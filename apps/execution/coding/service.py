@@ -1,5 +1,6 @@
 import logging
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -34,7 +35,7 @@ async def search_dictionary(
     dictionary_type: str,
     version: str,
     target_level: str | None = None,
-) -> dict:
+) -> dict[str, Any]:
     """Delegates interactive terminology search or auto-complete lookup to match_verbatim_term."""
     if not term or not term.strip():
         raise HTTPException(
@@ -193,6 +194,7 @@ async def get_coding_assignment(
             status_code=404,
             detail=f"Coding assignment '{assignment_id}' not found or has been deleted.",
         )
+
     return assignment
 
 
@@ -468,7 +470,7 @@ async def trigger_impact_analysis(
     dictionary_type: str,
     new_version: str,
     actor: str = "system",
-) -> dict:
+) -> dict[str, Any]:
     """Manually triggers up-versioning impact analysis on existing coded assignments."""
     try:
         return await run_impact_analysis(

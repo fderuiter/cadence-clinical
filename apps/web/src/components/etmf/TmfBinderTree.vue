@@ -2,8 +2,8 @@
   <div class="tmf-binder-tree-container">
     <div class="tree-search-bar">
       <input
-        v-model="searchQuery"
         type="text"
+        v-model="searchQuery"
         placeholder="Search zones, sections, or artifacts..."
         class="search-input"
       />
@@ -28,8 +28,8 @@
       >
         <div
           class="node-header zone-header"
-          :class="{ 'is-expanded': isExpanded(zone.id) }"
           @click="toggleNode(zone.id)"
+          :class="{ 'is-expanded': isExpanded(zone.id) }"
         >
           <span class="toggle-icon">{{ isExpanded(zone.id) ? "▼" : "▶" }}</span>
           <span class="folder-icon">📂</span>
@@ -51,8 +51,8 @@
           >
             <div
               class="node-header section-header"
-              :class="{ 'is-expanded': isExpanded(section.id) }"
               @click="toggleNode(section.id)"
+              :class="{ 'is-expanded': isExpanded(section.id) }"
             >
               <span class="toggle-icon">{{
                 isExpanded(section.id) ? "▼" : "▶"

@@ -7,13 +7,8 @@ import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from execution.sdv_transport_models import (
-    BulkQueryGenerationRequest,
-    BulkQueryGenerationResponse,
-    BulkSdvSignOffRequest,
-    BulkSdvSignOffResponse,
-)
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from execution.sdv_transport_models import BulkSdvSignOffRequest, BulkSdvSignOffResponse
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select, text
 
@@ -21,18 +16,13 @@ from apps.execution.database.context import current_user_id
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import (
     ClinicalObservation,
-    ClinicalQuery,
     ClinicalSubject,
     ClinicalVisit,
     SDVSignOff,
     TSDVConfig,
 )
-from apps.execution.notifications_client import publish_notification
-from apps.execution.rtsm_authz import verify_site_access
 from apps.execution.sdv_helper import validate_and_upsert_sdv_target
-from apps.execution.trial_lock import TrialLockManager
 from apps.execution.tsdv import evaluate_tsdv_requirement
-from packages.security import run_async
 from packages.security.rbac import (
     ROLE_CRA,
     ROLE_DATA_MANAGER,
@@ -42,7 +32,6 @@ from packages.security.rbac import (
     require_permission,
     require_roles,
 )
-from packages.security.signature_builder import CryptographicSignatureBuilder
 
 router = APIRouter(prefix="/api/v1/execution", tags=["SDV/TSDV"])
 
@@ -410,43 +399,27 @@ async def sdv_signoff(
         )
 
 
-# New dedicated APIRouter for bulk SDV endpoints (Task 1)
-bulk_sdv_router = APIRouter(prefix="/api/v1/execution/sdv", tags=["SDV"])
-
-# New dedicated APIRouter for bulk query generation endpoints (Task 3)
-queries_router = APIRouter(prefix="/api/v1/execution/queries", tags=["Queries"])
-
-
-@bulk_sdv_router.post(
-    "/bulk-sign-off",
+@router.post(
+    "/sdv/bulk-sign-off",
     response_model=BulkSdvSignOffResponse,
-    status_code=status.HTTP_200_OK,
 )
 async def bulk_sdv_signoff(
-    request: Request,
     payload: BulkSdvSignOffRequest,
-    principal: Principal = Depends(get_principal),
-    roles: list[str] = Depends(require_roles(ROLE_CRA, "monitor")),
+    principal: Principal = Depends(require_permission("sdv:update")),
+    _study_scope: Principal = Depends(require_study_scope()),
 ) -> BulkSdvSignOffResponse:
     """CRA/monitor-gated bulk SDV sign-off endpoint for Field, Page, or Visit scopes."""
-    # 1. Input Validation
+    # Validate request-body
     if not payload.reason_for_change or not payload.reason_for_change.strip():
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="GxP Part 11: reason_for_change cannot be blank.",
+            status_code=400, detail="GxP Part 11: reason_for_change cannot be blank."
         )
     if not payload.target_ids:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="target_ids list cannot be empty.",
-        )
-
-    # Note: X-Sig-Token batch binding validation is executed at the GatewayAuthMiddleware layer.
-    # On mismatch, it has already raised a 401.
+        raise HTTPException(status_code=400, detail="target_ids list cannot be empty.")
 
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
-            # Enable app-writing config for GxP auditing
+            # Set GxP write permission config if needed
             await session.execute(
                 text("SELECT set_config('cadence.app_writing', 'true', true);")
             )
@@ -455,56 +428,74 @@ async def bulk_sdv_signoff(
             stmt_subj = select(ClinicalSubject).where(
                 ClinicalSubject.subject_id == payload.subject_id,
                 ClinicalSubject.study_id == payload.study_id,
-                ClinicalSubject.is_deleted.is_(False),
             )
             res_subj = await session.execute(stmt_subj)
             subj_db = res_subj.scalars().first()
             if not subj_db:
                 raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
+                    status_code=404,
                     detail="Subject not found or inconsistent study reference.",
-                )
-
-            # Study scope authorization check
-            if not can_access_study(principal, payload.study_id):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Forbidden: Insufficient scope access for this study.",
-                )
-
-            # Verify site access (security gating)
-            if principal.assigned_sites:
-                verify_site_access(
-                    principal,
-                    subj_db.site_id,
-                    study_id=payload.study_id,
-                    subject_id=subj_db.subject_id,
-                )
-
-            # Trial-level and Site-level locking checks (atomic rejects)
-            if TrialLockManager.is_locked():
-                raise HTTPException(
-                    status_code=status.HTTP_423_LOCKED,
-                    detail="Trial is currently locked in a read-only state.",
-                )
-            if subj_db.site_id and TrialLockManager.is_site_locked(subj_db.site_id):
-                raise HTTPException(
-                    status_code=status.HTTP_423_LOCKED,
-                    detail=f"Site {subj_db.site_id} is currently locked in a read-only state.",
-                )
-            if subj_db.subject_id and TrialLockManager.is_subject_locked(
-                subj_db.subject_id
-            ):
-                raise HTTPException(
-                    status_code=status.HTTP_423_LOCKED,
-                    detail=f"Subject {subj_db.subject_id} is currently locked in a read-only state.",
                 )
 
             signed_target_ids = []
             skipped_target_ids = []
-            skipped_targets_info = []
 
-            # Pre-fetch existing SDVSignOff records for these targets to ensure idempotency
+            # 2. Scope-specific validation & fetching
+            if payload.scope == "FIELD":
+                stmt_obs = select(ClinicalObservation).where(
+                    ClinicalObservation.id.in_(payload.target_ids),
+                    ClinicalObservation.subject_id == payload.subject_id,
+                    ClinicalObservation.study_id == payload.study_id,
+                )
+                res_obs = await session.execute(stmt_obs)
+                obs_map = {obs.id: obs for obs in res_obs.scalars().all()}
+
+                # Verify that all provided target_ids actually exist
+                for tid in payload.target_ids:
+                    if tid not in obs_map:
+                        raise HTTPException(
+                            status_code=404,
+                            detail=f"Clinical observation {tid} not found or inconsistent reference.",
+                        )
+            elif payload.scope == "VISIT":
+                stmt_visit = select(ClinicalVisit).where(
+                    ClinicalVisit.id.in_(payload.target_ids),
+                    ClinicalVisit.subject_id == payload.subject_id,
+                    ClinicalVisit.study_id == payload.study_id,
+                )
+                res_visit = await session.execute(stmt_visit)
+                visit_map = {v.id: v for v in res_visit.scalars().all()}
+                for tid in payload.target_ids:
+                    if tid not in visit_map:
+                        raise HTTPException(
+                            status_code=404,
+                            detail=f"Clinical visit {tid} not found or inconsistent reference.",
+                        )
+            elif payload.scope == "PAGE":
+                stmt_page_obs = select(ClinicalObservation).where(
+                    ClinicalObservation.page_id.in_(payload.target_ids),
+                    ClinicalObservation.subject_id == payload.subject_id,
+                    ClinicalObservation.study_id == payload.study_id,
+                )
+                res_page_obs = await session.execute(stmt_page_obs)
+                existing_pages = {obs.page_id for obs in res_page_obs.scalars().all()}
+                for tid in payload.target_ids:
+                    if tid not in existing_pages:
+                        raise HTTPException(
+                            status_code=404,
+                            detail=f"Page ID {tid} not found or inconsistent reference.",
+                        )
+            else:
+                raise HTTPException(status_code=400, detail="Invalid scope.")
+
+            # 3. Apply sign-off behavior
+            verifier_id = current_user_id.get() or "system"
+            verified_at = datetime.now(UTC).replace(tzinfo=None)
+            site_id = payload.site_id or (
+                subj_db.site_id if hasattr(subj_db, "site_id") else None
+            )
+
+            # Query existing SDVSignOff records for these targets
             stmt_signoffs = select(SDVSignOff).where(
                 SDVSignOff.scope == payload.scope,
                 SDVSignOff.target_id.in_(payload.target_ids),
@@ -516,89 +507,11 @@ async def bulk_sdv_signoff(
                 so.target_id: so for so in res_signoffs.scalars().all()
             }
 
-            # Pre-fetch target map for existence / consistency checks
-            obs_map = {}
-            visit_map = {}
-            existing_pages = set()
-
-            if payload.scope == "FIELD":
-                stmt_obs = select(ClinicalObservation).where(
-                    ClinicalObservation.id.in_(payload.target_ids),
-                    ClinicalObservation.subject_id == payload.subject_id,
-                    ClinicalObservation.study_id == payload.study_id,
-                )
-                res_obs = await session.execute(stmt_obs)
-                obs_map = {obs.id: obs for obs in res_obs.scalars().all()}
-            elif payload.scope == "VISIT":
-                stmt_visit = select(ClinicalVisit).where(
-                    ClinicalVisit.id.in_(payload.target_ids),
-                    ClinicalVisit.subject_id == payload.subject_id,
-                    ClinicalVisit.study_id == payload.study_id,
-                )
-                res_visit = await session.execute(stmt_visit)
-                visit_map = {v.id: v for v in res_visit.scalars().all()}
-            elif payload.scope == "PAGE":
-                stmt_page_obs = select(ClinicalObservation).where(
-                    ClinicalObservation.page_id.in_(payload.target_ids),
-                    ClinicalObservation.subject_id == payload.subject_id,
-                    ClinicalObservation.study_id == payload.study_id,
-                )
-                res_page_obs = await session.execute(stmt_page_obs)
-                existing_pages = {obs.page_id for obs in res_page_obs.scalars().all()}
-
-            verifier_id = current_user_id.get() or "system"
-            verified_at = datetime.now(UTC).replace(tzinfo=None)
-            site_id = payload.site_id or subj_db.site_id
-
+            # We process each target_id
             for tid in payload.target_ids:
-                # 1. Existence / Consistency validations
-                if payload.scope == "FIELD" and tid not in obs_map:
-                    skipped_target_ids.append(tid)
-                    skipped_targets_info.append(
-                        {
-                            "target_id": tid,
-                            "reason": "Clinical observation not found or inconsistent reference.",
-                        }
-                    )
-                    continue
-                if payload.scope == "VISIT" and tid not in visit_map:
-                    skipped_target_ids.append(tid)
-                    skipped_targets_info.append(
-                        {
-                            "target_id": tid,
-                            "reason": "Clinical visit not found or inconsistent reference.",
-                        }
-                    )
-                    continue
-                if payload.scope == "PAGE" and tid not in existing_pages:
-                    skipped_target_ids.append(tid)
-                    skipped_targets_info.append(
-                        {
-                            "target_id": tid,
-                            "reason": "Page ID not found or inconsistent reference.",
-                        }
-                    )
-                    continue
-
-                # 2. Target lock checking
-                if payload.scope == "VISIT" and TrialLockManager.is_visit_locked(tid):
-                    raise HTTPException(
-                        status_code=status.HTTP_423_LOCKED,
-                        detail=f"Clinical visit {tid} is currently locked.",
-                    )
-                if payload.scope == "PAGE" and TrialLockManager.is_form_locked(tid):
-                    raise HTTPException(
-                        status_code=status.HTTP_423_LOCKED,
-                        detail=f"Form/Page {tid} is currently locked.",
-                    )
-
-                # 3. Idempotent check
                 signoff_db = existing_signoffs.get(tid)
                 if signoff_db and signoff_db.is_verified:
                     skipped_target_ids.append(tid)
-                    skipped_targets_info.append(
-                        {"target_id": tid, "reason": "Target already verified."}
-                    )
                     continue
 
                 if signoff_db:
@@ -620,7 +533,7 @@ async def bulk_sdv_signoff(
                     )
                     session.add(signoff_db)
 
-                # For FIELD scope, also update the matching ClinicalObservation verification columns
+                # For FIELD scope, update the ClinicalObservation too
                 if payload.scope == "FIELD":
                     obs_db = obs_map.get(tid)
                     if obs_db:
@@ -630,180 +543,31 @@ async def bulk_sdv_signoff(
 
                 signed_target_ids.append(tid)
 
+            # Commit the transaction
             await session.commit()
 
-    # Content digest and response building
-    builder = CryptographicSignatureBuilder()
-    content_digest = builder.compute_content_digest(sorted(payload.target_ids))
+        # Compute SHA256 digest of signed payload data
+        import hashlib
+        import json
 
-    timestamp_str = datetime.now(UTC).isoformat().replace("+00:00", "Z")
-    audit_tx = f"tx_{uuid.uuid4().hex[:12]}"
-    bulk_id = f"bulk_{uuid.uuid4().hex[:8]}"
-
-    return BulkSdvSignOffResponse(
-        bulk_id=bulk_id,
-        content_digest=content_digest,
-        timestamp_utc=timestamp_str,
-        audit_tx=audit_tx,
-        verified_count=len(signed_target_ids),
-        verified_target_ids=signed_target_ids,
-        skipped_targets=skipped_targets_info,
-        signed_count=len(signed_target_ids),
-        signed_target_ids=signed_target_ids,
-        skipped_target_ids=skipped_target_ids,
-    )
-
-
-@queries_router.post(
-    "/generate",
-    response_model=BulkQueryGenerationResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-async def bulk_generate_queries(
-    request: Request,
-    payload: BulkQueryGenerationRequest,
-    principal: Principal = Depends(get_principal),
-    roles: list[str] = Depends(require_roles(ROLE_CRA, "monitor")),
-) -> BulkQueryGenerationResponse:
-    """CRA/monitor-gated endpoint to raise multiple clinical queries at once."""
-    # 1. Validation
-    if not payload.reason_for_change or not payload.reason_for_change.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="GxP Part 11: reason_for_change cannot be blank.",
-        )
-    if not payload.targets:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="targets list cannot be empty.",
-        )
-
-    # Enable trial-locking and site-locking gating checks
-    if TrialLockManager.is_locked():
-        raise HTTPException(
-            status_code=status.HTTP_423_LOCKED,
-            detail="Trial is currently locked in a read-only state.",
-        )
-
-    generated_queries = []
-    skipped_targets = []
-
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            # Enable app-writing config for GxP auditing
-            await session.execute(
-                text("SELECT set_config('cadence.app_writing', 'true', true);")
-            )
-
-            for target in payload.targets:
-                resolved_study_id = target.study_id or payload.study_id
-                if not resolved_study_id:
-                    # Missing study ID coordinate -> skip target
-                    skipped_targets.append(target)
-                    continue
-
-                # Study authorization check
-                if not can_access_study(principal, resolved_study_id):
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="Forbidden: Insufficient scope access for this study.",
-                    )
-
-                # Fetch ClinicalSubject to resolve site_id and check existence/consistency
-                stmt_subj = select(ClinicalSubject).where(
-                    ClinicalSubject.subject_id == target.subject_id,
-                    ClinicalSubject.study_id == resolved_study_id,
-                    ClinicalSubject.is_deleted.is_(False),
-                )
-                res_subj = await session.execute(stmt_subj)
-                subj_db = res_subj.scalars().first()
-                if not subj_db:
-                    # Subject is not found or is inconsistent -> skip target
-                    skipped_targets.append(target)
-                    continue
-
-                # Verify site scoping
-                if principal.assigned_sites:
-                    verify_site_access(
-                        principal,
-                        subj_db.site_id,
-                        study_id=resolved_study_id,
-                        subject_id=subj_db.subject_id,
-                    )
-
-                # Lock checking
-                if subj_db.site_id and TrialLockManager.is_site_locked(subj_db.site_id):
-                    raise HTTPException(
-                        status_code=status.HTTP_423_LOCKED,
-                        detail=f"Site {subj_db.site_id} is currently locked.",
-                    )
-                if TrialLockManager.is_subject_locked(subj_db.subject_id):
-                    raise HTTPException(
-                        status_code=status.HTTP_423_LOCKED,
-                        detail=f"Subject {subj_db.subject_id} is currently locked.",
-                    )
-
-                # Active-query deduplication rule: status in OPEN / REOPENED / ANSWERED and not deleted
-                stmt_exist = select(ClinicalQuery).where(
-                    ClinicalQuery.study_id == resolved_study_id,
-                    ClinicalQuery.subject_id == target.subject_id,
-                    ClinicalQuery.visit_id == target.visit_id,
-                    ClinicalQuery.domain == target.domain,
-                    ClinicalQuery.test_code == target.test_code,
-                    ClinicalQuery.status.in_(["OPEN", "REOPENED", "ANSWERED"]),
-                    ClinicalQuery.is_deleted.is_(False),
-                )
-                res_exist = await session.execute(stmt_exist)
-                if res_exist.scalars().first():
-                    skipped_targets.append(target)
-                    continue
-
-                # Create the ClinicalQuery record
-                q_id = f"q_{uuid.uuid4().hex[:8]}"
-                q = ClinicalQuery(
-                    id=q_id,
-                    study_id=resolved_study_id,
-                    site_id=subj_db.site_id,
-                    subject_id=target.subject_id,
-                    visit_id=target.visit_id,
-                    domain=target.domain,
-                    test_code=target.test_code,
-                    status="OPEN",
-                    explanation=target.explanation,
-                    message=target.explanation,
-                    origin="manual",
-                    created_by=principal.user_id,
-                    observation_id=target.observation_id,
-                    form_id=target.form_id,
-                    field_id=target.field_id,
-                )
-                session.add(q)
-                generated_queries.append(q)
-
-            await session.commit()
-
-    # Dispatch fire-and-forget notifications post-commit
-    for q in generated_queries:
-        payload_notif = {
-            "recipient_role": "Site Investigator",
-            "category": "ACTION_ITEMS",
-            "priority": "HIGH",
-            "channels": "IN_APP",
-            "message_content": f"New clinical query raised for subject {q.subject_id} in study {q.study_id}: {q.explanation}",
-            "related_entity_type": "query",
-            "related_entity_id": q.id,
+        digest_payload = {
+            "study_id": payload.study_id,
+            "subject_id": payload.subject_id,
+            "scope": payload.scope,
+            "target_ids": sorted(payload.target_ids),
+            "reason_for_change": payload.reason_for_change,
         }
-        run_async(publish_notification(payload_notif))
+        serialized_digest = json.dumps(digest_payload, sort_keys=True)
+        content_digest = hashlib.sha256(serialized_digest.encode("utf-8")).hexdigest()
 
-    batch_id = f"batch_{uuid.uuid4().hex[:8]}"
-    audit_tx = f"tx_{uuid.uuid4().hex[:12]}"
-    timestamp_str = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+        # Use current timestamp for UTC
+        timestamp_str = datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
-    return BulkQueryGenerationResponse(
-        batch_id=batch_id,
-        audit_tx=audit_tx,
-        generated_count=len(generated_queries),
-        generated_query_ids=[q.id for q in generated_queries],
-        skipped_targets=skipped_targets,
-        timestamp_utc=timestamp_str,
-    )
+        return BulkSdvSignOffResponse(
+            signed_count=len(signed_target_ids),
+            signed_target_ids=signed_target_ids,
+            skipped_target_ids=skipped_target_ids,
+            content_digest=content_digest,
+            timestamp_utc=timestamp_str,
+            audit_tx="tx-" + str(uuid.uuid4())[:8],
+        )

@@ -67,10 +67,12 @@ from apps.execution.database.models import (
     FormSubmissionStatus,
     ImportState,
     MigrationRule,
+    SDVSignOff,
     StudyAuthoredRule,
     SubjectConsent,
     SubjectRandomization,
     TranslationJob,
+    TSDVConfig,
 )
 from apps.execution.database.models import (
     DictionaryType as DBDictionaryType,
@@ -100,8 +102,6 @@ from apps.execution.routers.eisf import router as eisf_router
 from apps.execution.routers.locks import router as locks_router
 from apps.execution.routers.offline import router as offline_router
 from apps.execution.routers.safety import router as safety_router
-from apps.execution.routers.sdv import bulk_sdv_router
-from apps.execution.routers.sdv import queries_router as sdv_queries_router
 from apps.execution.routers.sdv import router as sdv_router
 from apps.execution.routers.signatures import router as signatures_router
 from apps.execution.rtsm_authz import redact_response, verify_site_access
@@ -110,9 +110,11 @@ from apps.execution.rtsm_supply import (
     SiteInventoryNotFoundError,
     dispense_kit_transaction,
 )
+from apps.execution.sdv_helper import validate_and_upsert_sdv_target
 from apps.execution.subject_lifecycle import InvalidStateTransitionError
 from apps.execution.translator import process_translation
 from apps.execution.trial_lock import TrialLockManager
+from apps.execution.tsdv import evaluate_tsdv_requirement
 from apps.execution.ucum import convert_unit, get_normalized_representation
 from packages.security import (
     ROLE_AUTHORIZED_ER_PHYSICIAN,
@@ -305,8 +307,6 @@ app.include_router(doa_router)
 app.include_router(offline_router)
 app.include_router(documents_router)
 app.include_router(sdv_router)
-app.include_router(bulk_sdv_router)
-app.include_router(sdv_queries_router)
 
 
 @app.exception_handler(RequestValidationError)
@@ -3718,6 +3718,120 @@ async def open_query(
 # ==========================================
 
 
+# Phase 11: Shared Sampling Model enums for the API layer
+class SamplingModelEnum(StrEnum):
+    SUBJECT_BASED = "SUBJECT_BASED"
+    FIELD_BASED = "FIELD_BASED"
+    COMBINED = "COMBINED"
+
+
+class TSDVConfigCreate(BaseModel):
+    study_id: str
+    sampling_model: SamplingModelEnum
+    initial_full_sdv_subject_count: int = Field(default=0, ge=0)
+    random_sample_percentage: float = Field(default=0.0, ge=0.0, le=100.0)
+    full_sdv_domains: list[str] | None = None
+    safety_endpoints: list[str] | None = None
+    zero_sdv_domains: list[str] | None = None
+    trial_random_seed: int | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def validate_seed(self) -> "TSDVConfigCreate":
+        if self.random_sample_percentage > 0.0 and self.trial_random_seed is None:
+            raise ValueError(
+                "trial_random_seed is required when random_sample_percentage is greater than 0"
+            )
+        return self
+
+
+class TSDVConfigResponse(BaseModel):
+    id: str
+    study_id: str
+    sampling_model: str
+    initial_full_sdv_subject_count: int
+    random_sample_percentage: float
+    full_sdv_domains: list[str] | None = None
+    safety_endpoints: list[str] | None = None
+    zero_sdv_domains: list[str] | None = None
+    trial_random_seed: int | None = None
+    version: int
+
+    class Config:
+        from_attributes = True
+
+
+@app.post(
+    "/api/v1/execution/tsdv/config",
+    response_model=TSDVConfigResponse,
+    status_code=201,
+)
+async def create_or_update_tsdv_config(
+    request: Request,
+    payload: TSDVConfigCreate,
+    roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
+) -> TSDVConfig:
+    """Create or update Targeted SDV (TSDV) configuration for a study.
+
+    Restricts config writes to CRA/Data Manager roles with GxP change justifications.
+    """
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', true);")
+        )
+        stmt = select(TSDVConfig).where(TSDVConfig.study_id == payload.study_id)
+        res = await session.execute(stmt)
+        config = res.scalars().first()
+
+        if config:
+            config.sampling_model = payload.sampling_model.value
+            config.initial_full_sdv_subject_count = (
+                payload.initial_full_sdv_subject_count
+            )
+            config.random_sample_percentage = payload.random_sample_percentage
+            config.full_sdv_domains = payload.full_sdv_domains
+            config.safety_endpoints = payload.safety_endpoints
+            config.zero_sdv_domains = payload.zero_sdv_domains
+            config.trial_random_seed = payload.trial_random_seed
+        else:
+            config = TSDVConfig(
+                study_id=payload.study_id,
+                sampling_model=payload.sampling_model.value,
+                initial_full_sdv_subject_count=payload.initial_full_sdv_subject_count,
+                random_sample_percentage=payload.random_sample_percentage,
+                full_sdv_domains=payload.full_sdv_domains,
+                safety_endpoints=payload.safety_endpoints,
+                zero_sdv_domains=payload.zero_sdv_domains,
+                trial_random_seed=payload.trial_random_seed,
+            )
+            session.add(config)
+
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(TSDVConfig).where(TSDVConfig.study_id == payload.study_id)
+        res = await session.execute(stmt)
+        return res.scalars().one()
+
+
+@app.get(
+    "/api/v1/execution/tsdv/config/{study_id}",
+    response_model=TSDVConfigResponse,
+)
+async def get_tsdv_config(
+    study_id: str,
+    roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
+) -> TSDVConfig:
+    """Retrieve Targeted SDV (TSDV) configuration for a study."""
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(TSDVConfig).where(TSDVConfig.study_id == study_id)
+        res = await session.execute(stmt)
+        config = res.scalars().first()
+        if not config:
+            raise HTTPException(
+                status_code=404,
+                detail=f"TSDV configuration not found for study {study_id}",
+            )
+        return config
+
+
 class TSDVEvaluationResponse(BaseModel):
     required: bool
     subject_selected: bool
@@ -3726,6 +3840,96 @@ class TSDVEvaluationResponse(BaseModel):
     config_id: str
     enrollment_index: int
     explanation: str
+
+
+@app.get(
+    "/api/v1/execution/tsdv/required",
+    response_model=TSDVEvaluationResponse,
+)
+async def evaluate_tsdv_rule(
+    study_id: str,
+    subject_id: str,
+    domain: str | None = None,
+    enrollment_index: int | None = None,
+    roles: list[str] = Depends(get_normalized_roles),
+) -> TSDVEvaluationResponse:
+    """Evaluate Targeted SDV (TSDV) requirement for a given context.
+
+    Calculates deterministic sampling decisions and returns component results with an audit explanation.
+    """
+    async with db_manager.get_session_maker()() as session:
+        # 1. Resolve Study TSDV Configuration
+        stmt_cfg = select(TSDVConfig).where(TSDVConfig.study_id == study_id)
+        res_cfg = await session.execute(stmt_cfg)
+        config = res_cfg.scalars().first()
+        if not config:
+            raise HTTPException(
+                status_code=404,
+                detail=f"TSDV configuration not found for study {study_id}",
+            )
+
+        # 2. Resolve Subject and Enrollment Index
+        stmt_subj = select(ClinicalSubject).where(
+            ClinicalSubject.study_id == study_id,
+            ClinicalSubject.is_deleted.is_(False),
+        )
+        res_subj = await session.execute(stmt_subj)
+        subjects = list(res_subj.scalars().all())
+
+        # Sort alphabetically as a deterministic fallback only
+        subjects_sorted = sorted(subjects, key=lambda s: s.subject_id)
+
+        target_sub = None
+        fallback_index = None
+        for idx, sub in enumerate(subjects_sorted):
+            if sub.subject_id == subject_id or sub.id == subject_id:
+                target_sub = sub
+                fallback_index = idx
+                break
+
+        if target_sub is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Subject {subject_id} not found in study {study_id}",
+            )
+
+        # Resolve persisted enrollment_index, with alphabetical as fallback if not backfilled yet
+        resolved_index = (
+            target_sub.enrollment_index
+            if target_sub.enrollment_index is not None
+            else fallback_index
+        )
+
+        if enrollment_index is not None:
+            if enrollment_index != resolved_index:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Conflicting enrollment_index {enrollment_index} supplied. Persisted index is {resolved_index}.",
+                )
+        else:
+            enrollment_index = resolved_index
+
+        subject_uuid = target_sub.id
+
+        # 3. Perform Deterministic Evaluation
+        required, subject_selected, field_decision, explanation = (
+            evaluate_tsdv_requirement(
+                config=config,
+                subject_uuid=subject_uuid,
+                enrollment_index=enrollment_index,
+                domain=domain,
+            )
+        )
+
+        return TSDVEvaluationResponse(
+            required=required,
+            subject_selected=subject_selected,
+            field_decision=field_decision,
+            sampling_model=config.sampling_model,
+            config_id=config.id,
+            enrollment_index=enrollment_index,
+            explanation=explanation,
+        )
 
 
 # Phase 11: Shared SDV scope enums for the API layer
@@ -3769,6 +3973,62 @@ class SDVSignoffResponse(BaseModel):
 # Keep the old names as aliases for backward compatibility or testing
 SDVSignOffRequest = SDVSignoffCreate
 SDVSignOffResponse = SDVSignoffResponse
+
+
+@app.post("/api/v1/execution/sdv/signoff", response_model=SDVSignoffResponse)
+async def sdv_signoff(
+    payload: SDVSignoffCreate,
+    request: Request,
+) -> SDVSignoffResponse:
+    """CRA/monitor-gated SDV sign-off endpoint for Field, Page, or Visit scopes."""
+    state_roles = getattr(request.state, "roles", [])
+    if not isinstance(state_roles, list):
+        state_roles = [state_roles]
+    normalized_state_roles = [str(r).strip().lower() for r in state_roles]
+    if not any(role in ["cra", "monitor"] for role in normalized_state_roles):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: SDV sign-off is restricted to CRA or monitor roles.",
+        )
+    async with db_manager.get_session_maker()() as session:
+        verifier_id = current_user_id.get() or "system"
+        success, err_msg = await validate_and_upsert_sdv_target(
+            session=session,
+            scope=payload.scope,
+            target_id=payload.target_id,
+            subject_id=payload.subject_id,
+            study_id=payload.study_id,
+            site_id=payload.site_id,
+            verifier_id=verifier_id,
+        )
+        if not success:
+            raise HTTPException(status_code=404, detail=err_msg)
+
+        await session.commit()
+
+        # Re-query
+        stmt_re = select(SDVSignOff).where(
+            SDVSignOff.scope == payload.scope.value,
+            SDVSignOff.target_id == payload.target_id,
+            SDVSignOff.subject_id == payload.subject_id,
+            SDVSignOff.study_id == payload.study_id,
+        )
+        res_re = await session.execute(stmt_re)
+        re_signoff = res_re.scalars().first()
+
+        return SDVSignoffResponse(
+            id=re_signoff.id,
+            scope=re_signoff.scope,
+            target_id=re_signoff.target_id,
+            subject_id=re_signoff.subject_id,
+            study_id=re_signoff.study_id,
+            site_id=re_signoff.site_id,
+            is_verified=re_signoff.is_verified,
+            verified_by=re_signoff.verified_by,
+            verified_at=re_signoff.verified_at,
+            dropped_reason=re_signoff.dropped_reason,
+            dropped_at=re_signoff.dropped_at,
+        )
 
 
 # ==========================================

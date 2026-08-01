@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1873
-- **Passed:** 1873 🟢
+- **Total Automated Test Cases Run:** 1871
+- **Passed:** 1871 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1646,8 +1646,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_map_vs` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_persist_sdtm_records_pipeline` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_to_dtc` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_bulk_query_generation_happy_path_and_deduplication` | `tests.test_sdv` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_bulk_query_generation_rbac_and_locks` | `tests.test_sdv` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_bulk_sdv_signoff_batch_binding_mismatch` | `tests.test_sdv` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_bulk_sdv_signoff_happy_path` | `tests.test_sdv` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_bulk_sdv_signoff_input_validation` | `tests.test_sdv` | PRD-SYS-001 | 🟢 PASSED | < 1s |
