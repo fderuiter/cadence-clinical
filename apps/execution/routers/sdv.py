@@ -41,14 +41,11 @@ from packages.security.rbac import (
     get_principal,
     require_permission,
     require_roles,
-    StudyScopeChecker,
     require_study_scope,
 )
 from packages.security.signature_builder import CryptographicSignatureBuilder
 
 router = APIRouter(prefix="/api/v1/execution", tags=["SDV/TSDV"])
-
-
 
 
 # ==========================================

@@ -1333,6 +1333,12 @@ def test_lab_range_rbac_permissions() -> None:
         for action in ("create", "update", "delete"):
             assert has_permission(p, f"lab_range:{action}") is False
 
+    # Check inherited read-only permissions for derived investigator roles (PI, ER physician, Lead Investigator)
+    for p in (pi, er_phys, lead_inv):
+        assert has_permission(p, "lab_range:read") is True
+        for action in ("create", "update", "delete"):
+            assert has_permission(p, f"lab_range:{action}") is False
+
 
 def test_lab_range_alert_permissions() -> None:
     """Verify that lab_range alert action is mapped correctly for the requested roles."""
@@ -1363,7 +1369,18 @@ def test_lab_range_alert_permissions() -> None:
     lead_inv = Principal(user_id="lead1", roles=[ROLE_LEAD_INVESTIGATOR])
 
     # All these roles must have both 'read' and 'alert' actions on lab_range
-    for p in (sysadmin, dm, admin, cra, monitor, investigator, crc, pi, er_phys, lead_inv):
+    for p in (
+        sysadmin,
+        dm,
+        admin,
+        cra,
+        monitor,
+        investigator,
+        crc,
+        pi,
+        er_phys,
+        lead_inv,
+    ):
         assert has_permission(p, "lab_range:read") is True
         assert has_permission(p, "lab_range:alert") is True
 
@@ -1371,11 +1388,15 @@ def test_lab_range_alert_permissions() -> None:
 @pytest.mark.asyncio
 async def test_require_study_scope_extraction() -> None:
     """Verify that require_study_scope correctly extracts study_id from different parts of a request."""
-    from fastapi import Request, HTTPException
-    from packages.security.rbac import StudyScopeChecker, Principal
     import json
 
-    principal = Principal(user_id="u1", roles=["investigator"], assigned_studies=["study_A"])
+    from fastapi import HTTPException, Request
+
+    from packages.security.rbac import Principal, StudyScopeChecker
+
+    principal = Principal(
+        user_id="u1", roles=["investigator"], assigned_studies=["study_A"]
+    )
     checker = StudyScopeChecker()
 
     # Case 1: Path Params
@@ -1383,7 +1404,7 @@ async def test_require_study_scope_extraction() -> None:
         "type": "http",
         "path_params": {"study_id": "study_A"},
         "query_string": b"",
-        "headers": []
+        "headers": [],
     }
     req = Request(scope)
     res = await checker(req, principal=principal)
@@ -1394,7 +1415,7 @@ async def test_require_study_scope_extraction() -> None:
         "type": "http",
         "path_params": {},
         "query_string": b"study_id=study_A",
-        "headers": []
+        "headers": [],
     }
     req = Request(scope)
     res = await checker(req, principal=principal)
@@ -1405,7 +1426,7 @@ async def test_require_study_scope_extraction() -> None:
         "type": "http",
         "path_params": {},
         "query_string": b"",
-        "headers": [(b"X-Study-Id", b"study_A")]
+        "headers": [(b"X-Study-Id", b"study_A")],
     }
     req = Request(scope)
     res = await checker(req, principal=principal)
@@ -1416,7 +1437,7 @@ async def test_require_study_scope_extraction() -> None:
         "type": "http",
         "path_params": {},
         "query_string": b"",
-        "headers": [(b"x-study-id", b"study_A")]
+        "headers": [(b"x-study-id", b"study_A")],
     }
     req = Request(scope)
     res = await checker(req, principal=principal)
@@ -1424,13 +1445,15 @@ async def test_require_study_scope_extraction() -> None:
 
     # Case 5: JSON body (study_id)
     body_data = b'{"study_id": "study_A"}'
+
     async def receive_body():
         return {"type": "http.request", "body": body_data, "more_body": False}
+
     scope = {
         "type": "http",
         "path_params": {},
         "query_string": b"",
-        "headers": [(b"content-type", b"application/json")]
+        "headers": [(b"content-type", b"application/json")],
     }
     req = Request(scope, receive=receive_body)
     res = await checker(req, principal=principal)
@@ -1441,13 +1464,15 @@ async def test_require_study_scope_extraction() -> None:
 
     # Case 6: JSON body (id)
     body_data2 = b'{"id": "study_A"}'
+
     async def receive_body2():
         return {"type": "http.request", "body": body_data2, "more_body": False}
+
     scope = {
         "type": "http",
         "path_params": {},
         "query_string": b"",
-        "headers": [(b"content-type", b"application/json")]
+        "headers": [(b"content-type", b"application/json")],
     }
     req = Request(scope, receive=receive_body2)
     res = await checker(req, principal=principal)
@@ -1458,7 +1483,7 @@ async def test_require_study_scope_extraction() -> None:
         "type": "http",
         "path_params": {"study_id": "study_B"},
         "query_string": b"",
-        "headers": []
+        "headers": [],
     }
     req = Request(scope)
     with pytest.raises(HTTPException) as exc_info:
