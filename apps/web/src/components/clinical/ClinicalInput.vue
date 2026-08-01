@@ -15,7 +15,7 @@
         :value="modelValue"
         @input="$emit('update:modelValue', $event.target.value)"
         @change="$emit('change', $event.target.value, $event.target)"
-      />
+      >
 
       <!-- Query Flag -->
       <ClinicalQueryFlag
@@ -27,7 +27,10 @@
     </div>
 
     <!-- Validation Error -->
-    <div v-if="showError" class="validation-error-msg">
+    <div
+      v-if="showError"
+      class="validation-error-msg"
+    >
       {{ error }}
     </div>
 

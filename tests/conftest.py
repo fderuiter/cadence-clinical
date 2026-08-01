@@ -481,3 +481,129 @@ def pytest_sessionfinish(session, exitstatus):
                 print(result.stderr)
     except Exception as e:
         print(f"Error executing RTM generator: {e}")
+
+
+# =========================================================================
+# Shared multi-service RBAC test harness fixtures
+# =========================================================================
+
+import httpx
+import pytest_asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
+
+from apps.etmf.database import db_manager as etmf_db_manager
+from apps.etmf.models import Base as ETMFBase
+from apps.execution.database.core import db_manager as exec_db_manager
+from apps.execution.database.models import Base as ExecBase
+from apps.designer.main import app as designer_app
+from apps.execution.main import app as exec_app
+from apps.etmf.main import app as etmf_app
+
+
+@pytest_asyncio.fixture
+async def shared_sqlite_dbs():
+    """
+    Setup in-memory SQLite databases for execution and etmf using their own db_manager/Base singletons.
+    Follows the init_db + create_all + teardown pattern.
+    """
+    etmf_db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
+    async with etmf_db_manager.engine.begin() as conn:
+        await conn.run_sync(ETMFBase.metadata.create_all)
+
+    exec_db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
+    async with exec_db_manager.engine.begin() as conn:
+        await conn.run_sync(ExecBase.metadata.create_all)
+
+    yield
+
+    try:
+        async with etmf_db_manager.engine.begin() as conn:
+            await conn.run_sync(ETMFBase.metadata.drop_all)
+        await etmf_db_manager.close()
+    except Exception:
+        pass
+
+    try:
+        async with exec_db_manager.engine.begin() as conn:
+            await conn.run_sync(ExecBase.metadata.drop_all)
+        await exec_db_manager.close()
+    except Exception:
+        pass
+
+
+@pytest.fixture
+def mock_designer_driver():
+    """
+    Injects a mock or fake Neo4j driver into designer_app.state.driver after client creation,
+    and restores the original driver on teardown.
+    """
+    driver_mock = MagicMock()
+    session_mock = AsyncMock()
+    session_ctx = AsyncMock()
+    session_ctx.__aenter__.return_value = session_mock
+    driver_mock.session.return_value = session_ctx
+
+    tx_mock = AsyncMock()
+    tx_mock.__aenter__.return_value = tx_mock
+    session_mock.begin_transaction.return_value = tx_mock
+
+    driver_mock._tx_mock = tx_mock
+    driver_mock._session_mock = session_mock
+
+    original_driver = getattr(designer_app.state, "driver", None)
+    designer_app.state.driver = driver_mock
+
+    yield driver_mock
+
+    designer_app.state.driver = original_driver
+
+
+@pytest_asyncio.fixture
+async def execution_client():
+    """Expose httpx.AsyncClient instance with ASGITransport for the execution app."""
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=exec_app), base_url="http://test") as client:
+        yield client
+
+
+@pytest_asyncio.fixture
+async def etmf_client():
+    """Expose httpx.AsyncClient instance with ASGITransport for the etmf app."""
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=etmf_app), base_url="http://test") as client:
+        yield client
+
+
+@pytest_asyncio.fixture
+async def designer_client(mock_designer_driver):
+    """Expose httpx.AsyncClient instance with ASGITransport for the designer app (mocked Neo4j driver injected)."""
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=designer_app), base_url="http://test") as client:
+        yield client
+
+
+@pytest.fixture
+def intercept_cross_service_calls():
+    """
+    Patch httpx.AsyncClient.send globally to route service-to-service HTTP calls
+    to the target in-process app (execution, etmf, or designer) while keeping signed headers intact.
+    """
+    original_send = httpx.AsyncClient.send
+
+    async def mock_send(self, request: httpx.Request, *args, **kwargs) -> httpx.Response:
+        url_str = str(request.url)
+        target_app = None
+
+        if "localhost:8002" in url_str or "api/v1/execution" in url_str or "api/v1/subjects" in url_str:
+            target_app = exec_app
+        elif "localhost:8003" in url_str or "api/v1/etmf" in url_str:
+            target_app = etmf_app
+        elif "localhost:8001" in url_str or "api/v1/studies" in url_str or "api/v2/studies" in url_str or "api/v1/terminology" in url_str or "soa-projection" in url_str:
+            target_app = designer_app
+
+        if target_app is not None:
+            transport = httpx.ASGITransport(app=target_app)
+            async with httpx.AsyncClient(transport=transport) as local_client:
+                return await original_send(local_client, request, *args, **kwargs)
+
+        return await original_send(self, request, *args, **kwargs)
+
+    with patch("httpx.AsyncClient.send", mock_send):
+        yield
