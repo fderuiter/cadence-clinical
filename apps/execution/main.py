@@ -2420,6 +2420,7 @@ async def create_lab_range(
             )
             session.add(lab_range)
             await session.flush()
+            lab_range_cache.invalidate(lab_range.study_id, lab_range.test_code)
 
         lab_range_cache.invalidate(lab_range.study_id, lab_range.test_code)
 
@@ -2562,6 +2563,9 @@ async def update_lab_range(
                     status_code=404, detail="LabReferenceRange not found"
                 )
 
+            original_study_id = r.study_id
+            original_test_code = r.test_code
+
             update_dict = payload.model_dump(exclude_unset=True)
             merged_data = {
                 "study_id": r.study_id,
@@ -2599,6 +2603,11 @@ async def update_lab_range(
             r.critical_low = merged_data["critical_low"]
             r.critical_high = merged_data["critical_high"]
             await session.flush()
+            lab_range_cache.invalidate(r.study_id, r.test_code)
+
+            lab_range_cache.invalidate(original_study_id, original_test_code)
+            if original_study_id != r.study_id or original_test_code != r.test_code:
+                lab_range_cache.invalidate(r.study_id, r.test_code)
 
         lab_range_cache.invalidate(r.study_id, r.test_code)
 
@@ -2647,6 +2656,7 @@ async def delete_lab_range(
 
             r.is_deleted = True
             await session.flush()
+            lab_range_cache.invalidate(r.study_id, r.test_code)
 
         lab_range_cache.invalidate(r.study_id, r.test_code)
 
