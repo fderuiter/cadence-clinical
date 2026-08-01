@@ -2,8 +2,8 @@
   <div
     v-if="isOpen"
     id="signature-capture-modal"
-    class="modal-overlay"
     ref="modalRef"
+    class="modal-overlay"
     role="dialog"
     aria-modal="true"
     aria-label="Electronic Signature Capture Modal"

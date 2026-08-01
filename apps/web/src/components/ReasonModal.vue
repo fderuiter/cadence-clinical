@@ -2,8 +2,8 @@
   <div
     v-if="show"
     :id="idPrefix ? idPrefix + 'reason-modal' : 'reason-modal'"
-    class="modal-overlay"
     ref="modalRef"
+    class="modal-overlay"
     style="display: flex"
     role="dialog"
     aria-modal="true"
@@ -14,7 +14,9 @@
         {{ title }}
       </div>
       <div class="modal-body">
-        <p v-if="description">{{ description }}</p>
+        <p v-if="description">
+          {{ description }}
+        </p>
 
         <div class="form-group" style="margin-bottom: 12px">
           <label :for="idPrefix + 'change-reason-select'"

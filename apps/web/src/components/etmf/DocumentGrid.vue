@@ -14,7 +14,11 @@
       <button
         class="btn btn-primary upload-trigger-btn"
         :disabled="!selectedArtifactCode"
-        :aria-label="selectedArtifactCode ? 'Upload Regulated Document for artifact ' + selectedArtifactCode : 'Upload Regulated Document'"
+        :aria-label="
+          selectedArtifactCode
+            ? 'Upload Regulated Document for artifact ' + selectedArtifactCode
+            : 'Upload Regulated Document'
+        "
         @click="openUploadModal"
       >
         <span>📤</span> Upload Regulated Document
@@ -73,7 +77,9 @@
               <button
                 class="btn btn-sm btn-outline-primary"
                 title="View Watermarked PDF Preview"
-                :aria-label="'Preview secure watermarked document ' + doc.filename"
+                :aria-label="
+                  'Preview secure watermarked document ' + doc.filename
+                "
                 @click="$emit('preview', doc)"
               >
                 👁️ Preview
@@ -85,11 +91,24 @@
     </div>
 
     <!-- GxP Electronic Record Drag & Drop Upload Modal -->
-    <div v-if="showUploadModal" class="modal-backdrop" ref="uploadModalRef" role="dialog" aria-modal="true" aria-label="Document Ingestion Modal">
+    <div
+      v-if="showUploadModal"
+      ref="uploadModalRef"
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Document Ingestion Modal"
+    >
       <div class="modal-card upload-modal">
         <div class="modal-header">
           <h3>FDA 21 CFR Part 11 Compliant Document Ingestion</h3>
-          <button class="close-modal-btn" aria-label="Close modal" @click="closeUploadModal">×</button>
+          <button
+            class="close-modal-btn"
+            aria-label="Close modal"
+            @click="closeUploadModal"
+          >
+            ×
+          </button>
         </div>
 
         <div class="modal-body">
@@ -317,7 +336,7 @@ watch(showUploadModal, async (newVal) => {
     document.addEventListener("keydown", handleUploadModalKeyDown);
     if (uploadModalRef.value) {
       const focusable = uploadModalRef.value.querySelectorAll(
-        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled])'
+        "button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled])"
       );
       if (focusable && focusable.length > 0) {
         focusable[0].focus();

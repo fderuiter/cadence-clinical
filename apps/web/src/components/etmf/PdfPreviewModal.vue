@@ -1,10 +1,18 @@
 <template>
-  <div class="modal-backdrop" @click.self="$emit('close')" ref="modalRef" role="dialog" aria-modal="true" aria-label="Secure PDF Preview Modal">
+  <div
+    ref="modalRef"
+    class="modal-backdrop"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Secure PDF Preview Modal"
+    @click.self="$emit('close')"
+  >
     <div class="modal-card pdf-preview-modal">
       <div class="modal-header">
         <div class="header-details">
           <h3>
-            <span class="secure-icon" aria-hidden="true">🔒</span> Secure Regulated Viewer -
+            <span class="secure-icon" aria-hidden="true">🔒</span> Secure
+            Regulated Viewer -
             {{ document.filename }}
           </h3>
           <p class="gxp-tracking-subtitle">
@@ -12,7 +20,13 @@
             <strong>v{{ document.version_index }}.0</strong>
           </p>
         </div>
-        <button class="close-modal-btn" aria-label="Close modal" @click="$emit('close')">×</button>
+        <button
+          class="close-modal-btn"
+          aria-label="Close modal"
+          @click="$emit('close')"
+        >
+          ×
+        </button>
       </div>
 
       <div class="modal-body-layout">

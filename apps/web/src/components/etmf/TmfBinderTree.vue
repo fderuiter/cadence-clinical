@@ -2,8 +2,8 @@
   <div class="tmf-binder-tree-container">
     <div class="tree-search-bar">
       <input
-        type="text"
         v-model="searchQuery"
+        type="text"
         placeholder="Search zones, sections, or artifacts..."
         class="search-input"
       />
@@ -17,7 +17,13 @@
       </div>
     </div>
 
-    <div class="tree-root-nodes" role="tree" aria-label="TMF Binder Folder Tree" @keydown="handleTreeKeyDown">
+    <div
+      class="tree-root-nodes"
+      role="tree"
+      tabindex="0"
+      aria-label="TMF Binder Folder Tree"
+      @keydown="handleTreeKeyDown"
+    >
       <div v-if="filteredTree.length === 0" class="empty-tree-message">
         No matching TMF items found.
       </div>
@@ -27,13 +33,16 @@
         class="tree-node zone-node"
       >
         <div
+          :id="'tree-node-' + zone.id"
           class="node-header zone-header"
           role="treeitem"
           :aria-expanded="isExpanded(zone.id)"
-          :tabindex="activeFocusedNodeId === zone.id ? 0 : -1"
-          :id="'tree-node-' + zone.id"
-          @click="clickZone(zone)"
+          :aria-selected="false"
+          tabindex="0"
           :class="{ 'is-expanded': isExpanded(zone.id) }"
+          @click="clickZone(zone)"
+          @keydown.enter="clickZone(zone)"
+          @keydown.space.prevent="clickZone(zone)"
         >
           <span class="toggle-icon">{{ isExpanded(zone.id) ? "▼" : "▶" }}</span>
           <span class="folder-icon">📂</span>
@@ -47,20 +56,27 @@
           </span>
         </div>
 
-        <div v-if="isExpanded(zone.id)" class="node-children zone-children" role="group">
+        <div
+          v-if="isExpanded(zone.id)"
+          class="node-children zone-children"
+          role="group"
+        >
           <div
             v-for="section in zone.children"
             :key="section.id"
             class="tree-node section-node"
           >
             <div
+              :id="'tree-node-' + section.id"
               class="node-header section-header"
               role="treeitem"
               :aria-expanded="isExpanded(section.id)"
-              :tabindex="activeFocusedNodeId === section.id ? 0 : -1"
-              :id="'tree-node-' + section.id"
-              @click="clickSection(section)"
+              :aria-selected="false"
+              tabindex="0"
               :class="{ 'is-expanded': isExpanded(section.id) }"
+              @click="clickSection(section)"
+              @keydown.enter="clickSection(section)"
+              @keydown.space.prevent="clickSection(section)"
             >
               <span class="toggle-icon">{{
                 isExpanded(section.id) ? "▼" : "▶"
@@ -83,13 +99,16 @@
             >
               <div
                 v-for="artifact in section.children"
+                :id="'tree-node-' + artifact.id"
                 :key="artifact.id"
                 class="tree-node artifact-node"
                 role="treeitem"
-                :tabindex="activeFocusedNodeId === artifact.id ? 0 : -1"
-                :id="'tree-node-' + artifact.id"
+                :aria-selected="selectedArtifactId === artifact.code"
+                tabindex="0"
                 :class="{ 'is-selected': selectedArtifactId === artifact.code }"
                 @click="clickArtifact(artifact)"
+                @keydown.enter="clickArtifact(artifact)"
+                @keydown.space.prevent="clickArtifact(artifact)"
               >
                 <div class="node-header artifact-header">
                   <span class="file-icon">📄</span>
@@ -341,9 +360,14 @@ function handleTreeKeyDown(e) {
       if (currentItem.type !== "artifact" && !isExpanded(currentItem.id)) {
         // Expand collapsed parent node
         expandedNodes.value[currentItem.id] = true;
-      } else if (currentItem.type !== "artifact" && isExpanded(currentItem.id)) {
+      } else if (
+        currentItem.type !== "artifact" &&
+        isExpanded(currentItem.id)
+      ) {
         // Move focus to first child node
-        const firstChild = list.find((item) => item.parentId === currentItem.id);
+        const firstChild = list.find(
+          (item) => item.parentId === currentItem.id
+        );
         if (firstChild) {
           focusNodeId(firstChild.id);
         }

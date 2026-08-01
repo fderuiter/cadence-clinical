@@ -1,7 +1,7 @@
 <template>
   <div
-    class="modal-backdrop"
     ref="modalRef"
+    class="modal-backdrop"
     role="dialog"
     aria-modal="true"
     aria-label="Export Inspection Log Modal"

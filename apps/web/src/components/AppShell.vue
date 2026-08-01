@@ -202,7 +202,16 @@
       role="status"
       aria-live="polite"
       aria-atomic="true"
-      style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;"
+      style="
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+      "
     >
       {{ screenReaderAnnouncement }}
     </div>
@@ -210,7 +219,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useAuthStore } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
 import { hasRequiredRole } from "../router";
@@ -219,6 +228,7 @@ const authStore = useAuthStore();
 const clinicalStore = useClinicalStore();
 
 const screenReaderAnnouncement = ref("");
+let refreshTimer = null;
 
 // Watch background session authentication silent refresh events
 watch(
@@ -235,12 +245,18 @@ watch(
 
 // Emulate quiet background token refresh events periodically in demo/sandbox modes
 onMounted(() => {
-  const interval = setInterval(() => {
+  refreshTimer = setInterval(() => {
     if (authStore.isAuthenticated) {
       screenReaderAnnouncement.value =
         "System status: Quiet background token refresh and security re-authentication completed successfully.";
     }
   }, 45000); // Trigger every 45s to avoid flood but remain active
+});
+
+onUnmounted(() => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer);
+  }
 });
 
 // Watch offline syncing / ledger transaction commits

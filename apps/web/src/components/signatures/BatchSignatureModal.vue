@@ -1,9 +1,9 @@
 <template>
   <div
     v-if="isOpen"
-    class="modal-backdrop"
     id="batch-signature-modal"
     ref="modalRef"
+    class="modal-backdrop"
     role="dialog"
     aria-modal="true"
     aria-label="Batch Electronic Signature Modal"
@@ -222,8 +222,8 @@
                 Signature Meaning / Attestation
               </label>
               <select
-                class="signature-meaning-picker"
                 v-model="signatureMeaning"
+                class="signature-meaning-picker"
                 required
                 style="
                   width: 100%;
@@ -257,9 +257,9 @@
                 Password Re-Authentication
               </label>
               <input
+                v-model="password"
                 type="password"
                 class="password-input"
-                v-model="password"
                 required
                 placeholder="Re-enter password"
                 style="
@@ -285,9 +285,9 @@
                 MFA / TOTP Token (Optional)
               </label>
               <input
+                v-model="totp"
                 type="text"
                 class="totp-input"
-                v-model="totp"
                 placeholder="Enter 6-digit TOTP code"
                 style="
                   width: 100%;
@@ -341,7 +341,7 @@
                   height: 16px;
                   animation: spin 1s linear infinite;
                 "
-              ></span>
+              />
               Executing Electronic Signature...
             </div>
 

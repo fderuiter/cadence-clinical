@@ -457,7 +457,9 @@
                   v-if="doc.status !== 'SIGNED'"
                   class="btn btn-primary btn-sign-doc"
                   style="padding: 4px 8px; font-size: 11px; cursor: pointer"
-                  :aria-label="'Sign and manifestation seal document ' + doc.filename"
+                  :aria-label="
+                    'Sign and manifestation seal document ' + doc.filename
+                  "
                   @click="openSignModal(doc)"
                 >
                   Sign
@@ -465,7 +467,9 @@
                 <button
                   class="btn btn-secondary btn-download-watermarked"
                   style="padding: 4px 8px; font-size: 11px; cursor: pointer"
-                  :aria-label="'Download secure watermarked copy of ' + doc.filename"
+                  :aria-label="
+                    'Download secure watermarked copy of ' + doc.filename
+                  "
                   @click="downloadWatermarkedDoc(doc)"
                 >
                   Download (Watermarked)

@@ -3,8 +3,8 @@
   <div
     v-if="isOpen"
     id="approval-handoff-modal"
-    class="modal-overlay"
     ref="modalRef"
+    class="modal-overlay"
     role="dialog"
     aria-modal="true"
     aria-label="eCRF Approval Handoff Modal"

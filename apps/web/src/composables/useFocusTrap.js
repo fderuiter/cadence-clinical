@@ -89,5 +89,3 @@ export function useFocusTrap(targetRef) {
     }
   });
 }
-
-
