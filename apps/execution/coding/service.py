@@ -1,6 +1,7 @@
 import logging
 from datetime import UTC, datetime
 
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -75,9 +76,15 @@ async def search_dictionary(
     Reshapes the returned dict into the MedDRACodeLookupResponse/WHODrugCodeLookupResponse structures.
     """
     if not term or not term.strip():
-        raise ValueError("Term must be a non-empty string.")
+        raise HTTPException(
+            status_code=400,
+            detail="Term must be a non-empty string",
+        )
     if not version or not version.strip():
-        raise ValueError("Version must be a non-empty string.")
+        raise HTTPException(
+            status_code=400,
+            detail="Version must be a non-empty string",
+        )
 
     res = await match_verbatim_term(
         session=session,
@@ -444,8 +451,9 @@ async def process_coding_action(
             res_valid = await session.execute(stmt_valid)
             term_record = res_valid.scalars().first()
             if not term_record:
-                raise ValueError(
-                    f"Invalid code '{coded_code}' for MedDRA version '{version}'."
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid code '{coded_code}' for MedDRA version '{version}'.",
                 )
 
             # Fetch hierarchy for the overridden term if possible
@@ -462,8 +470,9 @@ async def process_coding_action(
             res_valid = await session.execute(stmt_valid)
             rec_record = res_valid.scalars().first()
             if not rec_record:
-                raise ValueError(
-                    f"Invalid drug code '{coded_code}' for WHODrug version '{version}'."
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid drug code '{coded_code}' for WHODrug version '{version}'.",
                 )
 
             # Fetch ATC context and ingredients for WHODrug override

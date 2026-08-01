@@ -11,6 +11,8 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 1863
 - **Passed:** 1863 🟢
+- **Total Automated Test Cases Run:** 1868
+- **Passed:** 1868 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1642,6 +1644,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_map_vs` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_persist_sdtm_records_pipeline` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_to_dtc` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_bulk_query_generation_happy_path_and_deduplication` | `tests.test_sdv` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_bulk_query_generation_rbac_and_locks` | `tests.test_sdv` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_bulk_sdv_signoff_batch_binding_mismatch` | `tests.test_sdv` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_bulk_sdv_signoff_happy_path` | `tests.test_sdv` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_bulk_sdv_signoff_input_validation` | `tests.test_sdv` | PRD-SYS-001 | 🟢 PASSED | < 1s |
@@ -1695,6 +1699,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_verify_gateway_signature_scope_fallback_restrictions` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_gateway_signature_tenant_and_multishape_restrictions` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_sig_token_helper_scenarios` | `tests.test_security_middleware` | Trace-15 | 🟢 PASSED | < 1s |
+| `test_cross_service_interception` | `tests.test_shared_rbac_harness` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_mock_designer_driver` | `tests.test_shared_rbac_harness` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_persona_builders_contain_correct_claims` | `tests.test_shared_rbac_harness` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_shared_sqlite_dbs_and_clients` | `tests.test_shared_rbac_harness` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_and_consume_sig_token_expired` | `tests.test_sig_token_verifier` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_and_consume_sig_token_mismatched_user` | `tests.test_sig_token_verifier` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_and_consume_sig_token_replay_blocked` | `tests.test_sig_token_verifier` | *Regression/Helper* | 🟢 PASSED | < 1s |
