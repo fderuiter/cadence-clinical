@@ -11,6 +11,8 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 1833
 - **Passed:** 1833 🟢
+- **Total Automated Test Cases Run:** 1889
+- **Passed:** 1889 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -235,6 +237,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_artifact_cascade_engine_generation` | `tests.test_artifact_cascade` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_artifact_cascade_router_endpoint` | `tests.test_artifact_cascade` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_artifact_cascade_router_endpoint_dependency_override` | `tests.test_artifact_cascade` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_clean_neo4j_graph_calls_run` | `tests.test_asgi_live_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_clean_postgres_databases_calls_truncate` | `tests.test_asgi_live_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_live_db_halt_when_neo4j_unreachable` | `tests.test_asgi_live_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_live_db_halt_when_postgres_unreachable` | `tests.test_asgi_live_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_records_ip_and_custom_timestamp` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_hard_delete_is_prevented` | `tests.test_audit` | Trace-1 | 🟢 PASSED | < 1s |
 | `test_insert_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | < 1s |
@@ -1091,6 +1097,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_range_cache_operations` | `tests.test_lab_range_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_range_cache_singleton` | `tests.test_lab_range_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_range_cache_ttl_config` | `tests.test_lab_range_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cache_invalidation_on_create` | `tests.test_lab_range_cache_invalidation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cache_invalidation_on_delete` | `tests.test_lab_range_cache_invalidation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cache_invalidation_on_recalculate` | `tests.test_lab_range_cache_invalidation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cache_invalidation_on_update_no_key_change` | `tests.test_lab_range_cache_invalidation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cache_invalidation_on_update_with_key_changes` | `tests.test_lab_range_cache_invalidation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_absent_boundaries` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_age_boundaries` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_convert_lab_unit_db_and_fallback` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
