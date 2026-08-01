@@ -17,10 +17,12 @@ from apps.execution.database.models import (
     ClinicalCodingLedger,
     ClinicalQuery,
     CodingState,
-    DictionaryType as DBDictionaryType,
     MedDRATerm,
     RecodingState,
     WHODrugRecord,
+)
+from apps.execution.database.models import (
+    DictionaryType as DBDictionaryType,
 )
 
 logger = logging.getLogger(__name__)
@@ -149,6 +151,7 @@ async def process_coding_action(
     # Resolve actor with fallback to current_user_id.get() or parameter actor or "system"
     try:
         from apps.execution.database.context import current_user_id
+
         resolved_actor = current_user_id.get() or actor
     except Exception:
         resolved_actor = actor
