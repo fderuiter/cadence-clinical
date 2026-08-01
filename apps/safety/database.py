@@ -1,3 +1,9 @@
+"""
+Safety Microservice Database Manager (Phase 6).
+
+Manages connection pool and session lifespans locally.
+"""
+
 from packages.database import RelationalDatabaseManager
 
 

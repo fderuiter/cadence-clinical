@@ -1,3 +1,9 @@
+"""
+Outbound Safety Database Adapter (Phase 6).
+
+Transmits ICSR E2B(R3) payloads securely to the configured PV database.
+"""
+
 import os
 from typing import Any
 
