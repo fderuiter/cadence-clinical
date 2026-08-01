@@ -15,6 +15,7 @@ from apps.execution.database.models import (
     AuditLog,
     Base,
     ClinicalObservation,
+    ClinicalQuery,
     ClinicalSubject,
     ClinicalVisit,
     SDVSignOff,
@@ -1048,6 +1049,282 @@ async def test_bulk_sdv_signoff_input_validation():
             "/api/v1/execution/sdv/bulk-sign-off",
             json=payload_blank_reason,
             headers=headers,
+        )
+        assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_bulk_query_generation_happy_path(signed_headers):
+    """
+    Verify that a valid bulk query generation request creates queries,
+    respects GxP Part 11 changes, and dispatches notifications.
+    """
+    # 1. Populate DB with test subject, visit, and observations
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        subj = ClinicalSubject(
+            subject_id="SUBJ-QGEN-1",
+            study_id="STUDY-QGEN-TEST",
+            site_id="SITE-QGEN-1",
+        )
+        session.add(subj)
+
+    payload = {
+        "study_id": "STUDY-QGEN-TEST",
+        "reason_for_change": "Discrepancy review.",
+        "targets": [
+            {
+                "study_id": "STUDY-QGEN-TEST",
+                "subject_id": "SUBJ-QGEN-1",
+                "visit_id": "VISIT-1",
+                "domain": "VS",
+                "test_code": "SYSBP",
+                "explanation": "Please verify high systolic BP value."
+            },
+            {
+                "study_id": "STUDY-QGEN-TEST",
+                "subject_id": "SUBJ-QGEN-1",
+                "visit_id": "VISIT-1",
+                "domain": "VS",
+                "test_code": "DIABP",
+                "explanation": "Please verify low diastolic BP value."
+            }
+        ]
+    }
+
+    from unittest.mock import AsyncMock
+    mock_notify = AsyncMock()
+    with (
+        patch(
+            "apps.execution.notifications_client.publish_notification",
+            mock_notify,
+        ),
+    ):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            headers = signed_headers(
+                user_id="CRA-USER-QGEN",
+                roles="CRA",
+                change_reason="Discrepancy review.",
+                site_id="SITE-QGEN-1",
+                study_id="STUDY-QGEN-TEST",
+            )
+            # Send bulk query generation request
+            resp = await client.post(
+                "/api/v1/execution/queries/generate",
+                json=payload,
+                headers=headers,
+            )
+            print("STATUS CODE:", resp.status_code)
+            print("BODY:", resp.text)
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["generated_count"] == 2
+            assert len(data["generated_query_ids"]) == 2
+            assert len(data["skipped_targets"]) == 0
+
+    # Assert that queries are saved in DB
+    async with db_manager.get_session_maker()() as session:
+        res = await session.execute(
+            select(ClinicalQuery).where(
+                ClinicalQuery.subject_id == "SUBJ-QGEN-1",
+                ClinicalQuery.study_id == "STUDY-QGEN-TEST",
+            )
+        )
+        queries = res.scalars().all()
+        assert len(queries) == 2
+        for q in queries:
+            assert q.status == "OPEN"
+            assert q.origin == "manual"
+            assert q.created_by == "CRA-USER-QGEN"
+
+    # Assert that notifications were triggered
+    assert mock_notify.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_bulk_query_generation_deduplication(signed_headers):
+    """
+    Verify that bulk query generation skips targets that already have an active query on the coordinates.
+    """
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        subj = ClinicalSubject(
+            subject_id="SUBJ-QDUP-1",
+            study_id="STUDY-QDUP-TEST",
+            site_id="SITE-QDUP-1",
+        )
+        session.add(subj)
+
+        # Pre-existing active query on SYSBP
+        existing_q = ClinicalQuery(
+            id="qry_existing_1",
+            study_id="STUDY-QDUP-TEST",
+            site_id="SITE-QDUP-1",
+            subject_id="SUBJ-QDUP-1",
+            visit_id="VISIT-1",
+            domain="VS",
+            test_code="SYSBP",
+            status="OPEN",
+            origin="manual",
+            explanation="Existing issue.",
+            created_by="someone",
+        )
+        session.add(existing_q)
+
+    payload = {
+        "study_id": "STUDY-QDUP-TEST",
+        "reason_for_change": "Discrepancy review.",
+        "targets": [
+            {
+                "study_id": "STUDY-QDUP-TEST",
+                "subject_id": "SUBJ-QDUP-1",
+                "visit_id": "VISIT-1",
+                "domain": "VS",
+                "test_code": "SYSBP",
+                "explanation": "Existing coordinate, should be skipped."
+            },
+            {
+                "study_id": "STUDY-QDUP-TEST",
+                "subject_id": "SUBJ-QDUP-1",
+                "visit_id": "VISIT-1",
+                "domain": "VS",
+                "test_code": "DIABP",
+                "explanation": "New coordinate, should be generated."
+            }
+        ]
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        headers = signed_headers(
+            user_id="CRA-USER-QDUP",
+            roles="CRA",
+            change_reason="Discrepancy review.",
+            site_id="SITE-QDUP-1",
+            study_id="STUDY-QDUP-TEST",
+        )
+        resp = await client.post(
+            "/api/v1/execution/queries/generate",
+            json=payload,
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["generated_count"] == 1
+        assert len(data["skipped_targets"]) == 1
+        assert data["skipped_targets"][0]["test_code"] == "SYSBP"
+
+
+@pytest.mark.asyncio
+async def test_bulk_query_generation_rbac_gating(signed_headers):
+    """
+    Verify role-based access control for bulk query generation.
+    """
+    payload = {
+        "study_id": "STUDY-QRBAC-TEST",
+        "reason_for_change": "Discrepancy review.",
+        "targets": [
+            {
+                "study_id": "STUDY-QRBAC-TEST",
+                "subject_id": "SUBJ-QRBAC-1",
+                "visit_id": "VISIT-1",
+                "domain": "VS",
+                "test_code": "SYSBP",
+                "explanation": "Will fail auth."
+            }
+        ]
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # Investigator (forbidden)
+        headers_inv = signed_headers(
+            user_id="INV-USER-QRBAC",
+            roles="Site Investigator",
+            change_reason="Discrepancy review.",
+            site_id="SITE-QRBAC-1",
+            study_id="STUDY-QRBAC-TEST",
+        )
+        resp = await client.post(
+            "/api/v1/execution/queries/generate",
+            json=payload,
+            headers=headers_inv,
+        )
+        assert resp.status_code == 403
+
+        # CRC (forbidden)
+        headers_crc = signed_headers(
+            user_id="CRC-USER-QRBAC",
+            roles="CRC",
+            change_reason="Discrepancy review.",
+            site_id="SITE-QRBAC-1",
+            study_id="STUDY-QRBAC-TEST",
+        )
+        resp = await client.post(
+            "/api/v1/execution/queries/generate",
+            json=payload,
+            headers=headers_crc,
+        )
+        assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_bulk_query_generation_input_validation(signed_headers):
+    """
+    Verify input validation (empty targets, blank reason) for query generation.
+    """
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # 1. Blank reason
+        payload_blank_reason = {
+            "study_id": "STUDY-QVAL-TEST",
+            "reason_for_change": "   ",
+            "targets": [
+                {
+                    "study_id": "STUDY-QVAL-TEST",
+                    "subject_id": "SUBJ-QVAL-1",
+                    "visit_id": "VISIT-1",
+                    "domain": "VS",
+                    "test_code": "SYSBP",
+                    "explanation": "Will fail."
+                }
+            ]
+        }
+        headers_blank_reason = signed_headers(
+            user_id="CRA-USER-QVAL",
+            roles="CRA",
+            change_reason="Valid reason.",
+            site_id="SITE-QVAL-1",
+            study_id="STUDY-QVAL-TEST",
+        )
+        # Note: X-Change-Reason in gateway signatures is validated before reaching route schemas,
+        # but the JSON body reason_for_change is what gets blank here.
+        resp = await client.post(
+            "/api/v1/execution/queries/generate",
+            json=payload_blank_reason,
+            headers=headers_blank_reason,
+        )
+        assert resp.status_code == 400
+
+        # 2. Empty targets list
+        payload_empty_targets = {
+            "study_id": "STUDY-QVAL-TEST",
+            "reason_for_change": "Valid reason.",
+            "targets": []
+        }
+        resp = await client.post(
+            "/api/v1/execution/queries/generate",
+            json=payload_empty_targets,
+            headers=headers_blank_reason,
         )
         assert resp.status_code == 400
 

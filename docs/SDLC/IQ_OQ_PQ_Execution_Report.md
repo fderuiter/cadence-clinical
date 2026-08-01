@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1885
-- **Passed:** 1885 🟢
+- **Total Automated Test Cases Run:** 1889
+- **Passed:** 1889 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -21,7 +21,7 @@ The Installation Qualification verifies that the software execution environment,
 
 ### 2.1 System Environment Metadata
 - **Operating System / Platform:** linux (containerized target specification)
-- **Python Version:** 3.12.12 (Docker execution environment baseline)
+- **Python Version:** 3.12.13 (Docker execution environment baseline)
 - **Database Provider (Execution Engine):** PostgreSQL / SQLite in-memory fallback
 - **Graph Database Provider (Designer Engine):** Neo4j (mocked in unit suite)
 - **Identity Management Gateway:** Keycloak OIDC Router
@@ -1660,6 +1660,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_map_vs` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_persist_sdtm_records_pipeline` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_to_dtc` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_bulk_query_generation_deduplication` | `tests.test_sdv` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_bulk_query_generation_happy_path` | `tests.test_sdv` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_bulk_query_generation_input_validation` | `tests.test_sdv` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_bulk_query_generation_rbac_gating` | `tests.test_sdv` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_bulk_sdv_signoff_batch_binding_mismatch` | `tests.test_sdv` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_bulk_sdv_signoff_happy_path` | `tests.test_sdv` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_bulk_sdv_signoff_input_validation` | `tests.test_sdv` | PRD-SYS-001 | 🟢 PASSED | < 1s |
