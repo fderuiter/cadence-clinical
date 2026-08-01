@@ -487,17 +487,18 @@ def pytest_sessionfinish(session, exitstatus):
 # Shared multi-service RBAC test harness fixtures
 # =========================================================================
 
-import httpx
-import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
+import pytest_asyncio
+
+from apps.designer.main import app as designer_app
 from apps.etmf.database import db_manager as etmf_db_manager
+from apps.etmf.main import app as etmf_app
 from apps.etmf.models import Base as ETMFBase
 from apps.execution.database.core import db_manager as exec_db_manager
 from apps.execution.database.models import Base as ExecBase
-from apps.designer.main import app as designer_app
 from apps.execution.main import app as exec_app
-from apps.etmf.main import app as etmf_app
 
 
 @pytest_asyncio.fixture
@@ -561,21 +562,27 @@ def mock_designer_driver():
 @pytest_asyncio.fixture
 async def execution_client():
     """Expose httpx.AsyncClient instance with ASGITransport for the execution app."""
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=exec_app), base_url="http://test") as client:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=exec_app), base_url="http://test"
+    ) as client:
         yield client
 
 
 @pytest_asyncio.fixture
 async def etmf_client():
     """Expose httpx.AsyncClient instance with ASGITransport for the etmf app."""
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=etmf_app), base_url="http://test") as client:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=etmf_app), base_url="http://test"
+    ) as client:
         yield client
 
 
 @pytest_asyncio.fixture
 async def designer_client(mock_designer_driver):
     """Expose httpx.AsyncClient instance with ASGITransport for the designer app (mocked Neo4j driver injected)."""
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=designer_app), base_url="http://test") as client:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=designer_app), base_url="http://test"
+    ) as client:
         yield client
 
 
@@ -587,15 +594,27 @@ def intercept_cross_service_calls():
     """
     original_send = httpx.AsyncClient.send
 
-    async def mock_send(self, request: httpx.Request, *args, **kwargs) -> httpx.Response:
+    async def mock_send(
+        self, request: httpx.Request, *args, **kwargs
+    ) -> httpx.Response:
         url_str = str(request.url)
         target_app = None
 
-        if "localhost:8002" in url_str or "api/v1/execution" in url_str or "api/v1/subjects" in url_str:
+        if (
+            "localhost:8002" in url_str
+            or "api/v1/execution" in url_str
+            or "api/v1/subjects" in url_str
+        ):
             target_app = exec_app
         elif "localhost:8003" in url_str or "api/v1/etmf" in url_str:
             target_app = etmf_app
-        elif "localhost:8001" in url_str or "api/v1/studies" in url_str or "api/v2/studies" in url_str or "api/v1/terminology" in url_str or "soa-projection" in url_str:
+        elif (
+            "localhost:8001" in url_str
+            or "api/v1/studies" in url_str
+            or "api/v2/studies" in url_str
+            or "api/v1/terminology" in url_str
+            or "soa-projection" in url_str
+        ):
             target_app = designer_app
 
         if target_app is not None:
@@ -619,6 +638,7 @@ def signed_headers():
     """
     import os
     import time
+
     from packages.security.signing import generate_gateway_signature
 
     def _factory(
@@ -634,7 +654,9 @@ def signed_headers():
         tamper_tenant_id: str | None = None,
     ) -> dict[str, str]:
         secret_env = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
-        secret_bytes = secret_env.encode("utf-8") if isinstance(secret_env, str) else secret_env
+        secret_bytes = (
+            secret_env.encode("utf-8") if isinstance(secret_env, str) else secret_env
+        )
         timestamp = str(time.time())
 
         # Support tamper mode: sign with tamper_tenant_id but send tenant_id in X-Tenant-Id
@@ -685,9 +707,10 @@ def capture_cross_service_calls():
     Fixture to patch httpx.AsyncClient.request to capture outbound requests,
     exposing them to the test, and providing a helper to replay them.
     """
-    import httpx
     import json as json_lib
     from unittest.mock import patch
+
+    import httpx
 
     class CrossServiceCallCapture:
         def __init__(self):
@@ -699,7 +722,9 @@ def capture_cross_service_calls():
         def clear(self):
             self.calls.clear()
 
-        async def replay(self, client: httpx.AsyncClient, captured_call: dict, **kwargs) -> httpx.Response:
+        async def replay(
+            self, client: httpx.AsyncClient, captured_call: dict, **kwargs
+        ) -> httpx.Response:
             method = captured_call.get("method", "GET")
             path = captured_call.get("path", "/")
             headers = dict(captured_call.get("headers", {}))
@@ -716,7 +741,7 @@ def capture_cross_service_calls():
                 headers=headers,
                 json=json_payload,
                 content=content,
-                **kwargs
+                **kwargs,
             )
 
     capture_obj = CrossServiceCallCapture()
@@ -730,6 +755,7 @@ def capture_cross_service_calls():
         body_val = kwargs.get("content") or kwargs.get("data")
 
         from httpx import URL
+
         parsed_url = URL(url)
         path = parsed_url.path
         if parsed_url.query:
@@ -751,13 +777,12 @@ def capture_cross_service_calls():
         resp_json = capture_obj.default_response_json
         resp_status = capture_obj.default_response_status
 
-        response = httpx.Response(
+        return httpx.Response(
             status_code=resp_status,
             content=json_lib.dumps(resp_json).encode("utf-8"),
             headers={"content-type": "application/json"},
-            request=httpx.Request(method, url)
+            request=httpx.Request(method, url),
         )
-        return response
 
     with patch.object(httpx.AsyncClient, "request", mock_request):
         yield capture_obj

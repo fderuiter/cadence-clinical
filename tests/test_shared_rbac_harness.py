@@ -1,17 +1,18 @@
-import pytest
-import httpx
 from unittest.mock import AsyncMock, MagicMock
+
+import httpx
+import pytest
+
 from tests.rbac_helpers import (
-    build_gateway_headers,
+    auditor,
+    cra,
+    data_manager,
+    external_monitor,
+    investigator,
     sponsor_admin,
     sponsor_designer,
-    data_manager,
-    cra,
-    crc,
-    investigator,
-    auditor,
-    external_monitor,
 )
+
 
 @pytest.mark.asyncio
 async def test_persona_builders_contain_correct_claims():
@@ -48,7 +49,9 @@ async def test_persona_builders_contain_correct_claims():
 
 
 @pytest.mark.asyncio
-async def test_shared_sqlite_dbs_and_clients(shared_sqlite_dbs, execution_client, etmf_client):
+async def test_shared_sqlite_dbs_and_clients(
+    shared_sqlite_dbs, execution_client, etmf_client
+):
     """
     Verify that the SQLite fixtures successfully setup in-memory databases and
     allow the execution and etmf clients to handle authenticated calls.
@@ -61,7 +64,9 @@ async def test_shared_sqlite_dbs_and_clients(shared_sqlite_dbs, execution_client
 
     # Access execution queries (which should be 200 for a data_manager, returning an empty list)
     dm_headers = data_manager()
-    resp_exec = await execution_client.get("/api/v1/execution/queries", headers=dm_headers)
+    resp_exec = await execution_client.get(
+        "/api/v1/execution/queries", headers=dm_headers
+    )
     assert resp_exec.status_code == 200
     assert isinstance(resp_exec.json(), list)
 
@@ -70,6 +75,7 @@ async def test_shared_sqlite_dbs_and_clients(shared_sqlite_dbs, execution_client
 async def test_mock_designer_driver(designer_client, mock_designer_driver):
     """Verify that mock_designer_driver fixture properly injects Neo4j mock and intercepts driver calls."""
     from apps.designer.main import app as designer_app
+
     assert designer_app.state.driver is not None
 
     # Setup database query mock results for create_study_arm to succeed (returning 201)
@@ -83,12 +89,19 @@ async def test_mock_designer_driver(designer_client, mock_designer_driver):
     create_res.single.return_value = create_record_mock
 
     # Configure our tx_mock run to return success for create study arm queries
-    mock_designer_driver._tx_mock.run.side_effect = [lock_res, duplicate_res, create_res]
+    mock_designer_driver._tx_mock.run.side_effect = [
+        lock_res,
+        duplicate_res,
+        create_res,
+    ]
 
     headers = sponsor_designer()
     res = await designer_client.post(
         "/api/v1/studies/study_harness/versions/v_draft/arms",
-        json={"id": "arm_harness", "properties": {"name": "Arm Harness", "type": "Active"}},
+        json={
+            "id": "arm_harness",
+            "properties": {"name": "Arm Harness", "type": "Active"},
+        },
         headers=headers,
     )
     assert res.status_code == 201
@@ -106,12 +119,16 @@ async def test_cross_service_interception(
     headers = auditor()
     async with httpx.AsyncClient() as client:
         # Outbound call targeting the local etmf service port/URL
-        resp = await client.get("http://localhost:8003/api/v1/etmf/audit-logs", headers=headers)
+        resp = await client.get(
+            "http://localhost:8003/api/v1/etmf/audit-logs", headers=headers
+        )
         assert resp.status_code == 200
         assert "items" in resp.json()
 
         # Outbound call targeting the execution service
         dm_headers = data_manager()
-        resp_exec = await client.get("http://localhost:8002/api/v1/execution/queries", headers=dm_headers)
+        resp_exec = await client.get(
+            "http://localhost:8002/api/v1/execution/queries", headers=dm_headers
+        )
         assert resp_exec.status_code == 200
         assert isinstance(resp_exec.json(), list)

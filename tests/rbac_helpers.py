@@ -1,5 +1,7 @@
 import time
+
 from apps.gateway.main import generate_signature
+
 
 def build_gateway_headers(
     user_id: str,
@@ -51,33 +53,41 @@ def build_gateway_headers(
         headers["X-Sig-Token"] = sig_token
     return headers
 
+
 def sponsor_admin(user_id: str = "test_sponsor_admin", **kwargs) -> dict:
     """Persona builder for sponsor_admin role."""
     return build_gateway_headers(user_id=user_id, roles="sponsor_admin", **kwargs)
+
 
 def sponsor_designer(user_id: str = "test_sponsor_designer", **kwargs) -> dict:
     """Persona builder for sponsor_designer role."""
     return build_gateway_headers(user_id=user_id, roles="sponsor_designer", **kwargs)
 
+
 def data_manager(user_id: str = "test_data_manager", **kwargs) -> dict:
     """Persona builder for data_manager role."""
     return build_gateway_headers(user_id=user_id, roles="sponsor_dm", **kwargs)
+
 
 def cra(user_id: str = "test_cra", **kwargs) -> dict:
     """Persona builder for cra role."""
     return build_gateway_headers(user_id=user_id, roles="cra", **kwargs)
 
+
 def crc(user_id: str = "test_crc", **kwargs) -> dict:
     """Persona builder for crc role."""
     return build_gateway_headers(user_id=user_id, roles="crc", **kwargs)
+
 
 def investigator(user_id: str = "test_investigator", **kwargs) -> dict:
     """Persona builder for investigator role."""
     return build_gateway_headers(user_id=user_id, roles="investigator", **kwargs)
 
+
 def auditor(user_id: str = "test_auditor", **kwargs) -> dict:
     """Persona builder for auditor role."""
     return build_gateway_headers(user_id=user_id, roles="auditor", **kwargs)
+
 
 def external_monitor(user_id: str = "test_external_monitor", **kwargs) -> dict:
     """Persona builder for external_monitor role."""
