@@ -259,6 +259,53 @@ def main() -> None:
                                     "apps/web/src/views/MdrView.vue",
                                     "apps/web/src/views/RulesView.vue",
                                 },
+                                {
+                                    "apps/etmf/main.py",
+                                    "apps/designer/main.py",
+                                },
+                                {
+                                    "packages/core-models/sdtm/models.py",
+                                    "packages/core-models/sdtm/sdtm_models.py",
+                                },
+                                {
+                                    "apps/tickets/notifications_client.py",
+                                    "apps/execution/notifications_client.py",
+                                },
+                                {
+                                    "apps/ctms/services/doa_service.py",
+                                    "apps/econsent/services/econsent_service.py",
+                                    "apps/notifications/workers/notification_worker.py",
+                                },
+                                {
+                                    "apps/interop/designer_client.py",
+                                    "apps/etmf/lock_client.py",
+                                    "apps/execution/designer_client.py",
+                                    "apps/execution/econsent_client.py",
+                                },
+                                {
+                                    "apps/safety/processor.py",
+                                    "apps/safety/main.py",
+                                },
+                                {
+                                    "apps/execution/main.py",
+                                    "apps/execution/routers/sdv.py",
+                                },
+                                {
+                                    "apps/execution/biostat/deid.py",
+                                    "apps/execution/services/deident_scrubber.py",
+                                },
+                                {
+                                    "apps/eisf/main.py",
+                                    "apps/eisf/routers/eisf.py",
+                                },
+                                {
+                                    "apps/web/src/components/SignatureCaptureModal.vue",
+                                    "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+                                },
+                                {
+                                    "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+                                    "apps/web/src/components/clinical/ClinicalInput.vue",
+                                },
                             ]
                         ):
                             continue

@@ -41,4 +41,3 @@ Chosen option: Option A because it completely eliminates environment drift, fulf
 
 * Target files/packages modified: `pyproject.toml`, `package.json`, `Makefile`, `.python-version`, `.github/workflows/ci.yml`, `.github/workflows/project-automation.yml`, `docker/Dockerfile`.
 * Verification tests added or updated under `tests/validation/environment_integrity_tests.py` to assert a minimum Python runtime version of `>= (3, 12)`.
-

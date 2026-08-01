@@ -178,6 +178,179 @@
         }
       }
     },
+    "/api/v1/execution/signatures/quiz-result": {
+      "post": {
+        "tags": [
+          "Signatures"
+        ],
+        "summary": "Seed Quiz Result Endpoint",
+        "operationId": "seed_quiz_result_endpoint_api_v1_execution_signatures_quiz_result_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuizResultRequestPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizResultResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/signatures/process-econsent": {
+      "post": {
+        "tags": [
+          "Signatures"
+        ],
+        "summary": "Process Econsent Endpoint",
+        "operationId": "process_econsent_endpoint_api_v1_execution_signatures_process_econsent_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EConsentSignRequestPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EConsentSignResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/signatures/capture": {
+      "post": {
+        "tags": [
+          "Signatures"
+        ],
+        "summary": "Capture Signature Endpoint",
+        "operationId": "capture_signature_endpoint_api_v1_execution_signatures_capture_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowCaptureRequestPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentSignatureResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/signatures/form-records": {
+      "get": {
+        "tags": [
+          "Signatures"
+        ],
+        "summary": "Get Form Records Endpoint",
+        "operationId": "get_form_records_endpoint_api_v1_execution_signatures_form_records_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConsentFormRecordResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Get Form Records Endpoint Api V1 Execution Signatures Form Records Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/signatures/consent-signatures": {
+      "get": {
+        "tags": [
+          "Signatures"
+        ],
+        "summary": "Get Consent Signatures Endpoint",
+        "operationId": "get_consent_signatures_endpoint_api_v1_execution_signatures_consent_signatures_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConsentSignatureResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Get Consent Signatures Endpoint Api V1 Execution Signatures Consent Signatures Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/amendments/publish": {
       "post": {
         "tags": [
@@ -5433,6 +5606,10 @@
             "type": "string",
             "title": "Delegation Id"
           },
+          "pi_user_id": {
+            "type": "string",
+            "title": "Pi User Id"
+          },
           "password": {
             "type": "string",
             "title": "Password"
@@ -5447,17 +5624,13 @@
               }
             ],
             "title": "Totp Code"
-          },
-          "pi_user_id": {
-            "type": "string",
-            "title": "Pi User Id"
           }
         },
         "type": "object",
         "required": [
           "delegation_id",
-          "password",
-          "pi_user_id"
+          "pi_user_id",
+          "password"
         ],
         "title": "ApproveDelegationRequest"
       },
@@ -5467,6 +5640,10 @@
             "type": "string",
             "title": "Delegation Id"
           },
+          "pi_user_id": {
+            "type": "string",
+            "title": "Pi User Id"
+          },
           "signature_hash": {
             "type": "string",
             "title": "Signature Hash"
@@ -5474,18 +5651,14 @@
           "reason_for_change": {
             "type": "string",
             "title": "Reason For Change"
-          },
-          "pi_user_id": {
-            "type": "string",
-            "title": "Pi User Id"
           }
         },
         "type": "object",
         "required": [
           "delegation_id",
+          "pi_user_id",
           "signature_hash",
-          "reason_for_change",
-          "pi_user_id"
+          "reason_for_change"
         ],
         "title": "ApproveTaskDelegationRequest"
       },
@@ -6517,6 +6690,139 @@
         ],
         "title": "CodingAssignmentResponse"
       },
+      "ConsentFormRecordResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "icf_version_id": {
+            "type": "string",
+            "title": "Icf Version Id"
+          },
+          "printed_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Printed Name"
+          },
+          "relationship_to_subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relationship To Subject"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "is_verified": {
+            "type": "boolean",
+            "title": "Is Verified"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "subject_id",
+          "icf_version_id",
+          "status",
+          "is_verified"
+        ],
+        "title": "ConsentFormRecordResponse"
+      },
+      "ConsentSignatureResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "icf_version_id": {
+            "type": "string",
+            "title": "Icf Version Id"
+          },
+          "printed_name": {
+            "type": "string",
+            "title": "Printed Name"
+          },
+          "signature_svg": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Svg"
+          },
+          "verification_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Hash"
+          },
+          "signed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signed At"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "subject_id",
+          "icf_version_id",
+          "printed_name",
+          "status"
+        ],
+        "title": "ConsentSignatureResponse"
+      },
       "CriterionLevelResult": {
         "properties": {
           "criterion_id": {
@@ -6681,8 +6987,37 @@
         "description": "Delegation of Authority (DOA) site personnel assignment log record.\n\nRequirements: PRD-SYS-001"
       },
       "DOAAuditLogResponse": {
-        "properties": {},
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "details": {
+            "type": "string",
+            "title": "Details"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          }
+        },
         "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "action",
+          "details",
+          "timestamp"
+        ],
         "title": "DOAAuditLogResponse"
       },
       "DOADelegationRecordResponse": {
@@ -6690,11 +7025,81 @@
           "id": {
             "type": "string",
             "title": "Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "staff_user_id": {
+            "type": "string",
+            "title": "Staff User Id"
+          },
+          "task_code": {
+            "type": "string",
+            "title": "Task Code"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "pi_user_id": {
+            "type": "string",
+            "title": "Pi User Id"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "pi_approved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pi Approved At"
+          },
+          "pi_signature_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pi Signature Hash"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
           }
         },
         "type": "object",
         "required": [
-          "id"
+          "id",
+          "site_id",
+          "staff_user_id",
+          "task_code",
+          "status",
+          "pi_user_id",
+          "reason_for_change",
+          "is_active"
         ],
         "title": "DOADelegationRecordResponse"
       },
@@ -7162,6 +7567,78 @@
         ],
         "title": "DocumentUploadResponse",
         "description": "Schema representing upload response.\n\nRequirements: PRD-SYS-001"
+      },
+      "EConsentSignRequestPayload": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "icf_version_id": {
+            "type": "string",
+            "title": "Icf Version Id"
+          },
+          "printed_name": {
+            "type": "string",
+            "title": "Printed Name"
+          },
+          "relationship_to_subject": {
+            "type": "string",
+            "title": "Relationship To Subject"
+          },
+          "signature_svg": {
+            "type": "string",
+            "title": "Signature Svg"
+          },
+          "otp_auth_code": {
+            "type": "string",
+            "title": "Otp Auth Code"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_id",
+          "icf_version_id",
+          "printed_name",
+          "relationship_to_subject",
+          "signature_svg",
+          "otp_auth_code",
+          "reason_for_change"
+        ],
+        "title": "EConsentSignRequestPayload"
+      },
+      "EConsentSignResponsePayload": {
+        "properties": {
+          "consent_record_id": {
+            "type": "string",
+            "title": "Consent Record Id"
+          },
+          "signed_pdf_url": {
+            "type": "string",
+            "title": "Signed Pdf Url"
+          },
+          "signature_timestamp_utc": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Signature Timestamp Utc"
+          },
+          "verification_hash": {
+            "type": "string",
+            "title": "Verification Hash"
+          }
+        },
+        "type": "object",
+        "required": [
+          "consent_record_id",
+          "signed_pdf_url",
+          "signature_timestamp_utc",
+          "verification_hash"
+        ],
+        "title": "EConsentSignResponsePayload"
       },
       "EISFDocumentRecord": {
         "properties": {
@@ -9870,6 +10347,67 @@
         "title": "QueryUpdate",
         "description": "Pydantic schema for general state transitions."
       },
+      "QuizResultRequestPayload": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "icf_version_id": {
+            "type": "string",
+            "title": "Icf Version Id"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_id",
+          "icf_version_id",
+          "score",
+          "passed"
+        ],
+        "title": "QuizResultRequestPayload"
+      },
+      "QuizResultResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "icf_version_id": {
+            "type": "string",
+            "title": "Icf Version Id"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "subject_id",
+          "icf_version_id",
+          "score",
+          "passed"
+        ],
+        "title": "QuizResultResponse"
+      },
       "RedactPDFRequest": {
         "properties": {
           "pdf_base64": {
@@ -10196,13 +10734,13 @@
       },
       "SiteStaffMemberRequest": {
         "properties": {
-          "staff_user_id": {
-            "type": "string",
-            "title": "Staff User Id"
-          },
           "site_id": {
             "type": "string",
             "title": "Site Id"
+          },
+          "staff_user_id": {
+            "type": "string",
+            "title": "Staff User Id"
           },
           "name": {
             "type": "string",
@@ -10219,8 +10757,8 @@
         },
         "type": "object",
         "required": [
-          "staff_user_id",
           "site_id",
+          "staff_user_id",
           "name",
           "email",
           "has_gcp_training"
@@ -10228,8 +10766,36 @@
         "title": "SiteStaffMemberRequest"
       },
       "SiteStaffMemberResponse": {
-        "properties": {},
+        "properties": {
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "staff_user_id": {
+            "type": "string",
+            "title": "Staff User Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "has_gcp_training": {
+            "type": "boolean",
+            "title": "Has Gcp Training"
+          }
+        },
         "type": "object",
+        "required": [
+          "site_id",
+          "staff_user_id",
+          "name",
+          "email",
+          "has_gcp_training"
+        ],
         "title": "SiteStaffMemberResponse"
       },
       "StudyEvent": {
@@ -11853,6 +12419,39 @@
           "score"
         ],
         "title": "WHODrugMatch"
+      },
+      "WorkflowCaptureRequestPayload": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "icf_version_id": {
+            "type": "string",
+            "title": "Icf Version Id"
+          },
+          "printed_name": {
+            "type": "string",
+            "title": "Printed Name"
+          },
+          "signature_svg": {
+            "type": "string",
+            "title": "Signature Svg"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_id",
+          "icf_version_id",
+          "printed_name",
+          "signature_svg",
+          "reason_for_change"
+        ],
+        "title": "WorkflowCaptureRequestPayload"
       }
     }
   }

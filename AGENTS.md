@@ -108,6 +108,17 @@ exclusion is global.**
 
 ---
 
+### REST API-First Architecture & Microservice Decoupling
+
+To ensure proper GxP boundaries and architectural decoupling across the Cadence Clinical Platform, agents must adhere strictly to the following standards for all inter-service communications:
+
+1. **No Sibling Database Imports:** Sibling database imports (of models, schemas, or session helpers) across distinct microservice boundary paths (e.g., CTMS importing execution database models) are strictly prohibited.
+2. **REST Endpoints for Cross-App Operations:** All inter-service communications, state changes, and validations must be routed through secure, performance-optimized, and well-typed REST endpoints exposed by the owning microservice (e.g., `/api/v1/execution/doa/*`).
+3. **Gateway Token Authentication:** Every cross-service HTTP client request must be authenticated using internal gateway signatures and tokens generated via `generate_gateway_signature(...)` from `packages.security.signing` to pass `GatewayAuthMiddleware` checks.
+4. **SLA Enforcements:** High-performance, low-latency asynchronous connection pooling via `httpx.AsyncClient` must be maintained to adhere to our strict **100ms internal SLA.**
+
+---
+
 ## GxP Compliance Sync Protocol
 
 The CI `compliance` job regenerates the RTM docs and diffs them against the
