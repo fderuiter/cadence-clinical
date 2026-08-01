@@ -168,6 +168,7 @@ databases_pre_created = False
 # Create worker isolated databases and perform patching if PostgreSQL is available
 try:
     from filelock import FileLock
+
     lock_path = "/tmp/postgres_db_creation.lock"
     with FileLock(lock_path, timeout=120):
         run_sync(create_databases_async(worker_suffix))

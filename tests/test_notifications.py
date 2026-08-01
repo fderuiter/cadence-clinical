@@ -160,6 +160,7 @@ async def test_notification_creation_and_auditing():
         await poll_and_dispatch()
         # Allow async task processing robustly
         from apps.notifications.main import active_tasks
+
         if active_tasks:
             await asyncio.gather(*list(active_tasks), return_exceptions=True)
 
@@ -453,6 +454,7 @@ async def test_email_delivery_channel_success():
         await poll_and_dispatch()
         # Wait up to 8 seconds for the background task to update the status to SUCCESS
         from apps.notifications.main import active_tasks
+
         if active_tasks:
             await asyncio.gather(*list(active_tasks), return_exceptions=True)
 
@@ -515,6 +517,7 @@ async def test_webhook_delivery_channel_success():
         await poll_and_dispatch()
         # Wait up to 8 seconds for the background task to update the status to SUCCESS
         from apps.notifications.main import active_tasks
+
         if active_tasks:
             await asyncio.gather(*list(active_tasks), return_exceptions=True)
 
@@ -567,6 +570,7 @@ async def test_webhook_delivery_channel_failure_and_retry_backoff():
     with patch("httpx.AsyncClient", side_effect=Exception("Connection timed out")):
         await poll_and_dispatch()
         from apps.notifications.main import active_tasks
+
         if active_tasks:
             await asyncio.gather(*list(active_tasks), return_exceptions=True)
 
@@ -590,6 +594,7 @@ async def test_webhook_delivery_channel_failure_and_retry_backoff():
     with patch("httpx.AsyncClient", side_effect=Exception("Temporary server error")):
         await poll_and_dispatch()
         from apps.notifications.main import active_tasks
+
         if active_tasks:
             await asyncio.gather(*list(active_tasks), return_exceptions=True)
 
@@ -613,6 +618,7 @@ async def test_webhook_delivery_channel_failure_and_retry_backoff():
     with patch("httpx.AsyncClient", side_effect=Exception("Terminal failure")):
         await poll_and_dispatch()
         from apps.notifications.main import active_tasks
+
         if active_tasks:
             await asyncio.gather(*list(active_tasks), return_exceptions=True)
 
@@ -665,6 +671,7 @@ async def test_email_delivery_channel_failure_and_exhaustion():
 
         # Robustly wait for first attempt to complete
         from apps.notifications.main import active_tasks
+
         if active_tasks:
             await asyncio.gather(*list(active_tasks), return_exceptions=True)
 
@@ -690,6 +697,7 @@ async def test_email_delivery_channel_failure_and_exhaustion():
 
         # Robustly wait for final attempt to complete
         from apps.notifications.main import active_tasks
+
         if active_tasks:
             await asyncio.gather(*list(active_tasks), return_exceptions=True)
 
@@ -759,6 +767,7 @@ async def test_multi_channel_edge_case_in_app_succeeds_email_exhausts():
 
         # Robustly wait for the first dispatch to complete
         from apps.notifications.main import active_tasks
+
         if active_tasks:
             await asyncio.gather(*list(active_tasks), return_exceptions=True)
 
@@ -780,6 +789,7 @@ async def test_multi_channel_edge_case_in_app_succeeds_email_exhausts():
 
         # Robustly wait for the second dispatch to complete
         from apps.notifications.main import active_tasks
+
         if active_tasks:
             await asyncio.gather(*list(active_tasks), return_exceptions=True)
 
