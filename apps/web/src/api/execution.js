@@ -20,6 +20,21 @@ export const executionService = {
   },
 
   /**
+   * Lists real-time lab alerts matching filters.
+   */
+  listLabAlerts(params = {}, options = {}) {
+    const query = new URLSearchParams();
+    if (params.study_id) query.append("study_id", params.study_id);
+    if (params.subject_id) query.append("subject_id", params.subject_id);
+    if (params.test_code) query.append("test_code", params.test_code);
+    const queryString = query.toString();
+    const path = queryString
+      ? `/api/v1/execution/lab-alerts?${queryString}`
+      : "/api/v1/execution/lab-alerts";
+    return apiClient.get(path, options);
+  },
+
+  /**
    * Retrieves detail for a single clinical query.
    */
   getQuery(queryId, options = {}) {
