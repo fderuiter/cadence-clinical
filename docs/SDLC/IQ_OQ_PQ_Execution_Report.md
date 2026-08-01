@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1885
-- **Passed:** 1885 🟢
+- **Total Automated Test Cases Run:** 1888
+- **Passed:** 1888 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -21,7 +21,7 @@ The Installation Qualification verifies that the software execution environment,
 
 ### 2.1 System Environment Metadata
 - **Operating System / Platform:** linux (containerized target specification)
-- **Python Version:** 3.12.12 (Docker execution environment baseline)
+- **Python Version:** 3.12.13 (Docker execution environment baseline)
 - **Database Provider (Execution Engine):** PostgreSQL / SQLite in-memory fallback
 - **Graph Database Provider (Designer Engine):** Neo4j (mocked in unit suite)
 - **Identity Management Gateway:** Keycloak OIDC Router
@@ -1106,6 +1106,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_unmapped_fields_preservation` | `tests.test_inverse_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unsupported_rule_expression_raises_value_error` | `tests.test_inverse_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_master_migrations` | `tests.test_lab_master_migrations` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_lab_reference_range_migration_upgrade_and_idempotency` | `tests.test_lab_master_migrations` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_test_master_crud_and_audit` | `tests.test_lab_master_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_lab_unit_conversion_crud_and_audit` | `tests.test_lab_master_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_get_active_lab_ranges_helper` | `tests.test_lab_range_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1124,6 +1125,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_deterministic_ties` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_evaluate_lab_value_all_indicators` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_is_deleted_filtering` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_lab_reference_range_synonyms_and_audit` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_no_matching_rule_behavior` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normal_boundaries_and_inclusion` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sex_and_all_fallback` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1149,6 +1151,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_range_recalculation_unauthorized_role` | `tests.test_lab_ranges_recalculate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_observation_extended_fields` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_audit_and_triggers` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
+| `test_lab_reference_range_audit_quartet_persistence` | `tests.test_lab_reference_range_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_crud_and_precision` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_schema_evolution_migration_upgrade` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001, PRD-QRY-005 | 🟢 PASSED | < 1s |
 | `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |

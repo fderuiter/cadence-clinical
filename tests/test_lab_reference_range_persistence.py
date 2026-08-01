@@ -96,6 +96,76 @@ async def test_lab_reference_range_crud_and_precision():
         assert saved_range.version == 1
         assert saved_range.is_deleted is False
 
+        # Assert GxP audit fields on LabReferenceRange
+        # Assert created_at populates from server default, and version_index defaults to 1 on insert
+        assert saved_range.created_at is not None
+        assert saved_range.version_index == 1
+        assert saved_range.created_by is None
+        assert saved_range.reason_for_change is None
+
+
+@pytest.mark.asyncio
+async def test_lab_reference_range_audit_quartet_persistence():
+    """
+    Confirm the audit quartet persists and updates correctly on the reference range model.
+    """
+    range_id = None
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        lab_range = LabReferenceRange(
+            study_id="STUDY-XYZ-AUDIT",
+            test_code="ALT",
+            test_name="Alanine Aminotransferase",
+            source="LOCAL",
+            site_id="SITE-01",
+            unit="U/L",
+            normalized_unit="U/L",
+            sex_applicability="M",
+            age_low=18.0,
+            age_high=100.0,
+            low_bound=10.0,
+            high_bound=50.0,
+            created_by="auditor_user",
+            reason_for_change="Establishing ALT range",
+            version_index=2,
+        )
+        session.add(lab_range)
+        await session.flush()
+        range_id = lab_range.id
+
+    async with db_manager.get_session_maker()() as session:
+        result = await session.execute(
+            select(LabReferenceRange).where(LabReferenceRange.id == range_id)
+        )
+        saved = result.scalar_one()
+        assert saved.created_at is not None
+        assert saved.created_by == "auditor_user"
+        assert saved.reason_for_change == "Establishing ALT range"
+        assert saved.version_index == 2
+
+    # Update and assert they persist/update
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        result = await session.execute(
+            select(LabReferenceRange).where(LabReferenceRange.id == range_id)
+        )
+        saved = result.scalar_one()
+        saved.reason_for_change = "Updated bounds"
+        saved.version_index = 3
+
+    async with db_manager.get_session_maker()() as session:
+        result = await session.execute(
+            select(LabReferenceRange).where(LabReferenceRange.id == range_id)
+        )
+        updated = result.scalar_one()
+        assert updated.created_by == "auditor_user"  # Persists on update
+        assert updated.reason_for_change == "Updated bounds"
+        assert updated.version_index == 3
+
 
 @pytest.mark.asyncio
 async def test_lab_reference_range_audit_and_triggers():
