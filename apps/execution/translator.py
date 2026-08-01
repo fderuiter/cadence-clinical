@@ -93,6 +93,64 @@ def extract_appearance(item: dict[str, Any]) -> str | None:
     return None
 
 
+def extract_relevant_expression(item: dict[str, Any]) -> str | None:
+    """Extract and compile skip_logic rules on a USDM item into an XPath relevant expression.
+
+    Args:
+        item (dict[str, Any]): The USDM study item definition dictionary.
+
+    Returns:
+        str | None: The compiled XPath expression, or None if no relevant rules exist.
+    """
+    relevants = []
+    item_rules = item.get("rules", [])
+    for r in item_rules:
+        r_type = r.get("type")
+        if r_type != "skip_logic":
+            continue
+        condition = r.get("condition")
+        if not condition:
+            continue
+        compiled_xpath = compile_condition_to_xpath(condition)
+        if not compiled_xpath:
+            continue
+        action = r.get("action", "show")
+        expr = f"not({compiled_xpath})" if action == "hide" else compiled_xpath
+        relevants.append(expr)
+
+    if not relevants:
+        return None
+    return " and ".join(f"({r})" if len(relevants) > 1 else r for r in relevants)
+
+
+def extract_constraint_expression(item: dict[str, Any]) -> str | None:
+    """Extract and compile constraint rules on a USDM item into an XPath constraint expression.
+
+    Args:
+        item (dict[str, Any]): The USDM study item definition dictionary.
+
+    Returns:
+        str | None: The compiled XPath expression, or None if no constraint rules exist.
+    """
+    constraints = []
+    item_rules = item.get("rules", [])
+    for r in item_rules:
+        r_type = r.get("type")
+        if r_type != "constraint":
+            continue
+        condition = r.get("condition")
+        if not condition:
+            continue
+        compiled_xpath = compile_condition_to_xpath(condition)
+        if not compiled_xpath:
+            continue
+        constraints.append(compiled_xpath)
+
+    if not constraints:
+        return None
+    return " and ".join(f"({c})" if len(constraints) > 1 else c for c in constraints)
+
+
 def compile_condition_to_xpath(node: Any) -> str:
     """Recursively compiles a structured rule condition (dict or ExpressionNode) into an XPath expression string.
 
@@ -416,50 +474,18 @@ async def process_translation(
                             appearance = extract_appearance(item)
 
                             # Parse and compile rules
-                            relevants = []
-                            constraints = []
+                            relevant_expr = extract_relevant_expression(item)
+                            constraint_expr = extract_constraint_expression(item)
+
                             constraint_messages = []
                             item_rules = item.get("rules", [])
                             for r in item_rules:
                                 r_type = r.get("type")
-                                condition = r.get("condition")
-                                if not condition:
-                                    continue
-
-                                compiled_xpath = compile_condition_to_xpath(condition)
-                                if not compiled_xpath:
-                                    continue
-
-                                if r_type == "skip_logic":
-                                    action = r.get("action", "show")
-                                    if action == "hide":
-                                        expr = f"not({compiled_xpath})"
-                                    else:
-                                        expr = compiled_xpath
-                                    relevants.append(expr)
-
-                                elif r_type == "constraint":
-                                    constraints.append(compiled_xpath)
+                                if r_type == "constraint":
                                     msg = r.get("query_message")
                                     if msg:
                                         constraint_messages.append(msg)
 
-                            relevant_expr = (
-                                " and ".join(
-                                    f"({r})" if len(relevants) > 1 else r
-                                    for r in relevants
-                                )
-                                if relevants
-                                else None
-                            )
-                            constraint_expr = (
-                                " and ".join(
-                                    f"({c})" if len(constraints) > 1 else c
-                                    for c in constraints
-                                )
-                                if constraints
-                                else None
-                            )
                             constraint_msg = (
                                 "; ".join(constraint_messages)
                                 if constraint_messages

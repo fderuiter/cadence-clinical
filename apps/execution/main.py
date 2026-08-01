@@ -3043,101 +3043,22 @@ async def get_meddra_code(
 
     Phase 17 / Epic #109 dictionary lookup endpoint.
     """
-    from apps.execution.coding import search_dictionary
+    from apps.execution.coding.service import search_dictionary
+
+    if not term or not term.strip():
+        raise HTTPException(status_code=400, detail="Term must be a non-empty string.")
 
     async with db_manager.get_session_maker()() as session:
-        res = await search_dictionary(
-            session=session,
-            term=term,
-            dictionary_type="MEDDRA",
-            version=version,
-            target_level=target_level.value if target_level else None,
-        )
-
-        matches = []
-        if res.get("match"):
-            parent_match = res["match"]
-            score = parent_match.get("score", 0.0)
-            if parent_match.get("hierarchies"):
-                for h in parent_match.get("hierarchies", []):
-                    matches.append(
-                        MedDRACodeMatch(
-                            llt_code=h.get("llt_code") or "",
-                            llt_name=h.get("llt_name") or "",
-                            pt_code=h.get("pt_code") or "",
-                            pt_name=h.get("pt_name") or "",
-                            hlt_code=h.get("hlt_code") or "",
-                            hlt_name=h.get("hlt_name") or "",
-                            hlgt_code=h.get("hlgt_code") or "",
-                            hlgt_name=h.get("hlgt_name") or "",
-                            soc_code=h.get("soc_code") or "",
-                            soc_name=h.get("soc_name") or "",
-                            primary_soc_flag=h.get("primary_soc_flag"),
-                            score=score,
-                        )
-                    )
-            else:
-                is_llt = parent_match.get("level") == "LLT"
-                matches.append(
-                    MedDRACodeMatch(
-                        llt_code=parent_match.get("code") if is_llt else "",
-                        llt_name=parent_match.get("term_name") if is_llt else "",
-                        pt_code=parent_match.get("code") if not is_llt else "",
-                        pt_name=parent_match.get("term_name") if not is_llt else "",
-                        hlt_code="",
-                        hlt_name="",
-                        hlgt_code="",
-                        hlgt_name="",
-                        soc_code="",
-                        soc_name="",
-                        primary_soc_flag=None,
-                        score=score,
-                    )
-                )
-        elif res.get("suggestions"):
-            for sug in res["suggestions"]:
-                score = sug.get("score", 0.0)
-                if sug.get("hierarchies"):
-                    for h in sug.get("hierarchies", []):
-                        matches.append(
-                            MedDRACodeMatch(
-                                llt_code=h.get("llt_code") or "",
-                                llt_name=h.get("llt_name") or "",
-                                pt_code=h.get("pt_code") or "",
-                                pt_name=h.get("pt_name") or "",
-                                hlt_code=h.get("hlt_code") or "",
-                                hlt_name=h.get("hlt_name") or "",
-                                hlgt_code=h.get("hlgt_code") or "",
-                                hlgt_name=h.get("hlgt_name") or "",
-                                soc_code=h.get("soc_code") or "",
-                                soc_name=h.get("soc_name") or "",
-                                primary_soc_flag=h.get("primary_soc_flag"),
-                                score=score,
-                            )
-                        )
-                else:
-                    is_llt = sug.get("level") == "LLT"
-                    matches.append(
-                        MedDRACodeMatch(
-                            llt_code=sug.get("code") if is_llt else "",
-                            llt_name=sug.get("term_name") if is_llt else "",
-                            pt_code=sug.get("code") if not is_llt else "",
-                            pt_name=sug.get("term_name") if not is_llt else "",
-                            hlt_code="",
-                            hlt_name="",
-                            hlgt_code="",
-                            hlgt_name="",
-                            soc_code="",
-                            soc_name="",
-                            primary_soc_flag=None,
-                            score=score,
-                        )
-                    )
-
-        return MedDRACodingResult(
-            status=res.get("status", "UNCODABLE"),
-            matches=matches,
-        )
+        try:
+            return await search_dictionary(
+                session=session,
+                term=term,
+                dictionary_type="MEDDRA",
+                version=version,
+                target_level=target_level.value if target_level else None,
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.get("/api/v1/dictionaries/whodrug/code", response_model=WHODrugCodingResult)
@@ -3150,70 +3071,21 @@ async def get_whodrug_code(
 
     Phase 17 / Epic #109 drug dictionary lookup endpoint.
     """
-    from apps.execution.coding import search_dictionary
+    from apps.execution.coding.service import search_dictionary
+
+    if not term or not term.strip():
+        raise HTTPException(status_code=400, detail="Term must be a non-empty string.")
 
     async with db_manager.get_session_maker()() as session:
-        res = await search_dictionary(
-            session=session,
-            term=term,
-            dictionary_type="WHODRUG",
-            version=version,
-        )
-
-        matches = []
-        if res.get("match"):
-            m = res["match"]
-            matches.append(
-                WHODrugCodeMatch(
-                    drug_code=m.get("drug_code") or "",
-                    preferred_name=m.get("preferred_name") or "",
-                    drug_name=m.get("drug_name"),
-                    score=m.get("score", 0.0),
-                    atc_context=[
-                        WHODrugATCContext(
-                            atc_code=a.get("atc_code") or "",
-                            description=a.get("description") or "",
-                        )
-                        for a in m.get("atc_context", [])
-                    ],
-                    ingredients=[
-                        WHODrugIngredientItem(
-                            ingredient_code=i.get("ingredient_code") or "",
-                            ingredient_name=i.get("ingredient_name") or "",
-                        )
-                        for i in m.get("ingredients", [])
-                    ],
-                )
+        try:
+            return await search_dictionary(
+                session=session,
+                term=term,
+                dictionary_type="WHODRUG",
+                version=version,
             )
-        elif res.get("suggestions"):
-            for sug in res["suggestions"]:
-                matches.append(
-                    WHODrugCodeMatch(
-                        drug_code=sug.get("drug_code") or "",
-                        preferred_name=sug.get("preferred_name") or "",
-                        drug_name=sug.get("drug_name"),
-                        score=sug.get("score", 0.0),
-                        atc_context=[
-                            WHODrugATCContext(
-                                atc_code=a.get("atc_code") or "",
-                                description=a.get("description") or "",
-                            )
-                            for a in sug.get("atc_context", [])
-                        ],
-                        ingredients=[
-                            WHODrugIngredientItem(
-                                ingredient_code=i.get("ingredient_code") or "",
-                                ingredient_name=i.get("ingredient_name") or "",
-                            )
-                            for i in sug.get("ingredients", [])
-                        ],
-                    )
-                )
-
-        return WHODrugCodingResult(
-            status=res.get("status", "UNCODABLE"),
-            matches=matches,
-        )
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.post(
@@ -5528,6 +5400,7 @@ async def list_coding_assignments(
     """Lists and filters medical coding assignments."""
     from apps.execution.coding import (
         list_coding_assignments as list_assignments_service,
+        map_assignment_to_response,
     )
 
     async with db_manager.get_session_maker()() as session:
@@ -5538,29 +5411,7 @@ async def list_coding_assignments(
             verbatim_text=verbatim_text,
             dictionary_type=dictionary_type,
         )
-        return [
-            CodingAssignmentResponse(
-                id=a.id,
-                verbatim_text=a.verbatim_text,
-                source_field=a.source_field,
-                observation_id=a.observation_id,
-                dictionary_type=a.dictionary_type.value,
-                dictionary_version=a.dictionary_version,
-                coded_code=a.coded_code,
-                coded_term=a.coded_term,
-                status=a.status.value,
-                recoding_status=a.recoding_status.value,
-                assigned_by=a.assigned_by,
-                assigned_at=a.assigned_at,
-                score=a.score,
-                hierarchy=a.hierarchy,
-                suggestions=a.suggestions,
-                domain=a.domain,
-                version=a.version,
-                is_deleted=a.is_deleted,
-            )
-            for a in assignments
-        ]
+        return [map_assignment_to_response(a) for a in assignments]
 
 
 @app.get(
@@ -5572,30 +5423,14 @@ async def get_coding_assignment(
     roles: list[str] = Depends(get_normalized_roles),
 ) -> CodingAssignmentResponse:
     """Retrieves a single medical coding assignment by ID."""
-    from apps.execution.coding import get_coding_assignment as get_assignment_service
+    from apps.execution.coding import (
+        get_coding_assignment as get_assignment_service,
+        map_assignment_to_response,
+    )
 
     async with db_manager.get_session_maker()() as session:
         a = await get_assignment_service(session=session, assignment_id=assignment_id)
-        return CodingAssignmentResponse(
-            id=a.id,
-            verbatim_text=a.verbatim_text,
-            source_field=a.source_field,
-            observation_id=a.observation_id,
-            dictionary_type=a.dictionary_type.value,
-            dictionary_version=a.dictionary_version,
-            coded_code=a.coded_code,
-            coded_term=a.coded_term,
-            status=a.status.value,
-            recoding_status=a.recoding_status.value,
-            assigned_by=a.assigned_by,
-            assigned_at=a.assigned_at,
-            score=a.score,
-            hierarchy=a.hierarchy,
-            suggestions=a.suggestions,
-            domain=a.domain,
-            version=a.version,
-            is_deleted=a.is_deleted,
-        )
+        return map_assignment_to_response(a)
 
 
 @app.post(
@@ -5609,41 +5444,28 @@ async def process_coding_action(
     roles: list[str] = Depends(require_roles("data manager")),
 ) -> CodingAssignmentResponse:
     """Accepts a suggestion or submits a manual override, persisting results and updating the ledger."""
-    from apps.execution.coding import process_coding_action as process_action_service
+    from apps.execution.coding import (
+        map_assignment_to_response,
+        process_coding_action as process_action_service,
+    )
 
     actor = current_user_id.get() or "system"
     async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            as_db = await process_action_service(
-                session=session,
-                assignment_id=assignment_id,
-                action=payload.action,
-                code=payload.code,
-                term=payload.term,
-                suggestion_index=payload.suggestion_index,
-                reason_for_change=payload.reason_for_change,
-                actor=actor,
-            )
-        return CodingAssignmentResponse(
-            id=as_db.id,
-            verbatim_text=as_db.verbatim_text,
-            source_field=as_db.source_field,
-            observation_id=as_db.observation_id,
-            dictionary_type=as_db.dictionary_type.value,
-            dictionary_version=as_db.dictionary_version,
-            coded_code=as_db.coded_code,
-            coded_term=as_db.coded_term,
-            status=as_db.status.value,
-            recoding_status=as_db.recoding_status.value,
-            assigned_by=as_db.assigned_by,
-            assigned_at=as_db.assigned_at,
-            score=as_db.score,
-            hierarchy=as_db.hierarchy,
-            suggestions=as_db.suggestions,
-            domain=as_db.domain,
-            version=as_db.version,
-            is_deleted=as_db.is_deleted,
-        )
+        try:
+            async with session.begin():
+                as_db = await process_action_service(
+                    session=session,
+                    assignment_id=assignment_id,
+                    action=payload.action,
+                    code=payload.code,
+                    term=payload.term,
+                    suggestion_index=payload.suggestion_index,
+                    reason_for_change=payload.reason_for_change,
+                    actor=actor,
+                )
+            return map_assignment_to_response(as_db)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
 
 # ==========================================
