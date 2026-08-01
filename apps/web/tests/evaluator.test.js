@@ -7,6 +7,10 @@ import {
   getCompiledExpression,
 } from "../src/evaluator.js";
 import { useClinicalStore } from "../src/stores/clinical.js";
+import {
+  renderFormFromJSON,
+  validateField as indexValidateField,
+} from "../index.js";
 
 describe("Client-side AST Evaluator & Cascading Nullification", () => {
   beforeEach(() => {
@@ -346,6 +350,77 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
         evaluateAST(isEmptyInvalid, { comment: "", vssbp: 120 })
       ).toBeNull();
       expect(evaluateAST(isNotEmptyInvalid, {})).toBeNull();
+    });
+  });
+
+  describe("index.js Module (renderFormFromJSON & validateField)", () => {
+    it("renders and evaluates skip logic, hides fields by default, and cascades nullifications with correct audit log message", () => {
+      const fields = [
+        { id: "pulse", label: "Pulse", type: "text" },
+        {
+          id: "pulse_details",
+          label: "Pulse Details",
+          type: "text",
+          relevant: {
+            type: "comparison",
+            operator: ">",
+            operands: [
+              { type: "field_ref", field_ref: { field_id: "pulse" } },
+              { type: "constant", value: 100 },
+            ],
+          },
+        },
+      ];
+
+      const initialValues = { pulse: "120", pulse_details: "Tachycardic" };
+      const auditLogs = [];
+      const logPurge = (fieldId, val, reason) => {
+        auditLogs.push({ fieldId, val, reason });
+      };
+
+      // When pulse is 120, pulse_details is relevant
+      const res1 = renderFormFromJSON(fields, initialValues, logPurge);
+      expect(res1.visibleFields.pulse_details).toBe(true);
+      expect(res1.updatedValues.pulse_details).toBe("Tachycardic");
+      expect(auditLogs.length).toBe(0);
+
+      // Change pulse to 70 (parent value mutation)
+      const res2 = renderFormFromJSON(fields, { ...res1.updatedValues, pulse: "70" }, logPurge);
+      expect(res2.visibleFields.pulse_details).toBe(false);
+      expect(res2.updatedValues.pulse_details).toBe("");
+      expect(auditLogs.length).toBe(1);
+      expect(auditLogs[0]).toEqual({
+        fieldId: "pulse_details",
+        val: "Tachycardic",
+        reason: "System-initiated purge of inactive child variable due to parent value mutation",
+      });
+    });
+
+    it("evaluates constraints via validateField in index.js", () => {
+      const heightFieldMeta = {
+        id: "height",
+        validation: { required: true },
+        constraint: {
+          condition: {
+            type: "comparison",
+            operator: ">",
+            operands: [
+              { type: "field_ref", field_ref: { field_id: "height" } },
+              { type: "constant", value: 0 },
+            ],
+          },
+          query_message: "Height must be strictly greater than zero.",
+        },
+      };
+
+      // Valid value
+      const res1 = indexValidateField(heightFieldMeta, "1.75", { height: 1.75 });
+      expect(res1.valid).toBe(true);
+
+      // Invalid value violating constraint (value <= 0)
+      const res2 = indexValidateField(heightFieldMeta, "0", { height: 0 });
+      expect(res2.valid).toBe(false);
+      expect(res2.message).toBe("Height must be strictly greater than zero.");
     });
   });
 });

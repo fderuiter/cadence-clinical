@@ -40,6 +40,13 @@ class DictionaryImportRequest(BaseModel):
             raise ValueError("Version must be a non-empty string.")
         return v
 
+    @field_validator("dictionary_type")
+    @classmethod
+    def validate_dictionary_type(cls, v: DictTypeEnum) -> DictTypeEnum:
+        if v not in (DictTypeEnum.MEDDRA, DictTypeEnum.WHODRUG):
+            raise ValueError(f"Import not supported for dictionary type: {v.value}")
+        return v
+
 
 class CoderActionRequest(BaseModel):
     action: str  # "ACCEPT" or "OVERRIDE" or "QUERY"
@@ -79,13 +86,12 @@ class ImpactAnalysisRequest(BaseModel):
     dictionary_type: DictTypeEnum
     new_version: str
 
-    @model_validator(mode="after")
-    def validate_dictionary_type(self) -> "ImpactAnalysisRequest":
-        if self.dictionary_type not in (DictTypeEnum.MEDDRA, DictTypeEnum.WHODRUG):
-            raise ValueError(
-                f"Unsupported dictionary type: {self.dictionary_type.value}"
-            )
-        return self
+    @field_validator("dictionary_type")
+    @classmethod
+    def validate_dictionary_type(cls, v: DictTypeEnum) -> DictTypeEnum:
+        if v not in (DictTypeEnum.MEDDRA, DictTypeEnum.WHODRUG):
+            raise ValueError(f"Unsupported dictionary type: {v.value}")
+        return v
 
 
 # Response Models
@@ -112,7 +118,7 @@ class MedDRAMatch(BaseModel):
     hlgt_name: str
     soc_code: str
     soc_name: str
-    primary_soc_flag: PrimarySocFlagEnum | None = None
+    primary_soc_flag: str | None = None
     score: float
 
 
@@ -127,29 +133,29 @@ MedDRACodingResult = MedDRACodeLookupResponse
 
 
 class WHODrugIngredientItem(BaseModel):
+    ingredient_code: str
+    ingredient_name: str
     code: str | None = None
     name: str | None = None
-    ingredient_code: str | None = None
-    ingredient_name: str | None = None
 
 
 class WHODrugATCContext(BaseModel):
+    atc_code: str
+    description: str
     code: str | None = None
     text: str | None = None
-    atc_code: str | None = None
-    description: str | None = None
 
 
 class WHODrugMatch(BaseModel):
-    code: str | None = None
-    name: str | None = None
-    drug_code: str | None = None
-    preferred_name: str | None = None
+    drug_code: str
+    preferred_name: str
     drug_name: str | None = None
     score: float
     ingredients: list[WHODrugIngredientItem] = []
-    atc: list[WHODrugATCContext] = []
     atc_context: list[WHODrugATCContext] = []
+    code: str | None = None
+    name: str | None = None
+    atc: list[WHODrugATCContext] = []
 
 
 class WHODrugCodeLookupResponse(BaseModel):

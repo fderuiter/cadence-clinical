@@ -11,6 +11,8 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 1805
 - **Passed:** 1805 🟢
+- **Total Automated Test Cases Run:** 1872
+- **Passed:** 1872 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -900,6 +902,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_redaction_derivative_safety` | `tests.test_etmf_sync_provenance` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sealer_retains_and_validates_reason_for_change` | `tests.test_etmf_sync_provenance` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_arithmetic_null_safety_and_bmi` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cascading_dependent_nullification_parity` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_comparison_null_semantics` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_comparison_operators` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_field_reference_and_xpath` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1637,6 +1640,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_verify_gateway_signature_scope_fallback_restrictions` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_gateway_signature_tenant_and_multishape_restrictions` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_sig_token_helper_scenarios` | `tests.test_security_middleware` | Trace-15 | 🟢 PASSED | < 1s |
+| `test_cross_service_interception_and_replay` | `tests.test_shared_infrastructure` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_service_client_fixtures_isolation` | `tests.test_shared_infrastructure` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_signed_headers_generation` | `tests.test_shared_infrastructure` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cross_service_interception` | `tests.test_shared_rbac_harness` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_mock_designer_driver` | `tests.test_shared_rbac_harness` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_persona_builders_contain_correct_claims` | `tests.test_shared_rbac_harness` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_shared_sqlite_dbs_and_clients` | `tests.test_shared_rbac_harness` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_and_consume_sig_token_expired` | `tests.test_sig_token_verifier` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_and_consume_sig_token_mismatched_user` | `tests.test_sig_token_verifier` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_and_consume_sig_token_replay_blocked` | `tests.test_sig_token_verifier` | *Regression/Helper* | 🟢 PASSED | < 1s |
