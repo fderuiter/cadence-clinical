@@ -92,6 +92,19 @@ class HighSystolicBPCheckRule(EditCheckRule):
         return None
 
 
+class LabOutOfRangeCheckRule(EditCheckRule):
+    rule_id = "LAB_OUT_OF_RANGE_CHECK"
+    rule_type = "field_level"
+    message = "Laboratory observation is out of range."
+
+    async def evaluate(
+        self, session: AsyncSession, observation: ClinicalObservation
+    ) -> str | None:
+        if observation.lab_out_of_range:
+            return self.message
+        return None
+
+
 class AEConsentTemporalCheckRule(EditCheckRule):
     rule_id = "AE_CONSENT_TEMPORAL_CHECK"
     rule_type = "cross_form"
@@ -481,6 +494,7 @@ class WeightLossCheckRule(EditCheckRule):
 FIELD_LEVEL_RULES: list[EditCheckRule] = [
     OutlierCheckRule(),
     HighSystolicBPCheckRule(),
+    LabOutOfRangeCheckRule(),
 ]
 
 CROSS_FORM_LONGITUDINAL_RULES: list[EditCheckRule] = [

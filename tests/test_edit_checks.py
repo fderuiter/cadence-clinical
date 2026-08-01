@@ -701,3 +701,300 @@ async def test_authored_longitudinal_predecessor_handling() -> None:
             all_pending = res.scalars().all()
             assert len([p for p in all_pending if not p.is_deleted]) == 0
             assert len([p for p in all_pending if p.is_deleted]) == 1
+
+
+@pytest.mark.asyncio
+async def test_lab_out_of_range_and_auto_close() -> None:
+    """Test that a lab out-of-range value opens exactly one query, and auto-closes on correction."""
+    from apps.execution.database.models import LabReferenceRange, ClinicalQuery
+
+    headers = get_v2_auth_headers(
+        user_id="dm_user_001",
+        roles="Data Manager",
+        change_reason="Submit clinical lab data",
+    )
+
+    # 1. Setup a subject, visit, and LabReferenceRange in DB
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # Create Subject
+        sub_resp = await client.post(
+            "/api/v1/execution/subjects",
+            json={"subject_id": "SUBJ-LAB-OUT", "study_id": "STUDY-LAB-EDIT"},
+            headers=headers,
+        )
+        assert sub_resp.status_code == 200
+
+        # Create Visit
+        visit_resp = await client.post(
+            "/api/v1/execution/visits",
+            json={
+                "subject_id": "SUBJ-LAB-OUT",
+                "visit_name": "BASELINE",
+                "study_id": "STUDY-LAB-EDIT",
+            },
+            headers=headers,
+        )
+        assert visit_resp.status_code == 200
+        visit_id = visit_resp.json()["id"]
+
+        # Insert LabReferenceRange into database
+        async with db_manager.get_session_maker()() as session, session.begin():
+            ref_range = LabReferenceRange(
+                study_id="STUDY-LAB-EDIT",
+                test_code="WBC",
+                test_name="White Blood Cell Count",
+                source="CENTRAL",
+                site_id=None,
+                unit="10^9/L",
+                normalized_unit="10^9/L",
+                sex_applicability="ALL",
+                age_low=None,
+                age_high=None,
+                low_bound=4.0,
+                high_bound=11.0,
+                critical_low=2.0,
+                critical_high=20.0,
+            )
+            session.add(ref_range)
+
+        # 2. Submit an out-of-range observation (e.g. value = 3.0, LOW, lab_out_of_range=True)
+        out_resp = await client.post(
+            "/api/v1/execution/observations",
+            json={
+                "subject_id": "SUBJ-LAB-OUT",
+                "study_id": "STUDY-LAB-EDIT",
+                "visit_id": visit_id,
+                "domain": "LB",
+                "test_code": "WBC",
+                "test_name": "White Blood Cell Count",
+                "value": 3.0,
+                "unit": "10^9/L",
+            },
+            headers=headers,
+        )
+        assert out_resp.status_code == 200
+        assert out_resp.json()["lab_out_of_range"] is True
+
+        # Verify that exactly one query was opened with rule_id="LAB_OUT_OF_RANGE_CHECK"
+        queries_resp = await client.get("/api/v1/execution/queries", headers=headers)
+        queries = queries_resp.json()
+        range_queries = [q for q in queries if q["rule_id"] == "LAB_OUT_OF_RANGE_CHECK"]
+        assert len(range_queries) == 1
+        query = range_queries[0]
+        assert query["status"] == "OPEN"
+        assert query["origin"] == "SYSTEM"
+        assert query["created_by"] == "SYSTEM"
+
+        # Verify the observation coordinates (study_id, subject_id, visit_id, domain, test_code)
+        assert query["study_id"] == "STUDY-LAB-EDIT"
+        assert query["subject_id"] == "SUBJ-LAB-OUT"
+        assert query["visit_id"] == visit_id
+        assert query["domain"] == "LB"
+        assert query["test_code"] == "WBC"
+
+        # 3. Attempt duplicate submit with same value: should not open another query
+        dup_resp = await client.post(
+            "/api/v1/execution/observations",
+            json={
+                "subject_id": "SUBJ-LAB-OUT",
+                "study_id": "STUDY-LAB-EDIT",
+                "visit_id": visit_id,
+                "domain": "LB",
+                "test_code": "WBC",
+                "test_name": "White Blood Cell Count",
+                "value": 3.0,
+                "unit": "10^9/L",
+            },
+            headers=headers,
+        )
+        assert dup_resp.status_code == 200
+
+        queries_resp = await client.get("/api/v1/execution/queries", headers=headers)
+        assert (
+            len(
+                [
+                    q
+                    for q in queries_resp.json()
+                    if q["rule_id"] == "LAB_OUT_OF_RANGE_CHECK" and q["status"] == "OPEN"
+                ]
+            )
+            == 1
+        )
+
+        # 4. Submit normal/corrected value (WBC = 5.0): should automatically resolve and close query
+        corr_resp = await client.post(
+            "/api/v1/execution/observations",
+            json={
+                "subject_id": "SUBJ-LAB-OUT",
+                "study_id": "STUDY-LAB-EDIT",
+                "visit_id": visit_id,
+                "domain": "LB",
+                "test_code": "WBC",
+                "test_name": "White Blood Cell Count",
+                "value": 5.0,
+                "unit": "10^9/L",
+            },
+            headers=headers,
+        )
+        assert corr_resp.status_code == 200
+        assert corr_resp.json()["lab_out_of_range"] is False
+
+        # Verify the query is now CLOSED with system details
+        queries_resp = await client.get("/api/v1/execution/queries", headers=headers)
+        closed_queries = [
+            q
+            for q in queries_resp.json()
+            if q["rule_id"] == "LAB_OUT_OF_RANGE_CHECK" and q["status"] == "CLOSED"
+        ]
+        assert len(closed_queries) == 1
+        closed_query = closed_queries[0]
+        assert closed_query["resolver"] == "SYSTEM"
+        assert closed_query["resolved_at"] is not None
+        assert "Auto-resolved" in closed_query["response"]
+
+        # Verify database record has version incremented
+        async with db_manager.get_session_maker()() as session:
+            stmt = select(ClinicalQuery).where(
+                ClinicalQuery.rule_id == "LAB_OUT_OF_RANGE_CHECK",
+                ClinicalQuery.subject_id == "SUBJ-LAB-OUT",
+            )
+            res = await session.execute(stmt)
+            q_db = res.scalar_one()
+            assert q_db.version > 1
+
+
+@pytest.mark.asyncio
+async def test_critical_notification_dispatch_and_suppression(signed_headers) -> None:
+    """Verify that only LOW LOW/HIGH HIGH values dispatch a notification with ALERTS/CRITICAL payload."""
+    from unittest.mock import AsyncMock, patch
+    from apps.execution.database.models import LabReferenceRange, ClinicalQuery
+
+    # 1. Use the scope-aware signed_headers fixture
+    headers = signed_headers(
+        user_id="dm_user_001",
+        roles="Data Manager",
+        change_reason="Submit clinical lab data",
+        tenant_id="tenant_default",
+    )
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # Create Subject
+        sub_resp = await client.post(
+            "/api/v1/execution/subjects",
+            json={"subject_id": "SUBJ-LAB-CRIT", "study_id": "STUDY-LAB-CRIT"},
+            headers=headers,
+        )
+        assert sub_resp.status_code == 200
+
+        # Create Visit
+        visit_resp = await client.post(
+            "/api/v1/execution/visits",
+            json={
+                "subject_id": "SUBJ-LAB-CRIT",
+                "visit_name": "BASELINE",
+                "study_id": "STUDY-LAB-CRIT",
+            },
+            headers=headers,
+        )
+        assert visit_resp.status_code == 200
+        visit_id = visit_resp.json()["id"]
+
+        # Insert LabReferenceRange into database
+        async with db_manager.get_session_maker()() as session, session.begin():
+            ref_range = LabReferenceRange(
+                study_id="STUDY-LAB-CRIT",
+                test_code="WBC",
+                test_name="White Blood Cell Count",
+                source="CENTRAL",
+                site_id=None,
+                unit="10^9/L",
+                normalized_unit="10^9/L",
+                sex_applicability="ALL",
+                age_low=None,
+                age_high=None,
+                low_bound=4.0,
+                high_bound=11.0,
+                critical_low=2.0,
+                critical_high=20.0,
+            )
+            session.add(ref_range)
+
+        # 2. Patch publish_notification
+        with patch("apps.execution.notifications_client.publish_notification", new_callable=AsyncMock) as mock_pub:
+            mock_pub.return_value = True
+
+            # Submit a critical out-of-range value (WBC = 1.0, LOW LOW)
+            crit_resp = await client.post(
+                "/api/v1/execution/observations",
+                json={
+                    "subject_id": "SUBJ-LAB-CRIT",
+                    "study_id": "STUDY-LAB-CRIT",
+                    "visit_id": visit_id,
+                    "domain": "LB",
+                    "test_code": "WBC",
+                    "test_name": "White Blood Cell Count",
+                    "value": 1.0,
+                    "unit": "10^9/L",
+                },
+                headers=headers,
+            )
+            assert crit_resp.status_code == 200
+            crit_data = crit_resp.json()
+            assert crit_data["lab_indicator"] == "LOW LOW"
+
+            # Wait briefly to let the background task run (as publish_notification runs in background task)
+            await asyncio.sleep(0.1)
+
+            # Assert that publish_notification is called once with the expected payload
+            mock_pub.assert_called_once()
+            notif_payload = mock_pub.call_args[0][0]
+            assert notif_payload["category"] == "ALERTS"
+            assert notif_payload["priority"] == "CRITICAL"
+            assert notif_payload["message_content"] is not None
+            assert len(notif_payload["message_content"]) > 0
+            assert notif_payload["related_entity_type"] == "observation"
+            assert notif_payload["related_entity_id"] == crit_data["id"]
+            assert notif_payload["related_entity_subject_id"] == "SUBJ-LAB-CRIT"
+
+            # Reset the mock
+            mock_pub.reset_mock()
+
+            # 3. Submit a non-critical out-of-range value (WBC = 3.0, LOW)
+            non_crit_resp = await client.post(
+                "/api/v1/execution/observations",
+                json={
+                    "subject_id": "SUBJ-LAB-CRIT",
+                    "study_id": "STUDY-LAB-CRIT",
+                    "visit_id": visit_id,
+                    "domain": "LB",
+                    "test_code": "WBC",
+                    "test_name": "White Blood Cell Count",
+                    "value": 3.0,
+                    "unit": "10^9/L",
+                },
+                headers=headers,
+            )
+            assert non_crit_resp.status_code == 200
+            non_crit_data = non_crit_resp.json()
+            assert non_crit_data["lab_indicator"] == "LOW"
+
+            # Wait briefly
+            await asyncio.sleep(0.1)
+
+            # Assert that publish_notification is NOT called for non-critical out-of-range value
+            mock_pub.assert_not_called()
+
+            # Assert that a ClinicalQuery was opened for it
+            queries_resp = await client.get("/api/v1/execution/queries", headers=headers)
+            queries = queries_resp.json()
+            range_queries = [
+                q
+                for q in queries
+                if q["rule_id"] == "LAB_OUT_OF_RANGE_CHECK"
+                and q["status"] == "OPEN"
+            ]
+            assert len(range_queries) == 1

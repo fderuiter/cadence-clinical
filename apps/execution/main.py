@@ -1992,6 +1992,19 @@ async def create_observation(
         await run_synchronous_edit_checks(session, obs_db)
         await session.commit()
 
+        # Check for critical lab notification dispatch
+        if obs_db.lab_indicator in ("LOW LOW", "HIGH HIGH"):
+            from apps.execution.notifications_client import publish_notification
+            notification_payload = {
+                "category": "ALERTS",
+                "priority": "CRITICAL",
+                "message_content": f"Critical lab value detected: {obs_db.lab_indicator} for subject {obs_db.subject_id}, test code {obs_db.test_code}.",
+                "related_entity_type": "observation",
+                "related_entity_id": obs_db.id,
+                "related_entity_subject_id": obs_db.subject_id,
+            }
+            background_tasks.add_task(publish_notification, notification_payload)
+
         # Propagate audit and user context to background tasks
         user_id = current_user_id.get()
         change_reason = current_change_reason.get()

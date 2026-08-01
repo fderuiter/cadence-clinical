@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1873
-- **Passed:** 1873 🟢
+- **Total Automated Test Cases Run:** 1876
+- **Passed:** 1876 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -725,8 +725,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_protocol_amendment_triggers_reconsent` | `tests.test_econsent_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_authored_cross_form_rule_lifecycle` | `tests.test_edit_checks` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_authored_longitudinal_predecessor_handling` | `tests.test_edit_checks` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_critical_notification_dispatch_and_suppression` | `tests.test_edit_checks` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cross_form_temporal_consistency_and_context_propagation` | `tests.test_edit_checks` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_deferred_predecessor_checks` | `tests.test_edit_checks` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_lab_out_of_range_and_auto_close` | `tests.test_edit_checks` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_same_record_failure_outlier_and_auto_close` | `tests.test_edit_checks` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scenario_cross_form_edit_checks_and_auto_resolve` | `tests.test_edit_checks_scenarios` | PRD-QRY-003 | 🟢 PASSED | < 1s |
 | `test_scenario_longitudinal_predecessor_draft_and_complete` | `tests.test_edit_checks_scenarios` | PRD-QRY-004 | 🟢 PASSED | < 1s |
@@ -1115,6 +1117,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_convert_lab_unit_db_and_fallback` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_critical_boundaries_and_exclusion` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_deterministic_ties` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_evaluate_lab_value_all_indicators` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_is_deleted_filtering` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_no_matching_rule_behavior` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normal_boundaries_and_inclusion` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
