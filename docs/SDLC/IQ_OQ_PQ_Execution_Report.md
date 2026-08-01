@@ -10,10 +10,10 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 1926
-- **Passed:** 1926 🟢
-- **Failed/Errors:** 0 🔴
+- **Passed:** 1925 🟢
+- **Failed/Errors:** 1 🔴
 - **Skipped:** 0 ⚪
-- **Overall Operational Pass Rate:** 100.00%
+- **Overall Operational Pass Rate:** 99.95%
 
 ## 2. Installation Qualification (IQ)
 
@@ -1413,7 +1413,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_merge_amendment_branch` | `tests.test_protocol_comparison` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_build_docx_template` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_as_docx_success` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_export_protocol_as_pdf_success` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_export_protocol_as_pdf_success` | `tests.test_protocol_export` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_export_protocol_etmf_forwarding_best_effort` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_etmf_forwarding_strict_failure` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_generation_auditing` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
