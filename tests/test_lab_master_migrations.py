@@ -145,6 +145,7 @@ async def test_lab_reference_range_migration_upgrade_and_idempotency():
         engine = create_async_engine(db_url)
         try:
             async with engine.connect() as conn:
+
                 def inspect_db(sync_conn):
                     insp = inspect(sync_conn)
                     tables = insp.get_table_names()
@@ -159,7 +160,9 @@ async def test_lab_reference_range_migration_upgrade_and_idempotency():
                     ]
                     return tables, cols_ref, cols_master, cols_conversion
 
-                tables, cols_ref, cols_master, cols_conversion = await conn.run_sync(inspect_db)
+                tables, cols_ref, cols_master, cols_conversion = await conn.run_sync(
+                    inspect_db
+                )
 
                 # Assert tables exist
                 assert "lab_test_masters" in tables
@@ -180,7 +183,9 @@ async def test_lab_reference_range_migration_upgrade_and_idempotency():
 
                 # Check backfilled values of legacy row
                 res = await conn.execute(
-                    text("SELECT version_index FROM lab_reference_ranges WHERE id = 'range-legacy-1';")
+                    text(
+                        "SELECT version_index FROM lab_reference_ranges WHERE id = 'range-legacy-1';"
+                    )
                 )
                 row = res.fetchone()
                 assert row is not None
@@ -197,7 +202,9 @@ async def test_lab_reference_range_migration_upgrade_and_idempotency():
         engine = create_async_engine(db_url)
         try:
             async with engine.connect() as conn:
-                tables, cols_ref, cols_master, cols_conversion = await conn.run_sync(inspect_db)
+                tables, cols_ref, cols_master, cols_conversion = await conn.run_sync(
+                    inspect_db
+                )
                 assert "lab_test_masters" in tables
                 assert "lab_unit_conversions" in tables
                 assert "lab_reference_ranges" in tables
@@ -210,7 +217,9 @@ async def test_lab_reference_range_migration_upgrade_and_idempotency():
 
                 # Check backfilled legacy row still intact
                 res = await conn.execute(
-                    text("SELECT version_index FROM lab_reference_ranges WHERE id = 'range-legacy-1';")
+                    text(
+                        "SELECT version_index FROM lab_reference_ranges WHERE id = 'range-legacy-1';"
+                    )
                 )
                 row = res.fetchone()
                 assert row is not None
