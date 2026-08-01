@@ -40,6 +40,7 @@ from apps.etmf.models import (
     TMFDocument,
 )
 from apps.etmf.routers.archive import router as archive_router
+from apps.etmf.routers.taxonomy import router as taxonomy_router
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.deid.detector import DeidDetector
 from packages.deid.manifest import build_redaction_manifest, sign_manifest_symmetric
@@ -158,6 +159,7 @@ app = FastAPI(
 app.add_middleware(GatewayAuthMiddleware)
 
 app.include_router(archive_router)
+app.include_router(taxonomy_router)
 
 
 # Dependable to obtain database session
@@ -171,27 +173,12 @@ def map_artifact_to_tmf(artifact_type: str) -> tuple[int, str]:
     Uses the active taxonomy catalog version under the hood.
     Raises ValueError if artifact cannot be resolved.
     """
-    version = get_active_catalog().version
-    is_code = False
-    cleaned_type = artifact_type.strip()
+    from apps.etmf.classification_service import classify_tmf_document
 
-    # Map/Normalize aliases to canonical names or codes
-    if cleaned_type == "FORM_1572":
-        cleaned_type = "FDA Form 1572"
-    elif cleaned_type == "FINANCIAL_DISCLOSURE":
-        cleaned_type = "Financial Disclosure"
-    elif cleaned_type == "PROTOCOL_SIGNOFF":
-        cleaned_type = "Protocol Sign-off"
-
-    if cleaned_type and cleaned_type.replace(".", "").isdigit():
-        is_code = True
-
-    if is_code:
-        res = resolve_artifact(version, code=cleaned_type)
-    else:
-        res = resolve_artifact(version, name=cleaned_type)
-
-    return res["zone"].code, res["section"].code
+    classification = classify_tmf_document(filename="", artifact_type=artifact_type)
+    if classification is None:
+        raise ValueError(f"Unresolvable artifact: {artifact_type}")
+    return classification.resolved_zone, classification.resolved_section
 
 
 # Pydantic models for eTMF
@@ -2914,41 +2901,21 @@ def resolve_binder_hint(binder_hint: str | None) -> tuple[int, str, str, str]:
     if not binder_hint:
         return 5, "04", "05.04.01", "Site Communication Log"
 
-    version = get_active_catalog().version
     cleaned_hint = binder_hint.strip()
-    is_code = cleaned_hint.replace(".", "").isdigit()
-
     if cleaned_hint.lower() in ("conduct", "initiation", "closeout", "milestone"):
         cleaned_hint = "Site Communication Log"
 
-    try:
-        if is_code:
-            res = resolve_artifact(version, code=cleaned_hint)
-        else:
-            if (
-                cleaned_hint.upper() == "FORM_1572"
-                or cleaned_hint.lower() == "form 1572"
-            ):
-                cleaned_hint = "FDA Form 1572"
-            elif (
-                cleaned_hint.upper() == "FINANCIAL_DISCLOSURE"
-                or cleaned_hint.lower() == "financial disclosure"
-            ):
-                cleaned_hint = "Financial Disclosure"
-            elif (
-                cleaned_hint.upper() == "PROTOCOL_SIGNOFF"
-                or cleaned_hint.lower() == "protocol signoff"
-            ):
-                cleaned_hint = "Protocol Sign-off"
-            res = resolve_artifact(version, name=cleaned_hint)
-    except Exception as e:
-        raise ValueError(f"Unresolvable binder hint: {str(e)}")
+    from apps.etmf.classification_service import classify_tmf_document
+
+    classification = classify_tmf_document(filename="", artifact_type=cleaned_hint)
+    if classification is None:
+        raise ValueError(f"Unresolvable binder hint: {binder_hint}")
 
     return (
-        res["zone"].code,
-        res["section"].code,
-        res["artifact"].code,
-        res["artifact"].name,
+        classification.resolved_zone,
+        classification.resolved_section,
+        classification.artifact_code,
+        classification.artifact_type,
     )
 
 

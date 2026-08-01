@@ -268,6 +268,12 @@ def load_and_validate_ledger(
             )
             continue
 
+        if rpn >= 20:
+            errors.append(
+                f"Vulnerability {vuln_id} has a high FMEA Risk Priority Number (RPN) of {rpn} >= 20, which violates existing validation thresholds."
+            )
+            continue
+
         # Justification check
         is_frontend = vuln_id.startswith("GHSA-")
         min_len = 11 if is_frontend else 10
@@ -493,7 +499,11 @@ def main() -> None:
     processed_vulns: list[dict[str, Any]] = []
     has_unapproved_vulns = False
 
-    ledger_map = {entry["vulnerability_id"]: entry for entry in ledger_entries}
+    ledger_map = {}
+    for entry in ledger_entries:
+        v_id = entry.get("vulnerability_id")
+        p_name = entry.get("package_name", "")
+        ledger_map[(v_id, p_name)] = entry
 
     all_vulnerabilities = [(v, "Python") for v in active_vulnerabilities] + [
         (v, "Frontend") for v in active_frontend_vulnerabilities
@@ -504,8 +514,8 @@ def main() -> None:
         pkg = vuln["package_name"]
         ver = vuln["version"]
 
-        if v_id in ledger_map:
-            entry = ledger_map[v_id]
+        if (v_id, pkg) in ledger_map:
+            entry = ledger_map[(v_id, pkg)]
             rpn = entry["rpn"]
             justification = entry["justification"]
             status = entry.get("status", "active")
@@ -539,9 +549,21 @@ def main() -> None:
                 }
             )
         else:
-            print(
-                f"[❌] {source_type} vulnerability {v_id} ({pkg}@{ver}) has no corresponding entry in the compliance ledger."
-            )
+            matching_ids = [
+                e for e in ledger_entries if e.get("vulnerability_id") == v_id
+            ]
+            if matching_ids:
+                exempted_packages = ", ".join(
+                    repr(e.get("package_name", "")) for e in matching_ids
+                )
+                print(
+                    f"[❌] {source_type} vulnerability {v_id} found in ledger, but exemption only applies to package(s): {exempted_packages}. "
+                    f"It does not apply to active package: '{pkg}'. Blocked from automatic progression."
+                )
+            else:
+                print(
+                    f"[❌] {source_type} vulnerability {v_id} ({pkg}@{ver}) has no corresponding entry in the compliance ledger."
+                )
             has_unapproved_vulns = True
             processed_vulns.append(
                 {

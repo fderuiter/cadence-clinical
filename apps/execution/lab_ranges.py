@@ -394,10 +394,10 @@ async def recalculate_range_flags(
             # Dispatch alerts on transitioning to critical indicator
             if indicator in ("LOW LOW", "HIGH HIGH") and background_tasks is not None:
                 from apps.execution.notification_events import (
-                    dispatch_critical_lab_notifications,
+                    dispatch_critical_lab_alerts,
                 )
 
-                dispatch_critical_lab_notifications(
+                dispatch_critical_lab_alerts(
                     background_tasks,
                     obs,
                     indicator,

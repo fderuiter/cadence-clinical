@@ -79,7 +79,7 @@ async def publish_notification_background(
         await publish_notification(payload)
 
 
-def dispatch_critical_lab_notifications(
+def dispatch_critical_lab_alerts(
     background_tasks: Any,
     observation: ClinicalObservation,
     lab_indicator: str,
@@ -87,7 +87,14 @@ def dispatch_critical_lab_notifications(
     change_reason: str | None,
 ) -> None:
     """
-    Standard recipients-based multi-dispatch in the background for critical lab alerts.
+    Generates and dispatches critical lab notification alerts asynchronously using a multi-recipient dispatch.
+
+    Args:
+        background_tasks: BackgroundTasks context instance.
+        observation: The clinical observation record.
+        lab_indicator: The critical indicator value.
+        user_id: Optional GxP user ID.
+        change_reason: Optional GxP change reason.
     """
     raw_payload = generate_critical_lab_notification_payload(observation, lab_indicator)
     for recipient in raw_payload["recipients"]:

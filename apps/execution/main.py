@@ -1994,10 +1994,10 @@ async def create_observation(
         # Check for critical lab notification dispatch
         if obs_db.lab_indicator in ("LOW LOW", "HIGH HIGH"):
             from apps.execution.notification_events import (
-                dispatch_critical_lab_notifications,
+                dispatch_critical_lab_alerts,
             )
 
-            dispatch_critical_lab_notifications(
+            dispatch_critical_lab_alerts(
                 background_tasks,
                 obs_db,
                 obs_db.lab_indicator,

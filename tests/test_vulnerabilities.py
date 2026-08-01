@@ -408,3 +408,213 @@ def test_load_and_validate_ledger_frontend_invalid_rpn(tmp_path):
     entries, errors = load_and_validate_ledger(str(ledger))
     assert len(entries) == 0
     assert "invalid pre-calculated FMEA Risk Priority Number" in errors[0]
+
+
+def test_load_and_validate_ledger_rpn_threshold(tmp_path):
+    """Verify that load_and_validate_ledger fails when RPN is >= 20."""
+    ledger = tmp_path / "ledger.json"
+    ledger.write_text(
+        json.dumps(
+            [
+                {
+                    "vulnerability_id": "PYSEC-2026-9999",
+                    "package_name": "ecdsa",
+                    "severity": 5,
+                    "occurrence": 4,
+                    "detectability": 1,
+                    "rpn": 20,
+                    "justification": "Valid justification here for GxP purposes",
+                    "status": "active",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    entries, errors = load_and_validate_ledger(str(ledger))
+    assert len(entries) == 0
+    assert len(errors) == 1
+    assert "violates existing validation thresholds" in errors[0]
+
+
+def test_load_and_validate_ledger_multiple_entries_same_id(tmp_path):
+    """Verify that multiple ledger entries with the same vulnerability ID but different package names are parsed successfully."""
+    ledger = tmp_path / "ledger.json"
+    ledger.write_text(
+        json.dumps(
+            [
+                {
+                    "vulnerability_id": "CVE-2026-SAME",
+                    "package_name": "pkg-a",
+                    "severity": 3,
+                    "occurrence": 2,
+                    "detectability": 2,
+                    "rpn": 12,
+                    "justification": "Valid justification for package A",
+                    "status": "active",
+                },
+                {
+                    "vulnerability_id": "CVE-2026-SAME",
+                    "package_name": "pkg-b",
+                    "severity": 2,
+                    "occurrence": 2,
+                    "detectability": 2,
+                    "rpn": 8,
+                    "justification": "Valid justification for package B",
+                    "status": "active",
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+    entries, errors = load_and_validate_ledger(str(ledger))
+    assert len(errors) == 0
+    assert len(entries) == 2
+    assert entries[0]["package_name"] == "pkg-a"
+    assert entries[1]["package_name"] == "pkg-b"
+
+
+@patch("scripts.validate_vulnerabilities.load_and_validate_ledger")
+@patch("scripts.validate_vulnerabilities.execute_pip_audit")
+@patch("scripts.validate_vulnerabilities.execute_pnpm_audit")
+@patch("scripts.validate_vulnerabilities.extract_active_vulnerabilities")
+@patch("scripts.validate_vulnerabilities.extract_active_frontend_vulnerabilities")
+@patch("scripts.validate_vulnerabilities.sys.exit")
+def test_validate_vulnerabilities_compound_matching(
+    mock_exit,
+    mock_extract_frontend,
+    mock_extract_python,
+    mock_execute_pnpm,
+    mock_execute_pip,
+    mock_load_ledger,
+):
+    """Verify that compliance run fails if vuln ID matches but package name mismatches, and passes if both match."""
+    from scripts.validate_vulnerabilities import main
+
+    # Setup mock ledger with CVE-2026-1111 exempted for package 'ecdsa'
+    mock_load_ledger.return_value = (
+        [
+            {
+                "vulnerability_id": "CVE-2026-1111",
+                "package_name": "ecdsa",
+                "severity": 3,
+                "occurrence": 2,
+                "detectability": 2,
+                "rpn": 12,
+                "justification": "Approved exemption justification here",
+                "status": "active",
+            }
+        ],
+        [],
+    )
+
+    # Setup active Python vulnerability: CVE-2026-1111 but for package 'django' (mismatch)
+    mock_execute_pip.return_value = ("stdout", "stderr", 1)
+    mock_extract_python.return_value = (
+        [
+            {
+                "vulnerability_id": "CVE-2026-1111",
+                "package_name": "django",
+                "version": "4.2.0",
+            }
+        ],
+        "",
+    )
+
+    # Frontend returns no vulnerabilities
+    mock_execute_pnpm.return_value = ("stdout", "stderr", 0)
+    mock_extract_frontend.return_value = ([], "")
+
+    # Run main and catch exit/errors
+    main()
+
+    # It must exit with code 1 (failure) because package name django does not match ecdsa
+    mock_exit.assert_called_once_with(1)
+    mock_exit.reset_mock()
+
+    # Now let's test a PASS scenario where the package name matches exactly (ecdsa)
+    mock_extract_python.return_value = (
+        [
+            {
+                "vulnerability_id": "CVE-2026-1111",
+                "package_name": "ecdsa",
+                "version": "0.19.2",
+            }
+        ],
+        "",
+    )
+
+    main()
+
+    # Since it matches, it should pass (sys.exit(1) is NOT called)
+    mock_exit.assert_not_called()
+
+
+@patch("scripts.validate_vulnerabilities.load_and_validate_ledger")
+@patch("scripts.validate_vulnerabilities.execute_pip_audit")
+@patch("scripts.validate_vulnerabilities.execute_pnpm_audit")
+@patch("scripts.validate_vulnerabilities.extract_active_vulnerabilities")
+@patch("scripts.validate_vulnerabilities.extract_active_frontend_vulnerabilities")
+@patch("scripts.validate_vulnerabilities.sys.exit")
+def test_validate_vulnerabilities_multiple_identical_vuln_ids(
+    mock_exit,
+    mock_extract_frontend,
+    mock_extract_python,
+    mock_execute_pnpm,
+    mock_execute_pip,
+    mock_load_ledger,
+):
+    """Verify that multiple entries with identical vuln IDs but different packages are validated independently."""
+    from scripts.validate_vulnerabilities import main
+
+    # Setup mock ledger with CVE-2026-2222 for both 'ecdsa' and 'paramiko'
+    mock_load_ledger.return_value = (
+        [
+            {
+                "vulnerability_id": "CVE-2026-2222",
+                "package_name": "ecdsa",
+                "severity": 3,
+                "occurrence": 2,
+                "detectability": 2,
+                "rpn": 12,
+                "justification": "Justification for ecdsa",
+                "status": "active",
+            },
+            {
+                "vulnerability_id": "CVE-2026-2222",
+                "package_name": "paramiko",
+                "severity": 2,
+                "occurrence": 2,
+                "detectability": 2,
+                "rpn": 8,
+                "justification": "Justification for paramiko",
+                "status": "active",
+            },
+        ],
+        [],
+    )
+
+    # Active vulnerabilities: CVE-2026-2222 on both ecdsa and paramiko
+    mock_execute_pip.return_value = ("stdout", "stderr", 1)
+    mock_extract_python.return_value = (
+        [
+            {
+                "vulnerability_id": "CVE-2026-2222",
+                "package_name": "ecdsa",
+                "version": "0.19.2",
+            },
+            {
+                "vulnerability_id": "CVE-2026-2222",
+                "package_name": "paramiko",
+                "version": "3.4.0",
+            },
+        ],
+        "",
+    )
+
+    mock_execute_pnpm.return_value = ("stdout", "stderr", 0)
+    mock_extract_frontend.return_value = ([], "")
+
+    main()
+
+    # Both are matched successfully and approved, so it should pass!
+    mock_exit.assert_not_called()
