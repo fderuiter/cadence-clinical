@@ -1,7 +1,8 @@
 import os
 import threading
 import time
-from typing import Any, Optional
+from typing import Any
+
 from sqlalchemy import select
 
 from apps.execution.database.models import LabReferenceRange
@@ -14,7 +15,7 @@ class LabRangeCache:
     Uses a composite key (study_id, test_code).
     """
 
-    def __init__(self, max_size: int = 1000, ttl: Optional[float] = None) -> None:
+    def __init__(self, max_size: int = 1000, ttl: float | None = None) -> None:
         self.max_size = max_size
         self._lock = threading.Lock()
         self._cache: dict[tuple[str, str], tuple[list[Any], float]] = {}
@@ -31,7 +32,9 @@ class LabRangeCache:
             else:
                 self.ttl = 3600.0
 
-    def get_cached(self, study_id: str, test_code: str) -> tuple[Optional[list[Any]], bool]:
+    def get_cached(
+        self, study_id: str, test_code: str
+    ) -> tuple[list[Any] | None, bool]:
         """
         Retrieves the item from cache. Returns (rows | None, is_expired).
         """

@@ -1,11 +1,14 @@
-import asyncio
 import os
 import time
 from unittest import mock
-import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.execution.lab_range_cache import LabRangeCache, get_active_lab_ranges, lab_range_cache
+import pytest
+
+from apps.execution.lab_range_cache import (
+    LabRangeCache,
+    get_active_lab_ranges,
+    lab_range_cache,
+)
 
 
 def test_lab_range_cache_ttl_config():

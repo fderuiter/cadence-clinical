@@ -1,15 +1,16 @@
 <template>
+  <!-- Formal eCRF Approval Modal Overlay -->
   <div
     v-if="isOpen"
     id="approval-handoff-modal"
     class="modal-overlay"
     style="
-      display: flex;
       position: fixed;
       top: 0;
+      bottom: 0;
       left: 0;
       right: 0;
-      bottom: 0;
+      display: flex;
       background: rgba(0, 0, 0, 0.5);
       align-items: center;
       justify-content: center;
@@ -19,26 +20,26 @@
     <div
       class="modal"
       style="
-        background: white;
         border-radius: 8px;
+        background: #ffffff;
         width: 100%;
         max-width: 500px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         overflow: hidden;
-        color: #333;
+        color: #333333;
       "
     >
       <div
         class="modal-header"
         style="
+          font-size: 16px;
           padding: 16px;
           border-bottom: 1px solid #e2e8f0;
           font-weight: 600;
-          font-size: 16px;
           color: #1e293b;
         "
       >
-        eCRF Formal Approval & Production Handoff
+        eCRF Formal Approval &amp; Production Handoff
       </div>
       <div class="modal-body" style="padding: 16px">
         <p
@@ -212,6 +213,7 @@
           />
         </div>
 
+        <!-- Handoff Error Status Section -->
         <div
           v-if="error"
           id="approval-error-msg"
@@ -222,7 +224,7 @@
             font-weight: 500;
           "
         >
-          {{ error }}
+          {{ props.isOpen ? error : "" }}
         </div>
       </div>
       <div
@@ -266,7 +268,7 @@
           :disabled="!isChecklistComplete"
           @click="confirm"
         >
-          Verify, Sign & Approve
+          Verify, Sign &amp; Approve
         </button>
       </div>
     </div>

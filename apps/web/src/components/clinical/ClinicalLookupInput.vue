@@ -53,21 +53,21 @@
       style="display: none"
     />
 
-    <!-- Validation Error -->
+    <!-- Active Clinical Lookup Field Validation Error -->
     <div v-if="showError" class="validation-error-msg">
-      {{ error }}
+      {{ props.error }}
     </div>
 
-    <!-- Query Panel -->
+    <!-- Terminology Specific Query Panel -->
     <ClinicalQueryPanel
       v-if="isQueryOpen"
-      :id="id"
-      :query="query"
-      @close-panel="isQueryOpen = false"
-      @create-query="$emit('create-query', $event)"
-      @respond-query="$emit('respond-query', $event)"
+      :query="props.query"
+      :id="props.id"
       @close-query="$emit('close-query')"
       @reopen-query="$emit('reopen-query')"
+      @create-query="$emit('create-query', $event)"
+      @respond-query="$emit('respond-query', $event)"
+      @close-panel="isQueryOpen = false"
     />
   </div>
 </template>
@@ -78,38 +78,47 @@ import ClinicalQueryFlag from "./ClinicalQueryFlag.vue";
 import ClinicalQueryPanel from "./ClinicalQueryPanel.vue";
 
 const props = defineProps({
-  id: {
-    type: String,
-    required: true,
-  },
-  label: {
-    type: String,
-    required: true,
-  },
-  modelValue: {
-    type: [String, Number],
-    default: "",
-  },
-  query: {
-    type: Object,
-    default: null,
-  },
-  gridSpan: {
-    type: [Number, String],
-    default: 12,
-  },
-  error: {
-    type: String,
-    default: null,
-  },
-  status: {
-    type: String,
-    default: "none", // 'none', 'loading', 'valid', 'invalid', 'degraded'
-  },
+  // Status message explanation helper
   statusMessage: {
     type: String,
     default: "",
   },
+  // Active lookup status
+  status: {
+    type: String,
+    default: "none", // 'none', 'loading', 'valid', 'invalid', 'degraded'
+  },
+  // Field identifier
+  id: {
+    type: String,
+    required: true,
+  },
+  // Label for field
+  label: {
+    type: String,
+    required: true,
+  },
+  // Active model value
+  modelValue: {
+    type: [String, Number],
+    default: "",
+  },
+  // Validation error string
+  error: {
+    type: String,
+    default: null,
+  },
+  // Grid width span
+  gridSpan: {
+    type: [Number, String],
+    default: 12,
+  },
+  // Query details
+  query: {
+    type: Object,
+    default: null,
+  },
+  // Custom element attributes mapping
   attributes: {
     type: Object,
     default: () => ({}),

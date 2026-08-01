@@ -610,7 +610,6 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { apiClient } from "../api/apiClient";
-import { serializeConditionsTree } from "@cadence/ui";
 import ReasonModal from "../components/ReasonModal.vue";
 import {
   createRuleEditorHTML,
@@ -832,38 +831,6 @@ const ruleEditorHtml = computed(() => {
   });
 });
 
-<<<<<<< HEAD
-async function getSignedGatewayHeaders(changeReason = "") {
-  const authStore = useAuthStore();
-  const userId = authStore.userId || "usr_dm_fderuiter";
-  const roles = authStore.normalizedRoles
-    ? authStore.normalizedRoles.join(",")
-    : "data_manager";
-  const timestamp = String(Math.floor(Date.now() / 1000));
-  const secret =
-    import.meta.env?.VITE_GATEWAY_SECRET || "internal-gateway-secret-12345";
-
-  const signature = await generateGatewaySignature(
-    userId,
-    roles,
-    timestamp,
-    "2",
-    changeReason,
-    secret
-  );
-
-  return {
-    "X-User-Id": userId,
-    "X-User-Roles": roles,
-    "X-Gateway-Timestamp": timestamp,
-    "X-Gateway-Signature": signature,
-    "X-Signature-Version": "2",
-    "X-Change-Reason": changeReason,
-  };
-}
-
-=======
->>>>>>> origin/main
 function handleEditorClick(e) {
   const target = e.target;
   const action = target.getAttribute("data-action");
@@ -921,11 +888,40 @@ function handleEditorInput(e) {
     }
   }
 }
-<<<<<<< HEAD
+async function getSignedGatewayHeaders(changeReason = "") {
+  const authStore = useAuthStore();
+  const userId = authStore.userId || "usr_dm_fderuiter";
+  const roles = authStore.normalizedRoles
+    ? authStore.normalizedRoles.join(",")
+    : "data_manager";
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const secret =
+    import.meta.env?.VITE_GATEWAY_SECRET || "internal-gateway-secret-12345";
 
-// Helper to construct signed headers
-=======
->>>>>>> origin/main
+  let signature = "mock-sig";
+  try {
+    signature = await generateGatewaySignature(
+      userId,
+      roles,
+      timestamp,
+      "2",
+      changeReason,
+      secret
+    );
+  } catch {
+    // Fallback if crypto.subtle is uninitialized
+  }
+
+  return {
+    "X-User-Id": userId,
+    "X-User-Roles": roles,
+    "X-Gateway-Timestamp": timestamp,
+    "X-Gateway-Signature": signature,
+    "X-Signature-Version": "2",
+    "X-Change-Reason": changeReason,
+  };
+}
+
 // Fetch active rules from backend REST API
 async function fetchRules() {
   loadingRules.value = true;

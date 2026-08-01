@@ -69,7 +69,6 @@ describe("Transient Drag-Scoped Window Listeners", () => {
     const mermaidWrapper = document.querySelector(".mermaid-wrapper");
     expect(mermaidWrapper).not.toBeNull();
 
-    // Verify no window movement or release listeners exist when page loads
     const getActiveWindowListeners = (types) =>
       addedListeners.filter(
         (l) =>
@@ -81,44 +80,42 @@ describe("Transient Drag-Scoped Window Listeners", () => {
 
     expect(
       getActiveWindowListeners([
-        "mousemove",
-        "mouseup",
-        "touchmove",
-        "touchend",
+        "pointermove",
+        "pointerup",
+        "pointercancel",
       ])
     ).toHaveLength(0);
 
-    // 3. Trigger mousedown to start dragging
-    const mousedownEvent = new MouseEvent("mousedown", {
+    // 3. Trigger pointerdown to start dragging
+    const pointerdownEvent = new PointerEvent("pointerdown", {
       button: 0,
       clientX: 10,
       clientY: 10,
+      pointerId: 1,
+      isPrimary: true,
     });
-    mermaidWrapper.dispatchEvent(mousedownEvent);
+    mermaidWrapper.dispatchEvent(pointerdownEvent);
 
     // Verify global window-level listeners are successfully attached
     const activeListenersAfterDown = getActiveWindowListeners([
-      "mousemove",
-      "mouseup",
-      "touchmove",
-      "touchend",
+      "pointermove",
+      "pointerup",
+      "pointercancel",
     ]);
-    expect(activeListenersAfterDown).toHaveLength(4);
-    expect(activeListenersAfterDown.map((l) => l.type)).toContain("mousemove");
-    expect(activeListenersAfterDown.map((l) => l.type)).toContain("mouseup");
-    expect(activeListenersAfterDown.map((l) => l.type)).toContain("touchmove");
-    expect(activeListenersAfterDown.map((l) => l.type)).toContain("touchend");
+    expect(activeListenersAfterDown).toHaveLength(3);
+    expect(activeListenersAfterDown.map((l) => l.type)).toContain("pointermove");
+    expect(activeListenersAfterDown.map((l) => l.type)).toContain("pointerup");
+    expect(activeListenersAfterDown.map((l) => l.type)).toContain("pointercancel");
 
-    // 4. Trigger mouseup on window to release dragging
-    const mouseupEvent = new MouseEvent("mouseup");
-    window.dispatchEvent(mouseupEvent);
+    // 4. Trigger pointerup on window to release dragging
+    const pointerupEvent = new PointerEvent("pointerup", { pointerId: 1 });
+    window.dispatchEvent(pointerupEvent);
 
     // Verify all global window-level listeners are completely unregistered immediately
     const activeListenersAfterUp = getActiveWindowListeners([
-      "mousemove",
-      "mouseup",
-      "touchmove",
-      "touchend",
+      "pointermove",
+      "pointerup",
+      "pointercancel",
     ]);
     expect(activeListenersAfterUp).toHaveLength(0);
 
@@ -163,40 +160,40 @@ describe("Transient Drag-Scoped Window Listeners", () => {
 
     expect(
       getActiveWindowListeners([
-        "mousemove",
-        "mouseup",
-        "touchmove",
-        "touchend",
+        "pointermove",
+        "pointerup",
+        "pointercancel",
       ])
     ).toHaveLength(0);
 
-    // Trigger touchstart to start touch dragging
-    const touchstartEvent = new TouchEvent("touchstart", {
-      touches: [{ clientX: 10, clientY: 10 }],
+    // Trigger pointerdown to start touch dragging
+    const pointerdownEvent = new PointerEvent("pointerdown", {
+      clientX: 10,
+      clientY: 10,
+      pointerId: 1,
+      pointerType: "touch",
     });
-    mermaidWrapper.dispatchEvent(touchstartEvent);
+    mermaidWrapper.dispatchEvent(pointerdownEvent);
 
     // Verify global window-level listeners are successfully attached
     expect(
       getActiveWindowListeners([
-        "mousemove",
-        "mouseup",
-        "touchmove",
-        "touchend",
+        "pointermove",
+        "pointerup",
+        "pointercancel",
       ])
-    ).toHaveLength(4);
+    ).toHaveLength(3);
 
-    // Trigger touchend on window to release dragging
-    const touchendEvent = new TouchEvent("touchend");
-    window.dispatchEvent(touchendEvent);
+    // Trigger pointerup on window to release dragging
+    const pointerupEvent = new PointerEvent("pointerup", { pointerId: 1 });
+    window.dispatchEvent(pointerupEvent);
 
     // Verify all global window-level listeners are completely unregistered immediately
     expect(
       getActiveWindowListeners([
-        "mousemove",
-        "mouseup",
-        "touchmove",
-        "touchend",
+        "pointermove",
+        "pointerup",
+        "pointercancel",
       ])
     ).toHaveLength(0);
 
@@ -229,12 +226,13 @@ describe("Transient Drag-Scoped Window Listeners", () => {
     vi.useRealTimers();
 
     const mermaidWrapper = document.querySelector(".mermaid-wrapper");
-    const mousedownEvent = new MouseEvent("mousedown", {
+    const pointerdownEvent = new PointerEvent("pointerdown", {
       button: 0,
       clientX: 10,
       clientY: 10,
+      pointerId: 1,
     });
-    mermaidWrapper.dispatchEvent(mousedownEvent);
+    mermaidWrapper.dispatchEvent(pointerdownEvent);
 
     const getActiveWindowListeners = (types) =>
       addedListeners.filter(
@@ -247,12 +245,11 @@ describe("Transient Drag-Scoped Window Listeners", () => {
 
     expect(
       getActiveWindowListeners([
-        "mousemove",
-        "mouseup",
-        "touchmove",
-        "touchend",
+        "pointermove",
+        "pointerup",
+        "pointercancel",
       ])
-    ).toHaveLength(4);
+    ).toHaveLength(3);
 
     // Unmount component
     wrapper.unmount();
@@ -260,10 +257,9 @@ describe("Transient Drag-Scoped Window Listeners", () => {
     // Verify all global window-level listeners are completely cleaned up
     expect(
       getActiveWindowListeners([
-        "mousemove",
-        "mouseup",
-        "touchmove",
-        "touchend",
+        "pointermove",
+        "pointerup",
+        "pointercancel",
       ])
     ).toHaveLength(0);
 
