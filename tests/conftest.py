@@ -175,6 +175,9 @@ try:
     patch_init_db()
     databases_pre_created = True
 except Exception as e:
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        print(f"[conftest] ERROR: Database initialization failed in CI: {e}")
+        raise
     print(
         f"[conftest] Warning: PostgreSQL database is not available ({e}). Skipping worker-isolated DB setup and patching. Tests will fall back to SQLite or mocked states."
     )
