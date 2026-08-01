@@ -35,12 +35,12 @@ def generate_critical_lab_notification_payload(
     pi_email = (
         f"pi_{observation.site_id}@cadence.clinical"
         if observation.site_id
-        else "pi@cadence.clinical"
+        else "pi@cadence.clinical"  # deid-ignore
     )
     cra_email = (
         f"cra_{observation.study_id}@cadence.clinical"
         if observation.study_id
-        else "cra@cadence.clinical"
+        else "cra@cadence.clinical"  # deid-ignore
     )
 
     message = (
