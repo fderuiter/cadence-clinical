@@ -260,6 +260,24 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked --all-extras
 
+      - name: Cache Playwright Browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright Browsers
+        run: |
+          for i in {1..3}; do
+            uv run playwright install chromium --with-deps && break || {
+              echo "Playwright install failed on attempt $i, retrying in 10s..."
+              sleep 10
+            }
+          done
+
       - name: Run frontend unit tests
         run: pnpm -r test
 
