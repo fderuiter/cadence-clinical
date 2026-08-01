@@ -56,6 +56,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-27: Standardize FastAPI Identity Dependency and Site Access Migration](2026-07-27-standardize-fastapi-identity-dependency.md)
 - [2026-07-31: eCOA Subject Identity, Authorization, and Gateway Routing](2026-07-31-ecoa-subject-identity-and-gateway-routing.md)
 - [2026-08-01: Vue SPA, OIDC, RBAC, and Signing Boundaries](2026-08-01-vue-spa-oidc-rbac-signing-boundaries.md)
+- [2026-08-01: Cryptographic Signature Verification Engine for Electronic Signatures](2026-08-01-cryptographic-signature-verification-engine-for-esignatures.md)
 - [2026-08-07: Route terminology APIs through the gateway](2026-08-07-gateway-terminology-routing.md)
 - [2026-08-08: Centralized RBAC Toolkit, Permissions, Principals, and Field Masking](2026-08-08-centralized-rbac-toolkit.md)
 - [2026-08-08: Gateway Step-Up Re-Authentication and Signature Token Issuance](2026-08-08-gateway-step-up-re-authentication.md)
@@ -67,6 +68,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-17: Centralized Permission-Based Authorization and Dynamic Mappings](2026-08-17-centralized-permission-auth.md)
 - [2026-08-21: eTMF Inbound-Email Webhook and Binder Routing](2026-08-21-etmf-inbound-email-webhook-and-binder-routing.md)
 - [2026-08-24: Role Authorization for Granular Data-Lock Actions and Trust Boundary Verification](2026-08-24-role-authorization-for-granular-data-lock-actions.md)
+- [2026-08-01: Cryptographic Signature Verification Engine for Part 11 eSignatures](2026-08-01-cryptographic-signature-verification-engine.md)
 
 ### 3. Clinical Data Interoperability & Standards
 - [2026-09-01: SAE Reconciliation & Safety Gateway (E2B)](2026-09-01-sae-reconciliation-safety-gateway-e2b.md)
