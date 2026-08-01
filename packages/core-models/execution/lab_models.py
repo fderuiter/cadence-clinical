@@ -9,7 +9,7 @@ from enum import StrEnum
 from pydantic import BaseModel, Field
 
 
-class LabSource(StrEnum):
+class LabSourceEnum(StrEnum):
     """Source of the laboratory testing.
 
     Requirements: PRD-SYS-001

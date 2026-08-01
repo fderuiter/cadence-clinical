@@ -64,3 +64,24 @@ def test_ctms_database_manager_uninitialized_and_close():
     with pytest.raises(Exception, match="not initialized"):
         mgr.get_session_maker()
     asyncio.run(mgr.close())
+
+
+def test_ci_database_parity_enforcement_raises_on_failure(monkeypatch):
+    """
+    Verify that when GITHUB_ACTIONS is active, database initialization failures raise an exception.
+    """
+    import os
+
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+
+    def mock_create_databases_async(worker_suffix):
+        raise ConnectionRefusedError("Simulated database connection failure")
+
+    with pytest.raises(
+        ConnectionRefusedError, match="Simulated database connection failure"
+    ):
+        try:
+            mock_create_databases_async("_test")
+        except Exception:
+            if os.environ.get("GITHUB_ACTIONS") == "true":
+                raise

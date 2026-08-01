@@ -1,7 +1,6 @@
 import { vi, expect } from "vitest";
 import axe from "axe-core";
 
-// Define the custom async matcher toBeAccessible
 expect.extend({
   /**
    * Asserts that a standard DOM Element, raw HTML string, or Vue test wrapper is WCAG accessible.

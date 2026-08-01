@@ -3,8 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-import importlib
-
+from cdisc.usdm_importer import USDMImporter
 from cdisc.usdm_transport_models import (
     UsdmExportResponse,
     UsdmImportRequest,
@@ -13,9 +12,6 @@ from cdisc.usdm_transport_models import (
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from packages.security.middleware import get_current_user
-
-_designer_importers = importlib.import_module("apps.designer.importers.usdm_importer")
-USDMImporter = _designer_importers.USDMImporter
 
 router = APIRouter()
 

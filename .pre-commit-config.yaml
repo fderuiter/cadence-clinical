@@ -69,6 +69,13 @@ repos:
         language: system
         files: \.md$
 
+      - id: validate-imports
+        name: Cross-Service Import Validator
+        entry: python3 scripts/validate_imports.py
+        language: system
+        files: ^(apps/|packages/|scripts/validate_imports\.py)
+        pass_filenames: false
+
       - id: deid-compliance-scan
         name: DEID Compliance Scan
         entry: uv run python -m packages.deid.cli
