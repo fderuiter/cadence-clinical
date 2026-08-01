@@ -394,30 +394,16 @@ async def recalculate_range_flags(
             # Dispatch alerts on transitioning to critical indicator
             if indicator in ("LOW LOW", "HIGH HIGH") and background_tasks is not None:
                 from apps.execution.notification_events import (
-                    generate_critical_lab_notification_payload,
-                    publish_notification_background,
+                    dispatch_critical_lab_notifications,
                 )
 
-                raw_payload = generate_critical_lab_notification_payload(obs, indicator)
-                for recipient in raw_payload["recipients"]:
-                    recipient_payload = {
-                        "category": raw_payload["category"],
-                        "priority": raw_payload["priority"],
-                        "channels": "IN_APP",
-                        "message_content": raw_payload["message_content"],
-                        "related_entity_id": raw_payload["related_entity_id"],
-                        "related_entity_type": raw_payload["related_entity_type"],
-                        "related_entity_subject_id": raw_payload[
-                            "related_entity_subject_id"
-                        ],
-                        "recipient_user_id": recipient,
-                    }
-                    background_tasks.add_task(
-                        publish_notification_background,
-                        recipient_payload,
-                        user_id,
-                        change_reason,
-                    )
+                dispatch_critical_lab_notifications(
+                    background_tasks,
+                    obs,
+                    indicator,
+                    user_id,
+                    change_reason,
+                )
 
     if updated_count > 0:
         await session.commit()
