@@ -71,8 +71,6 @@ export default {
       let panX = 0;
       let panY = 0;
       let isDragging = false;
-      let startX = 0;
-      let startY = 0;
 
       // Apply transforms to SVG
       const updateTransform = () => {
@@ -121,79 +119,149 @@ export default {
       outerContainer.appendChild(toolbar);
 
       let listenersAttached = false;
+      const activePointers = new Map();
+      let lastSinglePointerPos = null;
+      let isMultiTouch = false;
 
-      const handleMouseMove = (e) => {
+      // Multi-touch initial metrics
+      let D_start = 0;
+      let S_start = 1;
+      let panX_start = 0;
+      let panY_start = 0;
+      let C_start = { x: 0, y: 0 };
+
+      const initMultiTouch = () => {
+        if (activePointers.size !== 2) return;
+        const [p1, p2] = Array.from(activePointers.values());
+        D_start = Math.hypot(p1.clientX - p2.clientX, p1.clientY - p2.clientY);
+        S_start = scale;
+        panX_start = panX;
+        panY_start = panY;
+        C_start = {
+          x: (p1.clientX + p2.clientX) / 2,
+          y: (p1.clientY + p2.clientY) / 2
+        };
+        isMultiTouch = true;
+      };
+
+      const handlePointerMove = (e) => {
         if (!isDragging) return;
-        panX = e.clientX - startX;
-        panY = e.clientY - startY;
-        updateTransform();
-      };
+        if (activePointers.has(e.pointerId)) {
+          activePointers.set(e.pointerId, e);
+        } else {
+          return;
+        }
 
-      const handleMouseUp = () => {
-        cleanupDrag();
-      };
+        if (activePointers.size === 1) {
+          const p = activePointers.get(e.pointerId);
+          if (lastSinglePointerPos) {
+            const dx = p.clientX - lastSinglePointerPos.x;
+            const dy = p.clientY - lastSinglePointerPos.y;
+            panX += dx;
+            panY += dy;
+            lastSinglePointerPos = { x: p.clientX, y: p.clientY };
+            updateTransform();
+          }
+        } else if (activePointers.size === 2) {
+          if (!isMultiTouch) {
+            initMultiTouch();
+          }
+          const [p1, p2] = Array.from(activePointers.values());
+          const D_new = Math.hypot(p1.clientX - p2.clientX, p1.clientY - p2.clientY);
+          const C_new = {
+            x: (p1.clientX + p2.clientX) / 2,
+            y: (p1.clientY + p2.clientY) / 2
+          };
 
-      const handleTouchMove = (e) => {
-        if (!isDragging || e.touches.length !== 1) return;
-        panX = e.touches[0].clientX - startX;
-        panY = e.touches[0].clientY - startY;
-        updateTransform();
-        if (e.cancelable) {
-          e.preventDefault();
+          if (D_start > 0) {
+            const f = D_new / D_start;
+            const S_new = Math.min(Math.max(S_start * f, 0.2), 5);
+            panX = C_new.x - S_new * (C_start.x - panX_start) / S_start;
+            panY = C_new.y - S_new * (C_start.y - panY_start) / S_start;
+            scale = S_new;
+            updateTransform();
+          }
         }
       };
 
-      const handleTouchEnd = () => {
-        cleanupDrag();
+      const handlePointerUp = (e) => {
+        activePointers.delete(e.pointerId);
+        try {
+          wrapper.releasePointerCapture(e.pointerId);
+        } catch (err) {}
+
+        if (activePointers.size === 0) {
+          cleanupDrag();
+        } else if (activePointers.size === 1) {
+          const [p] = Array.from(activePointers.values());
+          lastSinglePointerPos = { x: p.clientX, y: p.clientY };
+          isMultiTouch = false;
+        } else if (activePointers.size === 2) {
+          initMultiTouch();
+        }
+      };
+
+      const handlePointerCancel = (e) => {
+        activePointers.delete(e.pointerId);
+        try {
+          wrapper.releasePointerCapture(e.pointerId);
+        } catch (err) {}
+
+        if (activePointers.size === 0) {
+          cleanupDrag();
+        } else if (activePointers.size === 1) {
+          const [p] = Array.from(activePointers.values());
+          lastSinglePointerPos = { x: p.clientX, y: p.clientY };
+          isMultiTouch = false;
+        } else if (activePointers.size === 2) {
+          initMultiTouch();
+        }
       };
 
       const cleanupDrag = () => {
         isDragging = false;
+        isMultiTouch = false;
+        activePointers.clear();
+        lastSinglePointerPos = null;
         wrapper.classList.remove('active');
+        svg.style.transition = ''; // Restore transitions for toolbar buttons
         if (listenersAttached) {
-          window.removeEventListener('mousemove', handleMouseMove);
-          window.removeEventListener('mouseup', handleMouseUp);
-          window.removeEventListener('touchmove', handleTouchMove);
-          window.removeEventListener('touchend', handleTouchEnd);
+          window.removeEventListener('pointermove', handlePointerMove);
+          window.removeEventListener('pointerup', handlePointerUp);
+          window.removeEventListener('pointercancel', handlePointerCancel);
           listenersAttached = false;
         }
         activeCleanups.delete(cleanupDrag);
       };
 
-      // Drag and drop / panning functionality on the wrapper
-      wrapper.addEventListener('mousedown', (e) => {
-        if (e.button !== 0) return; // Only left click
+      // Set touch-action programmatically to prevent scrolling and gesture actions
+      wrapper.style.touchAction = 'none';
+
+      // Unified PointerEvents pipeline for interactions
+      wrapper.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+
         isDragging = true;
-        startX = e.clientX - panX;
-        startY = e.clientY - panY;
-        wrapper.classList.add('active');
-        e.preventDefault();
+        activePointers.set(e.pointerId, e);
+        svg.style.transition = 'none'; // Temporarily disable transitions during drag
+
+        try {
+          wrapper.setPointerCapture(e.pointerId);
+        } catch (err) {}
+
+        if (activePointers.size === 1) {
+          lastSinglePointerPos = { x: e.clientX, y: e.clientY };
+          wrapper.classList.add('active');
+        } else if (activePointers.size === 2) {
+          initMultiTouch();
+        }
 
         if (!listenersAttached) {
-          window.addEventListener('mousemove', handleMouseMove);
-          window.addEventListener('mouseup', handleMouseUp);
-          window.addEventListener('touchmove', handleTouchMove, { passive: false });
-          window.addEventListener('touchend', handleTouchEnd);
+          window.addEventListener('pointermove', handlePointerMove);
+          window.addEventListener('pointerup', handlePointerUp);
+          window.addEventListener('pointercancel', handlePointerCancel);
           listenersAttached = true;
           activeCleanups.add(cleanupDrag);
-        }
-      });
-
-      // Touch panning
-      wrapper.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 1) {
-          isDragging = true;
-          startX = e.touches[0].clientX - panX;
-          startY = e.touches[0].clientY - panY;
-
-          if (!listenersAttached) {
-            window.addEventListener('mousemove', handleMouseMove);
-            window.addEventListener('mouseup', handleMouseUp);
-            window.addEventListener('touchmove', handleTouchMove, { passive: false });
-            window.addEventListener('touchend', handleTouchEnd);
-            listenersAttached = true;
-            activeCleanups.add(cleanupDrag);
-          }
         }
       });
     };
