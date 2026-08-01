@@ -723,6 +723,73 @@ async def process_translation(
                         odm_str = pretty_print(odm_xml_str)
                         openrosa_str = pretty_print(openrosa_xml_str)
 
+                        # Run actual HTML layout and accessibility checks inside the Playwright execution thread
+                        import hashlib
+
+                        form_hash = hashlib.sha256(
+                            openrosa_str.encode("utf-8")
+                        ).hexdigest()
+
+                        from apps.execution.services.layout_validator import (
+                            run_layout_and_accessibility_checks,
+                            save_accessibility_audit_log,
+                        )
+
+                        (
+                            violations,
+                            passes,
+                            incomplete,
+                            inapplicable,
+                            layout_errors,
+                        ) = await run_layout_and_accessibility_checks(openrosa_str)
+
+                        if violations or layout_errors:
+                            err_msgs = []
+                            for err in layout_errors:
+                                err_msgs.append(err)
+                            for v in violations:
+                                node_details = []
+                                for n in v.get("nodes", []):
+                                    node_details.append(n.get("html", ""))
+                                err_msgs.append(
+                                    f"Accessibility Violation: {v.get('id')} - {v.get('description')} on nodes: {', '.join(node_details)}"
+                                )
+                            error_text = "; ".join(err_msgs)
+
+                            # First save the failed audit log inside the current transaction
+                            await save_accessibility_audit_log(
+                                session=session,
+                                study_id=study_id,
+                                status="FAIL",
+                                form_hash=form_hash,
+                                violations=violations,
+                                passes=passes,
+                                incomplete=incomplete,
+                                inapplicable=inapplicable,
+                                layout_errors=layout_errors,
+                                user_id=user_id,
+                                change_reason=change_reason,
+                            )
+                            # Block publication by raising ValueError
+                            raise ValueError(
+                                f"Layout/Accessibility Validation Failed: {error_text}"
+                            )
+
+                        # Validation passed, log the success
+                        await save_accessibility_audit_log(
+                            session=session,
+                            study_id=study_id,
+                            status="PASS",
+                            form_hash=form_hash,
+                            violations=violations,
+                            passes=passes,
+                            incomplete=incomplete,
+                            inapplicable=inapplicable,
+                            layout_errors=[],
+                            user_id=user_id,
+                            change_reason=change_reason,
+                        )
+
                         job.odm_payload = odm_str
                         job.openrosa_payload = openrosa_str
                         job.status = "COMPLETED"
@@ -737,6 +804,40 @@ async def process_translation(
                             error_message=str(e),
                         )
                         session.add(failed_job)
+
+                        # Structured, immutable audit log entry is saved inside the error transaction
+                        try:
+                            try:
+                                l_openrosa = openrosa_str
+                            except NameError:
+                                l_openrosa = ""
+                            import hashlib
+
+                            form_hash = (
+                                hashlib.sha256(l_openrosa.encode("utf-8")).hexdigest()
+                                if l_openrosa
+                                else "unknown"
+                            )
+
+                            from apps.execution.services.layout_validator import (
+                                save_accessibility_audit_log,
+                            )
+
+                            await save_accessibility_audit_log(
+                                session=session,
+                                study_id=study_id,
+                                status="FAIL",
+                                form_hash=form_hash,
+                                violations=[],
+                                passes=[],
+                                incomplete=[],
+                                inapplicable=[],
+                                layout_errors=[str(e)],
+                                user_id=user_id,
+                                change_reason=change_reason,
+                            )
+                        except Exception:
+                            pass
         finally:
             if token is not None:
                 current_session.reset(token)
