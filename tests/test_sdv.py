@@ -117,8 +117,17 @@ def get_bulk_sdv_auth_headers(
     return headers
 
 
+def get_auth_headers(
+    user_id: str = "test_user",
+    roles: str = "CRA",
+    change_reason: str = "test operation",
+) -> dict[str, str]:
+    """Alias for get_v2_auth_headers to match the standard signature helper naming."""
+    return get_v2_auth_headers(user_id=user_id, roles=roles, change_reason=change_reason)
+
+
 @pytest.fixture(autouse=True)
-async def setup_test_db():
+async def setup_db():
     TrialLockManager.reset()
     db_manager.init_db(
         "sqlite+aiosqlite:///:memory:",

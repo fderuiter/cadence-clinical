@@ -11,6 +11,8 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 1871
 - **Passed:** 1871 🟢
+- **Total Automated Test Cases Run:** 1869
+- **Passed:** 1869 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -933,6 +935,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_redaction_derivative_safety` | `tests.test_etmf_sync_provenance` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sealer_retains_and_validates_reason_for_change` | `tests.test_etmf_sync_provenance` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_arithmetic_null_safety_and_bmi` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cascading_dependent_nullification_parity` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_comparison_null_semantics` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_comparison_operators` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_field_reference_and_xpath` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
