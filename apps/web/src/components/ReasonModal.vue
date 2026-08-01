@@ -2,6 +2,7 @@
   <div
     v-if="show"
     :id="idPrefix ? idPrefix + 'reason-modal' : 'reason-modal'"
+    ref="modalRef"
     class="modal-overlay"
     style="display: flex"
     role="dialog"
@@ -13,7 +14,9 @@
         {{ title }}
       </div>
       <div class="modal-body">
-        <p v-if="description">{{ description }}</p>
+        <p v-if="description">
+          {{ description }}
+        </p>
 
         <div class="form-group" style="margin-bottom: 12px">
           <label :for="idPrefix + 'change-reason-select'"
@@ -78,6 +81,8 @@
 
 <script setup>
 import { ref, watch } from "vue";
+import { useFocusTrap } from "@/composables/useFocusTrap";
+import { useEscapeClose } from "@/composables/useEscapeClose";
 
 const props = defineProps({
   show: {
@@ -127,6 +132,10 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["confirm", "cancel"]);
+
+const modalRef = ref(null);
+useFocusTrap(modalRef);
+useEscapeClose(() => emit("cancel"));
 
 const selectedOption = ref("");
 const customText = ref("");
