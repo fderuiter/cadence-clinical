@@ -237,12 +237,7 @@ export function createConditionRowHTML(
  * @param {Object} [options={}] - Options for pre-populating fields and conditions.
  * @returns {string} The HTML string.
  */
-export function createRuleEditorHTML(
-  // eslint-disable-next-line no-unused-vars
-  forms = [],
-  fields = [],
-  options = {}
-) {
+export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
   const opt = {
     conditions: [],
     matchOperator: "and",
