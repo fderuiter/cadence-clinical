@@ -175,6 +175,7 @@ def step_run_tests(dry_run: bool) -> None:
                 "--no-cov",
                 "--ignore=tests/test_layout_validator.py",
                 "--ignore=tests/test_notifications.py",
+                "--ignore=tests/test_notification_worker.py",
             ]
         )
         # Run notification tests sequentially
@@ -188,6 +189,7 @@ def step_run_tests(dry_run: bool) -> None:
                 "-q",
                 "--no-cov",
                 "tests/test_notifications.py",
+                "tests/test_notification_worker.py",
             ]
         )
         # Run layout validator tests sequentially
