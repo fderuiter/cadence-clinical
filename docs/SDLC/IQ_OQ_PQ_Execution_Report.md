@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1885
-- **Passed:** 1885 🟢
+- **Total Automated Test Cases Run:** 1887
+- **Passed:** 1887 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -21,7 +21,7 @@ The Installation Qualification verifies that the software execution environment,
 
 ### 2.1 System Environment Metadata
 - **Operating System / Platform:** linux (containerized target specification)
-- **Python Version:** 3.12.12 (Docker execution environment baseline)
+- **Python Version:** 3.12.13 (Docker execution environment baseline)
 - **Database Provider (Execution Engine):** PostgreSQL / SQLite in-memory fallback
 - **Graph Database Provider (Designer Engine):** Neo4j (mocked in unit suite)
 - **Identity Management Gateway:** Keycloak OIDC Router
@@ -2035,8 +2035,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_load_and_validate_ledger_not_found` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_load_and_validate_ledger_not_list` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_load_and_validate_ledger_valid` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scan_exits_successfully_on_unreadable_files` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scan_for_inline_bypasses_no_violations` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scan_for_inline_bypasses_with_violations` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scan_for_manifest_bypasses` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_delimited_format_int_indices_without_header` | `tests.test_whodrug_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_delimited_format_parsing` | `tests.test_whodrug_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_detect_file_type` | `tests.test_whodrug_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |

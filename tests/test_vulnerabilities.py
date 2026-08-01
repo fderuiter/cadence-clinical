@@ -12,74 +12,110 @@ from scripts.validate_vulnerabilities import (
     extract_active_vulnerabilities,
     load_and_validate_ledger,
     scan_for_inline_bypasses,
+    scan_for_manifest_bypasses,
 )
 
 
 def test_scan_for_inline_bypasses_no_violations(tmp_path):
-    """Verify that scan_for_inline_bypasses returns no violations when none exist."""
-    # Create temp directory layout matching scan paths
-    workflows_dir = tmp_path / ".github" / "workflows"
-    workflows_dir.mkdir(parents=True)
+    """Verify that scan_for_inline_bypasses returns no violations when none exist.
 
-    workflow_file = workflows_dir / "ci_clean.yml"
-    workflow_file.write_text("run: uv run pip-audit\n", encoding="utf-8")
+    Requirements: PRD-SYS-001
+    """
+    (tmp_path / "apps").mkdir()
+    (tmp_path / "packages").mkdir()
 
-    with patch("scripts.validate_vulnerabilities.os.path.exists", return_value=True):
-        with patch("scripts.validate_vulnerabilities.os.walk") as mock_walk:
+    clean_file = tmp_path / "apps" / "clean.py"
+    clean_file.write_text("print('hello world')\n", encoding="utf-8")
 
-            def mock_walk_fn(path, *args, **kwargs):
-                if ".github/workflows" in path:
-                    return [(str(workflows_dir), [], ["ci_clean.yml"])]
-                return []
+    audit_file = tmp_path / "packages" / "audit.py"
+    audit_file.write_text("uv run pip-audit\n", encoding="utf-8")
 
-            mock_walk.side_effect = mock_walk_fn
-
-            # Use open() patch to direct to our temporary file
-            orig_open = open
-
-            def mock_open(file, *args, **kwargs):
-                if "ci_clean.yml" in str(file):
-                    return orig_open(workflow_file, *args, **kwargs)
-                return orig_open(file, *args, **kwargs)
-
-            with patch("builtins.open", mock_open):
-                violations = scan_for_inline_bypasses()
-                assert len(violations) == 0
+    with patch("scripts.validate_vulnerabilities.REPO_ROOT", str(tmp_path)):
+        violations = scan_for_inline_bypasses()
+        assert len(violations) == 0
 
 
 def test_scan_for_inline_bypasses_with_violations(tmp_path):
-    """Verify that scan_for_inline_bypasses identifies --ignore-vuln flag violations."""
-    workflows_dir = tmp_path / ".github" / "workflows"
-    workflows_dir.mkdir(parents=True)
+    """Verify that scan_for_inline_bypasses identifies flag violations when adjacent to audit.
 
-    workflow_file = workflows_dir / "ci_dirty.yml"
-    workflow_file.write_text(
+    Requirements: PRD-SYS-001
+    """
+    (tmp_path / "apps").mkdir()
+
+    # File with long-form bypass flag and audit utility on same line
+    dirty_file = tmp_path / "apps" / "dirty.yml"
+    dirty_file.write_text(
         "run: uv run pip-audit --ignore-vuln CVE-12345\n", encoding="utf-8"
     )
 
-    with patch("scripts.validate_vulnerabilities.os.path.exists", return_value=True):
-        with patch("scripts.validate_vulnerabilities.os.walk") as mock_walk:
+    # File with short-form bypass flag and audit utility on same line
+    short_dirty_file = tmp_path / "apps" / "short_dirty.py"
+    short_dirty_file.write_text("pnpm audit -i CVE-1111\n", encoding="utf-8")
 
-            def mock_walk_fn(path, *args, **kwargs):
-                if ".github/workflows" in path:
-                    return [(str(workflows_dir), [], ["ci_dirty.yml"])]
-                return []
+    # File with short flag but NO audit utility (should not be flagged)
+    grep_file = tmp_path / "apps" / "grep.sh"
+    grep_file.write_text("grep -i 'pattern' file.txt\n", encoding="utf-8")
 
-            mock_walk.side_effect = mock_walk_fn
+    with patch("scripts.validate_vulnerabilities.REPO_ROOT", str(tmp_path)):
+        violations = scan_for_inline_bypasses()
+        assert len(violations) == 2
 
-            orig_open = open
+        paths = [v[0] for v in violations]
+        assert str(dirty_file) in paths
+        assert str(short_dirty_file) in paths
+        assert str(grep_file) not in paths
 
-            def mock_open(file, *args, **kwargs):
-                if "ci_dirty.yml" in str(file):
-                    return orig_open(workflow_file, *args, **kwargs)
-                return orig_open(file, *args, **kwargs)
 
-            with patch("builtins.open", mock_open):
-                violations = scan_for_inline_bypasses()
-                assert len(violations) == 1
-                assert "ci_dirty.yml" in violations[0][0]
-                assert violations[0][1] == 1
-                assert "--ignore-vuln" in violations[0][2]
+def test_scan_for_manifest_bypasses(tmp_path):
+    """Verify that scan_for_manifest_bypasses identifies non-empty pnpm.auditConfig overrides.
+
+    Requirements: PRD-SYS-001
+    """
+    (tmp_path / "apps" / "app1").mkdir(parents=True)
+    (tmp_path / "packages" / "pkg1").mkdir(parents=True)
+
+    # package.json with empty/missing auditConfig
+    pjson1 = tmp_path / "apps" / "app1" / "package.json"
+    pjson1.write_text(
+        json.dumps({"name": "app1", "dependencies": {}}), encoding="utf-8"
+    )
+
+    # package.json with non-empty auditConfig
+    pjson2 = tmp_path / "packages" / "pkg1" / "package.json"
+    pjson2.write_text(
+        json.dumps(
+            {"name": "pkg1", "pnpm": {"auditConfig": {"ignoreCves": ["CVE-2022-1234"]}}}
+        ),
+        encoding="utf-8",
+    )
+
+    with patch("scripts.validate_vulnerabilities.REPO_ROOT", str(tmp_path)):
+        violations = scan_for_manifest_bypasses()
+        assert len(violations) == 1
+        assert str(pjson2) in violations[0][0]
+        assert "pnpm.auditConfig" in violations[0][2]
+
+
+def test_scan_exits_successfully_on_unreadable_files(tmp_path):
+    """Verify that scanning silently ignores unreadable files and directories without crashing.
+
+    Requirements: PRD-SYS-001
+    """
+    (tmp_path / "apps").mkdir()
+    unreadable_file = tmp_path / "apps" / "locked.py"
+    unreadable_file.write_text("pip-audit -i\n", encoding="utf-8")
+
+    orig_open = open
+
+    def mock_open(file, *args, **kwargs):
+        if str(file) == str(unreadable_file):
+            raise PermissionError("Permission denied (locked file mock)")
+        return orig_open(file, *args, **kwargs)
+
+    with patch("scripts.validate_vulnerabilities.REPO_ROOT", str(tmp_path)):
+        with patch("builtins.open", mock_open):
+            violations = scan_for_inline_bypasses()
+            assert len(violations) == 0
 
 
 def test_load_and_validate_ledger_not_found():
