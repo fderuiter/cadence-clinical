@@ -1,5 +1,8 @@
 <template>
-  <div id="section-ecrf" class="dashboard-section active">
+  <div
+    id="section-ecrf"
+    class="dashboard-section active"
+  >
     <div class="section-header">
       <h2>eCRF Runtime Renderer</h2>
       <p>
@@ -8,10 +11,137 @@
       </p>
     </div>
 
+    <!-- Active User Role Badge & CRA Mode Toggle (for Sub-Issue 10) -->
+    <div
+      style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 20px;
+      "
+    >
+      <div style="font-size: 0.9rem">
+        Active Role:
+        <span
+          class="badge"
+          style="
+            background-color: var(--accent);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+          "
+        >{{ activeUserRole.toUpperCase() }}</span>
+      </div>
+
+      <!-- Let user select role in demo mode to test Site Coordinator (CRC) vs Monitor (CRA) workflows -->
+      <div style="display: flex; gap: 8px; align-items: center">
+        <label
+          for="role-tester-select"
+          style="font-size: 0.8rem; font-weight: bold"
+        >Demo Role Toggle:</label>
+        <select
+          id="role-tester-select"
+          v-model="demoRole"
+          style="
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+          "
+        >
+          <option value="site_investigator">
+            Site Coordinator / CRC
+          </option>
+          <option value="cra">
+            CRA Monitor (SDV Enabled)
+          </option>
+        </select>
+      </div>
+    </div>
+
     <div class="grid-2">
       <!-- Dynamic eCRF Form -->
       <div class="card">
-        <div class="card-title">Subject eCRF Data Entry Form</div>
+        <div class="card-title">
+          Subject eCRF Data Entry Form
+        </div>
+
+        <!-- Sub-Issue 9: Subject & Visit Selection Panel -->
+        <div
+          style="
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+          "
+        >
+          <div
+            class="form-group"
+            style="flex: 1"
+          >
+            <label
+              for="ecrf-subject-selector"
+              style="font-weight: bold"
+            >Active Subject ID</label>
+            <select
+              id="ecrf-subject-selector"
+              v-model="selectedSubjectId"
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+              "
+              @change="loadEcrfSession"
+            >
+              <option value="SUBJ-001">
+                SUBJ-001 (Mock Subject)
+              </option>
+              <option value="SUBJ-002">
+                SUBJ-002 (Screened Cohort)
+              </option>
+              <option value="SUBJ-003">
+                SUBJ-003 (Post-Randomization)
+              </option>
+            </select>
+          </div>
+          <div
+            class="form-group"
+            style="flex: 1"
+          >
+            <label
+              for="ecrf-visit-selector"
+              style="font-weight: bold"
+            >Active Visit / Encounter</label>
+            <select
+              id="ecrf-visit-selector"
+              v-model="selectedVisitId"
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+              "
+              @change="loadEcrfSession"
+            >
+              <option value="Screening">
+                Screening / Day -7
+              </option>
+              <option value="Week2">
+                Week 2 Treatment
+              </option>
+              <option value="Week4">
+                Week 4 Treatment
+              </option>
+            </select>
+          </div>
+        </div>
+
         <form
           id="form-VS_DEMO"
           class="clinical-form clinical-form-grid"
@@ -22,27 +152,75 @@
           "
           @submit.prevent
         >
-          <ClinicalFormField
+          <template
             v-for="field in store.ecrfFields"
-            v-show="store.fieldVisibility[field.id] !== false"
             :key="field.id"
-            :field="field"
-            :model-value="store.formValues[field.id]"
-            :query="store.formQueries[field.id]"
-            :error="getValidationError(field)"
-            :lookup-status="lookupStatuses[field.id]"
-            @update:model-value="store.formValues[field.id] = $event"
-            @input="handleLookupInput(field, $event)"
-            @change="(val, target) => handleFieldChange(field, val, target)"
-            @create-query="createQuery(field.id, $event)"
-            @respond-query="respondQuery(field.id, $event)"
-            @close-query="closeQuery(field.id)"
-            @reopen-query="reopenQuery(field.id)"
-          />
+          >
+            <div
+              v-show="store.fieldVisibility[field.id] !== false"
+              :style="`grid-column: span ${field.gridSpan || 12}; display: flex; flex-direction: column; gap: 8px;`"
+              style="margin-bottom: 8px"
+            >
+              <ClinicalFormField
+                :field="field"
+                :model-value="store.formValues[field.id]"
+                :query="store.formQueries[field.id]"
+                :error="getValidationError(field)"
+                :lookup-status="lookupStatuses[field.id]"
+                @update:model-value="store.formValues[field.id] = $event"
+                @input="handleLookupInput(field, $event)"
+                @change="(val, target) => handleFieldChange(field, val, target)"
+                @create-query="createQuery(field.id, $event)"
+                @respond-query="respondQuery(field.id, $event)"
+                @close-query="closeQuery(field.id)"
+                @reopen-query="reopenQuery(field.id)"
+              />
+
+              <!-- Sub-Issue 10: CRA Monitoring and SDV (Source Document Verification) checkbox -->
+              <div
+                v-if="isCraUser"
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  background-color: #f0fdf4;
+                  border: 1px dashed #bbf7d0;
+                  padding: 8px;
+                  border-radius: 4px;
+                  margin-top: -6px;
+                "
+                class="sdv-box"
+              >
+                <input
+                  :id="`sdv-${field.id}`"
+                  type="checkbox"
+                  :checked="sdvStates[getSdvKey(field.id)] === true"
+                  style="cursor: pointer"
+                  @change="handleSdvToggle(field.id, $event.target.checked)"
+                >
+                <label
+                  :for="`sdv-${field.id}`"
+                  style="
+                    font-size: 0.8rem;
+                    color: #166534;
+                    font-weight: 600;
+                    margin: 0;
+                    cursor: pointer;
+                  "
+                >
+                  Source Document Verified (SDV)
+                </label>
+              </div>
+            </div>
+          </template>
         </form>
 
         <div class="form-actions">
-          <button id="btn-clear-ecrf" class="btn" @click="clearForm">
+          <button
+            id="btn-clear-ecrf"
+            class="btn"
+            @click="clearForm"
+          >
             Clear Form
           </button>
           <button
@@ -61,7 +239,9 @@
         style="display: flex; flex-direction: column; gap: 16px"
       >
         <div>
-          <div class="card-title">CDASH Metadata Specification</div>
+          <div class="card-title">
+            CDASH Metadata Specification
+          </div>
           <p style="font-size: 0.85rem; color: #475569; margin-bottom: 8px">
             The fields on the left are dynamically rendered using structural
             CDASH metadata tags (e.g. <code>DM.BRTHDT</code>,
@@ -143,7 +323,9 @@
         class="card"
         style="display: flex; flex-direction: column; gap: 16px"
       >
-        <div class="card-title">PI Sign-Off Worklist & Verification</div>
+        <div class="card-title">
+          PI Sign-Off Worklist &amp; Verification
+        </div>
         <p style="font-size: 0.85rem; color: #475569; margin-bottom: 4px">
           Perform a 21 CFR Part 11 compliant electronic signature. This action
           requires re-authenticating the Principal Investigator credentials to
@@ -152,9 +334,7 @@
 
         <div style="display: flex; flex-direction: column; gap: 12px">
           <div class="form-group">
-            <label for="signoff-target-type"
-              >Sign-Off Scope (Granularity)</label
-            >
+            <label for="signoff-target-type">Sign-Off Scope (Granularity)</label>
             <select
               id="signoff-target-type"
               v-model="signoffTargetType"
@@ -165,9 +345,15 @@
                 border-radius: 4px;
               "
             >
-              <option value="FORM">FORM Level</option>
-              <option value="VISIT">VISIT Level</option>
-              <option value="SUBJECT">SUBJECT Level</option>
+              <option value="FORM">
+                FORM Level
+              </option>
+              <option value="VISIT">
+                VISIT Level
+              </option>
+              <option value="SUBJECT">
+                SUBJECT Level
+              </option>
             </select>
           </div>
 
@@ -183,7 +369,9 @@
                 border-radius: 4px;
               "
             >
-              <option value="">-- Choose ID --</option>
+              <option value="">
+                -- Choose ID --
+              </option>
               <template v-if="signoffTargetType === 'SUBJECT'">
                 <option
                   v-for="sub in availableSubjects"
@@ -211,11 +399,16 @@
                   {{ form }}
                 </option>
               </template>
-              <option value="custom">-- Enter Custom --</option>
+              <option value="custom">
+                -- Enter Custom --
+              </option>
             </select>
           </div>
 
-          <div v-if="signoffTargetId === 'custom'" class="form-group">
+          <div
+            v-if="signoffTargetId === 'custom'"
+            class="form-group"
+          >
             <label for="signoff-custom-target-id">Custom Target ID Value</label>
             <input
               id="signoff-custom-target-id"
@@ -228,7 +421,7 @@
                 border-radius: 4px;
               "
               @input="(e) => (customTargetId = e.target.value)"
-            />
+            >
           </div>
 
           <div class="form-group">
@@ -277,7 +470,7 @@
         "
       >
         <div class="card-title">
-          Ultimate CRF Builder: Protocol Ingestion & Review
+          Ultimate CRF Builder: Protocol Ingestion &amp; Review
         </div>
         <p style="font-size: 0.85rem; color: #475569">
           Upload a clinical protocol document (PDF/DOCX) to automatically
@@ -302,12 +495,12 @@
             accept=".pdf,.docx"
             style="display: none"
             @change="triggerDocumentUpload"
-          />
+          >
           <button
             class="btn"
             type="button"
-            @click="triggerFileSelect"
             :disabled="store.ingestionLoading"
+            @click="triggerFileSelect"
           >
             {{
               store.ingestionLoading
@@ -361,8 +554,7 @@
                   border-radius: 4px;
                 "
                 class="candidate-id"
-                >{{ store.candidateDraft.id }}</code
-              >
+              >{{ store.candidateDraft.id }}</code>
             </span>
             <span
               :class="[
@@ -470,9 +662,7 @@
                 class="item-edit-section"
               >
                 <div class="form-group">
-                  <label style="font-size: 0.75rem"
-                    >Modify Candidate Name/Label</label
-                  >
+                  <label style="font-size: 0.75rem">Modify Candidate Name/Label</label>
                   <input
                     v-model="editItemValue"
                     type="text"
@@ -484,12 +674,10 @@
                       font-size: 0.8rem;
                     "
                     class="edit-item-input"
-                  />
+                  >
                 </div>
                 <div class="form-group">
-                  <label style="font-size: 0.75rem"
-                    >Change Reason Justification (Mandatory)</label
-                  >
+                  <label style="font-size: 0.75rem">Change Reason Justification (Mandatory)</label>
                   <input
                     v-model="editItemReason"
                     type="text"
@@ -502,10 +690,13 @@
                       font-size: 0.8rem;
                     "
                     class="edit-item-reason"
-                  />
+                  >
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 6px">
-                  <button class="btn btn-sm" @click="cancelEditItem">
+                  <button
+                    class="btn btn-sm"
+                    @click="cancelEditItem"
+                  >
                     Cancel
                   </button>
                   <button
@@ -537,8 +728,7 @@
                       color: #ef4444;
                       font-weight: bold;
                     "
-                    >Provide Rejection Reason (Mandatory)</label
-                  >
+                  >Provide Rejection Reason (Mandatory)</label>
                   <input
                     v-model="rejectItemReason"
                     type="text"
@@ -551,10 +741,13 @@
                       font-size: 0.8rem;
                     "
                     class="reject-item-reason"
-                  />
+                  >
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 6px">
-                  <button class="btn btn-sm" @click="cancelRejectItem">
+                  <button
+                    class="btn btn-sm"
+                    @click="cancelRejectItem"
+                  >
                     Cancel
                   </button>
                   <button
@@ -642,9 +835,10 @@
             "
           >
             <div class="form-group">
-              <label for="promote-change-reason" style="font-weight: bold"
-                >Promotion Change Reason (Mandatory)</label
-              >
+              <label
+                for="promote-change-reason"
+                style="font-weight: bold"
+              >Promotion Change Reason (Mandatory)</label>
               <input
                 id="promote-change-reason"
                 v-model="promoteChangeReason"
@@ -657,7 +851,7 @@
                   border-radius: 4px;
                 "
                 class="promote-change-reason"
-              />
+              >
             </div>
 
             <div
@@ -683,8 +877,8 @@
                 type="button"
                 :disabled="
                   unreviewedCount > 0 ||
-                  !promoteChangeReason.trim() ||
-                  store.ingestionLoading
+                    !promoteChangeReason.trim() ||
+                    store.ingestionLoading
                 "
                 @click="promoteCandidate"
               >
@@ -739,14 +933,19 @@
       style="display: flex"
     >
       <div class="modal">
-        <div class="modal-header">Identity Re-Authentication Required</div>
+        <div class="modal-header">
+          Identity Re-Authentication Required
+        </div>
         <div class="modal-body">
           <p>
             To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>,
             you must re-verify your identity before performing this
             high-security action.
           </p>
-          <div class="form-group" style="margin-bottom: 12px">
+          <div
+            class="form-group"
+            style="margin-bottom: 12px"
+          >
             <label for="reauth-username">Username</label>
             <input
               id="reauth-username"
@@ -758,9 +957,12 @@
                 border: 1px solid var(--border);
                 border-radius: 4px;
               "
-            />
+            >
           </div>
-          <div class="form-group" style="margin-bottom: 12px">
+          <div
+            class="form-group"
+            style="margin-bottom: 12px"
+          >
             <label for="reauth-password">Password</label>
             <input
               id="reauth-password"
@@ -775,9 +977,12 @@
                 border-radius: 4px;
               "
               @keyup.enter="confirmReauth"
-            />
+            >
           </div>
-          <div class="form-group" style="margin-bottom: 12px">
+          <div
+            class="form-group"
+            style="margin-bottom: 12px"
+          >
             <label for="reauth-totp">MFA/TOTP Token (Optional)</label>
             <input
               id="reauth-totp"
@@ -790,7 +995,7 @@
                 border: 1px solid var(--border);
                 border-radius: 4px;
               "
-            />
+            >
           </div>
           <div
             v-if="reauthError"
@@ -801,7 +1006,11 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button id="btn-cancel-reauth" class="btn" @click="cancelReauth">
+          <button
+            id="btn-cancel-reauth"
+            class="btn"
+            @click="cancelReauth"
+          >
             Cancel
           </button>
           <button
@@ -809,7 +1018,7 @@
             class="btn btn-primary"
             @click="confirmReauth"
           >
-            Verify & Confirm
+            Verify &amp; Confirm
           </button>
         </div>
       </div>
@@ -955,6 +1164,96 @@ function handleLookupInput(field, value) {
   getDebouncedLookup(fieldId)(value);
 }
 
+// Sub-Issue 9 & 10 Subject, Visit, and SDV states
+const selectedSubjectId = ref("SUBJ-001");
+const selectedVisitId = ref("Screening");
+const ecrfSessions = reactive({});
+const sdvStates = reactive({}); // keyed by `${subjectId}:${visitId}:${fieldId}`
+
+// Role Tester Toggle support
+const demoRole = ref("site_investigator");
+
+const activeUserRole = computed(() => {
+  if (authStore.isAuthenticated) {
+    const roles = authStore.normalizedRoles || [];
+    if (roles.includes("cra") || roles.includes("monitor")) return "cra";
+    if (roles.includes("site_investigator") || roles.includes("crc"))
+      return "site_investigator";
+    return roles[0] || "site_investigator";
+  }
+  return demoRole.value;
+});
+
+const isCraUser = computed(() => {
+  return activeUserRole.value === "cra";
+});
+
+function getSessionKey() {
+  return `${selectedSubjectId.value}:${selectedVisitId.value}`;
+}
+
+function getSdvKey(fieldId) {
+  return `${selectedSubjectId.value}:${selectedVisitId.value}:${fieldId}`;
+}
+
+// Handle SDV Toggle (Sub-Issue 10)
+function handleSdvToggle(fieldId, checked) {
+  pendingSdvToggle.value = { fieldId, checked };
+  showReasonModal.value = true;
+}
+
+const pendingSdvToggle = ref(null);
+
+function loadEcrfSession() {
+  const key = getSessionKey();
+  if (!ecrfSessions[key]) {
+    ecrfSessions[key] = {
+      values: {},
+      queries: {},
+    };
+    store.ecrfFields.forEach((f) => {
+      ecrfSessions[key].values[f.id] = "";
+    });
+  }
+
+  // Swap Form values and queries references
+  store.formValues = ecrfSessions[key].values;
+  store.formQueries = ecrfSessions[key].queries;
+
+  store.evaluateRules();
+  // Initialize terminology lookups
+  store.ecrfFields.forEach((field) => {
+    if (field.type === "concept_code" && store.formValues[field.id]) {
+      performConceptCodeValidation(field.id, store.formValues[field.id]);
+    }
+  });
+}
+
+// Save active form state back to sessions deep-watched
+watch(
+  () => store.formValues,
+  (newValues) => {
+    const key = getSessionKey();
+    if (!ecrfSessions[key]) {
+      ecrfSessions[key] = { values: {}, queries: {} };
+    }
+    ecrfSessions[key].values = newValues;
+  },
+  { deep: true }
+);
+
+watch(
+  () => store.formQueries,
+  (newQueries) => {
+    const key = getSessionKey();
+    if (!ecrfSessions[key]) {
+      ecrfSessions[key] = { values: {}, queries: {} };
+    }
+    ecrfSessions[key].queries = newQueries;
+  },
+  { deep: true }
+);
+
 // Deep watch formValues to evaluate rules debounced
 watch(
   () => store.formValues,
@@ -965,13 +1264,7 @@ watch(
 );
 
 onMounted(() => {
-  store.evaluateRules();
-  // Initialize lookup validation for any pre-populated concept_code fields on mount
-  store.ecrfFields.forEach((field) => {
-    if (field.type === "concept_code" && store.formValues[field.id]) {
-      performConceptCodeValidation(field.id, store.formValues[field.id]);
-    }
-  });
+  loadEcrfSession();
 });
 
 // Reason Modal States
@@ -1043,9 +1336,32 @@ function cancelChange() {
   }
   showReasonModal.value = false;
   pendingValueChange.value = null;
+  pendingSdvToggle.value = null;
 }
 
 function saveChange(finalReason) {
+  if (pendingSdvToggle.value) {
+    const { fieldId, checked } = pendingSdvToggle.value;
+    const sKey = getSdvKey(fieldId);
+    sdvStates[sKey] = checked;
+
+    store.addLedgerBlock(
+      "SDV_TOGGLE",
+      {
+        subjectId: selectedSubjectId.value,
+        visitId: selectedVisitId.value,
+        fieldId,
+        is_sdv_verified: checked,
+      },
+      finalReason
+    );
+
+    pendingSdvToggle.value = null;
+    showReasonModal.value = false;
+    alert(`Source Document Verification (SDV) status updated and logged!`);
+    return;
+  }
+
   if (!pendingValueChange.value) return;
 
   commitChange(
@@ -1069,6 +1385,8 @@ function commitChange(field, oldValue, newValue, reason) {
       cdash: field.cdash || "",
       oldValue,
       newValue,
+      subjectId: selectedSubjectId.value,
+      visitId: selectedVisitId.value,
     },
     reason
   );
@@ -1076,10 +1394,7 @@ function commitChange(field, oldValue, newValue, reason) {
 
 // Query Operations
 function createQuery(fieldId, msgFromComponent = null) {
-  const msg =
-    msgFromComponent !== null
-      ? msgFromComponent
-      : (queryInputs[fieldId] || "").trim();
+  const msg = msgFromComponent !== null ? msgFromComponent : "";
   if (!msg) {
     alert("Please enter a discrepancy message!");
     return;
@@ -1088,23 +1403,25 @@ function createQuery(fieldId, msgFromComponent = null) {
   const queryObj = {
     status: "OPEN",
     message: msg,
-    createdBy: "Data Monitor (Offline Client)",
+    createdBy: `${activeUserRole.value} (Client Monitor)`,
     createdAt: new Date().toISOString().slice(0, 10),
   };
 
   store.formQueries[fieldId] = queryObj;
   store.addLedgerBlock(
     "QUERY_CREATE",
-    { fieldId, query: queryObj },
+    {
+      fieldId,
+      query: queryObj,
+      subjectId: selectedSubjectId.value,
+      visitId: selectedVisitId.value,
+    },
     `Raised discrepancy: "${msg}"`
   );
 }
 
 function respondQuery(fieldId, respFromComponent = null) {
-  const resp =
-    respFromComponent !== null
-      ? respFromComponent
-      : (queryResponses[fieldId] || "").trim();
+  const resp = respFromComponent !== null ? respFromComponent : "";
   if (!resp) {
     alert("Please enter a response!");
     return;
@@ -1113,12 +1430,17 @@ function respondQuery(fieldId, respFromComponent = null) {
   const queryObj = store.formQueries[fieldId];
   queryObj.status = "ANSWERED";
   queryObj.response = resp;
-  queryObj.respondedBy = "Clinical Investigator (Offline Client)";
+  queryObj.respondedBy = "Clinical Investigator / CRC";
   queryObj.respondedAt = new Date().toISOString().slice(0, 10);
 
   store.addLedgerBlock(
     "QUERY_RESPOND",
-    { fieldId, query: queryObj },
+    {
+      fieldId,
+      query: queryObj,
+      subjectId: selectedSubjectId.value,
+      visitId: selectedVisitId.value,
+    },
     `Responded to query: "${resp}"`
   );
 }
@@ -1180,7 +1502,7 @@ async function confirmReauth() {
     if (fieldId) {
       const queryObj = store.formQueries[fieldId];
       queryObj.status = "CLOSED";
-      queryObj.closedBy = `${username} (Offline Client)`;
+      queryObj.closedBy = `${username} (CRA Monitor)`;
       queryObj.closedAt = new Date().toISOString().slice(0, 10);
 
       const fieldMeta = store.ecrfFields.find((f) => f.id === fieldId);
@@ -1194,13 +1516,13 @@ async function confirmReauth() {
         {
           fieldId,
           studyId: store.currentUsdm.studyId || "STUDY-USDM-001",
-          subjectId: "SUBJ-001",
-          visitId: "Screening",
+          subjectId: selectedSubjectId.value,
+          visitId: selectedVisitId.value,
           domain,
           testCode,
           query: queryObj,
         },
-        "Discrepancy resolved and closed permanently."
+        "Discrepancy resolved and closed permanently by monitor."
       );
       pendingCloseQueryFieldId.value = null;
     }
@@ -1314,8 +1636,13 @@ function reopenQuery(fieldId) {
 
   store.addLedgerBlock(
     "QUERY_REOPEN",
-    { fieldId, query: queryObj },
-    "Investigator response was rejected. Query reopened."
+    {
+      fieldId,
+      query: queryObj,
+      subjectId: selectedSubjectId.value,
+      visitId: selectedVisitId.value,
+    },
+    "Investigator response was rejected by clinical monitor."
   );
 }
 
@@ -1326,7 +1653,11 @@ function clearForm() {
   });
   store.addLedgerBlock(
     "FORM_CLEAR",
-    { formId: "VS_DEMO" },
+    {
+      formId: "VS_DEMO",
+      subjectId: selectedSubjectId.value,
+      visitId: selectedVisitId.value,
+    },
     "All eCRF form fields cleared by clinical staff."
   );
 }
@@ -1360,6 +1691,8 @@ function submitEcrf() {
     "SESSION_SUBMIT",
     {
       formId: "VS_DEMO",
+      subjectId: selectedSubjectId.value,
+      visitId: selectedVisitId.value,
       formValues: store.formValues,
       formQueries: store.formQueries,
     },
