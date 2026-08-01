@@ -25,10 +25,10 @@ from apps.execution.database.models import (
 from apps.execution.routers.coding_schemas import (
     MedDRACodeLookupResponse,
     MedDRACodeMatch,
-    WHODrugCodeLookupResponse,
-    WHODrugMatch,
     WHODrugATCContext,
+    WHODrugCodeLookupResponse,
     WHODrugIngredientItem,
+    WHODrugMatch,
 )
 
 logger = logging.getLogger(__name__)
@@ -150,7 +150,7 @@ async def search_dictionary(
             matches=matches,
         )
 
-    elif dict_type_upper == "WHODRUG":
+    if dict_type_upper == "WHODRUG":
         whodrug_matches = []
         if res.get("match"):
             m = res["match"]
@@ -206,8 +206,7 @@ async def search_dictionary(
             matches=whodrug_matches,
         )
 
-    else:
-        raise ValueError(f"Unsupported dictionary type: {dictionary_type}")
+    raise ValueError(f"Unsupported dictionary type: {dictionary_type}")
 
 
 async def list_coding_assignments(
