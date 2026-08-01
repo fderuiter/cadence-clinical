@@ -2,6 +2,7 @@
   <div
     v-if="show"
     id="conflict-resolution-modal"
+    ref="modalRef"
     class="modal-overlay"
     style="display: flex"
     role="dialog"
@@ -115,10 +116,10 @@
               "
             >
               <input
+                v-model="selectedStrategy"
                 type="radio"
                 name="strategy"
                 value="SERVER_WIN"
-                v-model="selectedStrategy"
                 style="margin-top: 4px"
               />
               <div>
@@ -143,10 +144,10 @@
               "
             >
               <input
+                v-model="selectedStrategy"
                 type="radio"
                 name="strategy"
                 value="CLIENT_WIN"
-                v-model="selectedStrategy"
                 style="margin-top: 4px"
               />
               <div>
@@ -171,10 +172,10 @@
               "
             >
               <input
+                v-model="selectedStrategy"
                 type="radio"
                 name="strategy"
                 value="MANUAL_REVIEW"
-                v-model="selectedStrategy"
                 style="margin-top: 4px"
               />
               <div>
@@ -237,8 +238,8 @@
           id="btn-cancel-conflict"
           class="btn"
           type="button"
-          @click="onCancel"
           style="background-color: #e2e8f0; color: #334155"
+          @click="onCancel"
         >
           Cancel
         </button>
@@ -246,8 +247,8 @@
           id="btn-confirm-conflict"
           class="btn btn-primary"
           type="button"
-          @click="onConfirm"
           style="background-color: #f59e0b; border-color: #d97706; color: white"
+          @click="onConfirm"
         >
           Save Resolution
         </button>
@@ -258,6 +259,8 @@
 
 <script setup>
 import { ref, watch } from "vue";
+import { useFocusTrap } from "@/composables/useFocusTrap";
+import { useEscapeClose } from "@/composables/useEscapeClose";
 
 const props = defineProps({
   show: {
@@ -271,6 +274,10 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["confirm", "cancel"]);
+
+const modalRef = ref(null);
+useFocusTrap(modalRef);
+useEscapeClose(() => emit("cancel"));
 
 const selectedStrategy = ref("SERVER_WIN");
 const reasonText = ref("");
