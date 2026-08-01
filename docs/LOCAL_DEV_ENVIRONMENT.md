@@ -31,8 +31,8 @@ The frontend portals and monorepo workspace configurations depend on Node.js and
    pnpm install
    ```
 
-### Step 3: Install Python 3.11 & Run Single-Command Setup (`pnpm setup:dev`)
-Our backend systems are written in Python 3.11 and utilize `uv` for package management. Python version `3.11` is pinned via `.python-version`.
+### Step 3: Install Python 3.12 & Run Single-Command Setup (`pnpm setup:dev`)
+Our backend systems are written in Python 3.12 and utilize `uv` for package management. Python version `3.12` is pinned via `.python-version`.
 
 1. Install `uv` Package Manager:
    * **macOS/Linux/WSL:** `curl -LsSf https://astral.sh/uv/install.sh | sh`
@@ -42,7 +42,7 @@ Our backend systems are written in Python 3.11 and utilize `uv` for package mana
    ```bash
    pnpm setup:dev
    ```
-   *This single command automatically provisions Python 3.11 with `--all-extras` (`pytest`, `ruff`, `bandit`, `playwright`, `weasyprint`), downloads required Playwright browser engines, and links workspace dependencies.*
+   *This single command automatically provisions Python 3.12 with `--all-extras` (`pytest`, `ruff`, `bandit`, `playwright`, `weasyprint`), downloads required Playwright browser engines, and links workspace dependencies.*
 
 ### Step 4: Install & Configure Git Pre-commit Hooks
 Register the pre-commit configuration with Git to run automatic linting, formatting, and link validations before staging commits:

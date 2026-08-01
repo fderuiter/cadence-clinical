@@ -385,3 +385,46 @@ async def recalculate_range_flags(session: Any, study_id: str, test_code: str) -
         await session.commit()
 
     return updated_count
+
+
+async def convert_lab_unit(
+    session: Any,
+    test_code: str,
+    from_unit: str,
+    to_unit: str,
+    value: float,
+) -> float:
+    """Converts a numeric laboratory value from one unit to another, utilizing
+    database-defined LabUnitConversion entries first, and falling back to static
+    UCUM conversions.
+
+    Args:
+        session (Any): Async SQLAlchemy database session.
+        test_code (str): The laboratory test code (e.g. 'HEMOGLOBIN').
+        from_unit (str): The starting unit of measurement.
+        to_unit (str): The target unit of measurement.
+        value (float): The numeric value to convert.
+
+    Returns:
+        float: The converted numeric value.
+    """
+    from sqlalchemy import select
+
+    from apps.execution.database.models import LabUnitConversion
+    from apps.execution.ucum import convert_unit
+
+    stmt = select(LabUnitConversion).where(
+        LabUnitConversion.test_code == test_code,
+        LabUnitConversion.from_unit == from_unit,
+        LabUnitConversion.to_unit == to_unit,
+        LabUnitConversion.is_deleted.is_(False),
+    )
+    result = await session.execute(stmt)
+    row = result.scalars().first()
+
+    if row is not None:
+        factor = float(row.factor)
+        offset = float(row.offset) if row.offset is not None else 0.0
+        return value * factor + offset
+
+    return convert_unit(value, from_unit, to_unit)
