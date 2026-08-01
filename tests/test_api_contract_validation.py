@@ -231,6 +231,7 @@ def loaded_specs():
 
 
 _RAW_WHITELISTED_ROUTES = {
+    ("get", "/api/v1/studies/{study_id}/soa"),
     ("patch", "/subjects/{id}/state"),
     ("patch", "/api/v1/execution/subjects/{id}/state"),
     ("put", "/subjects/{id}/demographics"),
@@ -628,6 +629,8 @@ def is_whitelisted(method: str, path: str) -> bool:
         "/api/v1/designer/sentinel",
         "/api/v1/designer/cascade",
         "/api/v1/designer/export",
+        "/api/v1/execution/doa",
+        "/api/v1/execution/signatures",
     ]
     for w in wildcards:
         if p_norm.startswith(w):

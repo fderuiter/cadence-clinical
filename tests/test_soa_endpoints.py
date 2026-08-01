@@ -885,3 +885,101 @@ async def test_api_soa_retirement_and_projection_exclusion():
             headers=headers,
         )
         assert len(res_proj_3.json()["encounters"]) == 0
+
+
+@pytest.mark.asyncio
+async def test_api_latest_soa_projection_unversioned():
+    """
+    Verifies that GET /api/v1/studies/{study_id}/soa resolves the latest version
+    of the study and returns the complete matrix projection correctly.
+    """
+    study_id = "study_latest_soa"
+    version_id1 = "v_old"
+    version_id2 = "v_new"
+
+    # Register two versions of the study: v_old and v_new (latest)
+    from apps.designer.db import MOCK_STUDIES, MOCK_STUDY_VERSIONS
+    from apps.designer.delta import MOCK_SOA_DATA, _init_mock_soa
+
+    MOCK_STUDY_VERSIONS[study_id] = [
+        {
+            "id": version_id1,
+            "version_tag": "1.0",
+            "status": "APPROVED",
+            "version_index": 1,
+            "created_by": "designer",
+        },
+        {
+            "id": version_id2,
+            "version_tag": "2.0",
+            "status": "DRAFT",
+            "version_index": 2,
+            "created_by": "designer",
+        },
+    ]
+    MOCK_STUDIES[study_id] = {"id": study_id, "arms": []}
+
+    # Setup some dummy SoA entities under v_new (latest)
+    _init_mock_soa(version_id2)
+    MOCK_SOA_DATA[version_id2]["arms"]["arm_latest"] = {
+        "id": "arm_latest",
+        "version_index": 1,
+        "created_by": "designer",
+        "created_at": "2026-08-01T00:00:00",
+        "name": "Arm Latest",
+        "arm_type": "Active",
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        headers = get_auth_headers()
+
+        # Query latest SoA Projection without specifying version_id
+        res = await client.get(
+            f"/api/v1/studies/{study_id}/soa",
+            headers=headers,
+        )
+        assert res.status_code == 200
+        matrix = res.json()
+        assert "arms" in matrix
+        assert len(matrix["arms"]) == 1
+        assert matrix["arms"][0]["arm_id"] == "arm_latest"
+        assert matrix["arms"][0]["arm_name"] == "Arm Latest"
+
+
+@pytest.mark.asyncio
+async def test_api_soa_mutation_missing_change_reason():
+    """
+    Verifies that mutation operations raise an error if change reasoning is completely missing.
+    """
+    study_id = "study_1"
+    version_id = "v_draft"
+
+    MOCK_STUDY_VERSIONS[study_id] = [
+        {
+            "id": version_id,
+            "version_tag": "1.0",
+            "status": "DRAFT",
+            "version_index": 1,
+            "created_by": "designer",
+        }
+    ]
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        headers = get_auth_headers()
+        del headers["X-Change-Reason"]
+
+        # POST arm with missing header / body reason
+        res = await client.post(
+            f"/api/v1/studies/{study_id}/versions/{version_id}/arms",
+            json={
+                "id": "arm_fail",
+                "properties": {"name": "Fail Arm", "type": "Active"},
+            },
+            headers=headers,
+        )
+        # Note resolve_change_reason can raise 400 Bad Request
+        assert res.status_code in (400, 403)
