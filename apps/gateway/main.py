@@ -171,7 +171,7 @@ SERVICES = {
     "quality": os.getenv("QUALITY_URL", "http://localhost:8005"),
     "safety": os.getenv(
         "SAFETY_URL", "http://localhost:8008"
-    ),  # Registered Safety microservice scaffold URL
+    ),  # Registered Safety microservice scaffold URL (Phase 6 Integration)
     "tickets": os.getenv("TICKETS_URL", "http://localhost:8009"),
     "org": os.getenv("ORG_URL", "http://localhost:8012"),
     "eisf": os.getenv("EISF_URL", "http://localhost:8010"),
