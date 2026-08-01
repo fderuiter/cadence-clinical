@@ -201,7 +201,7 @@ def evaluate_ast(
             child_val = evaluate_ast(operands[0], context, current_indices)
             if child_val is None:
                 return True
-            return bool(isinstance(child_val, str) and child_val.strip() == "")
+            return str(child_val).strip() == ""
 
         if func_name == "is_not_empty":
             if len(operands) != 1:
@@ -209,7 +209,7 @@ def evaluate_ast(
             child_val = evaluate_ast(operands[0], context, current_indices)
             if child_val is None:
                 return False
-            return not (isinstance(child_val, str) and child_val.strip() == "")
+            return str(child_val).strip() != ""
 
         if func_name == "indexed-repeat":
             if len(operands) != 3:
