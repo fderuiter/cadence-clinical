@@ -1490,3 +1490,80 @@ async def test_require_study_scope_extraction() -> None:
         await checker(req, principal=principal)
     assert exc_info.value.status_code == 403
     assert "Forbidden" in exc_info.value.detail
+
+
+def test_etmf_taxonomy_and_tag_permissions() -> None:
+    """Verify granular permissions for etmf_taxonomy resource and etmf_document tag action.
+
+    Requirements: PRD-SYS-RBAC-001
+    """
+    from packages.security.rbac import (
+        ROLE_SYSADMIN,
+        ROLE_SPONSOR_DM,
+        ROLE_INVESTIGATOR,
+        ROLE_CRC,
+        ROLE_CRA_CANONICAL,
+        ROLE_AUDITOR_CANONICAL,
+        ROLE_EXTERNAL_MONITOR,
+        ROLE_SPONSOR_DESIGNER,
+        ROLE_SUBJECT,
+        Principal,
+        has_permission,
+    )
+
+    # 1. Test etmf_taxonomy:read permission
+    allowed_taxonomy_roles = [
+        ROLE_SYSADMIN,
+        "admin",
+        ROLE_SPONSOR_DM,
+        ROLE_INVESTIGATOR,
+        ROLE_CRC,
+        ROLE_CRA_CANONICAL,
+        "monitor",
+        ROLE_AUDITOR_CANONICAL,
+        ROLE_EXTERNAL_MONITOR,
+        "grants manager",
+        "grants_manager",
+        "system",
+        "anonymous",
+    ]
+
+    denied_taxonomy_roles = [
+        ROLE_SPONSOR_DESIGNER,
+        ROLE_SUBJECT,
+        "sponsor_clinical",
+    ]
+
+    for role in allowed_taxonomy_roles:
+        p = Principal(user_id="test_user", roles=[role])
+        assert has_permission(p, "etmf_taxonomy:read") is True, f"Role '{role}' should have etmf_taxonomy:read"
+
+    for role in denied_taxonomy_roles:
+        p = Principal(user_id="test_user", roles=[role])
+        assert has_permission(p, "etmf_taxonomy:read") is False, f"Role '{role}' should NOT have etmf_taxonomy:read"
+
+    # 2. Test etmf_document:tag permission
+    allowed_tag_roles = [
+        ROLE_SYSADMIN,
+        "admin",
+        ROLE_SPONSOR_DM,
+        ROLE_CRA_CANONICAL,
+        "monitor",
+    ]
+
+    denied_tag_roles = [
+        ROLE_INVESTIGATOR,
+        ROLE_CRC,
+        ROLE_AUDITOR_CANONICAL,
+        ROLE_EXTERNAL_MONITOR,
+        "anonymous",
+        "sponsor_clinical",
+    ]
+
+    for role in allowed_tag_roles:
+        p = Principal(user_id="test_user", roles=[role])
+        assert has_permission(p, "etmf_document:tag") is True, f"Role '{role}' should have etmf_document:tag"
+
+    for role in denied_tag_roles:
+        p = Principal(user_id="test_user", roles=[role])
+        assert has_permission(p, "etmf_document:tag") is False, f"Role '{role}' should NOT have etmf_document:tag"
