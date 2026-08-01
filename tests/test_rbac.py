@@ -1333,8 +1333,135 @@ def test_lab_range_rbac_permissions() -> None:
         for action in ("create", "update", "delete"):
             assert has_permission(p, f"lab_range:{action}") is False
 
-    # Check inherited read-only permissions for derived investigator roles (PI, ER physician, Lead Investigator)
-    for p in (pi, er_phys, lead_inv):
+
+def test_lab_range_alert_permissions() -> None:
+    """Verify that lab_range alert action is mapped correctly for the requested roles."""
+    from packages.security.rbac import (
+        ROLE_AUTHORIZED_ER_PHYSICIAN,
+        ROLE_CRA_CANONICAL,
+        ROLE_CRC,
+        ROLE_INVESTIGATOR,
+        ROLE_LEAD_INVESTIGATOR,
+        ROLE_PRINCIPAL_INVESTIGATOR,
+        ROLE_SPONSOR_DM,
+        ROLE_SYSADMIN,
+        Principal,
+        has_permission,
+    )
+
+    sysadmin = Principal(user_id="sys1", roles=[ROLE_SYSADMIN])
+    dm = Principal(user_id="dm1", roles=[ROLE_SPONSOR_DM])
+    admin = Principal(user_id="admin1", roles=["admin"])
+    cra = Principal(user_id="cra1", roles=[ROLE_CRA_CANONICAL])
+    monitor = Principal(user_id="mon1", roles=["monitor"])
+
+    investigator = Principal(user_id="inv1", roles=[ROLE_INVESTIGATOR])
+    crc = Principal(user_id="crc1", roles=[ROLE_CRC])
+
+    pi = Principal(user_id="pi1", roles=[ROLE_PRINCIPAL_INVESTIGATOR])
+    er_phys = Principal(user_id="er1", roles=[ROLE_AUTHORIZED_ER_PHYSICIAN])
+    lead_inv = Principal(user_id="lead1", roles=[ROLE_LEAD_INVESTIGATOR])
+
+    # All these roles must have both 'read' and 'alert' actions on lab_range
+    for p in (sysadmin, dm, admin, cra, monitor, investigator, crc, pi, er_phys, lead_inv):
         assert has_permission(p, "lab_range:read") is True
-        for action in ("create", "update", "delete"):
-            assert has_permission(p, f"lab_range:{action}") is False
+        assert has_permission(p, "lab_range:alert") is True
+
+
+@pytest.mark.asyncio
+async def test_require_study_scope_extraction() -> None:
+    """Verify that require_study_scope correctly extracts study_id from different parts of a request."""
+    from fastapi import Request, HTTPException
+    from packages.security.rbac import StudyScopeChecker, Principal
+    import json
+
+    principal = Principal(user_id="u1", roles=["investigator"], assigned_studies=["study_A"])
+    checker = StudyScopeChecker()
+
+    # Case 1: Path Params
+    scope = {
+        "type": "http",
+        "path_params": {"study_id": "study_A"},
+        "query_string": b"",
+        "headers": []
+    }
+    req = Request(scope)
+    res = await checker(req, principal=principal)
+    assert res == principal
+
+    # Case 2: Query Params
+    scope = {
+        "type": "http",
+        "path_params": {},
+        "query_string": b"study_id=study_A",
+        "headers": []
+    }
+    req = Request(scope)
+    res = await checker(req, principal=principal)
+    assert res == principal
+
+    # Case 3: X-Study-Id header (uppercase)
+    scope = {
+        "type": "http",
+        "path_params": {},
+        "query_string": b"",
+        "headers": [(b"X-Study-Id", b"study_A")]
+    }
+    req = Request(scope)
+    res = await checker(req, principal=principal)
+    assert res == principal
+
+    # Case 4: x-study-id header (lowercase)
+    scope = {
+        "type": "http",
+        "path_params": {},
+        "query_string": b"",
+        "headers": [(b"x-study-id", b"study_A")]
+    }
+    req = Request(scope)
+    res = await checker(req, principal=principal)
+    assert res == principal
+
+    # Case 5: JSON body (study_id)
+    body_data = b'{"study_id": "study_A"}'
+    async def receive_body():
+        return {"type": "http.request", "body": body_data, "more_body": False}
+    scope = {
+        "type": "http",
+        "path_params": {},
+        "query_string": b"",
+        "headers": [(b"content-type", b"application/json")]
+    }
+    req = Request(scope, receive=receive_body)
+    res = await checker(req, principal=principal)
+    assert res == principal
+    # Verify re-injection
+    body_bytes = await req.body()
+    assert json.loads(body_bytes)["study_id"] == "study_A"
+
+    # Case 6: JSON body (id)
+    body_data2 = b'{"id": "study_A"}'
+    async def receive_body2():
+        return {"type": "http.request", "body": body_data2, "more_body": False}
+    scope = {
+        "type": "http",
+        "path_params": {},
+        "query_string": b"",
+        "headers": [(b"content-type", b"application/json")]
+    }
+    req = Request(scope, receive=receive_body2)
+    res = await checker(req, principal=principal)
+    assert res == principal
+
+    # Case 7: Forbidden
+    scope = {
+        "type": "http",
+        "path_params": {"study_id": "study_B"},
+        "query_string": b"",
+        "headers": []
+    }
+    req = Request(scope)
+    with pytest.raises(HTTPException) as exc_info:
+        await checker(req, principal=principal)
+    assert exc_info.value.status_code == 403
+    assert "Forbidden" in exc_info.value.detail

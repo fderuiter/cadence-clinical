@@ -73,6 +73,8 @@ from packages.security.rbac import (
     mask_payload,
     require_permission,
     require_roles,
+    StudyScopeChecker,
+    require_study_scope,
     verify_is_auditor,
     verify_not_auditor,
 )
@@ -156,6 +158,8 @@ __all__ = [
     "has_permission",
     "can_access_site",
     "can_access_study",
+    "StudyScopeChecker",
+    "require_study_scope",
     "mask_payload",
     "PermissionEnum",
     "RoleEnum",
