@@ -786,6 +786,9 @@ async def test_lab_out_of_range_and_auto_close() -> None:
         assert query["status"] == "OPEN"
         assert query["origin"] == "SYSTEM"
         assert query["created_by"] == "SYSTEM"
+        assert "Laboratory observation is out of range" in query["message"]
+        assert "Indicator: LOW" in query["message"]
+        assert "Normal bounds:" in query["message"]
 
         # Verify the observation coordinates (study_id, subject_id, visit_id, domain, test_code)
         assert query["study_id"] == "STUDY-LAB-EDIT"
@@ -956,14 +959,14 @@ async def test_critical_notification_dispatch_and_suppression(signed_headers) ->
             # Wait briefly to let the background task run (as publish_notification runs in background task)
             await asyncio.sleep(0.1)
 
-            # Assert that publish_notification is called once with the expected payload
-            mock_pub.assert_called_once()
-            notif_payload = mock_pub.call_args[0][0]
+            # Assert that publish_notification is called with the expected payload
+            assert mock_pub.call_count >= 1
+            notif_payload = mock_pub.call_args_list[0][0][0]
             assert notif_payload["category"] == "ALERTS"
             assert notif_payload["priority"] == "CRITICAL"
             assert notif_payload["message_content"] is not None
             assert len(notif_payload["message_content"]) > 0
-            assert notif_payload["related_entity_type"] == "observation"
+            assert notif_payload["related_entity_type"] == "lab-observation"
             assert notif_payload["related_entity_id"] == crit_data["id"]
             assert notif_payload["related_entity_subject_id"] == "SUBJ-LAB-CRIT"
 

@@ -1991,23 +1991,41 @@ async def create_observation(
         await run_synchronous_edit_checks(session, obs_db)
         await session.commit()
 
-        # Check for critical lab notification dispatch
-        if obs_db.lab_indicator in ("LOW LOW", "HIGH HIGH"):
-            from apps.execution.notifications_client import publish_notification
-
-            notification_payload = {
-                "category": "ALERTS",
-                "priority": "CRITICAL",
-                "message_content": f"Critical lab value detected: {obs_db.lab_indicator} for subject {obs_db.subject_id}, test code {obs_db.test_code}.",
-                "related_entity_type": "observation",
-                "related_entity_id": obs_db.id,
-                "related_entity_subject_id": obs_db.subject_id,
-            }
-            background_tasks.add_task(publish_notification, notification_payload)
-
         # Propagate audit and user context to background tasks
         user_id = current_user_id.get()
         change_reason = current_change_reason.get()
+
+        # Check for critical lab notification dispatch
+        if obs_db.lab_indicator in ("LOW LOW", "HIGH HIGH"):
+            from apps.execution.notification_events import (
+                generate_critical_lab_notification_payload,
+                publish_notification_background,
+            )
+
+            raw_payload = generate_critical_lab_notification_payload(
+                obs_db, obs_db.lab_indicator
+            )
+            # Standard recipients-based multi-dispatch in the background
+            for recipient in raw_payload["recipients"]:
+                recipient_payload = {
+                    "category": raw_payload["category"],
+                    "priority": raw_payload["priority"],
+                    "channels": "IN_APP",
+                    "message_content": raw_payload["message_content"],
+                    "related_entity_id": raw_payload["related_entity_id"],
+                    "related_entity_type": raw_payload["related_entity_type"],
+                    "related_entity_subject_id": raw_payload[
+                        "related_entity_subject_id"
+                    ],
+                    "recipient_user_id": recipient,
+                }
+                background_tasks.add_task(
+                    publish_notification_background,
+                    recipient_payload,
+                    user_id,
+                    change_reason,
+                )
+
         background_tasks.add_task(
             run_asynchronous_edit_checks,
             db_manager.get_session_maker(),
@@ -2701,6 +2719,7 @@ class LabRangeRecalculateResponse(BaseModel):
 )
 async def trigger_lab_range_recalculation(
     payload: LabRangeRecalculateRequest,
+    background_tasks: BackgroundTasks,
     roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
     _justification=Depends(verify_change_justification),
 ) -> LabRangeRecalculateResponse:
@@ -2713,7 +2732,7 @@ async def trigger_lab_range_recalculation(
     # before execution, allowing the before_flush event listener to log attributed updates.
     async with db_manager.get_session_maker()() as session:
         count = await recalculate_range_flags(
-            session, payload.study_id, payload.test_code
+            session, payload.study_id, payload.test_code, background_tasks
         )
         lab_range_cache.invalidate(payload.study_id, payload.test_code)
         return LabRangeRecalculateResponse(
