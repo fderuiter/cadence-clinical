@@ -11,6 +11,8 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 1810
 - **Passed:** 1810 🟢
+- **Total Automated Test Cases Run:** 1872
+- **Passed:** 1872 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1638,6 +1640,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_verify_gateway_signature_scope_fallback_restrictions` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_gateway_signature_tenant_and_multishape_restrictions` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_sig_token_helper_scenarios` | `tests.test_security_middleware` | Trace-15 | 🟢 PASSED | < 1s |
+| `test_cross_service_interception_and_replay` | `tests.test_shared_infrastructure` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_service_client_fixtures_isolation` | `tests.test_shared_infrastructure` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_signed_headers_generation` | `tests.test_shared_infrastructure` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cross_service_interception` | `tests.test_shared_rbac_harness` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_mock_designer_driver` | `tests.test_shared_rbac_harness` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_persona_builders_contain_correct_claims` | `tests.test_shared_rbac_harness` | *Regression/Helper* | 🟢 PASSED | < 1s |
