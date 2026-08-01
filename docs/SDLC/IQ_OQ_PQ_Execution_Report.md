@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1872
-- **Passed:** 1872 🟢
+- **Total Automated Test Cases Run:** 1876
+- **Passed:** 1876 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1106,6 +1106,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_master_migrations` | `tests.test_lab_master_migrations` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_test_master_crud_and_audit` | `tests.test_lab_master_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_lab_unit_conversion_crud_and_audit` | `tests.test_lab_master_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
+| `test_get_active_lab_ranges_helper` | `tests.test_lab_range_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_lab_range_cache_operations` | `tests.test_lab_range_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_lab_range_cache_singleton` | `tests.test_lab_range_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_lab_range_cache_ttl_config` | `tests.test_lab_range_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_absent_boundaries` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_age_boundaries` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_convert_lab_unit_db_and_fallback` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
