@@ -5,18 +5,19 @@ Requirements: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 
 import os
 import time
-from datetime import datetime, UTC
+from datetime import datetime
+
+import httpx
 import pytest
 import pytest_asyncio
-import httpx
 from httpx import ASGITransport
-from packages.security.signing import generate_gateway_signature
 
 from apps.econsent.services.econsent_service import (
+    EConsentSignRequest,
     EConsentWorkflowEngine,
     process_econsent_signature,
-    EConsentSignRequest,
 )
+from packages.security.signing import generate_gateway_signature
 
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
 
@@ -58,6 +59,7 @@ async def setup_execution_db(monkeypatch):
     )
     async with exec_db_manager.engine.begin() as conn:
         from sqlalchemy import text
+
         await conn.execute(text("ATTACH DATABASE ':memory:' AS audit_schema;"))
         await conn.run_sync(ExecBase.metadata.create_all)
 
@@ -94,7 +96,7 @@ async def test_successful_signature_capture():
                 "icf_version_id": "ICF-V1.0",
                 "score": 95.0,
                 "passed": True,
-            }
+            },
         )
         assert quiz_res.status_code == 201
 
@@ -111,6 +113,7 @@ async def test_successful_signature_capture():
 
     # 3. Process the signature
     from packages.security.audit_logger import audit_logger_engine
+
     audit_logger_engine._chain.clear()
 
     response = await process_econsent_signature(None, payload)
@@ -122,7 +125,9 @@ async def test_successful_signature_capture():
 
     # 4. Verify DB updates via API
     async with httpx.AsyncClient() as client:
-        forms_res = await client.get("/api/v1/execution/signatures/form-records", headers=get_auth_headers())
+        forms_res = await client.get(
+            "/api/v1/execution/signatures/form-records", headers=get_auth_headers()
+        )
         assert forms_res.status_code == 200
         forms = forms_res.json()
         assert len(forms) > 0
@@ -131,7 +136,10 @@ async def test_successful_signature_capture():
         assert record["is_verified"] is True
         assert record["printed_name"] == "John Doe"
 
-        sigs_res = await client.get("/api/v1/execution/signatures/consent-signatures", headers=get_auth_headers())
+        sigs_res = await client.get(
+            "/api/v1/execution/signatures/consent-signatures",
+            headers=get_auth_headers(),
+        )
         assert sigs_res.status_code == 200
         sigs = sigs_res.json()
         assert len(sigs) > 0
@@ -168,7 +176,7 @@ async def test_failed_comprehension_quiz_blocks_signature():
                 "icf_version_id": "ICF-V1.0",
                 "score": 75.0,
                 "passed": True,
-            }
+            },
         )
         assert quiz_res.status_code == 201
 
@@ -227,7 +235,7 @@ async def test_invalid_otp_auth_code_blocks_signature():
                 "icf_version_id": "ICF-V1.0",
                 "score": 100.0,
                 "passed": True,
-            }
+            },
         )
         assert quiz_res.status_code == 201
 
@@ -269,7 +277,10 @@ async def test_workflow_engine_legacy_signature_capture():
 
     # Verify database entry via API
     async with httpx.AsyncClient() as client:
-        sigs_res = await client.get("/api/v1/execution/signatures/consent-signatures", headers=get_auth_headers())
+        sigs_res = await client.get(
+            "/api/v1/execution/signatures/consent-signatures",
+            headers=get_auth_headers(),
+        )
         assert sigs_res.status_code == 200
         sigs = sigs_res.json()
         assert len(sigs) > 0

@@ -3,23 +3,27 @@
 Requirements: PRD-SYS-001
 """
 
-import uuid
 import hashlib
+import uuid
 from datetime import UTC, datetime
 from io import BytesIO
-from typing import Optional, Any
+from typing import Any
 
 from execution.signature_transport_models import (
     BatchSignatureRequest,
     BatchSignatureResponse,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy import select
-from apps.execution.database.core import db_manager
-from apps.execution.database.models import ComprehensionQuizResult, ConsentFormRecord, ConsentSignature
 
 import packages  # noqa: F401
+from apps.execution.database.core import db_manager
+from apps.execution.database.models import (
+    ComprehensionQuizResult,
+    ConsentFormRecord,
+    ConsentSignature,
+)
 from packages.security.middleware import get_current_user
 from packages.security.sig_token_verifier import verify_and_consume_sig_token
 from packages.security.signature_builder import CryptographicSignatureBuilder
@@ -35,9 +39,7 @@ except ImportError:
     HAS_REPORTLAB = False
 
 
-def _render_pdf_certificate_helper(
-    payload: Any, sig_hash: str, now: datetime
-) -> bytes:
+def _render_pdf_certificate_helper(payload: Any, sig_hash: str, now: datetime) -> bytes:
     """Render PDF certificate for signature capture."""
     if HAS_REPORTLAB:
         pdf_buffer = BytesIO()
@@ -120,11 +122,11 @@ class ConsentSignatureResponse(BaseModel):
     subject_id: str
     icf_version_id: str
     printed_name: str
-    signature_svg: Optional[str] = None
-    verification_hash: Optional[str] = None
-    signed_at: Optional[datetime] = None
+    signature_svg: str | None = None
+    verification_hash: str | None = None
+    signed_at: datetime | None = None
     status: str
-    reason_for_change: Optional[str] = None
+    reason_for_change: str | None = None
 
     class Config:
         from_attributes = True
@@ -134,8 +136,8 @@ class ConsentFormRecordResponse(BaseModel):
     id: str
     subject_id: str
     icf_version_id: str
-    printed_name: Optional[str] = None
-    relationship_to_subject: Optional[str] = None
+    printed_name: str | None = None
+    relationship_to_subject: str | None = None
     status: str
     is_verified: bool
 
@@ -241,7 +243,7 @@ async def process_econsent_endpoint(payload: EConsentSignRequestPayload):
         if not quiz_result or quiz_result.score < 80.0:
             raise HTTPException(
                 status_code=400,
-                detail="Comprehension quiz not passed with required score >= 80%"
+                detail="Comprehension quiz not passed with required score >= 80%",
             )
 
         # 2. Verify OTP auth code
@@ -253,8 +255,7 @@ async def process_econsent_endpoint(payload: EConsentSignRequestPayload):
             or "expired" in otp_lower
         ):
             raise HTTPException(
-                status_code=400,
-                detail="Invalid OTP authentication code"
+                status_code=400, detail="Invalid OTP authentication code"
             )
 
         now = datetime.now(UTC)
@@ -312,6 +313,7 @@ async def process_econsent_endpoint(payload: EConsentSignRequestPayload):
 
         # 6. Save PDF blob
         import os
+
         os.makedirs("/tmp/consent_pdfs", exist_ok=True)
         pdf_filename = f"{payload.subject_id}_{payload.icf_version_id}_{now.strftime('%Y%m%d%H%M%S')}.pdf"
         pdf_path = os.path.join("/tmp/consent_pdfs", pdf_filename)
@@ -325,6 +327,7 @@ async def process_econsent_endpoint(payload: EConsentSignRequestPayload):
 
         try:
             from packages.security.audit_logger import CentralAuditLogger
+
             CentralAuditLogger.log_event(
                 service_name="econsent",
                 action_type="SIGN",
@@ -391,4 +394,3 @@ async def get_consent_signatures_endpoint():
         stmt = select(ConsentSignature)
         res = await session.execute(stmt)
         return list(res.scalars().all())
-

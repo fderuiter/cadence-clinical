@@ -3,6 +3,9 @@
 Requirements: PRD-SYS-001
 """
 
+import hashlib
+from datetime import UTC, datetime
+
 from execution.doa_models import (
     DOAAssignmentRecord,
     DOATaskDelegationEnum,
@@ -11,13 +14,14 @@ from execution.doa_models import (
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
-from apps.execution.database.core import db_manager
-from apps.execution.database.models import SiteStaffMember, DOADelegationRecord, DOAAuditLog
-import hashlib
-from datetime import datetime, UTC
-import uuid
 
 import packages  # noqa: F401
+from apps.execution.database.core import db_manager
+from apps.execution.database.models import (
+    DOAAuditLog,
+    DOADelegationRecord,
+    SiteStaffMember,
+)
 from apps.execution.services.doa_service import DOAService
 from packages.security.middleware import get_current_user
 
@@ -202,13 +206,13 @@ async def delegate_task_endpoint(
         if not staff:
             raise HTTPException(
                 status_code=404,
-                detail=f"Site staff member {payload.staff_user_id} not found at site {payload.site_id}."
+                detail=f"Site staff member {payload.staff_user_id} not found at site {payload.site_id}.",
             )
 
         if not staff.has_gcp_training:
             raise HTTPException(
                 status_code=400,
-                detail=f"Staff member {payload.staff_user_id} has not completed required GCP training."
+                detail=f"Staff member {payload.staff_user_id} has not completed required GCP training.",
             )
 
         # 2. Create DOADelegationRecord in PENDING_PI_APPROVAL status
@@ -241,9 +245,7 @@ async def delegate_task_endpoint(
 async def approve_delegation_endpoint(
     payload: ApproveDelegationRequest,
 ):
-    if (
-        payload.password == "wrong_password" or "invalid" in payload.password
-    ):
+    if payload.password == "wrong_password" or "invalid" in payload.password:
         raise HTTPException(status_code=400, detail="Invalid credentials")
     if payload.totp_code and (
         "invalid" in payload.totp_code or "wrong" in payload.totp_code
@@ -260,12 +262,16 @@ async def approve_delegation_endpoint(
         if not record:
             raise HTTPException(
                 status_code=404,
-                detail=f"Delegation record {payload.delegation_id} not found."
+                detail=f"Delegation record {payload.delegation_id} not found.",
             )
 
         now = datetime.now(UTC)
-        verification_payload = f"{payload.delegation_id}:{payload.pi_user_id}:{now.isoformat()}"
-        verification_hash = hashlib.sha256(verification_payload.encode("utf-8")).hexdigest()
+        verification_payload = (
+            f"{payload.delegation_id}:{payload.pi_user_id}:{now.isoformat()}"
+        )
+        verification_hash = hashlib.sha256(
+            verification_payload.encode("utf-8")
+        ).hexdigest()
 
         record.status = "ACTIVE"
         record.pi_approved_at = now
@@ -298,7 +304,7 @@ async def approve_task_endpoint(
         if not record:
             raise HTTPException(
                 status_code=404,
-                detail=f"Delegation record {payload.delegation_id} not found."
+                detail=f"Delegation record {payload.delegation_id} not found.",
             )
 
         now = datetime.now(UTC)
@@ -333,7 +339,7 @@ async def revoke_delegation_endpoint(
         if not record:
             raise HTTPException(
                 status_code=404,
-                detail=f"Delegation record {payload.delegation_id} not found."
+                detail=f"Delegation record {payload.delegation_id} not found.",
             )
 
         record.status = "REVOKED"
@@ -356,7 +362,9 @@ async def revoke_delegation_endpoint(
 @router.post("/staff", response_model=SiteStaffMemberResponse, status_code=201)
 async def create_staff_endpoint(payload: SiteStaffMemberRequest):
     async with db_manager.get_session_maker()() as session:
-        stmt = select(SiteStaffMember).where(SiteStaffMember.staff_user_id == payload.staff_user_id)
+        stmt = select(SiteStaffMember).where(
+            SiteStaffMember.staff_user_id == payload.staff_user_id
+        )
         res = await session.execute(stmt)
         existing = res.scalar_one_or_none()
         if existing:
@@ -395,4 +403,3 @@ async def get_delegations_endpoint():
         stmt = select(DOADelegationRecord)
         res = await session.execute(stmt)
         return list(res.scalars().all())
-

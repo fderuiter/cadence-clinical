@@ -2,14 +2,13 @@ import asyncio
 import contextlib
 import json
 import logging
-import sys
 import os
+import sys
 import time
 from typing import Any
 
-from notifications.event_models import SystemDomainEvent
 import httpx
-from packages.security.signing import generate_gateway_signature
+from notifications.event_models import SystemDomainEvent
 
 from apps.notifications.database import db_manager as notifications_db_manager
 from apps.notifications.models import (
@@ -23,14 +22,13 @@ from apps.notifications.services.email_renderer import (
     get_template_name_for_event,
     render_email_template,
 )
+from packages.security.signing import generate_gateway_signature
 
 ORG_URL = (os.getenv("ORG_URL") or "http://localhost:8010").rstrip("/")
 
 
 def _get_auth_headers() -> dict[str, str]:
-    gateway_secret_env = os.getenv(
-        "GATEWAY_SECRET", "internal-gateway-secret-12345"
-    )
+    gateway_secret_env = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
     gateway_secret = (
         gateway_secret_env.encode("utf-8")
         if isinstance(gateway_secret_env, str)
@@ -122,7 +120,9 @@ class NotificationWorker:
         try:
             async with httpx.AsyncClient() as client:
                 headers = _get_auth_headers()
-                res = await client.get(f"{ORG_URL}/api/v1/org/personnel", headers=headers)
+                res = await client.get(
+                    f"{ORG_URL}/api/v1/org/personnel", headers=headers
+                )
                 if res.status_code == 200:
                     personnel_list = res.json()
                     for p in personnel_list:
@@ -135,7 +135,9 @@ class NotificationWorker:
                         p_study = p.get("study_id")
                         p_site = p.get("site_id")
                         if p_study and study_id.lower() == p_study.lower():
-                            if not site_id or (p_site and site_id.lower() == p_site.lower()):
+                            if not site_id or (
+                                p_site and site_id.lower() == p_site.lower()
+                            ):
                                 matched = True
 
                         if not matched:
@@ -151,16 +153,25 @@ class NotificationWorker:
                                     if a.get("is_active") is not False:
                                         a_study = a.get("study_id")
                                         a_site = a.get("site_id")
-                                        if a_study and study_id.lower() == a_study.lower():
-                                            if not site_id or (a_site and site_id.lower() == a_site.lower()):
+                                        if (
+                                            a_study
+                                            and study_id.lower() == a_study.lower()
+                                        ):
+                                            if not site_id or (
+                                                a_site
+                                                and site_id.lower() == a_site.lower()
+                                            ):
                                                 matched = True
                                                 break
 
                         if matched:
-                            resolved.append({
-                                "user_id": p.get("keycloak_user_id") or p.get("email"),
-                                "email": p.get("email"),
-                            })
+                            resolved.append(
+                                {
+                                    "user_id": p.get("keycloak_user_id")
+                                    or p.get("email"),
+                                    "email": p.get("email"),
+                                }
+                            )
         except Exception as e:
             logger.warning(
                 f"Failed to query org API for recipient resolution: {e}. Falling back."

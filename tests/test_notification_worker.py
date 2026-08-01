@@ -41,9 +41,10 @@ async def setup_test_databases(monkeypatch):
     both the Notifications and Org microservices, preventing test-to-test pollution.
     Also ensures any background worker task is cleanly terminated and reset.
     """
-    import apps.notifications.workers.notification_worker as nw
     import httpx
     from httpx import ASGITransport
+
+    import apps.notifications.workers.notification_worker as nw
     from apps.org.main import app as org_app
 
     nw._should_run = False

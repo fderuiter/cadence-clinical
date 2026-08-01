@@ -6,11 +6,11 @@ Requirements: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 import os
 import time
 from datetime import UTC, datetime
+
+import httpx
 import pytest
 import pytest_asyncio
-import httpx
 from httpx import ASGITransport
-from packages.security.signing import generate_gateway_signature
 
 from apps.ctms.services.doa_service import (
     DOAManagerService,
@@ -18,6 +18,7 @@ from apps.ctms.services.doa_service import (
     delegate_task,
     revoke_delegation,
 )
+from packages.security.signing import generate_gateway_signature
 
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
 
@@ -94,7 +95,7 @@ async def test_doa_task_delegation_and_esignature_lifecycle():
                 "name": "Alice Smith",
                 "email": "alice@site.org",
                 "has_gcp_training": True,
-            }
+            },
         )
         assert staff_res.status_code == 201
 
@@ -115,7 +116,9 @@ async def test_doa_task_delegation_and_esignature_lifecycle():
 
     # Check audit log was written via API
     async with httpx.AsyncClient() as client:
-        audit_res = await client.get("/api/v1/execution/doa/audit-logs", headers=get_auth_headers())
+        audit_res = await client.get(
+            "/api/v1/execution/doa/audit-logs", headers=get_auth_headers()
+        )
         assert audit_res.status_code == 200
         audit_logs = audit_res.json()
         delegate_logs = [log for log in audit_logs if log["action"] == "DELEGATE_TASK"]
@@ -133,7 +136,7 @@ async def test_doa_task_delegation_and_esignature_lifecycle():
                 "name": "Bob Jones",
                 "email": "bob@site.org",
                 "has_gcp_training": False,
-            }
+            },
         )
         assert untrained_res.status_code == 201
 
@@ -150,10 +153,14 @@ async def test_doa_task_delegation_and_esignature_lifecycle():
 
     # Retrieve the delegation record ID via API
     async with httpx.AsyncClient() as client:
-        delegations_res = await client.get("/api/v1/execution/doa/delegations", headers=get_auth_headers())
+        delegations_res = await client.get(
+            "/api/v1/execution/doa/delegations", headers=get_auth_headers()
+        )
         assert delegations_res.status_code == 200
         delegations = delegations_res.json()
-        target_delegation = [d for d in delegations if d["staff_user_id"] == "staff-01"][0]
+        target_delegation = [
+            d for d in delegations if d["staff_user_id"] == "staff-01"
+        ][0]
         delegation_id = target_delegation["id"]
 
     # 4. Test credential re-authentication rejection
@@ -182,10 +189,14 @@ async def test_doa_task_delegation_and_esignature_lifecycle():
 
     # Check approval audit log was written via API
     async with httpx.AsyncClient() as client:
-        audit_res = await client.get("/api/v1/execution/doa/audit-logs", headers=get_auth_headers())
+        audit_res = await client.get(
+            "/api/v1/execution/doa/audit-logs", headers=get_auth_headers()
+        )
         assert audit_res.status_code == 200
         audit_logs = audit_res.json()
-        approve_logs = [log for log in audit_logs if log["action"] == "APPROVE_DELEGATION"]
+        approve_logs = [
+            log for log in audit_logs if log["action"] == "APPROVE_DELEGATION"
+        ]
         assert len(approve_logs) > 0
         assert "Approved delegation" in approve_logs[0]["details"]
 
@@ -205,10 +216,14 @@ async def test_doa_task_delegation_and_esignature_lifecycle():
 
     # Check revocation audit log was written via API
     async with httpx.AsyncClient() as client:
-        audit_res = await client.get("/api/v1/execution/doa/audit-logs", headers=get_auth_headers())
+        audit_res = await client.get(
+            "/api/v1/execution/doa/audit-logs", headers=get_auth_headers()
+        )
         assert audit_res.status_code == 200
         audit_logs = audit_res.json()
-        revoke_logs = [log for log in audit_logs if log["action"] == "REVOKE_DELEGATION"]
+        revoke_logs = [
+            log for log in audit_logs if log["action"] == "REVOKE_DELEGATION"
+        ]
         assert len(revoke_logs) > 0
         assert "Revoked delegation" in revoke_logs[0]["details"]
 
@@ -230,7 +245,7 @@ async def test_doa_manager_service_class_interface():
                 "name": "Charlie Brown",
                 "email": "charlie@site.org",
                 "has_gcp_training": True,
-            }
+            },
         )
         assert staff_res.status_code == 201
 

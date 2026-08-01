@@ -6,17 +6,17 @@ Requirements: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 import os
 import time
 from datetime import datetime
+
 import httpx
 from pydantic import BaseModel
+
 from packages.security.signing import generate_gateway_signature
 
 EXECUTION_URL = (os.getenv("EXECUTION_URL") or "http://localhost:8002").rstrip("/")
 
 
 def _get_auth_headers() -> dict[str, str]:
-    gateway_secret_env = os.getenv(
-        "GATEWAY_SECRET", "internal-gateway-secret-12345"
-    )
+    gateway_secret_env = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
     gateway_secret = (
         gateway_secret_env.encode("utf-8")
         if isinstance(gateway_secret_env, str)
@@ -75,7 +75,9 @@ class ConsentSignatureObj:
 
         signed_at_raw = data.get("signed_at")
         if signed_at_raw:
-            self.signed_at = datetime.fromisoformat(signed_at_raw.replace("Z", "+00:00"))
+            self.signed_at = datetime.fromisoformat(
+                signed_at_raw.replace("Z", "+00:00")
+            )
         else:
             self.signed_at = None
 
@@ -95,8 +97,10 @@ async def process_econsent_signature(
             json=payload.model_dump() if hasattr(payload, "model_dump") else payload,
         )
         if response.status_code == 400:
-            raise ValueError(response.json().get("detail", "Error processing eConsent signature"))
-        elif response.status_code != 200:
+            raise ValueError(
+                response.json().get("detail", "Error processing eConsent signature")
+            )
+        if response.status_code != 200:
             raise ValueError(f"HTTP error {response.status_code}: {response.text}")
 
         res_data = response.json()
@@ -147,7 +151,9 @@ class EConsentWorkflowEngine:
                 json=payload,
             )
             if response.status_code == 400:
-                raise ValueError(response.json().get("detail", "Error capturing signature"))
-            elif response.status_code != 200:
+                raise ValueError(
+                    response.json().get("detail", "Error capturing signature")
+                )
+            if response.status_code != 200:
                 raise ValueError(f"HTTP error {response.status_code}: {response.text}")
             return ConsentSignatureObj(response.json())

@@ -5,17 +5,17 @@ Requirements: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 
 import os
 import time
-from datetime import datetime, UTC
+from datetime import datetime
+
 import httpx
+
 from packages.security.signing import generate_gateway_signature
 
 EXECUTION_URL = (os.getenv("EXECUTION_URL") or "http://localhost:8002").rstrip("/")
 
 
 def _get_auth_headers() -> dict[str, str]:
-    gateway_secret_env = os.getenv(
-        "GATEWAY_SECRET", "internal-gateway-secret-12345"
-    )
+    gateway_secret_env = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
     gateway_secret = (
         gateway_secret_env.encode("utf-8")
         if isinstance(gateway_secret_env, str)
@@ -100,7 +100,7 @@ async def delegate_task(
         )
         if response.status_code == 400:
             raise ValueError(response.json().get("detail", "Error delegating task"))
-        elif response.status_code != 200:
+        if response.status_code != 200:
             raise ValueError(f"HTTP error {response.status_code}: {response.text}")
         return DOADelegationRecordObj(response.json())
 
@@ -127,8 +127,10 @@ async def approve_delegation_with_esignature(
             json=payload,
         )
         if response.status_code == 400:
-            raise ValueError(response.json().get("detail", "Error approving delegation"))
-        elif response.status_code != 200:
+            raise ValueError(
+                response.json().get("detail", "Error approving delegation")
+            )
+        if response.status_code != 200:
             raise ValueError(f"HTTP error {response.status_code}: {response.text}")
         return DOADelegationRecordObj(response.json())
 
@@ -154,7 +156,7 @@ async def revoke_delegation(
         )
         if response.status_code == 400:
             raise ValueError(response.json().get("detail", "Error revoking delegation"))
-        elif response.status_code != 200:
+        if response.status_code != 200:
             raise ValueError(f"HTTP error {response.status_code}: {response.text}")
         return DOADelegationRecordObj(response.json())
 
@@ -228,8 +230,10 @@ class DOAManagerService:
                 json=payload,
             )
             if response.status_code == 400:
-                raise ValueError(response.json().get("detail", "Error approving task delegation"))
-            elif response.status_code != 200:
+                raise ValueError(
+                    response.json().get("detail", "Error approving task delegation")
+                )
+            if response.status_code != 200:
                 raise ValueError(f"HTTP error {response.status_code}: {response.text}")
             return DOADelegationRecordObj(response.json())
 
