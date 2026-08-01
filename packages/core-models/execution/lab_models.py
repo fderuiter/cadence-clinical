@@ -4,12 +4,12 @@ Requirements: PRD-SYS-001
 """
 
 from datetime import datetime
-from enum import Enum, StrEnum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class LabSourceEnum(str, Enum):
+class LabSourceEnum(StrEnum):
     """Source of the laboratory testing.
 
     Requirements: PRD-SYS-001

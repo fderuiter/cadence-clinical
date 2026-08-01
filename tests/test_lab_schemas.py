@@ -4,15 +4,16 @@ Requirements: PRD-SYS-001
 """
 
 from datetime import datetime
-import pytest
-from pydantic import ValidationError
 
+import pytest
 from execution.lab_models import (
     LabSourceEnum,
     LabTestMasterRecord,
     LabUnitConversionRecord,
 )
 from execution.lab_transport_models import (
+    LabRangeRecalculateRequest,
+    LabRangeRecalculateResponse,
     LabReferenceRangeCreate,
     LabReferenceRangeResponse,
     LabReferenceRangeUpdate,
@@ -20,9 +21,8 @@ from execution.lab_transport_models import (
     LabTestMasterResponse,
     LabUnitConversionCreate,
     LabUnitConversionResponse,
-    LabRangeRecalculateRequest,
-    LabRangeRecalculateResponse,
 )
+from pydantic import ValidationError
 
 
 def test_lab_source_enum_values():
@@ -175,3 +175,80 @@ def test_lab_range_recalculate_request_and_response():
     res = LabRangeRecalculateResponse(**res_data)
     assert res.status == "success"
     assert res.updated_count == 42
+
+
+def test_lab_test_master_create_valid():
+    """Verify parsing of LabTestMasterCreate schema."""
+    data = {
+        "study_id": "STUDY-101",
+        "test_code": "ALT",
+        "test_name": "Alanine Aminotransferase",
+        "default_unit": "U/L",
+        "normalized_unit": "U/L",
+        "loinc_code": "1742-6",
+        "reason_for_change": "Adding liver enzyme",
+    }
+    create = LabTestMasterCreate(**data)
+    assert create.loinc_code == "1742-6"
+
+
+def test_lab_test_master_response_valid():
+    """Verify parsing of LabTestMasterResponse schema."""
+    data = {
+        "id": "master-02",
+        "study_id": "STUDY-101",
+        "test_code": "ALT",
+        "test_name": "Alanine Aminotransferase",
+        "default_unit": "U/L",
+        "normalized_unit": "U/L",
+        "loinc_code": "1742-6",
+        "version_index": 1,
+        "version": 1,
+        "is_deleted": False,
+    }
+    res = LabTestMasterResponse(**data)
+    assert res.test_code == "ALT"
+
+
+def test_lab_unit_conversion_create_valid():
+    """Verify parsing of LabUnitConversionCreate schema."""
+    data = {
+        "study_id": "STUDY-101",
+        "test_code": "ALT",
+        "from_unit": "U/L",
+        "to_unit": "U/L",
+        "factor": 1.0,
+        "offset": None,
+        "reason_for_change": "Identity conversion",
+    }
+    create = LabUnitConversionCreate(**data)
+    assert create.factor == 1.0
+
+
+def test_lab_unit_conversion_response_valid():
+    """Verify parsing of LabUnitConversionResponse schema."""
+    data = {
+        "id": "conv-02",
+        "study_id": "STUDY-101",
+        "test_code": "ALT",
+        "from_unit": "U/L",
+        "to_unit": "U/L",
+        "factor": 1.0,
+        "offset": None,
+        "version_index": 1,
+        "version": 1,
+        "is_deleted": False,
+    }
+    res = LabUnitConversionResponse(**data)
+    assert res.factor == 1.0
+
+
+def test_lab_reference_range_update_valid():
+    """Verify parsing of LabReferenceRangeUpdate schema."""
+    data = {
+        "test_name": "New descriptive name",
+        "reason_for_change": "Refining test name descriptor",
+    }
+    update = LabReferenceRangeUpdate(**data)
+    assert update.test_name == "New descriptive name"
+    assert update.reason_for_change == "Refining test name descriptor"
