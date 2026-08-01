@@ -515,7 +515,7 @@ async def test_webhook_delivery_channel_success():
 
     with patch("httpx.AsyncClient", return_value=mock_context):
         await poll_and_dispatch()
-        # Wait up to 8 seconds for the background task to update the status to SUCCESS
+        # Wait for the background task to complete
         from apps.notifications.main import active_tasks
 
         if active_tasks:
