@@ -179,7 +179,22 @@ async def run_layout_and_accessibility_checks(
                         )
 
             # Injected axe-core to run accessibility audits inside the Playwright execution thread
-            axe_path = "/app/node_modules/axe-core/axe.min.js"
+            # Dynamically resolve relative to this file to work in different container and CI workspace paths
+            axe_path = os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__),
+                    "..",
+                    "..",
+                    "..",
+                    "node_modules",
+                    "axe-core",
+                    "axe.min.js",
+                )
+            )
+            if not os.path.exists(axe_path):
+                # Fallback to absolute path if relative path is somehow not found
+                axe_path = "/app/node_modules/axe-core/axe.min.js"
+
             if os.path.exists(axe_path):
                 await page.add_script_tag(path=axe_path)
                 axe_results = await page.evaluate("""async () => {
