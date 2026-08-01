@@ -259,7 +259,7 @@ async def test_layout_validation_integration():
     import asyncio
 
     job = None
-    for _ in range(50):
+    for _ in range(250):
         async with db_manager.get_session_maker()() as session:
             result = await session.execute(
                 TranslationJob.__table__.select().where(

@@ -244,7 +244,8 @@ async def process_translation(
                             id=actual_job_id, study_id=study_id, status="PROCESSING"
                         )
                         session.add(job)
-                        await session.flush()
+
+                    if True:
 
                         # Requirement 6: Validate input structures against schema translation rules
                         if not payload or not isinstance(payload, dict):
@@ -756,54 +757,47 @@ async def process_translation(
                                 )
                             error_text = "; ".join(err_msgs)
 
-                            # First save the failed audit log inside the current transaction
-                            await save_accessibility_audit_log(
-                                session=session,
-                                study_id=study_id,
-                                status="FAIL",
-                                form_hash=form_hash,
-                                violations=violations,
-                                passes=passes,
-                                incomplete=incomplete,
-                                inapplicable=inapplicable,
-                                layout_errors=layout_errors,
-                                user_id=user_id,
-                                change_reason=change_reason,
-                            )
                             # Block publication by raising ValueError
                             raise ValueError(
                                 f"Layout/Accessibility Validation Failed: {error_text}"
                             )
 
-                        # Validation passed, log the success
-                        await save_accessibility_audit_log(
-                            session=session,
-                            study_id=study_id,
-                            status="PASS",
-                            form_hash=form_hash,
-                            violations=violations,
-                            passes=passes,
-                            incomplete=incomplete,
-                            inapplicable=inapplicable,
-                            layout_errors=[],
-                            user_id=user_id,
-                            change_reason=change_reason,
-                        )
-
-                        job.odm_payload = odm_str
-                        job.openrosa_payload = openrosa_str
-                        job.status = "COMPLETED"
+                        # Validation passed, log the success and complete the job in a transaction
+                        async with session.begin():
+                            db_job = await session.get(TranslationJob, actual_job_id)
+                            if db_job:
+                                db_job.odm_payload = odm_str
+                                db_job.openrosa_payload = openrosa_str
+                                db_job.status = "COMPLETED"
+                            await save_accessibility_audit_log(
+                                session=session,
+                                study_id=study_id,
+                                status="PASS",
+                                form_hash=form_hash,
+                                violations=violations,
+                                passes=passes,
+                                incomplete=incomplete,
+                                inapplicable=inapplicable,
+                                layout_errors=[],
+                                user_id=user_id,
+                                change_reason=change_reason,
+                            )
 
                 except Exception as e:
-                    # Transaction has been rolled back. Now save the failed status in a new transaction.
+                    # Save the failed status and error logs in a safe transaction
                     async with session.begin():
-                        failed_job = TranslationJob(
-                            id=actual_job_id,
-                            study_id=study_id,
-                            status="FAILED",
-                            error_message=str(e),
-                        )
-                        session.add(failed_job)
+                        db_job = await session.get(TranslationJob, actual_job_id)
+                        if db_job:
+                            db_job.status = "FAILED"
+                            db_job.error_message = str(e)
+                        else:
+                            failed_job = TranslationJob(
+                                id=actual_job_id,
+                                study_id=study_id,
+                                status="FAILED",
+                                error_message=str(e),
+                            )
+                            session.add(failed_job)
 
                         # Structured, immutable audit log entry is saved inside the error transaction
                         try:
@@ -823,16 +817,24 @@ async def process_translation(
                                 save_accessibility_audit_log,
                             )
 
+                            active_violations = violations if "violations" in locals() else []
+                            active_passes = passes if "passes" in locals() else []
+                            active_incomplete = incomplete if "incomplete" in locals() else []
+                            active_inapplicable = inapplicable if "inapplicable" in locals() else []
+                            active_layout_errors = layout_errors if "layout_errors" in locals() else []
+                            if not active_layout_errors:
+                                active_layout_errors = [str(e)]
+
                             await save_accessibility_audit_log(
                                 session=session,
                                 study_id=study_id,
                                 status="FAIL",
                                 form_hash=form_hash,
-                                violations=[],
-                                passes=[],
-                                incomplete=[],
-                                inapplicable=[],
-                                layout_errors=[str(e)],
+                                violations=active_violations,
+                                passes=active_passes,
+                                incomplete=active_incomplete,
+                                inapplicable=active_inapplicable,
+                                layout_errors=active_layout_errors,
                                 user_id=user_id,
                                 change_reason=change_reason,
                             )
