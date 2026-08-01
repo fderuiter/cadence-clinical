@@ -1,6 +1,6 @@
 import logging
 from datetime import UTC, datetime
-from typing import Any, List, Optional, Union
+from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -36,8 +36,8 @@ async def search_dictionary(
     term: str,
     dictionary_type: str,
     version: str,
-    target_level: Optional[str] = None,
-) -> Union[dict[str, Any], MedDRACodeLookupResponse]:
+    target_level: str | None = None,
+) -> dict[str, Any] | MedDRACodeLookupResponse:
     """Delegates interactive terminology search or auto-complete lookup to match_verbatim_term."""
     if not term or not term.strip():
         raise ValueError("Term must be a non-empty string")
@@ -150,11 +150,11 @@ async def search_dictionary(
 
 async def list_coding_assignments(
     session: AsyncSession,
-    observation_id: Optional[str] = None,
-    status: Optional[str] = None,
-    verbatim_text: Optional[str] = None,
-    dictionary_type: Optional[str] = None,
-) -> List[ClinicalCodingAssignment]:
+    observation_id: str | None = None,
+    status: str | None = None,
+    verbatim_text: str | None = None,
+    dictionary_type: str | None = None,
+) -> list[ClinicalCodingAssignment]:
     """Retrieves and filters active, non-deleted medical coding assignments."""
     stmt = select(ClinicalCodingAssignment).where(
         ClinicalCodingAssignment.is_deleted.is_(False)
@@ -218,10 +218,10 @@ async def process_coding_action(
     session: AsyncSession,
     assignment_id: str,
     action: str,
-    code: Optional[str] = None,
-    term: Optional[str] = None,
-    suggestion_index: Optional[int] = None,
-    reason_for_change: Optional[str] = None,
+    code: str | None = None,
+    term: str | None = None,
+    suggestion_index: int | None = None,
+    reason_for_change: str | None = None,
     actor: str = "system",
 ) -> ClinicalCodingAssignment:
     """Processes a data manager coding action (ACCEPT, OVERRIDE, or QUERY).
@@ -275,10 +275,7 @@ async def process_coding_action(
 
         sug = None
         if suggestion_index is not None:
-            if (
-                suggestion_index < 0
-                or suggestion_index >= len(sug_list)
-            ):
+            if suggestion_index < 0 or suggestion_index >= len(sug_list):
                 raise ValueError("Invalid suggestion_index")
             sug = sug_list[suggestion_index]
         elif code:
@@ -302,7 +299,9 @@ async def process_coding_action(
 
         # Resolve suggestion fields
         coded_code = sug.get("code") or sug.get("drug_code")
-        coded_term = sug.get("term_name") or sug.get("preferred_name") or sug.get("drug_name")
+        coded_term = (
+            sug.get("term_name") or sug.get("preferred_name") or sug.get("drug_name")
+        )
         score = sug.get("score")
         if dict_type == DBDictionaryType.MEDDRA:
             hierarchy = {"hierarchies": sug.get("hierarchies") or []}
