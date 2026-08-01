@@ -95,13 +95,15 @@ class HighSystolicBPCheckRule(EditCheckRule):
 class LabOutOfRangeCheckRule(EditCheckRule):
     rule_id = "LAB_OUT_OF_RANGE_CHECK"
     rule_type = "field_level"
-    message = "Laboratory observation is out of range."
+    message = "Laboratory observation is out of range (Indicator: {indicator}, Bounds: {bounds})."
 
     async def evaluate(
         self, session: AsyncSession, observation: ClinicalObservation
     ) -> str | None:
         if observation.lab_out_of_range:
-            return self.message
+            indicator = observation.lab_indicator or "UNKNOWN"
+            bounds = observation.matched_normal_bounds or "None"
+            return self.message.format(indicator=indicator, bounds=bounds)
         return None
 
 
