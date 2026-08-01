@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1876
-- **Passed:** 1876 🟢
+- **Total Automated Test Cases Run:** 1880
+- **Passed:** 1880 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1502,6 +1502,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_verify_is_auditor_denies_non_auditors` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_not_auditor_allows_others` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_not_auditor_denies_auditors` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rbac_designer_study_scoping` | `tests.test_rbac_e2e` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rbac_etmf_site_scoping` | `tests.test_rbac_e2e` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rbac_execution_access` | `tests.test_rbac_e2e` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rbac_execution_unauthorized` | `tests.test_rbac_e2e` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_field_level_masking_blinded_user` | `tests.test_rbac_enforcement` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_field_level_masking_pii_fields` | `tests.test_rbac_enforcement` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_field_level_masking_unblinded_user` | `tests.test_rbac_enforcement` | *Regression/Helper* | 🟢 PASSED | < 1s |

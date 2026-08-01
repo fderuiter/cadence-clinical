@@ -1995,6 +1995,7 @@ async def create_observation(
         # Check for critical lab notification dispatch
         if obs_db.lab_indicator in ("LOW LOW", "HIGH HIGH"):
             from apps.execution.notifications_client import publish_notification
+
             notification_payload = {
                 "category": "ALERTS",
                 "priority": "CRITICAL",
@@ -2823,7 +2824,6 @@ from apps.execution.routers.coding_schemas import (  # noqa: E402
     ImpactMetrics,
     JobStatusEnum,
     JobStatusResponse,
-    MedDRACodeMatch,
     MedDRACodingResult,
     WHODrugATCContext,
     WHODrugCodeMatch,
@@ -3047,13 +3047,16 @@ async def get_meddra_code(
     from apps.execution.coding import search_dictionary
 
     async with db_manager.get_session_maker()() as session:
-        return await search_dictionary(
-            session=session,
-            term=term,
-            dictionary_type="MEDDRA",
-            version=version,
-            target_level=target_level.value if target_level else None,
-        )
+        try:
+            return await search_dictionary(
+                session=session,
+                term=term,
+                dictionary_type="MEDDRA",
+                version=version,
+                target_level=target_level.value if target_level else None,
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.get("/api/v1/dictionaries/whodrug/code", response_model=WHODrugCodingResult)
@@ -3069,12 +3072,15 @@ async def get_whodrug_code(
     from apps.execution.coding import search_dictionary
 
     async with db_manager.get_session_maker()() as session:
-        res = await search_dictionary(
-            session=session,
-            term=term,
-            dictionary_type="WHODRUG",
-            version=version,
-        )
+        try:
+            res = await search_dictionary(
+                session=session,
+                term=term,
+                dictionary_type="WHODRUG",
+                version=version,
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
         matches = []
         if res.get("match"):
@@ -5535,16 +5541,19 @@ async def process_coding_action(
     actor = current_user_id.get() or "system"
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
-            as_db = await process_action_service(
-                session=session,
-                assignment_id=assignment_id,
-                action=payload.action,
-                code=payload.code,
-                term=payload.term,
-                suggestion_index=payload.suggestion_index,
-                reason_for_change=payload.reason_for_change,
-                actor=actor,
-            )
+            try:
+                as_db = await process_action_service(
+                    session=session,
+                    assignment_id=assignment_id,
+                    action=payload.action,
+                    code=payload.code,
+                    term=payload.term,
+                    suggestion_index=payload.suggestion_index,
+                    reason_for_change=payload.reason_for_change,
+                    actor=actor,
+                )
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
         return CodingAssignmentResponse(
             id=as_db.id,
             verbatim_text=as_db.verbatim_text,
