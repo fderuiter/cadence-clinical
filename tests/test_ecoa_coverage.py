@@ -85,6 +85,7 @@ async def test_subject_only_authorization_and_cross_subject_rejection():
     )
 
     inst_payload = {
+        "study_id": "study_test_1",
         "name": "Daily Pain Scale",
         "description": "Pain scale tracker.",
         "items": {"pain_level": "Pain level rating"},
@@ -100,6 +101,7 @@ async def test_subject_only_authorization_and_cross_subject_rejection():
 
     now = datetime.now(UTC).replace(tzinfo=None)
     assign_payload = {
+        "study_id": "study_test_1",
         "subject_id": "subject_alice",
         "instrument_id": inst_id,
         "start_date": (now - timedelta(days=1)).isoformat(),
@@ -216,6 +218,7 @@ async def test_instrument_retrieval_and_assignment_boundaries():
     inst_1 = client.post(
         "/api/v1/interop/instruments",
         json={
+            "study_id": "study_test_1",
             "name": "Instrument One",
             "items": {"q": "one"},
             "response_types": {"q": {"type": "text"}},
@@ -228,6 +231,7 @@ async def test_instrument_retrieval_and_assignment_boundaries():
     inst_2 = client.post(
         "/api/v1/interop/instruments",
         json={
+            "study_id": "study_test_1",
             "name": "Instrument Two",
             "items": {"q": "two"},
             "response_types": {"q": {"type": "text"}},
@@ -242,6 +246,7 @@ async def test_instrument_retrieval_and_assignment_boundaries():
     client.post(
         "/api/v1/interop/assignments",
         json={
+            "study_id": "study_test_1",
             "subject_id": "subject_alice",
             "instrument_id": inst_1["id"],
             "start_date": now.isoformat(),
@@ -299,6 +304,7 @@ async def test_assignment_compliance_states_and_recalculations():
     inst = client.post(
         "/api/v1/interop/instruments",
         json={
+            "study_id": "study_test_1",
             "name": "Compliance Survey",
             "items": {"f1": "f1"},
             "response_types": {"f1": {"type": "text"}},
@@ -314,6 +320,7 @@ async def test_assignment_compliance_states_and_recalculations():
     client.post(
         "/api/v1/interop/assignments",
         json={
+            "study_id": "study_test_1",
             "subject_id": "subject_comp",
             "instrument_id": inst["id"],
             "start_date": (now - timedelta(days=2)).isoformat(),
@@ -328,6 +335,7 @@ async def test_assignment_compliance_states_and_recalculations():
     client.post(
         "/api/v1/interop/assignments",
         json={
+            "study_id": "study_test_1",
             "subject_id": "subject_comp",
             "instrument_id": inst["id"],
             "start_date": (now - timedelta(hours=1)).isoformat(),
@@ -397,6 +405,7 @@ async def test_offline_submission_conflict_resolution_lifecycles():
     inst = client.post(
         "/api/v1/interop/instruments",
         json={
+            "study_id": "study_test_1",
             "name": "Symptom Tracker",
             "items": {"symptom": "Symptom description", "severity": "Severity rating"},
             "response_types": {
@@ -413,6 +422,7 @@ async def test_offline_submission_conflict_resolution_lifecycles():
     client.post(
         "/api/v1/interop/assignments",
         json={
+            "study_id": "study_test_1",
             "subject_id": "subject_sync",
             "instrument_id": inst["id"],
             "start_date": (now - timedelta(days=1)).isoformat(),
@@ -636,6 +646,7 @@ async def test_notifications_lifecycle_reminders_and_acknowledgments():
     inst = client.post(
         "/api/v1/interop/instruments",
         json={
+            "study_id": "study_test_1",
             "name": "Daily Diary",
             "items": {"s": "s"},
             "response_types": {"s": {"type": "text"}},
@@ -651,6 +662,7 @@ async def test_notifications_lifecycle_reminders_and_acknowledgments():
     client.post(
         "/api/v1/interop/assignments",
         json={
+            "study_id": "study_test_1",
             "subject_id": "subject_notif",
             "instrument_id": inst["id"],
             "start_date": (now - timedelta(days=2)).isoformat(),
