@@ -16,6 +16,7 @@ from apps.execution.database.models import (
     ClinicalCodingLedger,
     ClinicalQuery,
     CodingState,
+    RecodingState,
 )
 from apps.execution.database.models import (
     DictionaryType as DBDictionaryType,
@@ -423,6 +424,7 @@ async def process_coding_action(
                 )
 
         status = CodingState.CODED
+        assignment.recoding_status = RecodingState.NONE
 
     elif action_upper == "OVERRIDE":
         # Override requires reason_for_change, code, and term

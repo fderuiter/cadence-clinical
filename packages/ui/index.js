@@ -237,7 +237,12 @@ export function createConditionRowHTML(
  * @param {Object} [options={}] - Options for pre-populating fields and conditions.
  * @returns {string} The HTML string.
  */
-export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
+export function createRuleEditorHTML(
+  // eslint-disable-next-line no-unused-vars
+  forms = [],
+  fields = [],
+  options = {}
+) {
   const opt = {
     conditions: [],
     matchOperator: "and",
@@ -250,11 +255,10 @@ export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
   };
 
   const ruleTypes = [
-    { value: "skip_logic", text: "Skip Logic (Show/Hide fields)" },
-    {
-      value: "constraint",
-      text: "Field Constraint (Single field query validation)",
-    },
+    { value: "skip_logic", text: "Skip Logic (Field Visibility)" },
+    { value: "constraint", text: "Field Constraint Check" },
+    { value: "edit_check", text: "Edit Check (Validation Error)" },
+    { value: "derived_field", text: "Derived Calculation" },
     { value: "cross_form_check", text: "Cross-Form / Longitudinal Check" },
   ];
 
