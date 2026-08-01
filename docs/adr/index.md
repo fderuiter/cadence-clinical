@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-01: SDV and TSDV Data Model Foundations](2026-08-01-sdv-and-tsdv-data-model-foundations.md)
 - [2026-08-01: Unused ESLint Variable and DEID Exemption in UI Package](2026-08-01-unused-eslint-variable-and-deid-exemption-in-ui-package.md)
 - [2026-09-03: Centralized Study Scope and Lab Range Permissions](2026-09-03-centralized-study-scope-and-lab-range-permissions.md)
 - [2026-08-01: Define Laboratory Master and Align ORM Models](2026-08-01-define-laboratory-master-and-align-orm-models.md)
@@ -200,3 +201,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-31: SDV Verification and Compliance Tests Phase 14](2026-07-31-sdv-verification-and-compliance-tests-phase-14.md)
 - [2026-09-03: Centralized Study Scope and Lab Range Permissions](2026-09-03-centralized-study-scope-and-lab-range-permissions.md)
 - [2026-08-01: Unused ESLint Variable and DEID Exemption in UI Package](2026-08-01-unused-eslint-variable-and-deid-exemption-in-ui-package.md)
+- [2026-08-01: Explicit Background Task Cancellation in Ledger Sealer](2026-08-01-explicit-background-task-cancellation-in-ledger-sealer.md)
+- [2026-09-04: Interactive SoA Builder Web Client (Phase 19)](2026-09-04-interactive-soa-builder-web-client-phase-19.md)
+- [2026-08-01: Developer-Centric Architecture Alignment and Automated Drift Gating](2026-08-01-dev-centric-alignment-and-automated-drift-gating.md)
+- [2026-09-04: Dynamic Port Diagnostics and Fallback Realignment](2026-09-04-dynamic-port-diagnostics-and-fallback-realignment.md)

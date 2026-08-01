@@ -11,6 +11,8 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 1826
 - **Passed:** 1826 🟢
+- **Total Automated Test Cases Run:** 1901
+- **Passed:** 1901 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -235,6 +237,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_artifact_cascade_engine_generation` | `tests.test_artifact_cascade` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_artifact_cascade_router_endpoint` | `tests.test_artifact_cascade` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_artifact_cascade_router_endpoint_dependency_override` | `tests.test_artifact_cascade` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_clean_neo4j_graph_calls_run` | `tests.test_asgi_live_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_clean_postgres_databases_calls_truncate` | `tests.test_asgi_live_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_live_db_halt_when_neo4j_unreachable` | `tests.test_asgi_live_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_live_db_halt_when_postgres_unreachable` | `tests.test_asgi_live_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_records_ip_and_custom_timestamp` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_hard_delete_is_prevented` | `tests.test_audit` | Trace-1 | 🟢 PASSED | < 1s |
 | `test_insert_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | < 1s |
@@ -352,6 +358,18 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_query_state_transition_and_role_boundaries` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rejection_and_cancellation_reason_requirements` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reopen_transitions` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_deterministic_per_subject_date_shifting` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_exact_numeric_and_float_age_capping` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sas_dates_shifting` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_signature_parsing_exceptions` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_signature_parsing_formats` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_stripped_block_json_validation` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_stripped_block_xml_validation` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_study_specific_pseudonym_prefixes` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unified_api_ecdsa_verification` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unified_api_invalid_inputs` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unified_api_rsa_verification` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unified_api_signature_mismatch` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_publish_notification_failure_swallowed` | `tests.test_clinical_workflow_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_publish_notification_success` | `tests.test_clinical_workflow_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_router_send_dashboard_notification_sdv_drop` | `tests.test_clinical_workflow_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
