@@ -871,7 +871,10 @@ async def test_phase13_xpath_compilation_and_extensions():
     """Verify Phase 13 XPath helpers (extract_relevant_expression, extract_constraint_expression)
     correctly render relevant and constraint expressions into OpenRosa xf:bind attributes and
     ODM Alias extensions while preserving XML parity and autoescaping of comparison operators."""
-    from apps.execution.translator import extract_relevant_expression, extract_constraint_expression
+    from apps.execution.translator import (
+        extract_constraint_expression,
+        extract_relevant_expression,
+    )
 
     # Unit-level helper verification
     item_with_rules = {
@@ -909,8 +912,8 @@ async def test_phase13_xpath_compilation_and_extensions():
                         {"type": "constant", "value": 200},
                     ],
                 },
-            }
-        ]
+            },
+        ],
     }
 
     assert extract_relevant_expression(item_with_rules) == "(/sys_bp = 120)"
@@ -939,6 +942,7 @@ async def test_phase13_xpath_compilation_and_extensions():
     assert response.status_code == 200
 
     import asyncio
+
     job = None
     for _ in range(50):
         async with db_manager.get_session_maker()() as session:
@@ -957,8 +961,8 @@ async def test_phase13_xpath_compilation_and_extensions():
 
     # Verify OpenRosa XML output
     openrosa_xml = job["openrosa_payload"]
-    assert "relevant=\"(/sys_bp = 120)\"" in openrosa_xml
-    assert "constraint=\"(/heart_rate &lt; 200)\"" in openrosa_xml
+    assert 'relevant="(/sys_bp = 120)"' in openrosa_xml
+    assert 'constraint="(/heart_rate &lt; 200)"' in openrosa_xml
 
     openrosa_root = ET.fromstring(openrosa_xml)
     ns = {"xf": "http://www.w3.org/2002/xforms"}

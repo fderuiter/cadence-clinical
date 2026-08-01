@@ -115,10 +115,7 @@ def extract_relevant_expression(item: dict[str, Any]) -> str | None:
         if not compiled_xpath:
             continue
         action = r.get("action", "show")
-        if action == "hide":
-            expr = f"not({compiled_xpath})"
-        else:
-            expr = compiled_xpath
+        expr = f"not({compiled_xpath})" if action == "hide" else compiled_xpath
         relevants.append(expr)
 
     if not relevants:
