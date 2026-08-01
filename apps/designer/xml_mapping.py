@@ -1,7 +1,7 @@
 import csv
 import io
 import re
-from typing import Any, Dict, List
+from typing import Any
 
 # W3C XML Name Regex (simplified to allow English letters, underscores, dots, hyphens, and numbers)
 # A strict W3C NameStartChar without colon
@@ -29,7 +29,7 @@ def is_valid_xml_name(name: str) -> bool:
     return bool(XML_NAME_PATTERN.match(name))
 
 
-def validate_mapping_csv(csv_content: str) -> List[Dict[str, Any]]:
+def validate_mapping_csv(csv_content: str) -> list[dict[str, Any]]:
     """
     Parses and validates the CSV configuration.
     Raises ValueError if any target name fails the W3C XML Name regex.

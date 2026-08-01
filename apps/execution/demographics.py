@@ -12,7 +12,7 @@ import base64
 import json
 import logging
 from datetime import date, datetime
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 from cryptography.fernet import Fernet, InvalidToken
 
@@ -52,7 +52,7 @@ def decrypt_demographics(encrypted_str: str) -> dict:
     return json.loads(decrypted.decode("utf-8"))
 
 
-def normalize_gender(gender_str: Optional[str]) -> str:
+def normalize_gender(gender_str: str | None) -> str:
     """Normalize supported gender/sex input values into standard rule-engine codes (CDISC SEX).
 
     Args:
@@ -77,7 +77,7 @@ def normalize_gender(gender_str: Optional[str]) -> str:
     return "U"
 
 
-def _parse_date_string(date_str: str) -> Optional[date]:
+def _parse_date_string(date_str: str) -> date | None:
     """Helper to parse common date strings safely.
 
     Args:
@@ -112,9 +112,9 @@ def _parse_date_string(date_str: str) -> Optional[date]:
 
 
 def calculate_age(
-    birthdate: Union[date, datetime, str, None],
-    observation_date: Union[date, datetime, str, None],
-) -> Optional[int]:
+    birthdate: date | datetime | str | None,
+    observation_date: date | datetime | str | None,
+) -> int | None:
     """Calculate subject's completed years of age relative to the observation date.
 
     Handles boundary dates such as birthdays on, before, or after the observation date.
@@ -176,8 +176,8 @@ def calculate_age(
 
 def get_safe_demographics(
     subject: Any,
-    observation_date: Union[date, datetime, str, None],
-) -> Dict[str, Any]:
+    observation_date: date | datetime | str | None,
+) -> dict[str, Any]:
     """Securely extract range-matching demographics from ClinicalSubject without exposing raw PII.
 
     This function safely decrypts ClinicalSubject.encrypted_demographics and extracts

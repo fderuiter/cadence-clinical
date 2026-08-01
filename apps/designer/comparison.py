@@ -1,13 +1,13 @@
 import re
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any
 
 
-def flatten_dict(d: Any, parent_key: str = "", sep: str = ".") -> Dict[str, Any]:
+def flatten_dict(d: Any, parent_key: str = "", sep: str = ".") -> dict[str, Any]:
     """
     Recursively flattens a nested dictionary, list, or Pydantic model into a flat dictionary.
     Normalizes complex nested structures to enable 1D path-by-path comparison.
     """
-    items: List[Tuple[str, Any]] = []
+    items: list[tuple[str, Any]] = []
 
     # Handle Pydantic models (e.g. converting to dict/model_dump)
     if hasattr(d, "model_dump") and callable(getattr(d, "model_dump")):
@@ -31,7 +31,7 @@ def flatten_dict(d: Any, parent_key: str = "", sep: str = ".") -> Dict[str, Any]
     return dict(items)
 
 
-def collect_original_ids(d: Any) -> Dict[str, str]:
+def collect_original_ids(d: Any) -> dict[str, str]:
     """
     Traverses a nested structure to collect all mapping pairs between UUIDs and original string IDs
     based on '_original_id' fields.
@@ -86,7 +86,7 @@ def is_empty_value(val: Any) -> bool:
     return bool(isinstance(val, (str, list, dict)) and len(val) == 0)
 
 
-def compare_payloads(original: Any, round_tripped: Any) -> Dict[str, Any]:
+def compare_payloads(original: Any, round_tripped: Any) -> dict[str, Any]:
     """
     Compares two payloads path-by-path and classifies differences into Material and Non-material.
     Returns a structured fidelity report detailing added, dropped, and altered paths.
@@ -99,11 +99,11 @@ def compare_payloads(original: Any, round_tripped: Any) -> Dict[str, Any]:
     # Combine ID mappings for bidirectional lookup
     id_mappings = {**orig_id_mappings, **rt_id_mappings}
 
-    added_paths: List[Dict[str, Any]] = []
-    dropped_paths: List[Dict[str, Any]] = []
-    altered_paths: List[Dict[str, Any]] = []
+    added_paths: list[dict[str, Any]] = []
+    dropped_paths: list[dict[str, Any]] = []
+    altered_paths: list[dict[str, Any]] = []
 
-    all_keys: Set[str] = set(flat_orig.keys()).union(set(flat_rt.keys()))
+    all_keys: set[str] = set(flat_orig.keys()).union(set(flat_rt.keys()))
 
     material_difference_count = 0
     non_material_difference_count = 0

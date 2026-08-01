@@ -2,7 +2,7 @@
 Standard Part 11 compliant audit and metadata fields for Pydantic v2.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from datetime_helpers import AwareDatetime
 from pydantic import BaseModel, Field, field_validator
@@ -14,7 +14,7 @@ class Part11AuditMixin(BaseModel):
     """
 
     created_at: AwareDatetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Chronological UTC timestamp when the record was created.",
     )
     created_by: str = Field(

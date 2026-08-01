@@ -6,7 +6,7 @@ entirely avoiding eval/exec. It tracks fine-grained node-level traceability
 explanations and aggregates individual criteria into a final eligibility report.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from eligibility.models import (
     AggregateEligibilityResult,
@@ -17,7 +17,7 @@ from eligibility.models import (
 )
 
 
-def evaluate_node(node: ExpressionNode, context: Dict[str, Any]) -> NodeEvaluation:
+def evaluate_node(node: ExpressionNode, context: dict[str, Any]) -> NodeEvaluation:
     """
     Deterministically evaluates an ExpressionNode AST against the given data context.
     Propagates missing or null values as indeterminate (Kleene 3-valued logic).
@@ -252,7 +252,7 @@ def evaluate_node(node: ExpressionNode, context: Dict[str, Any]) -> NodeEvaluati
 
 
 def evaluate_eligibility(
-    criteria: List[EligibilityCriterion], context: Dict[str, Any]
+    criteria: list[EligibilityCriterion], context: dict[str, Any]
 ) -> AggregateEligibilityResult:
     """
     Aggregates the eligibility assessment over a list of inclusion/exclusion criteria.
@@ -305,8 +305,8 @@ def evaluate_eligibility(
 
 
 def evaluate_structured_expression(
-    tree: ExpressionNode, context: Dict[str, Any]
-) -> tuple[Optional[bool], str]:
+    tree: ExpressionNode, context: dict[str, Any]
+) -> tuple[bool | None, str]:
     """
     Deterministically evaluates a structured expression tree against a context dict of eCRF field values.
     Returns:
@@ -338,8 +338,8 @@ def evaluate_structured_expression(
 
 
 def evaluate_criteria_group(
-    criteria: List[EligibilityCriterion], context: Dict[str, Any]
-) -> tuple[Optional[bool], List[str]]:
+    criteria: list[EligibilityCriterion], context: dict[str, Any]
+) -> tuple[bool | None, list[str]]:
     """
     Aggregates evaluations across a list of inclusion/exclusion criteria.
     Derives an overall outcome:

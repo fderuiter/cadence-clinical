@@ -2,7 +2,7 @@ import base64
 import contextlib
 import logging
 import re
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes
@@ -12,7 +12,7 @@ logger = logging.getLogger("etmf-cryptography")
 
 
 def requires_signature(
-    artifact_type: str, metadata_json: Optional[Dict[str, Any]] = None
+    artifact_type: str, metadata_json: dict[str, Any] | None = None
 ) -> bool:
     """
     Determines if a given eTMF artifact type requires a cryptographic signature
@@ -42,7 +42,7 @@ def requires_signature(
 
 def extract_signature_from_content(
     content: str,
-) -> Tuple[Optional[str], Optional[bytes], Optional[str]]:
+) -> tuple[str | None, bytes | None, str | None]:
     """
     Scans the document content to extract an embedded X.509 certificate and signature.
     Supports both PEM/text blocks and XML signature tags.
@@ -170,8 +170,8 @@ def verify_x509_signature(
 
 
 def validate_document_signature(
-    artifact_type: str, content: str, metadata_json: Optional[Dict[str, Any]] = None
-) -> Tuple[bool, str]:
+    artifact_type: str, content: str, metadata_json: dict[str, Any] | None = None
+) -> tuple[bool, str]:
     """
     Extracts and validates embedded digital signatures from document content or metadata.
 

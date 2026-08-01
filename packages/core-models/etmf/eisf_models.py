@@ -4,7 +4,6 @@ Requirements: PRD-SYS-001
 """
 
 from datetime import date, datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -40,7 +39,7 @@ class EISFDocumentRecordResponse(BaseModel):
     version_major: int = Field(..., description="The major version of the document")
     version_minor: int = Field(..., description="The minor version of the document")
     status: str = Field(..., description="The lifecycle state status of the document")
-    expiration_date: Optional[date] = Field(
+    expiration_date: date | None = Field(
         None, description="Optional document expiration date"
     )
     created_at: datetime = Field(..., description="The creation timestamp in UTC")

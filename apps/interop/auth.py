@@ -5,8 +5,6 @@ Provides reusable role verification and subject-scoped identity checks
 aligned with 21 CFR Part 11 and secure diary-only patient boundary specifications.
 """
 
-from typing import List
-
 from fastapi import HTTPException, Request, status
 
 
@@ -52,7 +50,7 @@ def verify_subject_identity(request: Request, subject_id: str) -> None:
             )
 
 
-def verify_subject_bulk_identity(request: Request, subject_ids: List[str]) -> None:
+def verify_subject_bulk_identity(request: Request, subject_ids: list[str]) -> None:
     """
     Verify that if the request has a Subject role, its authenticated user_id matches all target subject_ids.
 

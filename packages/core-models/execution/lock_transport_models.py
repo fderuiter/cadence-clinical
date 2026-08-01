@@ -3,8 +3,6 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import Optional
-
 from execution.lock_models import DataLockRecord, LockScopeEnum
 from pydantic import BaseModel, Field
 
@@ -18,10 +16,10 @@ class DataLockRequest(BaseModel):
     study_id: str = Field(..., description="Target protocol study ID")
     subject_id: str = Field(..., description="Target subject ID")
     form_id: str = Field(..., description="Target eCRF form ID")
-    item_group_id: Optional[str] = Field(
+    item_group_id: str | None = Field(
         None, description="Optional target item group code"
     )
-    field_name: Optional[str] = Field(
+    field_name: str | None = Field(
         None, description="Optional target field variable name"
     )
     scope: LockScopeEnum = Field(

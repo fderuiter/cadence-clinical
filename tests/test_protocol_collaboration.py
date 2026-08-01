@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -128,7 +128,7 @@ async def test_section_review_transitions_lifecycle():
     # Transition: LOCKED -> APPROVED (captures signature manifest)
     sig_manifestation = {
         "signer_id": "pi_1",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "signing_reason": "Approve rationale section",
     }
     t3 = await transition_section_status(
@@ -445,7 +445,7 @@ def test_api_section_collaboration_gates():
                 "block_id": block_id,
                 "version_index": 1,
                 "created_by": "system",
-                "created_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
                 "reason_for_change": "Init",
                 "is_deleted": False,
                 "block_type": "narrative",

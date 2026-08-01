@@ -1,9 +1,9 @@
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class DetectorCategory(str, Enum):
+class DetectorCategory(StrEnum):
     """
     Standard categories of PII/PHI supported by the detection engine.
     """
@@ -20,7 +20,7 @@ class DetectorCategory(str, Enum):
     CUSTOM = "custom"
 
 
-class ComplianceProfile(str, Enum):
+class ComplianceProfile(StrEnum):
     """
     Compliance profiles that govern which PII/PHI categories are active.
     """

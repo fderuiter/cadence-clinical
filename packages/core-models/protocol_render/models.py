@@ -6,8 +6,7 @@ view models for automated protocol narrative, synopsis, and Schedule of Activiti
 documents in compliance with FDA 21 CFR Part 11 and CDISC USDM.
 """
 
-from datetime import datetime, timezone
-from typing import List, Optional
+from datetime import UTC, datetime
 
 import usdm_model
 from datetime_helpers import AwareDatetime
@@ -25,10 +24,10 @@ class ExportMetadata(BaseModel):
         description="The unique identifier (e.g. username/OIDC user_id) of the user who generated/exported the document.",
     )
     timestamp: AwareDatetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Chronological UTC timestamp when the document export was requested.",
     )
-    change_reason: Optional[str] = Field(
+    change_reason: str | None = Field(
         None,
         description="Mandatory explanation or audit justification for creating or mutating this document version (required if version_index > 1).",
     )
@@ -61,7 +60,7 @@ class NarrativeItemView(BaseModel):
     id: str = Field(
         ..., description="Unique identifier for the narrative content item."
     )
-    name: Optional[str] = Field(None, description="Optional name/tag for the item.")
+    name: str | None = Field(None, description="Optional name/tag for the item.")
     text: str = Field(..., description="The narrative text content.")
     order: int = Field(..., description="Sequential sorting order within its section.")
 
@@ -72,16 +71,16 @@ class NarrativeSectionView(BaseModel):
     """
 
     section_id: str = Field(..., description="Unique identifier of the section.")
-    section_number: Optional[str] = Field(
+    section_number: str | None = Field(
         None,
         description="Formatted section hierarchy identifier (e.g., '1.1', '2.3.1').",
     )
     title: str = Field(..., description="The heading or title of the section.")
-    items: List[NarrativeItemView] = Field(
+    items: list[NarrativeItemView] = Field(
         default_factory=list,
         description="List of narrative content items belonging directly to this section.",
     )
-    subsections: List["NarrativeSectionView"] = Field(
+    subsections: list["NarrativeSectionView"] = Field(
         default_factory=list,
         description="Subsections nested inside this section.",
     )
@@ -98,31 +97,31 @@ class SynopsisView(BaseModel):
 
     study_id: str = Field(..., description="The unique study identifier.")
     protocol_title: str = Field(..., description="The formal title of the protocol.")
-    protocol_number: Optional[str] = Field(
+    protocol_number: str | None = Field(
         None, description="Sponsor protocol identification number."
     )
-    sponsor_name: Optional[str] = Field(None, description="Name of the study sponsor.")
-    phase: Optional[str] = Field(
+    sponsor_name: str | None = Field(None, description="Name of the study sponsor.")
+    phase: str | None = Field(
         None, description="Clinical trial phase (e.g. Phase I, Phase II)."
     )
-    objectives: List[str] = Field(
+    objectives: list[str] = Field(
         default_factory=list,
         description="Key objectives of the clinical trial represented as strings.",
     )
-    study_design_type: Optional[str] = Field(
+    study_design_type: str | None = Field(
         None,
         description="The structural design type (e.g., Randomized, Double-Blind, Parallel).",
     )
-    population: Optional[str] = Field(
+    population: str | None = Field(
         None, description="Summary of target study population and eligibility criteria."
     )
-    sample_size: Optional[int] = Field(
+    sample_size: int | None = Field(
         None, description="Planned total sample size of trial subjects."
     )
-    duration: Optional[str] = Field(
+    duration: str | None = Field(
         None, description="Planned duration of participant involvement."
     )
-    interventions: List[str] = Field(
+    interventions: list[str] = Field(
         default_factory=list,
         description="Summary list of study interventions/treatments.",
     )
@@ -150,7 +149,7 @@ class SoAHeaderEpoch(BaseModel):
         ..., description="Name of the study epoch (e.g., Treatment, Follow-up)."
     )
     sequence: int = Field(..., description="Sequence number of the epoch.")
-    arm_id: Optional[str] = Field(None, description="Optional associated arm ID.")
+    arm_id: str | None = Field(None, description="Optional associated arm ID.")
 
 
 class SoAHeaderEncounter(BaseModel):
@@ -162,7 +161,7 @@ class SoAHeaderEncounter(BaseModel):
     encounter_name: str = Field(..., description="Name of the encounter/visit.")
     epoch_id: str = Field(..., description="Associated study epoch identifier.")
     sequence: int = Field(..., description="Sequence number of the encounter/visit.")
-    arm_id: Optional[str] = Field(None, description="Optional associated arm ID.")
+    arm_id: str | None = Field(None, description="Optional associated arm ID.")
 
 
 class SoACellView(BaseModel):
@@ -177,10 +176,10 @@ class SoACellView(BaseModel):
         ...,
         description="Whether the activity is planned to occur during this encounter.",
     )
-    details: Optional[str] = Field(
+    details: str | None = Field(
         None, description="Optional timing windows, constraints, or instruction notes."
     )
-    arm_id: Optional[str] = Field(None, description="Optional associated arm ID.")
+    arm_id: str | None = Field(None, description="Optional associated arm ID.")
     derived_from_soa: bool = Field(
         False, description="Flag indicating selective lineage."
     )
@@ -195,7 +194,7 @@ class SoARowView(BaseModel):
     activity_name: str = Field(
         ..., description="Name or label of the activity/procedure."
     )
-    cells: List[SoACellView] = Field(
+    cells: list[SoACellView] = Field(
         default_factory=list,
         description="Applicability cell mapping for each encounter column.",
     )
@@ -209,19 +208,19 @@ class SoAMatrixView(BaseModel):
     Presentation view of the Schedule of Activities (SoA) matrix table.
     """
 
-    epochs: List[SoAHeaderEpoch] = Field(
+    epochs: list[SoAHeaderEpoch] = Field(
         default_factory=list,
         description="Ordered list of Study Epoch columns.",
     )
-    encounters: List[SoAHeaderEncounter] = Field(
+    encounters: list[SoAHeaderEncounter] = Field(
         default_factory=list,
         description="Ordered list of Encounter/Visit sub-columns.",
     )
-    rows: List[SoARowView] = Field(
+    rows: list[SoARowView] = Field(
         default_factory=list,
         description="Ordered list of row-wise activity procedures.",
     )
-    arms: List[SoAHeaderArm] = Field(
+    arms: list[SoAHeaderArm] = Field(
         default_factory=list,
         description="Ordered list of Study Arm columns.",
     )
@@ -239,7 +238,7 @@ class RenderedProtocolDocument(BaseModel):
     synopsis: SynopsisView = Field(
         ..., description="The presentation synopsis overview."
     )
-    narrative_sections: List[NarrativeSectionView] = Field(
+    narrative_sections: list[NarrativeSectionView] = Field(
         default_factory=list,
         description="The ordered and structured narrative sections.",
     )
@@ -247,7 +246,7 @@ class RenderedProtocolDocument(BaseModel):
         ...,
         description="The structured Schedule of Activities (SoA) presentation matrix.",
     )
-    source_study: Optional[usdm_model.Study] = Field(
+    source_study: usdm_model.Study | None = Field(
         None,
         description="Optional backup reference to the official, full CDISC USDM source model.",
     )

@@ -6,12 +6,11 @@ to CDISC controlled terminology standards.
 """
 
 import re
-from typing import List, Optional, Union
 
 from sdtm.enums import AESeverity, Race, Sex
 
 
-def normalize_sex(val: Optional[str]) -> str:
+def normalize_sex(val: str | None) -> str:
     """
     Normalizes and validates SEX value to CDISC Controlled Terminology: 'M', 'F', 'U'.
 
@@ -45,7 +44,7 @@ def normalize_sex(val: Optional[str]) -> str:
     raise ValueError(f"Value '{val}' is not a valid or normalizable CDISC SEX value.")
 
 
-def normalize_race(val: Union[str, List[str]]) -> str:
+def normalize_race(val: str | list[str]) -> str:
     """
     Normalizes and validates RACE value to CDISC Controlled Terminology.
 
@@ -117,7 +116,7 @@ def normalize_race(val: Union[str, List[str]]) -> str:
     raise ValueError(f"Value '{val}' is not a valid or normalizable CDISC RACE value.")
 
 
-def normalize_severity(val: Optional[str]) -> str:
+def normalize_severity(val: str | None) -> str:
     """
     Normalizes and validates AE severity (AESEV) to CDISC Controlled Terminology: 'MILD', 'MODERATE', 'SEVERE'.
 
@@ -149,7 +148,7 @@ def normalize_severity(val: Optional[str]) -> str:
     raise ValueError(f"Value '{val}' is not a valid or normalizable AE Severity value.")
 
 
-def normalize_seriousness(val: Optional[Union[str, bool]]) -> str:
+def normalize_seriousness(val: str | bool | None) -> str:
     """
     Normalizes and validates AE seriousness (AESER) to CDISC: 'Y' or 'N'.
 

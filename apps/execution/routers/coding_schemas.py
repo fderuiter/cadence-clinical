@@ -1,6 +1,6 @@
 from datetime import datetime
-from enum import Enum
-from typing import Any, List, Literal, Optional, Union
+from enum import StrEnum
+from typing import Any, Literal
 
 from pydantic import BaseModel, ValidationInfo, field_validator, model_validator
 
@@ -8,21 +8,21 @@ from apps.execution.database.models import DictionaryType, ImportState
 
 
 # Enums
-class DictTypeEnum(str, Enum):
+class DictTypeEnum(StrEnum):
     MEDDRA = DictionaryType.MEDDRA.value
     WHODRUG = DictionaryType.WHODRUG.value
     LOINC = DictionaryType.LOINC.value
     SNOMED = DictionaryType.SNOMED.value
 
 
-class JobStatusEnum(str, Enum):
+class JobStatusEnum(StrEnum):
     PENDING = ImportState.PENDING.value
     PROCESSING = ImportState.PROCESSING.value
     COMPLETED = ImportState.COMPLETED.value
     FAILED = ImportState.FAILED.value
 
 
-class PrimarySocFlagEnum(str, Enum):
+class PrimarySocFlagEnum(StrEnum):
     Y = "Y"
     N = "N"
 
@@ -43,16 +43,16 @@ class DictionaryImportRequest(BaseModel):
 
 class CoderActionRequest(BaseModel):
     action: str  # "ACCEPT" or "OVERRIDE" or "QUERY"
-    code: Optional[str] = None  # required for OVERRIDE
-    term: Optional[str] = None  # required for OVERRIDE
-    suggestion_index: Optional[int] = None  # optional for ACCEPT
-    reason_for_change: Optional[str] = None  # required for OVERRIDE
+    code: str | None = None  # required for OVERRIDE
+    term: str | None = None  # required for OVERRIDE
+    suggestion_index: int | None = None  # optional for ACCEPT
+    reason_for_change: str | None = None  # required for OVERRIDE
 
     @field_validator("reason_for_change")
     @classmethod
     def validate_reason_for_change_field(
-        cls, v: Optional[str], info: ValidationInfo
-    ) -> Optional[str]:
+        cls, v: str | None, info: ValidationInfo
+    ) -> str | None:
         action_upper = (info.data.get("action") or "").upper()
         if action_upper == "OVERRIDE" and (not v or not v.strip()):
             raise ValueError(
@@ -95,10 +95,10 @@ class JobStatusResponse(BaseModel):
     version: str
     status: JobStatusEnum
     started_at: datetime
-    completed_at: Optional[datetime] = None
-    progress_percentage: Optional[int] = None
-    records_imported: Optional[int] = None
-    errors_encountered: Optional[int] = None
+    completed_at: datetime | None = None
+    progress_percentage: int | None = None
+    records_imported: int | None = None
+    errors_encountered: int | None = None
 
 
 class MedDRAMatch(BaseModel):
@@ -112,13 +112,13 @@ class MedDRAMatch(BaseModel):
     hlgt_name: str
     soc_code: str
     soc_name: str
-    primary_soc_flag: Optional[PrimarySocFlagEnum] = None
+    primary_soc_flag: PrimarySocFlagEnum | None = None
     score: float
 
 
 class MedDRACodeLookupResponse(BaseModel):
     status: Literal["AUTO-CODED", "SUGGESTIONS", "UNCODABLE"]
-    matches: List[MedDRAMatch]
+    matches: list[MedDRAMatch]
 
 
 # For backward compatibility
@@ -127,34 +127,34 @@ MedDRACodingResult = MedDRACodeLookupResponse
 
 
 class WHODrugIngredientItem(BaseModel):
-    code: Optional[str] = None
-    name: Optional[str] = None
-    ingredient_code: Optional[str] = None
-    ingredient_name: Optional[str] = None
+    code: str | None = None
+    name: str | None = None
+    ingredient_code: str | None = None
+    ingredient_name: str | None = None
 
 
 class WHODrugATCContext(BaseModel):
-    code: Optional[str] = None
-    text: Optional[str] = None
-    atc_code: Optional[str] = None
-    description: Optional[str] = None
+    code: str | None = None
+    text: str | None = None
+    atc_code: str | None = None
+    description: str | None = None
 
 
 class WHODrugMatch(BaseModel):
-    code: Optional[str] = None
-    name: Optional[str] = None
-    drug_code: Optional[str] = None
-    preferred_name: Optional[str] = None
-    drug_name: Optional[str] = None
+    code: str | None = None
+    name: str | None = None
+    drug_code: str | None = None
+    preferred_name: str | None = None
+    drug_name: str | None = None
     score: float
-    ingredients: List[WHODrugIngredientItem] = []
-    atc: List[WHODrugATCContext] = []
-    atc_context: List[WHODrugATCContext] = []
+    ingredients: list[WHODrugIngredientItem] = []
+    atc: list[WHODrugATCContext] = []
+    atc_context: list[WHODrugATCContext] = []
 
 
 class WHODrugCodeLookupResponse(BaseModel):
     status: Literal["AUTO-CODED", "SUGGESTIONS", "UNCODABLE"]
-    matches: List[WHODrugMatch]
+    matches: list[WHODrugMatch]
 
 
 # For backward compatibility
@@ -165,20 +165,20 @@ WHODrugCodingResult = WHODrugCodeLookupResponse
 class CodingAssignmentResponse(BaseModel):
     id: str
     verbatim_text: str
-    source_field: Optional[str] = None
-    observation_id: Optional[str] = None
+    source_field: str | None = None
+    observation_id: str | None = None
     dictionary_type: str
     dictionary_version: str
-    coded_code: Optional[str] = None
-    coded_term: Optional[str] = None
+    coded_code: str | None = None
+    coded_term: str | None = None
     status: str
     recoding_status: str
-    assigned_by: Optional[str] = None
+    assigned_by: str | None = None
     assigned_at: datetime
-    score: Optional[float] = None
-    hierarchy: Optional[Union[dict[str, Any], list[Any]]] = None
-    suggestions: Optional[Union[list[Any], dict[str, Any]]] = None
-    domain: Optional[str] = None
+    score: float | None = None
+    hierarchy: dict[str, Any] | list[Any] | None = None
+    suggestions: list[Any] | dict[str, Any] | None = None
+    domain: str | None = None
     version: int
     is_deleted: bool
 
@@ -188,9 +188,9 @@ class ImpactMetrics(BaseModel):
     reclassified: int = 0
     deprecated: int = 0
     skipped: int = 0
-    verbatim_terms_affected: Optional[int] = None
-    coded_terms_affected: Optional[int] = None
-    uncodable_terms: Optional[int] = None
+    verbatim_terms_affected: int | None = None
+    coded_terms_affected: int | None = None
+    uncodable_terms: int | None = None
 
 
 class ImpactAnalysisResponse(BaseModel):

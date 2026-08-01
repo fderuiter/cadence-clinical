@@ -1,5 +1,5 @@
 import hashlib
-from typing import List, NamedTuple, Optional, Tuple
+from typing import NamedTuple
 
 
 class TSDVTargetEvaluation(NamedTuple):
@@ -10,10 +10,10 @@ class TSDVTargetEvaluation(NamedTuple):
 
     subject_uuid: str
     enrollment_index: int
-    domain: Optional[str]
+    domain: str | None
     required: bool
     subject_selected: bool
-    field_decision: Optional[bool]
+    field_decision: bool | None
     explanation: str
 
 
@@ -55,7 +55,7 @@ def is_subject_selected_for_sdv(
     return scaled_value < percentage
 
 
-def is_field_required(config, domain: Optional[str]) -> Optional[bool]:
+def is_field_required(config, domain: str | None) -> bool | None:
     """Check if SDV is required/excluded for a domain based on configuration.
 
     Safety endpoints and full-SDV domains always require SDV, overriding zero-SDV.
@@ -93,8 +93,8 @@ def is_field_required(config, domain: Optional[str]) -> Optional[bool]:
 
 
 def evaluate_tsdv_requirement(
-    config, subject_uuid: str, enrollment_index: int, domain: Optional[str] = None
-) -> Tuple[bool, bool, Optional[bool], str]:
+    config, subject_uuid: str, enrollment_index: int, domain: str | None = None
+) -> tuple[bool, bool, bool | None, str]:
     """Combine subject and field decisions according to the configuration's sampling model.
 
     Args:
@@ -168,8 +168,8 @@ def evaluate_tsdv_requirement(
 
 # Phase 1: Bulk TSDV evaluation helper (PRD-SYS-001)
 def evaluate_bulk_tsdv(
-    config, targets: List[Tuple[str, int, Optional[str]]]
-) -> List[TSDVTargetEvaluation]:
+    config, targets: list[tuple[str, int, str | None]]
+) -> list[TSDVTargetEvaluation]:
     """Evaluate a bulk list of target coordinate inputs against a TSDVConfig.
 
     Reuses evaluate_tsdv_requirement to determine the target-specific decision.
@@ -181,7 +181,7 @@ def evaluate_bulk_tsdv(
     Returns:
         List[TSDVTargetEvaluation]: Structured evaluation results for each target.
     """
-    results: List[TSDVTargetEvaluation] = []
+    results: list[TSDVTargetEvaluation] = []
     for subject_uuid, enrollment_index, domain in targets:
         required, subject_selected, field_decision, explanation = (
             evaluate_tsdv_requirement(config, subject_uuid, enrollment_index, domain)

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -40,7 +40,7 @@ def test_auditable_model_fields_and_validation():
     Verify that AuditableModel validates its audit fields correctly,
     especially the non-empty change reason and >= 1 version index.
     """
-    dt = datetime.now(timezone.utc)
+    dt = datetime.now(UTC)
     dm = DM(
         STUDYID="STUDY-1",
         DOMAIN="DM",

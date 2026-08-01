@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 import pytest_asyncio
@@ -151,7 +151,7 @@ async def test_doa_task_delegation_and_esignature_lifecycle():
 
     async with db_manager.get_session_maker()() as session:
         # 6. Test successful revocation and end dating
-        end_date = datetime.now(timezone.utc)
+        end_date = datetime.now(UTC)
         revoked = await revoke_delegation(
             session=session,
             delegation_id=delegation_id,
@@ -214,7 +214,7 @@ async def test_doa_manager_service_class_interface():
         assert approved.status == "ACTIVE"
 
         # 3. Test revoke_delegation method
-        end_date = datetime.now(timezone.utc)
+        end_date = datetime.now(UTC)
         revoked = await service.revoke_delegation(
             delegation_id=record.id,
             end_date=end_date,

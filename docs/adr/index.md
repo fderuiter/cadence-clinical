@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-07-31: Modernize Python 3.10 Type Hint Syntax and Lock Ruff Rule Enforcements](2026-07-31-modernize-python-310-type-hint-syntax-and-lock-ruff-rule-enforcements.md)
 - [2026-07-31: Lab Master Catalog and Unit Conversion Data Models](2026-07-31-lab-master-catalog-and-unit-conversion-data-models.md)
 - [2026-07-31: On-Demand Consent Status Validation and Audit Hooks](2026-07-31-on-demand-consent-status-validation-and-audit-hooks.md)
 - [2026-07-29: Consolidated eClinical Services and Compliance Enhancements](2026-07-29-consolidated-eclinical-services-and-compliance-enhancements.md)
@@ -150,6 +151,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-17: Interactive Mermaid Diagrams and Responsive Layout Controls](2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md)
 
 ### 7. DevOps, Tooling & CI/CD
+- [2026-07-31: Upgrade Environments to Python 3.12](2026-07-31-upgrade-environments-to-python-312.md)
 
 - [2026-07-22: ADR 2026-07-22: Unified Database Management and Pre-Boot Migrations](2026-07-22-unified-database-management-and-pre-boot-migrations.md)
 - [2026-07-23: ADR 2026-07-23: Targeted Integration with Path Isolation](2026-07-23-targeted-integration-path-isolation.md)

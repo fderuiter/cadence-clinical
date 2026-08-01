@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict
+from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 
@@ -34,7 +34,7 @@ FALLBACK_TEMPLATES = {
 }
 
 
-def render_email_template(template_name: str, context: Dict[str, Any]) -> str:
+def render_email_template(template_name: str, context: dict[str, Any]) -> str:
     """
     Renders a GxP-compliant HTML email notification from Jinja2 templates.
     Falls back to embedded string templates if disk template files are inaccessible.

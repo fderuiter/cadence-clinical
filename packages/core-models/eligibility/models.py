@@ -7,15 +7,15 @@ evaluation outputs. All models conform to FDA 21 CFR Part 11 auditing principles
 """
 
 import re
-from enum import Enum
-from typing import Any, Dict, List, Literal, Optional, Union
+from enum import StrEnum
+from typing import Any, Literal
 
 # Import standard GxP audit fields
 from audit import Part11AuditMixin
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
-class ComparisonOperator(str, Enum):
+class ComparisonOperator(StrEnum):
     """
     Allowed binary comparison operators for criteria evaluations.
     """
@@ -28,7 +28,7 @@ class ComparisonOperator(str, Enum):
     GE = ">="
 
 
-class LogicalOperator(str, Enum):
+class LogicalOperator(StrEnum):
     """
     Allowed logical connectors for composite criteria expressions.
     """
@@ -99,19 +99,19 @@ class ExpressionNode(BaseModel):
         ...,
         description="Node type indicating the structure of the node.",
     )
-    operator: Optional[Union[ComparisonOperator, LogicalOperator, str]] = Field(
+    operator: ComparisonOperator | LogicalOperator | str | None = Field(
         None,
         description="Operator for logical (and, or, not) or comparison (==, !=, <, <=, >, >=) nodes.",
     )
-    operands: Optional[List["ExpressionNode"]] = Field(
+    operands: list["ExpressionNode"] | None = Field(
         None,
         description="Child operands of logical or comparison nodes.",
     )
-    value: Optional[Any] = Field(
+    value: Any | None = Field(
         None,
         description="Literal constant value of type constant.",
     )
-    field_ref: Optional[FieldReference] = Field(
+    field_ref: FieldReference | None = Field(
         None,
         description="Field reference details of type field_ref.",
     )
@@ -304,11 +304,11 @@ class NodeEvaluation(BaseModel):
         ...,
         description="The type of AST node that was evaluated.",
     )
-    operator: Optional[str] = Field(
+    operator: str | None = Field(
         None,
         description="The operator utilized during evaluation.",
     )
-    value: Optional[Any] = Field(
+    value: Any | None = Field(
         None,
         description="The evaluated literal value of the node, if determined.",
     )
@@ -320,7 +320,7 @@ class NodeEvaluation(BaseModel):
         ...,
         description="Trace explanation detailing how this node evaluated to its outcome.",
     )
-    children: List["NodeEvaluation"] = Field(
+    children: list["NodeEvaluation"] = Field(
         default_factory=list,
         description="Child node evaluation details.",
     )
@@ -373,20 +373,20 @@ class AggregateEligibilityResult(BaseModel):
     Aggregated eligibility outcome over a set of inclusion/exclusion criteria.
     """
 
-    eligible: Optional[bool] = Field(
+    eligible: bool | None = Field(
         None,
         description="Aggregated eligibility. True if all criteria are met. "
         "False if any criterion failed. None if indeterminate and no hard failures exist.",
     )
-    failed_criteria: List[str] = Field(
+    failed_criteria: list[str] = Field(
         default_factory=list,
         description="List of criterion IDs that failed evaluation.",
     )
-    indeterminate_criteria: List[str] = Field(
+    indeterminate_criteria: list[str] = Field(
         default_factory=list,
         description="List of criterion IDs that were indeterminate due to missing/null values.",
     )
-    criteria_evaluations: Dict[str, CriterionEvaluation] = Field(
+    criteria_evaluations: dict[str, CriterionEvaluation] = Field(
         default_factory=dict,
         description="A map of detailed evaluation results keyed by criterion ID.",
     )

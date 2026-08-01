@@ -2,7 +2,6 @@ import asyncio
 import contextlib
 import os
 from datetime import datetime, timedelta
-from typing import List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -26,10 +25,8 @@ from packages.security.rbac import get_normalized_roles
 
 # Pydantic Schemas for Request/Response Validation
 class NotificationCreate(BaseModel):
-    recipient_user_id: Optional[str] = Field(
-        None, description="Optional target user ID"
-    )
-    recipient_role: Optional[str] = Field(None, description="Optional target role")
+    recipient_user_id: str | None = Field(None, description="Optional target user ID")
+    recipient_role: str | None = Field(None, description="Optional target role")
     category: NotificationCategory = Field(
         ..., description="Category: ALERTS, SYSTEM, ACTION_ITEMS"
     )
@@ -40,10 +37,10 @@ class NotificationCreate(BaseModel):
         "IN_APP", description="Comma-separated delivery channels (e.g. 'IN_APP,EMAIL')"
     )
     message_content: str = Field(..., description="Message content")
-    related_entity_id: Optional[str] = Field(
+    related_entity_id: str | None = Field(
         None, description="Optional related entity ID"
     )
-    related_entity_type: Optional[str] = Field(
+    related_entity_type: str | None = Field(
         None, description="Optional related entity type"
     )
 
@@ -52,14 +49,14 @@ class NotificationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
-    recipient_user_id: Optional[str] = None
-    recipient_role: Optional[str] = None
+    recipient_user_id: str | None = None
+    recipient_role: str | None = None
     category: NotificationCategory
     priority: NotificationPriority
     channels: str
     message_content: str
-    related_entity_id: Optional[str] = None
-    related_entity_type: Optional[str] = None
+    related_entity_id: str | None = None
+    related_entity_type: str | None = None
     status: NotificationStatus
     delivery_state: str
     retries: int
@@ -235,7 +232,7 @@ async def dispatcher_lifecycle_worker() -> None:
         await asyncio.sleep(1.0)
 
 
-dispatcher_task: Optional[asyncio.Task] = None
+dispatcher_task: asyncio.Task | None = None
 
 
 async def start_dispatcher() -> None:
@@ -403,18 +400,18 @@ async def create_notification(
     return map_notification_to_response(notif)
 
 
-@app.get("/api/v1/notifications", response_model=List[NotificationResponse])
+@app.get("/api/v1/notifications", response_model=list[NotificationResponse])
 async def list_notifications(
     request: Request,
-    category: Optional[NotificationCategory] = Query(
+    category: NotificationCategory | None = Query(
         None, description="Filter by category"
     ),
-    priority: Optional[NotificationPriority] = Query(
+    priority: NotificationPriority | None = Query(
         None, description="Filter by priority"
     ),
-    status: Optional[NotificationStatus] = Query(None, description="Filter by status"),
+    status: NotificationStatus | None = Query(None, description="Filter by status"),
     session: AsyncSession = Depends(get_db_session),
-) -> List[NotificationResponse]:
+) -> list[NotificationResponse]:
     """
     Retrieve notification records targeted to the current user's user ID or roles, with optional filtering.
     """

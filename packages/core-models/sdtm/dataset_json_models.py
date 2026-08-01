@@ -4,7 +4,7 @@ Pydantic models for CDISC Dataset-JSON v1.0 standard representation.
 Requirements Traceability: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 """
 
-from typing import Any, List, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -17,7 +17,7 @@ class DatasetJsonItemDef(BaseModel):
     type: Literal["string", "integer", "float", "date", "datetime"] = Field(
         ..., description="Standard clinical data type"
     )
-    length: Optional[int] = Field(None, description="Optional length limitation")
+    length: int | None = Field(None, description="Optional length limitation")
 
 
 class DatasetJsonItemGroup(BaseModel):
@@ -26,10 +26,10 @@ class DatasetJsonItemGroup(BaseModel):
     records: int = Field(..., description="The number of records/rows in the dataset")
     name: str = Field(..., description="The dataset or domain name")
     label: str = Field(..., description="A descriptive label for the dataset")
-    items: List[DatasetJsonItemDef] = Field(
+    items: list[DatasetJsonItemDef] = Field(
         ..., description="Ordered list of variable/item definitions"
     )
-    itemData: List[List[Any]] = Field(
+    itemData: list[list[Any]] = Field(
         ...,
         description="The grid data, as an ordered list of lists matching the items metadata schema",
     )

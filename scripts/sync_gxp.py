@@ -190,8 +190,30 @@ def step_run_tests(dry_run: bool) -> None:
                 "tests/test_notifications.py",
             ]
         )
+        # Run layout validator tests sequentially
+        _run(
+            [
+                "uv",
+                "run",
+                "pytest",
+                "--junitxml",
+                "report_integration.xml",
+                "-q",
+                "--no-cov",
+                "tests/test_layout_validator.py",
+            ]
+        )
         # Merge reports
-        _merge_reports("report_main.xml", "report_notif.xml", JUNIT_REPORT)
+        _run(
+            [
+                "python3",
+                "scripts/merge_junit.py",
+                JUNIT_REPORT,
+                "report_main.xml",
+                "report_notif.xml",
+                "report_integration.xml",
+            ]
+        )
     except subprocess.CalledProcessError:
         print("\n✘  Tests failed. Fix failing tests before syncing GxP docs.")
         sys.exit(1)

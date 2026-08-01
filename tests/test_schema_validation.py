@@ -13,7 +13,7 @@ Compliance:
 - Gate 3: Tested and verified under standard pytest execution.
 """
 
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import patch
 
 import httpx
@@ -64,7 +64,7 @@ def test_rewrite_references_nested_references(monkeypatch: pytest.MonkeyPatch) -
     class MockResponse:
         status_code = 200
 
-        def json(self) -> Dict[str, Any]:
+        def json(self) -> dict[str, Any]:
             return mock_schema
 
     async def mock_get(*args: Any, **kwargs: Any) -> MockResponse:
@@ -109,7 +109,7 @@ def test_rewrite_references_recursion_protection(
     Creates a physical cyclic self-reference in the Python dictionary structure
     to verify that visited-state tracking avoids infinite loop crashes.
     """
-    cyclic_schema: Dict[str, Any] = {
+    cyclic_schema: dict[str, Any] = {
         "openapi": "3.1.0",
         "paths": {},
         "components": {
@@ -128,7 +128,7 @@ def test_rewrite_references_recursion_protection(
     class MockCyclicResponse:
         status_code = 200
 
-        def json(self) -> Dict[str, Any]:
+        def json(self) -> dict[str, Any]:
             return cyclic_schema
 
     async def mock_get(*args: Any, **kwargs: Any) -> MockCyclicResponse:

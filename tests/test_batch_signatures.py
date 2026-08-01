@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import packages  # noqa: F401
 from apps.execution.services.audit_manifest import AuditManifestGenerator
@@ -15,7 +15,7 @@ def test_generate_casebook_manifest_structure() -> None:
     Requirements: PRD-SYS-001
     """
     generator = AuditManifestGenerator()
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
 
     form_digests = {
         "form_vs_01": "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",  # pragma: allowlist secret
@@ -50,7 +50,7 @@ def test_master_root_digest_tamper_sensitivity() -> None:
     Requirements: PRD-SYS-001
     """
     generator = AuditManifestGenerator()
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
 
     original_digests = {
         "form_vs_01": "1111111111111111111111111111111111111111111111111111111111111111",

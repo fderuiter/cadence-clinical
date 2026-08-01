@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 from sdtm.scrubber_models import DeidentConfig
 
@@ -26,7 +26,7 @@ def test_scrubber_preserves_date_intervals():
         scrub_free_text=False,
     )
 
-    records: List[Dict[str, Any]] = [
+    records: list[dict[str, Any]] = [
         {
             "STUDYID": "STUDY-01",
             "USUBJID": "SUBJ-001",
@@ -80,7 +80,7 @@ def test_free_text_pii_scrubbing():
         scrub_free_text=True,
     )
 
-    records: List[Dict[str, Any]] = [
+    records: list[dict[str, Any]] = [
         {
             "STUDYID": "STUDY-01",
             "USUBJID": "SUBJ-001",

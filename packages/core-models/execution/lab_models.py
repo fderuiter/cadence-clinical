@@ -4,13 +4,12 @@ Requirements: PRD-SYS-001
 """
 
 from datetime import datetime
-from enum import Enum
-from typing import Optional
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class LabSource(str, Enum):
+class LabSource(StrEnum):
     """Source of the laboratory testing.
 
     Requirements: PRD-SYS-001
@@ -20,7 +19,7 @@ class LabSource(str, Enum):
     LOCAL = "LOCAL"
 
 
-class SexApplicability(str, Enum):
+class SexApplicability(StrEnum):
     """Sex applicability for laboratory reference ranges.
 
     Requirements: PRD-SYS-001
@@ -49,7 +48,7 @@ class LabTestMasterRecord(BaseModel):
     normalized_unit: str = Field(
         ..., description="Standardized normalized unit of measurement"
     )
-    loinc_code: Optional[str] = Field(
+    loinc_code: str | None = Field(
         None, description="Optional LOINC identifier mapping"
     )
 
@@ -57,10 +56,10 @@ class LabTestMasterRecord(BaseModel):
     created_at: datetime = Field(
         ..., description="Chronological timestamp of record creation"
     )
-    created_by: Optional[str] = Field(
+    created_by: str | None = Field(
         None, description="Identifier of user who created the record"
     )
-    reason_for_change: Optional[str] = Field(
+    reason_for_change: str | None = Field(
         None, description="GxP justification for creation or change"
     )
     version_index: int = Field(
@@ -86,7 +85,7 @@ class LabUnitConversionRecord(BaseModel):
     factor: float = Field(
         ..., description="Multiplicative conversion multiplier factor"
     )
-    offset: Optional[float] = Field(
+    offset: float | None = Field(
         None,
         description="Optional additive offset value for temperature conversions",
     )
@@ -95,10 +94,10 @@ class LabUnitConversionRecord(BaseModel):
     created_at: datetime = Field(
         ..., description="Chronological timestamp of record creation"
     )
-    created_by: Optional[str] = Field(
+    created_by: str | None = Field(
         None, description="Identifier of user who created the record"
     )
-    reason_for_change: Optional[str] = Field(
+    reason_for_change: str | None = Field(
         None, description="GxP justification for creation or change"
     )
     version_index: int = Field(

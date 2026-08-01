@@ -1,5 +1,4 @@
 import math
-from typing import List, Tuple
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.execution.database.models import ClinicalObservation
 
 
-def calculate_cohort_stats(values: List[float]) -> Tuple[float, float]:
+def calculate_cohort_stats(values: list[float]) -> tuple[float, float]:
     """Calculate mean and population standard deviation of a cohort using pure-Python.
 
     Args:
@@ -26,7 +25,7 @@ def calculate_cohort_stats(values: List[float]) -> Tuple[float, float]:
     return mean, std_dev
 
 
-def identify_outliers(values: List[float], mean: float, std_dev: float) -> List[bool]:
+def identify_outliers(values: list[float], mean: float, std_dev: float) -> list[bool]:
     """Flag values that fall outside of three standard deviations from the mean.
 
     Args:

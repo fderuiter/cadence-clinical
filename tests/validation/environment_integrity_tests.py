@@ -18,9 +18,9 @@ def test_environment_integrity():
     GxP Installation Qualification Verification Test:
     Ensures that the execution environment meets structural, system and runtime requirements.
     """
-    # 1. Verify Python Version (should be 3.11+ as per AGENTS.md)
-    assert sys.version_info >= (3, 11), (
-        f"Python version {sys.version} is less than 3.11!"
+    # 1. Verify Python Version (should be 3.12+ as per AGENTS.md)
+    assert sys.version_info >= (3, 12), (
+        f"Python version {sys.version} is less than 3.12!"
     )
 
     # 2. Verify Presence of Core Directory Boundaries

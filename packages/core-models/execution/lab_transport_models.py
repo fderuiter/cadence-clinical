@@ -4,7 +4,6 @@ Requirements: PRD-SYS-001
 """
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -27,7 +26,7 @@ class LabReferenceRangeCreate(BaseModel):
     lab_source: LabSource = Field(
         ..., description="Source type of the range, either 'CENTRAL' or 'LOCAL'"
     )
-    site_id: Optional[str] = Field(
+    site_id: str | None = Field(
         None, description="Optional investigator site identifier"
     )
     unit: str = Field(..., description="The original/captured unit of measurement")
@@ -37,22 +36,22 @@ class LabReferenceRangeCreate(BaseModel):
     sex: SexApplicability = Field(
         ..., description="Sex applicability of the reference range"
     )
-    age_low: Optional[float] = Field(
+    age_low: float | None = Field(
         None, description="Nullable lower bound of age applicability"
     )
-    age_high: Optional[float] = Field(
+    age_high: float | None = Field(
         None, description="Nullable upper bound of age applicability"
     )
-    range_low: Optional[float] = Field(
+    range_low: float | None = Field(
         None, description="Nullable lower limit of normal range"
     )
-    range_high: Optional[float] = Field(
+    range_high: float | None = Field(
         None, description="Nullable upper limit of normal range"
     )
-    critical_low: Optional[float] = Field(
+    critical_low: float | None = Field(
         None, description="Nullable lower limit of critical/panic alert range"
     )
-    critical_high: Optional[float] = Field(
+    critical_high: float | None = Field(
         None, description="Nullable upper limit of critical/panic alert range"
     )
     reason_for_change: str = Field(
@@ -66,40 +65,36 @@ class LabReferenceRangeUpdate(BaseModel):
     Requirements: PRD-SYS-001
     """
 
-    test_name: Optional[str] = Field(
+    test_name: str | None = Field(
         None, description="Updated descriptive name of the test"
     )
-    lab_source: Optional[LabSource] = Field(
+    lab_source: LabSource | None = Field(
         None, description="Updated source type of the range"
     )
-    site_id: Optional[str] = Field(
+    site_id: str | None = Field(
         None, description="Updated investigator site identifier"
     )
-    unit: Optional[str] = Field(
-        None, description="Updated original unit of measurement"
-    )
-    normalized_unit: Optional[str] = Field(
+    unit: str | None = Field(None, description="Updated original unit of measurement")
+    normalized_unit: str | None = Field(
         None, description="Updated standardized unit of measurement"
     )
-    sex: Optional[SexApplicability] = Field(
-        None, description="Updated sex applicability"
-    )
-    age_low: Optional[float] = Field(
+    sex: SexApplicability | None = Field(None, description="Updated sex applicability")
+    age_low: float | None = Field(
         None, description="Updated lower bound of age applicability"
     )
-    age_high: Optional[float] = Field(
+    age_high: float | None = Field(
         None, description="Updated upper bound of age applicability"
     )
-    range_low: Optional[float] = Field(
+    range_low: float | None = Field(
         None, description="Updated lower limit of normal range"
     )
-    range_high: Optional[float] = Field(
+    range_high: float | None = Field(
         None, description="Updated upper limit of normal range"
     )
-    critical_low: Optional[float] = Field(
+    critical_low: float | None = Field(
         None, description="Updated lower limit of critical alert range"
     )
-    critical_high: Optional[float] = Field(
+    critical_high: float | None = Field(
         None, description="Updated upper limit of critical alert range"
     )
     reason_for_change: str = Field(
@@ -118,25 +113,25 @@ class LabReferenceRangeResponse(BaseModel):
     test_code: str = Field(..., description="Standardized lab test code")
     test_name: str = Field(..., description="Descriptive test name")
     lab_source: LabSource = Field(..., description="Source type of the range")
-    site_id: Optional[str] = Field(
+    site_id: str | None = Field(
         None, description="Optional investigator site identifier"
     )
     unit: str = Field(..., description="Original unit of measurement")
     normalized_unit: str = Field(..., description="Standardized unit")
     sex: SexApplicability = Field(..., description="Sex applicability")
-    age_low: Optional[float] = Field(None, description="Lower age applicability limit")
-    age_high: Optional[float] = Field(None, description="Upper age applicability limit")
-    range_low: Optional[float] = Field(None, description="Lower normal limit")
-    range_high: Optional[float] = Field(None, description="Upper normal limit")
-    critical_low: Optional[float] = Field(None, description="Lower critical bound")
-    critical_high: Optional[float] = Field(None, description="Upper critical bound")
-    created_at: Optional[datetime] = Field(
+    age_low: float | None = Field(None, description="Lower age applicability limit")
+    age_high: float | None = Field(None, description="Upper age applicability limit")
+    range_low: float | None = Field(None, description="Lower normal limit")
+    range_high: float | None = Field(None, description="Upper normal limit")
+    critical_low: float | None = Field(None, description="Lower critical bound")
+    critical_high: float | None = Field(None, description="Upper critical bound")
+    created_at: datetime | None = Field(
         None, description="Chronological creation timestamp"
     )
-    created_by: Optional[str] = Field(
+    created_by: str | None = Field(
         None, description="Identifier of the user who created this range"
     )
-    reason_for_change: Optional[str] = Field(
+    reason_for_change: str | None = Field(
         None, description="GxP Part 11 justification description"
     )
     version_index: int = Field(..., description="Sequence row version identifier")
@@ -161,7 +156,7 @@ class LabTestMasterCreate(BaseModel):
     test_name: str = Field(..., description="Descriptive test name")
     default_unit: str = Field(..., description="Default/Captured unit of measurement")
     normalized_unit: str = Field(..., description="Standardized normalized target unit")
-    loinc_code: Optional[str] = Field(
+    loinc_code: str | None = Field(
         None, description="Optional LOINC dictionary standard code"
     )
     reason_for_change: str = Field(
@@ -181,14 +176,14 @@ class LabTestMasterResponse(BaseModel):
     test_name: str = Field(..., description="Descriptive test name")
     default_unit: str = Field(..., description="Default unit of measurement")
     normalized_unit: str = Field(..., description="Standardized normalized target unit")
-    loinc_code: Optional[str] = Field(None, description="Optional LOINC standard code")
-    created_at: Optional[datetime] = Field(
+    loinc_code: str | None = Field(None, description="Optional LOINC standard code")
+    created_at: datetime | None = Field(
         None, description="Chronological creation timestamp"
     )
-    created_by: Optional[str] = Field(
+    created_by: str | None = Field(
         None, description="Identifier of the user who created this master"
     )
-    reason_for_change: Optional[str] = Field(
+    reason_for_change: str | None = Field(
         None, description="GxP Part 11 justification description"
     )
     version_index: int = Field(..., description="Sequence row version identifier")
@@ -215,7 +210,7 @@ class LabUnitConversionCreate(BaseModel):
     factor: float = Field(
         ..., description="Multiplicative conversion multiplier factor"
     )
-    offset: Optional[float] = Field(None, description="Optional additive offset value")
+    offset: float | None = Field(None, description="Optional additive offset value")
     reason_for_change: str = Field(
         ..., description="Mandatory GxP 21 CFR Part 11 justification reason"
     )
@@ -235,14 +230,14 @@ class LabUnitConversionResponse(BaseModel):
     factor: float = Field(
         ..., description="Multiplicative conversion multiplier factor"
     )
-    offset: Optional[float] = Field(None, description="Optional additive offset value")
-    created_at: Optional[datetime] = Field(
+    offset: float | None = Field(None, description="Optional additive offset value")
+    created_at: datetime | None = Field(
         None, description="Chronological creation timestamp"
     )
-    created_by: Optional[str] = Field(
+    created_by: str | None = Field(
         None, description="Identifier of the user who created this conversion"
     )
-    reason_for_change: Optional[str] = Field(
+    reason_for_change: str | None = Field(
         None, description="GxP Part 11 justification description"
     )
     version_index: int = Field(..., description="Sequence row version identifier")

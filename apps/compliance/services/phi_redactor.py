@@ -3,8 +3,6 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import List
-
 import packages  # noqa: F401
 from packages.security.ner_scrubber import PHINameEntityScrubber
 
@@ -19,7 +17,7 @@ class PHIRedactorService:
         """Initialize PHI NER scrubber."""
         self.scrubber = PHINameEntityScrubber()
 
-    def redact_content(self, content: bytes, phi_terms: List[str]) -> bytes:
+    def redact_content(self, content: bytes, phi_terms: list[str]) -> bytes:
         """Redacts specified PHI terms and auto-detected PHI from content bytes.
 
         Args:
