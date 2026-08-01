@@ -462,17 +462,13 @@ async def test_email_delivery_channel_success():
     mock_smtp_client = AsyncMock()
     with patch("aiosmtplib.SMTP", return_value=mock_smtp_client):
         await poll_and_dispatch()
-        # Wait up to 8 seconds for the background task to update the status to SUCCESS
+        # Wait up to 8 seconds for the background task to complete without querying the database concurrently
+        from apps.notifications.main import active_tasks
+
         for _ in range(160):
+            if not active_tasks:
+                break
             await asyncio.sleep(0.05)
-            async with db_manager.get_session_maker()() as session:
-                stmt = select(NotificationDelivery).where(
-                    NotificationDelivery.id == delivery_id
-                )
-                res = await session.execute(stmt)
-                updated_delivery = res.scalars().first()
-                if updated_delivery.status == "SUCCESS":
-                    break
 
     # Assert SMTP interaction
     assert mock_smtp_client.connect.called
