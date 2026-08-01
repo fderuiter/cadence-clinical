@@ -193,7 +193,9 @@ async def test_lab_unit_conversion_crud_and_audit():
     for the LabUnitConversion model.
     """
     conversion_id = None
-    with audit_context(user_id="user_xyz", change_reason="Standard creatinine conversion factor"):
+    with audit_context(
+        user_id="user_xyz", change_reason="Standard creatinine conversion factor"
+    ):
         async with db_manager.get_session_maker()() as session, session.begin():
             await session.execute(
                 text("SELECT set_config('cadence.app_writing', 'true', 1);")
@@ -245,7 +247,9 @@ async def test_lab_unit_conversion_crud_and_audit():
         assert logs[0].version_index == 1
 
     # Verify UPDATE audit
-    with audit_context(user_id="user_xyz", change_reason="Added small offset correction"):
+    with audit_context(
+        user_id="user_xyz", change_reason="Added small offset correction"
+    ):
         async with db_manager.get_session_maker()() as session, session.begin():
             await session.execute(
                 text("SELECT set_config('cadence.app_writing', 'true', 1);")

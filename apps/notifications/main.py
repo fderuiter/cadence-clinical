@@ -79,6 +79,7 @@ async def poll_and_dispatch() -> None:
     Polls the database for due notification deliveries and spawns concurrent tasks to process them.
     """
     if not db_manager.session_maker:
+        print("DEBUG: poll_and_dispatch returned early because session_maker is None")
         return
     session_maker = db_manager.get_session_maker()
     async with session_maker() as session:
@@ -98,19 +99,30 @@ async def poll_and_dispatch() -> None:
         )
         result = await session.execute(stmt)
         due = result.scalars().all()
+        print(
+            f"DEBUG: poll_and_dispatch found {len(due)} due deliveries: {[d.id for d in due]}"
+        )
 
         for d in due:
             if d.id in active_deliveries:
+                print(f"DEBUG: delivery {d.id} is already in active_deliveries")
                 continue
             active_deliveries.add(d.id)
+            print(f"DEBUG: Dispatching delivery {d.id}")
             task = asyncio.create_task(deliver_channel_wrapper(d.id))
             active_tasks.add(task)
             task.add_done_callback(active_tasks.discard)
 
 
 async def deliver_channel_wrapper(delivery_id: str) -> None:
+    print(f"DEBUG: deliver_channel_wrapper called with id {delivery_id}")
     try:
         await deliver_channel(delivery_id)
+    except Exception:
+        import traceback
+
+        print("DEBUG: Exception in deliver_channel_wrapper:")
+        traceback.print_exc()
     finally:
         active_deliveries.discard(delivery_id)
 
@@ -125,21 +137,28 @@ async def deliver_channel(delivery_id: str) -> None:
     )
 
     if not db_manager.session_maker:
+        print("DEBUG: deliver_channel session_maker is None")
         return
     session_maker = db_manager.get_session_maker()
     async with session_maker() as session:
+        print("DEBUG: deliver_channel session opened")
         stmt = (
             select(NotificationDelivery)
             .where(NotificationDelivery.id == delivery_id)
             .with_for_update()
         )
+        print("DEBUG: deliver_channel executing select query...")
         result = await session.execute(stmt)
         delivery = result.scalars().first()
+        print(f"DEBUG: deliver_channel found delivery: {delivery is not None}")
         if not delivery:
             return
 
         # Defensive check for multi-replica race conditions after acquiring the lock
         if delivery.status not in ("PENDING", "FAILED"):
+            print(
+                f"DEBUG: deliver_channel delivery status is not pending/failed: {delivery.status}"
+            )
             return
 
         stmt_notif = select(Notification).where(
@@ -147,6 +166,7 @@ async def deliver_channel(delivery_id: str) -> None:
         )
         result_notif = await session.execute(stmt_notif)
         notification = result_notif.scalars().first()
+        print(f"DEBUG: deliver_channel found notification: {notification is not None}")
         if not notification:
             delivery.status = "FAILED"
             delivery.retry_eligible = False
@@ -157,6 +177,7 @@ async def deliver_channel(delivery_id: str) -> None:
         # Increment attempt count
         delivery.attempts += 1
         notification.retries = max(notification.retries, delivery.attempts)
+        print(f"DEBUG: deliver_channel channel: {delivery.channel}")
 
         try:
             if delivery.channel == "IN_APP":
@@ -166,19 +187,28 @@ async def deliver_channel(delivery_id: str) -> None:
                 notification.delivery_state = "DELIVERED"
 
             elif delivery.channel == "EMAIL":
+                print("DEBUG: deliver_channel calling send_email_notification...")
                 await send_email_notification(notification)
                 delivery.status = "SUCCESS"
                 delivery.completed_at = datetime.utcnow()
+                print(
+                    "DEBUG: deliver_channel send_email_notification finished successfully"
+                )
 
             elif delivery.channel == "WEBHOOK":
+                print("DEBUG: deliver_channel calling send_webhook_notification...")
                 await send_webhook_notification(notification)
                 delivery.status = "SUCCESS"
                 delivery.completed_at = datetime.utcnow()
+                print(
+                    "DEBUG: deliver_channel send_webhook_notification finished successfully"
+                )
 
             else:
                 raise ValueError(f"Unknown channel: {delivery.channel}")
 
         except Exception as e:
+            print(f"DEBUG: deliver_channel exception in try: {e}")
             delivery.status = "FAILED"
             delivery.last_error = str(e)
 

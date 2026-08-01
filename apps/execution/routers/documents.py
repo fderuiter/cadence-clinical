@@ -23,6 +23,7 @@ from storage.document_models import (
     DocumentMetadataResponse,
     DocumentUploadResponse,
 )
+from watermark import apply_watermark
 
 import packages  # noqa: F401
 from apps.execution.database.core import db_manager
@@ -33,25 +34,6 @@ router = APIRouter(prefix="/api/v1/documents", tags=["Documents"])
 
 # In-memory document database
 _DOCUMENTS_DB: dict[str, dict] = {}
-
-
-try:
-    import importlib
-
-    _etmf_watermark = importlib.import_module("apps.etmf.watermark")
-    apply_watermark = _etmf_watermark.apply_watermark
-except (ImportError, AttributeError):
-
-    def apply_watermark(
-        content: str, mime_type: str, user_id: str, user_role: str
-    ) -> str:
-        """Fallback watermarking logic."""
-        now_utc = datetime.datetime.now(datetime.UTC).isoformat()
-        marker = "CONFIDENTIAL — Auditor Copy"
-        watermark_msg = (
-            f"{marker} | Access by: {user_id} ({user_role}) | UTC Time: {now_utc}"
-        )
-        return content + f"\n\n--- WATERMARK ---\n{watermark_msg}\n"
 
 
 def enforce_permission(request: Request, required_permission: str) -> None:

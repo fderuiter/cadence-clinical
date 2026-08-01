@@ -11,6 +11,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import packages  # noqa: F401
+from apps.execution.database.models import (
+    ComprehensionQuizResult,
+    ConsentFormRecord,
+    ConsentSignature,
+)
+from packages.security import CentralAuditLogger
 from packages.security.gateway_client import create_service_auth_headers
 
 try:
@@ -22,15 +28,6 @@ try:
     HAS_REPORTLAB = True
 except ImportError:
     HAS_REPORTLAB = False
-
-import importlib
-
-from packages.security import CentralAuditLogger
-
-_execution_models = importlib.import_module("apps.execution.database.models")
-ComprehensionQuizResult = _execution_models.ComprehensionQuizResult
-ConsentFormRecord = _execution_models.ConsentFormRecord
-ConsentSignature = _execution_models.ConsentSignature
 
 
 def _get_auth_headers() -> dict[str, str]:

@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import hmac
 import os
@@ -753,7 +754,9 @@ async def test_age_bounded_range_recalculation() -> None:
 
             # Adult observation
             res_adult_db = await session.execute(
-                select(ClinicalObservation).where(ClinicalObservation.id == obs_adult_id)
+                select(ClinicalObservation).where(
+                    ClinicalObservation.id == obs_adult_id
+                )
             )
             obs_adult_db = res_adult_db.scalar_one()
             # Age 35 matches Adult range (0.6 - 1.2). Value 0.8 is NORMAL.
@@ -887,3 +890,107 @@ async def test_missing_and_undecryptable_demographics_recalculation() -> None:
             assert obs_b_db.lab_indicator == "NORMAL"
             assert obs_b_db.lab_out_of_range is False
             assert obs_b_db.matched_normal_bounds == '{"low": 150.0, "high": 450.0}'
+
+
+@pytest.mark.asyncio
+async def test_lab_range_recalculation_critical_alert() -> None:
+    """Verify that recalculating range flags triggers a critical alert when transitioning into a LOW LOW state."""
+    from unittest.mock import AsyncMock, patch
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # 1. Create a clinical subject
+        await client.post(
+            "/api/v1/execution/subjects",
+            json={
+                "subject_id": "SUBJ-RECALC-ALERT",
+                "study_id": "STUDY-RECALC-ALERT",
+                "demographics": {"gender": "M", "birthdate": "1980-01-01"},
+            },
+            headers=get_auth_headers(roles="cra"),
+        )
+
+        # 2. Insert initially wide LabReferenceRange into database (so value 1.0 is NORMAL)
+        async with db_manager.get_session_maker()() as session, session.begin():
+            ref_range = LabReferenceRange(
+                study_id="STUDY-RECALC-ALERT",
+                test_code="WBC",
+                test_name="White Blood Cell Count",
+                source="CENTRAL",
+                site_id=None,
+                unit="10^9/L",
+                normalized_unit="10^9/L",
+                sex_applicability="ALL",
+                age_low=None,
+                age_high=None,
+                low_bound=0.5,
+                high_bound=11.0,
+                critical_low=0.2,
+                critical_high=20.0,
+            )
+            session.add(ref_range)
+
+        # 3. Create active observation (value 1.0, NORMAL)
+        obs_payload = {
+            "subject_id": "SUBJ-RECALC-ALERT",
+            "study_id": "STUDY-RECALC-ALERT",
+            "domain": "LB",
+            "test_code": "WBC",
+            "test_name": "White Blood Cell Count",
+            "value": 1.0,
+            "unit": "10^9/L",
+        }
+        res_obs = await client.post(
+            "/api/v1/execution/observations",
+            json=obs_payload,
+            headers=get_auth_headers(roles="cra"),
+        )
+        assert res_obs.status_code == 200
+        obs_data = res_obs.json()
+        assert obs_data["lab_indicator"] == "NORMAL"
+
+        # 4. Modify LabReferenceRange so value 1.0 becomes critical (LOW LOW)
+        async with db_manager.get_session_maker()() as session, session.begin():
+            stmt = (
+                update(LabReferenceRange)
+                .where(
+                    LabReferenceRange.study_id == "STUDY-RECALC-ALERT",
+                    LabReferenceRange.test_code == "WBC",
+                )
+                .values(low_bound=5.0, critical_low=2.0)
+            )
+            await session.execute(stmt)
+
+        # 5. Patch publish_notification and trigger recalculate
+        with patch(
+            "apps.execution.notifications_client.publish_notification",
+            new_callable=AsyncMock,
+        ) as mock_pub:
+            mock_pub.return_value = True
+
+            recalc_payload = {
+                "study_id": "STUDY-RECALC-ALERT",
+                "test_code": "WBC",
+            }
+            res_recalc = await client.post(
+                "/api/v1/execution/lab-ranges/recalculate",
+                json=recalc_payload,
+                headers=get_auth_headers(
+                    roles="cra", change_reason="Recalculating limits to critical"
+                ),
+            )
+            assert res_recalc.status_code == 200
+            assert res_recalc.json()["updated_count"] == 1
+
+            # Wait briefly for background tasks to process
+            await asyncio.sleep(0.1)
+
+            # 6. Verify notification was dispatched
+            assert mock_pub.call_count >= 1
+            notif_payload = mock_pub.call_args_list[0][0][0]
+            assert notif_payload["category"] == "ALERTS"
+            assert notif_payload["priority"] == "CRITICAL"
+            assert notif_payload["related_entity_type"] == "lab-observation"
+            assert notif_payload["related_entity_id"] == obs_data["id"]
+            assert notif_payload["related_entity_subject_id"] == "SUBJ-RECALC-ALERT"

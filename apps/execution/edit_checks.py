@@ -101,10 +101,9 @@ class LabOutOfRangeCheckRule(EditCheckRule):
         self, session: AsyncSession, observation: ClinicalObservation
     ) -> str | None:
         if observation.lab_out_of_range:
-            return self.message.format(
-                indicator=observation.lab_indicator,
-                bounds=observation.matched_normal_bounds,
-            )
+            indicator = observation.lab_indicator or "UNKNOWN"
+            bounds = observation.matched_normal_bounds or "None"
+            return self.message.format(indicator=indicator, bounds=bounds)
         return None
 
 

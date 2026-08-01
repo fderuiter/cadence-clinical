@@ -4,6 +4,7 @@ Requirements: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 """
 
 from datetime import UTC, datetime
+from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
@@ -24,6 +25,66 @@ from apps.execution.database.models import (
     DOADelegationRecord,
     SiteStaffMember,
 )
+from apps.execution.routers.doa import (
+    ApproveDelegationRequest,
+    ApproveTaskDelegationRequest,
+    DelegateTaskRequest,
+    RevokeDelegationRequest,
+    approve_delegation_endpoint,
+    approve_task_endpoint,
+    delegate_task_endpoint,
+    revoke_delegation_endpoint,
+)
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def mock_gateway_client():
+    """Mock GatewayBaseClient.request to route to FastAPI endpoints during test."""
+    import httpx
+    from fastapi import HTTPException
+
+    from packages.security.gateway_client import GatewayBaseClient
+
+    async def mock_request(self, method, path, *args, **kwargs):
+        try:
+            if path == "/api/v1/execution/doa/delegate":
+                payload = DelegateTaskRequest(**kwargs["json"])
+                res = await delegate_task_endpoint(payload)
+            elif path == "/api/v1/execution/doa/endorse":
+                payload = ApproveDelegationRequest(**kwargs["json"])
+                res = await approve_delegation_endpoint(payload)
+            elif path == "/api/v1/execution/doa/endorse_task":
+                payload = ApproveTaskDelegationRequest(**kwargs["json"])
+                res = await approve_task_endpoint(payload)
+            elif path == "/api/v1/execution/doa/revoke":
+                payload = RevokeDelegationRequest(**kwargs["json"])
+                res = await revoke_delegation_endpoint(payload)
+            else:
+                return httpx.Response(404, text="Not found")
+
+            data = {
+                "id": res.id,
+                "site_id": res.site_id,
+                "staff_user_id": res.staff_user_id,
+                "task_code": res.task_code,
+                "pi_user_id": res.pi_user_id,
+                "status": res.status,
+                "pi_signature_hash": res.pi_signature_hash,
+                "pi_approved_at": res.pi_approved_at.isoformat()
+                if res.pi_approved_at
+                else None,
+                "end_date": res.end_date.isoformat() if res.end_date else None,
+                "reason_for_change": res.reason_for_change,
+                "is_active": res.is_active,
+            }
+            return httpx.Response(200, json=data)
+        except HTTPException as exc:
+            return httpx.Response(exc.status_code, json={"detail": exc.detail})
+        except Exception as exc:
+            return httpx.Response(500, json={"detail": str(exc)})
+
+    with patch.object(GatewayBaseClient, "request", mock_request):
+        yield
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -34,6 +95,11 @@ async def setup_doa_db():
         echo=False,
         execution_options={"schema_translate_map": {"audit_schema": None}},
     )
+    from apps.execution.database import db_manager as exec_db_manager
+
+    exec_db_manager.engine = db_manager.engine
+    exec_db_manager.session_maker = db_manager.get_session_maker()
+
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(ExecBase.metadata.create_all)
     yield

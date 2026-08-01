@@ -35,6 +35,61 @@ from apps.org.models import (
 
 
 @pytest_asyncio.fixture(autouse=True)
+async def mock_org_client():
+    """Mock GatewayBaseClient.request to query the in-memory Org SQLite database under test."""
+    import httpx
+
+    from packages.security.gateway_client import GatewayBaseClient
+
+    async def mock_request(self, method, path, *args, **kwargs):
+        if path == "/api/v1/org/personnel":
+            from sqlalchemy import select
+
+            from apps.org.database import db_manager as org_db_manager
+            from apps.org.models import Personnel, PersonnelAssignment
+
+            study_id = kwargs.get("params", {}).get("study_id")
+            site_id = kwargs.get("params", {}).get("site_id")
+
+            async with org_db_manager.get_session_maker()() as session:
+                stmt = select(
+                    Personnel.keycloak_user_id, Personnel.email, Personnel.role
+                ).join(
+                    PersonnelAssignment,
+                    PersonnelAssignment.personnel_id == Personnel.id,
+                )
+
+                if study_id:
+                    stmt = stmt.where(
+                        PersonnelAssignment.study_id == study_id,
+                        PersonnelAssignment.is_active.is_(True),
+                    )
+
+                if site_id:
+                    stmt = stmt.where(PersonnelAssignment.site_id == site_id)
+
+                res = await session.execute(stmt)
+                rows = res.all()
+
+                data = []
+                for keycloak_user_id, email, role in rows:
+                    data.append(
+                        {
+                            "keycloak_user_id": keycloak_user_id,
+                            "email": email,
+                            "role": role,
+                        }
+                    )
+
+                return httpx.Response(200, json=data)
+
+        return httpx.Response(404, text="Not found")
+
+    with patch.object(GatewayBaseClient, "request", mock_request):
+        yield
+
+
+@pytest_asyncio.fixture(autouse=True)
 async def setup_test_databases():
     """
     Autouse fixture to spin up separate in-memory sqlite databases for
@@ -51,9 +106,10 @@ async def setup_test_databases():
         nw._worker_task = None
 
     # Clear mock queue
-    while not nw._mock_queue.empty():
+    queue = nw._get_mock_queue()
+    while not queue.empty():
         try:
-            nw._mock_queue.get_nowait()
+            queue.get_nowait()
         except asyncio.QueueEmpty:
             break
 
@@ -77,9 +133,10 @@ async def setup_test_databases():
             await nw._worker_task
         nw._worker_task = None
 
-    while not nw._mock_queue.empty():
+    queue = nw._get_mock_queue()
+    while not queue.empty():
         try:
-            nw._mock_queue.get_nowait()
+            queue.get_nowait()
         except asyncio.QueueEmpty:
             break
 
@@ -463,20 +520,24 @@ async def test_start_stop_notification_worker_integration():
     # Publish an event to the queue
     await publish_domain_event(event)
 
-    # Give a tiny slice of time for the async background worker task to pick up and process
-    await asyncio.sleep(0.2)
+    # Poll for the notification to be created in the database to prevent flakiness under heavy test runner load
+    notifs = []
+    for _ in range(50):
+        async with notifications_db_manager.get_session_maker()() as session:
+            stmt = select(Notification).where(
+                Notification.related_entity_id == "evt-integration-99"
+            )
+            res = await session.execute(stmt)
+            notifs = list(res.scalars().all())
+            if len(notifs) >= 1:
+                break
+        await asyncio.sleep(0.1)
 
     # Stop the worker cleanly
     await stop_notification_worker()
 
     # Check that a notification record was created in the Notifications database
-    async with notifications_db_manager.get_session_maker()() as session:
-        stmt = select(Notification).where(
-            Notification.related_entity_id == "evt-integration-99"
-        )
-        res = await session.execute(stmt)
-        notifs = res.scalars().all()
-        assert len(notifs) >= 1
-        assert notifs[0].category == "SYSTEM"
-        assert notifs[0].priority == "LOW"
-        assert "Protocol amendment submitted" in notifs[0].message_content
+    assert len(notifs) >= 1
+    assert notifs[0].category == "SYSTEM"
+    assert notifs[0].priority == "LOW"
+    assert "Protocol amendment submitted" in notifs[0].message_content
