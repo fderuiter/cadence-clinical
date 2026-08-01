@@ -35,6 +35,61 @@ from apps.org.models import (
 
 
 @pytest_asyncio.fixture(autouse=True)
+async def mock_org_client():
+    """Mock GatewayBaseClient.request to query the in-memory Org SQLite database under test."""
+    import httpx
+
+    from packages.security.gateway_client import GatewayBaseClient
+
+    async def mock_request(self, method, path, *args, **kwargs):
+        if path == "/api/v1/org/personnel":
+            from sqlalchemy import select
+
+            from apps.org.database import db_manager as org_db_manager
+            from apps.org.models import Personnel, PersonnelAssignment
+
+            study_id = kwargs.get("params", {}).get("study_id")
+            site_id = kwargs.get("params", {}).get("site_id")
+
+            async with org_db_manager.get_session_maker()() as session:
+                stmt = select(
+                    Personnel.keycloak_user_id, Personnel.email, Personnel.role
+                ).join(
+                    PersonnelAssignment,
+                    PersonnelAssignment.personnel_id == Personnel.id,
+                )
+
+                if study_id:
+                    stmt = stmt.where(
+                        PersonnelAssignment.study_id == study_id,
+                        PersonnelAssignment.is_active.is_(True),
+                    )
+
+                if site_id:
+                    stmt = stmt.where(PersonnelAssignment.site_id == site_id)
+
+                res = await session.execute(stmt)
+                rows = res.all()
+
+                data = []
+                for keycloak_user_id, email, role in rows:
+                    data.append(
+                        {
+                            "keycloak_user_id": keycloak_user_id,
+                            "email": email,
+                            "role": role,
+                        }
+                    )
+
+                return httpx.Response(200, json=data)
+
+        return httpx.Response(404, text="Not found")
+
+    with patch.object(GatewayBaseClient, "request", mock_request):
+        yield
+
+
+@pytest_asyncio.fixture(autouse=True)
 async def setup_test_databases():
     """
     Autouse fixture to spin up separate in-memory sqlite databases for

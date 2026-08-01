@@ -39,6 +39,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
 
 ### 2. API Gateway, Security & Identity
+- [2026-08-01: Cryptographic Signature Verification Engine and Multi-Format Support](2026-08-01-cryptographic-signature-verification-engine-and-multi-format-support.md)
 - [2026-07-31: Extend Centralized Permission Matrix for Medical Coding](2026-07-31-extend-centralized-permission-matrix-for-medical-coding.md)
 - [2026-07-31: Decoupling Cross-Service Python Imports and Security RBAC Isolation](2026-07-31-decoupling-cross-service-python-imports-and-security-rbac-isolation.md)
 - [2026-07-30: Signatures and Workflow Automation Phase 1 and 2 Primitives](2026-07-30-signatures-and-workflow-automation-phase-1-and-2-primitives.md)
@@ -56,6 +57,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-27: Standardize FastAPI Identity Dependency and Site Access Migration](2026-07-27-standardize-fastapi-identity-dependency.md)
 - [2026-07-31: eCOA Subject Identity, Authorization, and Gateway Routing](2026-07-31-ecoa-subject-identity-and-gateway-routing.md)
 - [2026-08-01: Vue SPA, OIDC, RBAC, and Signing Boundaries](2026-08-01-vue-spa-oidc-rbac-signing-boundaries.md)
+- [2026-08-01: Cryptographic Signature Verification Engine for Electronic Signatures](2026-08-01-cryptographic-signature-verification-engine-for-esignatures.md)
 - [2026-08-07: Route terminology APIs through the gateway](2026-08-07-gateway-terminology-routing.md)
 - [2026-08-08: Centralized RBAC Toolkit, Permissions, Principals, and Field Masking](2026-08-08-centralized-rbac-toolkit.md)
 - [2026-08-08: Gateway Step-Up Re-Authentication and Signature Token Issuance](2026-08-08-gateway-step-up-re-authentication.md)
@@ -67,6 +69,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-17: Centralized Permission-Based Authorization and Dynamic Mappings](2026-08-17-centralized-permission-auth.md)
 - [2026-08-21: eTMF Inbound-Email Webhook and Binder Routing](2026-08-21-etmf-inbound-email-webhook-and-binder-routing.md)
 - [2026-08-24: Role Authorization for Granular Data-Lock Actions and Trust Boundary Verification](2026-08-24-role-authorization-for-granular-data-lock-actions.md)
+- [2026-08-01: Cryptographic Signature Verification Engine for Part 11 eSignatures](2026-08-01-cryptographic-signature-verification-engine.md)
 
 ### 3. Clinical Data Interoperability & Standards
 - [2026-09-01: SAE Reconciliation & Safety Gateway (E2B)](2026-09-01-sae-reconciliation-safety-gateway-e2b.md)
@@ -156,6 +159,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-17: Interactive Mermaid Diagrams and Responsive Layout Controls](2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md)
 
 ### 7. DevOps, Tooling & CI/CD
+- [2026-08-01: In-Process ASGI Routing with Live Databases](2026-08-01-in-process-asgi-routing-with-live-databases.md)
 - [2026-07-31: Upgrade Environments to Python 3.12](2026-07-31-upgrade-environments-to-python-312.md)
 
 - [2026-07-22: ADR 2026-07-22: Unified Database Management and Pre-Boot Migrations](2026-07-22-unified-database-management-and-pre-boot-migrations.md)

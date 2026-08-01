@@ -6,15 +6,15 @@ from execution.econsent_models import EConsentSignRequest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from apps.econsent.services.econsent_service import (
-    EConsentWorkflowEngine,
-    process_econsent_signature,
-)
 from apps.execution.database.models import (
     Base,
     ComprehensionQuizResult,
     ConsentFormRecord,
     ConsentSignature,
+)
+from apps.execution.services.econsent_capture_service import (
+    EConsentWorkflowEngine,
+    process_econsent_signature,
 )
 from packages.security.audit_logger import audit_logger_engine
 

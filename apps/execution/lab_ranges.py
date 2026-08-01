@@ -284,7 +284,12 @@ def evaluate_lab_value(
     return "NORMAL", False, matched_normal_bounds
 
 
-async def recalculate_range_flags(session: Any, study_id: str, test_code: str) -> int:
+async def recalculate_range_flags(
+    session: Any,
+    study_id: str,
+    test_code: str,
+    background_tasks: Any | None = None,
+) -> int:
     """Query and update the reference range indicators for all observations in a study-test cohort.
 
     Fetches all active clinical observations and lab reference ranges for the specified
@@ -297,6 +302,7 @@ async def recalculate_range_flags(session: Any, study_id: str, test_code: str) -
         session: The database session.
         study_id (str): The unique identifier of the study.
         test_code (str): The test parameter code.
+        background_tasks: Optional Starlette BackgroundTasks helper.
 
     Returns:
         int: The number of observations updated.
@@ -311,6 +317,7 @@ async def recalculate_range_flags(session: Any, study_id: str, test_code: str) -
         LabReferenceRange,
     )
     from apps.execution.demographics import get_safe_demographics
+    from packages.security.context import current_change_reason, current_user_id
 
     # 1. Fetch active observations
     stmt_obs = select(ClinicalObservation).where(
@@ -342,6 +349,9 @@ async def recalculate_range_flags(session: Any, study_id: str, test_code: str) -
     subjects = {subj.subject_id: subj for subj in res_subjects.scalars().all()}
 
     updated_count = 0
+    user_id = current_user_id.get()
+    change_reason = current_change_reason.get()
+
     for obs in observations:
         obs_date = obs.observation_date or datetime.now()
         subj = subjects.get(obs.subject_id)
@@ -380,6 +390,34 @@ async def recalculate_range_flags(session: Any, study_id: str, test_code: str) -
             obs.matched_normal_bounds = matched_bounds
             obs.version += 1
             updated_count += 1
+
+            # Dispatch alerts on transitioning to critical indicator
+            if indicator in ("LOW LOW", "HIGH HIGH") and background_tasks is not None:
+                from apps.execution.notification_events import (
+                    generate_critical_lab_notification_payload,
+                    publish_notification_background,
+                )
+
+                raw_payload = generate_critical_lab_notification_payload(obs, indicator)
+                for recipient in raw_payload["recipients"]:
+                    recipient_payload = {
+                        "category": raw_payload["category"],
+                        "priority": raw_payload["priority"],
+                        "channels": "IN_APP",
+                        "message_content": raw_payload["message_content"],
+                        "related_entity_id": raw_payload["related_entity_id"],
+                        "related_entity_type": raw_payload["related_entity_type"],
+                        "related_entity_subject_id": raw_payload[
+                            "related_entity_subject_id"
+                        ],
+                        "recipient_user_id": recipient,
+                    }
+                    background_tasks.add_task(
+                        publish_notification_background,
+                        recipient_payload,
+                        user_id,
+                        change_reason,
+                    )
 
     if updated_count > 0:
         await session.commit()

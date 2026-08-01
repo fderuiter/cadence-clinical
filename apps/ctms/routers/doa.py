@@ -3,11 +3,11 @@
 Requirements: PRD-SYS-001
 """
 
-import importlib
 import os
 from datetime import UTC, datetime
 from typing import Any
 
+import document_renderer
 from ctms.doa_transport_models import (
     DelegationTaskRequest,
     DOALogResponse,
@@ -24,10 +24,7 @@ from packages.database import DatabaseSessionDependency
 from packages.security.middleware import downstream_replay_cache, verify_sig_token
 from packages.security.rbac import Principal, get_principal, has_permission
 
-_designer_renderers = importlib.import_module(
-    "apps.designer.renderers.document_renderer"
-)
-ProtocolDocumentRenderer = _designer_renderers.ProtocolDocumentRenderer
+ProtocolDocumentRenderer = document_renderer.ProtocolDocumentRenderer
 
 router = APIRouter(prefix="/api/v1/ctms/doa", tags=["DOA"])
 

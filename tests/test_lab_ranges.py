@@ -571,6 +571,674 @@ def test_evaluate_lab_value_all_indicators():
         assert out_of_range is True
 
 
+def test_task1_sex_u_matching():
+    """Add tests that pass literal sex="U" and confirm only ranges with sex_applicability in ALL/U/None/empty match."""
+    study = "STUDY-123"
+    tcode = "WBC"
+    unit = "10^9/L"
+
+    # Define ranges with various sex applicabilities
+    r_all = create_mock_range(
+        id="sex_all", test_code=tcode, normalized_unit=unit, sex_applicability="ALL"
+    )
+    r_u = create_mock_range(
+        id="sex_u", test_code=tcode, normalized_unit=unit, sex_applicability="U"
+    )
+    r_none = create_mock_range(
+        id="sex_none", test_code=tcode, normalized_unit=unit, sex_applicability=None
+    )
+    r_empty = create_mock_range(
+        id="sex_empty", test_code=tcode, normalized_unit=unit, sex_applicability=""
+    )
+    r_m = create_mock_range(
+        id="sex_m", test_code=tcode, normalized_unit=unit, sex_applicability="M"
+    )
+    r_f = create_mock_range(
+        id="sex_f", test_code=tcode, normalized_unit=unit, sex_applicability="F"
+    )
+
+    # When sex="U", r_all, r_u, r_none, r_empty should match (with sex_score 1), and r_m, r_f should NOT match.
+    # We can test individual ranges separately to see if they match or not (return None).
+    for r in [r_all, r_u, r_none, r_empty]:
+        matched = select_reference_range(
+            [r], study, tcode, unit, "CENTRAL", sex="U", age=30.0
+        )
+        assert matched is not None, (
+            f"Range with sex_applicability={r['sex_applicability']} should match when sex='U'"
+        )
+        assert matched["id"] == r["id"]
+
+    for r in [r_m, r_f]:
+        matched = select_reference_range(
+            [r], study, tcode, unit, "CENTRAL", sex="U", age=30.0
+        )
+        assert matched is None, (
+            f"Range with sex_applicability={r['sex_applicability']} should NOT match when sex='U'"
+        )
+
+
+def test_task1_sex_alias_strings():
+    """Add tests that pass sex alias strings ("Male", "Female", "Boy", "Girl", "Woman", "Man", "Unknown")
+    into select_reference_range and assert the expected M/F/U matching outcome.
+    """
+    study = "STUDY-123"
+    tcode = "WBC"
+    unit = "10^9/L"
+
+    r_m = create_mock_range(
+        id="sex_m", test_code=tcode, normalized_unit=unit, sex_applicability="M"
+    )
+    r_f = create_mock_range(
+        id="sex_f", test_code=tcode, normalized_unit=unit, sex_applicability="F"
+    )
+    r_all = create_mock_range(
+        id="sex_all", test_code=tcode, normalized_unit=unit, sex_applicability="ALL"
+    )
+
+    # M aliases
+    for m_alias in ["Male", "Boy", "Man"]:
+        matched = select_reference_range(
+            [r_m, r_f], study, tcode, unit, "CENTRAL", sex=m_alias, age=30.0
+        )
+        assert matched is not None
+        assert matched["id"] == "sex_m"
+
+    # F aliases
+    for f_alias in ["Female", "Girl", "Woman"]:
+        matched = select_reference_range(
+            [r_m, r_f], study, tcode, unit, "CENTRAL", sex=f_alias, age=30.0
+        )
+        assert matched is not None
+        assert matched["id"] == "sex_f"
+
+    # U aliases
+    for u_alias in ["Unknown"]:
+        # Should not match r_m or r_f, but matches r_all
+        matched_specific = select_reference_range(
+            [r_m, r_f], study, tcode, unit, "CENTRAL", sex=u_alias, age=30.0
+        )
+        assert matched_specific is None
+
+        matched_all = select_reference_range(
+            [r_all], study, tcode, unit, "CENTRAL", sex=u_alias, age=30.0
+        )
+        assert matched_all is not None
+        assert matched_all["id"] == "sex_all"
+
+
+def test_task1_exact_m_rejected_against_f_only_range():
+    """Add a test that confirms an exact M observation is rejected against an F-only range (sex score 0 discard)."""
+    study = "STUDY-123"
+    tcode = "WBC"
+    unit = "10^9/L"
+
+    r_f = create_mock_range(
+        id="sex_f", test_code=tcode, normalized_unit=unit, sex_applicability="F"
+    )
+
+    matched = select_reference_range(
+        [r_f], study, tcode, unit, "CENTRAL", sex="M", age=30.0
+    )
+    assert matched is None
+
+
+def test_task1_divergence_select_reference_range_vs_normalize_gender():
+    """Document the known divergence: the inline sex normalization in select_reference_range falls back
+    to the raw uppercased string, while demographics.normalize_gender defaults to "U".
+    Add a test that pins the current select_reference_range behavior so the divergence is explicit.
+    """
+    from apps.execution.demographics import normalize_gender
+
+    study = "STUDY-123"
+    tcode = "WBC"
+    unit = "10^9/L"
+
+    # For an unmapped/custom string like "OTHER":
+    # 1. demographics.normalize_gender defaults to "U"
+    assert normalize_gender("OTHER") == "U"
+
+    # 2. select_reference_range falls back to raw uppercased string ("OTHER").
+    # This means norm_sex becomes "OTHER". Since "OTHER" is not "M" or "F", it falls to the else branch
+    # of select_reference_range, matching ranges with sex_applicability in ("ALL", None, "", "U").
+    # Specifically, a candidate range with sex_applicability="OTHER" gets a sex_score of 0 because:
+    #   r_sex is "OTHER", which is not in ("ALL", None, "", "U").
+    # Thus, even though norm_sex is "OTHER", it cannot match an exact sex_applicability="OTHER" range!
+    r_other = create_mock_range(
+        id="sex_other", test_code=tcode, normalized_unit=unit, sex_applicability="OTHER"
+    )
+    r_all = create_mock_range(
+        id="sex_all", test_code=tcode, normalized_unit=unit, sex_applicability="ALL"
+    )
+
+    # Passing sex="OTHER" will NOT match the "OTHER" range
+    matched_other = select_reference_range(
+        [r_other], study, tcode, unit, "CENTRAL", sex="OTHER", age=30.0
+    )
+    assert matched_other is None
+
+    # Passing sex="OTHER" WILL match the "ALL" range
+    matched_all = select_reference_range(
+        [r_all], study, tcode, unit, "CENTRAL", sex="OTHER", age=30.0
+    )
+    assert matched_all is not None
+    assert matched_all["id"] == "sex_all"
+
+
+def test_task2_age_inclusive_boundaries():
+    """Add tests that assert inclusive boundary behavior when age == age_low and age == age_high."""
+    study = "STUDY-123"
+    tcode = "WBC"
+    unit = "10^9/L"
+
+    # Define range with age bounds [18.0, 65.0]
+    r_bounded = create_mock_range(
+        id="age_bounded",
+        test_code=tcode,
+        normalized_unit=unit,
+        age_low=18.0,
+        age_high=65.0,
+    )
+
+    # 1. Test age == age_low (18.0)
+    matched_low = select_reference_range(
+        [r_bounded], study, tcode, unit, "CENTRAL", sex="M", age=18.0
+    )
+    assert matched_low is not None
+    assert matched_low["id"] == "age_bounded"
+
+    # 2. Test age == age_high (65.0)
+    matched_high = select_reference_range(
+        [r_bounded], study, tcode, unit, "CENTRAL", sex="M", age=65.0
+    )
+    assert matched_high is not None
+    assert matched_high["id"] == "age_bounded"
+
+    # 3. Test age just inside bounds (18.1, 64.9)
+    assert (
+        select_reference_range(
+            [r_bounded], study, tcode, unit, "CENTRAL", sex="M", age=18.1
+        )
+        is not None
+    )
+    assert (
+        select_reference_range(
+            [r_bounded], study, tcode, unit, "CENTRAL", sex="M", age=64.9
+        )
+        is not None
+    )
+
+    # 4. Test age outside bounds (17.9, 65.1)
+    assert (
+        select_reference_range(
+            [r_bounded], study, tcode, unit, "CENTRAL", sex="M", age=17.9
+        )
+        is None
+    )
+    assert (
+        select_reference_range(
+            [r_bounded], study, tcode, unit, "CENTRAL", sex="M", age=65.1
+        )
+        is None
+    )
+
+
+def test_task2_age_none_matching():
+    """Add a test that confirms age=None matches only unbounded ranges (score 1) and is discarded against bounded ranges."""
+    study = "STUDY-123"
+    tcode = "WBC"
+    unit = "10^9/L"
+
+    r_unbounded = create_mock_range(
+        id="age_unbounded",
+        test_code=tcode,
+        normalized_unit=unit,
+        age_low=None,
+        age_high=None,
+    )
+    r_bounded_low = create_mock_range(
+        id="age_bounded_low",
+        test_code=tcode,
+        normalized_unit=unit,
+        age_low=18.0,
+        age_high=None,
+    )
+    r_bounded_high = create_mock_range(
+        id="age_bounded_high",
+        test_code=tcode,
+        normalized_unit=unit,
+        age_low=None,
+        age_high=65.0,
+    )
+    r_bounded_both = create_mock_range(
+        id="age_bounded_both",
+        test_code=tcode,
+        normalized_unit=unit,
+        age_low=18.0,
+        age_high=65.0,
+    )
+
+    all_ranges = [r_unbounded, r_bounded_low, r_bounded_high, r_bounded_both]
+
+    # Passing age=None should strictly select r_unbounded (bounded ranges should be discarded)
+    matched = select_reference_range(
+        all_ranges, study, tcode, unit, "CENTRAL", sex="M", age=None
+    )
+    assert matched is not None
+    assert matched["id"] == "age_unbounded"
+
+
+def test_task2_zero_and_negative_age_evaluation():
+    """Add tests for zero age and negative age values at evaluation time
+    (evaluation-time behavior, distinct from the create-time age_low < 0 validation).
+    """
+    study = "STUDY-123"
+    tcode = "WBC"
+    unit = "10^9/L"
+
+    # Create a range designed for infants (0 to 1 year)
+    r_infant = create_mock_range(
+        id="infant", test_code=tcode, normalized_unit=unit, age_low=0.0, age_high=1.0
+    )
+    # Create a range designed for prenatal/gestational (negative age, e.g. -0.5 to 0.0)
+    r_prenatal = create_mock_range(
+        id="prenatal", test_code=tcode, normalized_unit=unit, age_low=-0.5, age_high=0.0
+    )
+
+    # 1. Test age = 0 at evaluation time (should match r_infant and r_prenatal)
+    # Under infant, matches because age_low=0.0 <= age=0.0 <= age_high=1.0
+    matched_infant = select_reference_range(
+        [r_infant], study, tcode, unit, "CENTRAL", sex="M", age=0.0
+    )
+    assert matched_infant is not None
+    assert matched_infant["id"] == "infant"
+
+    # Under prenatal, matches because age_low=-0.5 <= age=0.0 <= age_high=0.0
+    matched_prenatal = select_reference_range(
+        [r_prenatal], study, tcode, unit, "CENTRAL", sex="M", age=0.0
+    )
+    assert matched_prenatal is not None
+    assert matched_prenatal["id"] == "prenatal"
+
+    # 2. Test negative age (age = -0.2) should match r_prenatal but NOT r_infant
+    matched_neg = select_reference_range(
+        [r_infant, r_prenatal], study, tcode, unit, "CENTRAL", sex="M", age=-0.2
+    )
+    assert matched_neg is not None
+    assert matched_neg["id"] == "prenatal"
+
+
+def test_task2_age_span_tie_breaking():
+    """Add a test that confirms age-span tie-breaking selects the narrower range when site and sex scores tie."""
+    study = "STUDY-123"
+    tcode = "WBC"
+    unit = "10^9/L"
+
+    # Both ranges have exact sex match (score 2) and central site match (score 1) and both age bounds (score 3)
+    # Range 1: age span 18.0 to 65.0 (span = 47.0)
+    # Range 2: age span 20.0 to 40.0 (span = 20.0)
+    r_wide = create_mock_range(
+        id="wide_range",
+        test_code=tcode,
+        normalized_unit=unit,
+        age_low=18.0,
+        age_high=65.0,
+    )
+    r_narrow = create_mock_range(
+        id="narrow_range",
+        test_code=tcode,
+        normalized_unit=unit,
+        age_low=20.0,
+        age_high=40.0,
+    )
+
+    # For an observation with age = 30.0, both match. But r_narrow has narrower age span (20 vs 47), so it should win.
+    matched = select_reference_range(
+        [r_wide, r_narrow], study, tcode, unit, "CENTRAL", sex="M", age=30.0
+    )
+    assert matched is not None
+    assert matched["id"] == "narrow_range"
+
+
+def test_task3_study_id_isolation():
+    """Add a test that passes a study_id that does not match any candidate and asserts select_reference_range returns None."""
+    study = "STUDY-123"
+    tcode = "WBC"
+    unit = "10^9/L"
+
+    r_candidate = create_mock_range(
+        id="r_cand", study_id=study, test_code=tcode, normalized_unit=unit
+    )
+
+    # passing mismatched study_id "STUDY-999" must return None
+    matched = select_reference_range(
+        [r_candidate], "STUDY-999", tcode, unit, "CENTRAL", sex="M", age=30.0
+    )
+    assert matched is None
+
+
+def test_task3_test_code_isolation():
+    """Add a test that passes a mismatched test_code and asserts no candidate matches."""
+    study = "STUDY-123"
+    tcode = "WBC"
+    unit = "10^9/L"
+
+    r_candidate = create_mock_range(
+        id="r_cand", study_id=study, test_code=tcode, normalized_unit=unit
+    )
+
+    # passing mismatched test_code "RBC" must return None
+    matched = select_reference_range(
+        [r_candidate], study, "RBC", unit, "CENTRAL", sex="M", age=30.0
+    )
+    assert matched is None
+
+
+def test_task3_unknown_lab_source_fallback():
+    """Add a test with a lab_source value outside LOCAL/CENTRAL and assert the else branch falls back to CENTRAL-only matching."""
+    study = "STUDY-123"
+    tcode = "WBC"
+    unit = "10^9/L"
+
+    r_central = create_mock_range(
+        id="r_central",
+        study_id=study,
+        test_code=tcode,
+        normalized_unit=unit,
+        source="CENTRAL",
+    )
+    r_local = create_mock_range(
+        id="r_local",
+        study_id=study,
+        test_code=tcode,
+        normalized_unit=unit,
+        source="LOCAL",
+    )
+
+    # If we pass lab_source="UNKNOWN", only the r_central range should match (the r_local range should be discarded, i.e., site_score = 0)
+    matched = select_reference_range(
+        [r_central, r_local], study, tcode, unit, "UNKNOWN", sex="M", age=30.0
+    )
+    assert matched is not None
+    assert matched["id"] == "r_central"
+
+    # Verify that if only the r_local range is present, passing "UNKNOWN" returns None
+    matched_local_only = select_reference_range(
+        [r_local], study, tcode, unit, "UNKNOWN", sex="M", age=30.0
+    )
+    assert matched_local_only is None
+
+
+def test_task3_site_id_combinations():
+    """Add a test with a range that has a site_id while the observation has none (and the reverse)
+    and assert the expected site score outcome.
+    """
+    study = "STUDY-123"
+    tcode = "WBC"
+    unit = "10^9/L"
+
+    # Case 1: Range has site_id, but Observation has no site_id (lab_source="LOCAL")
+    # This should yield site_score = 0 and be discarded.
+    r_specific_site = create_mock_range(
+        id="specific_site",
+        study_id=study,
+        test_code=tcode,
+        normalized_unit=unit,
+        source="LOCAL",
+        site_id="SITE-A",
+    )
+    matched_case1 = select_reference_range(
+        [r_specific_site], study, tcode, unit, "LOCAL", sex="M", age=30.0, site_id=None
+    )
+    assert matched_case1 is None
+
+    # Case 2: Range has no site_id, but Observation has site_id="SITE-A" (lab_source="LOCAL")
+    # This matches generic local (site_score = 2).
+    r_generic_site = create_mock_range(
+        id="generic_site",
+        study_id=study,
+        test_code=tcode,
+        normalized_unit=unit,
+        source="LOCAL",
+        site_id=None,
+    )
+    matched_case2 = select_reference_range(
+        [r_generic_site],
+        study,
+        tcode,
+        unit,
+        "LOCAL",
+        sex="M",
+        age=30.0,
+        site_id="SITE-A",
+    )
+    assert matched_case2 is not None
+    assert matched_case2["id"] == "generic_site"
+
+
+@pytest.mark.asyncio
+async def test_task4_convert_lab_unit_edge_cases():
+    """Add tests for convert_lab_unit covering:
+    - DB conversion row with offset=None.
+    - DB conversion row with a non-null offset.
+    - from_unit == to_unit no-op via UCUM.
+    - incompatible-unit conversion that propagates ValueError from convert_unit.
+    - confirms is_deleted LabUnitConversion rows are ignored and the UCUM fallback is used.
+    """
+    from apps.execution.database.core import db_manager
+    from apps.execution.database.models import Base, LabUnitConversion
+    from apps.execution.lab_ranges import convert_lab_unit
+
+    db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
+    try:
+        async with db_manager.engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+        session_maker = db_manager.get_session_maker()
+        async with session_maker() as session:
+            # 1. DB conversion row with offset=None
+            conv_none_offset = LabUnitConversion(
+                study_id="STUDY-123",
+                test_code="TEST-A",
+                from_unit="u_from",
+                to_unit="u_to",
+                factor=2.5,
+                offset=None,
+                created_by="test_user",
+                reason_for_change="None offset check",
+                version_index=1,
+            )
+            session.add(conv_none_offset)
+
+            # 2. DB conversion row with non-null offset
+            conv_with_offset = LabUnitConversion(
+                study_id="STUDY-123",
+                test_code="TEST-B",
+                from_unit="u_from",
+                to_unit="u_to",
+                factor=2.0,
+                offset=1.5,
+                created_by="test_user",
+                reason_for_change="Non-null offset check",
+                version_index=1,
+            )
+            session.add(conv_with_offset)
+
+            # 3. is_deleted LabUnitConversion row (should be ignored and UCUM fallback used)
+            # In UCUM: kg to g is factor of 1000. Let's add a deleted conversion row with factor 5.0
+            conv_deleted = LabUnitConversion(
+                study_id="STUDY-123",
+                test_code="WBC",
+                from_unit="kg",
+                to_unit="g",
+                factor=5.0,
+                offset=0.0,
+                is_deleted=True,
+                created_by="test_user",
+                reason_for_change="Deleted conversion check",
+                version_index=1,
+            )
+            session.add(conv_deleted)
+
+            await session.commit()
+
+        # Re-open session to run test operations
+        async with session_maker() as session:
+            # 1. DB conversion row with offset=None: value=10.0 * 2.5 + 0.0 = 25.0
+            val_none_offset = await convert_lab_unit(
+                session, "TEST-A", "u_from", "u_to", 10.0
+            )
+            assert abs(val_none_offset - 25.0) < 1e-9
+
+            # 2. DB conversion row with non-null offset: value=10.0 * 2.0 + 1.5 = 21.5
+            val_with_offset = await convert_lab_unit(
+                session, "TEST-B", "u_from", "u_to", 10.0
+            )
+            assert abs(val_with_offset - 21.5) < 1e-9
+
+            # 3. from_unit == to_unit no-op via UCUM (using units not in DB, e.g. "kg" to "kg" or unrecognized)
+            # Both recognized "kg" to "kg" and unrecognized "xyz" to "xyz" should return the input value as a no-op
+            val_noop_kg = await convert_lab_unit(
+                session, "SOME-TEST", "kg", "kg", 12.34
+            )
+            assert val_noop_kg == 12.34
+
+            val_noop_unrecognized = await convert_lab_unit(
+                session, "SOME-TEST", "xyz", "xyz", 56.78
+            )
+            assert val_noop_unrecognized == 56.78
+
+            # 4. incompatible-unit conversion that propagates ValueError from convert_unit
+            # Converting mass "kg" to length "m"
+            with pytest.raises(ValueError, match="Incompatible unit conversion"):
+                await convert_lab_unit(session, "SOME-TEST", "kg", "m", 1.0)
+
+            # 5. confirms is_deleted LabUnitConversion rows are ignored and the UCUM fallback is used
+            # We added a deleted custom conversion row for WBC kg -> g with factor 5.0.
+            # Since it is ignored, the standard UCUM fallback conversion (factor 1000) should be used.
+            # value=2.0 kg should convert to 2000.0 g instead of 10.0 g.
+            val_deleted_ignored = await convert_lab_unit(session, "WBC", "kg", "g", 2.0)
+            assert abs(val_deleted_ignored - 2000.0) < 1e-9
+
+    finally:
+        await db_manager.close()
+
+
+def test_task4_evaluate_lab_value_edge_cases():
+    """Add tests for evaluate_lab_value covering:
+    - only critical bounds set (no normal bounds)
+    - only normal bounds set (no critical bounds)
+    - negative and zero lab values
+    - values exactly equal to a critical boundary (inclusive normal boundary vs exclusive critical boundary)
+    """
+    # 1. Only critical bounds set (no normal bounds)
+    # low_bound=None, high_bound=None, critical_low=5.0, critical_high=25.0
+    r_only_critical = create_mock_range(
+        low_bound=None, high_bound=None, critical_low=5.0, critical_high=25.0
+    )
+
+    # Within critical limits -> NORMAL (since there are no normal bounds to trigger LOW/HIGH)
+    ind, out_of_range, bounds = evaluate_lab_value(15.0, r_only_critical)
+    assert ind == "NORMAL"
+    assert out_of_range is False
+    assert json.loads(bounds) == {"low": None, "high": None}
+
+    # Below critical_low -> LOW LOW
+    ind, out_of_range, _ = evaluate_lab_value(4.9, r_only_critical)
+    assert ind == "LOW LOW"
+    assert out_of_range is True
+
+    # Above critical_high -> HIGH HIGH
+    ind, out_of_range, _ = evaluate_lab_value(25.1, r_only_critical)
+    assert ind == "HIGH HIGH"
+    assert out_of_range is True
+
+    # 2. Only normal bounds set (no critical bounds)
+    # low_bound=10.0, high_bound=20.0, critical_low=None, critical_high=None
+    r_only_normal = create_mock_range(
+        low_bound=10.0, high_bound=20.0, critical_low=None, critical_high=None
+    )
+
+    # Within limits -> NORMAL
+    ind, out_of_range, bounds = evaluate_lab_value(15.0, r_only_normal)
+    assert ind == "NORMAL"
+    assert out_of_range is False
+    assert json.loads(bounds) == {"low": 10.0, "high": 20.0}
+
+    # Below low_bound -> LOW (no critical bounds to trigger LOW LOW, so even very low values are just LOW)
+    ind, out_of_range, _ = evaluate_lab_value(1.0, r_only_normal)
+    assert ind == "LOW"
+    assert out_of_range is True
+
+    # Above high_bound -> HIGH (no critical bounds to trigger HIGH HIGH, so even very high values are just HIGH)
+    ind, out_of_range, _ = evaluate_lab_value(100.0, r_only_normal)
+    assert ind == "HIGH"
+    assert out_of_range is True
+
+    # 3. Negative and zero lab values
+    # Let's say we have normal bounds [-1.0, 1.0] and critical bounds [-2.0, 2.0]
+    r_neg_zero = create_mock_range(
+        low_bound=-1.0, high_bound=1.0, critical_low=-2.0, critical_high=2.0
+    )
+
+    # Zero value (0.0) -> NORMAL
+    ind, out_of_range, _ = evaluate_lab_value(0.0, r_neg_zero)
+    assert ind == "NORMAL"
+    assert out_of_range is False
+
+    # Negative value within normal (-0.5) -> NORMAL
+    ind, out_of_range, _ = evaluate_lab_value(-0.5, r_neg_zero)
+    assert ind == "NORMAL"
+    assert out_of_range is False
+
+    # Negative value out of normal but within critical (-1.5) -> LOW
+    ind, out_of_range, _ = evaluate_lab_value(-1.5, r_neg_zero)
+    assert ind == "LOW"
+    assert out_of_range is True
+
+    # Negative value below critical (-2.5) -> LOW LOW
+    ind, out_of_range, _ = evaluate_lab_value(-2.5, r_neg_zero)
+    assert ind == "LOW LOW"
+    assert out_of_range is True
+
+    # 4. Values exactly equal to a critical boundary
+    # Boundary Inclusion Policy:
+    # - Normal boundaries (low_bound, high_bound) are inclusive.
+    # - Critical boundaries (critical_low, critical_high) are exclusive.
+    # This means:
+    # - "LOW LOW" is value < critical_low (value == critical_low is NOT "LOW LOW").
+    # - "HIGH HIGH" is value > critical_high (value == critical_high is NOT "HIGH HIGH").
+    # If we have low_bound=10.0, critical_low=5.0:
+    # - value = 5.0 is exactly equal to critical_low. Since it is NOT < critical_low, it is NOT LOW LOW.
+    # - But value = 5.0 is < low_bound (10.0), so it is "LOW".
+    # If we have high_bound=20.0, critical_high=25.0:
+    # - value = 25.0 is exactly equal to critical_high. Since it is NOT > critical_high, it is NOT HIGH HIGH.
+    # - But value = 25.0 is > high_bound (20.0), so it is "HIGH".
+
+    r_exact_bounds = create_mock_range(
+        low_bound=10.0, high_bound=20.0, critical_low=5.0, critical_high=25.0
+    )
+
+    # Exactly equal to critical_low (5.0) -> LOW (NOT LOW LOW)
+    ind, out_of_range, _ = evaluate_lab_value(5.0, r_exact_bounds)
+    assert ind == "LOW"
+    assert out_of_range is True
+
+    # Exactly equal to critical_high (25.0) -> HIGH (NOT HIGH HIGH)
+    ind, out_of_range, _ = evaluate_lab_value(25.0, r_exact_bounds)
+    assert ind == "HIGH"
+    assert out_of_range is True
+
+    # Slightly below critical_low (4.99) -> LOW LOW
+    ind, out_of_range, _ = evaluate_lab_value(4.99, r_exact_bounds)
+    assert ind == "LOW LOW"
+    assert out_of_range is True
+
+    # Slightly above critical_high (25.01) -> HIGH HIGH
+    ind, out_of_range, _ = evaluate_lab_value(25.01, r_exact_bounds)
+    assert ind == "HIGH HIGH"
+    assert out_of_range is True
+
+
 @pytest.mark.asyncio
 async def test_lab_reference_range_synonyms_and_audit():
     """Verify synonym columns map to physical columns without affecting audit-field behavior."""
