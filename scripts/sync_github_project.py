@@ -202,17 +202,17 @@ def assign_work_stream(i):
             "Stream 1: eTMF & Regulated Document Management",
             "Document Management & Archiving",
         )
-    elif any(
+    if any(
         k in title or k in body
         for k in ["rtsm", "irt", "dispensation", "randomization", "supply", "blinded"]
     ):
         return "Stream 2: RTSM & IP Supply Chain", "RTSM / IRT v1.0"
-    elif any(
+    if any(
         k in title or k in body
         for k in ["ecrf", "soa", "mdr", "protocol", "designer", "form", "crf"]
     ):
         return "Stream 3: Study Designer, eCRF & SoA", "Ultimate CRF Builder"
-    elif any(
+    if any(
         k in title or k in body
         for k in ["ecoa", "epro", "subject portal", "patient", "econsent"]
     ):
@@ -220,11 +220,11 @@ def assign_work_stream(i):
             "Stream 4: eCOA, ePRO & Subject Portal",
             "Native eCOA/ePRO Subject Portal v1.6.0",
         )
-    elif "scope: frontend" in labels or any(
+    if "scope: frontend" in labels or any(
         k in title or k in body for k in ["spa", "vue", "ui", "widget", "component"]
     ):
         return "Stream 5: Frontend Vue 3 SPA", "Frontend SPA Completion"
-    elif any(
+    if any(
         k in title or k in body
         for k in [
             "rbac",
@@ -241,7 +241,7 @@ def assign_work_stream(i):
             "Stream 6: Platform Security, RBAC & Audit Ledger",
             "Compliance & Security Controls",
         )
-    elif any(
+    if any(
         k in title or k in body
         for k in ["sdtm", "adam", "dataset", "export", "biostat", "cdisc"]
     ):
@@ -249,16 +249,15 @@ def assign_work_stream(i):
             "Stream 7: Biostatistics & Dataset Exports",
             "Biostatistical Export Pipeline v1.7.0 Completion",
         )
-    elif any(
+    if any(
         k in title or k in body
         for k in ["sdv", "lab", "monitoring", "site", "query", "sae", "reconciliation"]
     ):
         return "Stream 8: Clinical Operations, SDV & Lab Ranges", "SDV/TSDV Hardening"
-    else:
-        return (
-            "Stream 6: Platform Security, RBAC & Audit Ledger",
-            "Compliance & Security Controls",
-        )
+    return (
+        "Stream 6: Platform Security, RBAC & Audit Ledger",
+        "Compliance & Security Controls",
+    )
 
 
 def clean_and_format_body(i, epics, issue_by_num):

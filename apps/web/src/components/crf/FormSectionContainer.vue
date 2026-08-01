@@ -31,10 +31,7 @@
       </div>
 
       <!-- Action Controls -->
-      <div
-        class="flex items-center gap-2"
-        @click.stop
-      >
+      <div class="flex items-center gap-2" @click.stop>
         <button
           class="btn-add-item bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold px-2.5 py-1.5 rounded transition flex items-center gap-1"
           @click="addNewItem"
@@ -51,10 +48,7 @@
     </div>
 
     <!-- Section Body: Draggable Nested Items List -->
-    <div
-      v-show="!section.isCollapsed"
-      class="section-body p-4 transition-all"
-    >
+    <div v-show="!section.isCollapsed" class="section-body p-4 transition-all">
       <!-- Visual Dropzone Indicator when empty -->
       <div
         v-if="!section.items || section.items.length === 0"
@@ -96,6 +90,13 @@
 </template>
 
 <script setup>
+/**
+ * FormSectionContainer component
+ *
+ * Provides a collapsible visual container for a group of related clinical fields.
+ * Manages intra-section and inter-section dragging operations, row appending, collapsing,
+ * and passes viewport alerts downstream to individual CanvasFieldWidgets.
+ */
 import { ref, computed } from "vue";
 import draggable from "vuedraggable";
 import CanvasFieldWidget from "./CanvasFieldWidget.vue";

@@ -42,7 +42,9 @@ def test_signed_headers_generation(signed_headers):
 
     # Verify that the generated signature is valid
     secret_env = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
-    secret_bytes = secret_env.encode("utf-8") if isinstance(secret_env, str) else secret_env
+    secret_bytes = (
+        secret_env.encode("utf-8") if isinstance(secret_env, str) else secret_env
+    )
 
     is_valid = verify_gateway_signature(
         user_id=user_id,
@@ -127,7 +129,9 @@ def test_signed_headers_generation(signed_headers):
 
 
 @pytest.mark.asyncio
-async def test_cross_service_interception_and_replay(capture_cross_service_calls, execution_client):
+async def test_cross_service_interception_and_replay(
+    capture_cross_service_calls, execution_client
+):
     """
     Test Task 3: Add the cross-service interception fixture.
     Verify that our capture_cross_service_calls fixture successfully intercepts
@@ -151,7 +155,10 @@ async def test_cross_service_interception_and_replay(capture_cross_service_calls
     captured = capture_cross_service_calls.calls[0]
 
     assert captured["method"] == "POST"
-    assert captured["url"] == "http://localhost:8001/api/v1/studies/study_123/eligibility-criteria"
+    assert (
+        captured["url"]
+        == "http://localhost:8001/api/v1/studies/study_123/eligibility-criteria"
+    )
     assert captured["path"] == "/api/v1/studies/study_123/eligibility-criteria"
     assert captured["headers"]["X-Custom-Header"] == "hello"
     assert captured["json"] == {"foo": "bar"}
@@ -174,13 +181,17 @@ async def test_cross_service_interception_and_replay(capture_cross_service_calls
     # Ensure passthrough is True so the call is actually forwarded to the target client
     capture_cross_service_calls.passthrough = True
 
-    response = await capture_cross_service_calls.replay(execution_client, health_captured_call)
+    response = await capture_cross_service_calls.replay(
+        execution_client, health_captured_call
+    )
     assert response.status_code == 200
     assert response.json()["status"] in ("ok", "healthy", "UP")
 
 
 @pytest.mark.asyncio
-async def test_service_client_fixtures_isolation(shared_sqlite_dbs, execution_client, etmf_client, designer_client, signed_headers):
+async def test_service_client_fixtures_isolation(
+    shared_sqlite_dbs, execution_client, etmf_client, designer_client, signed_headers
+):
     """
     Test Task 2: Add in-process ASGI client fixtures for each service.
     Verify that all ASGI clients (execution, etmf, designer) are accessible,
@@ -202,7 +213,9 @@ async def test_service_client_fixtures_isolation(shared_sqlite_dbs, execution_cl
     assert resp_designer_gated.status_code in (401, 403)
 
     # Verify that correct signed headers allow access through the GatewayAuthMiddleware
-    headers_exec = signed_headers(user_id="user_cra", roles="CRA", change_reason="CRA operation")
+    headers_exec = signed_headers(
+        user_id="user_cra", roles="CRA", change_reason="CRA operation"
+    )
     resp_exec_gated_signed = await execution_client.post(
         "/api/v1/execution/sdv/signoff",
         json={

@@ -95,20 +95,15 @@ export {
   deriveSessionKey,
 } from "./signing.js";
 
-export {
-  normalizeApprovedConsent,
-  shapeComprehensionAnswers,
-  interpretComprehensionResult,
-} from "./econsent.js";
-
 /**
- * Generates an accessible fieldset row HTML string for configuring a rule condition.
+ * Generates vanilla HTML string for a single condition row in the rule builder.
+ * Includes selectors for form, field, operator, right-hand operand type/value/field reference.
  *
- * @param {number} index - The zero-indexed position of the condition element.
- * @param {Array} forms - Available forms list.
- * @param {Array} fields - Available fields list.
- * @param {Object} [initialData={}] - Optional initial values.
- * @returns {string} Accessible HTML string.
+ * @param {number} index - Index of the condition row.
+ * @param {Array} forms - List of available forms [{ id, name }].
+ * @param {Array} fields - List of available fields [{ id, name, formId }].
+ * @param {Object} [initialData={}] - Initial data for pre-populating fields.
+ * @returns {string} The HTML string.
  */
 export function createConditionRowHTML(
   index,
@@ -116,159 +111,267 @@ export function createConditionRowHTML(
   fields = [],
   initialData = {}
 ) {
+  const cond = {
+    formId: "",
+    fieldId: "",
+    operator: "==",
+    rightType: "constant",
+    rightValue: "",
+    rightFieldId: "",
+    rightFormId: "",
+    ...initialData,
+  };
   const formOptions = forms
     .map(
       (f) =>
-        `<option value="${f.id}" ${f.id === initialData.formId ? "selected" : ""}>${f.name || f.id}</option>`
+        `<option value="${f.id}" ${cond.formId === f.id ? "selected" : ""}>${f.name}</option>`
     )
     .join("");
-
-  const filteredFields = initialData.formId
-    ? fields.filter((f) => f.formId === initialData.formId)
-    : fields;
-
-  const fieldOptions = filteredFields
+  const fieldOptions = fields
     .map(
       (f) =>
-        `<option value="${f.id}" ${f.id === initialData.fieldId ? "selected" : ""}>${f.name || f.id}</option>`
+        `<option value="${f.id}" ${cond.fieldId === f.id ? "selected" : ""}>${f.name}</option>`
+    )
+    .join("");
+  const rightFieldOptions = fields
+    .map(
+      (f) =>
+        `<option value="${f.id}" ${cond.rightFieldId === f.id ? "selected" : ""}>${f.name}</option>`
     )
     .join("");
 
   const operators = [
-    { value: "==", label: "Equals (==)" },
-    { value: "!=", label: "Not Equals (!=)" },
-    { value: ">", label: "Greater Than (>)" },
-    { value: "<", label: "Less Than (<)" },
-    { value: ">=", label: "Greater Than or Equal (>=)" },
-    { value: "<=", label: "Less Than or Equal (<=)" },
-    { value: "is_empty", label: "Is Empty" },
-    { value: "is_not_empty", label: "Is Not Empty" },
+    { value: "==", text: "equals" },
+    { value: "!=", text: "does not equal" },
+    { value: "<", text: "is less than" },
+    { value: "<=", text: "is less than or equal to" },
+    { value: ">", text: "is greater than" },
+    { value: ">=", text: "is greater than or equal to" },
+    { value: "is_empty", text: "is empty" },
+    { value: "is_not_empty", text: "is not empty" },
   ];
 
   const operatorOptions = operators
     .map(
       (op) =>
-        `<option value="${op.value}" ${op.value === initialData.operator ? "selected" : ""}>${op.label}</option>`
+        `<option value="${op.value}" ${cond.operator === op.value ? "selected" : ""}>${op.text}</option>`
     )
     .join("");
 
-  const isConstant = (initialData.rightType || "constant") === "constant";
+  const showRightOperand =
+    cond.operator !== "is_empty" && cond.operator !== "is_not_empty";
+
+  let rightOperandHTML = "";
+  if (showRightOperand) {
+    rightOperandHTML = `
+      <div class="form-group cond-right-group" style="flex: 1; min-width: 100px;">
+        <label for="cond-right-type-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Right Value Type</label>
+        <select id="cond-right-type-${index}" class="cond-right-type" data-index="${index}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--border);">
+          <option value="constant" ${cond.rightType === "constant" ? "selected" : ""}>Constant Value</option>
+          <option value="field_ref" ${cond.rightType === "field_ref" ? "selected" : ""}>Field Reference</option>
+        </select>
+      </div>
+
+      ${
+        cond.rightType === "constant"
+          ? `
+        <div class="form-group cond-right-val-group" style="flex: 1; min-width: 100px;">
+          <label for="cond-right-value-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Constant Value</label>
+          <input id="cond-right-value-${index}" class="cond-right-value" data-index="${index}" type="text" placeholder="Value..." value="${cond.rightValue}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--border);" />
+        </div>
+      `
+          : `
+        <div class="form-group cond-right-field-group" style="flex: 1; min-width: 100px;">
+          <label for="cond-right-field-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Right Field</label>
+          <select id="cond-right-field-${index}" class="cond-right-field" data-index="${index}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--border);">
+            <option value="">-- Select Field --</option>
+            ${rightFieldOptions}
+          </select>
+        </div>
+      `
+      }
+    `;
+  }
 
   return `
-  <fieldset class="condition-row-fieldset" data-index="${index}" style="border: 1px solid #cbd5e1; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
-    <legend style="font-size: 0.85rem; font-weight: 600;">Condition Element #${index + 1}</legend>
-    <div style="display: grid; grid-template-columns: repeat(12, 1fr); gap: 8px; align-items: center;">
-      <div style="grid-column: span 3;">
-        <label for="cond-form-${index}" style="font-size: 0.75rem; display: block;">Form</label>
-        <select id="cond-form-${index}" class="cond-form" style="width: 100%; padding: 4px;">
-          <option value="">Select Form</option>
-          ${formOptions}
-        </select>
+    <fieldset class="condition-row-fieldset" data-index="${index}" style="border: 1px dashed var(--border); border-radius: 8px; padding: 12px; background-color: #fafbfd; margin-bottom: 12px;">
+      <legend style="font-size: 0.75rem; font-weight: bold; padding: 0 4px; color: var(--primary);">Condition Element #${index + 1}</legend>
+      <div style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;">
+        <div class="form-group" style="flex: 1; min-width: 100px;">
+          <label for="cond-form-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Left Form</label>
+          <select id="cond-form-${index}" class="cond-form" data-index="${index}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--border);">
+            <option value="">-- Select Form --</option>
+            ${formOptions}
+          </select>
+        </div>
+
+        <div class="form-group" style="flex: 1; min-width: 100px;">
+          <label for="cond-field-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Left Field</label>
+          <select id="cond-field-${index}" class="cond-field" data-index="${index}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--border);">
+            <option value="">-- Select Field --</option>
+            ${fieldOptions}
+          </select>
+        </div>
+
+        <div class="form-group" style="flex: 1; min-width: 100px;">
+          <label for="cond-operator-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Operator</label>
+          <select id="cond-operator-${index}" class="cond-operator" data-index="${index}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--border);">
+            ${operatorOptions}
+          </select>
+        </div>
+
+        ${rightOperandHTML}
+
+        <button type="button" class="btn btn-danger remove-condition-btn" data-action="remove-condition" data-index="${index}" style="background-color: var(--error); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; height: fit-content; align-self: flex-end;">Remove</button>
       </div>
-      <div style="grid-column: span 3;">
-        <label for="cond-field-${index}" style="font-size: 0.75rem; display: block;">Field</label>
-        <select id="cond-field-${index}" class="cond-field" style="width: 100%; padding: 4px;">
-          <option value="">Select Field</option>
-          ${fieldOptions}
-        </select>
-      </div>
-      <div style="grid-column: span 2;">
-        <label for="cond-op-${index}" style="font-size: 0.75rem; display: block;">Operator</label>
-        <select id="cond-op-${index}" class="cond-operator" style="width: 100%; padding: 4px;">
-          ${operatorOptions}
-        </select>
-      </div>
-      <div style="grid-column: span 2;">
-        <label for="cond-right-type-${index}" style="font-size: 0.75rem; display: block;">Target Type</label>
-        <select id="cond-right-type-${index}" class="cond-right-type" style="width: 100%; padding: 4px;">
-          <option value="constant" ${isConstant ? "selected" : ""}>Constant Value</option>
-          <option value="field_ref" ${!isConstant ? "selected" : ""}>Field Reference</option>
-        </select>
-      </div>
-      <div style="grid-column: span 2; text-align: right;">
-        <label for="cond-val-${index}" style="font-size: 0.75rem; display: block;">Target Value</label>
-        <input id="cond-val-${index}" type="text" class="cond-value" value="${initialData.rightValue || ""}" style="width: 100%; padding: 4px;" />
-      </div>
-    </div>
-  </fieldset>`;
+    </fieldset>
+  `.trim();
 }
 
 /**
- * Generates an accessible rule builder HTML string layout.
+ * Generates vanilla HTML string for the rule editor container, assembling multiple condition rows.
  *
- * @param {Array} forms - Available forms list.
- * @param {Array} fields - Available fields list.
- * @param {Object} [initialRule={}] - Rule configuration data.
- * @returns {string} Accessible HTML markup string.
+ * @param {Array} forms - List of available forms [{ id, name }].
+ * @param {Array} fields - List of available fields [{ id, name, formId }].
+ * @param {Object} [options={}] - Options for pre-populating fields and conditions.
+ * @returns {string} The HTML string.
  */
-export function createRuleEditorHTML(
-  // eslint-disable-next-line no-unused-vars
-  forms = [],
-  fields = [],
-  initialRule = {}
-) {
-  const ruleTypeOptions = [
-    { value: "skip_logic", label: "Skip Logic (Field Visibility)" },
-    { value: "constraint", label: "Field Constraint Check" },
-    { value: "edit_check", label: "Edit Check (Validation Error)" },
-    { value: "derived_field", label: "Derived Calculation" },
-  ]
+export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
+  const opt = {
+    conditions: [],
+    matchOperator: "and",
+    ruleType: "skip_logic",
+    targetField: "",
+    ruleAction: "show",
+    targetForm: "",
+    queryMessage: "",
+    ...options,
+  };
+
+  const ruleTypes = [
+    { value: "skip_logic", text: "Skip Logic (Show/Hide fields)" },
+    {
+      value: "constraint",
+      text: "Field Constraint (Single field query validation)",
+    },
+    { value: "edit_check", text: "Edit Check (Validation Error)" },
+    { value: "derived_field", text: "Derived Calculation" },
+    { value: "cross_form_check", text: "Cross-Form / Longitudinal Check" },
+  ];
+
+  const typeOptions = ruleTypes
     .map(
       (t) =>
-        `<option value="${t.value}" ${t.value === initialRule.ruleType ? "selected" : ""}>${t.label}</option>`
+        `<option value="${t.value}" ${opt.ruleType === t.value ? "selected" : ""}>${t.text}</option>`
     )
     .join("");
-
   const targetFieldOptions = fields
     .map(
       (f) =>
-        `<option value="${f.id}" ${f.id === initialRule.targetField ? "selected" : ""}>${f.name || f.id}</option>`
+        `<option value="${f.id}" ${opt.targetField === f.id ? "selected" : ""}>${f.name}</option>`
+    )
+    .join("");
+  const targetFormOptions = forms
+    .map(
+      (f) =>
+        `<option value="${f.id}" ${opt.targetForm === f.id ? "selected" : ""}>${f.name}</option>`
     )
     .join("");
 
+  // Build rows HTML
+  const rowsHTML = (opt.conditions.length > 0 ? opt.conditions : [{}])
+    .map((cond, idx) => {
+      return createConditionRowHTML(idx, forms, fields, cond);
+    })
+    .join("\n");
+
   return `
-  <div class="rule-editor-container" style="padding: 16px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;" data-deid-ignore="deid-ignore">
-    <h3 style="margin-top: 0;">Rule Configuration</h3>
-    <div style="display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; margin-bottom: 16px;">
-      <div style="grid-column: span 6;">
-        <label for="rule-type-select">Rule Type</label>
-        <select id="rule-type-select" class="rule-type-selector" style="width: 100%; padding: 6px;">
-          ${ruleTypeOptions}
-        </select>
-      </div>
-      <div style="grid-column: span 6;">
-        <label for="target-field-select">Target Field</label>
-        <select id="target-field-select" class="target-field-selector" style="width: 100%; padding: 6px;">
-          <option value="">Select Target Field</option>
-          ${targetFieldOptions}
-        </select>
-      </div>
-      <div style="grid-column: span 12;">
-        <label for="query-message-input">Query Message</label>
-        <input id="query-message-input" type="text" class="query-message-input" value="${initialRule.queryMessage || ""}" placeholder="Discrepancy query explanation message..." style="width: 100%; padding: 6px;" />
-      </div>
+    <div class="rule-editor-container" data-deid-ignore="deid-ignore" style="display: flex; flex-direction: column; gap: 16px;">
+      <!-- Rule Type & Target definition -->
+      <fieldset style="border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
+        <legend style="padding: 0 8px; font-weight: bold; color: var(--accent);">Rule Type & Target Definition</legend>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div class="form-group">
+            <label for="rule-type-select" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem;">Rule Classification Type</label>
+            <select id="rule-type-select" class="rule-type-selector" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+              ${typeOptions}
+            </select>
+          </div>
+
+          <div id="target-field-wrapper" class="form-group" style="${opt.ruleType === "cross_form_check" ? "display: none;" : ""}">
+            <label for="target-field-select" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem;">Target Field</label>
+            <select id="target-field-select" class="target-field-selector" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+              <option value="">-- Select Target Field --</option>
+              ${targetFieldOptions}
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div id="skip-action-wrapper" class="form-group" style="${opt.ruleType !== "skip_logic" ? "display: none;" : ""}">
+            <label for="rule-action-select" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem;">Action on Target</label>
+            <select id="rule-action-select" class="rule-action-selector" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+              <option value="show" ${opt.ruleAction === "show" ? "selected" : ""}>Show target field</option>
+              <option value="hide" ${opt.ruleAction === "hide" ? "selected" : ""}>Hide target field</option>
+            </select>
+          </div>
+
+          <div id="target-form-wrapper" class="form-group" style="${opt.ruleType !== "skip_logic" ? "display: none;" : ""}">
+            <label for="target-form-select" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem;">Target Form (Optional)</label>
+            <select id="target-form-select" class="target-form-selector" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+              <option value="">-- Select Target Form --</option>
+              ${targetFormOptions}
+            </select>
+          </div>
+
+          <div id="query-message-wrapper" class="form-group" style="grid-column: span 2; ${opt.ruleType === "skip_logic" ? "display: none;" : ""}">
+            <label for="query-message-input" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem;">Auto-Query Discrepancy Message</label>
+            <input id="query-message-input" class="query-message-input" type="text" placeholder="e.g., Systolic BP is out of logical range" value="${opt.queryMessage}" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;" />
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Rule Conditions -->
+      <fieldset style="border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
+        <legend style="padding: 0 8px; font-weight: bold; color: var(--accent);">Rule Conditions (Logical Expression Tree)</legend>
+
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label for="match-operator-select" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem;">Match Conditions Group Operator</label>
+          <select id="match-operator-select" class="match-operator-selector" style="padding: 6px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem;">
+            <option value="and" ${opt.matchOperator === "and" ? "selected" : ""}>All conditions must be met (AND)</option>
+            <option value="or" ${opt.matchOperator === "or" ? "selected" : ""}>Any condition can be met (OR)</option>
+          </select>
+        </div>
+
+        <!-- Dynamic Conditions list -->
+        <div id="conditions-list-container" class="conditions-list-container" style="display: flex; flex-direction: column; gap: 12px;">
+          ${rowsHTML}
+        </div>
+
+        <div style="margin-top: 12px;">
+          <button type="button" class="btn btn-secondary add-condition-btn" data-action="add-condition" style="padding: 6px 12px; font-size: 0.8rem; cursor: pointer;">➕ Add Condition Row</button>
+        </div>
+      </fieldset>
     </div>
-    <h4>Condition Elements</h4>
-    <div class="conditions-list-container"></div>
-    <button type="button" class="btn btn-secondary add-condition-btn" style="margin-top: 8px;">+ Add Condition Element</button>
-  </div>`;
+  `.trim();
 }
 
 /**
- * Serializes dynamic UI condition rows into a structured Pydantic condition tree AST.
+ * Serializes local UI condition rows and group operator into designer AST expression-tree JSON shape.
  *
- * @param {Array} conditions - List of condition row objects.
- * @param {string} matchOperator - "and" or "or".
- * @returns {Object} Pydantic-compatible condition AST.
+ * @param {Array} conditions - Array of condition rows.
+ * @param {string} [matchOperator='and'] - Match conditions group operator.
+ * @returns {Object} The compiled Pydantic Condition Expression Tree.
  */
 export function serializeConditionsTree(
   conditions = [],
   matchOperator = "and"
 ) {
-  const validConditions = conditions.filter((c) => c && c.fieldId);
   const operands = [];
+  conditions.forEach((cond) => {
+    if (!cond.fieldId) return;
 
-  validConditions.forEach((cond) => {
     const leftRef = {
       type: "field_ref",
       field_ref: {
@@ -386,3 +489,9 @@ export function deserializeConditionsTree(tree) {
 
   return { conditions, matchOperator };
 }
+
+export {
+  normalizeApprovedConsent,
+  shapeComprehensionAnswers,
+  interpretComprehensionResult,
+} from "./econsent.js";

@@ -203,6 +203,21 @@ def step_run_tests(dry_run: bool) -> None:
                 "tests/test_layout_validator.py",
             ]
         )
+        # Run GxP qualification validation suite sequentially
+        _run(
+            [
+                "uv",
+                "run",
+                "pytest",
+                "tests/validation",
+                "-o",
+                "python_files=*_suite.py *_tests.py",
+                "--junitxml",
+                "report_qualification.xml",
+                "-q",
+                "--no-cov",
+            ]
+        )
         # Merge reports
         _run(
             [
@@ -212,6 +227,7 @@ def step_run_tests(dry_run: bool) -> None:
                 "report_main.xml",
                 "report_notif.xml",
                 "report_integration.xml",
+                "report_qualification.xml",
             ]
         )
     except subprocess.CalledProcessError:

@@ -1,3 +1,10 @@
+"""
+Post-submission cross-form & longitudinal edit checks with auto-query generation.
+Verifies and evaluates complex AST conditions asynchronously for GxP clinical trial compliance.
+Satisfies Phase 15 requirements: Post-submission edit-check evaluation queue, predecessor-visit pause/resume,
+and automatic query creation/resolution with audit.
+"""
+
 import contextlib
 import copy
 import logging

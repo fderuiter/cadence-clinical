@@ -36,6 +36,7 @@ ignore = [
 "apps/execution/database/models.py" = ["ALL"]
 "apps/execution/biostat/models.py" = ["N815"]
 "packages/core-models/sdtm/dataset_json_models.py" = ["N815"]
+"tests/conftest.py" = ["E402"]
 
 # ---------------------------------------------------------------------------
 # SQLAlchemy boolean filter pattern — IMPORTANT for all contributors

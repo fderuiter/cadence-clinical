@@ -32,9 +32,7 @@
           margin-bottom: 20px;
         "
       >
-        <h3 style="margin: 0; font-size: 16px">
-          Export Inspection Log
-        </h3>
+        <h3 style="margin: 0; font-size: 16px">Export Inspection Log</h3>
         <button
           class="btn-close"
           style="
@@ -50,10 +48,7 @@
         </button>
       </header>
 
-      <div
-        class="form-group"
-        style="margin-bottom: 16px"
-      >
+      <div class="form-group" style="margin-bottom: 16px">
         <label
           style="
             font-size: 12px;
@@ -61,7 +56,8 @@
             margin-bottom: 6px;
             display: block;
           "
-        >Export Format</label>
+          >Export Format</label
+        >
         <div style="display: flex; gap: 16px; margin-top: 8px">
           <label
             style="
@@ -72,11 +68,7 @@
               font-size: 13px;
             "
           >
-            <input
-              v-model="exportFormat"
-              type="radio"
-              value="CSV"
-            > CSV
+            <input v-model="exportFormat" type="radio" value="CSV" /> CSV
           </label>
           <label
             style="
@@ -87,11 +79,7 @@
               font-size: 13px;
             "
           >
-            <input
-              v-model="exportFormat"
-              type="radio"
-              value="PDF"
-            > PDF
+            <input v-model="exportFormat" type="radio" value="PDF" /> PDF
           </label>
           <label
             style="
@@ -102,19 +90,12 @@
               font-size: 13px;
             "
           >
-            <input
-              v-model="exportFormat"
-              type="radio"
-              value="JSON"
-            > JSON
+            <input v-model="exportFormat" type="radio" value="JSON" /> JSON
           </label>
         </div>
       </div>
 
-      <div
-        class="form-group"
-        style="margin-bottom: 16px"
-      >
+      <div class="form-group" style="margin-bottom: 16px">
         <label
           style="
             font-size: 12px;
@@ -122,7 +103,8 @@
             margin-bottom: 6px;
             display: block;
           "
-        >Date Range Bounds</label>
+          >Date Range Bounds</label
+        >
         <div
           style="
             display: grid;
@@ -139,7 +121,8 @@
                 display: block;
                 margin-bottom: 4px;
               "
-            >Start Date</label>
+              >Start Date</label
+            >
             <input
               v-model="startDate"
               type="date"
@@ -153,7 +136,7 @@
                 color: var(--text);
                 font-size: 13px;
               "
-            >
+            />
           </div>
           <div>
             <label
@@ -163,7 +146,8 @@
                 display: block;
                 margin-bottom: 4px;
               "
-            >End Date</label>
+              >End Date</label
+            >
             <input
               v-model="endDate"
               type="date"
@@ -177,7 +161,7 @@
                 color: var(--text);
                 font-size: 13px;
               "
-            >
+            />
           </div>
         </div>
       </div>
@@ -190,10 +174,7 @@
           margin-top: 24px;
         "
       >
-        <button
-          class="btn btn-secondary"
-          @click="$emit('close')"
-        >
+        <button class="btn btn-secondary" @click="$emit('close')">
           Cancel
         </button>
         <button

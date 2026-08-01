@@ -10,72 +10,72 @@
       <button
         type="button"
         class="toolbar-btn"
-        title="Bold"
         @click="formatDoc('bold')"
+        title="Bold"
       >
         <strong>B</strong>
       </button>
       <button
         type="button"
         class="toolbar-btn"
-        title="Italic"
         @click="formatDoc('italic')"
+        title="Italic"
       >
         <em>I</em>
       </button>
       <button
         type="button"
         class="toolbar-btn"
-        title="Heading 2"
         @click="formatHeading('h2')"
+        title="Heading 2"
       >
         H2
       </button>
       <button
         type="button"
         class="toolbar-btn"
-        title="Heading 3"
         @click="formatHeading('h3')"
+        title="Heading 3"
       >
         H3
       </button>
       <button
         type="button"
         class="toolbar-btn"
-        title="Bullet List"
         @click="formatDoc('insertUnorderedList')"
+        title="Bullet List"
       >
         • List
       </button>
       <button
         type="button"
         class="toolbar-btn"
-        title="Numbered List"
         @click="formatDoc('insertOrderedList')"
+        title="Numbered List"
       >
         1. List
       </button>
       <button
         type="button"
         class="toolbar-btn"
-        title="Insert Table"
         @click="insertTable"
+        title="Insert Table"
       >
         📊 Table
       </button>
       <button
         type="button"
         class="toolbar-btn"
-        title="Insert Image Embed"
         @click="insertImage"
+        title="Insert Image Embed"
       >
         🖼️ Image
       </button>
       <button
         type="button"
         class="toolbar-btn glossary-btn"
-        title="Annotate Glossary Term"
         @click="promptGlossary"
+        title="Annotate Glossary Term"
       >
         🏷️ Glossary Term
       </button>
@@ -96,13 +96,10 @@
       @focusin="handleCanvasMouseOver"
       @focusout="hidePopover"
       v-html="localHtml"
-    />
+    ></div>
 
     <!-- Glossary Term Annotation Dialog/Modal -->
-    <div
-      v-if="showGlossaryModal"
-      class="glossary-modal-overlay"
-    >
+    <div v-if="showGlossaryModal" class="glossary-modal-overlay">
       <div class="glossary-modal card">
         <h4>Annotate Selected Text as Glossary Term</h4>
         <p class="selected-text-preview">
@@ -116,7 +113,7 @@
             placeholder="e.g. An examination of tissue removed from a living body to discover the presence or cause of a disease."
             rows="3"
             class="form-control"
-          />
+          ></textarea>
         </div>
         <div class="modal-actions">
           <button
@@ -143,11 +140,10 @@
       class="glossary-popover"
       :style="{ top: popoverY + 'px', left: popoverX + 'px' }"
     >
-      <div class="popover-title">
-        Glossary Definition
-      </div>
+      <div class="popover-title">Glossary Definition</div>
       <div class="popover-body">
-        <strong>{{ hoveredGlossaryTerm }}</strong>: {{ hoveredGlossaryDefinition }}
+        <strong>{{ hoveredGlossaryTerm }}</strong
+        >: {{ hoveredGlossaryDefinition }}
       </div>
     </div>
   </div>

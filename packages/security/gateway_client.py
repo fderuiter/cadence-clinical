@@ -11,6 +11,33 @@ from packages.security.signing import generate_gateway_signature
 logger = logging.getLogger("packages.security.gateway_client")
 
 
+def create_service_auth_headers(
+    user_id: str, roles: str = "system", change_reason: str = "system_operation"
+) -> dict[str, str]:
+    gateway_secret_env = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+    secret = (
+        gateway_secret_env.encode("utf-8")
+        if isinstance(gateway_secret_env, str)
+        else gateway_secret_env
+    )
+    timestamp = str(time.time())
+    signature = generate_gateway_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        secret=secret,
+        change_reason=change_reason,
+    )
+    return {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": signature,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+    }
+
+
 def run_async(coro):
     """
     Runs an async coroutine synchronously.

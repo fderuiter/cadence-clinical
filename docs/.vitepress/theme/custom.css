@@ -22,12 +22,14 @@
   width: 100%;
   overflow: hidden;
   cursor: grab;
+  touch-action: none; /* Prevent native scroll and bouncy pinch-to-zoom */
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-.mermaid-wrapper:active {
+.mermaid-wrapper:active,
+.mermaid-wrapper.active {
   cursor: grabbing;
 }
 

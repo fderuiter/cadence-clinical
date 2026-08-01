@@ -296,12 +296,14 @@ def test_parser_incremental_batched_consumption() -> None:
 
 def test_public_entry_point_file_path() -> None:
     """Verify the stable public entry point parses successfully using a file path."""
+    import os
+    import shutil
+
     content = "10019211$Headache$10019211$$$$$\n"
-    with tempfile.NamedTemporaryFile(
-        mode="w+", delete=False, suffix="pt.asc", encoding="utf-8"
-    ) as temp_file:
+    temp_dir = tempfile.mkdtemp()
+    temp_path = os.path.join(temp_dir, "pt.asc")
+    with open(temp_path, "w", encoding="utf-8") as temp_file:
         temp_file.write(content)
-        temp_path = temp_file.name
 
     try:
         # Autodetect file type from path suffix
@@ -313,9 +315,7 @@ def test_public_entry_point_file_path() -> None:
         assert records[0]["data"]["level"] == "PT"
         assert records[0]["data"]["dictionary_version"] == "26.0"
     finally:
-        import os
-
-        os.remove(temp_path)
+        shutil.rmtree(temp_dir)
 
 
 def test_parse_in_batches_invalid_batch_size() -> None:

@@ -110,17 +110,14 @@ exclusion is global.**
 
 ### REST API-First Architecture & Microservice Decoupling
 
-> **Architecture-critical & GxP-critical.** Microservices within the Clinical Operations platform (CTMS, eConsent, Notifications, etc.) must remain physically and logically isolated to ensure database isolation, schema evolution safety, and Part 11 compliance. They are strictly prohibited from directly importing sibling database models or executing direct queries against other services' databases.
+To ensure proper GxP boundaries and architectural decoupling across the Cadence Clinical Platform, agents must adhere strictly to the following standards for all inter-service communications:
 
-#### Decoupled Service Boundary Rules
-
-1. **No Sibling Database Imports:** Never import database models, schemas, or session managers from one microservice application directory (e.g. `apps/execution`) into another sibling microservice application (e.g. `apps/ctms` or `apps/econsent`).
+1. **No Sibling Database Imports:** Sibling database imports (of models, schemas, or session helpers) across distinct microservice boundary paths (e.g., CTMS importing execution database models) are strictly prohibited.
 2. **REST Endpoints for Cross-App Operations:** All inter-service communications, state changes, and validations must be routed through secure, performance-optimized, and well-typed REST endpoints exposed by the owning microservice (e.g., `/api/v1/execution/doa/*`).
-3. **Gateway Token Authentication:** Every cross-service HTTP client request must be authenticated. Generate internal gateway signatures and tokens using `generate_gateway_signature(...)` from `packages.security.signing`, passing canonical headers (e.g. `X-Gateway-Signature`, `X-Gateway-Timestamp`, `X-User-Id`, `X-User-Roles`) to pass `GatewayAuthMiddleware` checks.
-4. **SLA Enforcements:** Maintain low latency, proper async connection pooling with `httpx.AsyncClient`, and ensure all operations adhere to the strict **100ms internal SLA**.
+3. **Gateway Token Authentication:** Every cross-service HTTP client request must be authenticated using internal gateway signatures and tokens generated via `generate_gateway_signature(...)` from `packages.security.signing` to pass `GatewayAuthMiddleware` checks.
+4. **SLA Enforcements:** High-performance, low-latency asynchronous connection pooling via `httpx.AsyncClient` must be maintained to adhere to our strict **100ms internal SLA.**
 
 ---
-
 ## GxP Compliance Sync Protocol
 
 The CI `compliance` job regenerates the RTM docs and diffs them against the

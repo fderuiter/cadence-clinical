@@ -1,15 +1,16 @@
 <template>
+  <!-- Formal eCRF Approval Modal Overlay -->
   <div
     v-if="isOpen"
     id="approval-handoff-modal"
     class="modal-overlay"
     style="
-      display: flex;
       position: fixed;
       top: 0;
+      bottom: 0;
       left: 0;
       right: 0;
-      bottom: 0;
+      display: flex;
       background: rgba(0, 0, 0, 0.5);
       align-items: center;
       justify-content: center;
@@ -19,31 +20,28 @@
     <div
       class="modal"
       style="
-        background: white;
         border-radius: 8px;
+        background: #ffffff;
         width: 100%;
         max-width: 500px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         overflow: hidden;
-        color: #333;
+        color: #333333;
       "
     >
       <div
         class="modal-header"
         style="
+          font-size: 16px;
           padding: 16px;
           border-bottom: 1px solid #e2e8f0;
           font-weight: 600;
-          font-size: 16px;
           color: #1e293b;
         "
       >
-        eCRF Formal Approval & Production Handoff
+        eCRF Formal Approval &amp; Production Handoff
       </div>
-      <div
-        class="modal-body"
-        style="padding: 16px"
-      >
+      <div class="modal-body" style="padding: 16px">
         <p
           style="
             font-size: 13px;
@@ -103,10 +101,12 @@
               >
                 {{ hasZeroUnresolved ? "✓" : "❌" }}
               </span>
-              <span>No unresolved CRITICAL review comments ({{
-                unresolvedCount
-              }}
-                pending)</span>
+              <span
+                >No unresolved CRITICAL review comments ({{
+                  unresolvedCount
+                }}
+                pending)</span
+              >
             </li>
             <li style="display: flex; align-items: center; gap: 8px">
               <span
@@ -123,10 +123,7 @@
         </div>
 
         <!-- Form fields -->
-        <div
-          class="form-group"
-          style="margin-bottom: 12px"
-        >
+        <div class="form-group" style="margin-bottom: 12px">
           <label
             for="approval-role"
             style="
@@ -151,28 +148,16 @@
               background: white;
             "
           >
-            <option
-              value=""
-              disabled
-            >
-              -- Select Role --
-            </option>
-            <option value="Lead Data Manager">
-              Lead Data Manager
-            </option>
+            <option value="" disabled>-- Select Role --</option>
+            <option value="Lead Data Manager">Lead Data Manager</option>
             <option value="Principal Investigator">
               Principal Investigator
             </option>
-            <option value="Lead Biostatistician">
-              Lead Biostatistician
-            </option>
+            <option value="Lead Biostatistician">Lead Biostatistician</option>
           </select>
         </div>
 
-        <div
-          class="form-group"
-          style="margin-bottom: 12px"
-        >
+        <div class="form-group" style="margin-bottom: 12px">
           <label
             for="approval-password"
             style="
@@ -197,13 +182,10 @@
               border-radius: 4px;
               font-size: 13px;
             "
-          >
+          />
         </div>
 
-        <div
-          class="form-group"
-          style="margin-bottom: 12px"
-        >
+        <div class="form-group" style="margin-bottom: 12px">
           <label
             for="approval-reason"
             style="
@@ -228,9 +210,10 @@
               border-radius: 4px;
               font-size: 13px;
             "
-          >
+          />
         </div>
 
+        <!-- Handoff Error Status Section -->
         <div
           v-if="error"
           id="approval-error-msg"
@@ -241,7 +224,7 @@
             font-weight: 500;
           "
         >
-          {{ error }}
+          {{ props.isOpen ? error : "" }}
         </div>
       </div>
       <div
@@ -285,7 +268,7 @@
           :disabled="!isChecklistComplete"
           @click="confirm"
         >
-          Verify, Sign & Approve
+          Verify, Sign &amp; Approve
         </button>
       </div>
     </div>

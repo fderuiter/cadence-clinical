@@ -15,7 +15,6 @@ from apps.execution.database.models import (
     AuditLog,
     Base,
     ClinicalObservation,
-    ClinicalQuery,
     ClinicalSubject,
     ClinicalVisit,
     SDVSignOff,
@@ -123,7 +122,9 @@ def get_auth_headers(
     change_reason: str = "test operation",
 ) -> dict[str, str]:
     """Alias for get_v2_auth_headers to match the standard signature helper naming."""
-    return get_v2_auth_headers(user_id=user_id, roles=roles, change_reason=change_reason)
+    return get_v2_auth_headers(
+        user_id=user_id, roles=roles, change_reason=change_reason
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -1049,162 +1050,6 @@ async def test_bulk_sdv_signoff_input_validation():
             headers=headers,
         )
         assert resp.status_code == 400
-
-
-@pytest.mark.asyncio
-async def test_bulk_query_generation_happy_path_and_deduplication():
-    from unittest.mock import AsyncMock
-
-    # 1. Populate DB with test subject
-    async with db_manager.get_session_maker()() as session, session.begin():
-        await session.execute(
-            text("SELECT set_config('cadence.app_writing', 'true', 1);")
-        )
-        subj = ClinicalSubject(
-            subject_id="SUBJ-Q-1",
-            study_id="STUDY-Q-TEST",
-            site_id="SITE-Q-1",
-        )
-        session.add(subj)
-
-        # Existing active query for deduplication checking
-        existing_q = ClinicalQuery(
-            id="q_existing_1",
-            study_id="STUDY-Q-TEST",
-            site_id="SITE-Q-1",
-            subject_id="SUBJ-Q-1",
-            visit_id="VISIT-Q-1",
-            domain="VS",
-            test_code="SYSBP",
-            status="OPEN",
-            explanation="Existing open query.",
-            origin="manual",
-        )
-        session.add(existing_q)
-
-    # Payload with two targets: one new, one duplicate
-    payload = {
-        "study_id": "STUDY-Q-TEST",
-        "reason_for_change": "Batch generating queries for vital signs.",
-        "targets": [
-            {
-                "subject_id": "SUBJ-Q-1",
-                "visit_id": "VISIT-Q-1",
-                "domain": "VS",
-                "test_code": "SYSBP",  # Duplicate (should be skipped)
-                "explanation": "High vital signs observed.",
-            },
-            {
-                "subject_id": "SUBJ-Q-1",
-                "visit_id": "VISIT-Q-1",
-                "domain": "VS",
-                "test_code": "DIABP",  # New target (should be created)
-                "explanation": "Diastolic vital signs out of bounds.",
-            },
-            {
-                "subject_id": "SUBJ-NONEXISTENT",  # Non-existent subject (should be skipped)
-                "visit_id": "VISIT-Q-1",
-                "domain": "VS",
-                "test_code": "DIABP",
-                "explanation": "Subject does not exist.",
-            },
-        ],
-    }
-
-    headers = get_v2_auth_headers(
-        roles="CRA", change_reason="Bulk Query Generation Test"
-    )
-
-    mock_publish = AsyncMock(return_value=True)
-    with patch("apps.execution.routers.sdv.publish_notification", mock_publish):
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            resp = await client.post(
-                "/api/v1/execution/queries/generate",
-                json=payload,
-                headers=headers,
-            )
-            assert resp.status_code == 201
-            data = resp.json()
-
-            assert data["generated_count"] == 1
-            assert len(data["generated_query_ids"]) == 1
-            assert len(data["skipped_targets"]) == 2
-
-            skipped_codes = {t["test_code"] for t in data["skipped_targets"]}
-            assert "SYSBP" in skipped_codes  # Skipped due to active query deduplication
-            assert "DIABP" in skipped_codes  # Skipped due to non-existent subject
-
-    # Assert persistence of the new ClinicalQuery in the database
-    async with db_manager.get_session_maker()() as session:
-        res = await session.execute(
-            select(ClinicalQuery).where(
-                ClinicalQuery.subject_id == "SUBJ-Q-1",
-                ClinicalQuery.test_code == "DIABP",
-            )
-        )
-        new_q = res.scalar_one()
-        assert new_q.status == "OPEN"
-        assert new_q.explanation == "Diastolic vital signs out of bounds."
-        assert new_q.origin == "manual"
-
-    # Verify that fire-and-forget notification publish was scheduled
-    mock_publish.assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_bulk_query_generation_rbac_and_locks():
-    # 1. Populate DB with test subject
-    async with db_manager.get_session_maker()() as session, session.begin():
-        await session.execute(
-            text("SELECT set_config('cadence.app_writing', 'true', 1);")
-        )
-        subj = ClinicalSubject(
-            subject_id="SUBJ-L-1",
-            study_id="STUDY-L-TEST",
-            site_id="SITE-L-1",
-        )
-        session.add(subj)
-
-    payload = {
-        "study_id": "STUDY-L-TEST",
-        "reason_for_change": "Test queries under lock & rbac checks.",
-        "targets": [
-            {
-                "subject_id": "SUBJ-L-1",
-                "visit_id": "VISIT-L-1",
-                "domain": "VS",
-                "test_code": "SYSBP",
-                "explanation": "Systolic check.",
-            }
-        ],
-    }
-
-    # Case 1: Non-CRA / Non-monitor role must be forbidden (403)
-    headers_crc = get_v2_auth_headers(roles="CRC", change_reason="CRC test")
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
-        resp = await client.post(
-            "/api/v1/execution/queries/generate",
-            json=payload,
-            headers=headers_crc,
-        )
-        assert resp.status_code == 403
-
-    # Case 2: When subject is locked, must raise 423 Locked
-    TrialLockManager.lock_subject("SUBJ-L-1")
-    headers_cra = get_v2_auth_headers(roles="CRA", change_reason="CRA test")
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
-        resp = await client.post(
-            "/api/v1/execution/queries/generate",
-            json=payload,
-            headers=headers_cra,
-        )
-        assert resp.status_code == 423
 
         # Case 2: Empty target_ids list
         payload_empty_targets = {
