@@ -512,3 +512,60 @@ async def test_convert_lab_unit_db_and_fallback():
 
     finally:
         await db_manager.close()
+
+
+def test_evaluate_lab_value_all_indicators():
+    """Verify that evaluate_lab_value returns the expected lab_indicator values
+    (NORMAL, LOW, HIGH, LOW LOW, HIGH HIGH, None) and lab_out_of_range boolean.
+    """
+    # Create reference range with normal limits [10.0, 20.0] and critical limits [5.0, 25.0]
+    r_range = create_mock_range(
+        low_bound=10.0,
+        high_bound=20.0,
+        critical_low=5.0,
+        critical_high=25.0,
+    )
+
+    # 1. Test None value (should be None, False)
+    ind, out_of_range, bounds = evaluate_lab_value(None, r_range)
+    assert ind is None
+    assert out_of_range is False
+    assert json.loads(bounds) == {"low": 10.0, "high": 20.0}
+
+    # 2. Test None reference_range (should be None, False)
+    ind, out_of_range, bounds = evaluate_lab_value(15.0, None)
+    assert ind is None
+    assert out_of_range is False
+    assert bounds is None
+
+    # 3. Test NORMAL (inclusive: low_bound <= value <= high_bound)
+    for v in [10.0, 15.0, 20.0]:
+        ind, out_of_range, _ = evaluate_lab_value(v, r_range)
+        assert ind == "NORMAL"
+        assert out_of_range is False
+
+    # 4. Test LOW (low_bound_val is present and value < low_bound_val, and not LOW LOW)
+    # critical_low is 5.0, so 5.0 <= value < 10.0
+    for v in [5.0, 7.5, 9.9]:
+        ind, out_of_range, _ = evaluate_lab_value(v, r_range)
+        assert ind == "LOW"
+        assert out_of_range is True
+
+    # 5. Test HIGH (high_bound_val is present and value > high_bound_val, and not HIGH HIGH)
+    # critical_high is 25.0, so 20.0 < value <= 25.0
+    for v in [20.1, 22.5, 25.0]:
+        ind, out_of_range, _ = evaluate_lab_value(v, r_range)
+        assert ind == "HIGH"
+        assert out_of_range is True
+
+    # 6. Test LOW LOW (exclusive: value < critical_low)
+    for v in [4.9, 2.0]:
+        ind, out_of_range, _ = evaluate_lab_value(v, r_range)
+        assert ind == "LOW LOW"
+        assert out_of_range is True
+
+    # 7. Test HIGH HIGH (exclusive: value > critical_high)
+    for v in [25.1, 30.0]:
+        ind, out_of_range, _ = evaluate_lab_value(v, r_range)
+        assert ind == "HIGH HIGH"
+        assert out_of_range is True
