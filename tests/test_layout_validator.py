@@ -272,6 +272,8 @@ async def test_layout_validation_integration():
         await asyncio.sleep(0.1)
 
     assert job is not None
+    if job["status"] == "FAILED":
+        print("JOB ERROR:", job.get("error_message"))
     assert job["status"] == "COMPLETED"
     assert job["openrosa_payload"] is not None
 
