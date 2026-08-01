@@ -246,7 +246,6 @@ async def process_translation(
                         session.add(job)
 
                     if True:
-
                         # Requirement 6: Validate input structures against schema translation rules
                         if not payload or not isinstance(payload, dict):
                             raise ValueError("Payload must be a dictionary.")
@@ -817,11 +816,19 @@ async def process_translation(
                                 save_accessibility_audit_log,
                             )
 
-                            active_violations = violations if "violations" in locals() else []
+                            active_violations = (
+                                violations if "violations" in locals() else []
+                            )
                             active_passes = passes if "passes" in locals() else []
-                            active_incomplete = incomplete if "incomplete" in locals() else []
-                            active_inapplicable = inapplicable if "inapplicable" in locals() else []
-                            active_layout_errors = layout_errors if "layout_errors" in locals() else []
+                            active_incomplete = (
+                                incomplete if "incomplete" in locals() else []
+                            )
+                            active_inapplicable = (
+                                inapplicable if "inapplicable" in locals() else []
+                            )
+                            active_layout_errors = (
+                                layout_errors if "layout_errors" in locals() else []
+                            )
                             if not active_layout_errors:
                                 active_layout_errors = [str(e)]
 
