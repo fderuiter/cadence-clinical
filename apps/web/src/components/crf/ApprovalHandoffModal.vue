@@ -45,10 +45,7 @@
       >
         eCRF Formal Approval &amp; Production Handoff
       </div>
-      <div
-        class="modal-body"
-        style="padding: 16px"
-      >
+      <div class="modal-body" style="padding: 16px">
         <p
           style="
             font-size: 13px;
@@ -108,10 +105,12 @@
               >
                 {{ hasZeroUnresolved ? "✓" : "❌" }}
               </span>
-              <span>No unresolved CRITICAL review comments ({{
-                unresolvedCount
-              }}
-                pending)</span>
+              <span
+                >No unresolved CRITICAL review comments ({{
+                  unresolvedCount
+                }}
+                pending)</span
+              >
             </li>
             <li style="display: flex; align-items: center; gap: 8px">
               <span
@@ -128,10 +127,7 @@
         </div>
 
         <!-- Form fields -->
-        <div
-          class="form-group"
-          style="margin-bottom: 12px"
-        >
+        <div class="form-group" style="margin-bottom: 12px">
           <label
             for="approval-role"
             style="
@@ -156,28 +152,16 @@
               background: white;
             "
           >
-            <option
-              value=""
-              disabled
-            >
-              -- Select Role --
-            </option>
-            <option value="Lead Data Manager">
-              Lead Data Manager
-            </option>
+            <option value="" disabled>-- Select Role --</option>
+            <option value="Lead Data Manager">Lead Data Manager</option>
             <option value="Principal Investigator">
               Principal Investigator
             </option>
-            <option value="Lead Biostatistician">
-              Lead Biostatistician
-            </option>
+            <option value="Lead Biostatistician">Lead Biostatistician</option>
           </select>
         </div>
 
-        <div
-          class="form-group"
-          style="margin-bottom: 12px"
-        >
+        <div class="form-group" style="margin-bottom: 12px">
           <label
             for="approval-password"
             style="
@@ -202,13 +186,10 @@
               border-radius: 4px;
               font-size: 13px;
             "
-          >
+          />
         </div>
 
-        <div
-          class="form-group"
-          style="margin-bottom: 12px"
-        >
+        <div class="form-group" style="margin-bottom: 12px">
           <label
             for="approval-reason"
             style="
@@ -233,7 +214,7 @@
               border-radius: 4px;
               font-size: 13px;
             "
-          >
+          />
         </div>
 
         <!-- Handoff Error Status Section -->

@@ -1,8 +1,5 @@
 <template>
-  <div
-    id="section-econsent-authoring"
-    class="dashboard-section active"
-  >
+  <div id="section-econsent-authoring" class="dashboard-section active">
     <div class="section-header">
       <h2>eConsent Template Authoring</h2>
       <p>
@@ -71,7 +68,8 @@
             v-if="loading"
             style="font-size: 0.85rem; color: #64748b"
             role="status"
-          >Loading...</span>
+            >Loading...</span
+          >
         </div>
 
         <!-- Connection Error Banner if any -->
@@ -227,11 +225,7 @@
         class="card"
         style="display: flex; flex-direction: column"
       >
-        <div
-          id="editor-title"
-          class="card-title"
-          style="margin-bottom: 16px"
-        >
+        <div id="editor-title" class="card-title" style="margin-bottom: 16px">
           {{ isEdit ? "Edit Consent Template" : "Compose Consent Template" }}
         </div>
 
@@ -291,7 +285,8 @@
                     font-weight: 600;
                     font-size: 0.85rem;
                   "
-                >Study ID</label>
+                  >Study ID</label
+                >
                 <input
                   id="input-study-id"
                   v-model="editorForm.study_id"
@@ -304,7 +299,7 @@
                     border: 1px solid var(--border);
                     border-radius: 6px;
                   "
-                >
+                />
               </div>
 
               <div class="form-group">
@@ -316,7 +311,8 @@
                     font-weight: 600;
                     font-size: 0.85rem;
                   "
-                >Template Name</label>
+                  >Template Name</label
+                >
                 <input
                   id="input-template-name"
                   v-model="editorForm.template_name"
@@ -329,7 +325,7 @@
                     border: 1px solid var(--border);
                     border-radius: 6px;
                   "
-                >
+                />
               </div>
 
               <div class="form-group">
@@ -341,7 +337,8 @@
                     font-weight: 600;
                     font-size: 0.85rem;
                   "
-                >Protocol Version</label>
+                  >Protocol Version</label
+                >
                 <input
                   id="input-protocol-version"
                   v-model="editorForm.protocol_version"
@@ -354,7 +351,7 @@
                     border: 1px solid var(--border);
                     border-radius: 6px;
                   "
-                >
+                />
               </div>
 
               <div
@@ -366,11 +363,12 @@
                   v-model="editorForm.requires_reconsent"
                   type="checkbox"
                   style="margin-right: 8px"
-                >
+                />
                 <label
                   for="checkbox-reconsent"
                   style="font-weight: 600; font-size: 0.85rem; cursor: pointer"
-                >Requires Re-consent</label>
+                  >Requires Re-consent</label
+                >
               </div>
             </div>
           </fieldset>
@@ -410,7 +408,8 @@
                     width: 24px;
                     text-align: center;
                   "
-                >{{ index + 1 }}.</span>
+                  >{{ index + 1 }}.</span
+                >
                 <input
                   v-model="editorForm.clauses[index]"
                   type="text"
@@ -422,7 +421,7 @@
                     border: 1px solid var(--border);
                     border-radius: 4px;
                   "
-                >
+                />
                 <button
                   type="button"
                   class="btn btn-move-up"
@@ -532,27 +531,27 @@
                   <label
                     :for="'step-question-' + index"
                     style="font-size: 0.75rem"
-                  >Verification prompt</label>
+                    >Verification prompt</label
+                  >
                   <input
                     :id="'step-question-' + index"
                     v-model="step.question"
                     type="text"
                     placeholder="Understood and agree to risk factors?"
                     style="width: 100%; padding: 4px 8px; font-size: 0.8rem"
-                  >
+                  />
                 </div>
                 <div v-else-if="step.type === 'signature_placeholder'">
-                  <label
-                    :for="'step-role-' + index"
-                    style="font-size: 0.75rem"
-                  >Required Role</label>
+                  <label :for="'step-role-' + index" style="font-size: 0.75rem"
+                    >Required Role</label
+                  >
                   <input
                     :id="'step-role-' + index"
                     v-model="step.role"
                     type="text"
                     placeholder="subject"
                     style="width: 100%; padding: 4px 8px; font-size: 0.8rem"
-                  >
+                  />
                 </div>
               </div>
             </div>
@@ -608,7 +607,9 @@
                   margin-bottom: 8px;
                 "
               >
-                <strong style="color: var(--primary); font-size: 0.85rem">Hydrated Clauses Preview:</strong>
+                <strong style="color: var(--primary); font-size: 0.85rem"
+                  >Hydrated Clauses Preview:</strong
+                >
                 <button
                   type="button"
                   class="btn btn-preview"

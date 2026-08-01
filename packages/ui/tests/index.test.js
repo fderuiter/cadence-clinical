@@ -249,7 +249,11 @@ describe("Schedule of Activities Matrix Components", () => {
 
   describe("createSoaBuilderMatrix", () => {
     it("renders empty encounters warning banner", () => {
-      const html = createSoaBuilderMatrix({ epochs: [], encounters: [], rows: [] });
+      const html = createSoaBuilderMatrix({
+        epochs: [],
+        encounters: [],
+        rows: [],
+      });
       expect(html).toContain("No encounters defined for SoA matrix.");
     });
 
@@ -260,7 +264,9 @@ describe("Schedule of Activities Matrix Components", () => {
 
     it("renders the correct hierarchical table structure", () => {
       const html = createSoaBuilderMatrix(soaData);
-      expect(html).toContain('class="clinical-visit-matrix clinical-soa-matrix"');
+      expect(html).toContain(
+        'class="clinical-visit-matrix clinical-soa-matrix"'
+      );
       expect(html).toContain('colspan="2"');
       expect(html).toContain('class="grouped-header arm-header"');
       expect(html).toContain("Active Arm");
@@ -276,15 +282,15 @@ describe("Schedule of Activities Matrix Components", () => {
   describe("createClinicalVisitMatrix", () => {
     it("delegates to createSoaBuilderMatrix when rich USDM/SoA data is passed", () => {
       const html = createClinicalVisitMatrix(soaData);
-      expect(html).toContain('class="clinical-visit-matrix clinical-soa-matrix"');
+      expect(html).toContain(
+        'class="clinical-visit-matrix clinical-soa-matrix"'
+      );
       expect(html).toContain("Active Arm");
     });
 
     it("renders simpler backwards-compatible 2D matrix for flat visits/forms arrays", () => {
       const visits = ["V1", "V2"];
-      const forms = [
-        { name: "DM", statuses: ["Complete", "Pending"] },
-      ];
+      const forms = [{ name: "DM", statuses: ["Complete", "Pending"] }];
       const html = createClinicalVisitMatrix(visits, forms);
       expect(html).toContain('<table class="clinical-visit-matrix">');
       expect(html).toContain("Form / Procedure");

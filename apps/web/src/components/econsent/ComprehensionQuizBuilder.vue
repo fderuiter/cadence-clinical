@@ -13,7 +13,7 @@
             max="100"
             step="5"
             class="form-control threshold-input"
-          >
+          />
           <span class="percentage-symbol">%</span>
         </div>
       </div>
@@ -21,10 +21,7 @@
 
     <!-- Question List -->
     <div class="questions-list">
-      <div
-        v-if="econsentStore.quizQuestions.length === 0"
-        class="no-questions"
-      >
+      <div v-if="econsentStore.quizQuestions.length === 0" class="no-questions">
         <p>
           No comprehension check questions added yet. Click "Add Question" below
           to draft one.
@@ -57,13 +54,15 @@
             placeholder="e.g. What is the main benefit of participating?"
             class="form-control"
             @input="updateTranslation(q)"
-          >
+          />
         </div>
 
         <!-- Choices/Options Builder -->
         <div class="options-builder">
-          <label>Answer Choices (Select the radio button for the correct
-            choice):</label>
+          <label
+            >Answer Choices (Select the radio button for the correct
+            choice):</label
+          >
           <div
             v-for="(opt, optIndex) in q.options"
             :key="optIndex"
@@ -75,14 +74,14 @@
               :checked="q.correctAnswerIndex === optIndex"
               title="Mark as correct answer"
               @change="q.correctAnswerIndex = optIndex"
-            >
+            />
             <input
               v-model="q.options[optIndex]"
               type="text"
               :placeholder="'Option ' + (optIndex + 1)"
               class="form-control option-input"
               @input="updateTranslation(q)"
-            >
+            />
             <button
               type="button"
               class="btn-remove-opt"
@@ -112,7 +111,7 @@
             placeholder="e.g. Hint: Refer to Section 2 of the consent document."
             class="form-control"
             @input="updateTranslation(q)"
-          >
+          />
         </div>
       </div>
     </div>

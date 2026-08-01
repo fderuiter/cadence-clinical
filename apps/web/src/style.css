@@ -301,7 +301,7 @@ main {
   background-color: var(--primary-light);
   color: white;
   font-weight: 800;
-  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.1); /* Subtle visual shadow */
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.1); /* Subtle visual shadow */
 }
 
 .clinical-soa-matrix th.epoch-header {

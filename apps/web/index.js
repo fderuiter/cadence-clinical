@@ -104,7 +104,7 @@ export function renderMdr(container, soaData, onUpdate = null) {
           <input id="vanilla-epoch-name" type="text" placeholder="Epoch Name" style="padding: 6px; flex: 2;" />
           <select id="vanilla-epoch-arm" style="padding: 6px; flex: 1;">
             <option value="">-- Shared / None --</option>
-            ${(soaData?.arms || []).map(arm => `<option value="${arm.arm_id}">${arm.arm_name}</option>`).join('')}
+            ${(soaData?.arms || []).map((arm) => `<option value="${arm.arm_id}">${arm.arm_name}</option>`).join("")}
           </select>
           <button id="vanilla-btn-add-epoch" class="btn btn-primary" style="padding: 6px 12px;">Add Epoch</button>
         </div>
@@ -118,7 +118,7 @@ export function renderMdr(container, soaData, onUpdate = null) {
           <input id="vanilla-visit-name" type="text" placeholder="Visit Name" style="padding: 6px; flex: 2;" />
           <select id="vanilla-visit-epoch" style="padding: 6px; flex: 1;">
             <option value="">-- Select Epoch --</option>
-            ${(soaData?.epochs || []).map(ep => `<option value="${ep.epoch_id}">${ep.epoch_name}</option>`).join('')}
+            ${(soaData?.epochs || []).map((ep) => `<option value="${ep.epoch_id}">${ep.epoch_name}</option>`).join("")}
           </select>
           <button id="vanilla-btn-add-visit" class="btn btn-primary" style="padding: 6px 12px;">Add Visit</button>
         </div>
@@ -140,11 +140,11 @@ export function renderMdr(container, soaData, onUpdate = null) {
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
           <select id="vanilla-link-proc" style="padding: 6px; flex: 1; min-width: 150px;">
             <option value="">-- Select Procedure --</option>
-            ${(soaData?.rows || []).map(row => `<option value="${row.activity_id}">${row.activity_name}</option>`).join('')}
+            ${(soaData?.rows || []).map((row) => `<option value="${row.activity_id}">${row.activity_name}</option>`).join("")}
           </select>
           <select id="vanilla-link-visit" style="padding: 6px; flex: 1; min-width: 150px;">
             <option value="">-- Select Visit --</option>
-            ${(soaData?.encounters || []).map(enc => `<option value="${enc.encounter_id}">${enc.encounter_name}</option>`).join('')}
+            ${(soaData?.encounters || []).map((enc) => `<option value="${enc.encounter_id}">${enc.encounter_name}</option>`).join("")}
           </select>
           <input id="vanilla-link-timing" type="text" placeholder="Timing (e.g. Conditional)" style="padding: 6px; flex: 2; min-width: 150px;" />
           <button id="vanilla-btn-set-link" class="btn btn-primary" style="padding: 6px 12px;">Apply</button>
@@ -171,7 +171,9 @@ export function renderMdr(container, soaData, onUpdate = null) {
   if (addArmBtn) {
     addArmBtn.addEventListener("click", () => {
       const armId = container.querySelector("#vanilla-arm-id")?.value?.trim();
-      const armName = container.querySelector("#vanilla-arm-name")?.value?.trim();
+      const armName = container
+        .querySelector("#vanilla-arm-name")
+        ?.value?.trim();
       if (!armId || !armName) {
         alert("Please enter Arm ID and Name");
         return;
@@ -187,8 +189,12 @@ export function renderMdr(container, soaData, onUpdate = null) {
   const addEpochBtn = container.querySelector("#vanilla-btn-add-epoch");
   if (addEpochBtn) {
     addEpochBtn.addEventListener("click", () => {
-      const epochId = container.querySelector("#vanilla-epoch-id")?.value?.trim();
-      const epochName = container.querySelector("#vanilla-epoch-name")?.value?.trim();
+      const epochId = container
+        .querySelector("#vanilla-epoch-id")
+        ?.value?.trim();
+      const epochName = container
+        .querySelector("#vanilla-epoch-name")
+        ?.value?.trim();
       const armId = container.querySelector("#vanilla-epoch-arm")?.value;
       if (!epochId || !epochName) {
         alert("Please enter Epoch ID and Name");
@@ -210,8 +216,12 @@ export function renderMdr(container, soaData, onUpdate = null) {
   const addVisitBtn = container.querySelector("#vanilla-btn-add-visit");
   if (addVisitBtn) {
     addVisitBtn.addEventListener("click", () => {
-      const visitId = container.querySelector("#vanilla-visit-id")?.value?.trim();
-      const visitName = container.querySelector("#vanilla-visit-name")?.value?.trim();
+      const visitId = container
+        .querySelector("#vanilla-visit-id")
+        ?.value?.trim();
+      const visitName = container
+        .querySelector("#vanilla-visit-name")
+        ?.value?.trim();
       const epochId = container.querySelector("#vanilla-visit-epoch")?.value;
       if (!visitId || !visitName || !epochId) {
         alert("Please populate all fields");
@@ -234,7 +244,9 @@ export function renderMdr(container, soaData, onUpdate = null) {
   if (addProcBtn) {
     addProcBtn.addEventListener("click", () => {
       const procId = container.querySelector("#vanilla-proc-id")?.value?.trim();
-      const procName = container.querySelector("#vanilla-proc-name")?.value?.trim();
+      const procName = container
+        .querySelector("#vanilla-proc-name")
+        ?.value?.trim();
       if (!procId || !procName) {
         alert("Please enter Procedure ID and Name");
         return;
@@ -244,7 +256,7 @@ export function renderMdr(container, soaData, onUpdate = null) {
       updatedData.rows.push({
         activity_id: procId,
         activity_name: procName,
-        cells: (updatedData.encounters || []).map(enc => ({
+        cells: (updatedData.encounters || []).map((enc) => ({
           encounter_id: enc.encounter_id,
           is_applicable: false,
         })),
@@ -259,16 +271,18 @@ export function renderMdr(container, soaData, onUpdate = null) {
     setLinkBtn.addEventListener("click", () => {
       const procId = container.querySelector("#vanilla-link-proc")?.value;
       const visitId = container.querySelector("#vanilla-link-visit")?.value;
-      const timing = container.querySelector("#vanilla-link-timing")?.value?.trim();
+      const timing = container
+        .querySelector("#vanilla-link-timing")
+        ?.value?.trim();
       if (!procId || !visitId) {
         alert("Select both a Procedure and a Visit");
         return;
       }
       const updatedData = { ...soaData };
-      const row = updatedData.rows?.find(r => r.activity_id === procId);
+      const row = updatedData.rows?.find((r) => r.activity_id === procId);
       if (row) {
         if (!row.cells) row.cells = [];
-        let cell = row.cells.find(c => c.encounter_id === visitId);
+        let cell = row.cells.find((c) => c.encounter_id === visitId);
         if (!cell) {
           cell = { encounter_id: visitId, is_applicable: true };
           row.cells.push(cell);
@@ -290,10 +304,10 @@ export function renderMdr(container, soaData, onUpdate = null) {
         return;
       }
       const updatedData = { ...soaData };
-      const row = updatedData.rows?.find(r => r.activity_id === procId);
+      const row = updatedData.rows?.find((r) => r.activity_id === procId);
       if (row) {
         if (!row.cells) row.cells = [];
-        let cell = row.cells.find(c => c.encounter_id === visitId);
+        let cell = row.cells.find((c) => c.encounter_id === visitId);
         if (cell) {
           cell.is_applicable = false;
           cell.details = undefined;

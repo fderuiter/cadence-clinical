@@ -39,7 +39,7 @@ export const soaClient = {
       `/api/v1/studies/${studyId}/versions/${versionId}/soa-projection`,
       {
         changeReason,
-        headers: { ...signedHeaders }
+        headers: { ...signedHeaders },
       }
     );
   },
