@@ -1,5 +1,8 @@
 <template>
-  <div id="section-audit" class="dashboard-section active">
+  <div
+    id="section-audit"
+    class="dashboard-section active"
+  >
     <!-- View Header -->
     <div class="section-header">
       <h2>Regulatory Auditor &amp; Inspection Portal</h2>
@@ -64,10 +67,8 @@
               class="spinner"
               style="display: inline-block; margin-right: 8px"
             />
-            <span
-              >Executing cryptographic seal validations across audit ledger
-              logs...</span
-            >
+            <span>Executing cryptographic seal validations across audit ledger
+              logs...</span>
           </div>
 
           <div
@@ -82,15 +83,13 @@
             <div style="display: flex; align-items: center; gap: 8px">
               <span style="font-size: 20px">🟢</span>
               <div>
-                <strong style="color: #28a745; font-size: 14px"
-                  >INTEGRITY VERIFIED</strong
-                >
+                <strong style="color: #28a745; font-size: 14px">INTEGRITY VERIFIED</strong>
                 <p
                   style="font-size: 12px; margin: 4px 0 0 0; color: var(--text)"
                 >
                   {{
                     integrity.message ||
-                    "All sequential block hashes, Merkle roots, and historical data logs are intact and structurally unbroken."
+                      "All sequential block hashes, Merkle roots, and historical data logs are intact and structurally unbroken."
                   }}
                 </p>
               </div>
@@ -109,15 +108,13 @@
             <div style="display: flex; align-items: center; gap: 8px">
               <span style="font-size: 20px">🔴</span>
               <div>
-                <strong style="color: var(--error); font-size: 14px"
-                  >INTEGRITY BREACH / TAMPERED</strong
-                >
+                <strong style="color: var(--error); font-size: 14px">INTEGRITY BREACH / TAMPERED</strong>
                 <p
                   style="font-size: 12px; margin: 4px 0 0 0; color: var(--text)"
                 >
                   {{
                     integrity.message ||
-                    "A discrepancy was detected in the cryptographic ledger chain. Trial lock sequence has been triggered."
+                      "A discrepancy was detected in the cryptographic ledger chain. Trial lock sequence has been triggered."
                   }}
                 </p>
               </div>
@@ -160,7 +157,10 @@
             Sections.
           </p>
           <div style="display: flex; flex-direction: column; gap: 12px">
-            <div class="form-group" style="margin-bottom: 0">
+            <div
+              class="form-group"
+              style="margin-bottom: 0"
+            >
               <label
                 style="
                   font-weight: 600;
@@ -168,8 +168,7 @@
                   margin-bottom: 4px;
                   display: block;
                 "
-                >Study Reference ID</label
-              >
+              >Study Reference ID</label>
               <input
                 v-model="binderStudyId"
                 type="text"
@@ -182,7 +181,7 @@
                   background: var(--bg);
                   color: var(--text);
                 "
-              />
+              >
             </div>
             <div
               style="
@@ -197,13 +196,12 @@
                 v-model="binderIncludeHistory"
                 type="checkbox"
                 style="cursor: pointer"
-              />
+              >
               <label
                 for="chk-history"
                 style="font-size: 13px; cursor: pointer; user-select: none"
-                >Include complete document version histories (audit
-                files)</label
-              >
+              >Include complete document version histories (audit
+                files)</label>
             </div>
             <button
               class="btn btn-primary"
@@ -222,7 +220,10 @@
       </div>
 
       <!-- Card 3: Ingest / Upload TMF Document -->
-      <div class="card card-upload-document" style="grid-column: span 2">
+      <div
+        class="card card-upload-document"
+        style="grid-column: span 2"
+      >
         <div class="card-title">
           <span>Ingest New TMF Document</span>
         </div>
@@ -238,7 +239,10 @@
             secure study repository.
           </p>
           <div style="display: flex; flex-direction: column; gap: 12px">
-            <div class="form-group" style="margin-bottom: 0">
+            <div
+              class="form-group"
+              style="margin-bottom: 0"
+            >
               <label
                 style="
                   font-weight: 600;
@@ -246,8 +250,7 @@
                   margin-bottom: 4px;
                   display: block;
                 "
-                >Select File</label
-              >
+              >Select File</label>
               <input
                 id="tmf-file-input"
                 type="file"
@@ -260,10 +263,16 @@
                   color: var(--text);
                 "
                 @change="handleTmfFileSelect"
-              />
+              >
             </div>
-            <div class="grid-2" style="gap: 16px">
-              <div class="form-group" style="margin-bottom: 0">
+            <div
+              class="grid-2"
+              style="gap: 16px"
+            >
+              <div
+                class="form-group"
+                style="margin-bottom: 0"
+              >
                 <label
                   style="
                     font-weight: 600;
@@ -271,8 +280,7 @@
                     margin-bottom: 4px;
                     display: block;
                   "
-                  >TMF Zone</label
-                >
+                >TMF Zone</label>
                 <select
                   id="tmf-zone-select"
                   v-model="uploadParams.zone"
@@ -296,7 +304,10 @@
                   </option>
                 </select>
               </div>
-              <div class="form-group" style="margin-bottom: 0">
+              <div
+                class="form-group"
+                style="margin-bottom: 0"
+              >
                 <label
                   style="
                     font-weight: 600;
@@ -304,8 +315,7 @@
                     margin-bottom: 4px;
                     display: block;
                   "
-                  >TMF Section</label
-                >
+                >TMF Section</label>
                 <input
                   id="tmf-section-input"
                   v-model="uploadParams.section"
@@ -319,7 +329,7 @@
                     background: var(--bg);
                     color: var(--text);
                   "
-                />
+                >
               </div>
             </div>
             <button
@@ -336,7 +346,10 @@
     </div>
 
     <!-- Card 3: eTMF Document Directory & Watermarked Viewer -->
-    <div class="card" style="margin-top: 20px">
+    <div
+      class="card"
+      style="margin-top: 20px"
+    >
       <div class="card-title">
         <span>eTMF Document Directory &amp; Viewer</span>
         <button
@@ -370,23 +383,49 @@
                 text-align: left;
               "
             >
-              <th style="padding: 10px">ID</th>
-              <th style="padding: 10px">Filename</th>
-              <th style="padding: 10px">TMF Zone/Sec</th>
-              <th style="padding: 10px">Artifact Type</th>
-              <th style="padding: 10px">Status</th>
-              <th style="padding: 10px">Ver.</th>
-              <th style="padding: 10px; text-align: right">Actions</th>
+              <th style="padding: 10px">
+                ID
+              </th>
+              <th style="padding: 10px">
+                Filename
+              </th>
+              <th style="padding: 10px">
+                TMF Zone/Sec
+              </th>
+              <th style="padding: 10px">
+                Artifact Type
+              </th>
+              <th style="padding: 10px">
+                Status
+              </th>
+              <th style="padding: 10px">
+                Ver.
+              </th>
+              <th style="padding: 10px; text-align: right">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
-            <tr v-if="documentsLoading" style="text-align: center">
-              <td colspan="7" style="padding: 20px; color: var(--text-muted)">
+            <tr
+              v-if="documentsLoading"
+              style="text-align: center"
+            >
+              <td
+                colspan="7"
+                style="padding: 20px; color: var(--text-muted)"
+              >
                 Retrieving active eTMF document registry...
               </td>
             </tr>
-            <tr v-else-if="documents.length === 0" style="text-align: center">
-              <td colspan="7" style="padding: 20px; color: var(--text-muted)">
+            <tr
+              v-else-if="documents.length === 0"
+              style="text-align: center"
+            >
+              <td
+                colspan="7"
+                style="padding: 20px; color: var(--text-muted)"
+              >
                 No documents found in the eTMF registry. Ingest some documents
                 from design or execution views!
               </td>
@@ -432,7 +471,9 @@
                   {{ doc.status }}
                 </span>
               </td>
-              <td style="padding: 10px">v{{ doc.version_index }}</td>
+              <td style="padding: 10px">
+                v{{ doc.version_index }}
+              </td>
               <td
                 style="
                   padding: 10px;
@@ -494,12 +535,11 @@
         >
           <div style="display: flex; align-items: center; gap: 8px">
             <span style="font-size: 16px">🔍</span>
-            <span style="font-weight: 600"
-              >Secure Preview: {{ previewDoc.filename }}</span
-            >
-            <span class="badge status-approved" style="font-size: 10px"
-              >Watermarked Preview active</span
-            >
+            <span style="font-weight: 600">Secure Preview: {{ previewDoc.filename }}</span>
+            <span
+              class="badge status-approved"
+              style="font-size: 10px"
+            >Watermarked Preview active</span>
           </div>
           <button
             class="btn btn-secondary btn-close-preview"
@@ -550,7 +590,7 @@
               position: relative;
               z-index: 1;
             "
-            >{{ previewContent }}</pre>
+          >{{ previewContent }}</pre>
         </div>
 
         <!-- Signature Manifestation Details -->
@@ -632,19 +672,18 @@
             background: var(--bg);
           "
         >
-          <span
-            >Audited view log added under user ID:
-            <strong>{{ currentUserId }}</strong></span
-          >
-          <span
-            >Date/Time: <strong>{{ new Date().toUTCString() }}</strong></span
-          >
+          <span>Audited view log added under user ID:
+            <strong>{{ currentUserId }}</strong></span>
+          <span>Date/Time: <strong>{{ new Date().toUTCString() }}</strong></span>
         </div>
       </div>
     </div>
 
     <!-- Card 4: Immutable Regulatory eTMF Audit Trail Logs -->
-    <div class="card" style="margin-top: 20px">
+    <div
+      class="card"
+      style="margin-top: 20px"
+    >
       <div class="card-title">
         <span>Immutable eTMF Audit Ledger Trail</span>
         <div style="display: flex; gap: 8px">
@@ -691,8 +730,7 @@
               margin-bottom: 2px;
               display: block;
             "
-            >Actor ID</label
-          >
+          >Actor ID</label>
           <input
             v-model="filters.user_id"
             type="text"
@@ -707,7 +745,7 @@
               background: var(--card-bg);
               color: var(--text);
             "
-          />
+          >
         </div>
         <div
           class="form-group"
@@ -720,8 +758,7 @@
               margin-bottom: 2px;
               display: block;
             "
-            >Action Type</label
-          >
+          >Action Type</label>
           <select
             v-model="filters.action"
             class="filter-action"
@@ -735,18 +772,36 @@
               color: var(--text);
             "
           >
-            <option value="">All Actions</option>
-            <option value="INGEST">INGEST (Ingest)</option>
-            <option value="VIEW">VIEW (View Metadata)</option>
-            <option value="DOWNLOAD">DOWNLOAD (Standard Download)</option>
+            <option value="">
+              All Actions
+            </option>
+            <option value="INGEST">
+              INGEST (Ingest)
+            </option>
+            <option value="VIEW">
+              VIEW (View Metadata)
+            </option>
+            <option value="DOWNLOAD">
+              DOWNLOAD (Standard Download)
+            </option>
             <option value="WATERMARKED_DOWNLOAD">
               WATERMARKED_DOWNLOAD (Auditor Download)
             </option>
-            <option value="LIST">LIST (Directory List)</option>
-            <option value="AUDIT_VIEW">AUDIT_VIEW (Audit Trail Read)</option>
-            <option value="QC_TRANSITION">QC_TRANSITION (QC Lifecycle)</option>
-            <option value="BINDER_EXPORT">BINDER_EXPORT (Binder Zip)</option>
-            <option value="COMPLETENESS">COMPLETENESS (EDL Metrics)</option>
+            <option value="LIST">
+              LIST (Directory List)
+            </option>
+            <option value="AUDIT_VIEW">
+              AUDIT_VIEW (Audit Trail Read)
+            </option>
+            <option value="QC_TRANSITION">
+              QC_TRANSITION (QC Lifecycle)
+            </option>
+            <option value="BINDER_EXPORT">
+              BINDER_EXPORT (Binder Zip)
+            </option>
+            <option value="COMPLETENESS">
+              COMPLETENESS (EDL Metrics)
+            </option>
           </select>
         </div>
         <div
@@ -760,8 +815,7 @@
               margin-bottom: 2px;
               display: block;
             "
-            >Document ID</label
-          >
+          >Document ID</label>
           <input
             v-model="filters.document_id"
             type="text"
@@ -776,7 +830,7 @@
               background: var(--card-bg);
               color: var(--text);
             "
-          />
+          >
         </div>
         <div
           style="
@@ -819,21 +873,43 @@
                 text-align: left;
               "
             >
-              <th style="padding: 10px; width: 180px">UTC Timestamp</th>
-              <th style="padding: 10px; width: 110px">Actor ID</th>
-              <th style="padding: 10px; width: 110px">Actor Role</th>
-              <th style="padding: 10px; width: 160px">Action Type</th>
-              <th style="padding: 10px">Operation Details</th>
+              <th style="padding: 10px; width: 180px">
+                UTC Timestamp
+              </th>
+              <th style="padding: 10px; width: 110px">
+                Actor ID
+              </th>
+              <th style="padding: 10px; width: 110px">
+                Actor Role
+              </th>
+              <th style="padding: 10px; width: 160px">
+                Action Type
+              </th>
+              <th style="padding: 10px">
+                Operation Details
+              </th>
             </tr>
           </thead>
           <tbody>
-            <tr v-if="auditLoading" style="text-align: center">
-              <td colspan="5" style="padding: 20px; color: var(--text-muted)">
+            <tr
+              v-if="auditLoading"
+              style="text-align: center"
+            >
+              <td
+                colspan="5"
+                style="padding: 20px; color: var(--text-muted)"
+              >
                 Retrieving chronological ledger events...
               </td>
             </tr>
-            <tr v-else-if="auditLogs.length === 0" style="text-align: center">
-              <td colspan="5" style="padding: 20px; color: var(--text-muted)">
+            <tr
+              v-else-if="auditLogs.length === 0"
+              style="text-align: center"
+            >
+              <td
+                colspan="5"
+                style="padding: 20px; color: var(--text-muted)"
+              >
                 No audit trail logs match the specified criteria.
               </td>
             </tr>
@@ -923,7 +999,10 @@
     </div>
 
     <!-- Card 5: eTMF Completeness Tracking Dashboard -->
-    <div class="card" style="margin-top: 20px">
+    <div
+      class="card"
+      style="margin-top: 20px"
+    >
       <div class="card-title">
         <span>eTMF Completeness Tracking &amp; Verification</span>
         <button
@@ -968,8 +1047,7 @@
               margin-bottom: 2px;
               display: block;
             "
-            >Study ID</label
-          >
+          >Study ID</label>
           <input
             v-model="completenessParams.study_id"
             type="text"
@@ -984,7 +1062,7 @@
               background: var(--card-bg);
               color: var(--text);
             "
-          />
+          >
         </div>
         <div
           class="form-group"
@@ -997,8 +1075,7 @@
               margin-bottom: 2px;
               display: block;
             "
-            >Milestone</label
-          >
+          >Milestone</label>
           <select
             v-model="completenessParams.milestone"
             class="completeness-milestone"
@@ -1012,9 +1089,15 @@
               color: var(--text);
             "
           >
-            <option value="INITIATION">INITIATION (Study Start)</option>
-            <option value="CONDUCT">CONDUCT (Data Collection)</option>
-            <option value="CLOSEOUT">CLOSEOUT (Study Closed/Lock)</option>
+            <option value="INITIATION">
+              INITIATION (Study Start)
+            </option>
+            <option value="CONDUCT">
+              CONDUCT (Data Collection)
+            </option>
+            <option value="CLOSEOUT">
+              CLOSEOUT (Study Closed/Lock)
+            </option>
           </select>
         </div>
         <div
@@ -1028,8 +1111,7 @@
               margin-bottom: 2px;
               display: block;
             "
-            >Site ID (Optional)</label
-          >
+          >Site ID (Optional)</label>
           <input
             v-model="completenessParams.site_id"
             type="text"
@@ -1044,7 +1126,7 @@
               background: var(--card-bg);
               color: var(--text);
             "
-          />
+          >
         </div>
         <div
           style="
@@ -1069,12 +1151,16 @@
       </div>
 
       <!-- Completeness Results View -->
-      <div v-if="completenessLoading" style="padding: 24px; text-align: center">
-        <div class="spinner" style="display: inline-block; margin-right: 8px" />
-        <span
-          >Calculating live completeness metrics and scanning EDL
-          expectations...</span
-        >
+      <div
+        v-if="completenessLoading"
+        style="padding: 24px; text-align: center"
+      >
+        <div
+          class="spinner"
+          style="display: inline-block; margin-right: 8px"
+        />
+        <span>Calculating live completeness metrics and scanning EDL
+          expectations...</span>
       </div>
 
       <div
@@ -1142,8 +1228,7 @@
                   Milestone: <strong>{{ completenessResult.milestone }}</strong>
                   <span v-if="completenessResult.site_id">
                     | Site:
-                    <strong>{{ completenessResult.site_id }}</strong></span
-                  >
+                    <strong>{{ completenessResult.site_id }}</strong></span>
                 </p>
               </div>
             </div>
@@ -1169,12 +1254,24 @@
                   text-align: left;
                 "
               >
-                <th style="padding: 10px">Expected Artifact Type</th>
-                <th style="padding: 10px">Scope</th>
-                <th style="padding: 10px">Compliance Status</th>
-                <th style="padding: 10px">Document ID</th>
-                <th style="padding: 10px">Ver.</th>
-                <th style="padding: 10px; text-align: right">Actions</th>
+                <th style="padding: 10px">
+                  Expected Artifact Type
+                </th>
+                <th style="padding: 10px">
+                  Scope
+                </th>
+                <th style="padding: 10px">
+                  Compliance Status
+                </th>
+                <th style="padding: 10px">
+                  Document ID
+                </th>
+                <th style="padding: 10px">
+                  Ver.
+                </th>
+                <th style="padding: 10px; text-align: right">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -1205,7 +1302,7 @@
                 <td style="padding: 10px">
                   {{
                     art.version_index !== null &&
-                    art.version_index !== undefined
+                      art.version_index !== undefined
                       ? "v" + art.version_index
                       : "-"
                   }}
@@ -1231,8 +1328,7 @@
                       font-size: 12px;
                       font-style: italic;
                     "
-                    >Missing Document</span
-                  >
+                  >Missing Document</span>
                 </td>
               </tr>
             </tbody>

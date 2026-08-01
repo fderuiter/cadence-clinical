@@ -200,3 +200,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-31: SDV Verification and Compliance Tests Phase 14](2026-07-31-sdv-verification-and-compliance-tests-phase-14.md)
 - [2026-09-03: Centralized Study Scope and Lab Range Permissions](2026-09-03-centralized-study-scope-and-lab-range-permissions.md)
 - [2026-08-01: Unused ESLint Variable and DEID Exemption in UI Package](2026-08-01-unused-eslint-variable-and-deid-exemption-in-ui-package.md)
+- [2026-09-04: Interactive SoA Builder Web Client (Phase 19)](2026-09-04-interactive-soa-builder-web-client-phase-19.md)

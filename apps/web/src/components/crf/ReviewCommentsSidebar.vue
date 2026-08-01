@@ -2,7 +2,10 @@
   <div class="review-comments-sidebar">
     <header class="sidebar-header">
       <h3>Review Comments ({{ filteredComments.length }})</h3>
-      <div v-if="fieldId" class="field-indicator">
+      <div
+        v-if="fieldId"
+        class="field-indicator"
+      >
         Selected Field: <strong>{{ fieldId }}</strong>
       </div>
     </header>
@@ -148,7 +151,7 @@
           margin-bottom: 8px;
           resize: vertical;
         "
-      ></textarea>
+      />
       <button
         class="btn-primary"
         style="

@@ -116,7 +116,10 @@
           <span>✅</span> No layout warnings for this viewport.
         </div>
 
-        <div v-else class="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+        <div
+          v-else
+          class="space-y-2 max-h-[220px] overflow-y-auto pr-1"
+        >
           <div
             v-for="warning in layoutWarnings"
             :key="warning.fieldId"
@@ -129,8 +132,7 @@
               <span class="truncate max-w-[150px]">{{ warning.label }}</span>
               <span
                 class="text-[10px] bg-amber-100 px-1 py-0.2 rounded font-mono"
-                >Span: {{ warning.gridSpan }}</span
-              >
+              >Span: {{ warning.gridSpan }}</span>
             </div>
             <p class="text-[11px] text-amber-700 leading-snug">
               {{ warning.message }}
@@ -170,32 +172,31 @@
             }}</span>
             <span
               class="font-mono text-xxs bg-slate-200 px-1.5 py-0.5 rounded text-slate-600"
-              >{{ selectedField.id }}</span
-            >
+            >{{ selectedField.id }}</span>
           </div>
 
           <div class="form-group flex flex-col gap-1.5">
-            <label class="text-xxs font-bold text-slate-500 uppercase"
-              >Field Label</label
-            >
+            <label class="text-xxs font-bold text-slate-500 uppercase">Field Label</label>
             <input
               id="inspect-field-label"
               v-model="selectedFieldLabel"
               type="text"
               class="inspect-label-input w-full border border-slate-200 rounded-md px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500 bg-white"
-            />
+            >
           </div>
 
           <div class="form-group flex flex-col gap-1.5">
-            <label class="text-xxs font-bold text-slate-500 uppercase"
-              >Grid Span (1-12 Columns)</label
-            >
+            <label class="text-xxs font-bold text-slate-500 uppercase">Grid Span (1-12 Columns)</label>
             <select
               id="inspect-field-span"
               v-model="selectedFieldGridSpan"
               class="inspect-span-select w-full border border-slate-200 rounded-md px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500 bg-white font-medium"
             >
-              <option v-for="n in 12" :key="n" :value="n">
+              <option
+                v-for="n in 12"
+                :key="n"
+                :value="n"
+              >
                 {{ n }}
                 {{
                   n === 12
@@ -209,20 +210,32 @@
           </div>
 
           <div class="form-group flex flex-col gap-1.5">
-            <label class="text-xxs font-bold text-slate-500 uppercase"
-              >Field Type</label
-            >
+            <label class="text-xxs font-bold text-slate-500 uppercase">Field Type</label>
             <select
               v-model="selectedFieldType"
               class="w-full border border-slate-200 rounded-md px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500 bg-white"
             >
-              <option value="text">Text Input</option>
-              <option value="numeric">Numeric Input</option>
-              <option value="date">Date Picker</option>
-              <option value="select">Dropdown Select</option>
-              <option value="radio">Radio Buttons</option>
-              <option value="grid">Grid Layout</option>
-              <option value="file">File Upload</option>
+              <option value="text">
+                Text Input
+              </option>
+              <option value="numeric">
+                Numeric Input
+              </option>
+              <option value="date">
+                Date Picker
+              </option>
+              <option value="select">
+                Dropdown Select
+              </option>
+              <option value="radio">
+                Radio Buttons
+              </option>
+              <option value="grid">
+                Grid Layout
+              </option>
+              <option value="file">
+                File Upload
+              </option>
             </select>
           </div>
 
@@ -232,12 +245,11 @@
               v-model="selectedFieldRequired"
               type="checkbox"
               class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-            />
+            >
             <label
               for="inspect-field-required"
               class="text-xs font-medium text-slate-700"
-              >Required Field</label
-            >
+            >Required Field</label>
           </div>
         </div>
       </div>
@@ -259,7 +271,7 @@
               v-model="dismissedWarnings"
               type="checkbox"
               class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-            />
+            >
             <label
               for="dismiss-warnings-checkbox"
               class="text-xs font-medium text-slate-700"
@@ -281,20 +293,16 @@
             class="compilation-error text-xs text-red-700 bg-red-50 border border-red-100 rounded-lg p-2.5 flex items-start gap-1.5 font-medium leading-snug"
           >
             <span class="flex-shrink-0">❌</span>
-            <span
-              >Compilation blocked: active layout warnings must be resolved or
-              explicitly dismissed!</span
-            >
+            <span>Compilation blocked: active layout warnings must be resolved or
+              explicitly dismissed!</span>
           </div>
           <div
             v-if="compilationStatus === 'success'"
             class="compilation-success text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg p-2.5 flex items-start gap-1.5 font-medium leading-snug"
           >
             <span class="flex-shrink-0">🎉</span>
-            <span
-              >Compilation successful! Form schema successfully
-              translated.</span
-            >
+            <span>Compilation successful! Form schema successfully
+              translated.</span>
           </div>
         </div>
       </div>

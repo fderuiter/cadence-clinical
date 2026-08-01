@@ -4,7 +4,10 @@
     class="dashboard-section active"
     style="max-width: 600px; margin: 40px auto"
   >
-    <div class="section-header" style="text-align: center">
+    <div
+      class="section-header"
+      style="text-align: center"
+    >
       <h2>System Authentication</h2>
       <p>Identity Gateway and Security Assertion Portal</p>
     </div>

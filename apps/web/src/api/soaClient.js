@@ -1,5 +1,5 @@
 import { apiClient } from "./apiClient";
-import { generateGatewaySignature, canonicalSerialize } from "ui";
+import { generateGatewaySignature } from "ui";
 
 /**
  * Thin API Client for Schedule of Activities (SoA) projection and entity mutations.

@@ -1,5 +1,8 @@
 <template>
-  <div id="section-mdr" class="dashboard-section active">
+  <div
+    id="section-mdr"
+    class="dashboard-section active"
+  >
     <div class="section-header">
       <h2>MDR / Protocol Visualizer &amp; Interactive SoA Builder</h2>
       <p>
@@ -45,7 +48,10 @@
     <!-- TAB 1: INTERACTIVE SOA WORKSPACE -->
     <div v-if="activeTab === 'soa'">
       <!-- Interactive Builder Controls -->
-      <div class="card" style="margin-bottom: 24px; padding: 16px">
+      <div
+        class="card"
+        style="margin-bottom: 24px; padding: 16px"
+      >
         <div
           style="
             display: flex;
@@ -115,7 +121,10 @@
               <legend style="font-weight: bold; padding: 0 6px">
                 Add Study Arm
               </legend>
-              <div class="form-group" style="margin-bottom: 8px">
+              <div
+                class="form-group"
+                style="margin-bottom: 8px"
+              >
                 <label for="new-arm-id">Arm ID</label>
                 <input
                   id="new-arm-id"
@@ -123,9 +132,12 @@
                   type="text"
                   placeholder="e.g. ARM-C"
                   style="width: 100%; padding: 6px"
-                />
+                >
               </div>
-              <div class="form-group" style="margin-bottom: 8px">
+              <div
+                class="form-group"
+                style="margin-bottom: 8px"
+              >
                 <label for="new-arm-name">Arm Name</label>
                 <input
                   id="new-arm-name"
@@ -133,7 +145,7 @@
                   type="text"
                   placeholder="e.g. Arm C: High Dose"
                   style="width: 100%; padding: 6px"
-                />
+                >
               </div>
               <div
                 class="form-group"
@@ -147,7 +159,7 @@
                   placeholder="Search Arm Type CT..."
                   style="width: 100%; padding: 6px"
                   @input="searchArmTerminology($event.target.value)"
-                />
+                >
                 <!-- Autocomplete Suggestion Dropdown -->
                 <div
                   v-if="armSuggestions.length > 0"
@@ -199,7 +211,10 @@
               <legend style="font-weight: bold; padding: 0 6px">
                 Add Epoch
               </legend>
-              <div class="form-group" style="margin-bottom: 8px">
+              <div
+                class="form-group"
+                style="margin-bottom: 8px"
+              >
                 <label for="new-epoch-id">Epoch ID</label>
                 <input
                   id="new-epoch-id"
@@ -207,9 +222,12 @@
                   type="text"
                   placeholder="e.g. EP-FLW"
                   style="width: 100%; padding: 6px"
-                />
+                >
               </div>
-              <div class="form-group" style="margin-bottom: 8px">
+              <div
+                class="form-group"
+                style="margin-bottom: 8px"
+              >
                 <label for="new-epoch-name">Epoch Name</label>
                 <input
                   id="new-epoch-name"
@@ -217,25 +235,33 @@
                   type="text"
                   placeholder="e.g. Follow-up"
                   style="width: 100%; padding: 6px"
-                />
+                >
               </div>
-              <div class="form-group" style="margin-bottom: 8px">
+              <div
+                class="form-group"
+                style="margin-bottom: 8px"
+              >
                 <label for="new-epoch-seq">Sequence</label>
                 <input
                   id="new-epoch-seq"
                   v-model.number="newEpoch.sequence"
                   type="number"
                   style="width: 100%; padding: 6px"
-                />
+                >
               </div>
-              <div class="form-group" style="margin-bottom: 8px">
+              <div
+                class="form-group"
+                style="margin-bottom: 8px"
+              >
                 <label for="new-epoch-arm">Associated Arm (Optional)</label>
                 <select
                   id="new-epoch-arm"
                   v-model="newEpoch.arm_id"
                   style="width: 100%; padding: 6px"
                 >
-                  <option value="">-- None / Shared --</option>
+                  <option value="">
+                    -- None / Shared --
+                  </option>
                   <option
                     v-for="arm in store.currentUsdm.arms"
                     :key="arm.arm_id"
@@ -265,7 +291,10 @@
               <legend style="font-weight: bold; padding: 0 6px">
                 Add Visit / Encounter
               </legend>
-              <div class="form-group" style="margin-bottom: 8px">
+              <div
+                class="form-group"
+                style="margin-bottom: 8px"
+              >
                 <label for="new-enc-id">Encounter ID</label>
                 <input
                   id="new-enc-id"
@@ -273,9 +302,12 @@
                   type="text"
                   placeholder="e.g. V-WEEK6"
                   style="width: 100%; padding: 6px"
-                />
+                >
               </div>
-              <div class="form-group" style="margin-bottom: 8px">
+              <div
+                class="form-group"
+                style="margin-bottom: 8px"
+              >
                 <label for="new-enc-name">Encounter Name</label>
                 <input
                   id="new-enc-name"
@@ -283,17 +315,20 @@
                   type="text"
                   placeholder="e.g. Week 6"
                   style="width: 100%; padding: 6px"
-                />
+                >
               </div>
 
-              <div class="form-group" style="margin-bottom: 8px">
+              <div
+                class="form-group"
+                style="margin-bottom: 8px"
+              >
                 <label for="new-enc-seq">Sequence</label>
                 <input
                   id="new-enc-seq"
                   v-model.number="newEnc.sequence"
                   type="number"
                   style="width: 100%; padding: 6px"
-                />
+                >
               </div>
               <div
                 class="form-group"
@@ -307,7 +342,7 @@
                   placeholder="Search Visit Type CT..."
                   style="width: 100%; padding: 6px"
                   @input="searchEncTerminology($event.target.value)"
-                />
+                >
                 <!-- Autocomplete Suggestion Dropdown -->
                 <div
                   v-if="encSuggestions.length > 0"
@@ -339,14 +374,19 @@
                   </div>
                 </div>
               </div>
-              <div class="form-group" style="margin-bottom: 8px">
+              <div
+                class="form-group"
+                style="margin-bottom: 8px"
+              >
                 <label for="new-enc-epoch">Associated Epoch</label>
                 <select
                   id="new-enc-epoch"
                   v-model="newEnc.epoch_id"
                   style="width: 100%; padding: 6px"
                 >
-                  <option value="">-- Select Epoch --</option>
+                  <option value="">
+                    -- Select Epoch --
+                  </option>
                   <option
                     v-for="ep in store.currentUsdm.epochs"
                     :key="ep.epoch_id"
@@ -376,7 +416,10 @@
               <legend style="font-weight: bold; padding: 0 6px">
                 Add Activity / Procedure
               </legend>
-              <div class="form-group" style="margin-bottom: 8px">
+              <div
+                class="form-group"
+                style="margin-bottom: 8px"
+              >
                 <label for="new-proc-id">Activity ID</label>
                 <input
                   id="new-proc-id"
@@ -384,9 +427,12 @@
                   type="text"
                   placeholder="e.g. ACT-LAB"
                   style="width: 100%; padding: 6px"
-                />
+                >
               </div>
-              <div class="form-group" style="margin-bottom: 8px">
+              <div
+                class="form-group"
+                style="margin-bottom: 8px"
+              >
                 <label for="new-proc-name">Activity Name</label>
                 <input
                   id="new-proc-name"
@@ -394,7 +440,7 @@
                   type="text"
                   placeholder="e.g. Laboratory Blood Draw"
                   style="width: 100%; padding: 6px"
-                />
+                >
               </div>
               <button
                 class="btn btn-primary"
@@ -428,7 +474,9 @@
                   v-model="linkPayload.procedure_id"
                   style="width: 100%; padding: 6px"
                 >
-                  <option value="">-- Select Procedure --</option>
+                  <option value="">
+                    -- Select Procedure --
+                  </option>
                   <option
                     v-for="row in store.currentUsdm.rows"
                     :key="row.activity_id"
@@ -445,7 +493,9 @@
                   v-model="linkPayload.visit_id"
                   style="width: 100%; padding: 6px"
                 >
-                  <option value="">-- Select Visit --</option>
+                  <option value="">
+                    -- Select Visit --
+                  </option>
                   <option
                     v-for="enc in store.currentUsdm.encounters"
                     :key="enc.encounter_id"
@@ -456,18 +506,19 @@
                 </select>
               </div>
             </div>
-            <div class="form-group" style="margin-top: 8px">
-              <label for="link-timing"
-                >Custom Timing Window / Details (e.g. "Within 10 mins", "Day
-                1")</label
-              >
+            <div
+              class="form-group"
+              style="margin-top: 8px"
+            >
+              <label for="link-timing">Custom Timing Window / Details (e.g. "Within 10 mins", "Day
+                1")</label>
               <input
                 id="link-timing"
                 v-model="linkPayload.timing"
                 type="text"
                 placeholder="Leave empty for default applicability"
                 style="width: 100%; padding: 6px"
-              />
+              >
             </div>
             <div
               style="
@@ -553,9 +604,10 @@
             "
           >
             <div style="display: flex; gap: 8px; align-items: center">
-              <span class="card-title" style="margin-right: 12px"
-                >Schedule of Activities (SoA) Matrix</span
-              >
+              <span
+                class="card-title"
+                style="margin-right: 12px"
+              >Schedule of Activities (SoA) Matrix</span>
               <button
                 id="btn-tab-soa"
                 class="btn"
@@ -578,15 +630,20 @@
             <span
               v-if="store.soaLoading"
               style="font-size: 0.8rem; font-weight: normal; color: #64748b"
-              >(Syncing...)</span
-            >
+            >(Syncing...)</span>
           </div>
 
-          <div v-if="!showCanvas" id="soa-matrix-container">
+          <div
+            v-if="!showCanvas"
+            id="soa-matrix-container"
+          >
             <ClinicalSoAMatrix :soa-data="soaData" />
           </div>
 
-          <div v-else id="crf-canvas-container">
+          <div
+            v-else
+            id="crf-canvas-container"
+          >
             <CrfAuthoringCanvas
               :form-schema="formSchema"
               :selected-field-id="selectedFieldId"
@@ -599,7 +656,10 @@
     </div>
 
     <!-- TAB 2: MDR CONCEPT BROWSE & EDIT (Sub-Issue 8) -->
-    <div v-else-if="activeTab === 'mdr'" class="card">
+    <div
+      v-else-if="activeTab === 'mdr'"
+      class="card"
+    >
       <div class="card-title">
         NCI Thesaurus Concept Registry &amp; Terminology Browser
       </div>
@@ -624,10 +684,11 @@
           >
             Search Concept Codes
           </h3>
-          <div class="form-group" style="margin-bottom: 16px">
-            <label for="concept-search-input"
-              >Search Term (e.g. "Arm", "Encounter")</label
-            >
+          <div
+            class="form-group"
+            style="margin-bottom: 16px"
+          >
+            <label for="concept-search-input">Search Term (e.g. "Arm", "Encounter")</label>
             <div style="display: flex; gap: 8px">
               <input
                 id="concept-search-input"
@@ -641,8 +702,11 @@
                   border-radius: 4px;
                 "
                 @keyup.enter="searchConcepts"
-              />
-              <button class="btn btn-primary" @click="searchConcepts">
+              >
+              <button
+                class="btn btn-primary"
+                @click="searchConcepts"
+              >
                 Search
               </button>
             </div>
@@ -660,7 +724,10 @@
           >
             No results found.
           </div>
-          <div v-else style="max-height: 400px; overflow-y: auto">
+          <div
+            v-else
+            style="max-height: 400px; overflow-y: auto"
+          >
             <ul
               style="
                 list-style: none;
@@ -733,7 +800,7 @@
                   border: 1px solid var(--border);
                   border-radius: 4px;
                 "
-              />
+              >
             </div>
             <div class="form-group">
               <label for="concept-name-input">Preferred Name</label>
@@ -748,7 +815,7 @@
                   border: 1px solid var(--border);
                   border-radius: 4px;
                 "
-              />
+              >
             </div>
             <div class="form-group">
               <label for="concept-def-input">Definition</label>
@@ -780,7 +847,10 @@
               >
                 Cancel Edit
               </button>
-              <button class="btn btn-primary" @click="handleSaveConcept">
+              <button
+                class="btn btn-primary"
+                @click="handleSaveConcept"
+              >
                 {{
                   editingConceptCode
                     ? "Save Signed Changes"
@@ -794,7 +864,10 @@
     </div>
 
     <!-- TAB 3: ALIGNMENT & DIFFERENCES REPORT (Sub-Issue 8) -->
-    <div v-else-if="activeTab === 'diff'" class="card">
+    <div
+      v-else-if="activeTab === 'diff'"
+      class="card"
+    >
       <div class="card-title">
         Study Protocol Alignment &amp; Differences Report
       </div>
@@ -822,11 +895,11 @@
         >
           <span
             style="font-weight: bold; font-size: 0.95rem; color: var(--primary)"
-            >Comparison Baseline: Last Approved Study Version (v1.0)</span
-          >
-          <span class="badge lookup-valid" style="font-size: 0.75rem"
-            >Aligned and Approved</span
-          >
+          >Comparison Baseline: Last Approved Study Version (v1.0)</span>
+          <span
+            class="badge lookup-valid"
+            style="font-size: 0.75rem"
+          >Aligned and Approved</span>
         </div>
         <div
           style="
@@ -851,7 +924,9 @@
             </div>
           </div>
           <div style="border-right: 1px solid var(--border)">
-            <div style="font-size: 0.8rem; color: #64748b">Baseline Epochs</div>
+            <div style="font-size: 0.8rem; color: #64748b">
+              Baseline Epochs
+            </div>
             <div
               style="
                 font-size: 1.5rem;
@@ -916,7 +991,10 @@
         No amendments or changes detected. Protocol schema is fully aligned with
         approved baseline.
       </div>
-      <div v-else style="display: flex; flex-direction: column; gap: 10px">
+      <div
+        v-else
+        style="display: flex; flex-direction: column; gap: 10px"
+      >
         <div
           v-for="(diff, index) in differences"
           :key="index"
@@ -939,14 +1017,11 @@
               {{ diff.type.toUpperCase() }}
             </span>
             <strong style="font-size: 0.9rem">{{ diff.element }}</strong>
-            <span style="font-size: 0.85rem; color: #475569; margin-left: 8px"
-              >({{ diff.description }})</span
-            >
+            <span style="font-size: 0.85rem; color: #475569; margin-left: 8px">({{ diff.description }})</span>
           </div>
           <span
             style="font-size: 0.8rem; font-family: monospace; color: #64748b"
-            >Path: /usdm/{{ diff.category }}/{{ diff.id }}</span
-          >
+          >Path: /usdm/{{ diff.category }}/{{ diff.id }}</span>
         </div>
       </div>
     </div>
