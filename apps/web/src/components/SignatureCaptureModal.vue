@@ -3,6 +3,10 @@
     v-if="isOpen"
     id="signature-capture-modal"
     class="modal-overlay"
+    ref="modalRef"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Electronic Signature Capture Modal"
     style="
       display: flex;
       position: fixed;
@@ -236,6 +240,8 @@
 <script setup>
 import { ref, watch } from "vue";
 import { etmfService } from "../api/etmf";
+import { useFocusTrap } from "@/composables/useFocusTrap";
+import { useEscapeClose } from "@/composables/useEscapeClose";
 
 const props = defineProps({
   isOpen: {
@@ -259,6 +265,10 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["cancel", "success", "error"]);
+
+const modalRef = ref(null);
+useFocusTrap(modalRef);
+useEscapeClose(() => emit("cancel"));
 
 const usernameVal = ref(props.username);
 const password = ref("");

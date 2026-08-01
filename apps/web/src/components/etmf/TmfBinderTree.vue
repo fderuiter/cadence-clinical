@@ -17,7 +17,7 @@
       </div>
     </div>
 
-    <div class="tree-root-nodes">
+    <div class="tree-root-nodes" role="tree" aria-label="TMF Binder Folder Tree" @keydown="handleTreeKeyDown">
       <div v-if="filteredTree.length === 0" class="empty-tree-message">
         No matching TMF items found.
       </div>
@@ -28,7 +28,11 @@
       >
         <div
           class="node-header zone-header"
-          @click="toggleNode(zone.id)"
+          role="treeitem"
+          :aria-expanded="isExpanded(zone.id)"
+          :tabindex="activeFocusedNodeId === zone.id ? 0 : -1"
+          :id="'tree-node-' + zone.id"
+          @click="clickZone(zone)"
           :class="{ 'is-expanded': isExpanded(zone.id) }"
         >
           <span class="toggle-icon">{{ isExpanded(zone.id) ? "▼" : "▶" }}</span>
@@ -43,7 +47,7 @@
           </span>
         </div>
 
-        <div v-if="isExpanded(zone.id)" class="node-children zone-children">
+        <div v-if="isExpanded(zone.id)" class="node-children zone-children" role="group">
           <div
             v-for="section in zone.children"
             :key="section.id"
@@ -51,7 +55,11 @@
           >
             <div
               class="node-header section-header"
-              @click="toggleNode(section.id)"
+              role="treeitem"
+              :aria-expanded="isExpanded(section.id)"
+              :tabindex="activeFocusedNodeId === section.id ? 0 : -1"
+              :id="'tree-node-' + section.id"
+              @click="clickSection(section)"
               :class="{ 'is-expanded': isExpanded(section.id) }"
             >
               <span class="toggle-icon">{{
@@ -71,13 +79,17 @@
             <div
               v-if="isExpanded(section.id)"
               class="node-children section-children"
+              role="group"
             >
               <div
                 v-for="artifact in section.children"
                 :key="artifact.id"
                 class="tree-node artifact-node"
+                role="treeitem"
+                :tabindex="activeFocusedNodeId === artifact.id ? 0 : -1"
+                :id="'tree-node-' + artifact.id"
                 :class="{ 'is-selected': selectedArtifactId === artifact.code }"
-                @click="selectArtifact(artifact)"
+                @click="clickArtifact(artifact)"
               >
                 <div class="node-header artifact-header">
                   <span class="file-icon">📄</span>
@@ -100,7 +112,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 
 const props = defineProps({
   tree: {
@@ -117,57 +129,6 @@ const selectedArtifactId = ref(null);
 
 // Tracks open state of collapsible nodes
 const expandedNodes = ref({});
-
-// Initialize expandedNodes with all zone nodes default open
-watch(
-  () => props.tree,
-  (newTree) => {
-    if (newTree && newTree.length > 0) {
-      newTree.forEach((zone) => {
-        if (expandedNodes.value[zone.id] === undefined) {
-          expandedNodes.value[zone.id] = false;
-        }
-      });
-    }
-  },
-  { immediate: true }
-);
-
-function toggleNode(nodeId) {
-  expandedNodes.value[nodeId] = !expandedNodes.value[nodeId];
-}
-
-function isExpanded(nodeId) {
-  return !!expandedNodes.value[nodeId];
-}
-
-function selectArtifact(artifact) {
-  selectedArtifactId.value = artifact.code;
-  emit("select-artifact", artifact.code);
-}
-
-// Map of mocked unread notifications for demonstration purposes
-const mockUnreadBadges = {
-  "01.01.01": 2, // Clinical Trial Protocol
-  "01.01.02": 1, // Protocol Amendment
-  "05.02.05": 3, // Informed Consent Form
-  "10.01.02": 1, // Define-XML Specifications
-};
-
-// Calculate unread counts dynamically for sections/zones
-function getUnreadBadgeCount(node) {
-  if (node.type === "artifact") {
-    return mockUnreadBadges[node.code] || 0;
-  }
-
-  let total = 0;
-  if (node.children) {
-    node.children.forEach((child) => {
-      total += getUnreadBadgeCount(child);
-    });
-  }
-  return total;
-}
 
 // Filtering algorithm: filters tree recursively and expands matching hierarchy nodes
 const filteredTree = computed(() => {
@@ -234,6 +195,195 @@ const filteredTree = computed(() => {
     })
     .filter((zone) => zone !== null);
 });
+
+// Initialize expandedNodes with all zone nodes default open
+watch(
+  () => props.tree,
+  (newTree) => {
+    if (newTree && newTree.length > 0) {
+      newTree.forEach((zone) => {
+        if (expandedNodes.value[zone.id] === undefined) {
+          expandedNodes.value[zone.id] = false;
+        }
+      });
+    }
+  },
+  { immediate: true }
+);
+
+function toggleNode(nodeId) {
+  expandedNodes.value[nodeId] = !expandedNodes.value[nodeId];
+}
+
+function isExpanded(nodeId) {
+  return !!expandedNodes.value[nodeId];
+}
+
+function selectArtifact(artifact) {
+  selectedArtifactId.value = artifact.code;
+  emit("select-artifact", artifact.code);
+}
+
+const activeFocusedNodeId = ref(null);
+
+// Initialize activeFocusedNodeId if not set
+watch(
+  filteredTree,
+  (newVal) => {
+    if (newVal && newVal.length > 0 && !activeFocusedNodeId.value) {
+      activeFocusedNodeId.value = newVal[0].id;
+    }
+  },
+  { immediate: true }
+);
+
+// Flat visible list
+const visibleNodesList = computed(() => {
+  const list = [];
+  filteredTree.value.forEach((zone) => {
+    list.push({ id: zone.id, code: zone.code, node: zone, type: "zone" });
+    if (isExpanded(zone.id)) {
+      (zone.children || []).forEach((section) => {
+        list.push({
+          id: section.id,
+          code: section.code,
+          node: section,
+          type: "section",
+          parentId: zone.id,
+        });
+        if (isExpanded(section.id)) {
+          (section.children || []).forEach((artifact) => {
+            list.push({
+              id: artifact.id,
+              code: artifact.code,
+              node: artifact,
+              type: "artifact",
+              parentId: section.id,
+            });
+          });
+        }
+      });
+    }
+  });
+  return list;
+});
+
+// Focus helper
+function focusNodeId(nodeId) {
+  activeFocusedNodeId.value = nodeId;
+  nextTick(() => {
+    const el = document.getElementById(`tree-node-${nodeId}`);
+    if (el) {
+      el.focus();
+    }
+  });
+}
+
+function clickZone(zone) {
+  activeFocusedNodeId.value = zone.id;
+  toggleNode(zone.id);
+}
+
+function clickSection(section) {
+  activeFocusedNodeId.value = section.id;
+  toggleNode(section.id);
+}
+
+function clickArtifact(artifact) {
+  activeFocusedNodeId.value = artifact.id;
+  selectArtifact(artifact);
+}
+
+// Master Keydown Handler for W3C ARIA Tree conformance
+function handleTreeKeyDown(e) {
+  const list = visibleNodesList.value;
+  if (list.length === 0) return;
+
+  // Find index of current active focused node
+  let currentIndex = list.findIndex(
+    (item) => item.id === activeFocusedNodeId.value
+  );
+  if (currentIndex === -1) {
+    currentIndex = 0;
+    activeFocusedNodeId.value = list[0].id;
+  }
+
+  const currentItem = list[currentIndex];
+
+  switch (e.key) {
+    case "ArrowDown":
+      e.preventDefault();
+      if (currentIndex < list.length - 1) {
+        focusNodeId(list[currentIndex + 1].id);
+      }
+      break;
+
+    case "ArrowUp":
+      e.preventDefault();
+      if (currentIndex > 0) {
+        focusNodeId(list[currentIndex - 1].id);
+      }
+      break;
+
+    case "ArrowLeft":
+      e.preventDefault();
+      if (currentItem.type !== "artifact" && isExpanded(currentItem.id)) {
+        // Collapse expanded parent node
+        expandedNodes.value[currentItem.id] = false;
+      } else if (currentItem.parentId) {
+        // Move focus to parent node
+        focusNodeId(currentItem.parentId);
+      }
+      break;
+
+    case "ArrowRight":
+      e.preventDefault();
+      if (currentItem.type !== "artifact" && !isExpanded(currentItem.id)) {
+        // Expand collapsed parent node
+        expandedNodes.value[currentItem.id] = true;
+      } else if (currentItem.type !== "artifact" && isExpanded(currentItem.id)) {
+        // Move focus to first child node
+        const firstChild = list.find((item) => item.parentId === currentItem.id);
+        if (firstChild) {
+          focusNodeId(firstChild.id);
+        }
+      }
+      break;
+
+    case "Enter":
+    case "Space":
+      e.preventDefault();
+      if (currentItem.type === "artifact") {
+        selectArtifact(currentItem.node);
+      } else {
+        toggleNode(currentItem.id);
+      }
+      break;
+  }
+}
+
+// Map of mocked unread notifications for demonstration purposes
+const mockUnreadBadges = {
+  "01.01.01": 2, // Clinical Trial Protocol
+  "01.01.02": 1, // Protocol Amendment
+  "05.02.05": 3, // Informed Consent Form
+  "10.01.02": 1, // Define-XML Specifications
+};
+
+// Calculate unread counts dynamically for sections/zones
+function getUnreadBadgeCount(node) {
+  if (node.type === "artifact") {
+    return mockUnreadBadges[node.code] || 0;
+  }
+
+  let total = 0;
+  if (node.children) {
+    node.children.forEach((child) => {
+      total += getUnreadBadgeCount(child);
+    });
+  }
+  return total;
+}
 </script>
 
 <style scoped>

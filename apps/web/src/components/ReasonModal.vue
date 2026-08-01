@@ -3,6 +3,7 @@
     v-if="show"
     :id="idPrefix ? idPrefix + 'reason-modal' : 'reason-modal'"
     class="modal-overlay"
+    ref="modalRef"
     style="display: flex"
     role="dialog"
     aria-modal="true"
@@ -78,6 +79,8 @@
 
 <script setup>
 import { ref, watch } from "vue";
+import { useFocusTrap } from "@/composables/useFocusTrap";
+import { useEscapeClose } from "@/composables/useEscapeClose";
 
 const props = defineProps({
   show: {
@@ -127,6 +130,10 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["confirm", "cancel"]);
+
+const modalRef = ref(null);
+useFocusTrap(modalRef);
+useEscapeClose(() => emit("cancel"));
 
 const selectedOption = ref("");
 const customText = ref("");

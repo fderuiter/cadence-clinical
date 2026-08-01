@@ -1,10 +1,10 @@
 <template>
-  <div class="modal-backdrop" @click.self="$emit('close')">
+  <div class="modal-backdrop" @click.self="$emit('close')" ref="modalRef" role="dialog" aria-modal="true" aria-label="Secure PDF Preview Modal">
     <div class="modal-card pdf-preview-modal">
       <div class="modal-header">
         <div class="header-details">
           <h3>
-            <span class="secure-icon">🔒</span> Secure Regulated Viewer -
+            <span class="secure-icon" aria-hidden="true">🔒</span> Secure Regulated Viewer -
             {{ document.filename }}
           </h3>
           <p class="gxp-tracking-subtitle">
@@ -12,12 +12,12 @@
             <strong>v{{ document.version_index }}.0</strong>
           </p>
         </div>
-        <button class="close-modal-btn" @click="$emit('close')">×</button>
+        <button class="close-modal-btn" aria-label="Close modal" @click="$emit('close')">×</button>
       </div>
 
       <div class="modal-body-layout">
         <!-- Sidebar with GxP Provenance Ledger Metadata -->
-        <aside class="metadata-sidebar">
+        <aside class="metadata-sidebar" aria-label="Document Metadata">
           <div class="meta-section">
             <h4>Record Details</h4>
             <div class="meta-row">
@@ -108,10 +108,10 @@
         </aside>
 
         <!-- Simulated Document Frame with Dynamic Overlay Watermark -->
-        <main class="viewer-workspace">
+        <main class="viewer-workspace" aria-label="Document Viewer">
           <div class="pdf-document-canvas">
             <!-- Dynamic CSS Rotating Diagonal Watermark -->
-            <div class="watermark-overlay-container">
+            <div class="watermark-overlay-container" aria-hidden="true">
               <div v-for="n in 3" :key="n" class="diagonal-watermark-row">
                 <span class="watermark-text">{{ watermarkText }}</span>
               </div>
@@ -186,8 +186,10 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { ref, computed } from "vue";
 import { useAuthStore } from "../../stores/auth";
+import { useFocusTrap } from "@/composables/useFocusTrap";
+import { useEscapeClose } from "@/composables/useEscapeClose";
 
 const props = defineProps({
   document: {
@@ -196,7 +198,11 @@ const props = defineProps({
   },
 });
 
-defineEmits(["close"]);
+const emit = defineEmits(["close"]);
+
+const modalRef = ref(null);
+useFocusTrap(modalRef);
+useEscapeClose(() => emit("close"));
 
 const authStore = useAuthStore();
 
