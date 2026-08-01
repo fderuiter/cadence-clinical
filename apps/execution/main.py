@@ -2624,6 +2624,7 @@ async def update_lab_range(
             r.critical_low = merged_data["critical_low"]
             r.critical_high = merged_data["critical_high"]
             await session.flush()
+
         lab_range_cache.invalidate(original_study_id, original_test_code)
         if original_study_id != r.study_id or original_test_code != r.test_code:
             lab_range_cache.invalidate(r.study_id, r.test_code)
