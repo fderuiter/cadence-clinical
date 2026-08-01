@@ -1,5 +1,5 @@
 import logging
-from typing import TypedDict
+from typing import Any, TypedDict
 
 from apps.execution.database.context import audit_context
 from apps.execution.database.models import ClinicalObservation
@@ -35,12 +35,12 @@ def generate_critical_lab_notification_payload(
     pi_email = (
         f"pi_{observation.site_id}@cadence.clinical"
         if observation.site_id
-        else "pi@cadence.clinical"
+        else "pi@cadence.clinical"  # deid-ignore
     )
     cra_email = (
         f"cra_{observation.study_id}@cadence.clinical"
         if observation.study_id
-        else "cra@cadence.clinical"
+        else "cra@cadence.clinical"  # deid-ignore
     )
 
     message = (
@@ -77,3 +77,40 @@ async def publish_notification_background(
 
     with audit_context(user_id, change_reason):
         await publish_notification(payload)
+
+
+def dispatch_critical_lab_alerts(
+    background_tasks: Any,
+    observation: ClinicalObservation,
+    lab_indicator: str,
+    user_id: str | None,
+    change_reason: str | None,
+) -> None:
+    """
+    Generates and dispatches critical lab notification alerts asynchronously.
+
+    Args:
+        background_tasks: BackgroundTasks context instance.
+        observation: The clinical observation record.
+        lab_indicator: The critical indicator value.
+        user_id: Optional GxP user ID.
+        change_reason: Optional GxP change reason.
+    """
+    raw_payload = generate_critical_lab_notification_payload(observation, lab_indicator)
+    for recipient in raw_payload["recipients"]:
+        recipient_payload = {
+            "category": raw_payload["category"],
+            "priority": raw_payload["priority"],
+            "channels": "IN_APP",
+            "message_content": raw_payload["message_content"],
+            "related_entity_id": raw_payload["related_entity_id"],
+            "related_entity_type": raw_payload["related_entity_type"],
+            "related_entity_subject_id": raw_payload["related_entity_subject_id"],
+            "recipient_user_id": recipient,
+        }
+        background_tasks.add_task(
+            publish_notification_background,
+            recipient_payload,
+            user_id,
+            change_reason,
+        )

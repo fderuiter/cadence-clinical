@@ -219,7 +219,13 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "eisf_document": {"create", "read", "update", "delete", "sync"},
         # Medical Coding
         "medical_coding": {"create", "read", "update"},
-        "lab_range": {"create", "read", "update", "delete", "alert"},
+        "lab_range": {
+            "create",
+            "read",
+            "update",
+            "delete",
+            "alert",
+        },  # Added alert action
     },
     ROLE_SPONSOR_DESIGNER: {
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
@@ -327,7 +333,13 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "eisf_document": {"create", "read", "update", "delete", "sync"},
         # Medical Coding
         "medical_coding": {"create", "read", "update"},
-        "lab_range": {"create", "read", "update", "delete", "alert"},
+        "lab_range": {
+            "create",
+            "read",
+            "update",
+            "delete",
+            "alert",
+        },  # Added alert action
     },
     ROLE_SPONSOR_MM: {
         "study_design": {"read"},
@@ -358,7 +370,10 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "update",
         },  # 'Ans' (Answer query) maps to update/read
         "sdv": {"read"},
-        "lab_range": {"read", "alert"},
+        "lab_range": {
+            "read",
+            "alert",
+        },  # Added read and alert permissions for clinical reader roles
         "system_audit_logs": {"read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},
@@ -386,7 +401,10 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "update",
         },  # 'C/R/U (Draft)' maps to create/read/update
         "query_lifecycle": {"read", "update"},  # 'Ans' maps to update/read
-        "lab_range": {"read", "alert"},
+        "lab_range": {
+            "read",
+            "alert",
+        },  # Added read and alert permissions for clinical reader roles
         "system_audit_logs": {"read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},
@@ -433,7 +451,13 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "eisf_document": {"create", "read", "update", "delete", "sync"},
         # Medical Coding
         "medical_coding": {"read"},
-        "lab_range": {"create", "read", "update", "delete", "alert"},
+        "lab_range": {
+            "create",
+            "read",
+            "update",
+            "delete",
+            "alert",
+        },  # Added alert action
     },
     "monitor": {
         "study_design": {"read"},
@@ -456,7 +480,13 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "quality_event": {"create", "read", "update"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
-        "lab_range": {"create", "read", "update", "delete", "alert"},
+        "lab_range": {
+            "create",
+            "read",
+            "update",
+            "delete",
+            "alert",
+        },  # Added alert action
     },
     ROLE_SUBJECT: {
         "ecrf_data_entry": {"create", "update"},  # 'Diary' maps to create/update
@@ -598,7 +628,13 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "quality_audit_logs": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
-        "lab_range": {"create", "read", "update", "delete", "alert"},
+        "lab_range": {
+            "create",
+            "read",
+            "update",
+            "delete",
+            "alert",
+        },  # Added alert action
     },
     "quality_manager": {
         "quality_event": {"create", "read", "update", "delete", "investigate"},
@@ -1240,6 +1276,13 @@ def require_permission(permission: str) -> Callable[[Principal], Principal]:
 
 
 class StudyScopeChecker:
+    """
+    A class dependency that ensures the incoming request principal has access
+    to the study_id referenced in the request.
+    It resolves study_id from the path parameters, query parameters,
+    'X-Study-Id' or 'x-study-id' headers, or finally the JSON body (injecting it back).
+    """
+
     async def __call__(
         self, request: Request, principal: Principal = Depends(get_principal)
     ) -> Principal:
@@ -1285,6 +1328,9 @@ class StudyScopeChecker:
 
 
 def require_study_scope() -> StudyScopeChecker:
+    """
+    Dependency factory providing the StudyScopeChecker instance to enforce study access control.
+    """
     return StudyScopeChecker()
 
 

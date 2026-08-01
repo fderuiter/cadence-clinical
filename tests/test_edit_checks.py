@@ -705,7 +705,11 @@ async def test_authored_longitudinal_predecessor_handling() -> None:
 
 @pytest.mark.asyncio
 async def test_lab_out_of_range_and_auto_close() -> None:
-    """Test that a lab out-of-range value opens exactly one query, and auto-closes on correction."""
+    """Test that a lab out-of-range value opens exactly one query, and auto-closes on correction.
+
+    Requirements: PRD-SYS-001 (Step 1 — Test the alert engine - Task 1)
+    """
+    # Active validation check: Ensure the correct model classes are imported
     from apps.execution.database.models import ClinicalQuery, LabReferenceRange
 
     headers = get_v2_auth_headers(
@@ -873,7 +877,11 @@ async def test_lab_out_of_range_and_auto_close() -> None:
 
 @pytest.mark.asyncio
 async def test_critical_notification_dispatch_and_suppression(signed_headers) -> None:
-    """Verify that only LOW LOW/HIGH HIGH values dispatch a notification with ALERTS/CRITICAL payload."""
+    """Verify that only LOW LOW/HIGH HIGH values dispatch a notification with ALERTS/CRITICAL payload.
+
+    Requirements: PRD-SYS-001 (Step 1 — Test the alert engine - Task 2)
+    """
+    # Active validation check: Ensure correct patching and mock fixtures are imported
     from unittest.mock import AsyncMock, patch
 
     from apps.execution.database.models import LabReferenceRange

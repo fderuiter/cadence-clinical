@@ -1,3 +1,6 @@
+import pytest
+
+
 def test_crf_authoring_global_library_instantiation():
     """
     Verify that the layout designer allows loading, referencing, and instantiating
@@ -186,11 +189,45 @@ def test_failure_recovery_and_high_availability():
     assert indexed_db_cache["unsynced_draft_1"] is not None
 
 
-def test_in_memory_accessibility_auditing():
-    """
-    Verify that automated layout WCAG checks identify contrast and element focus violations.
+@pytest.mark.asyncio
+async def test_in_memory_accessibility_auditing():
+    """Verify that automated layout WCAG checks identify contrast and element focus violations.
+
     @req: PRD-CRF-015
     @req: Trace-31
     """
-    wcag_checker_results = {"violations": 0}
-    assert wcag_checker_results["violations"] == 0
+    from apps.execution.services.layout_validator import (
+        run_layout_and_accessibility_checks,
+    )
+
+    html_content = """
+    <html>
+      <head>
+        <title>Compliance Check Form</title>
+        <style>
+          .low-contrast-btn {
+            background-color: #eee;
+            color: #eed; /* extremely low contrast on light gray background */
+            width: 150px;
+            height: 50px;
+          }
+        </style>
+      </head>
+      <body>
+        <button class="low-contrast-btn">Low Contrast Button</button>
+      </body>
+    </html>
+    """
+
+    (
+        violations,
+        passes,
+        incomplete,
+        inapplicable,
+        layout_errors,
+    ) = await run_layout_and_accessibility_checks(html_content)
+
+    # Verify that color contrast violation is correctly identified via HTML audit
+    assert len(violations) > 0
+    violation_ids = {v["id"] for v in violations}
+    assert "color-contrast" in violation_ids

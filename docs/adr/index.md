@@ -39,6 +39,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
 
 ### 2. API Gateway, Security & Identity
+- [2026-08-01: Cryptographic Signature Verification Engine and Multi-Format Support](2026-08-01-cryptographic-signature-verification-engine-and-multi-format-support.md)
 - [2026-07-31: Extend Centralized Permission Matrix for Medical Coding](2026-07-31-extend-centralized-permission-matrix-for-medical-coding.md)
 - [2026-07-31: Decoupling Cross-Service Python Imports and Security RBAC Isolation](2026-07-31-decoupling-cross-service-python-imports-and-security-rbac-isolation.md)
 - [2026-07-30: Signatures and Workflow Automation Phase 1 and 2 Primitives](2026-07-30-signatures-and-workflow-automation-phase-1-and-2-primitives.md)
@@ -68,7 +69,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-17: Centralized Permission-Based Authorization and Dynamic Mappings](2026-08-17-centralized-permission-auth.md)
 - [2026-08-21: eTMF Inbound-Email Webhook and Binder Routing](2026-08-21-etmf-inbound-email-webhook-and-binder-routing.md)
 - [2026-08-24: Role Authorization for Granular Data-Lock Actions and Trust Boundary Verification](2026-08-24-role-authorization-for-granular-data-lock-actions.md)
-- [2026-08-01: Cryptographic Signature Verification Engine for Part 11 eSignatures](2026-08-01-cryptographic-signature-verification-engine.md)
+- [2026-08-01: Cryptographic Signature Verification Engine for Part 11 eSignatures](2026-08-01-cryptographic-signature-verification-engine-for-esignatures.md)
 
 ### 3. Clinical Data Interoperability & Standards
 - [2026-09-01: SAE Reconciliation & Safety Gateway (E2B)](2026-09-01-sae-reconciliation-safety-gateway-e2b.md)

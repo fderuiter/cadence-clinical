@@ -1998,33 +1998,16 @@ async def create_observation(
         # Check for critical lab notification dispatch
         if obs_db.lab_indicator in ("LOW LOW", "HIGH HIGH"):
             from apps.execution.notification_events import (
-                generate_critical_lab_notification_payload,
-                publish_notification_background,
+                dispatch_critical_lab_alerts,
             )
 
-            raw_payload = generate_critical_lab_notification_payload(
-                obs_db, obs_db.lab_indicator
+            dispatch_critical_lab_alerts(
+                background_tasks,
+                obs_db,
+                obs_db.lab_indicator,
+                user_id,
+                change_reason,
             )
-            # Standard recipients-based multi-dispatch in the background
-            for recipient in raw_payload["recipients"]:
-                recipient_payload = {
-                    "category": raw_payload["category"],
-                    "priority": raw_payload["priority"],
-                    "channels": "IN_APP",
-                    "message_content": raw_payload["message_content"],
-                    "related_entity_id": raw_payload["related_entity_id"],
-                    "related_entity_type": raw_payload["related_entity_type"],
-                    "related_entity_subject_id": raw_payload[
-                        "related_entity_subject_id"
-                    ],
-                    "recipient_user_id": recipient,
-                }
-                background_tasks.add_task(
-                    publish_notification_background,
-                    recipient_payload,
-                    user_id,
-                    change_reason,
-                )
 
         background_tasks.add_task(
             run_asynchronous_edit_checks,
@@ -2443,6 +2426,7 @@ async def create_lab_range(
             session.add(lab_range)
             await session.flush()
 
+        # Invalidate outside the transaction block to avoid race conditions
         lab_range_cache.invalidate(lab_range.study_id, lab_range.test_code)
 
         return LabReferenceRangeResponse(
@@ -2584,6 +2568,7 @@ async def update_lab_range(
                     status_code=404, detail="LabReferenceRange not found"
                 )
 
+            # Capture original study_id and test_code from the loaded row before they are overwritten
             original_study_id = r.study_id
             original_test_code = r.test_code
 
@@ -2625,6 +2610,7 @@ async def update_lab_range(
             r.critical_high = merged_data["critical_high"]
             await session.flush()
 
+        # Invalidate outside the transaction block to avoid race conditions
         lab_range_cache.invalidate(original_study_id, original_test_code)
         if original_study_id != r.study_id or original_test_code != r.test_code:
             lab_range_cache.invalidate(r.study_id, r.test_code)
@@ -2675,6 +2661,7 @@ async def delete_lab_range(
             r.is_deleted = True
             await session.flush()
 
+        # Invalidate outside the transaction block to avoid race conditions
         lab_range_cache.invalidate(r.study_id, r.test_code)
 
         return LabReferenceRangeResponse(
@@ -2735,6 +2722,7 @@ async def trigger_lab_range_recalculation(
         count = await recalculate_range_flags(
             session, payload.study_id, payload.test_code, background_tasks
         )
+        # Invalidate after recalculation
         lab_range_cache.invalidate(payload.study_id, payload.test_code)
         return LabRangeRecalculateResponse(
             status="success",
