@@ -517,8 +517,10 @@ async def test_convert_lab_unit_db_and_fallback():
 def test_evaluate_lab_value_all_indicators():
     """Verify that evaluate_lab_value returns the expected lab_indicator values
     (NORMAL, LOW, HIGH, LOW LOW, HIGH HIGH, None) and lab_out_of_range boolean.
+
+    Requirements: PRD-SYS-001 (Step 1 — Test the alert engine - Task 1 unit test)
     """
-    # Create reference range with normal limits [10.0, 20.0] and critical limits [5.0, 25.0]
+    # Active validation check: Create reference range with normal limits [10.0, 20.0] and critical limits [5.0, 25.0]
     r_range = create_mock_range(
         low_bound=10.0,
         high_bound=20.0,
