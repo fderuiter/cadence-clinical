@@ -51,9 +51,10 @@ async def setup_test_databases():
         nw._worker_task = None
 
     # Clear mock queue
-    while not nw._mock_queue.empty():
+    queue = nw._get_mock_queue()
+    while not queue.empty():
         try:
-            nw._mock_queue.get_nowait()
+            queue.get_nowait()
         except asyncio.QueueEmpty:
             break
 
@@ -77,9 +78,10 @@ async def setup_test_databases():
             await nw._worker_task
         nw._worker_task = None
 
-    while not nw._mock_queue.empty():
+    queue = nw._get_mock_queue()
+    while not queue.empty():
         try:
-            nw._mock_queue.get_nowait()
+            queue.get_nowait()
         except asyncio.QueueEmpty:
             break
 

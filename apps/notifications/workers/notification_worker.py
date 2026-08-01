@@ -42,7 +42,23 @@ PersonnelAssignment = _org_models.PersonnelAssignment
 logger = logging.getLogger("notification_worker")
 
 # In-memory mock subscription queue for local testing / non-Redis fallbacks
-_mock_queue = asyncio.Queue()
+_mock_queue: asyncio.Queue | None = None
+_mock_queue_loop: asyncio.AbstractEventLoop | None = None
+
+
+def _get_mock_queue() -> asyncio.Queue:
+    global _mock_queue, _mock_queue_loop
+    try:
+        current_loop = asyncio.get_running_loop()
+    except RuntimeError:
+        current_loop = None
+
+    if _mock_queue is None or (
+        current_loop is not None and _mock_queue_loop is not current_loop
+    ):
+        _mock_queue = asyncio.Queue()
+        _mock_queue_loop = current_loop
+    return _mock_queue
 
 
 class NotificationWorker:
@@ -301,7 +317,7 @@ async def publish_domain_event(event: SystemDomainEvent) -> None:
     """
     message_str = event.model_dump_json()
     # Try publishing to mock queue first
-    await _mock_queue.put(message_str)
+    await _get_mock_queue().put(message_str)
 
 
 # Control flags for background worker lifespan
@@ -319,6 +335,7 @@ async def start_notification_worker() -> None:
 
     _should_run = True
     worker = NotificationWorker()
+    queue = _get_mock_queue()
 
     async def worker_loop():
         logger.info("Notification Background Consumer Worker loop initiated.")
@@ -326,7 +343,7 @@ async def start_notification_worker() -> None:
             try:
                 # Retrieve from mock in-memory queue
                 try:
-                    message_str = await asyncio.wait_for(_mock_queue.get(), timeout=1.0)
+                    message_str = await asyncio.wait_for(queue.get(), timeout=1.0)
                 except TimeoutError:
                     continue
 
