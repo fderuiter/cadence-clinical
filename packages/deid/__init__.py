@@ -21,8 +21,12 @@ from packages.deid.transforms import (
     DEFAULT_DATE_SHIFT_DAYS,
     RedactionRecordItem,
     apply_deid_transforms,
+    cap_age_numeric,
     cap_age_string,
+    get_subject_date_shift,
+    pseudonymize_subject_id,
     pseudonymize_value,
+    shift_date_by_subject,
     shift_date_string,
 )
 
@@ -40,6 +44,10 @@ __all__ = [
     "cap_age_string",
     "pseudonymize_value",
     "shift_date_string",
+    "get_subject_date_shift",
+    "shift_date_by_subject",
+    "cap_age_numeric",
+    "pseudonymize_subject_id",
     "RedactionManifest",
     "build_redaction_manifest",
     "sign_manifest_symmetric",

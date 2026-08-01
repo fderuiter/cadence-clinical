@@ -7,6 +7,7 @@ import hashlib
 import hmac
 import re
 from datetime import timedelta
+from typing import Any
 
 from dateutil import parser as date_parser
 from pydantic import BaseModel, Field
@@ -38,20 +39,24 @@ class RedactionRecordItem(BaseModel):
     replacement: str = Field(..., description="The sanitized replacement text")
 
 
-def pseudonymize_value(value: str, salt: str | bytes) -> str:
+def pseudonymize_value(value: str, salt: str | bytes, prefix: str = "") -> str:
     """
     Generates a deterministic HMAC-SHA256 pseudonym for the given value.
 
     Args:
         value (str): The raw string value to pseudonymize.
         salt (Union[str, bytes]): The secret salt used for the HMAC operation.
+        prefix (str): An optional study-specific prefix to prepend.
 
     Returns:
-        str: Hex-encoded HMAC-SHA256 of the value.
+        str: Prepended prefix + Hex-encoded HMAC-SHA256 of the value.
     """
     if isinstance(salt, str):
         salt = salt.encode("utf-8")
-    return hmac.new(salt, value.encode("utf-8"), hashlib.sha256).hexdigest()
+    h = hmac.new(salt, value.encode("utf-8"), hashlib.sha256).hexdigest()
+    if prefix:
+        return f"{prefix}{h}"
+    return h
 
 
 def shift_date_string(date_str: str, shift_days: int = DEFAULT_DATE_SHIFT_DAYS) -> str:
@@ -79,7 +84,7 @@ def shift_date_string(date_str: str, shift_days: int = DEFAULT_DATE_SHIFT_DAYS) 
         if re.match(r"^\d{1,2}-[a-zA-Z]{3}-\d{4}$", date_str, re.IGNORECASE):
             return shifted_dt.strftime("%d-%b-%Y")
         if re.match(r"^[a-zA-Z]{3}\s+\d{1,2},?\s+\d{4}$", date_str, re.IGNORECASE):
-            # e.g., "Jan 15, 2026" or "Jan 15 2026"
+            # e.g. text date format
             has_comma = "," in date_str
             fmt = "%b %d, %Y" if has_comma else "%b %d %Y"
             return shifted_dt.strftime(fmt)
@@ -95,7 +100,7 @@ def cap_age_string(age_str: str, cap: int = 89) -> str:
     Finds the numeric age value in a string, and if it exceeds the cap, generalizes it.
 
     Args:
-        age_str (str): The age matched string (e.g., "age 95", "92 years old").
+        age_str (str): The age matched string.
         cap (int): The maximum age limit. Defaults to 89.
 
     Returns:
@@ -190,3 +195,72 @@ def apply_deid_transforms(
     redaction_record.reverse()
     transformed_text = "".join(parts)
     return transformed_text, redaction_record
+
+
+def pseudonymize_subject_id(
+    subject_id: str, salt: str | bytes, prefix: str = ""
+) -> str:
+    """
+    Generates a deterministic study-specific pseudonym for a subject ID.
+    """
+    return pseudonymize_value(subject_id, salt, prefix)
+
+
+def get_subject_date_shift(subject_id: str, salt: str | bytes) -> int:
+    """
+    Calculates a stable, deterministic date-shift offset in days for a given subject.
+    Maps to range [-365, 365] inclusive (731 possible days).
+    """
+    if not subject_id:
+        return 0
+    # Generate HMAC-SHA256 pseudonym of subject_id without prefix
+    h = pseudonymize_value(subject_id, salt)
+    return (int(h, 16) % 731) - 365
+
+
+def shift_date_by_subject(
+    date_val: Any,
+    subject_id: str,
+    salt: str | bytes,
+) -> Any:
+    """
+    Shifts a date value (standard ISO string, numeric SAS date, or float/int SAS date)
+    deterministically per subject.
+    """
+    if date_val is None:
+        return None
+    offset = get_subject_date_shift(subject_id, salt)
+
+    # Check if numeric SAS date (must not be boolean)
+    if isinstance(date_val, (int, float)) and not isinstance(date_val, bool):
+        return date_val + offset
+
+    # Check if string
+    if isinstance(date_val, str):
+        val_strip = date_val.strip()
+        if not val_strip:
+            return date_val
+        # Check if integer
+        if re.match(r"^-?\d+$", val_strip):
+            return int(val_strip) + offset
+        # Check if float
+        if re.match(r"^-?\d+\.\d+$", val_strip):
+            return float(val_strip) + offset
+
+        # Standard ISO or textual date string
+        return shift_date_string(val_strip, offset)
+
+    return date_val
+
+
+def cap_age_numeric(age: int | float, cap: int = 89) -> int | float:
+    """
+    Caps a numeric age value if it exceeds the specified cap.
+    """
+    if isinstance(age, bool):
+        return age
+    if age > cap:
+        if isinstance(age, float):
+            return float(cap)
+        return int(cap)
+    return age
