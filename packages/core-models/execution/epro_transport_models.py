@@ -1,8 +1,10 @@
 from datetime import datetime
 from typing import Any
+
 from pydantic import BaseModel, Field
 
 # eCOA and ePRO Shared Pydantic Schemas
+
 
 class InstrumentCreate(BaseModel):
     study_id: str = Field(..., description="Unique identifier of the clinical study")

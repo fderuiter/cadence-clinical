@@ -1518,6 +1518,48 @@
         }
       }
     },
+    "/api/v1/execution/queries/generate": {
+      "post": {
+        "tags": [
+          "SDV/TSDV"
+        ],
+        "summary": "Bulk Generate Queries",
+        "description": "CRA/monitor-gated bulk query generation endpoint.",
+        "operationId": "bulk_generate_queries_api_v1_execution_queries_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkQueryGenerationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkQueryGenerationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -5679,6 +5721,140 @@
         ],
         "title": "Body_upload_document_api_v1_documents_upload_post"
       },
+      "BulkQueryGenerationRequest": {
+        "properties": {
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Target protocol study ID"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional target site identifier"
+          },
+          "subject_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Id",
+            "description": "Optional target subject identifier"
+          },
+          "targets": {
+            "items": {
+              "$ref": "#/components/schemas/QueryTargetDescriptor"
+            },
+            "type": "array",
+            "title": "Targets",
+            "description": "List of query target coordinate fields and explanations"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory GxP 21 CFR Part 11 justification reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "targets",
+          "reason_for_change"
+        ],
+        "title": "BulkQueryGenerationRequest",
+        "description": "Request payload to execute bulk clinical query generation.\n\nRequirements: PRD-SYS-001"
+      },
+      "BulkQueryGenerationResponse": {
+        "properties": {
+          "batch_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Id",
+            "description": "Unique bulk query batch identifier"
+          },
+          "audit_tx": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audit Tx",
+            "description": "Immutable GxP audit ledger transaction ID"
+          },
+          "generated_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated Count",
+            "description": "Legacy generated query count"
+          },
+          "generated_query_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Generated Query Ids",
+            "description": "List of generated unique query IDs"
+          },
+          "skipped_targets": {
+            "items": {
+              "$ref": "#/components/schemas/QueryTargetDescriptor"
+            },
+            "type": "array",
+            "title": "Skipped Targets",
+            "description": "List of target descriptors that were skipped due to already having an active query"
+          },
+          "timestamp_utc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp Utc",
+            "description": "UTC ISO timestamp of query generation execution"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generated_query_ids"
+        ],
+        "title": "BulkQueryGenerationResponse",
+        "description": "Response payload following bulk query generation execution.\n\nRequirements: PRD-SYS-001"
+      },
       "BulkSdvSignOffRequest": {
         "properties": {
           "study_id": {
@@ -9497,6 +9673,99 @@
         ],
         "title": "QueryRespond",
         "description": "Pydantic schema for responding to an open query."
+      },
+      "QueryTargetDescriptor": {
+        "properties": {
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Target study trial identifier"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Target clinical trial subject ID"
+          },
+          "visit_id": {
+            "type": "string",
+            "title": "Visit Id",
+            "description": "Target visit identifier"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain",
+            "description": "Target SDTM domain code"
+          },
+          "test_code": {
+            "type": "string",
+            "title": "Test Code",
+            "description": "Target clinical test code"
+          },
+          "observation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observation Id",
+            "description": "Optional target unique clinical observation ID"
+          },
+          "form_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form Id",
+            "description": "Optional form identifier"
+          },
+          "field_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Id",
+            "description": "Optional field identifier"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation",
+            "description": "Contextual explanation/issue description triggering query generation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_id",
+          "visit_id",
+          "domain",
+          "test_code"
+        ],
+        "title": "QueryTargetDescriptor",
+        "description": "Coordinate fields representing the specific target of a query.\n\nRequirements: PRD-SYS-001"
       },
       "QueryUpdate": {
         "properties": {

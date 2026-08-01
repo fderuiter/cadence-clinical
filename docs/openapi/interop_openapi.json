@@ -862,6 +862,11 @@
       },
       "InstrumentCreate": {
         "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique identifier of the clinical study"
+          },
           "name": {
             "type": "string",
             "title": "Name",
@@ -905,6 +910,7 @@
         },
         "type": "object",
         "required": [
+          "study_id",
           "name",
           "items",
           "response_types",
@@ -1038,6 +1044,11 @@
       },
       "SubjectAssignmentCreate": {
         "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique identifier of the clinical study"
+          },
           "subject_id": {
             "type": "string",
             "title": "Subject Id",
@@ -1093,6 +1104,7 @@
         },
         "type": "object",
         "required": [
+          "study_id",
           "subject_id",
           "instrument_id",
           "start_date",

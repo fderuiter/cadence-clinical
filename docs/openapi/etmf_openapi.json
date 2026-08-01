@@ -132,6 +132,142 @@
         }
       }
     },
+    "/api/v1/etmf/taxonomy": {
+      "get": {
+        "tags": [
+          "Taxonomy"
+        ],
+        "summary": "Get Taxonomy Catalog",
+        "description": "Expose the full static DIA TMF catalog as a browsable tree.",
+        "operationId": "get_taxonomy_catalog_api_v1_etmf_taxonomy_get",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional taxonomy version",
+              "title": "Version"
+            },
+            "description": "Optional taxonomy version"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxonomyCatalogResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/classify": {
+      "post": {
+        "tags": [
+          "Taxonomy"
+        ],
+        "summary": "Suggest Classification",
+        "description": "Provide automatic classification/auto-filing suggestions for a document.",
+        "operationId": "suggest_classification_api_v1_etmf_classify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoFileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoFileResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/taxonomy/classify": {
+      "post": {
+        "tags": [
+          "Taxonomy"
+        ],
+        "summary": "Suggest Classification",
+        "description": "Provide automatic classification/auto-filing suggestions for a document.",
+        "operationId": "suggest_classification_api_v1_etmf_taxonomy_classify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoFileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoFileResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -1750,6 +1886,78 @@
         "title": "AuditLogResponse",
         "description": "Representation of an eTMF audit trail log."
       },
+      "AutoFileRequest": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "artifact_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Type",
+            "description": "Optional artifact type hint"
+          },
+          "free_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Text",
+            "description": "Optional free-text hint"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename"
+        ],
+        "title": "AutoFileRequest",
+        "description": "Request model for auto-filing/classification suggestion."
+      },
+      "AutoFileResponse": {
+        "properties": {
+          "resolved_zone": {
+            "type": "integer",
+            "title": "Resolved Zone"
+          },
+          "resolved_section": {
+            "type": "string",
+            "title": "Resolved Section"
+          },
+          "artifact_code": {
+            "type": "string",
+            "title": "Artifact Code"
+          },
+          "artifact_type": {
+            "type": "string",
+            "title": "Artifact Type"
+          },
+          "match_basis": {
+            "type": "string",
+            "title": "Match Basis"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resolved_zone",
+          "resolved_section",
+          "artifact_code",
+          "artifact_type",
+          "match_basis"
+        ],
+        "title": "AutoFileResponse",
+        "description": "Response model for auto-filing/classification suggestion."
+      },
       "AutomatedRedactRequest": {
         "properties": {
           "profile": {
@@ -3331,6 +3539,101 @@
         ],
         "title": "StudyArchiveResponse",
         "description": "Response model for bulk study archive operation."
+      },
+      "TaxonomyArtifactNode": {
+        "properties": {
+          "artifact_code": {
+            "type": "string",
+            "title": "Artifact Code"
+          },
+          "artifact_name": {
+            "type": "string",
+            "title": "Artifact Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "artifact_code",
+          "artifact_name"
+        ],
+        "title": "TaxonomyArtifactNode",
+        "description": "Representation of an artifact node in the taxonomy structure."
+      },
+      "TaxonomyCatalogResponse": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "zones": {
+            "items": {
+              "$ref": "#/components/schemas/TaxonomyZoneNode"
+            },
+            "type": "array",
+            "title": "Zones"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "zones"
+        ],
+        "title": "TaxonomyCatalogResponse",
+        "description": "Top-level taxonomy catalog response representation."
+      },
+      "TaxonomySectionNode": {
+        "properties": {
+          "section_code": {
+            "type": "string",
+            "title": "Section Code"
+          },
+          "section_name": {
+            "type": "string",
+            "title": "Section Name"
+          },
+          "artifacts": {
+            "items": {
+              "$ref": "#/components/schemas/TaxonomyArtifactNode"
+            },
+            "type": "array",
+            "title": "Artifacts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "section_code",
+          "section_name",
+          "artifacts"
+        ],
+        "title": "TaxonomySectionNode",
+        "description": "Representation of a section node in the taxonomy structure."
+      },
+      "TaxonomyZoneNode": {
+        "properties": {
+          "zone_code": {
+            "type": "integer",
+            "title": "Zone Code"
+          },
+          "zone_name": {
+            "type": "string",
+            "title": "Zone Name"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/TaxonomySectionNode"
+            },
+            "type": "array",
+            "title": "Sections"
+          }
+        },
+        "type": "object",
+        "required": [
+          "zone_code",
+          "zone_name",
+          "sections"
+        ],
+        "title": "TaxonomyZoneNode",
+        "description": "Representation of a zone node in the taxonomy structure."
       },
       "TransitionRequest": {
         "properties": {
