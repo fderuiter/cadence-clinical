@@ -607,3 +607,157 @@ def intercept_cross_service_calls():
 
     with patch("httpx.AsyncClient.send", mock_send):
         yield
+
+
+@pytest.fixture
+def signed_headers():
+    """
+    Factory fixture to build valid V2 gateway-signed headers for testing.
+    Resolves GATEWAY_SECRET from env, defaulting to 'internal-gateway-secret-12345'.
+    Always includes tenant_id in both the signed payload and X-Tenant-Id header.
+    Supports a 'tamper' mode by passing tamper_tenant_id to sign with a different tenant_id.
+    """
+    import os
+    import time
+    from packages.security.signing import generate_gateway_signature
+
+    def _factory(
+        user_id: str,
+        roles: str,
+        change_reason: str,
+        tenant_id: str = "tenant_default",
+        site_id: str | None = None,
+        sponsor_id: str | None = None,
+        unblinded_access: bool = False,
+        sig_token: str | None = None,
+        study_id: str | None = None,
+        tamper_tenant_id: str | None = None,
+    ) -> dict[str, str]:
+        secret_env = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+        secret_bytes = secret_env.encode("utf-8") if isinstance(secret_env, str) else secret_env
+        timestamp = str(time.time())
+
+        # Support tamper mode: sign with tamper_tenant_id but send tenant_id in X-Tenant-Id
+        sign_tenant = tamper_tenant_id if tamper_tenant_id is not None else tenant_id
+
+        signature = generate_gateway_signature(
+            user_id=user_id,
+            roles=roles,
+            timestamp=timestamp,
+            secret=secret_bytes,
+            change_reason=change_reason,
+            site_id=site_id,
+            sponsor_id=sponsor_id,
+            unblinded_access=unblinded_access,
+            tenant_id=sign_tenant,
+            sig_token=sig_token,
+        )
+
+        headers = {
+            "X-User-Id": user_id,
+            "X-User-Roles": roles,
+            "X-Gateway-Timestamp": timestamp,
+            "X-Gateway-Signature": signature,
+            "X-Signature-Version": "2",
+            "X-Change-Reason": change_reason,
+            "X-Tenant-Id": tenant_id,
+        }
+
+        if site_id is not None:
+            headers["X-Site-Id"] = site_id
+        if sponsor_id is not None:
+            headers["X-Sponsor-Id"] = sponsor_id
+        if sig_token is not None:
+            headers["X-Sig-Token"] = sig_token
+        if study_id is not None:
+            headers["X-Study-Id"] = study_id
+        if unblinded_access:
+            headers["X-Unblinded-Access"] = "true"
+
+        return headers
+
+    return _factory
+
+
+@pytest.fixture
+def capture_cross_service_calls():
+    """
+    Fixture to patch httpx.AsyncClient.request to capture outbound requests,
+    exposing them to the test, and providing a helper to replay them.
+    """
+    import httpx
+    import json as json_lib
+    from unittest.mock import patch
+
+    class CrossServiceCallCapture:
+        def __init__(self):
+            self.calls = []
+            self.default_response_json = {"status": "ok"}
+            self.default_response_status = 200
+            self.passthrough = False
+
+        def clear(self):
+            self.calls.clear()
+
+        async def replay(self, client: httpx.AsyncClient, captured_call: dict, **kwargs) -> httpx.Response:
+            method = captured_call.get("method", "GET")
+            path = captured_call.get("path", "/")
+            headers = dict(captured_call.get("headers", {}))
+
+            if "headers" in kwargs:
+                headers.update(kwargs.pop("headers"))
+
+            json_payload = kwargs.pop("json", captured_call.get("json"))
+            content = kwargs.pop("content", captured_call.get("body"))
+
+            return await client.request(
+                method=method,
+                url=path,
+                headers=headers,
+                json=json_payload,
+                content=content,
+                **kwargs
+            )
+
+    capture_obj = CrossServiceCallCapture()
+    original_request = httpx.AsyncClient.request
+
+    async def mock_request(self, method: str, url, *args, **kwargs):
+        headers = kwargs.get("headers") or {}
+        headers_dict = dict(headers)
+
+        json_val = kwargs.get("json")
+        body_val = kwargs.get("content") or kwargs.get("data")
+
+        from httpx import URL
+        parsed_url = URL(url)
+        path = parsed_url.path
+        if parsed_url.query:
+            path = f"{path}?{parsed_url.query.decode('utf-8')}"
+
+        call_info = {
+            "method": method.upper(),
+            "url": str(url),
+            "path": path,
+            "headers": headers_dict,
+            "body": body_val,
+            "json": json_val,
+        }
+        capture_obj.calls.append(call_info)
+
+        if capture_obj.passthrough:
+            return await original_request(self, method, url, *args, **kwargs)
+
+        resp_json = capture_obj.default_response_json
+        resp_status = capture_obj.default_response_status
+
+        response = httpx.Response(
+            status_code=resp_status,
+            content=json_lib.dumps(resp_json).encode("utf-8"),
+            headers={"content-type": "application/json"},
+            request=httpx.Request(method, url)
+        )
+        return response
+
+    with patch.object(httpx.AsyncClient, "request", mock_request):
+        yield capture_obj
