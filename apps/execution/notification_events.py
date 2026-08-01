@@ -87,7 +87,7 @@ def dispatch_critical_lab_alerts(
     change_reason: str | None,
 ) -> None:
     """
-    Generates and dispatches critical lab notification alerts asynchronously.
+    Generates and dispatches critical lab notification alerts asynchronously using a multi-recipient dispatch.
 
     Args:
         background_tasks: BackgroundTasks context instance.

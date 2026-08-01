@@ -45,7 +45,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-# Files that must be committed to keep CI green.
+# Files that must be committed to keep CI green and compliant.
 GXP_DOCS = [
     "docs/SDLC/Requirements_Traceability_Matrix.md",
     "docs/SDLC/IQ_OQ_PQ_Execution_Report.md",
