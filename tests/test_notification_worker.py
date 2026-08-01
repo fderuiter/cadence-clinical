@@ -35,13 +35,16 @@ from apps.org.models import (
 
 
 @pytest_asyncio.fixture(autouse=True)
-async def setup_test_databases():
+async def setup_test_databases(monkeypatch):
     """
     Autouse fixture to spin up separate in-memory sqlite databases for
     both the Notifications and Org microservices, preventing test-to-test pollution.
     Also ensures any background worker task is cleanly terminated and reset.
     """
     import apps.notifications.workers.notification_worker as nw
+    import httpx
+    from httpx import ASGITransport
+    from apps.org.main import app as org_app
 
     nw._should_run = False
     if nw._worker_task:
@@ -66,6 +69,16 @@ async def setup_test_databases():
     org_db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
     async with org_db_manager.engine.begin() as conn:
         await conn.run_sync(OrgBase.metadata.create_all)
+
+    # Monkeypatch AsyncClient to route requests to org_app in-memory
+    original_client_init = httpx.AsyncClient.__init__
+
+    def mocked_client_init(self, *args, **kwargs):
+        kwargs["transport"] = ASGITransport(app=org_app)
+        kwargs["base_url"] = "http://test"
+        original_client_init(self, *args, **kwargs)
+
+    monkeypatch.setattr(httpx.AsyncClient, "__init__", mocked_client_init)
 
     yield
 

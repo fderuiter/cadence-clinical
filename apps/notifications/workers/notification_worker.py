@@ -1,13 +1,15 @@
 import asyncio
 import contextlib
-import importlib
 import json
 import logging
 import sys
+import os
+import time
 from typing import Any
 
 from notifications.event_models import SystemDomainEvent
-from sqlalchemy import select
+import httpx
+from packages.security.signing import generate_gateway_signature
 
 from apps.notifications.database import db_manager as notifications_db_manager
 from apps.notifications.models import (
@@ -22,12 +24,40 @@ from apps.notifications.services.email_renderer import (
     render_email_template,
 )
 
-_org_database = importlib.import_module("apps.org.database")
-org_db_manager = _org_database.db_manager
+ORG_URL = (os.getenv("ORG_URL") or "http://localhost:8010").rstrip("/")
 
-_org_models = importlib.import_module("apps.org.models")
-Personnel = _org_models.Personnel
-PersonnelAssignment = _org_models.PersonnelAssignment
+
+def _get_auth_headers() -> dict[str, str]:
+    gateway_secret_env = os.getenv(
+        "GATEWAY_SECRET", "internal-gateway-secret-12345"
+    )
+    gateway_secret = (
+        gateway_secret_env.encode("utf-8")
+        if isinstance(gateway_secret_env, str)
+        else gateway_secret_env
+    )
+
+    user_id = "notifications-service"
+    roles = "system"
+    timestamp = str(time.time())
+
+    signature = generate_gateway_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        secret=gateway_secret,
+        change_reason="system_operation",
+    )
+
+    return {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": signature,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": "system_operation",
+    }
+
 
 logger = logging.getLogger("notification_worker")
 
@@ -36,16 +66,16 @@ _mock_queue = asyncio.Queue()
 
 
 class NotificationWorker:
-    """
-    Asynchronous event worker that consumes clinical domain events,
+    """Asynchronous event worker that consumes clinical domain events,
+
     resolves recipient user assignments, and dispatches alerts.
     """
 
     async def resolve_recipients(
         self, event_type: str, study_id: str, payload: dict[str, Any]
     ) -> list[dict[str, str]]:
-        """
-        Queries the Org microservice database to resolve target clinical users based on
+        """Queries the Org microservice database to resolve target clinical users based on
+
         study, site, and role assignments. Falls back to deterministic mock values if database is empty.
         """
         # Determine roles based on event type
@@ -88,43 +118,53 @@ class NotificationWorker:
 
         resolved = []
 
-        # Try database-driven resolution
-        if org_db_manager.session_maker:
-            try:
-                async with org_db_manager.get_session_maker()() as session:
-                    stmt = select(
-                        Personnel.keycloak_user_id, Personnel.email, Personnel.role
-                    ).join(
-                        PersonnelAssignment,
-                        PersonnelAssignment.personnel_id == Personnel.id,
-                    )
+        # Try database-driven resolution over REST API
+        try:
+            async with httpx.AsyncClient() as client:
+                headers = _get_auth_headers()
+                res = await client.get(f"{ORG_URL}/api/v1/org/personnel", headers=headers)
+                if res.status_code == 200:
+                    personnel_list = res.json()
+                    for p in personnel_list:
+                        role_norm = p.get("role", "").lower().strip()
+                        if not any(role_norm == r.lower() for r in roles_to_find):
+                            continue
 
-                    # Filter by study
-                    stmt = stmt.where(
-                        PersonnelAssignment.study_id == study_id,
-                        PersonnelAssignment.is_active.is_(True),
-                    )
+                        # Check if matched directly or via assignments
+                        matched = False
+                        p_study = p.get("study_id")
+                        p_site = p.get("site_id")
+                        if p_study and study_id.lower() == p_study.lower():
+                            if not site_id or (p_site and site_id.lower() == p_site.lower()):
+                                matched = True
 
-                    # Filter by site if site-scoped and present
-                    if site_id:
-                        stmt = stmt.where(PersonnelAssignment.site_id == site_id)
-
-                    result = await session.execute(stmt)
-                    rows = result.all()
-
-                    for r_user_id, r_email, r_role in rows:
-                        role_norm = r_role.lower().strip()
-                        if any(role_norm == r.lower() for r in roles_to_find):
-                            resolved.append(
-                                {
-                                    "user_id": r_user_id or r_email,
-                                    "email": r_email,
-                                }
+                        if not matched:
+                            # Fetch assignments
+                            p_id = p.get("id")
+                            assigns_res = await client.get(
+                                f"{ORG_URL}/api/v1/org/personnel/{p_id}/assignments",
+                                headers=headers,
                             )
-            except Exception as e:
-                logger.warning(
-                    f"Failed to query org database for recipient resolution: {e}. Falling back."
-                )
+                            if assigns_res.status_code == 200:
+                                assignments = assigns_res.json()
+                                for a in assignments:
+                                    if a.get("is_active") is not False:
+                                        a_study = a.get("study_id")
+                                        a_site = a.get("site_id")
+                                        if a_study and study_id.lower() == a_study.lower():
+                                            if not site_id or (a_site and site_id.lower() == a_site.lower()):
+                                                matched = True
+                                                break
+
+                        if matched:
+                            resolved.append({
+                                "user_id": p.get("keycloak_user_id") or p.get("email"),
+                                "email": p.get("email"),
+                            })
+        except Exception as e:
+            logger.warning(
+                f"Failed to query org API for recipient resolution: {e}. Falling back."
+            )
 
         # Fallback to deterministic mock values if no matches found in database
         if not resolved:
@@ -286,9 +326,7 @@ class NotificationWorker:
 
 
 async def publish_domain_event(event: SystemDomainEvent) -> None:
-    """
-    Client helper to publish an event onto the mock queue or Redis channel.
-    """
+    """Client helper to publish an event onto the mock queue or Redis channel."""
     message_str = event.model_dump_json()
     # Try publishing to mock queue first
     await _mock_queue.put(message_str)
@@ -300,9 +338,7 @@ _should_run: bool = False
 
 
 async def start_notification_worker() -> None:
-    """
-    Starts the background worker loop, subscribing to the Redis or mock pubsub channel.
-    """
+    """Starts the background worker loop, subscribing to the Redis or mock pubsub channel."""
     global _worker_task, _should_run
     if _worker_task:
         return
@@ -366,9 +402,7 @@ async def start_notification_worker() -> None:
 
 
 async def stop_notification_worker() -> None:
-    """
-    Cleans up and cancels the running background worker loop.
-    """
+    """Cleans up and cancels the running background worker loop."""
     global _worker_task, _should_run
     _should_run = False
     if _worker_task:
