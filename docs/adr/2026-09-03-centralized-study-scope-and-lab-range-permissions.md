@@ -4,6 +4,7 @@
 * **Date:** 2026-09-03
 * **Authors:** @jules
 * **Deciders:** @engineering-lead, @quality-officer
+* **Requirements:** PRD-SYS-001
 
 ---
 
