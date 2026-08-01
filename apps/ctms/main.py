@@ -2520,14 +2520,13 @@ async def process_visit_sync(
             }
 
     # 5. Build SyncRecord representation
-    import importlib
+    import sync_engine
 
-    _interop_sync = importlib.import_module("apps.interop.sync_engine")
-    signature_validation_error = _interop_sync.SignatureValidationError
-    sync_metadata = _interop_sync.SyncMetadata
-    sync_record = _interop_sync.SyncRecord
-    reconcile_records = _interop_sync.reconcile_records
-    verify_record_signature = _interop_sync.verify_record_signature
+    signature_validation_error = sync_engine.SignatureValidationError
+    sync_metadata = sync_engine.SyncMetadata
+    sync_record = sync_engine.SyncRecord
+    reconcile_records = sync_engine.reconcile_records
+    verify_record_signature = sync_engine.verify_record_signature
 
     incoming_timestamps = payload.offline_sync_markers.timestamps or {}
     timestamps = {}

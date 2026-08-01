@@ -4,17 +4,29 @@ Requirements: PRD-SYS-001
 """
 
 import hashlib
-import importlib
 import uuid
 
 from sqlalchemy import Boolean, String, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 import packages  # noqa: F401
+from packages.security.ner_scrubber import PHINameEntityScrubber
 from packages.security.rbac import Principal, can_access_site
 
-_compliance_services = importlib.import_module("apps.compliance.services.phi_redactor")
-PHIRedactorService = _compliance_services.PHIRedactorService
+
+class PHIRedactorService:
+    """Service for identifying and redacting PHI/PII from regulatory documents non-destructively."""
+
+    def __init__(self) -> None:
+        self.scrubber = PHINameEntityScrubber()
+
+    def redact_content(self, content: bytes, phi_terms: list[str]) -> bytes:
+        text = content.decode("utf-8", errors="ignore")
+        for term in phi_terms:
+            if term:
+                text = text.replace(term, "[REDACTED]")
+        text = self.scrubber.scrub_phi(text)
+        return text.encode("utf-8")
 
 
 class Base(DeclarativeBase):

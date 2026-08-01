@@ -151,30 +151,34 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     Yields:
         None
     """
-    # Initialize shared database library
-    db_manager.init_db(DATABASE_URL)
+    is_testing = "PYTEST_CURRENT_TEST" in os.environ or "TESTING" in os.environ
 
-    # Start the background ledger sealer
-    from apps.execution.database.sealer import (
-        start_background_sealer,
-        stop_background_sealer,
-    )
-    from apps.execution.queries_escalation import (
-        start_background_query_escalation,
-        stop_background_query_escalation,
-    )
+    if not is_testing:
+        # Initialize shared database library
+        db_manager.init_db(DATABASE_URL)
 
-    await start_background_sealer(db_manager.get_session_maker())
-    await start_background_query_escalation(db_manager.get_session_maker())
+        # Start the background ledger sealer
+        from apps.execution.database.sealer import (
+            start_background_sealer,
+            stop_background_sealer,
+        )
+        from apps.execution.queries_escalation import (
+            start_background_query_escalation,
+            stop_background_query_escalation,
+        )
+
+        await start_background_sealer(db_manager.get_session_maker())
+        await start_background_query_escalation(db_manager.get_session_maker())
 
     yield
 
-    # Stop background ledger sealer
-    await stop_background_sealer()
-    # Stop background query escalation
-    await stop_background_query_escalation()
-    # Cleanup database connection
-    await db_manager.close()
+    if not is_testing:
+        # Stop background ledger sealer
+        await stop_background_sealer()
+        # Stop background query escalation
+        await stop_background_query_escalation()
+        # Cleanup database connection
+        await db_manager.close()
 
 
 class InvalidParam(BaseModel):
@@ -1983,23 +1987,41 @@ async def create_observation(
         await run_synchronous_edit_checks(session, obs_db)
         await session.commit()
 
-        # Check for critical lab notification dispatch
-        if obs_db.lab_indicator in ("LOW LOW", "HIGH HIGH"):
-            from apps.execution.notifications_client import publish_notification
-
-            notification_payload = {
-                "category": "ALERTS",
-                "priority": "CRITICAL",
-                "message_content": f"Critical lab value detected: {obs_db.lab_indicator} for subject {obs_db.subject_id}, test code {obs_db.test_code}.",
-                "related_entity_type": "observation",
-                "related_entity_id": obs_db.id,
-                "related_entity_subject_id": obs_db.subject_id,
-            }
-            background_tasks.add_task(publish_notification, notification_payload)
-
         # Propagate audit and user context to background tasks
         user_id = current_user_id.get()
         change_reason = current_change_reason.get()
+
+        # Check for critical lab notification dispatch
+        if obs_db.lab_indicator in ("LOW LOW", "HIGH HIGH"):
+            from apps.execution.notification_events import (
+                generate_critical_lab_notification_payload,
+                publish_notification_background,
+            )
+
+            raw_payload = generate_critical_lab_notification_payload(
+                obs_db, obs_db.lab_indicator
+            )
+            # Standard recipients-based multi-dispatch in the background
+            for recipient in raw_payload["recipients"]:
+                recipient_payload = {
+                    "category": raw_payload["category"],
+                    "priority": raw_payload["priority"],
+                    "channels": "IN_APP",
+                    "message_content": raw_payload["message_content"],
+                    "related_entity_id": raw_payload["related_entity_id"],
+                    "related_entity_type": raw_payload["related_entity_type"],
+                    "related_entity_subject_id": raw_payload[
+                        "related_entity_subject_id"
+                    ],
+                    "recipient_user_id": recipient,
+                }
+                background_tasks.add_task(
+                    publish_notification_background,
+                    recipient_payload,
+                    user_id,
+                    change_reason,
+                )
+
         background_tasks.add_task(
             run_asynchronous_edit_checks,
             db_manager.get_session_maker(),
@@ -2416,7 +2438,6 @@ async def create_lab_range(
             )
             session.add(lab_range)
             await session.flush()
-            lab_range_cache.invalidate(lab_range.study_id, lab_range.test_code)
 
         lab_range_cache.invalidate(lab_range.study_id, lab_range.test_code)
 
@@ -2599,13 +2620,10 @@ async def update_lab_range(
             r.critical_low = merged_data["critical_low"]
             r.critical_high = merged_data["critical_high"]
             await session.flush()
+
+        lab_range_cache.invalidate(original_study_id, original_test_code)
+        if original_study_id != r.study_id or original_test_code != r.test_code:
             lab_range_cache.invalidate(r.study_id, r.test_code)
-
-            lab_range_cache.invalidate(original_study_id, original_test_code)
-            if original_study_id != r.study_id or original_test_code != r.test_code:
-                lab_range_cache.invalidate(r.study_id, r.test_code)
-
-        lab_range_cache.invalidate(r.study_id, r.test_code)
 
         return LabReferenceRangeResponse(
             id=r.id,
@@ -2652,7 +2670,6 @@ async def delete_lab_range(
 
             r.is_deleted = True
             await session.flush()
-            lab_range_cache.invalidate(r.study_id, r.test_code)
 
         lab_range_cache.invalidate(r.study_id, r.test_code)
 
@@ -2699,6 +2716,7 @@ class LabRangeRecalculateResponse(BaseModel):
 )
 async def trigger_lab_range_recalculation(
     payload: LabRangeRecalculateRequest,
+    background_tasks: BackgroundTasks,
     roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
     _justification=Depends(verify_change_justification),
 ) -> LabRangeRecalculateResponse:
@@ -2711,7 +2729,7 @@ async def trigger_lab_range_recalculation(
     # before execution, allowing the before_flush event listener to log attributed updates.
     async with db_manager.get_session_maker()() as session:
         count = await recalculate_range_flags(
-            session, payload.study_id, payload.test_code
+            session, payload.study_id, payload.test_code, background_tasks
         )
         lab_range_cache.invalidate(payload.study_id, payload.test_code)
         return LabRangeRecalculateResponse(
@@ -2833,10 +2851,7 @@ from apps.execution.routers.coding_schemas import (  # noqa: E402
     JobStatusEnum,
     JobStatusResponse,
     MedDRACodingResult,
-    WHODrugATCContext,
-    WHODrugCodeMatch,
     WHODrugCodingResult,
-    WHODrugIngredientItem,
 )
 
 
@@ -3081,7 +3096,7 @@ async def get_whodrug_code(
 
     async with db_manager.get_session_maker()() as session:
         try:
-            res = await search_dictionary(
+            return await search_dictionary(
                 session=session,
                 term=term,
                 dictionary_type="WHODRUG",
@@ -3089,61 +3104,6 @@ async def get_whodrug_code(
             )
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
-
-        matches = []
-        if res.get("match"):
-            m = res["match"]
-            matches.append(
-                WHODrugCodeMatch(
-                    drug_code=m.get("drug_code") or "",
-                    preferred_name=m.get("preferred_name") or "",
-                    drug_name=m.get("drug_name"),
-                    score=m.get("score", 0.0),
-                    atc_context=[
-                        WHODrugATCContext(
-                            atc_code=a.get("atc_code") or "",
-                            description=a.get("description") or "",
-                        )
-                        for a in m.get("atc_context", [])
-                    ],
-                    ingredients=[
-                        WHODrugIngredientItem(
-                            ingredient_code=i.get("ingredient_code") or "",
-                            ingredient_name=i.get("ingredient_name") or "",
-                        )
-                        for i in m.get("ingredients", [])
-                    ],
-                )
-            )
-        elif res.get("suggestions"):
-            for sug in res["suggestions"]:
-                matches.append(
-                    WHODrugCodeMatch(
-                        drug_code=sug.get("drug_code") or "",
-                        preferred_name=sug.get("preferred_name") or "",
-                        drug_name=sug.get("drug_name"),
-                        score=sug.get("score", 0.0),
-                        atc_context=[
-                            WHODrugATCContext(
-                                atc_code=a.get("atc_code") or "",
-                                description=a.get("description") or "",
-                            )
-                            for a in sug.get("atc_context", [])
-                        ],
-                        ingredients=[
-                            WHODrugIngredientItem(
-                                ingredient_code=i.get("ingredient_code") or "",
-                                ingredient_name=i.get("ingredient_name") or "",
-                            )
-                            for i in sug.get("ingredients", [])
-                        ],
-                    )
-                )
-
-        return WHODrugCodingResult(
-            status=res.get("status", "UNCODABLE"),
-            matches=matches,
-        )
 
 
 @app.post(
