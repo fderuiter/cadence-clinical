@@ -1,15 +1,22 @@
 <template>
-  <div id="section-rules" class="dashboard-section active">
+  <div
+    id="section-rules"
+    class="dashboard-section active"
+  >
     <div class="section-header">
-      <h2>Interactive Rules &amp; Query Designer</h2>
+      <h2>Interactive Rules Designer</h2>
       <p>
         Declarative visual rule builder supporting skip logic, constraint
-        checks, and cross-form edit validations, plus centralized Query Life-Cycle management.
+        checks, and cross-form edit validations, plus centralized Query
+        Life-Cycle management.
       </p>
     </div>
 
     <!-- Authorization Gating check -->
-    <div v-if="!hasEditAccess" class="card rules-gating-banner">
+    <div
+      v-if="!hasEditAccess"
+      class="card rules-gating-banner"
+    >
       <div class="rules-gating-content">
         <span class="rules-gating-icon">🚫</span>
         <div>
@@ -18,9 +25,9 @@
           </h3>
           <p class="rules-gating-text">
             You do not have the required <strong>DATA_MANAGER</strong> role to
-            view or interact with clinical rules and queries. Please authenticate
-            with an authorized data management token or consult your system
-            administrator.
+            view or interact with clinical rules and queries. Please
+            authenticate with an authorized data management token or consult
+            your system administrator.
           </p>
         </div>
       </div>
@@ -41,14 +48,22 @@
       >
         <button
           class="btn tab-btn-rules"
-          :style="activeTab === 'rules' ? 'background-color: var(--primary); color: white;' : 'background-color: #e2e8f0; color: #475569;'"
+          :style="
+            activeTab === 'rules'
+              ? 'background-color: var(--primary); color: white;'
+              : 'background-color: rgba(226, 232, 240, 1); color: #475569;'
+          "
           @click="activeTab = 'rules'"
         >
           📋 Rules Designer Workspace
         </button>
         <button
           class="btn tab-btn-queries"
-          :style="activeTab === 'queries' ? 'background-color: var(--primary); color: white;' : 'background-color: #e2e8f0; color: #475569;'"
+          :style="
+            activeTab === 'queries'
+              ? 'background-color: var(--primary); color: white;'
+              : 'background-color: rgba(226, 232, 240, 1); color: #475569;'
+          "
           @click="activeTab = 'queries'"
         >
           💬 Data Manager Query Dashboard
@@ -79,8 +94,7 @@
             <span
               v-if="loadingRules"
               style="font-size: 0.85rem; color: #64748b; font-weight: normal"
-              >Loading...</span
-            >
+            >Loading...</span>
           </div>
 
           <!-- Connection Error Banner if any -->
@@ -96,8 +110,8 @@
               font-size: 0.85rem;
             "
           >
-            <strong>API Mode Degraded:</strong> Running in Local Sandbox VM. Sync
-            with GxP Server offline.
+            <strong>API Mode Degraded:</strong> Running in Local Sandbox VM.
+            Sync with GxP Server offline.
           </div>
 
           <div
@@ -118,7 +132,8 @@
                 text-align: center;
               "
             >
-              No active rules configured. Click "Create New Rule" to get started.
+              No active rules configured. Click "Create New Rule" to get
+              started.
             </div>
             <div v-else>
               <div
@@ -133,8 +148,7 @@
                       font-size: 0.95rem;
                       font-family: monospace;
                     "
-                    >{{ rule.id }}</strong
-                  >
+                  >{{ rule.id }}</strong>
                   <div style="display: flex; gap: 6px">
                     <button
                       class="btn"
@@ -185,8 +199,7 @@
                         font-size: 0.7rem;
                         padding: 2px 6px;
                       "
-                      >{{ rule.type }}</span
-                    >
+                    >{{ rule.type }}</span>
                   </div>
                   <div v-if="rule.type === 'skip_logic'">
                     <strong>Action:</strong> {{ rule.action }} field
@@ -194,17 +207,13 @@
                   </div>
                   <div v-else-if="rule.type === 'constraint'">
                     <strong>Target Field:</strong>
-                    <code>{{ rule.target_field }}</code> <br />
+                    <code>{{ rule.target_field }}</code> <br>
                     <strong>Discrepancy Message:</strong>
-                    <span style="font-style: italic; color: var(--primary)"
-                      >"{{ rule.query_message }}"</span
-                    >
+                    <span style="font-style: italic; color: var(--primary)">"{{ rule.query_message }}"</span>
                   </div>
                   <div v-else-if="rule.type === 'cross_form_check'">
                     <strong>Discrepancy Message:</strong>
-                    <span style="font-style: italic; color: var(--primary)"
-                      >"{{ rule.query_message }}"</span
-                    >
+                    <span style="font-style: italic; color: var(--primary)">"{{ rule.query_message }}"</span>
                   </div>
                 </div>
                 <div
@@ -249,7 +258,10 @@
           class="card"
           style="display: flex; flex-direction: column"
         >
-          <div class="card-title" style="margin-bottom: 16px">
+          <div
+            class="card-title"
+            style="margin-bottom: 16px"
+          >
             {{ editingRuleId ? "Edit Clinical Rule" : "Compose Clinical Rule" }}
           </div>
 
@@ -270,7 +282,7 @@
               @change="handleEditorChange"
               @input="handleEditorInput"
               v-html="ruleEditorHtml"
-            ></div>
+            />
 
             <!-- Live Compilation & GxP Verification Preview -->
             <fieldset
@@ -333,7 +345,12 @@
                     margin-bottom: 8px;
                   "
                 >
-                  <div v-for="(f, i) in previewFailures" :key="i">⚠️ {{ f }}</div>
+                  <div
+                    v-for="(f, i) in previewFailures"
+                    :key="i"
+                  >
+                    ⚠️ {{ f }}
+                  </div>
                 </div>
                 <div
                   v-else
@@ -350,7 +367,10 @@
                   v-if="previewCircularCycles.length > 0"
                   style="color: var(--error); font-weight: 600"
                 >
-                  <div v-for="(c, i) in previewCircularCycles" :key="i">
+                  <div
+                    v-for="(c, i) in previewCircularCycles"
+                    :key="i"
+                  >
                     🚨 {{ c }}
                   </div>
                 </div>
@@ -388,7 +408,10 @@
       </div>
 
       <!-- Tab 2: Query Life-Cycle Dashboard & History Viewer (Sub-Issue 11) -->
-      <div v-else-if="activeTab === 'queries'" class="card">
+      <div
+        v-else-if="activeTab === 'queries'"
+        class="card"
+      >
         <div
           class="card-title"
           style="
@@ -417,7 +440,8 @@
           </div>
         </div>
         <p style="font-size: 0.85rem; color: #475569; margin-bottom: 16px">
-          Review, manage, and audit clinical query states (OPEN, ANSWERED, REOPENED, CLOSED) across all trial subjects.
+          Review, manage, and audit clinical query states (OPEN, ANSWERED,
+          REOPENED, CLOSED) across all trial subjects.
         </p>
 
         <!-- Coding Dictionary Lookup Area -->
@@ -453,16 +477,19 @@
                 border-radius: 4px;
                 font-size: 0.85rem;
               "
-            />
+            >
             <button
               class="btn btn-primary"
-              @click="searchDict"
               style="font-size: 0.85rem"
+              @click="searchDict"
             >
               Search Dictionary
             </button>
           </div>
-          <div v-if="dictSearching" style="font-size: 0.8rem; color: #64748b">
+          <div
+            v-if="dictSearching"
+            style="font-size: 0.8rem; color: #64748b"
+          >
             Querying dictionaries...
           </div>
           <div
@@ -481,7 +508,7 @@
               :key="r.code"
               style="
                 padding: 4px 0;
-                border-bottom: 1px solid #f1f5f9;
+                border-bottom: 1px solid rgba(241, 245, 249, 1);
                 font-size: 0.8rem;
               "
             >
@@ -492,19 +519,37 @@
         </div>
 
         <!-- Queries Table -->
-        <table class="clinical-visit-matrix" style="width: 100%">
+        <table
+          class="clinical-visit-matrix"
+          style="width: 100%"
+        >
           <thead>
             <tr>
-              <th scope="col">ID</th>
-              <th scope="col">Subject / Visit</th>
-              <th scope="col">Field</th>
-              <th scope="col">Discrepancy Message / Responses</th>
-              <th scope="col">Status</th>
-              <th scope="col">Actions</th>
+              <th scope="col">
+                ID
+              </th>
+              <th scope="col">
+                Subject / Visit
+              </th>
+              <th scope="col">
+                Field
+              </th>
+              <th scope="col">
+                Discrepancy Message / Responses
+              </th>
+              <th scope="col">
+                Status
+              </th>
+              <th scope="col">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="q in dashboardQueries" :key="q.id">
+            <tr
+              v-for="q in dashboardQueries"
+              :key="q.id"
+            >
               <td>
                 <strong style="font-family: monospace">{{ q.id }}</strong>
               </td>
@@ -514,16 +559,26 @@
               </td>
               <td>
                 <div><strong>Query:</strong> {{ q.message }}</div>
-                <div v-if="q.response" style="color: #0369a1; margin-top: 4px">
+                <div
+                  v-if="q.response"
+                  style="color: #0369a1; margin-top: 4px"
+                >
                   <strong>Response:</strong> "{{ q.response }}" (Responded by:
                   {{ q.respondedBy }} on {{ q.respondedAt }})
                 </div>
-                <div v-if="q.closedBy" style="color: #15803d; margin-top: 4px">
-                  <strong>Closed:</strong> by {{ q.closedBy }} on {{ q.closedAt }}
+                <div
+                  v-if="q.closedBy"
+                  style="color: #15803d; margin-top: 4px"
+                >
+                  <strong>Closed:</strong> by {{ q.closedBy }} on
+                  {{ q.closedAt }}
                 </div>
               </td>
               <td>
-                <span class="badge" :class="getBadgeClass(q.status)">{{
+                <span
+                  class="badge"
+                  :class="getBadgeClass(q.status)"
+                >{{
                   q.status
                 }}</span>
               </td>
@@ -559,7 +614,9 @@
                     Add Response
                   </button>
                 </div>
-                <div v-else>-</div>
+                <div v-else>
+                  -
+                </div>
               </td>
             </tr>
           </tbody>
@@ -581,7 +638,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, reactive } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { apiClient } from "../api/apiClient";
@@ -620,7 +677,7 @@ const dashboardQueries = ref([
     status: "OPEN",
     message: "Pulse is 190. Please re-measure.",
     createdBy: "CRA",
-    createdAt: "2026-08-10",
+    createdAt: new Date().toISOString().slice(0, 10),
   },
   {
     id: "q-2",
@@ -631,7 +688,7 @@ const dashboardQueries = ref([
     message: "Systolic BP out of logic constraint range.",
     response: "Re-measured and confirmed correct.",
     respondedBy: "CRC",
-    respondedAt: "2026-08-15",
+    respondedAt: new Date().toISOString().slice(0, 10),
   },
   {
     id: "q-3",
@@ -642,7 +699,7 @@ const dashboardQueries = ref([
     message: "Diastolic value missing.",
     response: "Entered 80 mmHg.",
     closedBy: "DM",
-    closedAt: "2026-08-11",
+    closedAt: new Date().toISOString().slice(0, 10),
   },
 ]);
 
@@ -668,7 +725,11 @@ async function searchDict() {
   } catch (err) {
     console.warn("Dictionary search failed, providing mock definitions:", err);
     dictResults.value = [
-      { code: "10023026", name: "Hypertension (High blood pressure)", dictionary: "MedDRA v25.0" },
+      {
+        code: "10023026",
+        name: "Hypertension (High blood pressure)",
+        dictionary: "MedDRA v25.0",
+      },
       { code: "10037340", name: "Pulse irregular", dictionary: "MedDRA v25.0" },
     ];
   } finally {
@@ -686,15 +747,23 @@ function promptUpdateQueryState(query, nextState) {
 
 function exportQueries(format) {
   const filename = `query_history_export.${format.toLowerCase()}`;
-  let content = "";
-  let mimeType = "text/plain";
+  let content;
+  let mimeType;
 
   if (format === "JSON") {
     content = JSON.stringify(dashboardQueries.value, null, 2);
     mimeType = "application/json";
   } else {
     // CSV export
-    const headers = ["ID", "Subject", "Visit", "Field", "Status", "Message", "Response"];
+    const headers = [
+      "ID",
+      "Subject",
+      "Visit",
+      "Field",
+      "Status",
+      "Message",
+      "Response",
+    ];
     const rows = dashboardQueries.value.map((q) => [
       q.id,
       q.subjectId,
@@ -706,7 +775,9 @@ function exportQueries(format) {
     ]);
     content = [
       headers.join(","),
-      ...rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")),
+      ...rows.map((r) =>
+        r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")
+      ),
     ].join("\n");
     mimeType = "text/csv";
   }

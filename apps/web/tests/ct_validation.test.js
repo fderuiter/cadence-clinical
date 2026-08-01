@@ -166,7 +166,7 @@ describe("Controlled Terminology (CT) Live Validation Unit & UI Tests", () => {
       const wrapper = mount(MdrView);
 
       // Open builder mode
-      const toggleBtn = wrapper.find("button.btn");
+      const toggleBtn = wrapper.find("button.btn-builder-toggle");
       await toggleBtn.trigger("click");
 
       expect(wrapper.find("input#new-arm-concept").exists()).toBe(true);
@@ -181,7 +181,7 @@ describe("Controlled Terminology (CT) Live Validation Unit & UI Tests", () => {
       });
 
       const wrapper = mount(MdrView);
-      const toggleBtn = wrapper.find("button.btn");
+      const toggleBtn = wrapper.find("button.btn-builder-toggle");
       await toggleBtn.trigger("click");
 
       const armInput = wrapper.find("input#new-arm-concept");

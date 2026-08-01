@@ -1,7 +1,7 @@
 <template>
   <div
-    ref="panelRef"
     :id="`query-panel-${id}`"
+    ref="panelRef"
     class="query-panel"
     role="region"
     :aria-labelledby="`query-flag-${id}`"
@@ -19,9 +19,14 @@
     </div>
     <div class="query-panel-body">
       <!-- NONE state (Only CRAs or DMs can raise new queries) -->
-      <div v-if="status === 'NONE'" class="query-create-section">
+      <div
+        v-if="status === 'NONE'"
+        class="query-create-section"
+      >
         <template v-if="canManageQueries">
-          <p class="query-panel-instruction">Raise a query for this field:</p>
+          <p class="query-panel-instruction">
+            Raise a query for this field:
+          </p>
           <div class="form-group">
             <label :for="`query-message-${id}`">Discrepancy Message</label>
             <textarea
@@ -29,7 +34,7 @@
               v-model="messageInput"
               placeholder="Enter clinical discrepancy details..."
               required
-            ></textarea>
+            />
           </div>
           <button
             type="button"
@@ -42,8 +47,9 @@
           </button>
         </template>
         <template v-else>
-          <p style="font-size: 0.85rem; color: #64748b; font-style: italic;">
-            Raising queries is restricted to clinical monitors (CRA) and data managers.
+          <p style="font-size: 0.85rem; color: #64748b; font-style: italic">
+            Raising queries is restricted to clinical monitors (CRA) and data
+            managers.
           </p>
         </template>
       </div>
@@ -66,7 +72,10 @@
           Raised by: {{ query.createdBy || "System" }} on
           {{ query.createdAt || "N/A" }}
         </p>
-        <div class="query-respond-section" style="margin-top: 12px">
+        <div
+          class="query-respond-section"
+          style="margin-top: 12px"
+        >
           <div class="form-group">
             <label :for="`query-response-${id}`">Your Response</label>
             <textarea
@@ -74,7 +83,7 @@
               v-model="responseInput"
               placeholder="Enter clinical justification or resolution explanation..."
               required
-            ></textarea>
+            />
           </div>
           <button
             type="button"
@@ -89,8 +98,13 @@
       </div>
 
       <!-- ANSWERED state (Only CRAs/DMs can close/reopen) -->
-      <div v-else-if="status === 'ANSWERED'" class="query-details">
-        <div class="query-status-badge badge-answered">Status: ANSWERED</div>
+      <div
+        v-else-if="status === 'ANSWERED'"
+        class="query-details"
+      >
+        <div class="query-status-badge badge-answered">
+          Status: ANSWERED
+        </div>
         <p class="query-current-msg">
           <strong>Discrepancy:</strong> {{ query.message }}
         </p>
@@ -126,14 +140,28 @@
             Reopen Query
           </button>
         </div>
-        <div v-else style="margin-top: 12px; font-size: 0.85rem; color: #64748b; font-style: italic;">
-          Query resolution is restricted to clinical monitors (CRA) and data managers.
+        <div
+          v-else
+          style="
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: #64748b;
+            font-style: italic;
+          "
+        >
+          Query resolution is restricted to clinical monitors (CRA) and data
+          managers.
         </div>
       </div>
 
       <!-- CLOSED state -->
-      <div v-else-if="status === 'CLOSED'" class="query-details">
-        <div class="query-status-badge badge-closed">Status: CLOSED</div>
+      <div
+        v-else-if="status === 'CLOSED'"
+        class="query-details"
+      >
+        <div class="query-status-badge badge-closed">
+          Status: CLOSED
+        </div>
         <p class="query-current-msg">
           <strong>Discrepancy:</strong> {{ query.message }}
         </p>
@@ -195,7 +223,14 @@ const canManageQueries = computed(() => {
   const roles = authStore.normalizedRoles || [];
   // Ensure we also support mock data manager role in RulesView
   return roles.some((role) =>
-    ["cra", "monitor", "data_manager", "sponsor_admin", "admin", "sponsor_designer"].includes(role)
+    [
+      "cra",
+      "monitor",
+      "data_manager",
+      "sponsor_admin",
+      "admin",
+      "sponsor_designer",
+    ].includes(role)
   );
 });
 

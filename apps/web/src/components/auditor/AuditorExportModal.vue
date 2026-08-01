@@ -32,10 +32,11 @@
           margin-bottom: 20px;
         "
       >
-        <h3 style="margin: 0; font-size: 16px">Export Inspection Log</h3>
+        <h3 style="margin: 0; font-size: 16px">
+          Export Inspection Log
+        </h3>
         <button
           class="btn-close"
-          @click="$emit('close')"
           style="
             background: none;
             border: none;
@@ -43,12 +44,16 @@
             cursor: pointer;
             color: var(--text);
           "
+          @click="$emit('close')"
         >
           ×
         </button>
       </header>
 
-      <div class="form-group" style="margin-bottom: 16px">
+      <div
+        class="form-group"
+        style="margin-bottom: 16px"
+      >
         <label
           style="
             font-size: 12px;
@@ -56,8 +61,7 @@
             margin-bottom: 6px;
             display: block;
           "
-          >Export Format</label
-        >
+        >Export Format</label>
         <div style="display: flex; gap: 16px; margin-top: 8px">
           <label
             style="
@@ -68,7 +72,11 @@
               font-size: 13px;
             "
           >
-            <input type="radio" v-model="exportFormat" value="CSV" /> CSV
+            <input
+              v-model="exportFormat"
+              type="radio"
+              value="CSV"
+            > CSV
           </label>
           <label
             style="
@@ -79,7 +87,11 @@
               font-size: 13px;
             "
           >
-            <input type="radio" v-model="exportFormat" value="PDF" /> PDF
+            <input
+              v-model="exportFormat"
+              type="radio"
+              value="PDF"
+            > PDF
           </label>
           <label
             style="
@@ -90,12 +102,19 @@
               font-size: 13px;
             "
           >
-            <input type="radio" v-model="exportFormat" value="JSON" /> JSON
+            <input
+              v-model="exportFormat"
+              type="radio"
+              value="JSON"
+            > JSON
           </label>
         </div>
       </div>
 
-      <div class="form-group" style="margin-bottom: 16px">
+      <div
+        class="form-group"
+        style="margin-bottom: 16px"
+      >
         <label
           style="
             font-size: 12px;
@@ -103,8 +122,7 @@
             margin-bottom: 6px;
             display: block;
           "
-          >Date Range Bounds</label
-        >
+        >Date Range Bounds</label>
         <div
           style="
             display: grid;
@@ -121,11 +139,10 @@
                 display: block;
                 margin-bottom: 4px;
               "
-              >Start Date</label
-            >
+            >Start Date</label>
             <input
-              type="date"
               v-model="startDate"
+              type="date"
               class="export-start-date"
               style="
                 width: 100%;
@@ -136,7 +153,7 @@
                 color: var(--text);
                 font-size: 13px;
               "
-            />
+            >
           </div>
           <div>
             <label
@@ -146,11 +163,10 @@
                 display: block;
                 margin-bottom: 4px;
               "
-              >End Date</label
-            >
+            >End Date</label>
             <input
-              type="date"
               v-model="endDate"
+              type="date"
               class="export-end-date"
               style="
                 width: 100%;
@@ -161,7 +177,7 @@
                 color: var(--text);
                 font-size: 13px;
               "
-            />
+            >
           </div>
         </div>
       </div>
@@ -174,13 +190,16 @@
           margin-top: 24px;
         "
       >
-        <button class="btn btn-secondary" @click="$emit('close')">
+        <button
+          class="btn btn-secondary"
+          @click="$emit('close')"
+        >
           Cancel
         </button>
         <button
           class="btn btn-primary"
-          @click="handleExport"
           :disabled="exporting"
+          @click="handleExport"
         >
           {{ exporting ? "Exporting..." : "Download Export" }}
         </button>
