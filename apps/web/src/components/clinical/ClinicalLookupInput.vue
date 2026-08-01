@@ -61,8 +61,8 @@
     <!-- Terminology Specific Query Panel -->
     <ClinicalQueryPanel
       v-if="isQueryOpen"
-      :query="props.query"
       :id="props.id"
+      :query="props.query"
       @close-query="$emit('close-query')"
       @reopen-query="$emit('reopen-query')"
       @create-query="$emit('create-query', $event)"

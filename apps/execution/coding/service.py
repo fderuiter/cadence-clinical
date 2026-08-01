@@ -26,6 +26,10 @@ from apps.execution.database.models import (
 from apps.execution.routers.coding_schemas import (
     MedDRACodeLookupResponse,
     MedDRACodeMatch,
+    WHODrugATCContext,
+    WHODrugCodeLookupResponse,
+    WHODrugIngredientItem,
+    WHODrugMatch,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,7 +41,7 @@ async def search_dictionary(
     dictionary_type: str,
     version: str,
     target_level: str | None = None,
-) -> dict[str, Any] | MedDRACodeLookupResponse:
+) -> MedDRACodeLookupResponse | WHODrugCodeLookupResponse:
     """Delegates interactive terminology search or auto-complete lookup to match_verbatim_term."""
     if not term or not term.strip():
         raise ValueError("Term must be a non-empty string")
@@ -52,6 +56,8 @@ async def search_dictionary(
             version=version.strip(),
             target_level=target_level,
         )
+    except ValueError:
+        raise
     except Exception as e:
         logger.error(f"Error matching verbatim term '{term}': {e}", exc_info=True)
         raise HTTPException(
@@ -145,7 +151,63 @@ async def search_dictionary(
             matches=matches,
         )
 
-    return res
+    if dict_type_upper == "WHODRUG":
+        whodrug_matches = []
+        if res.get("match"):
+            m = res["match"]
+            whodrug_matches.append(
+                WHODrugMatch(
+                    drug_code=m.get("drug_code") or "",
+                    preferred_name=m.get("preferred_name") or "",
+                    drug_name=m.get("drug_name"),
+                    score=m.get("score", 0.0),
+                    atc_context=[
+                        WHODrugATCContext(
+                            atc_code=a.get("atc_code") or "",
+                            description=a.get("description") or "",
+                        )
+                        for a in m.get("atc_context", [])
+                    ],
+                    ingredients=[
+                        WHODrugIngredientItem(
+                            ingredient_code=i.get("ingredient_code") or "",
+                            ingredient_name=i.get("ingredient_name") or "",
+                        )
+                        for i in m.get("ingredients", [])
+                    ],
+                )
+            )
+        elif res.get("suggestions"):
+            for sug in res["suggestions"]:
+                whodrug_matches.append(
+                    WHODrugMatch(
+                        drug_code=sug.get("drug_code") or "",
+                        preferred_name=sug.get("preferred_name") or "",
+                        drug_name=sug.get("drug_name"),
+                        score=sug.get("score", 0.0),
+                        atc_context=[
+                            WHODrugATCContext(
+                                atc_code=a.get("atc_code") or "",
+                                description=a.get("description") or "",
+                            )
+                            for a in sug.get("atc_context", [])
+                        ],
+                        ingredients=[
+                            WHODrugIngredientItem(
+                                ingredient_code=i.get("ingredient_code") or "",
+                                ingredient_name=i.get("ingredient_name") or "",
+                            )
+                            for i in sug.get("ingredients", [])
+                        ],
+                    )
+                )
+
+        return WHODrugCodeLookupResponse(
+            status=res.get("status", "UNCODABLE"),
+            matches=whodrug_matches,
+        )
+
+    raise ValueError(f"Unsupported dictionary type: {dictionary_type}")
 
 
 async def list_coding_assignments(

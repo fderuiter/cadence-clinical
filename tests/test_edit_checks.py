@@ -793,6 +793,8 @@ async def test_lab_out_of_range_and_auto_close() -> None:
         assert query["visit_id"] == visit_id
         assert query["domain"] == "LB"
         assert query["test_code"] == "WBC"
+        assert "Indicator: LOW" in query["message"]
+        assert 'Normal bounds: {"low": 4.0, "high": 11.0}' in query["message"]
 
         # 3. Attempt duplicate submit with same value: should not open another query
         dup_resp = await client.post(

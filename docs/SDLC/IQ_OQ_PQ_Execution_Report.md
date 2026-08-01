@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1885
-- **Passed:** 1885 🟢
+- **Total Automated Test Cases Run:** 1908
+- **Passed:** 1908 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -235,6 +235,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_artifact_cascade_engine_generation` | `tests.test_artifact_cascade` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_artifact_cascade_router_endpoint` | `tests.test_artifact_cascade` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_artifact_cascade_router_endpoint_dependency_override` | `tests.test_artifact_cascade` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_clean_neo4j_graph_calls_run` | `tests.test_asgi_live_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_clean_postgres_databases_calls_truncate` | `tests.test_asgi_live_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_live_db_halt_when_neo4j_unreachable` | `tests.test_asgi_live_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_live_db_halt_when_postgres_unreachable` | `tests.test_asgi_live_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_records_ip_and_custom_timestamp` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_hard_delete_is_prevented` | `tests.test_audit` | Trace-1 | 🟢 PASSED | < 1s |
 | `test_insert_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | < 1s |
@@ -352,6 +356,18 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_query_state_transition_and_role_boundaries` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rejection_and_cancellation_reason_requirements` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reopen_transitions` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_deterministic_per_subject_date_shifting` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_exact_numeric_and_float_age_capping` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sas_dates_shifting` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_signature_parsing_exceptions` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_signature_parsing_formats` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_stripped_block_json_validation` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_stripped_block_xml_validation` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_study_specific_pseudonym_prefixes` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unified_api_ecdsa_verification` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unified_api_invalid_inputs` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unified_api_rsa_verification` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unified_api_signature_mismatch` | `tests.test_clinical_validation_engines` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_publish_notification_failure_swallowed` | `tests.test_clinical_workflow_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_publish_notification_success` | `tests.test_clinical_workflow_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_router_send_dashboard_notification_sdv_drop` | `tests.test_clinical_workflow_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1161,6 +1177,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | PRD-SYS-001, Trace-1 | 🟢 PASSED | < 1s |
 | `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | PRD-SYS-002, Trace-1 | 🟢 PASSED | < 1s |
+| `test_library_object_active_study_lock` | `tests.test_library_locks` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_library_object_author_self_approval_block` | `tests.test_library_locks` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_library_object_rbac_permissions` | `tests.test_library_locks` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_lock_enforcement_field_level_blocked` | `tests.test_lock_enforcement` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lock_enforcement_form_level_blocked` | `tests.test_lock_enforcement` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_data_lock_record_creation` | `tests.test_lock_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1660,6 +1679,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_map_vs` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_persist_sdtm_records_pipeline` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_to_dtc` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_bulk_query_generation_deduplication` | `tests.test_sdv` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_bulk_query_generation_happy_path` | `tests.test_sdv` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_bulk_query_generation_input_validation` | `tests.test_sdv` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_bulk_query_generation_rbac_gating` | `tests.test_sdv` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_bulk_sdv_signoff_batch_binding_mismatch` | `tests.test_sdv` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_bulk_sdv_signoff_happy_path` | `tests.test_sdv` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_bulk_sdv_signoff_input_validation` | `tests.test_sdv` | PRD-SYS-001 | 🟢 PASSED | < 1s |
