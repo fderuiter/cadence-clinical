@@ -783,7 +783,7 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
     if auth_time_claim:
         token_age = time.time() - float(auth_time_claim)
         # Standard Keycloak guidance: enforce credentials re-verification if session age exceeds max_age
-        if token_age > 36000.0:  # 10 hours max age
+        if token_age > 10 * 3600.0:  # 10 hours max age
             logger = logging.getLogger("gateway")
             logger.info("Session max_age exceeded. Forcing step-up re-authentication.")
 
