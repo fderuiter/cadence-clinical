@@ -916,6 +916,7 @@ async def test_instrument_and_assignment_endpoints_and_auditing():
 
     # 1. Create Instrument (authorized)
     inst_payload = {
+        "study_id": "study_test_1",
         "name": "EORTC QLQ-C30",
         "description": "Cancer patient quality of life questionnaire.",
         "items": {"q1": "Do you have trouble taking a long walk?"},
@@ -947,6 +948,7 @@ async def test_instrument_and_assignment_endpoints_and_auditing():
 
     # 3. Create Subject Assignment (authorized)
     assign_payload = {
+        "study_id": "study_test_1",
         "subject_id": "patient_charlie",
         "instrument_id": inst_id,
         "start_date": datetime.now(UTC).isoformat(),
@@ -1041,6 +1043,7 @@ async def test_subject_content_submission_and_compliance_apis():
 
     # 1. Author an Instrument as staff
     inst_payload = {
+        "study_id": "study_test_1",
         "name": "Sleep Quality Survey",
         "description": "Daily survey tracking patient sleep patterns.",
         "items": {"q1": "How many hours of restful sleep did you get?"},
@@ -1057,6 +1060,7 @@ async def test_subject_content_submission_and_compliance_apis():
     # 2. Assign to alice
     now_utc = datetime.now(UTC).replace(tzinfo=None)
     assign_payload = {
+        "study_id": "study_test_1",
         "subject_id": "alice_subject",
         "instrument_id": inst_id,
         "start_date": (now_utc - timedelta(days=2)).isoformat(),
@@ -1075,6 +1079,7 @@ async def test_subject_content_submission_and_compliance_apis():
 
     # Assign another pending to Alice
     assign_payload_pending = {
+        "study_id": "study_test_1",
         "subject_id": "alice_subject",
         "instrument_id": inst_id,
         "start_date": now_utc.isoformat(),
@@ -1208,6 +1213,7 @@ async def test_notifications_and_reminders_lifecycle():
 
     # 1. Author an Instrument as staff
     inst_payload = {
+        "study_id": "study_test_1",
         "name": "Daily Diary",
         "description": "Daily symptom tracker.",
         "items": {"q1": "Any symptoms today?"},
@@ -1224,6 +1230,7 @@ async def test_notifications_and_reminders_lifecycle():
     # 2. Assign to David - make it due (due_at in the past)
     now_utc = datetime.now(UTC).replace(tzinfo=None)
     assign_payload = {
+        "study_id": "study_test_1",
         "subject_id": "david_subject",
         "instrument_id": inst_id,
         "start_date": (now_utc - timedelta(days=2)).isoformat(),
@@ -1351,6 +1358,7 @@ async def test_compute_reminders_by_subject_and_end_date_branch():
 
     # 1. Create Instrument
     inst_payload = {
+        "study_id": "study_test_1",
         "name": "Quality Survey",
         "description": "Eva symptom tracker.",
         "items": {"q1": "Any headache?"},
@@ -1367,6 +1375,7 @@ async def test_compute_reminders_by_subject_and_end_date_branch():
     # 2. Assign to Eva with no due_at, but end_date in the past (overdue/due)
     now_utc = datetime.now(UTC).replace(tzinfo=None)
     assign_payload = {
+        "study_id": "study_test_1",
         "subject_id": "eva_subject",
         "instrument_id": inst_id,
         "start_date": (now_utc - timedelta(days=2)).isoformat(),
@@ -1463,6 +1472,7 @@ async def test_compute_reminders_all_subjects_staff():
     resp = client.post(
         "/api/v1/interop/instruments",
         json={
+            "study_id": "study_test_1",
             "name": "Global Survey",
             "description": "Global tracker.",
             "items": {"q1": "status"},
@@ -1479,6 +1489,7 @@ async def test_compute_reminders_all_subjects_staff():
     client.post(
         "/api/v1/interop/assignments",
         json={
+            "study_id": "study_test_1",
             "subject_id": "global_subject_1",
             "instrument_id": inst_id,
             "start_date": (now_utc - timedelta(days=2)).isoformat(),

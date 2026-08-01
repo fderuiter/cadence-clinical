@@ -227,6 +227,9 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "delete",
             "alert",
         },  # Added alert action
+        "ecoa_schedule": {"create", "read"},
+        "ecoa_diary": {"create", "read"},
+        "ecoa_submission": {"create", "read"},
     },
     ROLE_SPONSOR_DESIGNER: {
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
@@ -264,6 +267,9 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "protocol_section": {"lock", "unlock", "approve", "review", "read"},
         "regulatory_form": {"read"},
         "training_log": {"read"},
+        "ecoa_schedule": {"create", "read"},
+        "ecoa_diary": {"create", "read"},
+        "ecoa_submission": {"create", "read"},
     },
     ROLE_REVIEWER: {
         "study_design": {"read"},
@@ -342,6 +348,9 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "delete",
             "alert",
         },  # Added alert action
+        "ecoa_schedule": {"create", "read"},
+        "ecoa_diary": {"create", "read"},
+        "ecoa_submission": {"create", "read"},
     },
     ROLE_SPONSOR_MM: {
         "study_design": {"read"},
@@ -393,6 +402,9 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "quality_event": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
+        "ecoa_schedule": {"create", "read"},
+        "ecoa_diary": {"create", "read"},
+        "ecoa_submission": {"create", "read"},
     },
     ROLE_CRC: {
         "study_design": {"read"},
@@ -424,6 +436,9 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "quality_event": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
+        "ecoa_schedule": {"create", "read"},
+        "ecoa_diary": {"create", "read"},
+        "ecoa_submission": {"create", "read"},
     },
     ROLE_CRA_CANONICAL: {
         "study_design": {"read"},
@@ -467,6 +482,9 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "delete",
             "alert",
         },  # Added alert action
+        "ecoa_schedule": {"create", "read"},
+        "ecoa_diary": {"create", "read"},
+        "ecoa_submission": {"create", "read"},
     },
     "monitor": {
         "study_design": {"read"},
@@ -504,9 +522,15 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "delete",
             "alert",
         },  # Added alert action
+        "ecoa_schedule": {"create", "read"},
+        "ecoa_diary": {"create", "read"},
+        "ecoa_submission": {"create", "read"},
     },
     ROLE_SUBJECT: {
         "ecrf_data_entry": {"create", "update"},  # 'Diary' maps to create/update
+        "ecoa_schedule": {"read"},
+        "ecoa_diary": {"read"},
+        "ecoa_submission": {"create", "read"},
     },
     ROLE_AUDITOR_CANONICAL: {
         "system_audit_logs": {"read"},
@@ -655,6 +679,9 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "delete",
             "alert",
         },  # Added alert action
+        "ecoa_schedule": {"create", "read"},
+        "ecoa_diary": {"create", "read"},
+        "ecoa_submission": {"create", "read"},
     },
     "quality_manager": {
         "quality_event": {"create", "read", "update", "delete", "investigate"},
@@ -709,6 +736,9 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "publish",
             "release",
         },
+        "ecoa_schedule": {"create", "read"},
+        "ecoa_diary": {"create", "read"},
+        "ecoa_submission": {"create", "read"},
     },
     "anonymous": {
         "ctms_study": {"read"},
