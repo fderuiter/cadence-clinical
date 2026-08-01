@@ -11,6 +11,8 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 1825
 - **Passed:** 1825 🟢
+- **Total Automated Test Cases Run:** 1885
+- **Passed:** 1885 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1079,6 +1081,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_range_cache_operations` | `tests.test_lab_range_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_range_cache_singleton` | `tests.test_lab_range_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_range_cache_ttl_config` | `tests.test_lab_range_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cache_invalidation_on_create` | `tests.test_lab_range_cache_invalidation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cache_invalidation_on_delete` | `tests.test_lab_range_cache_invalidation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cache_invalidation_on_recalculate` | `tests.test_lab_range_cache_invalidation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cache_invalidation_on_update_no_key_change` | `tests.test_lab_range_cache_invalidation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cache_invalidation_on_update_with_key_changes` | `tests.test_lab_range_cache_invalidation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_absent_boundaries` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_age_boundaries` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_convert_lab_unit_db_and_fallback` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
