@@ -1610,9 +1610,6 @@
     },
     "/api/v1/studies/{study_id}/versions/{version_id}/arms/{arm_id}": {
       "delete": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Retire Arm Endpoint",
         "operationId": "retire_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__delete",
         "parameters": [
@@ -1668,9 +1665,6 @@
         }
       },
       "get": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Get Arm Endpoint",
         "operationId": "get_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__get",
         "parameters": [
@@ -1726,9 +1720,6 @@
         }
       },
       "put": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Update Arm Endpoint",
         "operationId": "update_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__put",
         "parameters": [
@@ -1796,9 +1787,6 @@
     },
     "/api/v1/studies/{study_id}/versions/{version_id}/epochs/{epoch_id}": {
       "delete": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Retire Epoch Endpoint",
         "operationId": "retire_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__delete",
         "parameters": [
@@ -1854,9 +1842,6 @@
         }
       },
       "get": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Get Epoch Endpoint",
         "operationId": "get_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__get",
         "parameters": [
@@ -1912,9 +1897,6 @@
         }
       },
       "put": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Update Epoch Endpoint",
         "operationId": "update_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__put",
         "parameters": [
@@ -1982,9 +1964,6 @@
     },
     "/api/v1/studies/{study_id}/versions/{version_id}/visits/{visit_id}": {
       "delete": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Retire Visit Endpoint",
         "operationId": "retire_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__delete",
         "parameters": [
@@ -2040,9 +2019,6 @@
         }
       },
       "get": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Get Visit Endpoint",
         "operationId": "get_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__get",
         "parameters": [
@@ -2098,9 +2074,6 @@
         }
       },
       "put": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Update Visit Endpoint",
         "operationId": "update_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__put",
         "parameters": [
@@ -2168,9 +2141,6 @@
     },
     "/api/v1/studies/{study_id}/versions/{version_id}/procedures/{procedure_id}": {
       "delete": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Retire Procedure Endpoint",
         "operationId": "retire_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__delete",
         "parameters": [
@@ -2226,9 +2196,6 @@
         }
       },
       "get": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Get Procedure Endpoint",
         "operationId": "get_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__get",
         "parameters": [
@@ -2284,9 +2251,6 @@
         }
       },
       "put": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Update Procedure Endpoint",
         "operationId": "update_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__put",
         "parameters": [
@@ -2354,9 +2318,6 @@
     },
     "/api/v1/studies/{study_id}/versions/{version_id}/timing-windows/{timing_id}": {
       "delete": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Retire Timing Window Endpoint",
         "operationId": "retire_timing_window_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows__timing_id__delete",
         "parameters": [
@@ -2412,9 +2373,6 @@
         }
       },
       "get": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Get Timing Window Endpoint",
         "operationId": "get_timing_window_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows__timing_id__get",
         "parameters": [
@@ -2470,9 +2428,6 @@
         }
       },
       "put": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Update Timing Window Endpoint",
         "operationId": "update_timing_window_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows__timing_id__put",
         "parameters": [
@@ -2540,9 +2495,6 @@
     },
     "/api/v1/studies/{study_id}/versions/{version_id}/links/epoch-visit": {
       "delete": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Retire Epoch Visit Endpoint",
         "operationId": "retire_epoch_visit_endpoint_api_v1_studies__study_id__versions__version_id__links_epoch_visit_delete",
         "parameters": [
@@ -2599,9 +2551,6 @@
         }
       },
       "post": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Link Epoch Visit Endpoint",
         "operationId": "link_epoch_visit_endpoint_api_v1_studies__study_id__versions__version_id__links_epoch_visit_post",
         "parameters": [
@@ -2660,9 +2609,6 @@
     },
     "/api/v1/studies/{study_id}/versions/{version_id}/links/visit-procedure": {
       "delete": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Retire Visit Procedure Endpoint",
         "operationId": "retire_visit_procedure_endpoint_api_v1_studies__study_id__versions__version_id__links_visit_procedure_delete",
         "parameters": [
@@ -2719,9 +2665,6 @@
         }
       },
       "post": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Link Visit Procedure Endpoint",
         "operationId": "link_visit_procedure_endpoint_api_v1_studies__study_id__versions__version_id__links_visit_procedure_post",
         "parameters": [
@@ -2780,9 +2723,6 @@
     },
     "/api/v1/studies/{study_id}/versions/{version_id}/links/timing": {
       "delete": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Retire Timing Endpoint",
         "operationId": "retire_timing_endpoint_api_v1_studies__study_id__versions__version_id__links_timing_delete",
         "parameters": [
@@ -2839,9 +2779,6 @@
         }
       },
       "post": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Link Timing Endpoint",
         "operationId": "link_timing_endpoint_api_v1_studies__study_id__versions__version_id__links_timing_post",
         "parameters": [
@@ -2900,9 +2837,6 @@
     },
     "/api/v1/studies/{study_id}/versions/{version_id}/links/arm-applicability": {
       "delete": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Retire Arm Applicability Endpoint",
         "operationId": "retire_arm_applicability_endpoint_api_v1_studies__study_id__versions__version_id__links_arm_applicability_delete",
         "parameters": [
@@ -2959,9 +2893,6 @@
         }
       },
       "post": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Link Arm Applicability Endpoint",
         "operationId": "link_arm_applicability_endpoint_api_v1_studies__study_id__versions__version_id__links_arm_applicability_post",
         "parameters": [
@@ -5155,9 +5086,6 @@
     },
     "/api/v1/studies/{study_id}/versions/{version_id}/arms": {
       "post": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Create Arm Endpoint",
         "operationId": "create_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms_post",
         "parameters": [
@@ -5214,9 +5142,6 @@
         }
       },
       "get": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "List Arms Endpoint",
         "operationId": "list_arms_endpoint_api_v1_studies__study_id__versions__version_id__arms_get",
         "parameters": [
@@ -5269,9 +5194,6 @@
     },
     "/api/v1/studies/{study_id}/versions/{version_id}/epochs": {
       "post": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Create Epoch Endpoint",
         "operationId": "create_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs_post",
         "parameters": [
@@ -5328,9 +5250,6 @@
         }
       },
       "get": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "List Epochs Endpoint",
         "operationId": "list_epochs_endpoint_api_v1_studies__study_id__versions__version_id__epochs_get",
         "parameters": [
@@ -5383,9 +5302,6 @@
     },
     "/api/v1/studies/{study_id}/versions/{version_id}/visits": {
       "post": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Create Visit Endpoint",
         "operationId": "create_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits_post",
         "parameters": [
@@ -5442,9 +5358,6 @@
         }
       },
       "get": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "List Visits Endpoint",
         "operationId": "list_visits_endpoint_api_v1_studies__study_id__versions__version_id__visits_get",
         "parameters": [
@@ -5497,9 +5410,6 @@
     },
     "/api/v1/studies/{study_id}/versions/{version_id}/procedures": {
       "post": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Create Procedure Endpoint",
         "operationId": "create_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures_post",
         "parameters": [
@@ -5556,9 +5466,6 @@
         }
       },
       "get": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "List Procedures Endpoint",
         "operationId": "list_procedures_endpoint_api_v1_studies__study_id__versions__version_id__procedures_get",
         "parameters": [
@@ -5611,9 +5518,6 @@
     },
     "/api/v1/studies/{study_id}/versions/{version_id}/timing-windows": {
       "post": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Create Timing Window Endpoint",
         "operationId": "create_timing_window_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows_post",
         "parameters": [
@@ -5670,9 +5574,6 @@
         }
       },
       "get": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "List Timing Windows Endpoint",
         "operationId": "list_timing_windows_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows_get",
         "parameters": [
@@ -5723,54 +5624,8 @@
         }
       }
     },
-    "/api/v1/studies/{study_id}/soa": {
-      "get": {
-        "tags": [
-          "Designer_SoA"
-        ],
-        "summary": "Get Soa Matrix Projection Latest",
-        "description": "Returns the assembled Schedule of Activities (SoA) presentation matrix for the latest version.\nAssembles the arm x epoch x visit x procedure structure with timing/conditional metadata.",
-        "operationId": "get_soa_matrix_projection_latest_api_v1_studies__study_id__soa_get",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Study Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SoAMatrixView"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/studies/{study_id}/versions/{version_id}/soa-projection": {
       "get": {
-        "tags": [
-          "Designer_SoA"
-        ],
         "summary": "Get Soa Projection Endpoint",
         "operationId": "get_soa_projection_endpoint_api_v1_studies__study_id__versions__version_id__soa_projection_get",
         "parameters": [
