@@ -443,3 +443,44 @@ async def is_concept_referenced_by_active_recruiting_study(
             pass
 
     return False
+
+
+async def is_library_object_referenced_by_active_recruiting_study(
+    object_id: str, driver=None, version: int | None = None
+) -> bool:
+    """
+    Check if a library object version is referenced by any active recruiting study (status = 'Active-Recruiting').
+    """
+    if driver is None:
+        from apps.designer.delta import MOCK_LIBRARY_INSTANCES
+
+        for study_id, instances in MOCK_LIBRARY_INSTANCES.items():
+            for inst in instances:
+                inst_from = inst.get("instantiated_from") or {}
+                if inst_from.get("library_object_id") == object_id:
+                    if version is None or inst_from.get("version") == version:
+                        study_data = MOCK_STUDIES.get(study_id) or {}
+                        is_active_recruiting = study_data.get("status") == "Active-Recruiting"
+                        versions = MOCK_STUDY_VERSIONS.get(study_id, [])
+                        for v in versions:
+                            if v.get("status") == "Active-Recruiting":
+                                is_active_recruiting = True
+                                break
+                        if is_active_recruiting:
+                            return True
+        return False
+
+    query = """
+    MATCH (s:Study)-[:HAS_LIBRARY_INSTANCE]->(instance:LibraryObjectInstance)-[:INSTANTIATED_FROM]->(lo:LibraryObject {id: $object_id})
+    WHERE (lo.version = $version OR $version IS NULL)
+    OPTIONAL MATCH (s)-[:HAS_VERSION]->(sv:StudyVersion)
+    WITH s, lo, collect(sv.status) as statuses
+    WHERE s.status = 'Active-Recruiting' OR any(st IN statuses WHERE st = 'Active-Recruiting')
+    RETURN count(lo) > 0 AS is_in_use
+    """
+    async with driver.session() as session:
+        res = await session.run(query, object_id=object_id, version=version)
+        record = await res.single()
+        if record:
+            return bool(record["is_in_use"])
+    return False
