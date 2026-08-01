@@ -244,7 +244,7 @@ async def list_coding_assignments(
     status: str | None = None,
     verbatim_text: str | None = None,
     dictionary_type: str | None = None,
-) -> list[CodingAssignmentResponse]:
+) -> list[ClinicalCodingAssignment]:
     """Retrieves and filters active, non-deleted medical coding assignments."""
     stmt = select(ClinicalCodingAssignment).where(
         ClinicalCodingAssignment.is_deleted.is_(False)
@@ -262,13 +262,13 @@ async def list_coding_assignments(
 
     res = await session.execute(stmt)
     assignments = res.scalars().all()
-    return [map_assignment_to_response(a) for a in assignments]
+    return list(assignments)
 
 
 async def get_coding_assignment(
     session: AsyncSession,
     assignment_id: str,
-) -> CodingAssignmentResponse:
+) -> ClinicalCodingAssignment:
     """Retrieves a single active, non-deleted coding assignment by ID."""
     stmt = select(ClinicalCodingAssignment).where(
         ClinicalCodingAssignment.id == assignment_id,
@@ -277,10 +277,11 @@ async def get_coding_assignment(
     res = await session.execute(stmt)
     assignment = res.scalars().first()
     if not assignment:
-        raise ValueError(
-            f"Coding assignment '{assignment_id}' not found or has been deleted."
+        raise HTTPException(
+            status_code=404,
+            detail=f"Coding assignment '{assignment_id}' not found or has been deleted.",
         )
-    return map_assignment_to_response(assignment)
+    return assignment
 
 
 async def process_coding_action(
@@ -292,15 +293,16 @@ async def process_coding_action(
     suggestion_index: int | None = None,
     reason_for_change: str | None = None,
     actor: str = "system",
-) -> CodingAssignmentResponse:
+) -> ClinicalCodingAssignment:
     """Processes a data manager coding action (ACCEPT, OVERRIDE, or QUERY).
 
     Accepts a suggestion or submits a manual override, persisting results and updating the ledger.
     """
     action_upper = action.upper()
     if action_upper not in ("ACCEPT", "OVERRIDE", "QUERY"):
-        raise ValueError(
-            f"Invalid action '{action}'. Allowed actions: ACCEPT, OVERRIDE, QUERY."
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid action '{action}'. Allowed actions: ACCEPT, OVERRIDE, QUERY."
         )
 
     # 1. Fetch existing assignment
@@ -311,8 +313,9 @@ async def process_coding_action(
     res = await session.execute(stmt)
     assignment = res.scalars().first()
     if not assignment:
-        raise ValueError(
-            f"Coding assignment '{assignment_id}' not found or has been deleted."
+        raise HTTPException(
+            status_code=404,
+            detail=f"Coding assignment '{assignment_id}' not found or has been deleted."
         )
 
     old_code = assignment.coded_code
@@ -348,7 +351,7 @@ async def process_coding_action(
                 or suggestion_index < 0
                 or suggestion_index >= len(sug_list)
             ):
-                raise ValueError("Invalid suggestion_index")
+                raise HTTPException(status_code=400, detail="Invalid suggestion_index")
             sug = sug_list[suggestion_index]
             coded_code = sug.get("code") or sug.get("drug_code")
             coded_term = sug.get("term_name") or sug.get("preferred_name")
@@ -380,8 +383,9 @@ async def process_coding_action(
                     found = True
                     break
             if not found:
-                raise ValueError(
-                    "The provided code does not match any available suggestions. Use OVERRIDE for manual coding."
+                raise HTTPException(
+                    status_code=400,
+                    detail="The provided code does not match any available suggestions. Use OVERRIDE for manual coding."
                 )
         else:
             # Accept highest suggestion if available
@@ -399,8 +403,9 @@ async def process_coding_action(
                         "ingredients": sug.get("ingredients", []),
                     }
             else:
-                raise ValueError(
-                    "No suggestions available to ACCEPT. Use OVERRIDE instead."
+                raise HTTPException(
+                    status_code=400,
+                    detail="No suggestions available to ACCEPT. Use OVERRIDE instead."
                 )
 
         # Double check existence of the code/version in DB
@@ -411,8 +416,9 @@ async def process_coding_action(
             )
             res_valid = await session.execute(stmt_valid)
             if not res_valid.scalars().first():
-                raise ValueError(
-                    f"Invalid code '{coded_code}' for MedDRA version '{version}'."
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid code '{coded_code}' for MedDRA version '{version}'."
                 )
         elif dict_type == DBDictionaryType.WHODRUG:
             stmt_valid = select(WHODrugRecord).where(
@@ -421,8 +427,9 @@ async def process_coding_action(
             )
             res_valid = await session.execute(stmt_valid)
             if not res_valid.scalars().first():
-                raise ValueError(
-                    f"Invalid drug code '{coded_code}' for WHODrug version '{version}'."
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid drug code '{coded_code}' for WHODrug version '{version}'."
                 )
 
         status = CodingState.CODED
@@ -431,13 +438,14 @@ async def process_coding_action(
     elif action_upper == "OVERRIDE":
         # Override requires reason_for_change, code, and term
         if not reason_for_change or not reason_for_change.strip():
-            raise ValueError(
-                "reason_for_change is required for OVERRIDE action and cannot be empty."
+            raise HTTPException(
+                status_code=400,
+                detail="reason_for_change is required for OVERRIDE action and cannot be empty."
             )
         if not code or not code.strip():
-            raise ValueError("code is required for OVERRIDE action.")
+            raise HTTPException(status_code=400, detail="code is required for OVERRIDE action.")
         if not term or not term.strip():
-            raise ValueError("term is required for OVERRIDE action.")
+            raise HTTPException(status_code=400, detail="term is required for OVERRIDE action.")
 
         coded_code = code.strip()
         coded_term = term.strip()
@@ -543,7 +551,7 @@ async def process_coding_action(
             session.add(active_q)
 
     await session.flush()
-    return map_assignment_to_response(assignment)
+    return assignment
 
 
 async def trigger_impact_analysis(
