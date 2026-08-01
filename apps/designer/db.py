@@ -460,7 +460,9 @@ async def is_library_object_referenced_by_active_recruiting_study(
                 if inst_from.get("library_object_id") == object_id:
                     if version is None or inst_from.get("version") == version:
                         study_data = MOCK_STUDIES.get(study_id) or {}
-                        is_active_recruiting = study_data.get("status") == "Active-Recruiting"
+                        is_active_recruiting = (
+                            study_data.get("status") == "Active-Recruiting"
+                        )
                         versions = MOCK_STUDY_VERSIONS.get(study_id, [])
                         for v in versions:
                             if v.get("status") == "Active-Recruiting":

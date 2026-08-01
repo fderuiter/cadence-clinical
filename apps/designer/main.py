@@ -3818,7 +3818,9 @@ async def transition_library_object_endpoint(
 
         signing_payload = {
             "id": id,
-            "version": str(int(latest.get("version", 1)) + 1),  # The next version being created
+            "version": str(
+                int(latest.get("version", 1)) + 1
+            ),  # The next version being created
             "status": "PUBLISHED",
             "sponsor_id": sponsor_id,
             "tenant_id": tenant_id,
