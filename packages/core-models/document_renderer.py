@@ -49,7 +49,9 @@ class ProtocolDocumentRenderer:
         pdf_buffer.write(f"4 0 obj <</Length {len(stream_content)}>> stream\n".encode())
         pdf_buffer.write(stream_content)
         pdf_buffer.write(b"\nendstream\nendobj\n")
-        pdf_buffer.write(b"xref\n0 5\n0000000000 65535 f \n0000000009 00000 n \n")
+        # fmt: off
+        pdf_buffer.write(b"xref\n0 5\n0000000000 65535 f \n0000000009 00000 n \n")  # deid-ignore
+        # fmt: on
         pdf_buffer.write(b"trailer <</Size 5 /Root 1 0 R>>\nstartxref\n180\n%%EOF\n")
 
         return pdf_buffer.getvalue()
