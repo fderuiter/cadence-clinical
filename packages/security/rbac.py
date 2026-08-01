@@ -211,6 +211,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         },
         "etmf_edl": {"read", "create"},
         "etmf_audit_logs": {"read"},
+        "etmf_taxonomy": {"read"},
         # Quality
         "quality_event": {"create", "read", "update", "delete", "investigate"},
         "quality_audit_logs": {"read"},
@@ -324,6 +325,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "manage_expiration",
         },
         "etmf_edl": {"read", "create"},
+        "etmf_taxonomy": {"read"},
         # Quality
         "quality_event": {"create", "read", "update", "delete", "investigate"},
         "quality_audit_logs": {"read"},
@@ -384,6 +386,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         # eTMF
         "etmf_document": {"read"},
         "etmf_edl": {"read"},
+        "etmf_taxonomy": {"read"},
         # Quality
         "quality_event": {"read"},
         # eISF
@@ -414,6 +417,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         # eTMF
         "etmf_document": {"read"},
         "etmf_edl": {"read"},
+        "etmf_taxonomy": {"read"},
         # Quality
         "quality_event": {"read"},
         # eISF
@@ -440,6 +444,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         # eTMF
         "etmf_document": {"create", "read", "redact", "sign", "transition_clinical_qc"},
         "etmf_edl": {"read", "create"},
+        "etmf_taxonomy": {"read"},
         # Quality
         "quality_event": {"create", "read", "update"},
         # eISF
@@ -507,6 +512,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "etmf_document": {"read"},
         "etmf_edl": {"read"},
         "etmf_audit_logs": {"read"},
+        "etmf_taxonomy": {"read"},
         # Quality read-only
         "quality_event": {"read"},
         "quality_audit_logs": {"read"},
@@ -517,6 +523,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "etmf_document": {"read"},
         "etmf_edl": {"read"},
         "etmf_audit_logs": {"read"},
+        "etmf_taxonomy": {"read"},
         "eisf_document": {"read"},
         "regulatory_form": {"read"},
         "training_log": {"read"},
@@ -615,6 +622,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "manage_expiration",
         },
         "etmf_edl": {"read", "create"},
+        "etmf_taxonomy": {"read"},
         # Quality
         "quality_event": {"create", "read", "update", "delete", "investigate"},
         "quality_audit_logs": {"read"},
@@ -663,6 +671,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         },
         "etmf_edl": {"read", "create"},
         "etmf_audit_logs": {"read"},
+        "etmf_taxonomy": {"read"},
         "quality_event": {"create", "read", "update", "delete", "investigate"},
         "quality_audit_logs": {"read"},
         "protocol_version": {"sign", "transition_approved"},
