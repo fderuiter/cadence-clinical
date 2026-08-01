@@ -18,6 +18,12 @@ class TerminologyCache:
     """Thread-safe in-memory cache for MedDRA term resolutions."""
 
     def __init__(self, max_size: int = 1000, ttl: float | None = None) -> None:
+        """Initializes the thread-safe terminology cache.
+
+        Args:
+            max_size: The maximum size of the cache. Defaults to 1000.
+            ttl: The cache expiration TTL. Defaults to None (loaded from env).
+        """
         self.max_size = max_size
         self._cache: dict[tuple[str, str], tuple[dict[str, Any], float]] = {}
         self._lock = threading.Lock()
@@ -37,6 +43,15 @@ class TerminologyCache:
                 self.ttl = 3600.0
 
     def get(self, term: str, version: str) -> dict[str, Any] | None:
+        """Retrieves a cached term resolution if still valid.
+
+        Args:
+            term: The verbatim term to resolve.
+            version: The MedDRA dictionary version.
+
+        Returns:
+            The cached dictionary match payload, or None if expired/not found.
+        """
         now = time.time()
         key = (term, version)
         with self._lock:
@@ -47,6 +62,13 @@ class TerminologyCache:
         return None
 
     def set(self, term: str, version: str, data: dict[str, Any]) -> None:
+        """Stores a resolved term resolution in the cache.
+
+        Args:
+            term: The verbatim term that was resolved.
+            version: The MedDRA dictionary version used.
+            data: The resolved dictionary match payload.
+        """
         key = (term, version)
         with self._lock:
             if len(self._cache) >= self.max_size:
@@ -55,10 +77,16 @@ class TerminologyCache:
             self._cache[key] = (data, time.time())
 
     def clear(self) -> None:
+        """Clears all entries in the cache."""
         with self._lock:
             self._cache.clear()
 
     def get_status(self) -> dict[str, int]:
+        """Returns the current cache usage status.
+
+        Returns:
+            A dictionary containing cache current size and max size.
+        """
         with self._lock:
             return {"size": len(self._cache), "max_size": self.max_size}
 
@@ -67,10 +95,17 @@ terminology_cache = TerminologyCache()
 
 
 def generate_stable_event_key(subject_key: str, sae: SeriousAdverseEvent) -> str:
-    """
-    Generates a stable, unique, and PII-free key for an event.
+    """Generates a stable, unique, and PII-free key for an adverse event.
+
     Aligns to safety case worldwide_unique_case_id / subject key.
     Uses AESEQ only as an event-level component when present, never as the sole key.
+
+    Args:
+        subject_key: The subject identifier.
+        sae: The SeriousAdverseEvent object representing the adverse event.
+
+    Returns:
+        A formatted string key.
     """
     # Standardize subject key
     subj = str(subject_key).strip().upper()
@@ -85,8 +120,14 @@ def generate_stable_event_key(subject_key: str, sae: SeriousAdverseEvent) -> str
 def normalize_edc_ae_to_sae(
     ae_dict: dict[str, Any], meddra_coding: MedDRACoding | None = None
 ) -> SeriousAdverseEvent:
-    """
-    Normalizes an EDC Adverse Event dict into a SeriousAdverseEvent model.
+    """Normalizes an EDC Adverse Event dict into a SeriousAdverseEvent model.
+
+    Args:
+        ae_dict: Dictionary representing the adverse event from EDC.
+        meddra_coding: Optional pre-resolved MedDRA coding hierarchy.
+
+    Returns:
+        A standardized SeriousAdverseEvent model.
     """
     # Aligns keys
     subject_key = ae_dict.get("USUBJID") or ae_dict.get("subject_key") or "UNKNOWN"
@@ -123,8 +164,13 @@ def normalize_edc_ae_to_sae(
 def normalize_external_icsr_to_saes(
     icsr_dict: dict[str, Any],
 ) -> list[SeriousAdverseEvent]:
-    """
-    Normalizes reaction events inside an external safety case / ICSR payload dict into SeriousAdverseEvent models.
+    """Normalizes reaction events inside external safety case/ICSR payload dict to SAEs.
+
+    Args:
+        icsr_dict: Parsed JSON/dict of an IndividualCaseSafetyReport.
+
+    Returns:
+        A list of standardized SeriousAdverseEvent models.
     """
     try:
         icsr = IndividualCaseSafetyReport(**icsr_dict)
@@ -199,10 +245,18 @@ def compare_sae_records(
     safety_saes: list[SeriousAdverseEvent],
     meddra_version: str = "26.0",
 ) -> list[dict[str, Any]]:
-    """
-    Pure, DB-free function that compares normalized EDC and external Safety SAE representations.
+    """Compares normalized EDC and external Safety SAE representations.
+
     Compares AESER, AESTDTC, AEENDTC, AESEV, AEREL, AEOUT, and MedDRA coding.
     Produces deterministic field-level discrepancy records sorted by key then field.
+
+    Args:
+        edc_saes: Standardized adverse events sourced from the EDC system.
+        safety_saes: Standardized adverse events sourced from the safety system.
+        meddra_version: Version of the MedDRA dictionary used. Defaults to "26.0".
+
+    Returns:
+        A list of discrepancy dictionaries containing mismatch details.
     """
     edc_map = {generate_stable_event_key(s.subject_key, s): s for s in edc_saes}
     safety_map = {generate_stable_event_key(s.subject_key, s): s for s in safety_saes}
@@ -320,17 +374,22 @@ async def run_reconciliation(
     client: Any | None = None,
     meddra_version: str = "26.0",
 ) -> dict[str, Any]:
-    """
-    Orchestration function running safety reconciliation:
-    1. Gathers EDC AE data via execution client.
-    2. Gathers external safety-system cases via adapter.
-    3. Resolves MedDRA codes for EDC AEs using clinical dictionaries endpoint.
-    4. Invokes the pure comparison function.
-    5. Persists the run + discrepancy records in Safety datastore.
-    6. Returns the persisted run and discrepancy summaries.
+    """Orchestrates safety reconciliation by comparing EDC and safety-system data.
 
-    Phase 7 Compliance: Ensures robust, secure automated alignment between EDC
-    observations and safety case records (PRD-SYS-001 / Trace-14).
+    Processes EDC adverse event records, queries the external clinical dictionaries
+    to retrieve and normalize MedDRA coding, matches them with safety case records,
+    detects material mismatches, and persists the reconciliation outcome.
+
+    Args:
+        study_id: Unique trial/study identifier.
+        session: Database session used to persist records.
+        created_by: User or service initiating the run.
+        reason_for_change: GxP audit change reason explanation.
+        client: Optional HTTPX async client used for service interaction.
+        meddra_version: Target MedDRA version to use. Defaults to "26.0".
+
+    Returns:
+        A dictionary containing the generated "run" and "discrepancies" lists.
     """
     exec_client = ExecutionClient()
     adapter = SafetyDatabaseAdapter(client=client)

@@ -101,7 +101,7 @@ async def drop_databases_async(worker_suffix: str):
 
 def run_sync(coro):
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
     except RuntimeError:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -118,6 +118,102 @@ def run_sync(coro):
 
 worker_id = os.environ.get("PYTEST_XDIST_WORKER")
 worker_suffix = f"_{worker_id}" if worker_id else "_test"
+
+
+def verify_live_db_connections():
+    from neo4j import AsyncGraphDatabase
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    # Check Postgres connection
+    base_url = f"{get_postgres_base_config()}postgres"
+    print(f"[conftest] Checking PostgreSQL connection: {base_url}")
+    try:
+        engine = create_async_engine(base_url, isolation_level="AUTOCOMMIT")
+
+        async def check_pg():
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+
+        run_sync(check_pg())
+        run_sync(engine.dispose())
+    except Exception as e:
+        import pytest
+
+        pytest.exit(
+            f"Database connection error: PostgreSQL instance is unreachable. {e}"
+        )
+
+    # Check Neo4j connection
+    uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+    user = os.getenv("NEO4J_USER", "neo4j")
+    password = os.getenv("NEO4J_PASSWORD", "password")
+    print(f"[conftest] Checking Neo4j connection: {uri}")
+    try:
+
+        async def check_neo():
+            async with AsyncGraphDatabase.driver(uri, auth=(user, password)) as driver:
+                await driver.verify_connectivity()
+
+        run_sync(check_neo())
+    except Exception as e:
+        import pytest
+
+        pytest.exit(f"Database connection error: Neo4j instance is unreachable. {e}")
+
+
+async def create_all_schemas_async(worker_suffix: str):
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    from apps.ctms.models import Base as CTMSBase
+    from apps.econsent.models import Base as EConsentBase
+    from apps.eisf.database.migrate import run_migrations as run_eisf_migrations
+    from apps.eisf.models import Base as EISFBase
+    from apps.etmf.database.migrate import run_migrations as run_etmf_migrations
+    from apps.etmf.models import Base as ETMFBase
+
+    # Migrations
+    from apps.execution.database.migrate import run_migrations as run_exec_migrations
+
+    # Import bases
+    from apps.execution.database.models import Base as ExecBase
+    from apps.interop.models import Base as InteropBase
+    from apps.notifications.models import Base as NotificationsBase
+    from apps.org.models import Base as OrgBase
+    from apps.quality.models import Base as QualityBase
+    from apps.safety.models import Base as SafetyBase
+    from apps.tickets.models import Base as TicketsBase
+
+    service_bases = {
+        "cadence_edc": (ExecBase, run_exec_migrations),
+        "cadence_etmf": (ETMFBase, run_etmf_migrations),
+        "cadence_ctms": (CTMSBase, None),
+        "cadence_quality": (QualityBase, None),
+        "cadence_interop": (InteropBase, None),
+        "cadence_tickets": (TicketsBase, None),
+        "cadence_notifications": (NotificationsBase, None),
+        "cadence_econsent": (EConsentBase, None),
+        "cadence_safety": (SafetyBase, None),
+        "cadence_org": (OrgBase, None),
+        "cadence_eisf": (EISFBase, run_eisf_migrations),
+    }
+
+    base_postgres_url = get_postgres_base_config()
+    for db_prefix, (base, migration_func) in service_bases.items():
+        db_name = f"{db_prefix}{worker_suffix}"
+        db_url = f"{base_postgres_url}{db_name}"
+
+        if migration_func is not None:
+            await migration_func(db_url)
+        else:
+            engine = create_async_engine(db_url)
+            async with engine.begin() as conn:
+                await conn.run_sync(base.metadata.create_all)
+            await engine.dispose()
+
+
+if os.environ.get("USE_LIVE_DB") == "true":
+    verify_live_db_connections()
 
 
 # Patch and create databases
@@ -145,19 +241,23 @@ def patch_init_db():
     base_postgres_url = get_postgres_base_config()
 
     def patched_exec_init_db(self, database_url: str, **kwargs):
-        if not database_url.startswith(("postgres", "postgresql")):
-            return original_exec_init_db(self, database_url, **kwargs)
-        db_name = f"cadence_edc{worker_suffix}"
-        new_url = f"{base_postgres_url}{db_name}"
-        return original_exec_init_db(self, new_url, **kwargs)
+        if os.environ.get("USE_LIVE_DB") == "true" or database_url.startswith(
+            ("postgres", "postgresql")
+        ):
+            db_name = f"cadence_edc{worker_suffix}"
+            new_url = f"{base_postgres_url}{db_name}"
+            return original_exec_init_db(self, new_url, **kwargs)
+        return original_exec_init_db(self, database_url, **kwargs)
 
     def patched_rel_init_db(self, database_url: str, **kwargs):
-        if not database_url.startswith(("postgres", "postgresql")):
-            return original_rel_init_db(self, database_url, **kwargs)
-        base_name = service_map.get(self.service_name, "cadence_edc")
-        db_name = f"{base_name}{worker_suffix}"
-        new_url = f"{base_postgres_url}{db_name}"
-        return original_rel_init_db(self, new_url, **kwargs)
+        if os.environ.get("USE_LIVE_DB") == "true" or database_url.startswith(
+            ("postgres", "postgresql")
+        ):
+            base_name = service_map.get(self.service_name, "cadence_edc")
+            db_name = f"{base_name}{worker_suffix}"
+            new_url = f"{base_postgres_url}{db_name}"
+            return original_rel_init_db(self, new_url, **kwargs)
+        return original_rel_init_db(self, database_url, **kwargs)
 
     DatabaseSessionManager.init_db = patched_exec_init_db
     RelationalDatabaseManager.init_db = patched_rel_init_db
@@ -167,17 +267,35 @@ databases_pre_created = False
 
 # Create worker isolated databases and perform patching if PostgreSQL is available
 try:
-    run_sync(create_databases_async(worker_suffix))
+    from filelock import FileLock
+
+    lock_path = "/tmp/postgres_db_creation.lock"
+    with FileLock(lock_path, timeout=120):
+        run_sync(create_databases_async(worker_suffix))
     # Override the env var so any standard fallback uses isolated DB too
     os.environ["TEST_DATABASE_URL"] = (
         f"{get_postgres_base_config()}cadence_edc{worker_suffix}"
     )
     patch_init_db()
     databases_pre_created = True
+
+    if os.environ.get("USE_LIVE_DB") == "true":
+        print("[conftest] USE_LIVE_DB=true: Initializing all PostgreSQL schemas...")
+        run_sync(create_all_schemas_async(worker_suffix))
 except Exception as e:
-    print(
-        f"[conftest] Warning: PostgreSQL database is not available ({e}). Skipping worker-isolated DB setup and patching. Tests will fall back to SQLite or mocked states."
-    )
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        print(f"[conftest] ERROR: Database initialization failed in CI: {e}")
+        raise
+    elif os.environ.get("USE_LIVE_DB") == "true":
+        import pytest
+
+        pytest.exit(
+            f"Database connection error: Failed to create/initialize isolated PostgreSQL databases: {e}"
+        )
+    else:
+        print(
+            f"[conftest] Warning: PostgreSQL database is not available ({e}). Skipping worker-isolated DB setup and patching. Tests will fall back to SQLite or mocked states."
+        )
 
 # Ensure packages path injection is run before tests start
 import packages  # noqa: F401, E402
@@ -487,6 +605,7 @@ def pytest_sessionfinish(session, exitstatus):
 # Shared multi-service RBAC test harness fixtures
 # =========================================================================
 
+import contextlib
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -538,25 +657,41 @@ def mock_designer_driver():
     Injects a mock or fake Neo4j driver into designer_app.state.driver after client creation,
     and restores the original driver on teardown.
     """
-    driver_mock = MagicMock()
-    session_mock = AsyncMock()
-    session_ctx = AsyncMock()
-    session_ctx.__aenter__.return_value = session_mock
-    driver_mock.session.return_value = session_ctx
+    if os.environ.get("USE_LIVE_DB") == "true":
+        from neo4j import AsyncGraphDatabase
 
-    tx_mock = AsyncMock()
-    tx_mock.__aenter__.return_value = tx_mock
-    session_mock.begin_transaction.return_value = tx_mock
+        uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+        user = os.getenv("NEO4J_USER", "neo4j")
+        password = os.getenv("NEO4J_PASSWORD", "password")
+        real_driver = AsyncGraphDatabase.driver(uri, auth=(user, password))
 
-    driver_mock._tx_mock = tx_mock
-    driver_mock._session_mock = session_mock
+        original_driver = getattr(designer_app.state, "driver", None)
+        designer_app.state.driver = real_driver
 
-    original_driver = getattr(designer_app.state, "driver", None)
-    designer_app.state.driver = driver_mock
+        yield real_driver
 
-    yield driver_mock
+        run_sync(real_driver.close())
+        designer_app.state.driver = original_driver
+    else:
+        driver_mock = MagicMock()
+        session_mock = AsyncMock()
+        session_ctx = AsyncMock()
+        session_ctx.__aenter__.return_value = session_mock
+        driver_mock.session.return_value = session_ctx
 
-    designer_app.state.driver = original_driver
+        tx_mock = AsyncMock()
+        tx_mock.__aenter__.return_value = tx_mock
+        session_mock.begin_transaction.return_value = tx_mock
+
+        driver_mock._tx_mock = tx_mock
+        driver_mock._session_mock = session_mock
+
+        original_driver = getattr(designer_app.state, "driver", None)
+        designer_app.state.driver = driver_mock
+
+        yield driver_mock
+
+        designer_app.state.driver = original_driver
 
 
 @pytest_asyncio.fixture
@@ -786,3 +921,119 @@ def capture_cross_service_calls():
 
     with patch.object(httpx.AsyncClient, "request", mock_request):
         yield capture_obj
+
+
+async def clean_neo4j_graph():
+    import os
+
+    from neo4j import AsyncGraphDatabase
+
+    uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+    user = os.getenv("NEO4J_USER", "neo4j")
+    password = os.getenv("NEO4J_PASSWORD", "password")
+
+    try:
+        async with AsyncGraphDatabase.driver(uri, auth=(user, password)) as driver:
+            async with driver.session() as session:
+                await session.run("MATCH (n) DETACH DELETE n")
+        print("[conftest] Live Neo4j graph database cleared successfully.")
+    except Exception as e:
+        print(f"[conftest] Error clearing live Neo4j graph database: {e}")
+
+
+async def clean_postgres_databases():
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    from apps.ctms.models import Base as CTMSBase
+    from apps.econsent.models import Base as EConsentBase
+    from apps.eisf.models import Base as EISFBase
+    from apps.etmf.models import Base as ETMFBase
+
+    # Import bases
+    from apps.execution.database.models import Base as ExecBase
+    from apps.interop.models import Base as InteropBase
+    from apps.notifications.models import Base as NotificationsBase
+    from apps.org.models import Base as OrgBase
+    from apps.quality.models import Base as QualityBase
+    from apps.safety.models import Base as SafetyBase
+    from apps.tickets.models import Base as TicketsBase
+
+    service_bases = {
+        "cadence_edc": ExecBase,
+        "cadence_etmf": ETMFBase,
+        "cadence_ctms": CTMSBase,
+        "cadence_quality": QualityBase,
+        "cadence_interop": InteropBase,
+        "cadence_tickets": TicketsBase,
+        "cadence_notifications": NotificationsBase,
+        "cadence_econsent": EConsentBase,
+        "cadence_safety": SafetyBase,
+        "cadence_org": OrgBase,
+        "cadence_eisf": EISFBase,
+    }
+
+    base_postgres_url = get_postgres_base_config()
+    for db_prefix, base in service_bases.items():
+        db_name = f"{db_prefix}{worker_suffix}"
+        db_url = f"{base_postgres_url}{db_name}"
+        engine = create_async_engine(db_url)
+        try:
+            async with engine.begin() as conn:
+                # Disable triggers and foreign keys for safe, trigger-free TRUNCATE of audited/restricted tables
+                await conn.execute(text("SET session_replication_role = 'replica';"))
+
+                # Truncate tables in reverse topological order of sorted tables to avoid cascade issues
+                for table in reversed(base.metadata.sorted_tables):
+                    try:
+                        await conn.execute(
+                            text(
+                                f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'
+                            )
+                        )
+                    except Exception:
+                        with contextlib.suppress(Exception):
+                            await conn.execute(table.delete())
+
+                # Also truncate audit schema tables if they exist
+                with contextlib.suppress(Exception):
+                    await conn.execute(
+                        text(
+                            'TRUNCATE TABLE "audit_schema"."audit_logs" RESTART IDENTITY CASCADE;'
+                        )
+                    )
+                with contextlib.suppress(Exception):
+                    await conn.execute(
+                        text(
+                            'TRUNCATE TABLE "audit_schema"."audit_ledger_seals" RESTART IDENTITY CASCADE;'
+                        )
+                    )
+
+                # Restore triggers/fk checks back to normal
+                await conn.execute(text("SET session_replication_role = 'origin';"))
+            print(f"[conftest] PostgreSQL database {db_name} cleaned successfully.")
+        except Exception as e:
+            print(f"[conftest] Error cleaning database {db_name}: {e}")
+        finally:
+            await engine.dispose()
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def cleanup_databases_fixture():
+    """
+    Autouse fixture that clears live Neo4j and PostgreSQL databases
+    before and after every single test case when USE_LIVE_DB=true is active.
+    """
+    if os.environ.get("USE_LIVE_DB") != "true":
+        yield
+        return
+
+    print("[conftest] USE_LIVE_DB=true: Performing pre-test database cleanups...")
+    await clean_postgres_databases()
+    await clean_neo4j_graph()
+
+    yield
+
+    print("[conftest] USE_LIVE_DB=true: Performing post-test database cleanups...")
+    await clean_postgres_databases()
+    await clean_neo4j_graph()
