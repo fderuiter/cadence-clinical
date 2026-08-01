@@ -1,6 +1,5 @@
 import asyncio
 import contextlib
-import importlib
 import json
 import logging
 import os
@@ -8,7 +7,6 @@ import sys
 from typing import Any
 
 from notifications.event_models import SystemDomainEvent
-from sqlalchemy import select
 
 from apps.notifications.database import db_manager as notifications_db_manager
 from apps.notifications.models import (
@@ -22,11 +20,10 @@ from apps.notifications.services.email_renderer import (
     get_template_name_for_event,
     render_email_template,
 )
-
-_org_database = importlib.import_module("apps.org.database")
-org_db_manager = _org_database.db_manager
-
-from packages.security.gateway_client import create_service_auth_headers  # noqa: E402
+from packages.security.gateway_client import (
+    GatewayBaseClient,
+    create_service_auth_headers,
+)
 
 ORG_URL = (os.getenv("ORG_URL") or "http://localhost:8010").rstrip("/")
 
@@ -34,10 +31,6 @@ ORG_URL = (os.getenv("ORG_URL") or "http://localhost:8010").rstrip("/")
 def _get_auth_headers() -> dict[str, str]:
     return create_service_auth_headers(user_id="notifications-service")
 
-
-_org_models = importlib.import_module("apps.org.models")
-Personnel = _org_models.Personnel
-PersonnelAssignment = _org_models.PersonnelAssignment
 
 logger = logging.getLogger("notification_worker")
 
@@ -98,31 +91,30 @@ class NotificationWorker:
 
         resolved = []
 
-        # Try database-driven resolution
-        if org_db_manager.session_maker:
-            try:
-                async with org_db_manager.get_session_maker()() as session:
-                    stmt = select(
-                        Personnel.keycloak_user_id, Personnel.email, Personnel.role
-                    ).join(
-                        PersonnelAssignment,
-                        PersonnelAssignment.personnel_id == Personnel.id,
-                    )
+        # Try database-driven resolution via secure REST HTTP call
+        try:
+            client = GatewayBaseClient(base_url=ORG_URL)
+            params = {}
+            if study_id:
+                params["study_id"] = study_id
+            if site_id:
+                params["site_id"] = site_id
 
-                    # Filter by study
-                    stmt = stmt.where(
-                        PersonnelAssignment.study_id == study_id,
-                        PersonnelAssignment.is_active.is_(True),
-                    )
-
-                    # Filter by site if site-scoped and present
-                    if site_id:
-                        stmt = stmt.where(PersonnelAssignment.site_id == site_id)
-
-                    result = await session.execute(stmt)
-                    rows = result.all()
-
-                    for r_user_id, r_email, r_role in rows:
+            response = await client.request(
+                method="GET",
+                path="/api/v1/org/personnel",
+                user_id="notifications-service",
+                roles="system",
+                change_reason="Resolve study personnel",
+                params=params,
+            )
+            if response.status_code < 400:
+                rows = response.json()
+                for p in rows:
+                    r_user_id = p.get("keycloak_user_id")
+                    r_email = p.get("email")
+                    r_role = p.get("role")
+                    if r_role:
                         role_norm = r_role.lower().strip()
                         if any(role_norm == r.lower() for r in roles_to_find):
                             resolved.append(
@@ -131,10 +123,10 @@ class NotificationWorker:
                                     "email": r_email,
                                 }
                             )
-            except Exception as e:
-                logger.warning(
-                    f"Failed to query org database for recipient resolution: {e}. Falling back."
-                )
+        except Exception as e:
+            logger.warning(
+                f"Failed to query org service via REST for recipient resolution: {e}. Falling back."
+            )
 
         # Fallback to deterministic mock values if no matches found in database
         if not resolved:

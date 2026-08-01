@@ -149,6 +149,15 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "instantiate",  # Phase 1: instantiate global library object in study
             "read",  # Phase 1: read global library object
         },
+        "library_object": {
+            "create",
+            "read",
+            "update",
+            "delete",
+            "approve",
+            "publish",
+            "release",
+        },
         "mdr_concept": {
             "create",  # Phase 1: create MDR biomedical concept
             "update",  # Phase 1: update MDR biomedical concept
@@ -227,6 +236,12 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "instantiate",  # Phase 1: instantiate global library object in study
             "read",  # Phase 1: read global library object
         },
+        "library_object": {
+            "create",
+            "read",
+            "update",
+            "delete",
+        },
         "mdr_concept": {
             "create",  # Phase 1: create MDR biomedical concept
             "update",  # Phase 1: update MDR biomedical concept
@@ -258,6 +273,11 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "global_library": {
             "transition",  # Phase 1: transition global library object status
             "read",  # Phase 1: read global library object
+        },
+        "library_object": {
+            "read",
+            "approve",
+            "publish",
         },
         "mdr_concept": {
             "read",  # Phase 1: read MDR biomedical concept
@@ -540,6 +560,15 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "transition",  # Phase 1: transition global library object status
             "read",  # Phase 1: read global library object
         },
+        "library_object": {
+            "create",
+            "read",
+            "update",
+            "delete",
+            "approve",
+            "publish",
+            "release",
+        },
         "mdr_concept": {
             "read",  # Phase 1: read MDR biomedical concept
         },
@@ -642,6 +671,15 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "training_log": {"create", "read", "sign"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
+        "library_object": {
+            "create",
+            "read",
+            "update",
+            "delete",
+            "approve",
+            "publish",
+            "release",
+        },
     },
     "anonymous": {
         "ctms_study": {"read"},

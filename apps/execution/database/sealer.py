@@ -278,6 +278,11 @@ async def start_background_sealer(
     Start the asynchronous background ledger sealer thread.
     """
     global _sealer_task, _should_run
+    if _sealer_task and not _sealer_task.done():
+        _sealer_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await _sealer_task
+
     if interval is None:
         interval = float(os.getenv("SEALER_INTERVAL_SECONDS", "60.0"))
     _should_run = True
@@ -312,6 +317,7 @@ async def stop_background_sealer() -> None:
     global _sealer_task, _should_run
     _should_run = False
     if _sealer_task:
+        _sealer_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await _sealer_task
         _sealer_task = None

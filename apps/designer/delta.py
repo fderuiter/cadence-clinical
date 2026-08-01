@@ -29,6 +29,14 @@ class LibraryObjectInUseError(Exception):
     pass
 
 
+class LibraryObjectLockedActiveStudyError(Exception):
+    """Raised when trying to directly mutate a library object/version that is referenced by an active recruiting study."""
+
+    def __init__(self, object_id: str):
+        self.object_id = object_id
+        self.message = f"Library object '{object_id}' is referenced by an active recruiting study and cannot be directly mutated. To perform a modification, please initiate an amendment workflow."
+
+
 class ConcurrentLockingError(Exception):
     """Raised when a concurrent locking/version conflict occurs."""
 
