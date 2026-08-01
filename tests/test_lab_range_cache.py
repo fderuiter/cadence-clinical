@@ -12,6 +12,10 @@ from apps.execution.lab_range_cache import (
 
 
 def test_lab_range_cache_ttl_config():
+    """Verify TTL parsing logic and fallback flow of LabRangeCache.
+
+    Requirements: PRD-SYS-001
+    """
     # Test fallback flow: env var LAB_RANGE_CACHE_TTL
     with mock.patch.dict(os.environ, {"LAB_RANGE_CACHE_TTL": "100.5"}):
         cache = LabRangeCache()
@@ -36,6 +40,10 @@ def test_lab_range_cache_ttl_config():
 
 
 def test_lab_range_cache_operations():
+    """Verify operations of LabRangeCache (get, set, invalidate, clear, FIFO eviction).
+
+    Requirements: PRD-SYS-001
+    """
     cache = LabRangeCache(max_size=3, ttl=1.0)
 
     # Empty cache check
@@ -83,6 +91,10 @@ def test_lab_range_cache_operations():
 
 @pytest.mark.asyncio
 async def test_get_active_lab_ranges_helper():
+    """Verify read-through helper behavior with hits, misses, expiration, and stale fallback.
+
+    Requirements: PRD-SYS-001
+    """
     cache = LabRangeCache(ttl=1.0)
     mock_session = mock.AsyncMock()
     mock_result = mock.MagicMock()
@@ -132,4 +144,8 @@ async def test_get_active_lab_ranges_helper():
 
 
 def test_lab_range_cache_singleton():
+    """Verify that a global singleton instance is created.
+
+    Requirements: PRD-SYS-001
+    """
     assert isinstance(lab_range_cache, LabRangeCache)

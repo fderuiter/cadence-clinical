@@ -87,11 +87,11 @@ from apps.execution.demographics import (
     get_safe_demographics as get_safe_demographics,
 )
 from apps.execution.dependencies import verify_change_justification
-from apps.execution.lab_range_cache import get_active_lab_ranges, lab_range_cache
 from apps.execution.edit_checks import (
     run_asynchronous_edit_checks,
     run_synchronous_edit_checks,
 )
+from apps.execution.lab_range_cache import get_active_lab_ranges, lab_range_cache
 from apps.execution.outliers import recalculate_cohort_outliers
 from apps.execution.query_service import QueryService, StateTransitionError
 from apps.execution.routers.amendments import router as amendments_router
@@ -2421,6 +2421,8 @@ async def create_lab_range(
             session.add(lab_range)
             await session.flush()
 
+        lab_range_cache.invalidate(data["study_id"], data["test_code"])
+
         return LabReferenceRangeResponse(
             id=lab_range.id,
             study_id=lab_range.study_id,
@@ -2560,6 +2562,8 @@ async def update_lab_range(
                     status_code=404, detail="LabReferenceRange not found"
                 )
 
+            orig_study_id = r.study_id
+            orig_test_code = r.test_code
             update_dict = payload.model_dump(exclude_unset=True)
             merged_data = {
                 "study_id": r.study_id,
@@ -2597,6 +2601,10 @@ async def update_lab_range(
             r.critical_low = merged_data["critical_low"]
             r.critical_high = merged_data["critical_high"]
             await session.flush()
+
+        lab_range_cache.invalidate(orig_study_id, orig_test_code)
+        if (orig_study_id, orig_test_code) != (r.study_id, r.test_code):
+            lab_range_cache.invalidate(r.study_id, r.test_code)
 
         return LabReferenceRangeResponse(
             id=r.id,
@@ -2643,6 +2651,8 @@ async def delete_lab_range(
 
             r.is_deleted = True
             await session.flush()
+
+        lab_range_cache.invalidate(r.study_id, r.test_code)
 
         return LabReferenceRangeResponse(
             id=r.id,
@@ -2701,6 +2711,7 @@ async def trigger_lab_range_recalculation(
         count = await recalculate_range_flags(
             session, payload.study_id, payload.test_code
         )
+        lab_range_cache.invalidate(payload.study_id, payload.test_code)
         return LabRangeRecalculateResponse(
             status="success",
             study_id=payload.study_id,
