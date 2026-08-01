@@ -31,63 +31,10 @@ from packages.security.rbac import (
     get_principal,
     require_permission,
     require_roles,
+    require_study_scope,
 )
 
 router = APIRouter(prefix="/api/v1/execution", tags=["SDV/TSDV"])
-
-
-# ==========================================
-# Study Scope Guard
-# ==========================================
-
-
-class StudyScopeChecker:
-    async def __call__(
-        self, request: Request, principal: Principal = Depends(get_principal)
-    ) -> Principal:
-        study_id = (
-            request.path_params.get("study_id")
-            or request.query_params.get("study_id")
-            or request.headers.get("X-Study-Id")
-            or request.headers.get("x-study-id")
-        )
-        if not study_id:
-            try:
-                content_type = request.headers.get("content-type", "")
-                if "application/json" in content_type:
-                    body_bytes = await request.body()
-                    if body_bytes:
-                        import json
-
-                        body = json.loads(body_bytes)
-                        if isinstance(body, dict):
-                            study_id = body.get("study_id") or body.get("id")
-
-                        async def receive():
-                            return {
-                                "type": "http.request",
-                                "body": body_bytes,
-                                "more_body": False,
-                            }
-
-                        request._receive = receive
-            except Exception:
-                pass
-
-        if study_id:
-            study_id = str(study_id).strip()
-
-        if study_id and not can_access_study(principal, study_id):
-            raise HTTPException(
-                status_code=403,
-                detail="Forbidden: Insufficient scope access for this study.",
-            )
-
-        return principal
-
-
-def require_study_scope() -> StudyScopeChecker:
-    return StudyScopeChecker()
 
 
 # ==========================================

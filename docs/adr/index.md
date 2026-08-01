@@ -199,3 +199,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-31: Expression Edit Check Phase 14 Runtime Evaluation Engine](2026-07-31-expression-edit-check-phase-14-runtime-evaluation-engine.md)
 - [2026-09-02: ADR 2026-09-02: Bypass Unused Parameter ESLint in Shared UI](2026-09-02-bypass-unused-parameter-eslint-in-shared-ui.md)
 - [2026-07-31: SDV Verification and Compliance Tests Phase 14](2026-07-31-sdv-verification-and-compliance-tests-phase-14.md)
+- [2026-09-03: Centralized Study Scope and Lab Range Permissions](2026-09-03-centralized-study-scope-and-lab-range-permissions.md)

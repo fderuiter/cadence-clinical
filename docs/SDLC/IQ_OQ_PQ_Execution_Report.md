@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1871
-- **Passed:** 1871 🟢
+- **Total Automated Test Cases Run:** 1873
+- **Passed:** 1873 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1482,11 +1482,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_external_monitor_principal_resolution` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_principal_from_request` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_has_permission` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_lab_range_alert_permissions` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_range_rbac_permissions` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_mask_payload_recursive` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_medical_coding_rbac_permissions` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_principal_agreement_with_middleware_coercion` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_require_permission_dependency` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_require_study_scope_extraction` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_role_aliases_normalization` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_role_normalization_list` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_role_normalization_string` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
