@@ -5,9 +5,7 @@ import sys
 # Load the shared sync_engine.py module directly from packages/core-models to avoid name conflicts.
 _current_dir = os.path.dirname(os.path.abspath(__file__))
 _shared_path = os.path.abspath(
-    os.path.join(
-        _current_dir, "..", "..", "packages", "core-models", "sync_engine.py"
-    )
+    os.path.join(_current_dir, "..", "..", "packages", "core-models", "sync_engine.py")
 )
 
 spec = importlib.util.spec_from_file_location("sync_engine_shared", _shared_path)

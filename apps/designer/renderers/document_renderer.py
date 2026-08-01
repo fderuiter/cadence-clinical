@@ -16,9 +16,7 @@ _shared_path = os.path.abspath(
     )
 )
 
-spec = importlib.util.spec_from_file_location(
-    "document_renderer_shared", _shared_path
-)
+spec = importlib.util.spec_from_file_location("document_renderer_shared", _shared_path)
 _shared_mod = importlib.util.module_from_spec(spec)
 sys.modules["document_renderer_shared"] = _shared_mod
 spec.loader.exec_module(_shared_mod)
