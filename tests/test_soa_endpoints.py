@@ -898,8 +898,8 @@ async def test_api_latest_soa_projection_unversioned():
     version_id2 = "v_new"
 
     # Register two versions of the study: v_old and v_new (latest)
-    from apps.designer.db import MOCK_STUDY_VERSIONS, MOCK_STUDIES
-    from apps.designer.delta import _init_mock_soa, MOCK_SOA_DATA
+    from apps.designer.db import MOCK_STUDIES, MOCK_STUDY_VERSIONS
+    from apps.designer.delta import MOCK_SOA_DATA, _init_mock_soa
 
     MOCK_STUDY_VERSIONS[study_id] = [
         {
@@ -915,7 +915,7 @@ async def test_api_latest_soa_projection_unversioned():
             "status": "DRAFT",
             "version_index": 2,
             "created_by": "designer",
-        }
+        },
     ]
     MOCK_STUDIES[study_id] = {"id": study_id, "arms": []}
 
@@ -975,7 +975,10 @@ async def test_api_soa_mutation_missing_change_reason():
         # POST arm with missing header / body reason
         res = await client.post(
             f"/api/v1/studies/{study_id}/versions/{version_id}/arms",
-            json={"id": "arm_fail", "properties": {"name": "Fail Arm", "type": "Active"}},
+            json={
+                "id": "arm_fail",
+                "properties": {"name": "Fail Arm", "type": "Active"},
+            },
             headers=headers,
         )
         # Note resolve_change_reason can raise 400 Bad Request
