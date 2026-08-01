@@ -56,6 +56,13 @@ repos:
         files: ^(docs/adr/|apps/gateway/|packages/security/|packages/ui/|apps/execution/database/|pyproject.toml$|package.json$|apps/execution/.*(models|migrations))
         pass_filenames: true
 
+      - id: validate-architecture-drift
+        name: Validate Architecture Drift
+        entry: python3 scripts/validate_architecture_drift.py
+        language: system
+        files: ^(docker/docker-compose\.yml|ARCHITECTURE\.md|docs/SDLC/02_Technical_Design_Document_TDD\.md)$
+        pass_filenames: false
+
       - id: validate-markdown
         name: Validate Custom Markdown
         entry: python3 scripts/validate_markdown.py

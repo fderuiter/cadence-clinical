@@ -178,179 +178,6 @@
         }
       }
     },
-    "/api/v1/execution/signatures/quiz-result": {
-      "post": {
-        "tags": [
-          "Signatures"
-        ],
-        "summary": "Seed Quiz Result Endpoint",
-        "operationId": "seed_quiz_result_endpoint_api_v1_execution_signatures_quiz_result_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/QuizResultRequestPayload"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/QuizResultResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/signatures/process-econsent": {
-      "post": {
-        "tags": [
-          "Signatures"
-        ],
-        "summary": "Process Econsent Endpoint",
-        "operationId": "process_econsent_endpoint_api_v1_execution_signatures_process_econsent_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EConsentSignRequestPayload"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EConsentSignResponsePayload"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/signatures/capture": {
-      "post": {
-        "tags": [
-          "Signatures"
-        ],
-        "summary": "Capture Signature Endpoint",
-        "operationId": "capture_signature_endpoint_api_v1_execution_signatures_capture_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WorkflowCaptureRequestPayload"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConsentSignatureResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/signatures/form-records": {
-      "get": {
-        "tags": [
-          "Signatures"
-        ],
-        "summary": "Get Form Records Endpoint",
-        "operationId": "get_form_records_endpoint_api_v1_execution_signatures_form_records_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ConsentFormRecordResponse"
-                  },
-                  "type": "array",
-                  "title": "Response Get Form Records Endpoint Api V1 Execution Signatures Form Records Get"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/signatures/consent-signatures": {
-      "get": {
-        "tags": [
-          "Signatures"
-        ],
-        "summary": "Get Consent Signatures Endpoint",
-        "operationId": "get_consent_signatures_endpoint_api_v1_execution_signatures_consent_signatures_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ConsentSignatureResponse"
-                  },
-                  "type": "array",
-                  "title": "Response Get Consent Signatures Endpoint Api V1 Execution Signatures Consent Signatures Get"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/execution/amendments/publish": {
       "post": {
         "tags": [
@@ -1440,9 +1267,6 @@
     },
     "/api/v1/execution/tsdv/config": {
       "post": {
-        "tags": [
-          "SDV/TSDV"
-        ],
         "summary": "Create Or Update Tsdv Config",
         "description": "Create or update Targeted SDV (TSDV) configuration for a study.\n\nRestricts config writes to CRA/Data Manager roles with GxP change justifications.",
         "operationId": "create_or_update_tsdv_config_api_v1_execution_tsdv_config_post",
@@ -1482,11 +1306,8 @@
     },
     "/api/v1/execution/tsdv/config/{study_id}": {
       "get": {
-        "tags": [
-          "SDV/TSDV"
-        ],
         "summary": "Get Tsdv Config",
-        "description": "Retrieve existing TSDV configuration for a study.",
+        "description": "Retrieve Targeted SDV (TSDV) configuration for a study.",
         "operationId": "get_tsdv_config_api_v1_execution_tsdv_config__study_id__get",
         "parameters": [
           {
@@ -1525,9 +1346,6 @@
     },
     "/api/v1/execution/tsdv/required": {
       "get": {
-        "tags": [
-          "SDV/TSDV"
-        ],
         "summary": "Evaluate Tsdv Rule",
         "description": "Evaluate Targeted SDV (TSDV) requirement for a given context.\n\nCalculates deterministic sampling decisions and returns component results with an audit explanation.",
         "operationId": "evaluate_tsdv_rule_api_v1_execution_tsdv_required_get",
@@ -1609,9 +1427,6 @@
     },
     "/api/v1/execution/sdv/signoff": {
       "post": {
-        "tags": [
-          "SDV/TSDV"
-        ],
         "summary": "Sdv Signoff",
         "description": "CRA/monitor-gated SDV sign-off endpoint for Field, Page, or Visit scopes.",
         "operationId": "sdv_signoff_api_v1_execution_sdv_signoff_post",
@@ -1619,7 +1434,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SDVSignOffRequest"
+                "$ref": "#/components/schemas/SDVSignoffCreate"
               }
             }
           },
@@ -1631,7 +1446,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SDVSignOffResponse"
+                  "$ref": "#/components/schemas/SDVSignoffResponse"
                 }
               }
             }
@@ -1652,7 +1467,7 @@
     "/api/v1/execution/sdv/bulk-sign-off": {
       "post": {
         "tags": [
-          "SDV"
+          "SDV/TSDV"
         ],
         "summary": "Bulk Sdv Signoff",
         "description": "CRA/monitor-gated bulk SDV sign-off endpoint for Field, Page, or Visit scopes.",
@@ -1674,48 +1489,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BulkSdvSignOffResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/queries/generate": {
-      "post": {
-        "tags": [
-          "Queries"
-        ],
-        "summary": "Bulk Generate Queries",
-        "description": "CRA/monitor-gated endpoint to raise multiple clinical queries at once.",
-        "operationId": "bulk_generate_queries_api_v1_execution_queries_generate_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BulkQueryGenerationRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BulkQueryGenerationResponse"
                 }
               }
             }
@@ -5894,140 +5667,6 @@
         ],
         "title": "Body_upload_document_api_v1_documents_upload_post"
       },
-      "BulkQueryGenerationRequest": {
-        "properties": {
-          "study_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Study Id",
-            "description": "Target protocol study ID"
-          },
-          "site_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Site Id",
-            "description": "Optional target site identifier"
-          },
-          "subject_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Subject Id",
-            "description": "Optional target subject identifier"
-          },
-          "targets": {
-            "items": {
-              "$ref": "#/components/schemas/QueryTargetDescriptor"
-            },
-            "type": "array",
-            "title": "Targets",
-            "description": "List of query target coordinate fields and explanations"
-          },
-          "reason_for_change": {
-            "type": "string",
-            "title": "Reason For Change",
-            "description": "Mandatory GxP 21 CFR Part 11 justification reason"
-          }
-        },
-        "type": "object",
-        "required": [
-          "targets",
-          "reason_for_change"
-        ],
-        "title": "BulkQueryGenerationRequest",
-        "description": "Request payload to execute bulk clinical query generation.\n\nRequirements: PRD-SYS-001"
-      },
-      "BulkQueryGenerationResponse": {
-        "properties": {
-          "batch_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Batch Id",
-            "description": "Unique bulk query batch identifier"
-          },
-          "audit_tx": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Audit Tx",
-            "description": "Immutable GxP audit ledger transaction ID"
-          },
-          "generated_count": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Generated Count",
-            "description": "Legacy generated query count"
-          },
-          "generated_query_ids": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Generated Query Ids",
-            "description": "List of generated unique query IDs"
-          },
-          "skipped_targets": {
-            "items": {
-              "$ref": "#/components/schemas/QueryTargetDescriptor"
-            },
-            "type": "array",
-            "title": "Skipped Targets",
-            "description": "List of target descriptors that were skipped due to already having an active query"
-          },
-          "timestamp_utc": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Timestamp Utc",
-            "description": "UTC ISO timestamp of query generation execution"
-          }
-        },
-        "type": "object",
-        "required": [
-          "generated_query_ids"
-        ],
-        "title": "BulkQueryGenerationResponse",
-        "description": "Response payload following bulk query generation execution.\n\nRequirements: PRD-SYS-001"
-      },
       "BulkSdvSignOffRequest": {
         "properties": {
           "study_id": {
@@ -6690,139 +6329,6 @@
         ],
         "title": "CodingAssignmentResponse"
       },
-      "ConsentFormRecordResponse": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "subject_id": {
-            "type": "string",
-            "title": "Subject Id"
-          },
-          "icf_version_id": {
-            "type": "string",
-            "title": "Icf Version Id"
-          },
-          "printed_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Printed Name"
-          },
-          "relationship_to_subject": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Relationship To Subject"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "is_verified": {
-            "type": "boolean",
-            "title": "Is Verified"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "subject_id",
-          "icf_version_id",
-          "status",
-          "is_verified"
-        ],
-        "title": "ConsentFormRecordResponse"
-      },
-      "ConsentSignatureResponse": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "subject_id": {
-            "type": "string",
-            "title": "Subject Id"
-          },
-          "icf_version_id": {
-            "type": "string",
-            "title": "Icf Version Id"
-          },
-          "printed_name": {
-            "type": "string",
-            "title": "Printed Name"
-          },
-          "signature_svg": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Signature Svg"
-          },
-          "verification_hash": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Verification Hash"
-          },
-          "signed_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Signed At"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "reason_for_change": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reason For Change"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "subject_id",
-          "icf_version_id",
-          "printed_name",
-          "status"
-        ],
-        "title": "ConsentSignatureResponse"
-      },
       "CriterionLevelResult": {
         "properties": {
           "criterion_id": {
@@ -7038,17 +6544,31 @@
             "type": "string",
             "title": "Task Code"
           },
+          "pi_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pi User Id"
+          },
           "status": {
             "type": "string",
             "title": "Status"
           },
-          "pi_user_id": {
-            "type": "string",
-            "title": "Pi User Id"
-          },
-          "reason_for_change": {
-            "type": "string",
-            "title": "Reason For Change"
+          "pi_signature_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pi Signature Hash"
           },
           "pi_approved_at": {
             "anyOf": [
@@ -7062,17 +6582,6 @@
             ],
             "title": "Pi Approved At"
           },
-          "pi_signature_hash": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pi Signature Hash"
-          },
           "end_date": {
             "anyOf": [
               {
@@ -7084,6 +6593,17 @@
               }
             ],
             "title": "End Date"
+          },
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change"
           },
           "is_active": {
             "type": "boolean",
@@ -7097,8 +6617,6 @@
           "staff_user_id",
           "task_code",
           "status",
-          "pi_user_id",
-          "reason_for_change",
           "is_active"
         ],
         "title": "DOADelegationRecordResponse"
@@ -7567,78 +7085,6 @@
         ],
         "title": "DocumentUploadResponse",
         "description": "Schema representing upload response.\n\nRequirements: PRD-SYS-001"
-      },
-      "EConsentSignRequestPayload": {
-        "properties": {
-          "subject_id": {
-            "type": "string",
-            "title": "Subject Id"
-          },
-          "icf_version_id": {
-            "type": "string",
-            "title": "Icf Version Id"
-          },
-          "printed_name": {
-            "type": "string",
-            "title": "Printed Name"
-          },
-          "relationship_to_subject": {
-            "type": "string",
-            "title": "Relationship To Subject"
-          },
-          "signature_svg": {
-            "type": "string",
-            "title": "Signature Svg"
-          },
-          "otp_auth_code": {
-            "type": "string",
-            "title": "Otp Auth Code"
-          },
-          "reason_for_change": {
-            "type": "string",
-            "title": "Reason For Change"
-          }
-        },
-        "type": "object",
-        "required": [
-          "subject_id",
-          "icf_version_id",
-          "printed_name",
-          "relationship_to_subject",
-          "signature_svg",
-          "otp_auth_code",
-          "reason_for_change"
-        ],
-        "title": "EConsentSignRequestPayload"
-      },
-      "EConsentSignResponsePayload": {
-        "properties": {
-          "consent_record_id": {
-            "type": "string",
-            "title": "Consent Record Id"
-          },
-          "signed_pdf_url": {
-            "type": "string",
-            "title": "Signed Pdf Url"
-          },
-          "signature_timestamp_utc": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Signature Timestamp Utc"
-          },
-          "verification_hash": {
-            "type": "string",
-            "title": "Verification Hash"
-          }
-        },
-        "type": "object",
-        "required": [
-          "consent_record_id",
-          "signed_pdf_url",
-          "signature_timestamp_utc",
-          "verification_hash"
-        ],
-        "title": "EConsentSignResponsePayload"
       },
       "EISFDocumentRecord": {
         "properties": {
@@ -10040,99 +9486,6 @@
         "title": "QueryRespond",
         "description": "Pydantic schema for responding to an open query."
       },
-      "QueryTargetDescriptor": {
-        "properties": {
-          "study_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Study Id",
-            "description": "Target study trial identifier"
-          },
-          "subject_id": {
-            "type": "string",
-            "title": "Subject Id",
-            "description": "Target clinical trial subject ID"
-          },
-          "visit_id": {
-            "type": "string",
-            "title": "Visit Id",
-            "description": "Target visit identifier"
-          },
-          "domain": {
-            "type": "string",
-            "title": "Domain",
-            "description": "Target SDTM domain code"
-          },
-          "test_code": {
-            "type": "string",
-            "title": "Test Code",
-            "description": "Target clinical test code"
-          },
-          "observation_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Observation Id",
-            "description": "Optional target unique clinical observation ID"
-          },
-          "form_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Form Id",
-            "description": "Optional form identifier"
-          },
-          "field_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Field Id",
-            "description": "Optional field identifier"
-          },
-          "explanation": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Explanation",
-            "description": "Contextual explanation/issue description triggering query generation"
-          }
-        },
-        "type": "object",
-        "required": [
-          "subject_id",
-          "visit_id",
-          "domain",
-          "test_code"
-        ],
-        "title": "QueryTargetDescriptor",
-        "description": "Coordinate fields representing the specific target of a query.\n\nRequirements: PRD-SYS-001"
-      },
       "QueryUpdate": {
         "properties": {
           "status": {
@@ -10346,67 +9699,6 @@
         ],
         "title": "QueryUpdate",
         "description": "Pydantic schema for general state transitions."
-      },
-      "QuizResultRequestPayload": {
-        "properties": {
-          "subject_id": {
-            "type": "string",
-            "title": "Subject Id"
-          },
-          "icf_version_id": {
-            "type": "string",
-            "title": "Icf Version Id"
-          },
-          "score": {
-            "type": "number",
-            "title": "Score"
-          },
-          "passed": {
-            "type": "boolean",
-            "title": "Passed"
-          }
-        },
-        "type": "object",
-        "required": [
-          "subject_id",
-          "icf_version_id",
-          "score",
-          "passed"
-        ],
-        "title": "QuizResultRequestPayload"
-      },
-      "QuizResultResponse": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "subject_id": {
-            "type": "string",
-            "title": "Subject Id"
-          },
-          "icf_version_id": {
-            "type": "string",
-            "title": "Icf Version Id"
-          },
-          "score": {
-            "type": "number",
-            "title": "Score"
-          },
-          "passed": {
-            "type": "boolean",
-            "title": "Passed"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "subject_id",
-          "icf_version_id",
-          "score",
-          "passed"
-        ],
-        "title": "QuizResultResponse"
       },
       "RedactPDFRequest": {
         "properties": {
@@ -10639,6 +9931,141 @@
         "title": "SDVSignOffResponse",
         "description": "Pydantic response schema for SDV sign-off."
       },
+      "SDVSignoffCreate": {
+        "properties": {
+          "scope": {
+            "$ref": "#/components/schemas/SDVScopeEnum"
+          },
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scope",
+          "target_id",
+          "subject_id",
+          "study_id"
+        ],
+        "title": "SDVSignoffCreate",
+        "description": "Pydantic request schema for SDV sign-off."
+      },
+      "SDVSignoffResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "is_verified": {
+            "type": "boolean",
+            "title": "Is Verified"
+          },
+          "verified_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified By"
+          },
+          "verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified At"
+          },
+          "dropped_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dropped Reason"
+          },
+          "dropped_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dropped At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "scope",
+          "target_id",
+          "subject_id",
+          "study_id",
+          "is_verified"
+        ],
+        "title": "SDVSignoffResponse",
+        "description": "Pydantic response schema for SDV sign-off."
+      },
       "SafetyDispatchRequest": {
         "properties": {
           "study_id": {
@@ -10752,7 +10179,8 @@
           },
           "has_gcp_training": {
             "type": "boolean",
-            "title": "Has Gcp Training"
+            "title": "Has Gcp Training",
+            "default": true
           }
         },
         "type": "object",
@@ -10760,13 +10188,16 @@
           "site_id",
           "staff_user_id",
           "name",
-          "email",
-          "has_gcp_training"
+          "email"
         ],
         "title": "SiteStaffMemberRequest"
       },
       "SiteStaffMemberResponse": {
         "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
           "site_id": {
             "type": "string",
             "title": "Site Id"
@@ -10790,6 +10221,7 @@
         },
         "type": "object",
         "required": [
+          "id",
           "site_id",
           "staff_user_id",
           "name",
@@ -12419,39 +11851,6 @@
           "score"
         ],
         "title": "WHODrugMatch"
-      },
-      "WorkflowCaptureRequestPayload": {
-        "properties": {
-          "subject_id": {
-            "type": "string",
-            "title": "Subject Id"
-          },
-          "icf_version_id": {
-            "type": "string",
-            "title": "Icf Version Id"
-          },
-          "printed_name": {
-            "type": "string",
-            "title": "Printed Name"
-          },
-          "signature_svg": {
-            "type": "string",
-            "title": "Signature Svg"
-          },
-          "reason_for_change": {
-            "type": "string",
-            "title": "Reason For Change"
-          }
-        },
-        "type": "object",
-        "required": [
-          "subject_id",
-          "icf_version_id",
-          "printed_name",
-          "signature_svg",
-          "reason_for_change"
-        ],
-        "title": "WorkflowCaptureRequestPayload"
       }
     }
   }
