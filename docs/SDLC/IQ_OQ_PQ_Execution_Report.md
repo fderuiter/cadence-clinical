@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1861
-- **Passed:** 1861 🟢
+- **Total Automated Test Cases Run:** 1865
+- **Passed:** 1865 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -21,7 +21,7 @@ The Installation Qualification verifies that the software execution environment,
 
 ### 2.1 System Environment Metadata
 - **Operating System / Platform:** linux (containerized target specification)
-- **Python Version:** 3.12.12 (Docker execution environment baseline)
+- **Python Version:** 3.12.13 (Docker execution environment baseline)
 - **Database Provider (Execution Engine):** PostgreSQL / SQLite in-memory fallback
 - **Graph Database Provider (Designer Engine):** Neo4j (mocked in unit suite)
 - **Identity Management Gateway:** Keycloak OIDC Router
@@ -1694,6 +1694,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_verify_gateway_signature_scope_fallback_restrictions` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_gateway_signature_tenant_and_multishape_restrictions` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_sig_token_helper_scenarios` | `tests.test_security_middleware` | Trace-15 | 🟢 PASSED | < 1s |
+| `test_cross_service_interception` | `tests.test_shared_rbac_harness` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_mock_designer_driver` | `tests.test_shared_rbac_harness` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_persona_builders_contain_correct_claims` | `tests.test_shared_rbac_harness` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_shared_sqlite_dbs_and_clients` | `tests.test_shared_rbac_harness` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_and_consume_sig_token_expired` | `tests.test_sig_token_verifier` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_and_consume_sig_token_mismatched_user` | `tests.test_sig_token_verifier` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_and_consume_sig_token_replay_blocked` | `tests.test_sig_token_verifier` | *Regression/Helper* | 🟢 PASSED | < 1s |
