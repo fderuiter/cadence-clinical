@@ -9,11 +9,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1894
-- **Passed:** 1893 🟢
-- **Failed/Errors:** 1 🔴
+- **Total Automated Test Cases Run:** 1915
+- **Passed:** 1915 🟢
+- **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
-- **Overall Operational Pass Rate:** 99.95%
+- **Overall Operational Pass Rate:** 100.00%
 
 ## 2. Installation Qualification (IQ)
 
@@ -21,7 +21,7 @@ The Installation Qualification verifies that the software execution environment,
 
 ### 2.1 System Environment Metadata
 - **Operating System / Platform:** linux (containerized target specification)
-- **Python Version:** 3.12.12 (Docker execution environment baseline)
+- **Python Version:** 3.12.13 (Docker execution environment baseline)
 - **Database Provider (Execution Engine):** PostgreSQL / SQLite in-memory fallback
 - **Graph Database Provider (Designer Engine):** Neo4j (mocked in unit suite)
 - **Identity Management Gateway:** Keycloak OIDC Router
@@ -1160,17 +1160,25 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_soft_delete_lab_reference_range` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_update_local_to_central_invariant_enforcement` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_ranges_comprehensive_e2e_workflow` | `tests.test_lab_ranges_e2e_verification` | PRD-LAB-001 | 🟢 PASSED | < 1s |
+| `test_age_bounded_range_recalculation` | `tests.test_lab_ranges_recalculate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_range_evaluation_and_recalculation_gxp` | `tests.test_lab_ranges_recalculate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_range_recalculation_authorized_data_manager` | `tests.test_lab_ranges_recalculate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_range_recalculation_blank_reason` | `tests.test_lab_ranges_recalculate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_range_recalculation_missing_reason` | `tests.test_lab_ranges_recalculate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_range_recalculation_no_match` | `tests.test_lab_ranges_recalculate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_range_recalculation_unauthorized_role` | `tests.test_lab_ranges_recalculate` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_and_undecryptable_demographics_recalculation` | `tests.test_lab_ranges_recalculate` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sex_specific_range_recalculation` | `tests.test_lab_ranges_recalculate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_observation_extended_fields` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_audit_and_triggers` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_audit_quartet_persistence` | `tests.test_lab_reference_range_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_crud_and_precision` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_schema_evolution_migration_upgrade` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001, PRD-QRY-005 | 🟢 PASSED | < 1s |
+| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1297,6 +1305,19 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_worker_resolves_cra_for_document_expiry` | `tests.test_notification_worker` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_worker_resolves_crc_for_edc_query` | `tests.test_notification_worker` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_worker_resolves_safety_officer_for_sae_flag` | `tests.test_notification_worker` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_direct_transition_open_to_resolved` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_email_delivery_channel_failure_and_exhaustion` | `tests.test_notifications` | PRD-SYS-003 | 🟢 PASSED | < 1s |
+| `test_email_delivery_channel_success` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_lifecycle_transitions_and_justifications` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_multi_channel_edge_case_in_app_succeeds_email_exhausts` | `tests.test_notifications` | PRD-SYS-003 | 🟢 PASSED | < 1s |
+| `test_notification_creation_and_auditing` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notification_detail_visibility` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notification_list_visibility_and_filtering` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notifications_database_schema_creation` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notifications_health_check` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notifications_negative_security_paths` | `tests.test_notifications` | PRD-SYS-004 | 🟢 PASSED | < 1s |
+| `test_webhook_delivery_channel_failure_and_retry_backoff` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_webhook_delivery_channel_success` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_offline_sync_batch_success_and_idempotency` | `tests.test_offline_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_offline_sync_batch_update_action` | `tests.test_offline_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_offline_batch_sync_success` | `tests.test_offline_sync` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1381,7 +1402,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_merge_amendment_branch` | `tests.test_protocol_comparison` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_build_docx_template` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_as_docx_success` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_export_protocol_as_pdf_success` | `tests.test_protocol_export` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_export_protocol_as_pdf_success` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_etmf_forwarding_best_effort` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_etmf_forwarding_strict_failure` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_generation_auditing` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
