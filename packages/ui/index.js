@@ -250,8 +250,11 @@ export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
   };
 
   const ruleTypes = [
-    { value: "skip_logic", text: "Skip Logic (Field Visibility)" },
-    { value: "constraint", text: "Field Constraint Check" },
+    { value: "skip_logic", text: "Skip Logic (Show/Hide fields)" },
+    {
+      value: "constraint",
+      text: "Field Constraint (Single field query validation)",
+    },
     { value: "edit_check", text: "Edit Check (Validation Error)" },
     { value: "derived_field", text: "Derived Calculation" },
     { value: "cross_form_check", text: "Cross-Form / Longitudinal Check" },
