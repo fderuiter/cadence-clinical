@@ -2420,8 +2420,10 @@ async def create_lab_range(
             )
             session.add(lab_range)
             await session.flush()
+            # Invalidate immediately after session.flush() inside the session.begin() block
             lab_range_cache.invalidate(lab_range.study_id, lab_range.test_code)
 
+        # Invalidate again outside the transaction block to avoid race conditions
         lab_range_cache.invalidate(lab_range.study_id, lab_range.test_code)
 
         return LabReferenceRangeResponse(
@@ -2563,6 +2565,7 @@ async def update_lab_range(
                     status_code=404, detail="LabReferenceRange not found"
                 )
 
+            # Capture original study_id and test_code from the loaded row before they are overwritten
             original_study_id = r.study_id
             original_test_code = r.test_code
 
@@ -2603,13 +2606,16 @@ async def update_lab_range(
             r.critical_low = merged_data["critical_low"]
             r.critical_high = merged_data["critical_high"]
             await session.flush()
-            lab_range_cache.invalidate(r.study_id, r.test_code)
-
+            # Invalidate immediately after session.flush() inside the transaction block
+            # For the original (study_id, test_code) key
             lab_range_cache.invalidate(original_study_id, original_test_code)
+            # and, if either field changed, also for the new (study_id, test_code) key
             if original_study_id != r.study_id or original_test_code != r.test_code:
                 lab_range_cache.invalidate(r.study_id, r.test_code)
 
+        # Invalidate again outside the transaction block to avoid race conditions
         lab_range_cache.invalidate(r.study_id, r.test_code)
+        lab_range_cache.invalidate(original_study_id, original_test_code)
 
         return LabReferenceRangeResponse(
             id=r.id,
@@ -2656,8 +2662,10 @@ async def delete_lab_range(
 
             r.is_deleted = True
             await session.flush()
+            # Invalidate immediately after session.flush() inside the transaction block
             lab_range_cache.invalidate(r.study_id, r.test_code)
 
+        # Invalidate again outside the transaction block to avoid race conditions
         lab_range_cache.invalidate(r.study_id, r.test_code)
 
         return LabReferenceRangeResponse(
@@ -2717,6 +2725,7 @@ async def trigger_lab_range_recalculation(
         count = await recalculate_range_flags(
             session, payload.study_id, payload.test_code
         )
+        # Invalidate after recalculation
         lab_range_cache.invalidate(payload.study_id, payload.test_code)
         return LabRangeRecalculateResponse(
             status="success",
