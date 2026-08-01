@@ -166,7 +166,7 @@ SERVICES = {
     "execution": os.getenv("EXECUTION_URL", "http://localhost:8002"),
     "etmf": os.getenv("ETMF_URL", "http://localhost:8003"),
     "interop": os.getenv("INTEROP_URL", "http://localhost:8004"),
-    "ctms": os.getenv("CTMS_URL", "http://localhost:8005"),
+    "ctms": os.getenv("CTMS_URL", "http://localhost:8007"),
     "notifications": os.getenv("NOTIFICATIONS_URL", "http://localhost:8006"),
     "quality": os.getenv("QUALITY_URL", "http://localhost:8005"),
     "safety": os.getenv(
