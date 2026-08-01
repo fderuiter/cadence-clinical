@@ -306,6 +306,10 @@ def main() -> None:
                                     "apps/web/src/components/clinical/ClinicalLookupInput.vue",
                                     "apps/web/src/components/clinical/ClinicalInput.vue",
                                 },
+                                {
+                                    "apps/designer/rules.py",
+                                    "packages/core-models/usdm_ingestion.py",
+                                },
                             ]
                         ):
                             continue
