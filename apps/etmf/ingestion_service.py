@@ -12,7 +12,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from tmf_reference_model import (
     get_active_catalog,
-    resolve_artifact,
     validate_hierarchy,
 )
 
@@ -66,9 +65,13 @@ async def ingest_tmf_document(
     from apps.etmf.classification_service import classify_tmf_document
 
     hint = artifact_code or artifact_type
-    classification = classify_tmf_document(filename=filename, artifact_type=hint, version=tax_version)
+    classification = classify_tmf_document(
+        filename=filename, artifact_type=hint, version=tax_version
+    )
     if classification is None:
-        raise ValueError(f"Validation Error: Could not resolve artifact for input '{hint}' or filename '{filename}'.")
+        raise ValueError(
+            f"Validation Error: Could not resolve artifact for input '{hint}' or filename '{filename}'."
+        )
 
     res_zone = classification.resolved_zone
     res_section = classification.resolved_section

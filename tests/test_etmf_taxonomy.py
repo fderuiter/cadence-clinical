@@ -18,15 +18,19 @@ def setup_db():
     db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
     # Create tables synchronously for tests
     import asyncio
+
     async def create_all():
         async with db_manager.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+
     asyncio.run(create_all())
     yield
     TrialLockManager.reset()
+
     async def drop_all():
         async with db_manager.engine.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)
+
     asyncio.run(drop_all())
     # Run close coroutine
     asyncio.run(db_manager.close())
@@ -70,7 +74,9 @@ def test_classification_service_direct():
     assert res.match_basis == "filename_match"
 
     # 6. Free text substring alias match
-    res = classify_tmf_document(filename="", free_text="Please upload the FINANCIAL_DISCLOSURE form here.")
+    res = classify_tmf_document(
+        filename="", free_text="Please upload the FINANCIAL_DISCLOSURE form here."
+    )
     assert res is not None
     assert res.artifact_code == "05.02.02"
     assert res.match_basis == "free_text_match"
@@ -127,7 +133,7 @@ def test_classify_endpoints():
     # 1. Test POST /api/v1/etmf/taxonomy/classify - successful resolution
     payload = {
         "filename": "protocol_amendment_2026.pdf",
-        "artifact_type": "Clinical Trial Protocol Amendment"
+        "artifact_type": "Clinical Trial Protocol Amendment",
     }
     resp = client.post("/api/v1/etmf/taxonomy/classify", json=payload, headers=headers)
     assert resp.status_code == 200
@@ -139,19 +145,19 @@ def test_classify_endpoints():
     assert data["match_basis"] == "artifact_type_hint"
 
     # 2. Test fallback POST /api/v1/etmf/classify - successful resolution via filename
-    payload_fallback = {
-        "filename": "my_blank_crf_form.pdf"
-    }
-    resp_fallback = client.post("/api/v1/etmf/classify", json=payload_fallback, headers=headers)
+    payload_fallback = {"filename": "my_blank_crf_form.pdf"}
+    resp_fallback = client.post(
+        "/api/v1/etmf/classify", json=payload_fallback, headers=headers
+    )
     assert resp_fallback.status_code == 200
     data_fb = resp_fallback.json()
     assert data_fb["artifact_code"] == "10.02.01"
     assert data_fb["match_basis"] == "filename_match"
 
     # 3. Test unresolved classification - returns HTTP 422
-    payload_unresolved = {
-        "filename": "completely_arbitrary_random_file.zip"
-    }
-    resp_unresolved = client.post("/api/v1/etmf/classify", json=payload_unresolved, headers=headers)
+    payload_unresolved = {"filename": "completely_arbitrary_random_file.zip"}
+    resp_unresolved = client.post(
+        "/api/v1/etmf/classify", json=payload_unresolved, headers=headers
+    )
     assert resp_unresolved.status_code == 422
     assert "unable to auto-classify" in resp_unresolved.json()["detail"].lower()

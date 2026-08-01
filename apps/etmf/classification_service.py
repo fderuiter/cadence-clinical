@@ -1,5 +1,4 @@
-from typing import Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from tmf_reference_model import (
     get_active_catalog,
     get_catalog,
@@ -26,6 +25,7 @@ class ClassificationResult(BaseModel):
     """
     Unified result of a classification/auto-filing attempt.
     """
+
     resolved_zone: int
     resolved_section: str
     artifact_code: str
@@ -94,7 +94,9 @@ def classify_tmf_document(
             if res:
                 return res
         for alias_key, (c_code, _) in ALIAS_MAP.items():
-            if normalize_for_comparison(alias_key) == normalize_for_comparison(cleaned_type):
+            if normalize_for_comparison(alias_key) == normalize_for_comparison(
+                cleaned_type
+            ):
                 res = create_result(c_code, "artifact_type_hint")
                 if res:
                     return res
@@ -118,7 +120,7 @@ def classify_tmf_document(
     if filename:
         filename_norm = normalize_for_comparison(filename)
         # Code match in filename
-        for code in catalog.artifact_map.keys():
+        for code in catalog.artifact_map:
             if code in filename_norm:
                 res = create_result(code, "filename_match")
                 if res:
@@ -143,7 +145,7 @@ def classify_tmf_document(
     if free_text:
         text_norm = normalize_for_comparison(free_text)
         # Code match in free_text
-        for code in catalog.artifact_map.keys():
+        for code in catalog.artifact_map:
             if code in text_norm:
                 res = create_result(code, "free_text_match")
                 if res:

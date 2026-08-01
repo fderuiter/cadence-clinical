@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-
-from packages.security.rbac import Principal, require_permission
 from tmf_reference_model import get_active_catalog, get_catalog
+
 from apps.etmf.classification_service import classify_tmf_document
+from packages.security.rbac import Principal, require_permission
 
 router = APIRouter(prefix="/api/v1/etmf", tags=["Taxonomy"])
 
@@ -12,6 +12,7 @@ class TaxonomyArtifactNode(BaseModel):
     """
     Representation of an artifact node in the taxonomy structure.
     """
+
     artifact_code: str
     artifact_name: str
 
@@ -20,6 +21,7 @@ class TaxonomySectionNode(BaseModel):
     """
     Representation of a section node in the taxonomy structure.
     """
+
     section_code: str
     section_name: str
     artifacts: list[TaxonomyArtifactNode]
@@ -29,6 +31,7 @@ class TaxonomyZoneNode(BaseModel):
     """
     Representation of a zone node in the taxonomy structure.
     """
+
     zone_code: int
     zone_name: str
     sections: list[TaxonomySectionNode]
@@ -38,6 +41,7 @@ class TaxonomyCatalogResponse(BaseModel):
     """
     Top-level taxonomy catalog response representation.
     """
+
     version: str
     zones: list[TaxonomyZoneNode]
 
@@ -46,6 +50,7 @@ class AutoFileRequest(BaseModel):
     """
     Request model for auto-filing/classification suggestion.
     """
+
     filename: str
     artifact_type: str | None = Field(None, description="Optional artifact type hint")
     free_text: str | None = Field(None, description="Optional free-text hint")
@@ -55,6 +60,7 @@ class AutoFileResponse(BaseModel):
     """
     Response model for auto-filing/classification suggestion.
     """
+
     resolved_zone: int
     resolved_section: str
     artifact_code: str
