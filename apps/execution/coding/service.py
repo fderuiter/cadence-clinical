@@ -1,6 +1,5 @@
 import logging
 from datetime import UTC, datetime
-from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +15,9 @@ from apps.execution.database.models import (
     ClinicalCodingLedger,
     ClinicalQuery,
     CodingState,
+    MedDRATerm,
+    RecodingState,
+    WHODrugRecord,
 )
 from apps.execution.database.models import (
     DictionaryType as DBDictionaryType,
@@ -40,12 +42,16 @@ def map_assignment_to_response(a: ClinicalCodingAssignment) -> CodingAssignmentR
         verbatim_text=a.verbatim_text,
         source_field=a.source_field,
         observation_id=a.observation_id,
-        dictionary_type=a.dictionary_type.value if hasattr(a.dictionary_type, "value") else str(a.dictionary_type),
+        dictionary_type=a.dictionary_type.value
+        if hasattr(a.dictionary_type, "value")
+        else str(a.dictionary_type),
         dictionary_version=a.dictionary_version,
         coded_code=a.coded_code,
         coded_term=a.coded_term,
         status=a.status.value if hasattr(a.status, "value") else str(a.status),
-        recoding_status=a.recoding_status.value if hasattr(a.recoding_status, "value") else str(a.recoding_status),
+        recoding_status=a.recoding_status.value
+        if hasattr(a.recoding_status, "value")
+        else str(a.recoding_status),
         assigned_by=a.assigned_by,
         assigned_at=a.assigned_at,
         score=a.score,
@@ -168,7 +174,7 @@ async def search_dictionary(
             matches=matches,
         )
 
-    elif dict_type_upper == "WHODRUG":
+    if dict_type_upper == "WHODRUG":
         if res.get("match"):
             m = res["match"]
             matches.append(
@@ -222,8 +228,7 @@ async def search_dictionary(
             matches=matches,
         )
 
-    else:
-        raise ValueError(f"Unsupported dictionary type: {dictionary_type}")
+    raise ValueError(f"Unsupported dictionary type: {dictionary_type}")
 
 
 async def list_coding_assignments(
@@ -265,7 +270,9 @@ async def get_coding_assignment(
     res = await session.execute(stmt)
     assignment = res.scalars().first()
     if not assignment:
-        raise ValueError(f"Coding assignment '{assignment_id}' not found or has been deleted.")
+        raise ValueError(
+            f"Coding assignment '{assignment_id}' not found or has been deleted."
+        )
     return map_assignment_to_response(assignment)
 
 
@@ -297,19 +304,32 @@ async def process_coding_action(
     res = await session.execute(stmt)
     assignment = res.scalars().first()
     if not assignment:
-        raise ValueError(f"Coding assignment '{assignment_id}' not found or has been deleted.")
+        raise ValueError(
+            f"Coding assignment '{assignment_id}' not found or has been deleted."
+        )
 
     old_code = assignment.coded_code
     old_term = assignment.coded_term
     old_version = assignment.dictionary_version
     dict_type = assignment.dictionary_type
     version = assignment.dictionary_version
+    old_hierarchy = assignment.hierarchy or {}
 
     status = assignment.status
     coded_code = assignment.coded_code
     coded_term = assignment.coded_term
     score = assignment.score
     hierarchy = assignment.hierarchy
+
+    # Resolve actor with fallback to current_user_id.get() or parameter actor or "system"
+    try:
+        from apps.execution.database.context import current_user_id
+
+        resolved_actor = current_user_id.get() or actor
+    except Exception:
+        resolved_actor = actor
+    if not resolved_actor:
+        resolved_actor = "system"
 
     if action_upper == "ACCEPT":
         # Must find a suggestion to accept
@@ -378,8 +398,6 @@ async def process_coding_action(
 
         # Double check existence of the code/version in DB
         if dict_type == DBDictionaryType.MEDDRA:
-            from apps.execution.database.models import MedDRATerm
-
             stmt_valid = select(MedDRATerm).where(
                 MedDRATerm.dictionary_version == version,
                 MedDRATerm.code == coded_code,
@@ -390,8 +408,6 @@ async def process_coding_action(
                     f"Invalid code '{coded_code}' for MedDRA version '{version}'."
                 )
         elif dict_type == DBDictionaryType.WHODRUG:
-            from apps.execution.database.models import WHODrugRecord
-
             stmt_valid = select(WHODrugRecord).where(
                 WHODrugRecord.dictionary_version == version,
                 WHODrugRecord.drug_code == coded_code,
@@ -403,6 +419,7 @@ async def process_coding_action(
                 )
 
         status = CodingState.CODED
+        assignment.recoding_status = RecodingState.NONE
 
     elif action_upper == "OVERRIDE":
         # Override requires reason_for_change, code, and term
@@ -415,57 +432,51 @@ async def process_coding_action(
         if not term or not term.strip():
             raise ValueError("term is required for OVERRIDE action.")
 
-        # Validate target code/version
-        if dict_type == DBDictionaryType.MEDDRA:
-            from apps.execution.database.models import MedDRATerm
+        coded_code = code.strip()
+        coded_term = term.strip()
 
+        # Validate target code/version and retrieve hierarchy
+        if dict_type == DBDictionaryType.MEDDRA:
             stmt_valid = select(MedDRATerm).where(
                 MedDRATerm.dictionary_version == version,
-                MedDRATerm.code == code.strip(),
+                MedDRATerm.code == coded_code,
             )
             res_valid = await session.execute(stmt_valid)
-            if not res_valid.scalars().first():
+            term_record = res_valid.scalars().first()
+            if not term_record:
                 raise ValueError(
-                    f"Invalid code '{code}' for MedDRA version '{version}'."
+                    f"Invalid code '{coded_code}' for MedDRA version '{version}'."
                 )
 
             # Fetch hierarchy for the overridden term if possible
             from apps.execution.coding.matcher import _get_meddra_hierarchy
 
-            term_obj = MedDRATerm(
-                code=code.strip(),
-                term_name=term.strip(),
-                level="LLT",
-            )
-            hierarchy_list = await _get_meddra_hierarchy(session, term_obj, version)
+            hierarchy_list = await _get_meddra_hierarchy(session, term_record, version)
             hierarchy = {"hierarchies": hierarchy_list} if hierarchy_list else {}
 
         elif dict_type == DBDictionaryType.WHODRUG:
-            from apps.execution.database.models import WHODrugRecord
-
             stmt_valid = select(WHODrugRecord).where(
                 WHODrugRecord.dictionary_version == version,
-                WHODrugRecord.drug_code == code.strip(),
+                WHODrugRecord.drug_code == coded_code,
             )
             res_valid = await session.execute(stmt_valid)
-            if not res_valid.scalars().first():
+            rec_record = res_valid.scalars().first()
+            if not rec_record:
                 raise ValueError(
-                    f"Invalid drug code '{code}' for WHODrug version '{version}'."
+                    f"Invalid drug code '{coded_code}' for WHODrug version '{version}'."
                 )
 
             # Fetch ATC context and ingredients for WHODrug override
             from apps.execution.coding.matcher import _get_whodrug_context
 
-            rec_obj = WHODrugRecord(drug_code=code.strip(), preferred_name=term.strip())
             atc_context, ingredients = await _get_whodrug_context(
-                session, rec_obj, version
+                session, rec_record, version
             )
             hierarchy = {"atc_context": atc_context, "ingredients": ingredients}
 
-        coded_code = code.strip()
-        coded_term = term.strip()
         score = 1.0  # Perfect manual certainty
         status = CodingState.CODED
+        assignment.recoding_status = RecodingState.NONE
 
     elif action_upper == "QUERY":
         status = CodingState.QUERY_PENDING
@@ -473,6 +484,7 @@ async def process_coding_action(
         coded_term = None
         score = None
         hierarchy = None
+        assignment.recoding_status = RecodingState.NONE
 
     # 2. Update assignment state
     assignment.status = status
@@ -480,7 +492,7 @@ async def process_coding_action(
     assignment.coded_term = coded_term
     assignment.score = score
     assignment.hierarchy = hierarchy
-    assignment.assigned_by = actor
+    assignment.assigned_by = resolved_actor
     assignment.assigned_at = datetime.now(UTC).replace(tzinfo=None)
 
     # 3. Create a ledger record for ACCEPT or OVERRIDE
@@ -490,15 +502,18 @@ async def process_coding_action(
             verbatim_text=assignment.verbatim_text,
             observation_id=assignment.observation_id,
             dictionary_type=dict_type,
-            old_dictionary_version=old_version if old_code else None,
+            old_dictionary_version=old_version,
             old_coded_code=old_code,
             old_coded_term=old_term,
             new_dictionary_version=version,
             new_coded_code=coded_code,
             new_coded_term=coded_term,
             recoding_reason=reason_for_change or f"Manual decision: {action_upper}",
-            decision_by=actor,
+            decision_by=resolved_actor,
             decision_at=datetime.now(UTC).replace(tzinfo=None),
+            old_hierarchy=old_hierarchy,
+            new_hierarchy=hierarchy or {},
+            recoding_status=RecodingState.NONE,
         )
         session.add(ledger)
 
@@ -513,7 +528,7 @@ async def process_coding_action(
         active_queries = res_active_q.scalars().all()
         for active_q in active_queries:
             active_q.status = "CLOSED"
-            active_q.resolver = actor
+            active_q.resolver = resolved_actor
             active_q.resolved_at = datetime.now(UTC).replace(tzinfo=None)
             active_q.response = f"Resolved via manual coding action: {action_upper} on code {coded_code}."
             session.add(active_q)
