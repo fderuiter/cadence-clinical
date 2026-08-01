@@ -11,8 +11,6 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 1928
 - **Passed:** 1928 🟢
-- **Total Automated Test Cases Run:** 1926
-- **Passed:** 1926 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -2078,8 +2076,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_load_and_validate_ledger_not_found` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_load_and_validate_ledger_not_list` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_load_and_validate_ledger_valid` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scan_exits_successfully_on_unreadable_files` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scan_for_inline_bypasses_no_violations` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scan_for_inline_bypasses_with_violations` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scan_for_manifest_bypasses` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_delimited_format_int_indices_without_header` | `tests.test_whodrug_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_delimited_format_parsing` | `tests.test_whodrug_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_detect_file_type` | `tests.test_whodrug_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
