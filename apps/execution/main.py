@@ -87,11 +87,11 @@ from apps.execution.demographics import (
     get_safe_demographics as get_safe_demographics,
 )
 from apps.execution.dependencies import verify_change_justification
-from apps.execution.lab_range_cache import get_active_lab_ranges, lab_range_cache
 from apps.execution.edit_checks import (
     run_asynchronous_edit_checks,
     run_synchronous_edit_checks,
 )
+from apps.execution.lab_range_cache import get_active_lab_ranges, lab_range_cache
 from apps.execution.outliers import recalculate_cohort_outliers
 from apps.execution.query_service import QueryService, StateTransitionError
 from apps.execution.routers.amendments import router as amendments_router
