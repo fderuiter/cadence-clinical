@@ -22,13 +22,13 @@
           <select
             id="filter-category"
             v-model="store.filters.category"
+            @change="onFilterChange"
             style="
               width: 100%;
               padding: 8px;
               border: 1px solid var(--border);
               border-radius: 6px;
             "
-            @change="onFilterChange"
           >
             <option value="">All Categories</option>
             <option value="ALERTS">ALERTS</option>
@@ -45,13 +45,13 @@
           <select
             id="filter-priority"
             v-model="store.filters.priority"
+            @change="onFilterChange"
             style="
               width: 100%;
               padding: 8px;
               border: 1px solid var(--border);
               border-radius: 6px;
             "
-            @change="onFilterChange"
           >
             <option value="">All Priorities</option>
             <option value="LOW">LOW</option>
@@ -69,13 +69,13 @@
           <select
             id="filter-status"
             v-model="store.filters.status"
+            @change="onFilterChange"
             style="
               width: 100%;
               padding: 8px;
               border: 1px solid var(--border);
               border-radius: 6px;
             "
-            @change="onFilterChange"
           >
             <option value="">All Statuses</option>
             <option value="OPEN">OPEN</option>
@@ -86,8 +86,8 @@
         <button
           id="btn-reset-filters"
           class="btn"
-          style="padding: 8px 16px"
           @click="resetFilters"
+          style="padding: 8px 16px"
         >
           Reset Filters
         </button>
@@ -427,7 +427,7 @@
                 border-radius: 6px;
                 resize: none;
               "
-            />
+            ></textarea>
           </div>
         </div>
         <div

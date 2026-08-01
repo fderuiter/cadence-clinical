@@ -118,7 +118,6 @@ To ensure proper GxP boundaries and architectural decoupling across the Cadence 
 4. **SLA Enforcements:** High-performance, low-latency asynchronous connection pooling via `httpx.AsyncClient` must be maintained to adhere to our strict **100ms internal SLA.**
 
 ---
-
 ## GxP Compliance Sync Protocol
 
 The CI `compliance` job regenerates the RTM docs and diffs them against the

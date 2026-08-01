@@ -148,7 +148,7 @@
           margin-bottom: 8px;
           resize: vertical;
         "
-      />
+      ></textarea>
       <button
         class="btn-primary"
         style="

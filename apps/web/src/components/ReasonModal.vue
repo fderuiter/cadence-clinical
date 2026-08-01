@@ -13,9 +13,7 @@
         {{ title }}
       </div>
       <div class="modal-body">
-        <p v-if="description">
-          {{ description }}
-        </p>
+        <p v-if="description">{{ description }}</p>
 
         <div class="form-group" style="margin-bottom: 12px">
           <label :for="idPrefix + 'change-reason-select'"
