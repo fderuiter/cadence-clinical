@@ -4639,6 +4639,56 @@
         }
       }
     },
+    "/api/v1/studies/{study_id}/rules/validate": {
+      "post": {
+        "summary": "Compile Validate Rule",
+        "description": "Read-only compile and validation preview route.\nDetects unknown field references and circular skip-logic dependencies.",
+        "operationId": "compile_validate_rule_api_v1_studies__study_id__rules_validate_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRuleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RulePreviewResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/designer/protocols/{id}/amend": {
       "post": {
         "summary": "Amend Protocol",

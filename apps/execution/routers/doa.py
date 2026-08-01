@@ -8,11 +8,8 @@ from datetime import UTC, datetime
 
 from execution.doa_models import (
     DOAAssignmentRecord,
-    DOAAuditLog,
-    DOADelegationRecord,
     DOATaskDelegationEnum,
     DOATaskRoleEnum,
-    SiteStaffMember,
 )
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -20,6 +17,11 @@ from sqlalchemy import select
 
 import packages  # noqa: F401
 from apps.execution.database import db_manager
+from apps.execution.database.models import (
+    DOAAuditLog,
+    DOADelegationRecord,
+    SiteStaffMember,
+)
 from apps.execution.services.doa_service import DOAService
 from packages.security.middleware import get_current_user
 

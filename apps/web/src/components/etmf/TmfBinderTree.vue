@@ -6,20 +6,11 @@
         type="text"
         placeholder="Search zones, sections, or artifacts..."
         class="search-input"
-      >
+      />
       <div class="filter-controls">
-        <select
-          v-model="selectedZoneFilter"
-          class="zone-filter-select"
-        >
-          <option value="">
-            All Zones
-          </option>
-          <option
-            v-for="node in tree"
-            :key="node.id"
-            :value="node.code"
-          >
+        <select v-model="selectedZoneFilter" class="zone-filter-select">
+          <option value="">All Zones</option>
+          <option v-for="node in tree" :key="node.id" :value="node.code">
             Zone {{ node.code }}: {{ node.name }}
           </option>
         </select>
@@ -27,10 +18,7 @@
     </div>
 
     <div class="tree-root-nodes">
-      <div
-        v-if="filteredTree.length === 0"
-        class="empty-tree-message"
-      >
+      <div v-if="filteredTree.length === 0" class="empty-tree-message">
         No matching TMF items found.
       </div>
       <div
@@ -55,10 +43,7 @@
           </span>
         </div>
 
-        <div
-          v-if="isExpanded(zone.id)"
-          class="node-children zone-children"
-        >
+        <div v-if="isExpanded(zone.id)" class="node-children zone-children">
           <div
             v-for="section in zone.children"
             :key="section.id"

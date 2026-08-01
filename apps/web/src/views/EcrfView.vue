@@ -1,8 +1,5 @@
 <template>
-  <div
-    id="section-ecrf"
-    class="dashboard-section active"
-  >
+  <div id="section-ecrf" class="dashboard-section active">
     <div class="section-header">
       <h2>eCRF Runtime Renderer</h2>
       <p>
@@ -35,7 +32,8 @@
             border-radius: 4px;
             font-weight: bold;
           "
-        >{{ activeUserRole.toUpperCase() }}</span>
+          >{{ activeUserRole.toUpperCase() }}</span
+        >
       </div>
 
       <!-- Let user select role in demo mode to test Site Coordinator (CRC) vs Monitor (CRA) workflows -->
@@ -43,7 +41,8 @@
         <label
           for="role-tester-select"
           style="font-size: 0.8rem; font-weight: bold"
-        >Demo Role Toggle:</label>
+          >Demo Role Toggle:</label
+        >
         <select
           id="role-tester-select"
           v-model="demoRole"
@@ -53,12 +52,8 @@
             border: 1px solid var(--border);
           "
         >
-          <option value="site_investigator">
-            Site Coordinator / CRC
-          </option>
-          <option value="cra">
-            CRA Monitor (SDV Enabled)
-          </option>
+          <option value="site_investigator">Site Coordinator / CRC</option>
+          <option value="cra">CRA Monitor (SDV Enabled)</option>
         </select>
       </div>
     </div>
@@ -66,9 +61,7 @@
     <div class="grid-2">
       <!-- Dynamic eCRF Form -->
       <div class="card">
-        <div class="card-title">
-          Subject eCRF Data Entry Form
-        </div>
+        <div class="card-title">Subject eCRF Data Entry Form</div>
 
         <!-- Sub-Issue 9: Subject & Visit Selection Panel -->
         <div
@@ -80,14 +73,10 @@
             padding-bottom: 12px;
           "
         >
-          <div
-            class="form-group"
-            style="flex: 1"
-          >
-            <label
-              for="ecrf-subject-selector"
-              style="font-weight: bold"
-            >Active Subject ID</label>
+          <div class="form-group" style="flex: 1">
+            <label for="ecrf-subject-selector" style="font-weight: bold"
+              >Active Subject ID</label
+            >
             <select
               id="ecrf-subject-selector"
               v-model="selectedSubjectId"
@@ -99,25 +88,15 @@
               "
               @change="loadEcrfSession"
             >
-              <option value="SUBJ-001">
-                SUBJ-001 (Mock Subject)
-              </option>
-              <option value="SUBJ-002">
-                SUBJ-002 (Screened Cohort)
-              </option>
-              <option value="SUBJ-003">
-                SUBJ-003 (Post-Randomization)
-              </option>
+              <option value="SUBJ-001">SUBJ-001 (Mock Subject)</option>
+              <option value="SUBJ-002">SUBJ-002 (Screened Cohort)</option>
+              <option value="SUBJ-003">SUBJ-003 (Post-Randomization)</option>
             </select>
           </div>
-          <div
-            class="form-group"
-            style="flex: 1"
-          >
-            <label
-              for="ecrf-visit-selector"
-              style="font-weight: bold"
-            >Active Visit / Encounter</label>
+          <div class="form-group" style="flex: 1">
+            <label for="ecrf-visit-selector" style="font-weight: bold"
+              >Active Visit / Encounter</label
+            >
             <select
               id="ecrf-visit-selector"
               v-model="selectedVisitId"
@@ -129,15 +108,9 @@
               "
               @change="loadEcrfSession"
             >
-              <option value="Screening">
-                Screening / Day -7
-              </option>
-              <option value="Week2">
-                Week 2 Treatment
-              </option>
-              <option value="Week4">
-                Week 4 Treatment
-              </option>
+              <option value="Screening">Screening / Day -7</option>
+              <option value="Week2">Week 2 Treatment</option>
+              <option value="Week4">Week 4 Treatment</option>
             </select>
           </div>
         </div>
@@ -152,10 +125,7 @@
           "
           @submit.prevent
         >
-          <template
-            v-for="field in store.ecrfFields"
-            :key="field.id"
-          >
+          <template v-for="field in store.ecrfFields" :key="field.id">
             <div
               v-show="store.fieldVisibility[field.id] !== false"
               :style="`grid-column: span ${field.gridSpan || 12}; display: flex; flex-direction: column; gap: 8px;`"
@@ -197,7 +167,7 @@
                   :checked="sdvStates[getSdvKey(field.id)] === true"
                   style="cursor: pointer"
                   @change="handleSdvToggle(field.id, $event.target.checked)"
-                >
+                />
                 <label
                   :for="`sdv-${field.id}`"
                   style="
@@ -216,11 +186,7 @@
         </form>
 
         <div class="form-actions">
-          <button
-            id="btn-clear-ecrf"
-            class="btn"
-            @click="clearForm"
-          >
+          <button id="btn-clear-ecrf" class="btn" @click="clearForm">
             Clear Form
           </button>
           <button
@@ -239,9 +205,7 @@
         style="display: flex; flex-direction: column; gap: 16px"
       >
         <div>
-          <div class="card-title">
-            CDASH Metadata Specification
-          </div>
+          <div class="card-title">CDASH Metadata Specification</div>
           <p style="font-size: 0.85rem; color: #475569; margin-bottom: 8px">
             The fields on the left are dynamically rendered using structural
             CDASH metadata tags (e.g. <code>DM.BRTHDT</code>,
@@ -323,9 +287,7 @@
         class="card"
         style="display: flex; flex-direction: column; gap: 16px"
       >
-        <div class="card-title">
-          PI Sign-Off Worklist &amp; Verification
-        </div>
+        <div class="card-title">PI Sign-Off Worklist &amp; Verification</div>
         <p style="font-size: 0.85rem; color: #475569; margin-bottom: 4px">
           Perform a 21 CFR Part 11 compliant electronic signature. This action
           requires re-authenticating the Principal Investigator credentials to
@@ -334,7 +296,9 @@
 
         <div style="display: flex; flex-direction: column; gap: 12px">
           <div class="form-group">
-            <label for="signoff-target-type">Sign-Off Scope (Granularity)</label>
+            <label for="signoff-target-type"
+              >Sign-Off Scope (Granularity)</label
+            >
             <select
               id="signoff-target-type"
               v-model="signoffTargetType"
@@ -345,15 +309,9 @@
                 border-radius: 4px;
               "
             >
-              <option value="FORM">
-                FORM Level
-              </option>
-              <option value="VISIT">
-                VISIT Level
-              </option>
-              <option value="SUBJECT">
-                SUBJECT Level
-              </option>
+              <option value="FORM">FORM Level</option>
+              <option value="VISIT">VISIT Level</option>
+              <option value="SUBJECT">SUBJECT Level</option>
             </select>
           </div>
 
@@ -369,9 +327,7 @@
                 border-radius: 4px;
               "
             >
-              <option value="">
-                -- Choose ID --
-              </option>
+              <option value="">-- Choose ID --</option>
               <template v-if="signoffTargetType === 'SUBJECT'">
                 <option
                   v-for="sub in availableSubjects"
@@ -399,16 +355,11 @@
                   {{ form }}
                 </option>
               </template>
-              <option value="custom">
-                -- Enter Custom --
-              </option>
+              <option value="custom">-- Enter Custom --</option>
             </select>
           </div>
 
-          <div
-            v-if="signoffTargetId === 'custom'"
-            class="form-group"
-          >
+          <div v-if="signoffTargetId === 'custom'" class="form-group">
             <label for="signoff-custom-target-id">Custom Target ID Value</label>
             <input
               id="signoff-custom-target-id"
@@ -421,7 +372,7 @@
                 border-radius: 4px;
               "
               @input="(e) => (customTargetId = e.target.value)"
-            >
+            />
           </div>
 
           <div class="form-group">
@@ -495,7 +446,7 @@
             accept=".pdf,.docx"
             style="display: none"
             @change="triggerDocumentUpload"
-          >
+          />
           <button
             class="btn"
             type="button"
@@ -554,7 +505,8 @@
                   border-radius: 4px;
                 "
                 class="candidate-id"
-              >{{ store.candidateDraft.id }}</code>
+                >{{ store.candidateDraft.id }}</code
+              >
             </span>
             <span
               :class="[
@@ -662,7 +614,9 @@
                 class="item-edit-section"
               >
                 <div class="form-group">
-                  <label style="font-size: 0.75rem">Modify Candidate Name/Label</label>
+                  <label style="font-size: 0.75rem"
+                    >Modify Candidate Name/Label</label
+                  >
                   <input
                     v-model="editItemValue"
                     type="text"
@@ -674,10 +628,12 @@
                       font-size: 0.8rem;
                     "
                     class="edit-item-input"
-                  >
+                  />
                 </div>
                 <div class="form-group">
-                  <label style="font-size: 0.75rem">Change Reason Justification (Mandatory)</label>
+                  <label style="font-size: 0.75rem"
+                    >Change Reason Justification (Mandatory)</label
+                  >
                   <input
                     v-model="editItemReason"
                     type="text"
@@ -690,13 +646,10 @@
                       font-size: 0.8rem;
                     "
                     class="edit-item-reason"
-                  >
+                  />
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 6px">
-                  <button
-                    class="btn btn-sm"
-                    @click="cancelEditItem"
-                  >
+                  <button class="btn btn-sm" @click="cancelEditItem">
                     Cancel
                   </button>
                   <button
@@ -728,7 +681,8 @@
                       color: #ef4444;
                       font-weight: bold;
                     "
-                  >Provide Rejection Reason (Mandatory)</label>
+                    >Provide Rejection Reason (Mandatory)</label
+                  >
                   <input
                     v-model="rejectItemReason"
                     type="text"
@@ -741,13 +695,10 @@
                       font-size: 0.8rem;
                     "
                     class="reject-item-reason"
-                  >
+                  />
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 6px">
-                  <button
-                    class="btn btn-sm"
-                    @click="cancelRejectItem"
-                  >
+                  <button class="btn btn-sm" @click="cancelRejectItem">
                     Cancel
                   </button>
                   <button
@@ -835,10 +786,9 @@
             "
           >
             <div class="form-group">
-              <label
-                for="promote-change-reason"
-                style="font-weight: bold"
-              >Promotion Change Reason (Mandatory)</label>
+              <label for="promote-change-reason" style="font-weight: bold"
+                >Promotion Change Reason (Mandatory)</label
+              >
               <input
                 id="promote-change-reason"
                 v-model="promoteChangeReason"
@@ -851,7 +801,7 @@
                   border-radius: 4px;
                 "
                 class="promote-change-reason"
-              >
+              />
             </div>
 
             <div
@@ -877,8 +827,8 @@
                 type="button"
                 :disabled="
                   unreviewedCount > 0 ||
-                    !promoteChangeReason.trim() ||
-                    store.ingestionLoading
+                  !promoteChangeReason.trim() ||
+                  store.ingestionLoading
                 "
                 @click="promoteCandidate"
               >
@@ -933,19 +883,14 @@
       style="display: flex"
     >
       <div class="modal">
-        <div class="modal-header">
-          Identity Re-Authentication Required
-        </div>
+        <div class="modal-header">Identity Re-Authentication Required</div>
         <div class="modal-body">
           <p>
             To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>,
             you must re-verify your identity before performing this
             high-security action.
           </p>
-          <div
-            class="form-group"
-            style="margin-bottom: 12px"
-          >
+          <div class="form-group" style="margin-bottom: 12px">
             <label for="reauth-username">Username</label>
             <input
               id="reauth-username"
@@ -957,12 +902,9 @@
                 border: 1px solid var(--border);
                 border-radius: 4px;
               "
-            >
+            />
           </div>
-          <div
-            class="form-group"
-            style="margin-bottom: 12px"
-          >
+          <div class="form-group" style="margin-bottom: 12px">
             <label for="reauth-password">Password</label>
             <input
               id="reauth-password"
@@ -977,12 +919,9 @@
                 border-radius: 4px;
               "
               @keyup.enter="confirmReauth"
-            >
+            />
           </div>
-          <div
-            class="form-group"
-            style="margin-bottom: 12px"
-          >
+          <div class="form-group" style="margin-bottom: 12px">
             <label for="reauth-totp">MFA/TOTP Token (Optional)</label>
             <input
               id="reauth-totp"
@@ -995,7 +934,7 @@
                 border: 1px solid var(--border);
                 border-radius: 4px;
               "
-            >
+            />
           </div>
           <div
             v-if="reauthError"
@@ -1006,11 +945,7 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button
-            id="btn-cancel-reauth"
-            class="btn"
-            @click="cancelReauth"
-          >
+          <button id="btn-cancel-reauth" class="btn" @click="cancelReauth">
             Cancel
           </button>
           <button

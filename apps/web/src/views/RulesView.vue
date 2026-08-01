@@ -609,6 +609,7 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { apiClient } from "../api/apiClient";
+import { serializeConditionsTree } from "@cadence/ui";
 import ReasonModal from "../components/ReasonModal.vue";
 
 const rulesReasonOptions = [
@@ -823,35 +824,6 @@ const ruleEditorHtml = computed(() => {
   });
 });
 
-async function getSignedGatewayHeaders(changeReason = "") {
-  const authStore = useAuthStore();
-  const userId = authStore.userId || "usr_dm_fderuiter";
-  const roles = authStore.normalizedRoles
-    ? authStore.normalizedRoles.join(",")
-    : "data_manager";
-  const timestamp = String(Math.floor(Date.now() / 1000));
-  const secret =
-    import.meta.env?.VITE_GATEWAY_SECRET || "internal-gateway-secret-12345";
-
-  const signature = await generateGatewaySignature(
-    userId,
-    roles,
-    timestamp,
-    "2",
-    changeReason,
-    secret
-  );
-
-  return {
-    "X-User-Id": userId,
-    "X-User-Roles": roles,
-    "X-Gateway-Timestamp": timestamp,
-    "X-Gateway-Signature": signature,
-    "X-Signature-Version": "2",
-    "X-Change-Reason": changeReason,
-  };
-}
-
 function handleEditorClick(e) {
   const target = e.target;
   const action = target.getAttribute("data-action");
@@ -966,66 +938,7 @@ function handleTypeChange() {
 
 // Serialize vue forms to Pydantic Expression tree
 function serializeConditions() {
-  const operands = [];
-  conditions.value.forEach((cond) => {
-    if (!cond.fieldId) return; // Skip incomplete
-
-    const leftRef = {
-      type: "field_ref",
-      field_ref: {
-        field_id: cond.fieldId,
-        form_id: cond.formId || null,
-      },
-    };
-
-    if (cond.operator === "is_empty" || cond.operator === "is_not_empty") {
-      operands.push({
-        type: "function",
-        operator: cond.operator,
-        operands: [leftRef],
-      });
-    } else {
-      let rightNode;
-      if (cond.rightType === "constant") {
-        let val = cond.rightValue;
-        if (val === "true") val = true;
-        else if (val === "false") val = false;
-        else if (!isNaN(parseFloat(val))) val = parseFloat(val);
-
-        rightNode = {
-          type: "constant",
-          value: val,
-        };
-      } else {
-        rightNode = {
-          type: "field_ref",
-          field_ref: {
-            field_id: cond.rightFieldId || "",
-          },
-        };
-      }
-
-      operands.push({
-        type: "comparison",
-        operator: cond.operator,
-        operands: [leftRef, rightNode],
-      });
-    }
-  });
-
-  if (operands.length === 0) {
-    return { type: "constant", value: true };
-  }
-
-  if (operands.length === 1) {
-    return operands[0];
-  }
-
-  return {
-    type: "logical",
-    operator: matchOperator.value,
-    operands: operands,
-  };
+  return serializeConditionsTree(conditions.value, matchOperator.value);
 }
 
 // Dry-run preview REST API compilation

@@ -385,14 +385,19 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
       expect(auditLogs.length).toBe(0);
 
       // Change pulse to 70 (parent value mutation)
-      const res2 = renderFormFromJSON(fields, { ...res1.updatedValues, pulse: "70" }, logPurge);
+      const res2 = renderFormFromJSON(
+        fields,
+        { ...res1.updatedValues, pulse: "70" },
+        logPurge
+      );
       expect(res2.visibleFields.pulse_details).toBe(false);
       expect(res2.updatedValues.pulse_details).toBe("");
       expect(auditLogs.length).toBe(1);
       expect(auditLogs[0]).toEqual({
         fieldId: "pulse_details",
         val: "Tachycardic",
-        reason: "System-initiated purge of inactive child variable due to parent value mutation",
+        reason:
+          "System-initiated purge of inactive child variable due to parent value mutation",
       });
     });
 
@@ -414,7 +419,9 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
       };
 
       // Valid value
-      const res1 = indexValidateField(heightFieldMeta, "1.75", { height: 1.75 });
+      const res1 = indexValidateField(heightFieldMeta, "1.75", {
+        height: 1.75,
+      });
       expect(res1.valid).toBe(true);
 
       // Invalid value violating constraint (value <= 0)

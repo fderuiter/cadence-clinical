@@ -54,7 +54,9 @@ def get_auth_headers(
     change_reason: str = "test operation",
 ) -> dict[str, str]:
     """Alias for get_v2_auth_headers to match the standard signature helper naming."""
-    return get_v2_auth_headers(user_id=user_id, roles=roles, change_reason=change_reason)
+    return get_v2_auth_headers(
+        user_id=user_id, roles=roles, change_reason=change_reason
+    )
 
 
 @pytest.fixture(autouse=True)

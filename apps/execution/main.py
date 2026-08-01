@@ -81,10 +81,10 @@ from apps.execution.demographics import (
 from apps.execution.demographics import (
     encrypt_demographics as encrypt_demographics,
 )
-from apps.execution.dependencies import verify_change_justification
 from apps.execution.demographics import (
     get_safe_demographics as get_safe_demographics,
 )
+from apps.execution.dependencies import verify_change_justification
 from apps.execution.edit_checks import (
     run_asynchronous_edit_checks,
     run_synchronous_edit_checks,
