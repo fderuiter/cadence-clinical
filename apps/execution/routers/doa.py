@@ -238,7 +238,9 @@ async def delegate_task_endpoint(
 async def approve_delegation_endpoint(
     payload: ApproveDelegationRequest,
 ):
-    if payload.password == "wrong_password" or "invalid" in payload.password:  # pragma: allowlist secret
+    if (
+        payload.password == "wrong_password" or "invalid" in payload.password
+    ):  # pragma: allowlist secret
         raise HTTPException(status_code=400, detail="Invalid credentials")
     if payload.totp_code and (
         "invalid" in payload.totp_code or "wrong" in payload.totp_code

@@ -706,7 +706,7 @@ async def test_authored_longitudinal_predecessor_handling() -> None:
 @pytest.mark.asyncio
 async def test_lab_out_of_range_and_auto_close() -> None:
     """Test that a lab out-of-range value opens exactly one query, and auto-closes on correction."""
-    from apps.execution.database.models import LabReferenceRange, ClinicalQuery
+    from apps.execution.database.models import ClinicalQuery, LabReferenceRange
 
     headers = get_v2_auth_headers(
         user_id="dm_user_001",
@@ -817,7 +817,8 @@ async def test_lab_out_of_range_and_auto_close() -> None:
                 [
                     q
                     for q in queries_resp.json()
-                    if q["rule_id"] == "LAB_OUT_OF_RANGE_CHECK" and q["status"] == "OPEN"
+                    if q["rule_id"] == "LAB_OUT_OF_RANGE_CHECK"
+                    and q["status"] == "OPEN"
                 ]
             )
             == 1
@@ -869,7 +870,8 @@ async def test_lab_out_of_range_and_auto_close() -> None:
 async def test_critical_notification_dispatch_and_suppression(signed_headers) -> None:
     """Verify that only LOW LOW/HIGH HIGH values dispatch a notification with ALERTS/CRITICAL payload."""
     from unittest.mock import AsyncMock, patch
-    from apps.execution.database.models import LabReferenceRange, ClinicalQuery
+
+    from apps.execution.database.models import LabReferenceRange
 
     # 1. Use the scope-aware signed_headers fixture
     headers = signed_headers(
@@ -924,7 +926,10 @@ async def test_critical_notification_dispatch_and_suppression(signed_headers) ->
             session.add(ref_range)
 
         # 2. Patch publish_notification
-        with patch("apps.execution.notifications_client.publish_notification", new_callable=AsyncMock) as mock_pub:
+        with patch(
+            "apps.execution.notifications_client.publish_notification",
+            new_callable=AsyncMock,
+        ) as mock_pub:
             mock_pub.return_value = True
 
             # Submit a critical out-of-range value (WBC = 1.0, LOW LOW)
@@ -989,12 +994,13 @@ async def test_critical_notification_dispatch_and_suppression(signed_headers) ->
             mock_pub.assert_not_called()
 
             # Assert that a ClinicalQuery was opened for it
-            queries_resp = await client.get("/api/v1/execution/queries", headers=headers)
+            queries_resp = await client.get(
+                "/api/v1/execution/queries", headers=headers
+            )
             queries = queries_resp.json()
             range_queries = [
                 q
                 for q in queries
-                if q["rule_id"] == "LAB_OUT_OF_RANGE_CHECK"
-                and q["status"] == "OPEN"
+                if q["rule_id"] == "LAB_OUT_OF_RANGE_CHECK" and q["status"] == "OPEN"
             ]
             assert len(range_queries) == 1

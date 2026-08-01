@@ -1995,6 +1995,7 @@ async def create_observation(
         # Check for critical lab notification dispatch
         if obs_db.lab_indicator in ("LOW LOW", "HIGH HIGH"):
             from apps.execution.notifications_client import publish_notification
+
             notification_payload = {
                 "category": "ALERTS",
                 "priority": "CRITICAL",
@@ -2823,7 +2824,6 @@ from apps.execution.routers.coding_schemas import (  # noqa: E402
     ImpactMetrics,
     JobStatusEnum,
     JobStatusResponse,
-    MedDRACodeMatch,
     MedDRACodingResult,
     WHODrugATCContext,
     WHODrugCodeMatch,
