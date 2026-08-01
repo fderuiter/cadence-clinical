@@ -3,156 +3,162 @@
 Requirements: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 """
 
-import hashlib
-import importlib
-from datetime import UTC, datetime
+import os
+import time
+from datetime import datetime
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+import httpx
 
-_execution_models = importlib.import_module("apps.execution.database.models")
-DOAAuditLog = _execution_models.DOAAuditLog
-DOADelegationRecord = _execution_models.DOADelegationRecord
-SiteStaffMember = _execution_models.SiteStaffMember
+from packages.security.signing import generate_gateway_signature
+
+EXECUTION_URL = (os.getenv("EXECUTION_URL") or "http://localhost:8002").rstrip("/")
+
+
+def _get_auth_headers() -> dict[str, str]:
+    gateway_secret_env = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+    gateway_secret = (
+        gateway_secret_env.encode("utf-8")
+        if isinstance(gateway_secret_env, str)
+        else gateway_secret_env
+    )
+
+    user_id = "ctms-service"
+    roles = "system"
+    timestamp = str(time.time())
+
+    signature = generate_gateway_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        secret=gateway_secret,
+        change_reason="system_operation",
+    )
+
+    return {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": signature,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": "system_operation",
+    }
+
+
+class DOADelegationRecordObj:
+    def __init__(self, data: dict):
+        self.id = data.get("id")
+        self.site_id = data.get("site_id")
+        self.staff_user_id = data.get("staff_user_id")
+        self.task_code = data.get("task_code")
+        self.status = data.get("status")
+        self.pi_user_id = data.get("pi_user_id")
+        self.reason_for_change = data.get("reason_for_change")
+        self.is_active = data.get("is_active")
+
+        pi_approved_at_raw = data.get("pi_approved_at")
+        self.pi_approved_at = (
+            datetime.fromisoformat(pi_approved_at_raw.replace("Z", "+00:00"))
+            if pi_approved_at_raw
+            else None
+        )
+
+        self.pi_signature_hash = data.get("pi_signature_hash")
+
+        end_date_raw = data.get("end_date")
+        self.end_date = (
+            datetime.fromisoformat(end_date_raw.replace("Z", "+00:00"))
+            if end_date_raw
+            else None
+        )
 
 
 async def delegate_task(
-    session: AsyncSession,
+    session,
     site_id: str,
     staff_user_id: str,
     task_code: str,
     pi_user_id: str,
     reason_for_change: str,
-) -> DOADelegationRecord:
+) -> DOADelegationRecordObj:
     """Delegate a clinical trial task to a staff member.
 
     Verifies the staff member is trained and creates a pending record.
     """
-    # 1. Verify staff member has completed required GCP training certificates
-    stmt = select(SiteStaffMember).where(
-        SiteStaffMember.site_id == site_id,
-        SiteStaffMember.staff_user_id == staff_user_id,
-    )
-    res = await session.execute(stmt)
-    staff = res.scalar_one_or_none()
-    if not staff:
-        raise ValueError(
-            f"Site staff member {staff_user_id} not found at site {site_id}."
+    headers = _get_auth_headers()
+    payload = {
+        "site_id": site_id,
+        "staff_user_id": staff_user_id,
+        "task_code": task_code,
+        "pi_user_id": pi_user_id,
+        "reason_for_change": reason_for_change,
+    }
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{EXECUTION_URL}/api/v1/execution/doa/delegate",
+            headers=headers,
+            json=payload,
         )
-
-    if not staff.has_gcp_training:
-        raise ValueError(
-            f"Staff member {staff_user_id} has not completed required GCP training."
-        )
-
-    # 2. Create DOADelegationRecord in PENDING_PI_APPROVAL status
-    record = DOADelegationRecord(
-        site_id=site_id,
-        staff_user_id=staff_user_id,
-        task_code=task_code,
-        pi_user_id=pi_user_id,
-        status="PENDING_PI_APPROVAL",
-        reason_for_change=reason_for_change,
-        is_active=True,
-    )
-    session.add(record)
-    await session.flush()
-
-    # Log audit entry
-    audit_log = DOAAuditLog(
-        user_id=pi_user_id,
-        action="DELEGATE_TASK",
-        details=f"Delegated task {task_code} to staff {staff_user_id} at site {site_id}. Reason: {reason_for_change}",
-    )
-    session.add(audit_log)
-
-    await session.commit()
-    return record
+        if response.status_code == 400:
+            raise ValueError(response.json().get("detail", "Error delegating task"))
+        if response.status_code != 200:
+            raise ValueError(f"HTTP error {response.status_code}: {response.text}")
+        return DOADelegationRecordObj(response.json())
 
 
 async def approve_delegation_with_esignature(
-    session: AsyncSession,
+    session,
     delegation_id: str,
     pi_user_id: str,
     password: str,
     totp_code: str | None = None,
-) -> DOADelegationRecord:
+) -> DOADelegationRecordObj:
     """Approve a pending task delegation with PI 21 CFR Part 11 eSignature."""
-    # 1. Re-authenticate PI credentials
-    if (
-        password == "wrong_password"  # pragma: allowlist secret
-        or "invalid" in password
-    ):
-        raise ValueError("Invalid credentials")
-    if totp_code and (
-        "invalid" in totp_code or "wrong" in totp_code
-    ):  # pragma: allowlist secret
-        raise ValueError("Invalid credentials")
-
-    # 2. Retrieve delegation record
-    stmt = select(DOADelegationRecord).where(
-        DOADelegationRecord.id == delegation_id,
-        DOADelegationRecord.is_active.is_(True),
-    )
-    res = await session.execute(stmt)
-    record = res.scalar_one_or_none()
-    if not record:
-        raise ValueError(f"Delegation record {delegation_id} not found.")
-
-    # 3. Embed Part 11 metadata and transition status
-    now = datetime.now(UTC)
-    verification_payload = f"{delegation_id}:{pi_user_id}:{now.isoformat()}"
-    verification_hash = hashlib.sha256(verification_payload.encode("utf-8")).hexdigest()
-
-    record.status = "ACTIVE"
-    record.pi_approved_at = now
-    record.pi_signature_hash = verification_hash
-    # Standard meaning mandated by Part 11
-    record.reason_for_change = "PI Delegation Approval"
-
-    # Log audit entry
-    audit_log = DOAAuditLog(
-        user_id=pi_user_id,
-        action="APPROVE_DELEGATION",
-        details=f"Approved delegation {delegation_id} for staff {record.staff_user_id}. Approved by PI {pi_user_id}.",
-    )
-    session.add(audit_log)
-
-    await session.commit()
-    return record
+    headers = _get_auth_headers()
+    payload = {
+        "delegation_id": delegation_id,
+        "pi_user_id": pi_user_id,
+        "password": password,
+        "totp_code": totp_code,
+    }
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{EXECUTION_URL}/api/v1/execution/doa/endorse",
+            headers=headers,
+            json=payload,
+        )
+        if response.status_code == 400:
+            raise ValueError(
+                response.json().get("detail", "Error approving delegation")
+            )
+        if response.status_code != 200:
+            raise ValueError(f"HTTP error {response.status_code}: {response.text}")
+        return DOADelegationRecordObj(response.json())
 
 
 async def revoke_delegation(
-    session: AsyncSession,
+    session,
     delegation_id: str,
     end_date: datetime,
     reason_for_change: str,
-) -> DOADelegationRecord:
+) -> DOADelegationRecordObj:
     """Revoke a task delegation record and mark its end date."""
-    stmt = select(DOADelegationRecord).where(
-        DOADelegationRecord.id == delegation_id,
-        DOADelegationRecord.is_active.is_(True),
-    )
-    res = await session.execute(stmt)
-    record = res.scalar_one_or_none()
-    if not record:
-        raise ValueError(f"Delegation record {delegation_id} not found.")
-
-    record.status = "REVOKED"
-    record.end_date = end_date
-    record.is_active = False
-    record.reason_for_change = reason_for_change
-
-    # Log audit entry
-    audit_log = DOAAuditLog(
-        user_id=record.pi_user_id,
-        action="REVOKE_DELEGATION",
-        details=f"Revoked delegation {delegation_id} with end date {end_date.isoformat()}. Reason: {reason_for_change}",
-    )
-    session.add(audit_log)
-
-    await session.commit()
-    return record
+    headers = _get_auth_headers()
+    payload = {
+        "delegation_id": delegation_id,
+        "end_date": end_date.isoformat(),
+        "reason_for_change": reason_for_change,
+    }
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{EXECUTION_URL}/api/v1/execution/doa/revoke",
+            headers=headers,
+            json=payload,
+        )
+        if response.status_code == 400:
+            raise ValueError(response.json().get("detail", "Error revoking delegation"))
+        if response.status_code != 200:
+            raise ValueError(f"HTTP error {response.status_code}: {response.text}")
+        return DOADelegationRecordObj(response.json())
 
 
 class DOAManagerService:
@@ -161,8 +167,8 @@ class DOAManagerService:
     Requirements: PRD-SYS-001
     """
 
-    def __init__(self, session: AsyncSession):
-        """Initialize service with an active AsyncSession."""
+    def __init__(self, session):
+        """Initialize service with session."""
         self.session = session
 
     async def delegate_task(
@@ -172,7 +178,7 @@ class DOAManagerService:
         task_code: str,
         pi_user_id: str,
         reason_for_change: str,
-    ) -> DOADelegationRecord:
+    ) -> DOADelegationRecordObj:
         """Delegate a task using this service's session."""
         return await delegate_task(
             session=self.session,
@@ -189,7 +195,7 @@ class DOAManagerService:
         pi_user_id: str,
         password: str,
         totp_code: str | None = None,
-    ) -> DOADelegationRecord:
+    ) -> DOADelegationRecordObj:
         """Approve a delegation with eSignature using this service's session."""
         return await approve_delegation_with_esignature(
             session=self.session,
@@ -205,43 +211,38 @@ class DOAManagerService:
         pi_user_id: str,
         signature_hash: str,
         reason_for_change: str,
-    ) -> DOADelegationRecord:
+    ) -> DOADelegationRecordObj:
         """Approve site staff task delegation via 21 CFR Part 11 electronic signature.
 
         Requirements: PRD-SYS-001
         """
-        stmt = select(DOADelegationRecord).where(
-            DOADelegationRecord.id == delegation_id,
-            DOADelegationRecord.is_active.is_(True),
-        )
-        res = await self.session.execute(stmt)
-        record = res.scalar_one_or_none()
-        if not record:
-            raise ValueError(f"Delegation record {delegation_id} not found.")
-
-        now = datetime.now(UTC)
-        record.status = "ACTIVE"
-        record.pi_approved_at = now
-        record.pi_signature_hash = signature_hash
-        record.reason_for_change = reason_for_change
-
-        # Log audit entry
-        audit_log = DOAAuditLog(
-            user_id=pi_user_id,
-            action="APPROVE_DELEGATION",
-            details=f"Approved delegation {delegation_id} via hash. Reason: {reason_for_change}",
-        )
-        self.session.add(audit_log)
-
-        await self.session.commit()
-        return record
+        headers = _get_auth_headers()
+        payload = {
+            "delegation_id": delegation_id,
+            "pi_user_id": pi_user_id,
+            "signature_hash": signature_hash,
+            "reason_for_change": reason_for_change,
+        }
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{EXECUTION_URL}/api/v1/execution/doa/endorse_task",
+                headers=headers,
+                json=payload,
+            )
+            if response.status_code == 400:
+                raise ValueError(
+                    response.json().get("detail", "Error approving task delegation")
+                )
+            if response.status_code != 200:
+                raise ValueError(f"HTTP error {response.status_code}: {response.text}")
+            return DOADelegationRecordObj(response.json())
 
     async def revoke_delegation(
         self,
         delegation_id: str,
         end_date: datetime,
         reason_for_change: str,
-    ) -> DOADelegationRecord:
+    ) -> DOADelegationRecordObj:
         """Revoke a task delegation using this service's session."""
         return await revoke_delegation(
             session=self.session,
