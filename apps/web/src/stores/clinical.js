@@ -619,7 +619,10 @@ export const useClinicalStore = defineStore("clinical", {
             const field = this.ecrfFields.find((f) => {
               if (!f.cdash) return false;
               const parts = f.cdash.split(".");
-              return parts[1] && parts[1].toUpperCase() === alertTestCode.toUpperCase();
+              return (
+                parts[1] &&
+                parts[1].toUpperCase() === alertTestCode.toUpperCase()
+              );
             });
             if (field) {
               alertsMap[field.id] = alert;

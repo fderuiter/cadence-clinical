@@ -11,6 +11,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 1. Core Platform & Execution Engine
 - [2026-08-01: Unused ESLint Variable and DEID Exemption in UI Package](2026-08-01-unused-eslint-variable-and-deid-exemption-in-ui-package.md)
+- [2026-09-03: Centralized Study Scope and Lab Range Permissions](2026-09-03-centralized-study-scope-and-lab-range-permissions.md)
 - [2026-08-01: Define Laboratory Master and Align ORM Models](2026-08-01-define-laboratory-master-and-align-orm-models.md)
 - [2026-07-31: Modernize Python 3.10 Type Hint Syntax and Lock Ruff Rule Enforcements](2026-07-31-modernize-python-310-type-hint-syntax-and-lock-ruff-rule-enforcements.md)
 - [2026-07-31: Lab Master Catalog and Unit Conversion Data Models](2026-07-31-lab-master-catalog-and-unit-conversion-data-models.md)
@@ -198,3 +199,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-02: ADR 2026-09-02: Bypass Unused Parameter ESLint in Shared UI](2026-09-02-bypass-unused-parameter-eslint-in-shared-ui.md)
 - [2026-07-31: SDV Verification and Compliance Tests Phase 14](2026-07-31-sdv-verification-and-compliance-tests-phase-14.md)
 - [2026-09-03: Centralized Study Scope and Lab Range Permissions](2026-09-03-centralized-study-scope-and-lab-range-permissions.md)
+- [2026-08-01: Unused ESLint Variable and DEID Exemption in UI Package](2026-08-01-unused-eslint-variable-and-deid-exemption-in-ui-package.md)

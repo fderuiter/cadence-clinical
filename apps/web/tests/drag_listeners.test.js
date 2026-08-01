@@ -79,11 +79,7 @@ describe("Transient Drag-Scoped Window Listeners", () => {
       );
 
     expect(
-      getActiveWindowListeners([
-        "pointermove",
-        "pointerup",
-        "pointercancel",
-      ])
+      getActiveWindowListeners(["pointermove", "pointerup", "pointercancel"])
     ).toHaveLength(0);
 
     // 3. Trigger pointerdown to start dragging
@@ -103,9 +99,13 @@ describe("Transient Drag-Scoped Window Listeners", () => {
       "pointercancel",
     ]);
     expect(activeListenersAfterDown).toHaveLength(3);
-    expect(activeListenersAfterDown.map((l) => l.type)).toContain("pointermove");
+    expect(activeListenersAfterDown.map((l) => l.type)).toContain(
+      "pointermove"
+    );
     expect(activeListenersAfterDown.map((l) => l.type)).toContain("pointerup");
-    expect(activeListenersAfterDown.map((l) => l.type)).toContain("pointercancel");
+    expect(activeListenersAfterDown.map((l) => l.type)).toContain(
+      "pointercancel"
+    );
 
     // 4. Trigger pointerup on window to release dragging
     const pointerupEvent = new PointerEvent("pointerup", { pointerId: 1 });
@@ -159,11 +159,7 @@ describe("Transient Drag-Scoped Window Listeners", () => {
       );
 
     expect(
-      getActiveWindowListeners([
-        "pointermove",
-        "pointerup",
-        "pointercancel",
-      ])
+      getActiveWindowListeners(["pointermove", "pointerup", "pointercancel"])
     ).toHaveLength(0);
 
     // Trigger pointerdown to start touch dragging
@@ -177,11 +173,7 @@ describe("Transient Drag-Scoped Window Listeners", () => {
 
     // Verify global window-level listeners are successfully attached
     expect(
-      getActiveWindowListeners([
-        "pointermove",
-        "pointerup",
-        "pointercancel",
-      ])
+      getActiveWindowListeners(["pointermove", "pointerup", "pointercancel"])
     ).toHaveLength(3);
 
     // Trigger pointerup on window to release dragging
@@ -190,11 +182,7 @@ describe("Transient Drag-Scoped Window Listeners", () => {
 
     // Verify all global window-level listeners are completely unregistered immediately
     expect(
-      getActiveWindowListeners([
-        "pointermove",
-        "pointerup",
-        "pointercancel",
-      ])
+      getActiveWindowListeners(["pointermove", "pointerup", "pointercancel"])
     ).toHaveLength(0);
 
     // Cleanup DOM
@@ -244,11 +232,7 @@ describe("Transient Drag-Scoped Window Listeners", () => {
       );
 
     expect(
-      getActiveWindowListeners([
-        "pointermove",
-        "pointerup",
-        "pointercancel",
-      ])
+      getActiveWindowListeners(["pointermove", "pointerup", "pointercancel"])
     ).toHaveLength(3);
 
     // Unmount component
@@ -256,11 +240,7 @@ describe("Transient Drag-Scoped Window Listeners", () => {
 
     // Verify all global window-level listeners are completely cleaned up
     expect(
-      getActiveWindowListeners([
-        "pointermove",
-        "pointerup",
-        "pointercancel",
-      ])
+      getActiveWindowListeners(["pointermove", "pointerup", "pointercancel"])
     ).toHaveLength(0);
 
     // Cleanup DOM
