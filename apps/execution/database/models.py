@@ -594,7 +594,7 @@ class SDVSignOff(AuditedModel):
     __tablename__ = "sdv_sign_offs"
 
     scope: Mapped[str] = mapped_column(
-        String(50), nullable=False
+        String(50), nullable=False, comment="FIELD, PAGE, or VISIT"
     )  # FIELD, PAGE, or VISIT
     target_id: Mapped[str] = mapped_column(String(255), nullable=False)
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False)

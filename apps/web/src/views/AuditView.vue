@@ -240,6 +240,7 @@
           <div style="display: flex; flex-direction: column; gap: 12px">
             <div class="form-group" style="margin-bottom: 0">
               <label
+                for="tmf-file-input"
                 style="
                   font-weight: 600;
                   font-size: 12px;
@@ -265,6 +266,7 @@
             <div class="grid-2" style="gap: 16px">
               <div class="form-group" style="margin-bottom: 0">
                 <label
+                  for="tmf-zone-select"
                   style="
                     font-weight: 600;
                     font-size: 12px;
@@ -298,6 +300,7 @@
               </div>
               <div class="form-group" style="margin-bottom: 0">
                 <label
+                  for="tmf-section-input"
                   style="
                     font-weight: 600;
                     font-size: 12px;
@@ -445,6 +448,7 @@
                 <button
                   class="btn btn-secondary btn-preview-doc"
                   style="padding: 4px 8px; font-size: 11px; cursor: pointer"
+                  :aria-label="'Preview secure document ' + doc.filename"
                   @click="previewDocument(doc)"
                 >
                   Preview
@@ -453,6 +457,9 @@
                   v-if="doc.status !== 'SIGNED'"
                   class="btn btn-primary btn-sign-doc"
                   style="padding: 4px 8px; font-size: 11px; cursor: pointer"
+                  :aria-label="
+                    'Sign and manifestation seal document ' + doc.filename
+                  "
                   @click="openSignModal(doc)"
                 >
                   Sign
@@ -460,6 +467,9 @@
                 <button
                   class="btn btn-secondary btn-download-watermarked"
                   style="padding: 4px 8px; font-size: 11px; cursor: pointer"
+                  :aria-label="
+                    'Download secure watermarked copy of ' + doc.filename
+                  "
                   @click="downloadWatermarkedDoc(doc)"
                 >
                   Download (Watermarked)
@@ -685,6 +695,7 @@
           style="margin-bottom: 0; flex: 1; min-width: 140px"
         >
           <label
+            for="filter-user-id-input"
             style="
               font-size: 11px;
               font-weight: 600;
@@ -694,6 +705,7 @@
             >Actor ID</label
           >
           <input
+            id="filter-user-id-input"
             v-model="filters.user_id"
             type="text"
             placeholder="Filter by Actor"
@@ -714,6 +726,7 @@
           style="margin-bottom: 0; flex: 1; min-width: 140px"
         >
           <label
+            for="filter-action-select"
             style="
               font-size: 11px;
               font-weight: 600;
@@ -723,6 +736,7 @@
             >Action Type</label
           >
           <select
+            id="filter-action-select"
             v-model="filters.action"
             class="filter-action"
             style="
@@ -962,6 +976,7 @@
           style="margin-bottom: 0; flex: 1; min-width: 140px"
         >
           <label
+            for="completeness-study-id-input"
             style="
               font-size: 11px;
               font-weight: 600;
@@ -971,6 +986,7 @@
             >Study ID</label
           >
           <input
+            id="completeness-study-id-input"
             v-model="completenessParams.study_id"
             type="text"
             placeholder="e.g. study_001"
@@ -991,6 +1007,7 @@
           style="margin-bottom: 0; flex: 1; min-width: 140px"
         >
           <label
+            for="completeness-milestone-select"
             style="
               font-size: 11px;
               font-weight: 600;
@@ -1000,6 +1017,7 @@
             >Milestone</label
           >
           <select
+            id="completeness-milestone-select"
             v-model="completenessParams.milestone"
             class="completeness-milestone"
             style="
