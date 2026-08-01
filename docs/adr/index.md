@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-01: SDV and TSDV Data Model Foundations](2026-08-01-sdv-and-tsdv-data-model-foundations.md)
 - [2026-08-01: Unused ESLint Variable and DEID Exemption in UI Package](2026-08-01-unused-eslint-variable-and-deid-exemption-in-ui-package.md)
 - [2026-09-03: Centralized Study Scope and Lab Range Permissions](2026-09-03-centralized-study-scope-and-lab-range-permissions.md)
 - [2026-08-01: Define Laboratory Master and Align ORM Models](2026-08-01-define-laboratory-master-and-align-orm-models.md)
