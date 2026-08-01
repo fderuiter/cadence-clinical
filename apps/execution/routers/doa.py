@@ -3,9 +3,10 @@
 Requirements: PRD-SYS-001
 """
 
-import hashlib
 from datetime import UTC, datetime
+import hashlib
 
+import packages  # noqa: F401
 from execution.doa_models import (
     DOAAssignmentRecord,
     DOATaskDelegationEnum,
@@ -23,6 +24,73 @@ from apps.execution.database.models import (
 )
 from apps.execution.services.doa_service import DOAService
 from packages.security.middleware import get_current_user
+
+
+class DelegateTaskRequest(BaseModel):
+    site_id: str
+    staff_user_id: str
+    task_code: str
+    pi_user_id: str
+    reason_for_change: str
+
+
+class ApproveDelegationRequest(BaseModel):
+    delegation_id: str
+    pi_user_id: str
+    password: str
+    totp_code: str | None = None
+
+
+class ApproveTaskDelegationRequest(BaseModel):
+    delegation_id: str
+    pi_user_id: str
+    signature_hash: str
+    reason_for_change: str
+
+
+class RevokeDelegationRequest(BaseModel):
+    delegation_id: str
+    end_date: datetime
+    reason_for_change: str
+
+
+class SiteStaffMemberRequest(BaseModel):
+    site_id: str
+    staff_user_id: str
+    name: str
+    email: str
+    has_gcp_training: bool = True
+
+
+class SiteStaffMemberResponse(BaseModel):
+    id: str
+    site_id: str
+    staff_user_id: str
+    name: str
+    email: str
+    has_gcp_training: bool
+
+
+class DOAAuditLogResponse(BaseModel):
+    id: str
+    user_id: str
+    action: str
+    details: str
+    timestamp: datetime
+
+
+class DOADelegationRecordResponse(BaseModel):
+    id: str
+    site_id: str
+    staff_user_id: str
+    task_code: str
+    pi_user_id: str | None = None
+    status: str
+    pi_signature_hash: str | None = None
+    pi_approved_at: datetime | None = None
+    end_date: datetime | None = None
+    reason_for_change: str | None = None
+    is_active: bool
 
 router = APIRouter(prefix="/api/v1/execution/doa", tags=["DOA"])
 
@@ -56,81 +124,6 @@ class DOASignOffRequest(BaseModel):
     reason_for_change: str = Field(
         ..., description="Mandatory GxP 21 CFR Part 11 justification"
     )
-
-
-class DelegateTaskRequest(BaseModel):
-    site_id: str
-    staff_user_id: str
-    task_code: str
-    pi_user_id: str
-    reason_for_change: str
-
-
-class ApproveDelegationRequest(BaseModel):
-    delegation_id: str
-    pi_user_id: str
-    password: str
-    totp_code: str | None = None
-
-
-class ApproveTaskDelegationRequest(BaseModel):
-    delegation_id: str
-    pi_user_id: str
-    signature_hash: str
-    reason_for_change: str
-
-
-class RevokeDelegationRequest(BaseModel):
-    delegation_id: str
-    end_date: datetime
-    reason_for_change: str
-
-
-class DOADelegationRecordResponse(BaseModel):
-    id: str
-    site_id: str
-    staff_user_id: str
-    task_code: str
-    status: str
-    pi_user_id: str
-    reason_for_change: str
-    pi_approved_at: datetime | None = None
-    pi_signature_hash: str | None = None
-    end_date: datetime | None = None
-    is_active: bool
-
-    class Config:
-        from_attributes = True
-
-
-class SiteStaffMemberRequest(BaseModel):
-    site_id: str
-    staff_user_id: str
-    name: str
-    email: str
-    has_gcp_training: bool
-
-
-class SiteStaffMemberResponse(BaseModel):
-    site_id: str
-    staff_user_id: str
-    name: str
-    email: str
-    has_gcp_training: bool
-
-    class Config:
-        from_attributes = True
-
-
-class DOAAuditLogResponse(BaseModel):
-    id: str
-    user_id: str
-    action: str
-    details: str
-    timestamp: datetime
-
-    class Config:
-        from_attributes = True
 
 
 @router.post(
@@ -403,3 +396,4 @@ async def get_delegations_endpoint():
         stmt = select(DOADelegationRecord)
         res = await session.execute(stmt)
         return list(res.scalars().all())
+>>>>>>> origin/main
