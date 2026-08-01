@@ -311,12 +311,13 @@ async def process_econsent_endpoint(payload: EConsentSignRequestPayload):
         )
         session.add(signature)
 
-        # 6. Save PDF blob
         import os
+        import tempfile
 
-        os.makedirs("/tmp/consent_pdfs", exist_ok=True)
+        pdf_dir = os.path.join(tempfile.gettempdir(), "consent_pdfs")
+        os.makedirs(pdf_dir, exist_ok=True)
         pdf_filename = f"{payload.subject_id}_{payload.icf_version_id}_{now.strftime('%Y%m%d%H%M%S')}.pdf"
-        pdf_path = os.path.join("/tmp/consent_pdfs", pdf_filename)
+        pdf_path = os.path.join(pdf_dir, pdf_filename)
         with open(pdf_path, "wb") as f:
             f.write(pdf_bytes)
 

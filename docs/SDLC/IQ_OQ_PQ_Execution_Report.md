@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1851
-- **Passed:** 1851 🟢
+- **Total Automated Test Cases Run:** 1861
+- **Passed:** 1861 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -21,7 +21,7 @@ The Installation Qualification verifies that the software execution environment,
 
 ### 2.1 System Environment Metadata
 - **Operating System / Platform:** linux (containerized target specification)
-- **Python Version:** 3.12.13 (Docker execution environment baseline)
+- **Python Version:** 3.12.12 (Docker execution environment baseline)
 - **Database Provider (Execution Engine):** PostgreSQL / SQLite in-memory fallback
 - **Graph Database Provider (Designer Engine):** Neo4j (mocked in unit suite)
 - **Identity Management Gateway:** Keycloak OIDC Router
@@ -1107,6 +1107,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_unit_conversion_crud_and_audit` | `tests.test_lab_master_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_absent_boundaries` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_age_boundaries` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_convert_lab_unit_db_and_fallback` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_critical_boundaries_and_exclusion` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_deterministic_ties` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_is_deleted_filtering` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1137,6 +1138,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_reference_range_audit_and_triggers` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_crud_and_precision` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_schema_evolution_migration_upgrade` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001, PRD-QRY-005 | 🟢 PASSED | < 1s |
+| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1246,7 +1252,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_stem_word[vomiting-vomit]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_token_cosine_similarity_empty` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_whodrug_matching_integration` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_lab_reference_ranges_evolution` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_cli` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_new_tables_metadata_creation` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_placeholders` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_run_migrations_failure` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_run_migrations_real_sqlite` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1705,11 +1713,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_api_audit_reason_enforcement` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_concurrent_locking_conflict_exception_translation` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_invalid_signature_exception_translation` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_latest_soa_projection_unversioned` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_rule_soft_delete` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_soa_crud_lifecycle_endpoints` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_soa_immutability_guards` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_soa_immutability_guards_updates` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_soa_linking_and_matrix_projection` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_soa_mutation_missing_change_reason` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_soa_retirement_and_projection_exclusion` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_soa_typed_validation_and_timing_rejection` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_unauthorized_requests` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
