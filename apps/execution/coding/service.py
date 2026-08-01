@@ -17,6 +17,7 @@ from apps.execution.database.models import (
     ClinicalCodingLedger,
     ClinicalQuery,
     CodingState,
+    RecodingState,
 )
 from apps.execution.database.models import (
     DictionaryType as DBDictionaryType,
@@ -38,15 +39,9 @@ async def search_dictionary(
 ) -> dict[str, Any]:
     """Delegates interactive terminology search or auto-complete lookup to match_verbatim_term."""
     if not term or not term.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Term must be a non-empty string.",
-        )
+        raise ValueError("Term must be a non-empty string.")
     if not version or not version.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Version must be a non-empty string.",
-        )
+        raise ValueError("Version must be a non-empty string.")
 
     try:
         res = await match_verbatim_term(
@@ -321,9 +316,8 @@ async def process_coding_action(
             )
             res_valid = await session.execute(stmt_valid)
             if not res_valid.scalars().first():
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Invalid code '{coded_code}' for MedDRA version '{version}'.",
+                raise ValueError(
+                    f"Invalid code '{coded_code}' for MedDRA version '{version}'."
                 )
         elif dict_type == DBDictionaryType.WHODRUG:
             from apps.execution.database.models import WHODrugRecord
@@ -334,50 +328,47 @@ async def process_coding_action(
             )
             res_valid = await session.execute(stmt_valid)
             if not res_valid.scalars().first():
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Invalid drug code '{coded_code}' for WHODrug version '{version}'.",
+                raise ValueError(
+                    f"Invalid drug code '{coded_code}' for WHODrug version '{version}'."
                 )
 
         status = CodingState.CODED
+        assignment.recoding_status = RecodingState.NONE
 
     elif action_upper == "OVERRIDE":
         # Override requires reason_for_change, code, and term
         if not reason_for_change or not reason_for_change.strip():
-            raise HTTPException(
-                status_code=400,
-                detail="reason_for_change is required for OVERRIDE action and cannot be empty.",
+            raise ValueError(
+                "reason_for_change is required for OVERRIDE action and cannot be empty."
             )
         if not code or not code.strip():
-            raise HTTPException(
-                status_code=400, detail="code is required for OVERRIDE action."
-            )
+            raise ValueError("code is required for OVERRIDE action.")
         if not term or not term.strip():
-            raise HTTPException(
-                status_code=400, detail="term is required for OVERRIDE action."
-            )
+            raise ValueError("term is required for OVERRIDE action.")
 
-        # Validate target code/version
+        coded_code = code.strip()
+        coded_term = term.strip()
+
+        # Validate target code/version and retrieve hierarchy
         if dict_type == DBDictionaryType.MEDDRA:
             from apps.execution.database.models import MedDRATerm
 
             stmt_valid = select(MedDRATerm).where(
                 MedDRATerm.dictionary_version == version,
-                MedDRATerm.code == code.strip(),
+                MedDRATerm.code == coded_code,
             )
             res_valid = await session.execute(stmt_valid)
             if not res_valid.scalars().first():
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Invalid code '{code}' for MedDRA version '{version}'.",
+                raise ValueError(
+                    f"Invalid code '{coded_code}' for MedDRA version '{version}'."
                 )
 
             # Fetch hierarchy for the overridden term if possible
             from apps.execution.coding.matcher import _get_meddra_hierarchy
 
             term_obj = MedDRATerm(
-                code=code.strip(),
-                term_name=term.strip(),
+                code=coded_code,
+                term_name=coded_term,
                 level="LLT",
             )
             hierarchy = await _get_meddra_hierarchy(session, term_obj, version)
@@ -387,28 +378,26 @@ async def process_coding_action(
 
             stmt_valid = select(WHODrugRecord).where(
                 WHODrugRecord.dictionary_version == version,
-                WHODrugRecord.drug_code == code.strip(),
+                WHODrugRecord.drug_code == coded_code,
             )
             res_valid = await session.execute(stmt_valid)
             if not res_valid.scalars().first():
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Invalid drug code '{code}' for WHODrug version '{version}'.",
+                raise ValueError(
+                    f"Invalid drug code '{coded_code}' for WHODrug version '{version}'."
                 )
 
             # Fetch ATC context and ingredients for WHODrug override
             from apps.execution.coding.matcher import _get_whodrug_context
 
-            rec_obj = WHODrugRecord(drug_code=code.strip(), preferred_name=term.strip())
+            rec_obj = WHODrugRecord(drug_code=coded_code, preferred_name=coded_term)
             atc_context, ingredients = await _get_whodrug_context(
                 session, rec_obj, version
             )
             hierarchy = {"atc_context": atc_context, "ingredients": ingredients}
 
-        coded_code = code.strip()
-        coded_term = term.strip()
         score = 1.0  # Perfect manual certainty
         status = CodingState.CODED
+        assignment.recoding_status = RecodingState.NONE
 
     elif action_upper == "QUERY":
         status = CodingState.QUERY_PENDING

@@ -121,7 +121,6 @@ export function createConditionRowHTML(
     rightFormId: "",
     ...initialData,
   };
-
   const formOptions = forms
     .map(
       (f) =>
