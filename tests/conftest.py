@@ -167,7 +167,10 @@ databases_pre_created = False
 
 # Create worker isolated databases and perform patching if PostgreSQL is available
 try:
-    run_sync(create_databases_async(worker_suffix))
+    from filelock import FileLock
+    lock_path = "/tmp/postgres_db_creation.lock"
+    with FileLock(lock_path, timeout=120):
+        run_sync(create_databases_async(worker_suffix))
     # Override the env var so any standard fallback uses isolated DB too
     os.environ["TEST_DATABASE_URL"] = (
         f"{get_postgres_base_config()}cadence_edc{worker_suffix}"
