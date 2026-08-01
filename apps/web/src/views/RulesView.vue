@@ -10,9 +10,17 @@
     </div>
 
     <!-- Authorization Gating check -->
-    <div v-if="!hasEditAccess" class="card rules-gating-banner">
-      <div class="rules-gating-content">
-        <span class="rules-gating-icon">🚫</span>
+    <div
+      v-if="!hasEditAccess"
+      class="card"
+      style="
+        border-left: 4px solid var(--error);
+        background-color: var(--error-bg);
+        padding: 24px;
+      "
+    >
+      <div style="display: flex; gap: 16px; align-items: flex-start">
+        <span style="font-size: 2rem">🚫</span>
         <div>
           <h3
             style="color: var(--error); font-weight: bold; margin-bottom: 8px"

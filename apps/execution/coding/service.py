@@ -302,7 +302,7 @@ async def process_coding_action(
     if action_upper not in ("ACCEPT", "OVERRIDE", "QUERY"):
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid action '{action}'. Allowed actions: ACCEPT, OVERRIDE, QUERY."
+            detail=f"Invalid action '{action}'. Allowed actions: ACCEPT, OVERRIDE, QUERY.",
         )
 
     # 1. Fetch existing assignment
@@ -315,7 +315,7 @@ async def process_coding_action(
     if not assignment:
         raise HTTPException(
             status_code=404,
-            detail=f"Coding assignment '{assignment_id}' not found or has been deleted."
+            detail=f"Coding assignment '{assignment_id}' not found or has been deleted.",
         )
 
     old_code = assignment.coded_code
@@ -385,7 +385,7 @@ async def process_coding_action(
             if not found:
                 raise HTTPException(
                     status_code=400,
-                    detail="The provided code does not match any available suggestions. Use OVERRIDE for manual coding."
+                    detail="The provided code does not match any available suggestions. Use OVERRIDE for manual coding.",
                 )
         else:
             # Accept highest suggestion if available
@@ -405,7 +405,7 @@ async def process_coding_action(
             else:
                 raise HTTPException(
                     status_code=400,
-                    detail="No suggestions available to ACCEPT. Use OVERRIDE instead."
+                    detail="No suggestions available to ACCEPT. Use OVERRIDE instead.",
                 )
 
         # Double check existence of the code/version in DB
@@ -418,7 +418,7 @@ async def process_coding_action(
             if not res_valid.scalars().first():
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Invalid code '{coded_code}' for MedDRA version '{version}'."
+                    detail=f"Invalid code '{coded_code}' for MedDRA version '{version}'.",
                 )
         elif dict_type == DBDictionaryType.WHODRUG:
             stmt_valid = select(WHODrugRecord).where(
@@ -429,7 +429,7 @@ async def process_coding_action(
             if not res_valid.scalars().first():
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Invalid drug code '{coded_code}' for WHODrug version '{version}'."
+                    detail=f"Invalid drug code '{coded_code}' for WHODrug version '{version}'.",
                 )
 
         status = CodingState.CODED
@@ -440,12 +440,16 @@ async def process_coding_action(
         if not reason_for_change or not reason_for_change.strip():
             raise HTTPException(
                 status_code=400,
-                detail="reason_for_change is required for OVERRIDE action and cannot be empty."
+                detail="reason_for_change is required for OVERRIDE action and cannot be empty.",
             )
         if not code or not code.strip():
-            raise HTTPException(status_code=400, detail="code is required for OVERRIDE action.")
+            raise HTTPException(
+                status_code=400, detail="code is required for OVERRIDE action."
+            )
         if not term or not term.strip():
-            raise HTTPException(status_code=400, detail="term is required for OVERRIDE action.")
+            raise HTTPException(
+                status_code=400, detail="term is required for OVERRIDE action."
+            )
 
         coded_code = code.strip()
         coded_term = term.strip()
