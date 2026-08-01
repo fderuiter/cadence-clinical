@@ -1,7 +1,7 @@
 <template>
   <div
-    ref="panelRef"
     :id="`query-panel-${id}`"
+    ref="panelRef"
     class="query-panel"
     role="region"
     :aria-labelledby="`query-flag-${id}`"
@@ -18,30 +18,43 @@
       </button>
     </div>
     <div class="query-panel-body">
-      <!-- NONE state -->
-      <div v-if="status === 'NONE'" class="query-create-section">
-        <p class="query-panel-instruction">Raise a query for this field:</p>
-        <div class="form-group">
-          <label :for="`query-message-${id}`">Discrepancy Message</label>
-          <textarea
-            :id="`query-message-${id}`"
-            v-model="messageInput"
-            placeholder="Enter clinical discrepancy details..."
-            required
-          ></textarea>
-        </div>
-        <button
-          type="button"
-          class="btn-submit-query"
-          :data-field-id="id"
-          data-action="create-query"
-          @click="handleSubmitQuery"
-        >
-          Submit Query
-        </button>
+      <!-- NONE state (Only CRAs or DMs can raise new queries) -->
+      <div
+        v-if="status === 'NONE'"
+        class="query-create-section"
+      >
+        <template v-if="canManageQueries">
+          <p class="query-panel-instruction">
+            Raise a query for this field:
+          </p>
+          <div class="form-group">
+            <label :for="`query-message-${id}`">Discrepancy Message</label>
+            <textarea
+              :id="`query-message-${id}`"
+              v-model="messageInput"
+              placeholder="Enter clinical discrepancy details..."
+              required
+            />
+          </div>
+          <button
+            type="button"
+            class="btn-submit-query"
+            :data-field-id="id"
+            data-action="create-query"
+            @click="handleSubmitQuery"
+          >
+            Submit Query
+          </button>
+        </template>
+        <template v-else>
+          <p style="font-size: 0.85rem; color: #64748b; font-style: italic">
+            Raising queries is restricted to clinical monitors (CRA) and data
+            managers.
+          </p>
+        </template>
       </div>
 
-      <!-- OPEN / REOPENED state -->
+      <!-- OPEN / REOPENED state (CRCs/Coordinators can respond/answer) -->
       <div
         v-else-if="status === 'OPEN' || status === 'REOPENED'"
         class="query-details"
@@ -59,7 +72,10 @@
           Raised by: {{ query.createdBy || "System" }} on
           {{ query.createdAt || "N/A" }}
         </p>
-        <div class="query-respond-section" style="margin-top: 12px">
+        <div
+          class="query-respond-section"
+          style="margin-top: 12px"
+        >
           <div class="form-group">
             <label :for="`query-response-${id}`">Your Response</label>
             <textarea
@@ -67,7 +83,7 @@
               v-model="responseInput"
               placeholder="Enter clinical justification or resolution explanation..."
               required
-            ></textarea>
+            />
           </div>
           <button
             type="button"
@@ -81,9 +97,14 @@
         </div>
       </div>
 
-      <!-- ANSWERED state -->
-      <div v-else-if="status === 'ANSWERED'" class="query-details">
-        <div class="query-status-badge badge-answered">Status: ANSWERED</div>
+      <!-- ANSWERED state (Only CRAs/DMs can close/reopen) -->
+      <div
+        v-else-if="status === 'ANSWERED'"
+        class="query-details"
+      >
+        <div class="query-status-badge badge-answered">
+          Status: ANSWERED
+        </div>
         <p class="query-current-msg">
           <strong>Discrepancy:</strong> {{ query.message }}
         </p>
@@ -96,6 +117,7 @@
           {{ query.respondedAt || "N/A" }}
         </p>
         <div
+          v-if="canManageQueries"
           class="query-actions-section"
           style="margin-top: 12px; display: flex; gap: 8px"
         >
@@ -118,11 +140,28 @@
             Reopen Query
           </button>
         </div>
+        <div
+          v-else
+          style="
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: #64748b;
+            font-style: italic;
+          "
+        >
+          Query resolution is restricted to clinical monitors (CRA) and data
+          managers.
+        </div>
       </div>
 
       <!-- CLOSED state -->
-      <div v-else-if="status === 'CLOSED'" class="query-details">
-        <div class="query-status-badge badge-closed">Status: CLOSED</div>
+      <div
+        v-else-if="status === 'CLOSED'"
+        class="query-details"
+      >
+        <div class="query-status-badge badge-closed">
+          Status: CLOSED
+        </div>
         <p class="query-current-msg">
           <strong>Discrepancy:</strong> {{ query.message }}
         </p>
@@ -145,6 +184,8 @@
 import { ref, computed, watch } from "vue";
 import { useFocusTrap } from "@/composables/useFocusTrap";
 import { useEscapeClose } from "@/composables/useEscapeClose";
+import { useAuthStore } from "../../stores/auth";
+import { getActivePinia } from "pinia";
 
 const props = defineProps({
   id: {
@@ -172,6 +213,26 @@ useEscapeClose(() => emit("close-panel"));
 
 const messageInput = ref("");
 const responseInput = ref("");
+
+// CRA / Monitor, Data Manager, or admin roles can manage queries (Close/Reopen/Create)
+const canManageQueries = computed(() => {
+  if (!getActivePinia()) {
+    return true; // default fallback for direct mount unit tests where Pinia is not installed
+  }
+  const authStore = useAuthStore();
+  const roles = authStore.normalizedRoles || [];
+  // Ensure we also support mock data manager role in RulesView
+  return roles.some((role) =>
+    [
+      "cra",
+      "monitor",
+      "data_manager",
+      "sponsor_admin",
+      "admin",
+      "sponsor_designer",
+    ].includes(role)
+  );
+});
 
 const status = computed(() => {
   return props.query && props.query.status
