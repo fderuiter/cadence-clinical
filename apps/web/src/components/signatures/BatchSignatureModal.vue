@@ -2,7 +2,11 @@
   <div
     v-if="isOpen"
     id="batch-signature-modal"
+    ref="modalRef"
     class="modal-backdrop"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Batch Electronic Signature Modal"
     style="
       display: flex;
       position: fixed;
@@ -404,6 +408,8 @@
 <script setup>
 import { ref, watch, onMounted } from "vue";
 import { useSignatureStore } from "../../stores/signatures";
+import { useFocusTrap } from "@/composables/useFocusTrap";
+import { useEscapeClose } from "@/composables/useEscapeClose";
 
 const props = defineProps({
   isOpen: {
@@ -425,6 +431,10 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["close", "signed"]);
+
+const modalRef = ref(null);
+useFocusTrap(modalRef);
+useEscapeClose(() => emit("close"));
 const signatureStore = useSignatureStore();
 
 const password = ref("");

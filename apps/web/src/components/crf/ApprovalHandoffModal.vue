@@ -3,7 +3,11 @@
   <div
     v-if="isOpen"
     id="approval-handoff-modal"
+    ref="modalRef"
     class="modal-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-label="eCRF Approval Handoff Modal"
     style="
       position: fixed;
       top: 0;
@@ -296,6 +300,8 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+import { useFocusTrap } from "@/composables/useFocusTrap";
+import { useEscapeClose } from "@/composables/useEscapeClose";
 
 const props = defineProps({
   isOpen: {
@@ -313,6 +319,10 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["cancel", "approve"]);
+
+const modalRef = ref(null);
+useFocusTrap(modalRef);
+useEscapeClose(() => emit("cancel"));
 
 const selectedRole = ref("");
 const password = ref("");

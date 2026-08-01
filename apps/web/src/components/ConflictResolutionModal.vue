@@ -2,6 +2,7 @@
   <div
     v-if="show"
     id="conflict-resolution-modal"
+    ref="modalRef"
     class="modal-overlay"
     style="display: flex"
     role="dialog"
@@ -266,6 +267,8 @@
 
 <script setup>
 import { ref, watch } from "vue";
+import { useFocusTrap } from "@/composables/useFocusTrap";
+import { useEscapeClose } from "@/composables/useEscapeClose";
 
 const props = defineProps({
   show: {
@@ -279,6 +282,10 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["confirm", "cancel"]);
+
+const modalRef = ref(null);
+useFocusTrap(modalRef);
+useEscapeClose(() => emit("cancel"));
 
 const selectedStrategy = ref("SERVER_WIN");
 const reasonText = ref("");
