@@ -1,18 +1,17 @@
 import hashlib
 import hmac
+import json
 import os
 import time
-import json
 
 import httpx
 import pytest
 import pytest_asyncio
-from sqlalchemy import select
 
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import Base
-from apps.execution.main import app
 from apps.execution.lab_range_cache import lab_range_cache
+from apps.execution.main import app
 
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
 
