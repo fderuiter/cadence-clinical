@@ -12,6 +12,7 @@ from apps.execution.coding.impact import run_impact_analysis
 from apps.execution.coding.matcher import match_verbatim_term
 
 # Database models & enums
+from apps.execution.database.context import current_user_id
 from apps.execution.database.models import (
     ClinicalCodingAssignment,
     ClinicalCodingLedger,
@@ -43,9 +44,9 @@ async def search_dictionary(
 ) -> MedDRACodeLookupResponse | WHODrugCodeLookupResponse:
     """Delegates interactive terminology search or auto-complete lookup to match_verbatim_term."""
     if not term or not term.strip():
-        raise ValueError("Term must be a non-empty string.")
+        raise ValueError("Term must be a non-empty string")
     if not version or not version.strip():
-        raise ValueError("Version must be a non-empty string.")
+        raise ValueError("Version must be a non-empty string")
 
     try:
         res = await match_verbatim_term(
@@ -223,13 +224,33 @@ async def list_coding_assignments(
     if observation_id:
         stmt = stmt.where(ClinicalCodingAssignment.observation_id == observation_id)
     if status:
-        stmt = stmt.where(ClinicalCodingAssignment.status == status.upper())
+        try:
+            status_enum = CodingState(status.upper())
+            stmt = stmt.where(ClinicalCodingAssignment.status == status_enum)
+        except ValueError:
+            try:
+                status_enum = CodingState[status.upper()]
+                stmt = stmt.where(ClinicalCodingAssignment.status == status_enum)
+            except (KeyError, ValueError):
+                stmt = stmt.where(ClinicalCodingAssignment.status == status)
     if verbatim_text:
         stmt = stmt.where(ClinicalCodingAssignment.verbatim_text == verbatim_text)
     if dictionary_type:
-        stmt = stmt.where(
-            ClinicalCodingAssignment.dictionary_type == dictionary_type.upper()
-        )
+        try:
+            dict_type_enum = DBDictionaryType(dictionary_type.upper())
+            stmt = stmt.where(
+                ClinicalCodingAssignment.dictionary_type == dict_type_enum
+            )
+        except ValueError:
+            try:
+                dict_type_enum = DBDictionaryType[dictionary_type.upper()]
+                stmt = stmt.where(
+                    ClinicalCodingAssignment.dictionary_type == dict_type_enum
+                )
+            except (KeyError, ValueError):
+                stmt = stmt.where(
+                    ClinicalCodingAssignment.dictionary_type == dictionary_type
+                )
 
     res = await session.execute(stmt)
     return list(res.scalars().all())
@@ -271,10 +292,17 @@ async def process_coding_action(
     """
     action_upper = action.upper()
     if action_upper not in ("ACCEPT", "OVERRIDE", "QUERY"):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid action '{action}'. Allowed actions: ACCEPT, OVERRIDE, QUERY.",
+        raise ValueError(
+            f"Invalid action '{action}'. Allowed actions: ACCEPT, OVERRIDE, QUERY."
         )
+
+    # Resolve actor from context or parameter
+    resolved_actor = actor
+    if not resolved_actor or resolved_actor == "system":
+        try:
+            resolved_actor = current_user_id.get() or "system"
+        except (LookupError, ValueError):
+            resolved_actor = "system"
 
     # 1. Fetch existing assignment
     stmt = select(ClinicalCodingAssignment).where(
@@ -294,6 +322,7 @@ async def process_coding_action(
     old_version = assignment.dictionary_version
     dict_type = assignment.dictionary_type
     version = assignment.dictionary_version
+    old_hierarchy = assignment.hierarchy or {}
 
     status = assignment.status
     coded_code = assignment.coded_code
@@ -302,73 +331,49 @@ async def process_coding_action(
     hierarchy = assignment.hierarchy
 
     if action_upper == "ACCEPT":
-        # Must find a suggestion to accept
+        sug_list = assignment.suggestions or []
+        if not isinstance(sug_list, list):
+            sug_list = []
+
+        sug = None
         if suggestion_index is not None:
-            sug_list = assignment.suggestions
-            if (
-                not sug_list
-                or not isinstance(sug_list, list)
-                or suggestion_index < 0
-                or suggestion_index >= len(sug_list)
-            ):
-                raise HTTPException(status_code=400, detail="Invalid suggestion_index")
+            if suggestion_index < 0 or suggestion_index >= len(sug_list):
+                raise ValueError("Invalid suggestion_index")
             sug = sug_list[suggestion_index]
-            coded_code = sug.get("code") or sug.get("drug_code")
-            coded_term = sug.get("term_name") or sug.get("preferred_name")
-            score = sug.get("score")
-            if dict_type == DBDictionaryType.MEDDRA:
-                hierarchy = sug.get("hierarchies")
-            else:
-                hierarchy = {
-                    "atc_context": sug.get("atc_context", []),
-                    "ingredients": sug.get("ingredients", []),
-                }
-        elif code and term:
-            # Direct accept of specified code/term if it matches one of the suggestions
-            sug_list = assignment.suggestions or []
-            found = False
-            for sug in sug_list:
-                s_code = sug.get("code") or sug.get("drug_code")
+        elif code:
+            # Look for suggestion with matching code
+            for s in sug_list:
+                s_code = s.get("code") or s.get("drug_code")
                 if s_code == code:
-                    coded_code = s_code
-                    coded_term = sug.get("term_name") or sug.get("preferred_name")
-                    score = sug.get("score")
-                    if dict_type == DBDictionaryType.MEDDRA:
-                        hierarchy = sug.get("hierarchies")
-                    else:
-                        hierarchy = {
-                            "atc_context": sug.get("atc_context", []),
-                            "ingredients": sug.get("ingredients", []),
-                        }
-                    found = True
+                    sug = s
                     break
-            if not found:
-                raise HTTPException(
-                    status_code=400,
-                    detail="The provided code does not match any available suggestions. Use OVERRIDE for manual coding.",
+            if sug is None:
+                raise ValueError(
+                    f"The provided code '{code}' does not match any available suggestions. Use OVERRIDE for manual coding."
                 )
         else:
-            # Accept highest suggestion if available
-            sug_list = assignment.suggestions
-            if sug_list and isinstance(sug_list, list) and len(sug_list) > 0:
+            if len(sug_list) > 0:
                 sug = sug_list[0]
-                coded_code = sug.get("code") or sug.get("drug_code")
-                coded_term = sug.get("term_name") or sug.get("preferred_name")
-                score = sug.get("score")
-                if dict_type == DBDictionaryType.MEDDRA:
-                    hierarchy = sug.get("hierarchies")
-                else:
-                    hierarchy = {
-                        "atc_context": sug.get("atc_context", []),
-                        "ingredients": sug.get("ingredients", []),
-                    }
             else:
-                raise HTTPException(
-                    status_code=400,
-                    detail="No suggestions available to ACCEPT. Use OVERRIDE instead.",
+                raise ValueError(
+                    "No suggestions available to ACCEPT. Use OVERRIDE instead."
                 )
 
-        # Double check existence of the code/version in DB
+        # Resolve suggestion fields
+        coded_code = sug.get("code") or sug.get("drug_code")
+        coded_term = (
+            sug.get("term_name") or sug.get("preferred_name") or sug.get("drug_name")
+        )
+        score = sug.get("score")
+        if dict_type == DBDictionaryType.MEDDRA:
+            hierarchy = {"hierarchies": sug.get("hierarchies") or []}
+        else:
+            hierarchy = {
+                "atc_context": sug.get("atc_context") or [],
+                "ingredients": sug.get("ingredients") or [],
+            }
+
+        # Validate existence of chosen code in DB
         if dict_type == DBDictionaryType.MEDDRA:
             from apps.execution.database.models import MedDRATerm
 
@@ -398,7 +403,6 @@ async def process_coding_action(
         assignment.recoding_status = RecodingState.NONE
 
     elif action_upper == "OVERRIDE":
-        # Override requires reason_for_change, code, and term
         if not reason_for_change or not reason_for_change.strip():
             raise ValueError(
                 "reason_for_change is required for OVERRIDE action and cannot be empty."
@@ -411,7 +415,7 @@ async def process_coding_action(
         coded_code = code.strip()
         coded_term = term.strip()
 
-        # Validate target code/version and retrieve hierarchy
+        # Validate existence and retrieve hierarchy
         if dict_type == DBDictionaryType.MEDDRA:
             from apps.execution.database.models import MedDRATerm
 
@@ -420,20 +424,17 @@ async def process_coding_action(
                 MedDRATerm.code == coded_code,
             )
             res_valid = await session.execute(stmt_valid)
-            if not res_valid.scalars().first():
+            term_record = res_valid.scalars().first()
+            if not term_record:
                 raise ValueError(
                     f"Invalid code '{coded_code}' for MedDRA version '{version}'."
                 )
 
-            # Fetch hierarchy for the overridden term if possible
+            # Re-derive hierarchy
             from apps.execution.coding.matcher import _get_meddra_hierarchy
 
-            term_obj = MedDRATerm(
-                code=coded_code,
-                term_name=coded_term,
-                level="LLT",
-            )
-            hierarchy = await _get_meddra_hierarchy(session, term_obj, version)
+            hierarchy_list = await _get_meddra_hierarchy(session, term_record, version)
+            hierarchy = {"hierarchies": hierarchy_list}
 
         elif dict_type == DBDictionaryType.WHODRUG:
             from apps.execution.database.models import WHODrugRecord
@@ -443,17 +444,17 @@ async def process_coding_action(
                 WHODrugRecord.drug_code == coded_code,
             )
             res_valid = await session.execute(stmt_valid)
-            if not res_valid.scalars().first():
+            rec_record = res_valid.scalars().first()
+            if not rec_record:
                 raise ValueError(
                     f"Invalid drug code '{coded_code}' for WHODrug version '{version}'."
                 )
 
-            # Fetch ATC context and ingredients for WHODrug override
+            # Re-derive context
             from apps.execution.coding.matcher import _get_whodrug_context
 
-            rec_obj = WHODrugRecord(drug_code=coded_code, preferred_name=coded_term)
             atc_context, ingredients = await _get_whodrug_context(
-                session, rec_obj, version
+                session, rec_record, version
             )
             hierarchy = {"atc_context": atc_context, "ingredients": ingredients}
 
@@ -467,6 +468,7 @@ async def process_coding_action(
         coded_term = None
         score = None
         hierarchy = None
+        assignment.recoding_status = RecodingState.NONE
 
     # 2. Update assignment state
     assignment.status = status
@@ -474,7 +476,7 @@ async def process_coding_action(
     assignment.coded_term = coded_term
     assignment.score = score
     assignment.hierarchy = hierarchy
-    assignment.assigned_by = actor
+    assignment.assigned_by = resolved_actor
     assignment.assigned_at = datetime.now(UTC).replace(tzinfo=None)
 
     # 3. Create a ledger record for ACCEPT or OVERRIDE
@@ -491,8 +493,11 @@ async def process_coding_action(
             new_coded_code=coded_code,
             new_coded_term=coded_term,
             recoding_reason=reason_for_change or f"Manual decision: {action_upper}",
-            decision_by=actor,
+            decision_by=resolved_actor,
             decision_at=datetime.now(UTC).replace(tzinfo=None),
+            old_hierarchy=old_hierarchy,
+            new_hierarchy=hierarchy,
+            recoding_status=assignment.recoding_status,
         )
         session.add(ledger)
 
@@ -507,7 +512,7 @@ async def process_coding_action(
         active_queries = res_active_q.scalars().all()
         for active_q in active_queries:
             active_q.status = "CLOSED"
-            active_q.resolver = actor
+            active_q.resolver = resolved_actor
             active_q.resolved_at = datetime.now(UTC).replace(tzinfo=None)
             active_q.response = f"Resolved via manual coding action: {action_upper} on code {coded_code}."
             session.add(active_q)
