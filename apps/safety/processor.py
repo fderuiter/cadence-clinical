@@ -25,8 +25,16 @@ async def write_safety_audit_log(
     change_reason: str | None = None,
     version_index: int = 1,
 ) -> None:
-    """
-    Utility function to write to the immutable Safety audit ledger.
+    """Utility function to write to the immutable Safety audit ledger.
+
+    Args:
+        session: Active database session.
+        user_id: User/agent performing the action.
+        action: Standard action code representing the operation.
+        details: Narrative details of the audited operation.
+        record_id: ID of the primary record being mutated. Defaults to None.
+        change_reason: Explanation of changes for GxP audit trail. Defaults to None.
+        version_index: Schema version index tracker. Defaults to 1.
     """
     await write_audit_log(
         session=session,
@@ -49,6 +57,23 @@ async def send_medical_monitor_alert(
     user_id: str,
     change_reason: str,
 ) -> None:
+    """Dispatches a notification alert to the Sponsor Medical Monitor.
+
+    Triggered on detecting material discrepancies between EDC and safety databases.
+
+    Args:
+        job_id: The ID of the parent background reconciliation job.
+        run_id: The ID of the completed reconciliation run.
+        study_id: The ID of the study/trial being evaluated.
+        discrepancy_count: The number of discrepancy entries found.
+        test_client: Optional async test client override for mock requests.
+        session: Database session used to log audit entries.
+        user_id: The user/agent context triggering the alert.
+        change_reason: Audit change reason context.
+
+    Raises:
+        RuntimeError: If GATEWAY_SECRET is not set in the environment.
+    """
     gateway_secret_env = os.getenv("GATEWAY_SECRET")
     if not gateway_secret_env:
         raise RuntimeError(
@@ -141,6 +166,18 @@ async def process_sae_reconciliation(
     change_reason: str,
     test_client: Any | None = None,
 ) -> None:
+    """Asynchronous worker executing safety reconciliation detection.
+
+    Loads job from DB, executes the discrepancy checking against live endpoints,
+    saves the runs, and triggers Medical Monitor alerts on finding any material discrepancy.
+
+    Args:
+        job_id: UUID of the background reconciliation job.
+        study_id: Unique trial/study identifier.
+        user_id: User/agent initiating the reconciliation run.
+        change_reason: Audit change reason context.
+        test_client: Optional async test client override for mock requests.
+    """
     session_maker = db_manager.get_session_maker()
     with audit_context(user_id, change_reason):
         async with session_maker() as session:

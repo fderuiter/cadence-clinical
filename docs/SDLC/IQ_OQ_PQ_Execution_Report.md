@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1901
-- **Passed:** 1901 🟢
+- **Total Automated Test Cases Run:** 1904
+- **Passed:** 1904 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1177,6 +1177,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | PRD-SYS-001, Trace-1 | 🟢 PASSED | < 1s |
 | `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | PRD-SYS-002, Trace-1 | 🟢 PASSED | < 1s |
+| `test_library_object_active_study_lock` | `tests.test_library_locks` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_library_object_author_self_approval_block` | `tests.test_library_locks` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_library_object_rbac_permissions` | `tests.test_library_locks` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_lock_enforcement_field_level_blocked` | `tests.test_lock_enforcement` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lock_enforcement_form_level_blocked` | `tests.test_lock_enforcement` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_data_lock_record_creation` | `tests.test_lock_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
