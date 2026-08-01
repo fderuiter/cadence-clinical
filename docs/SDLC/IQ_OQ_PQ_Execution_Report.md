@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1911
-- **Passed:** 1911 🟢
+- **Total Automated Test Cases Run:** 1912
+- **Passed:** 1912 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -469,6 +469,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_recruitment_records_crud_and_audit` | `tests.test_ctms` | PRD-CTMS-004, Trace-6 | 🟢 PASSED | < 1s |
 | `test_site_milestones_crud_and_audit` | `tests.test_ctms` | PRD-CTMS-001, Trace-6 | 🟢 PASSED | < 1s |
 | `test_data_lifecycle_protocol_amendment_traceability` | `tests.test_data_lifecycle_protocol_amendment_traceability` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ci_database_parity_enforcement_raises_on_failure` | `tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_database_manager_uninitialized_and_close` | `tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_econsent_database_manager_uninitialized_and_close` | `tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_database_manager_uninitialized_and_close` | `tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
