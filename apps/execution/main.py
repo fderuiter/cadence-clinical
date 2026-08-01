@@ -101,7 +101,7 @@ from apps.execution.routers.eisf import router as eisf_router
 from apps.execution.routers.locks import router as locks_router
 from apps.execution.routers.offline import router as offline_router
 from apps.execution.routers.safety import router as safety_router
-from apps.execution.routers.sdv import router as sdv_router
+from apps.execution.routers.sdv import router as sdv_router, bulk_sdv_router, queries_router as sdv_queries_router
 from apps.execution.routers.signatures import router as signatures_router
 from apps.execution.rtsm_authz import redact_response, verify_site_access
 from apps.execution.rtsm_supply import (
@@ -306,6 +306,8 @@ app.include_router(doa_router)
 app.include_router(offline_router)
 app.include_router(documents_router)
 app.include_router(sdv_router)
+app.include_router(bulk_sdv_router)
+app.include_router(sdv_queries_router)
 
 
 @app.exception_handler(RequestValidationError)

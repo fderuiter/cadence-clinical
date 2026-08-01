@@ -231,6 +231,7 @@ def loaded_specs():
 
 
 _RAW_WHITELISTED_ROUTES = {
+    ("post", "/api/v1/execution/queries/generate"),
     ("patch", "/subjects/{id}/state"),
     ("patch", "/api/v1/execution/subjects/{id}/state"),
     ("put", "/subjects/{id}/demographics"),
@@ -639,6 +640,7 @@ def is_whitelisted(method: str, path: str) -> bool:
         "/subjects",
         "/execution/subjects",
         "/execution/visits",
+        "/execution/queries",
         "/synopsis/export",
         "/synopsis/render",
         "/designer/sentinel/evaluate",
