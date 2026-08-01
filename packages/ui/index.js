@@ -202,6 +202,7 @@ export function createConditionRowHTML(
  * @returns {string} Accessible HTML markup string.
  */
 export function createRuleEditorHTML(
+  // eslint-disable-next-line no-unused-vars
   forms = [],
   fields = [],
   initialRule = {}
