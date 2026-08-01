@@ -87,6 +87,7 @@ from apps.execution.demographics import (
     get_safe_demographics as get_safe_demographics,
 )
 from apps.execution.dependencies import verify_change_justification
+from apps.execution.lab_range_cache import get_active_lab_ranges, lab_range_cache
 from apps.execution.edit_checks import (
     run_asynchronous_edit_checks,
     run_synchronous_edit_checks,
@@ -1754,16 +1755,10 @@ async def create_observation(
             gender = demo.get("gender")
             age = demo.get("age")
 
-        # Fetch active LabReferenceRange definitions for the study and test code
-        from apps.execution.database.models import LabReferenceRange
-
-        stmt_ranges = select(LabReferenceRange).where(
-            LabReferenceRange.study_id == study_id,
-            LabReferenceRange.test_code == payload.test_code,
-            LabReferenceRange.is_deleted.is_(False),
+        # Fetch active LabReferenceRange definitions using the read-through cache helper
+        ranges = await get_active_lab_ranges(
+            lab_range_cache, session, study_id, payload.test_code
         )
-        res_ranges = await session.execute(stmt_ranges)
-        ranges = res_ranges.scalars().all()
 
         from apps.execution.lab_ranges import evaluate_lab_value, select_reference_range
 
