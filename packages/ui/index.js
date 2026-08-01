@@ -227,7 +227,7 @@ export function createRuleEditorHTML(
     .join("");
 
   return `
-  <div class="rule-editor-container" style="padding: 16px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+  <div class="rule-editor-container" style="padding: 16px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;" data-deid-ignore="deid-ignore">
     <h3 style="margin-top: 0;">Rule Configuration</h3>
     <div style="display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; margin-bottom: 16px;">
       <div style="grid-column: span 6;">

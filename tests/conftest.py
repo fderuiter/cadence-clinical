@@ -487,17 +487,18 @@ def pytest_sessionfinish(session, exitstatus):
 # Shared multi-service RBAC test harness fixtures
 # =========================================================================
 
-import httpx
-import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
+import pytest_asyncio
+
+from apps.designer.main import app as designer_app
 from apps.etmf.database import db_manager as etmf_db_manager
+from apps.etmf.main import app as etmf_app
 from apps.etmf.models import Base as ETMFBase
 from apps.execution.database.core import db_manager as exec_db_manager
 from apps.execution.database.models import Base as ExecBase
-from apps.designer.main import app as designer_app
 from apps.execution.main import app as exec_app
-from apps.etmf.main import app as etmf_app
 
 
 @pytest_asyncio.fixture
@@ -619,6 +620,7 @@ def signed_headers():
     """
     import os
     import time
+
     from packages.security.signing import generate_gateway_signature
 
     def _factory(
@@ -685,9 +687,10 @@ def capture_cross_service_calls():
     Fixture to patch httpx.AsyncClient.request to capture outbound requests,
     exposing them to the test, and providing a helper to replay them.
     """
-    import httpx
     import json as json_lib
     from unittest.mock import patch
+
+    import httpx
 
     class CrossServiceCallCapture:
         def __init__(self):

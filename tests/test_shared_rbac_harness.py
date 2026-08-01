@@ -1,17 +1,18 @@
-import pytest
-import httpx
 from unittest.mock import AsyncMock, MagicMock
+
+import httpx
+import pytest
+
 from tests.rbac_helpers import (
-    build_gateway_headers,
+    auditor,
+    cra,
+    data_manager,
+    external_monitor,
+    investigator,
     sponsor_admin,
     sponsor_designer,
-    data_manager,
-    cra,
-    crc,
-    investigator,
-    auditor,
-    external_monitor,
 )
+
 
 @pytest.mark.asyncio
 async def test_persona_builders_contain_correct_claims():

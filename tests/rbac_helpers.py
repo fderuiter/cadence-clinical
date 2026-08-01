@@ -1,5 +1,7 @@
 import time
+
 from apps.gateway.main import generate_signature
+
 
 def build_gateway_headers(
     user_id: str,

@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-01: Unused ESLint Variable and DEID Exemption in UI Package](2026-08-01-unused-eslint-variable-and-deid-exemption-in-ui-package.md)
 - [2026-07-31: Standardize GxP Audit Fields Across Execution Lab ORM Models](2026-07-31-standardize-gxp-audit-fields-across-execution-lab-orm-models.md)
 - [2026-07-31: Visual Condition Expression Builder and AST Converter Utilities in Shared UI Package](2026-07-31-visual-condition-expression-builder-and-ast-converter-utilities-in-shared-ui-package.md)
 - [2026-07-31: Modernize Python 3.10 Type Hint Syntax and Lock Ruff Rule Enforcements](2026-07-31-modernize-python-310-type-hint-syntax-and-lock-ruff-rule-enforcements.md)
