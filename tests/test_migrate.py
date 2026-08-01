@@ -151,14 +151,16 @@ async def test_new_tables_metadata_creation():
     import os
     import tempfile
 
+    # Create a temporary file name for SQLite with a unique suffix to prevent parallel collisions
+    import uuid
+
     from sqlalchemy import inspect
     from sqlalchemy.ext.asyncio import create_async_engine
 
     from apps.execution.database.migrate import run_migrations
 
-    # Create a temporary file name for SQLite
     temp_dir = tempfile.gettempdir()
-    db_file = os.path.join(temp_dir, "test_migrate_temp.db")
+    db_file = os.path.join(temp_dir, f"test_migrate_temp_{uuid.uuid4().hex}.db")
     if os.path.exists(db_file):
         os.remove(db_file)
 
