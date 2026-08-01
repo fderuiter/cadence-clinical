@@ -10,72 +10,72 @@
       <button
         type="button"
         class="toolbar-btn"
-        @click="formatDoc('bold')"
         title="Bold"
+        @click="formatDoc('bold')"
       >
         <strong>B</strong>
       </button>
       <button
         type="button"
         class="toolbar-btn"
-        @click="formatDoc('italic')"
         title="Italic"
+        @click="formatDoc('italic')"
       >
         <em>I</em>
       </button>
       <button
         type="button"
         class="toolbar-btn"
-        @click="formatHeading('h2')"
         title="Heading 2"
+        @click="formatHeading('h2')"
       >
         H2
       </button>
       <button
         type="button"
         class="toolbar-btn"
-        @click="formatHeading('h3')"
         title="Heading 3"
+        @click="formatHeading('h3')"
       >
         H3
       </button>
       <button
         type="button"
         class="toolbar-btn"
-        @click="formatDoc('insertUnorderedList')"
         title="Bullet List"
+        @click="formatDoc('insertUnorderedList')"
       >
         • List
       </button>
       <button
         type="button"
         class="toolbar-btn"
-        @click="formatDoc('insertOrderedList')"
         title="Numbered List"
+        @click="formatDoc('insertOrderedList')"
       >
         1. List
       </button>
       <button
         type="button"
         class="toolbar-btn"
-        @click="insertTable"
         title="Insert Table"
+        @click="insertTable"
       >
         📊 Table
       </button>
       <button
         type="button"
         class="toolbar-btn"
-        @click="insertImage"
         title="Insert Image Embed"
+        @click="insertImage"
       >
         🖼️ Image
       </button>
       <button
         type="button"
         class="toolbar-btn glossary-btn"
-        @click="promptGlossary"
         title="Annotate Glossary Term"
+        @click="promptGlossary"
       >
         🏷️ Glossary Term
       </button>
@@ -96,7 +96,7 @@
       @focusin="handleCanvasMouseOver"
       @focusout="hidePopover"
       v-html="localHtml"
-    ></div>
+    />
 
     <!-- Glossary Term Annotation Dialog/Modal -->
     <div v-if="showGlossaryModal" class="glossary-modal-overlay">
@@ -113,7 +113,7 @@
             placeholder="e.g. An examination of tissue removed from a living body to discover the presence or cause of a disease."
             rows="3"
             class="form-control"
-          ></textarea>
+          />
         </div>
         <div class="modal-actions">
           <button
