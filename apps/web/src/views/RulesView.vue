@@ -9,14 +9,30 @@
     </div>
 
     <!-- Authorization Gating check -->
-    <div v-if="!hasEditAccess" class="card rules-gating-banner">
-      <div class="rules-gating-content">
-        <span class="rules-gating-icon">🚫</span>
+    <div
+      v-if="!hasEditAccess"
+      class="card"
+      style="
+        border-left: 4px solid var(--error);
+        background-color: var(--error-bg);
+        padding: 24px;
+      "
+    >
+      <div style="display: flex; gap: 16px; align-items: flex-start">
+        <span style="font-size: 2rem">🚫</span>
         <div>
-          <h3 class="rules-gating-title">
+          <h3
+            style="color: var(--error); font-weight: bold; margin-bottom: 8px"
+          >
             21 CFR Part 11 Role Gating - Access Denied
           </h3>
-          <p class="rules-gating-text">
+          <p
+            style="
+              color: var(--neutral-dark);
+              font-size: 0.95rem;
+              line-height: 1.6;
+            "
+          >
             You do not have the required <strong>STUDY_DESIGNER</strong> role to
             view or interact with the clinical study rules. Please authenticate
             with an authorized clinical design token or consult your system
@@ -95,9 +111,24 @@
             <div
               v-for="rule in activeRules"
               :key="rule.id"
-              class="rule-card rule-card-item"
+              class="rule-card"
+              style="
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 16px;
+                margin-bottom: 12px;
+                background-color: var(--neutral-light);
+                transition: all 0.2s;
+              "
             >
-              <div class="rule-card-header">
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: flex-start;
+                  margin-bottom: 8px;
+                "
+              >
                 <strong
                   style="
                     color: var(--accent);
@@ -183,10 +214,10 @@
                   font-family: monospace;
                   font-size: 0.75rem;
                   color: #0284c7;
-                  background-color: rgb(240, 249, 255);
+                  background-color: #f0f9ff;
                   padding: 6px 10px;
                   border-radius: 4px;
-                  border: 1px solid rgb(224, 242, 254);
+                  border: 1px solid #e0f2fe;
                   word-break: break-all;
                 "
               >
@@ -234,14 +265,461 @@
             padding-right: 4px;
           "
         >
-          <!-- Reusable Rule Editor Widget -->
-          <div
-            class="rule-editor-wrapper"
-            @click="handleEditorClick"
-            @change="handleEditorChange"
-            @input="handleEditorInput"
-            v-html="ruleEditorHtml"
-          ></div>
+          <!-- Rule Type & Target definition -->
+          <fieldset
+            style="
+              border: 1px solid var(--border);
+              border-radius: 8px;
+              padding: 16px;
+            "
+          >
+            <legend
+              style="padding: 0 8px; font-weight: bold; color: var(--accent)"
+            >
+              Rule Type & Target Definition
+            </legend>
+
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+                margin-bottom: 16px;
+              "
+            >
+              <div class="form-group">
+                <label
+                  style="
+                    display: block;
+                    margin-bottom: 6px;
+                    font-weight: 600;
+                    font-size: 0.85rem;
+                  "
+                  >Rule Classification Type</label
+                >
+                <select
+                  v-model="ruleType"
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                  "
+                  @change="handleTypeChange"
+                >
+                  <option value="skip_logic">
+                    Skip Logic (Show/Hide fields)
+                  </option>
+                  <option value="constraint">
+                    Field Constraint (Single field query validation)
+                  </option>
+                  <option value="cross_form_check">
+                    Cross-Form / Longitudinal Check
+                  </option>
+                </select>
+              </div>
+
+              <div v-if="ruleType !== 'cross_form_check'" class="form-group">
+                <label
+                  style="
+                    display: block;
+                    margin-bottom: 6px;
+                    font-weight: 600;
+                    font-size: 0.85rem;
+                  "
+                  >Target Field</label
+                >
+                <select
+                  v-model="targetField"
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                  "
+                >
+                  <option value="">-- Select Target Field --</option>
+                  <option
+                    v-for="f in mockStudyFields"
+                    :key="f.id"
+                    :value="f.id"
+                  >
+                    {{ f.name }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <div
+              style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px"
+            >
+              <div v-if="ruleType === 'skip_logic'" class="form-group">
+                <label
+                  style="
+                    display: block;
+                    margin-bottom: 6px;
+                    font-weight: 600;
+                    font-size: 0.85rem;
+                  "
+                  >Action on Target</label
+                >
+                <select
+                  v-model="ruleAction"
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                  "
+                >
+                  <option value="show">Show target field</option>
+                  <option value="hide">Hide target field</option>
+                </select>
+              </div>
+
+              <div v-if="ruleType === 'skip_logic'" class="form-group">
+                <label
+                  style="
+                    display: block;
+                    margin-bottom: 6px;
+                    font-weight: 600;
+                    font-size: 0.85rem;
+                  "
+                  >Target Form (Optional)</label
+                >
+                <select
+                  v-model="targetForm"
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                  "
+                >
+                  <option value="">-- Select Target Form --</option>
+                  <option v-for="f in mockStudyForms" :key="f.id" :value="f.id">
+                    {{ f.name }}
+                  </option>
+                </select>
+              </div>
+
+              <div
+                v-if="ruleType !== 'skip_logic'"
+                class="form-group"
+                style="grid-column: span 2"
+              >
+                <label
+                  style="
+                    display: block;
+                    margin-bottom: 6px;
+                    font-weight: 600;
+                    font-size: 0.85rem;
+                  "
+                  >Auto-Query Discrepancy Message</label
+                >
+                <input
+                  v-model="queryMessage"
+                  type="text"
+                  placeholder="e.g., Systolic BP is out of logical range"
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                  "
+                />
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- Rule Conditions -->
+          <fieldset
+            style="
+              border: 1px solid var(--border);
+              border-radius: 8px;
+              padding: 16px;
+            "
+          >
+            <legend
+              style="padding: 0 8px; font-weight: bold; color: var(--accent)"
+            >
+              Rule Conditions (Logical Expression Tree)
+            </legend>
+
+            <div class="form-group" style="margin-bottom: 16px">
+              <label
+                style="
+                  display: block;
+                  margin-bottom: 6px;
+                  font-weight: 600;
+                  font-size: 0.85rem;
+                "
+                >Match Conditions Group Operator</label
+              >
+              <select
+                v-model="matchOperator"
+                style="
+                  padding: 6px;
+                  border: 1px solid var(--border);
+                  border-radius: 6px;
+                  font-size: 0.85rem;
+                "
+              >
+                <option value="and">All conditions must be met (AND)</option>
+                <option value="or">Any condition can be met (OR)</option>
+              </select>
+            </div>
+
+            <!-- Dynamic Conditions list -->
+            <div style="display: flex; flex-direction: column; gap: 12px">
+              <fieldset
+                v-for="(cond, index) in conditions"
+                :key="index"
+                style="
+                  border: 1px dashed var(--border);
+                  border-radius: 8px;
+                  padding: 12px;
+                  background-color: #fafbfd;
+                "
+              >
+                <legend
+                  style="
+                    font-size: 0.75rem;
+                    font-weight: bold;
+                    padding: 0 4px;
+                    color: var(--primary);
+                  "
+                >
+                  Condition Element #{{ index + 1 }}
+                </legend>
+
+                <div
+                  style="
+                    display: flex;
+                    gap: 8px;
+                    align-items: flex-end;
+                    flex-wrap: wrap;
+                  "
+                >
+                  <div class="form-group" style="flex: 1; min-width: 100px">
+                    <label
+                      style="
+                        font-size: 0.75rem;
+                        display: block;
+                        margin-bottom: 4px;
+                      "
+                      >Left Form</label
+                    >
+                    <select
+                      v-model="cond.formId"
+                      style="
+                        width: 100%;
+                        padding: 6px;
+                        font-size: 0.8rem;
+                        border-radius: 4px;
+                        border: 1px solid var(--border);
+                      "
+                    >
+                      <option value="">-- Select Form --</option>
+                      <option
+                        v-for="f in mockStudyForms"
+                        :key="f.id"
+                        :value="f.id"
+                      >
+                        {{ f.name }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="form-group" style="flex: 1; min-width: 100px">
+                    <label
+                      style="
+                        font-size: 0.75rem;
+                        display: block;
+                        margin-bottom: 4px;
+                      "
+                      >Left Field</label
+                    >
+                    <select
+                      v-model="cond.fieldId"
+                      style="
+                        width: 100%;
+                        padding: 6px;
+                        font-size: 0.8rem;
+                        border-radius: 4px;
+                        border: 1px solid var(--border);
+                      "
+                    >
+                      <option value="">-- Select Field --</option>
+                      <option
+                        v-for="f in mockStudyFields"
+                        :key="f.id"
+                        :value="f.id"
+                      >
+                        {{ f.name }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="form-group" style="flex: 1; min-width: 100px">
+                    <label
+                      style="
+                        font-size: 0.75rem;
+                        display: block;
+                        margin-bottom: 4px;
+                      "
+                      >Operator</label
+                    >
+                    <select
+                      v-model="cond.operator"
+                      style="
+                        width: 100%;
+                        padding: 6px;
+                        font-size: 0.8rem;
+                        border-radius: 4px;
+                        border: 1px solid var(--border);
+                      "
+                    >
+                      <option value="==">equals</option>
+                      <option value="!=">does not equal</option>
+                      <option value="<">is less than</option>
+                      <option value="<=">is less than or equal to</option>
+                      <option value=">">is greater than</option>
+                      <option value=">=">is greater than or equal to</option>
+                      <option value="is_empty">is empty</option>
+                      <option value="is_not_empty">is not empty</option>
+                    </select>
+                  </div>
+
+                  <div
+                    v-if="
+                      cond.operator !== 'is_empty' &&
+                      cond.operator !== 'is_not_empty'
+                    "
+                    class="form-group"
+                    style="flex: 1; min-width: 100px"
+                  >
+                    <label
+                      style="
+                        font-size: 0.75rem;
+                        display: block;
+                        margin-bottom: 4px;
+                      "
+                      >Right Value Type</label
+                    >
+                    <select
+                      v-model="cond.rightType"
+                      style="
+                        width: 100%;
+                        padding: 6px;
+                        font-size: 0.8rem;
+                        border-radius: 4px;
+                        border: 1px solid var(--border);
+                      "
+                    >
+                      <option value="constant">Constant Value</option>
+                      <option value="field_ref">Field Reference</option>
+                    </select>
+                  </div>
+
+                  <div
+                    v-if="
+                      cond.operator !== 'is_empty' &&
+                      cond.operator !== 'is_not_empty' &&
+                      cond.rightType === 'constant'
+                    "
+                    class="form-group"
+                    style="flex: 1; min-width: 100px"
+                  >
+                    <label
+                      style="
+                        font-size: 0.75rem;
+                        display: block;
+                        margin-bottom: 4px;
+                      "
+                      >Constant Value</label
+                    >
+                    <input
+                      v-model="cond.rightValue"
+                      type="text"
+                      placeholder="Value..."
+                      style="
+                        width: 100%;
+                        padding: 6px;
+                        font-size: 0.8rem;
+                        border-radius: 4px;
+                        border: 1px solid var(--border);
+                      "
+                    />
+                  </div>
+
+                  <div
+                    v-if="
+                      cond.operator !== 'is_empty' &&
+                      cond.operator !== 'is_not_empty' &&
+                      cond.rightType === 'field_ref'
+                    "
+                    class="form-group"
+                    style="flex: 1; min-width: 100px"
+                  >
+                    <label
+                      style="
+                        font-size: 0.75rem;
+                        display: block;
+                        margin-bottom: 4px;
+                      "
+                      >Right Field</label
+                    >
+                    <select
+                      v-model="cond.rightFieldId"
+                      style="
+                        width: 100%;
+                        padding: 6px;
+                        font-size: 0.8rem;
+                        border-radius: 4px;
+                        border: 1px solid var(--border);
+                      "
+                    >
+                      <option value="">-- Select Field --</option>
+                      <option
+                        v-for="f in mockStudyFields"
+                        :key="f.id"
+                        :value="f.id"
+                      >
+                        {{ f.name }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <button
+                    class="btn"
+                    style="
+                      background-color: var(--error);
+                      color: white;
+                      border: none;
+                      padding: 6px 12px;
+                      border-radius: 4px;
+                      cursor: pointer;
+                      font-size: 0.8rem;
+                    "
+                    @click="removeConditionRow(index)"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </fieldset>
+            </div>
+
+            <div style="margin-top: 12px">
+              <button
+                class="btn btn-secondary"
+                style="padding: 6px 12px; font-size: 0.8rem; cursor: pointer"
+                @click="addConditionRow"
+              >
+                ➕ Add Condition Row
+              </button>
+            </div>
+          </fieldset>
 
           <!-- Live Compilation & GxP Verification Preview -->
           <fieldset
@@ -258,7 +736,7 @@
             </legend>
             <div
               style="
-                background-color: rgb(241, 245, 249);
+                background-color: #f1f5f9;
                 padding: 12px;
                 border-radius: 8px;
                 font-family: monospace;
@@ -377,13 +855,6 @@ import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { apiClient } from "../api/apiClient";
 import ReasonModal from "../components/ReasonModal.vue";
-import {
-  createRuleEditorHTML,
-  serializeConditionsTree,
-  deserializeConditionsTree,
-  generateGatewaySignature,
-  generateCanonicalSignature,
-} from "ui";
 
 const rulesReasonOptions = [
   { value: "Initial Entry", text: "Initial Data Entry" },
@@ -452,115 +923,14 @@ const previewCircularCycles = ref([]);
 const showReasonModal = ref(false);
 const pendingAction = ref(null); // { type: 'save' | 'delete', ruleId?: string, payload?: any }
 
-// Reusable rule-builder widget reactive state bridge
-const ruleEditorHtml = computed(() => {
-  return createRuleEditorHTML(mockStudyForms, mockStudyFields, {
-    conditions: conditions.value,
-    matchOperator: matchOperator.value,
-    ruleType: ruleType.value,
-    targetField: targetField.value,
-    ruleAction: ruleAction.value,
-    targetForm: targetForm.value,
-    queryMessage: queryMessage.value,
-  });
-});
-
-async function getSignedGatewayHeaders(changeReason = "") {
-  const authStore = useAuthStore();
-  const userId = authStore.userId || "usr_dm_fderuiter";
-  const roles = authStore.normalizedRoles
-    ? authStore.normalizedRoles.join(",")
-    : "data_manager";
-  const timestamp = String(Math.floor(Date.now() / 1000));
-  const secret =
-    import.meta.env?.VITE_GATEWAY_SECRET || "internal-gateway-secret-12345";
-
-  const signature = await generateGatewaySignature(
-    userId,
-    roles,
-    timestamp,
-    "2",
-    changeReason,
-    secret
-  );
-
-  return {
-    "X-User-Id": userId,
-    "X-User-Roles": roles,
-    "X-Gateway-Timestamp": timestamp,
-    "X-Gateway-Signature": signature,
-    "X-Signature-Version": "2",
-    "X-Change-Reason": changeReason,
-  };
-}
-
-function handleEditorClick(e) {
-  const target = e.target;
-  const action = target.getAttribute("data-action");
-  const indexAttr = target.getAttribute("data-index");
-  const index = indexAttr !== null ? parseInt(indexAttr, 10) : null;
-
-  if (action === "add-condition") {
-    addConditionRow();
-  } else if (action === "remove-condition" && index !== null && !isNaN(index)) {
-    removeConditionRow(index);
-  }
-}
-
-function handleEditorChange(e) {
-  const target = e.target;
-  const indexAttr = target.getAttribute("data-index");
-  const index = indexAttr !== null ? parseInt(indexAttr, 10) : null;
-
-  if (target.classList.contains("rule-type-selector")) {
-    ruleType.value = target.value;
-    handleTypeChange();
-  } else if (target.classList.contains("target-field-selector")) {
-    targetField.value = target.value;
-  } else if (target.classList.contains("rule-action-selector")) {
-    ruleAction.value = target.value;
-  } else if (target.classList.contains("target-form-selector")) {
-    targetForm.value = target.value;
-  } else if (target.classList.contains("match-operator-selector")) {
-    matchOperator.value = target.value;
-  } else if (index !== null && !isNaN(index) && conditions.value[index]) {
-    if (target.classList.contains("cond-form")) {
-      conditions.value[index].formId = target.value;
-    } else if (target.classList.contains("cond-field")) {
-      conditions.value[index].fieldId = target.value;
-    } else if (target.classList.contains("cond-operator")) {
-      conditions.value[index].operator = target.value;
-    } else if (target.classList.contains("cond-right-type")) {
-      conditions.value[index].rightType = target.value;
-    } else if (target.classList.contains("cond-right-field")) {
-      conditions.value[index].rightFieldId = target.value;
-    }
-  }
-}
-
-function handleEditorInput(e) {
-  const target = e.target;
-  const indexAttr = target.getAttribute("data-index");
-  const index = indexAttr !== null ? parseInt(indexAttr, 10) : null;
-
-  if (target.classList.contains("query-message-input")) {
-    queryMessage.value = target.value;
-  } else if (index !== null && !isNaN(index) && conditions.value[index]) {
-    if (target.classList.contains("cond-right-value")) {
-      conditions.value[index].rightValue = target.value;
-    }
-  }
-}
-
 // Helper to construct signed headers
 // Fetch active rules from backend REST API
 async function fetchRules() {
   loadingRules.value = true;
   connectionError.value = false;
   try {
-    const signedHeaders = await getSignedGatewayHeaders("Fetch clinical rules");
     const response = await apiClient.get(`/api/v1/studies/study_1/rules`, {
-      headers: signedHeaders,
+      changeReason: "Fetch clinical rules",
     });
     activeRules.value = response;
   } catch (err) {
@@ -611,7 +981,66 @@ function handleTypeChange() {
 
 // Serialize vue forms to Pydantic Expression tree
 function serializeConditions() {
-  return serializeConditionsTree(conditions.value, matchOperator.value);
+  const operands = [];
+  conditions.value.forEach((cond) => {
+    if (!cond.fieldId) return; // Skip incomplete
+
+    const leftRef = {
+      type: "field_ref",
+      field_ref: {
+        field_id: cond.fieldId,
+        form_id: cond.formId || null,
+      },
+    };
+
+    if (cond.operator === "is_empty" || cond.operator === "is_not_empty") {
+      operands.push({
+        type: "function",
+        operator: cond.operator,
+        operands: [leftRef],
+      });
+    } else {
+      let rightNode;
+      if (cond.rightType === "constant") {
+        let val = cond.rightValue;
+        if (val === "true") val = true;
+        else if (val === "false") val = false;
+        else if (!isNaN(parseFloat(val))) val = parseFloat(val);
+
+        rightNode = {
+          type: "constant",
+          value: val,
+        };
+      } else {
+        rightNode = {
+          type: "field_ref",
+          field_ref: {
+            field_id: cond.rightFieldId || "",
+          },
+        };
+      }
+
+      operands.push({
+        type: "comparison",
+        operator: cond.operator,
+        operands: [leftRef, rightNode],
+      });
+    }
+  });
+
+  if (operands.length === 0) {
+    return { type: "constant", value: true };
+  }
+
+  if (operands.length === 1) {
+    return operands[0];
+  }
+
+  return {
+    type: "logical",
+    operator: matchOperator.value,
+    operands: operands,
+  };
 }
 
 // Dry-run preview REST API compilation
@@ -629,22 +1058,10 @@ async function triggerPreview() {
   };
 
   try {
-    const signedHeaders = await getSignedGatewayHeaders(
-      "Rule compilation preview"
-    );
-
-    try {
-      await apiClient.post(`/api/v1/studies/study_1/rules/validate`, payload, {
-        headers: signedHeaders,
-      });
-    } catch (vErr) {
-      console.warn("Live-validation endpoint returned errors:", vErr);
-    }
-
     const data = await apiClient.post(
       `/api/v1/studies/study_1/rules/preview`,
       payload,
-      { headers: signedHeaders }
+      { changeReason: "Rule compilation preview" }
     );
     previewXpath.value = data.xpath;
     previewFailures.value = data.failures || [];
@@ -714,6 +1131,34 @@ function traverseRefs(node) {
   return refs;
 }
 
+// Deserialize condition node back into local state
+function deserializeNode(node) {
+  if (node.type === "comparison") {
+    const left = node.operands[0];
+    const right = node.operands[1];
+    return {
+      formId: left.field_ref ? left.field_ref.form_id || "" : "",
+      fieldId: left.field_ref ? left.field_ref.field_id || "" : "",
+      operator: node.operator || "==",
+      rightType: right.type === "field_ref" ? "field_ref" : "constant",
+      rightValue: right.type === "constant" ? String(right.value) : "",
+      rightFieldId:
+        right.type === "field_ref" ? right.field_ref.field_id || "" : "",
+    };
+  } else if (node.type === "function") {
+    const left = node.operands[0];
+    return {
+      formId: left.field_ref ? left.field_ref.form_id || "" : "",
+      fieldId: left.field_ref ? left.field_ref.field_id || "" : "",
+      operator: node.operator || "is_empty",
+      rightType: "constant",
+      rightValue: "",
+      rightFieldId: "",
+    };
+  }
+  return null;
+}
+
 function openRuleEditor(rule = null) {
   if (rule) {
     editingRuleId.value = rule.id;
@@ -723,10 +1168,20 @@ function openRuleEditor(rule = null) {
     targetForm.value = rule.target_form || "";
     queryMessage.value = rule.query_message || "";
 
-    const deserialized = deserializeConditionsTree(rule.condition);
-    conditions.value = deserialized.conditions;
-    matchOperator.value = deserialized.matchOperator;
-
+    conditions.value = [];
+    if (rule.condition) {
+      const node = rule.condition;
+      if (node.type === "logical" && node.operands) {
+        matchOperator.value = node.operator || "and";
+        node.operands.forEach((operand) => {
+          const row = deserializeNode(operand);
+          if (row) conditions.value.push(row);
+        });
+      } else {
+        const row = deserializeNode(node);
+        if (row) conditions.value.push(row);
+      }
+    }
     if (conditions.value.length === 0) {
       addConditionRow();
     }
@@ -803,39 +1258,16 @@ async function confirmChangeReason(reasonText) {
         ? `/api/v1/studies/study_1/rules/${editingRuleId.value}`
         : `/api/v1/studies/study_1/rules`;
 
-      const signedHeaders = await getSignedGatewayHeaders(reasonText);
-
       let saved;
-      try {
-        if (isEdit) {
-          saved = await apiClient.put(url, action.payload, {
-            headers: signedHeaders,
-          });
-        } else {
-          saved = await apiClient.post(url, action.payload, {
-            headers: signedHeaders,
-          });
-        }
-      } catch (err) {
-        console.warn("Save API failed, falling back to local mock save:", err);
-        saved = {
-          id: isEdit
-            ? editingRuleId.value
-            : `rule_${Math.floor(Math.random() * 1000)}`,
-          type: action.payload.type,
-          target_field: action.payload.target_field,
-          target_form: action.payload.target_form,
-          action: action.payload.action,
-          query_message: action.payload.query_message,
-          condition: action.payload.condition,
-          compiled_xpath: previewXpath.value || "(Local fallback compiled)",
-        };
+      if (isEdit) {
+        saved = await apiClient.put(url, action.payload, {
+          changeReason: reasonText,
+        });
+      } else {
+        saved = await apiClient.post(url, action.payload, {
+          changeReason: reasonText,
+        });
       }
-
-      const canonicalSig = await generateCanonicalSignature(
-        action.payload,
-        "internal-ledger-signing-key-12345"
-      );
 
       // Sync verified record into compliance ledger
       await store.addLedgerBlock(
@@ -844,9 +1276,7 @@ async function confirmChangeReason(reasonText) {
           ruleId: saved.id,
           type: saved.type,
           xpath: saved.compiled_xpath || previewXpath.value,
-          signature: canonicalSig,
-          payload: action.payload,
-          headers: signedHeaders,
+          headers: {},
         },
         reasonText
       );
@@ -854,24 +1284,14 @@ async function confirmChangeReason(reasonText) {
       alert(`Rule successfully compiled and signed save verified!`);
     } else if (action.type === "delete") {
       const url = `/api/v1/studies/study_1/rules/${action.ruleId}`;
-      let signedHeaders;
-      try {
-        signedHeaders = await getSignedGatewayHeaders(reasonText);
-        await apiClient.delete(url, { headers: signedHeaders });
-      } catch (err) {
-        console.warn(
-          "Delete API failed, falling back to local mock delete:",
-          err
-        );
-        signedHeaders = {};
-      }
+      await apiClient.delete(url, { changeReason: reasonText });
 
       // Sync deletion block
       await store.addLedgerBlock(
         "RULE_DELETE",
         {
           ruleId: action.ruleId,
-          headers: signedHeaders,
+          headers: {},
         },
         reasonText
       );
@@ -915,49 +1335,5 @@ onMounted(async () => {
 .rule-card:hover {
   border-color: var(--accent) !important;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
-}
-
-.rules-gating-banner {
-  border-left: 4px solid var(--error);
-  background-color: var(--error-bg);
-  padding: 24px;
-}
-
-.rules-gating-content {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-}
-
-.rules-gating-icon {
-  font-size: 2rem;
-}
-
-.rules-gating-title {
-  color: var(--error);
-  font-weight: bold;
-  margin-bottom: 8px;
-}
-
-.rules-gating-text {
-  color: var(--neutral-dark);
-  font-size: 0.95rem;
-  line-height: 1.6;
-}
-
-.rule-card-item {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
-  background-color: var(--neutral-light);
-  transition: all 0.2s;
-}
-
-.rule-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 8px;
 }
 </style>

@@ -2820,12 +2820,8 @@ from apps.execution.routers.coding_schemas import (  # noqa: E402
     ImpactMetrics,
     JobStatusEnum,
     JobStatusResponse,
-    MedDRACodeMatch,
     MedDRACodingResult,
-    WHODrugATCContext,
-    WHODrugCodeMatch,
     WHODrugCodingResult,
-    WHODrugIngredientItem,
 )
 
 
@@ -3041,10 +3037,7 @@ async def get_meddra_code(
 
     Phase 17 / Epic #109 dictionary lookup endpoint.
     """
-    from apps.execution.coding.service import search_dictionary
-
-    if not term or not term.strip():
-        raise HTTPException(status_code=400, detail="Term must be a non-empty string.")
+    from apps.execution.coding import search_dictionary
 
     async with db_manager.get_session_maker()() as session:
         try:
@@ -3069,10 +3062,7 @@ async def get_whodrug_code(
 
     Phase 17 / Epic #109 drug dictionary lookup endpoint.
     """
-    from apps.execution.coding.service import search_dictionary
-
-    if not term or not term.strip():
-        raise HTTPException(status_code=400, detail="Term must be a non-empty string.")
+    from apps.execution.coding import search_dictionary
 
     async with db_manager.get_session_maker()() as session:
         try:
@@ -5364,12 +5354,17 @@ async def post_impact_analysis(
     from apps.execution.coding import trigger_impact_analysis
 
     async with db_manager.get_session_maker()() as session, session.begin():
-        metrics_dict = await trigger_impact_analysis(
-            session=session,
-            dictionary_type=payload.dictionary_type,
-            new_version=payload.new_version,
-            actor=current_user_id.get() or "system",
-        )
+        try:
+            metrics_dict = await trigger_impact_analysis(
+                session=session,
+                dictionary_type=payload.dictionary_type.value
+                if hasattr(payload.dictionary_type, "value")
+                else str(payload.dictionary_type),
+                new_version=payload.new_version,
+                actor=current_user_id.get() or "system",
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
         metrics = ImpactMetrics(
             unchanged=metrics_dict.get("unchanged", 0),
             reclassified=metrics_dict.get("reclassified", 0),
@@ -5398,18 +5393,16 @@ async def list_coding_assignments(
     """Lists and filters medical coding assignments."""
     from apps.execution.coding import (
         list_coding_assignments as list_assignments_service,
-        map_assignment_to_response,
     )
 
     async with db_manager.get_session_maker()() as session:
-        assignments = await list_assignments_service(
+        return await list_assignments_service(
             session=session,
             observation_id=observation_id,
             status=status,
             verbatim_text=verbatim_text,
             dictionary_type=dictionary_type,
         )
-        return [map_assignment_to_response(a) for a in assignments]
 
 
 @app.get(
@@ -5421,14 +5414,15 @@ async def get_coding_assignment(
     roles: list[str] = Depends(get_normalized_roles),
 ) -> CodingAssignmentResponse:
     """Retrieves a single medical coding assignment by ID."""
-    from apps.execution.coding import (
-        get_coding_assignment as get_assignment_service,
-        map_assignment_to_response,
-    )
+    from apps.execution.coding import get_coding_assignment as get_assignment_service
 
     async with db_manager.get_session_maker()() as session:
-        a = await get_assignment_service(session=session, assignment_id=assignment_id)
-        return map_assignment_to_response(a)
+        try:
+            return await get_assignment_service(
+                session=session, assignment_id=assignment_id
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=404, detail=str(e))
 
 
 @app.post(
@@ -5442,16 +5436,13 @@ async def process_coding_action(
     roles: list[str] = Depends(require_roles("data manager")),
 ) -> CodingAssignmentResponse:
     """Accepts a suggestion or submits a manual override, persisting results and updating the ledger."""
-    from apps.execution.coding import (
-        map_assignment_to_response,
-        process_coding_action as process_action_service,
-    )
+    from apps.execution.coding import process_coding_action as process_action_service
 
     actor = current_user_id.get() or "system"
     async with db_manager.get_session_maker()() as session:
-        try:
-            async with session.begin():
-                as_db = await process_action_service(
+        async with session.begin():
+            try:
+                return await process_action_service(
                     session=session,
                     assignment_id=assignment_id,
                     action=payload.action,
@@ -5461,9 +5452,10 @@ async def process_coding_action(
                     reason_for_change=payload.reason_for_change,
                     actor=actor,
                 )
-            return map_assignment_to_response(as_db)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            except ValueError as e:
+                if "not found" in str(e).lower() or "deleted" in str(e).lower():
+                    raise HTTPException(status_code=404, detail=str(e))
+                raise HTTPException(status_code=400, detail=str(e))
 
 
 # ==========================================

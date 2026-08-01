@@ -10,8 +10,6 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
-- [2026-07-31: Standardize GxP Audit Fields Across Execution Lab ORM Models](2026-07-31-standardize-gxp-audit-fields-across-execution-lab-orm-models.md)
-- [2026-07-31: Visual Condition Expression Builder and AST Converter Utilities in Shared UI Package](2026-07-31-visual-condition-expression-builder-and-ast-converter-utilities-in-shared-ui-package.md)
 - [2026-07-31: Modernize Python 3.10 Type Hint Syntax and Lock Ruff Rule Enforcements](2026-07-31-modernize-python-310-type-hint-syntax-and-lock-ruff-rule-enforcements.md)
 - [2026-07-31: Lab Master Catalog and Unit Conversion Data Models](2026-07-31-lab-master-catalog-and-unit-conversion-data-models.md)
 - [2026-07-31: On-Demand Consent Status Validation and Audit Hooks](2026-07-31-on-demand-consent-status-validation-and-audit-hooks.md)
