@@ -110,7 +110,12 @@ export {
  * @param {Object} [initialData={}] - Optional initial values.
  * @returns {string} Accessible HTML string.
  */
-export function createConditionRowHTML(index, forms = [], fields = [], initialData = {}) {
+export function createConditionRowHTML(
+  index,
+  forms = [],
+  fields = [],
+  initialData = {}
+) {
   const formOptions = forms
     .map(
       (f) =>
@@ -196,7 +201,11 @@ export function createConditionRowHTML(index, forms = [], fields = [], initialDa
  * @param {Object} [initialRule={}] - Rule configuration data.
  * @returns {string} Accessible HTML markup string.
  */
-export function createRuleEditorHTML(forms = [], fields = [], initialRule = {}) {
+export function createRuleEditorHTML(
+  forms = [],
+  fields = [],
+  initialRule = {}
+) {
   const ruleTypeOptions = [
     { value: "skip_logic", label: "Skip Logic (Field Visibility)" },
     { value: "constraint", label: "Field Constraint Check" },
@@ -235,7 +244,7 @@ export function createRuleEditorHTML(forms = [], fields = [], initialRule = {}) 
       </div>
       <div style="grid-column: span 12;">
         <label for="query-message-input">Query Message</label>
-        <input id="query-message-input" type="text" class="query-message-input" value="${initialRule.queryMessage || ''}" placeholder="Discrepancy query explanation message..." style="width: 100%; padding: 6px;" />
+        <input id="query-message-input" type="text" class="query-message-input" value="${initialRule.queryMessage || ""}" placeholder="Discrepancy query explanation message..." style="width: 100%; padding: 6px;" />
       </div>
     </div>
     <h4>Condition Elements</h4>
@@ -251,7 +260,10 @@ export function createRuleEditorHTML(forms = [], fields = [], initialRule = {}) 
  * @param {string} matchOperator - "and" or "or".
  * @returns {Object} Pydantic-compatible condition AST.
  */
-export function serializeConditionsTree(conditions = [], matchOperator = "and") {
+export function serializeConditionsTree(
+  conditions = [],
+  matchOperator = "and"
+) {
   const validConditions = conditions.filter((c) => c && c.fieldId);
   const operands = [];
 
