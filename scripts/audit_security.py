@@ -62,6 +62,7 @@ def scan_file_for_secrets(filepath: str) -> list[str]:
                 or "os.environ" in line
                 or "# nosec" in line
                 or "mock" in line.lower()
+                or "pragma: allowlist" in line.lower()
             ):
                 continue
 
