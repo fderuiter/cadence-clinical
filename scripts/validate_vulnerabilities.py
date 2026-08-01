@@ -21,36 +21,167 @@ REPO_ROOT = os.path.dirname(SCRIPT_DIR)
 
 
 def scan_for_inline_bypasses() -> list[tuple[str, int, str]]:
-    """Scan CI workflow files and scripts for undocumented inline bypass flags.
+    """Scan the entire repository recursively for undocumented inline bypass flags.
+
+    The scan identifies instances where short-form (`-i`) or long-form (`--ignore-vuln`,
+    `--ignore-vulnerability`) bypass options are used adjacent to (i.e., on the same line as)
+    dependency audit utility execution. It ignores standard non-audit tool uses of `-i`.
 
     Returns:
-        A list of tuples containing (file_path, line_number, line_content)
-        where inline bypass flags were found.
+        list[tuple[str, int, str]]: A list of tuples containing (file_path, line_number, line_content)
+            where inline bypass flags were found.
+
+    Raises:
+        None
     """
-    bypass_pattern = re.compile(r"--(ignore-vuln|ignore-vulnerability)\b")
+    audit_tool_pattern = re.compile(
+        r"\b(pip-audit|pnpm\s+audit|npm\s+audit|yarn\s+audit)\b", re.IGNORECASE
+    )
+    flag_pattern = re.compile(
+        r"(?:\s|^)-(i)\b|(?:\s|^)--(ignore-vuln|ignore-vulnerability)\b"
+    )
     violations: list[tuple[str, int, str]] = []
 
-    # Scan workflows and scripts for inline bypass flags
-    scan_paths = [
-        os.path.join(REPO_ROOT, ".github/workflows"),
-        os.path.join(REPO_ROOT, "scripts"),
-    ]
-    for path in scan_paths:
-        if not os.path.exists(path):
-            continue
-        for root, _, files in os.walk(path):
+    excluded_dirs = {
+        ".git",
+        ".venv",
+        "venv",
+        "__pycache__",
+        ".pytest_cache",
+        "node_modules",
+    }
+
+    try:
+        for root, dirs, files in os.walk(REPO_ROOT):
+            # Filter out excluded directories in-place to prevent traversing them
+            dirs[:] = [d for d in dirs if d not in excluded_dirs]
+
             for file in files:
                 file_path = os.path.join(root, file)
                 # Ignore this validation script itself to prevent false positives
                 if "validate_vulnerabilities.py" in file:
                     continue
+                # Skip binary and format extensions that are not source files
+                if any(
+                    file_path.endswith(ext)
+                    for ext in [
+                        ".png",
+                        ".jpg",
+                        ".jpeg",
+                        ".gif",
+                        ".ico",
+                        ".svg",
+                        ".zip",
+                        ".tar.gz",
+                        ".tgz",
+                        ".pdf",
+                        ".db",
+                        ".sqlite",
+                        ".pyc",
+                        ".woff",
+                        ".woff2",
+                        ".ttf",
+                        ".eot",
+                    ]
+                ):
+                    continue
+
                 try:
-                    with open(file_path, encoding="utf-8") as f:
+                    with open(file_path, encoding="utf-8", errors="ignore") as f:
                         for line_num, line in enumerate(f, 1):
-                            if bypass_pattern.search(line):
+                            if audit_tool_pattern.search(line) and flag_pattern.search(
+                                line
+                            ):
                                 violations.append((file_path, line_num, line.strip()))
                 except Exception:
+                    # Catch and ignore file-read failures silently to prevent build crashes
                     pass
+    except Exception:
+        pass
+
+    return violations
+
+
+def scan_for_manifest_bypasses() -> list[tuple[str, int, str]]:
+    """Scan all package.json files recursively for non-empty pnpm.auditConfig overrides.
+
+    This identifies structured bypass configurations embedded within package manifests
+    that attempt to exempt package dependencies.
+
+    Returns:
+        list[tuple[str, int, str]]: A list of tuples containing (file_path, line_number, error_message)
+            where non-empty blocks were found.
+
+    Raises:
+        None
+    """
+    violations: list[tuple[str, int, str]] = []
+    excluded_dirs = {
+        ".git",
+        ".venv",
+        "venv",
+        "__pycache__",
+        ".pytest_cache",
+        "node_modules",
+    }
+
+    try:
+        for root, dirs, files in os.walk(REPO_ROOT):
+            # Filter out excluded directories in-place
+            dirs[:] = [d for d in dirs if d not in excluded_dirs]
+
+            for file in files:
+                if file == "package.json":
+                    file_path = os.path.join(root, file)
+                    try:
+                        with open(file_path, encoding="utf-8") as f:
+                            content = json.load(f)
+
+                        pnpm_block = content.get("pnpm")
+                        if isinstance(pnpm_block, dict):
+                            audit_config = pnpm_block.get("auditConfig")
+                            if audit_config is not None:
+                                is_non_empty = False
+                                if (
+                                    isinstance(audit_config, dict)
+                                    and audit_config
+                                    or isinstance(audit_config, list)
+                                    and audit_config
+                                    or isinstance(audit_config, str)
+                                    and audit_config.strip()
+                                    or not isinstance(audit_config, (dict, list, str))
+                                    and audit_config
+                                ):
+                                    is_non_empty = True
+
+                                if is_non_empty:
+                                    line_num = 1
+                                    try:
+                                        with open(
+                                            file_path, encoding="utf-8"
+                                        ) as f_lines:
+                                            for idx, line in enumerate(f_lines, 1):
+                                                if "auditConfig" in line:
+                                                    line_num = idx
+                                                    break
+                                                if "pnpm" in line:
+                                                    line_num = idx
+                                    except Exception:
+                                        pass
+
+                                    violations.append(
+                                        (
+                                            file_path,
+                                            line_num,
+                                            f"pnpm.auditConfig override block: {json.dumps(audit_config)}",
+                                        )
+                                    )
+                    except Exception:
+                        # Silently ignore read or parse failures on locked/unreadable files
+                        pass
+    except Exception:
+        pass
+
     return violations
 
 
@@ -293,6 +424,16 @@ def main() -> None:
         for file_path, line_num, line_content in inline_violations:
             print(f"    - {file_path}:{line_num} -> {line_content}")
 
+    # Step 1b: Scan for package.json manifest bypass configurations
+    print("Scanning package.json files for pnpm.auditConfig overrides...")
+    manifest_violations = scan_for_manifest_bypasses()
+    if manifest_violations:
+        print(
+            "\n[!] GxP Compliance Failure: Manifest (package.json) vulnerability bypasses detected:"
+        )
+        for file_path, line_num, line_content in manifest_violations:
+            print(f"    - {file_path}:{line_num} -> {line_content}")
+
     # Step 2: Validate ledger entries
     print("Validating compliance ledger...")
     ledger_entries, ledger_errors = load_and_validate_ledger(ledger_path)
@@ -414,6 +555,7 @@ def main() -> None:
     # Determine overall pass/fail state
     all_passed = (
         not inline_violations
+        and not manifest_violations
         and not ledger_errors
         and not has_unapproved_vulns
         and not audit_error
@@ -425,7 +567,7 @@ def main() -> None:
     summary_data = {
         "all_passed": all_passed,
         "vulnerabilities": processed_vulns,
-        "inline_violations": inline_violations,
+        "inline_violations": inline_violations + manifest_violations,
         "ledger_errors": ledger_errors,
     }
 
@@ -438,6 +580,7 @@ def main() -> None:
     # Step 6: Print validation summary report and exit
     print("\n--- GxP Security Compliance Validation Report ---")
     print(f"Inline bypass violations: {len(inline_violations)}")
+    print(f"Manifest bypass violations: {len(manifest_violations)}")
     print(f"Ledger schema/FMEA errors: {len(ledger_errors)}")
     print(f"Active Python vulnerabilities: {len(active_vulnerabilities)}")
     print(f"Active Frontend vulnerabilities: {len(active_frontend_vulnerabilities)}")

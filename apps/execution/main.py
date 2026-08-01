@@ -2597,6 +2597,7 @@ async def update_lab_range(
             r.critical_low = merged_data["critical_low"]
             r.critical_high = merged_data["critical_high"]
             await session.flush()
+            lab_range_cache.invalidate(r.study_id, r.test_code)
 
         return LabReferenceRangeResponse(
             id=r.id,
@@ -2643,6 +2644,7 @@ async def delete_lab_range(
 
             r.is_deleted = True
             await session.flush()
+            lab_range_cache.invalidate(r.study_id, r.test_code)
 
         return LabReferenceRangeResponse(
             id=r.id,
