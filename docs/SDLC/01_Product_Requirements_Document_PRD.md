@@ -678,6 +678,13 @@ To coordinate and track site monitoring, CRA allocations, recruitment progressio
 
 ---
 
+
+### 7.5 Laboratory Reference Range & Master Catalog Management
+To coordinate, track, and standardize laboratory reference range specifications, unit conversions, and master catalog mappings.
+
+#### PRD-LAB-001: Laboratory Reference Models and Validation Runs
+* The system must standardize laboratory reference models and map them to their corresponding verification runs.
+
 ## 8. Definition of Done (DoD) & Bi-directional Traceability
 
 This Product Requirements Document represents the definitive, legally compliant system configuration for Cadence Clinical. To satisfy the Definition of Done (DoD) for GxP system validation:

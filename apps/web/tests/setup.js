@@ -3,6 +3,14 @@ import axe from "axe-core";
 
 // Define the custom async matcher toBeAccessible
 expect.extend({
+  /**
+   * Asserts that a standard DOM Element, raw HTML string, or Vue test wrapper is WCAG accessible.
+   * Runs an asynchronous accessibility audit using axe-core and reports violations clearly.
+   *
+   * @param {Element|string|Object} received - The target DOM Element, raw HTML string, or Vue Wrapper.
+   * @param {Object} [customOptions={}] - Optional options to override the default rules and configuration.
+   * @returns {Promise<{pass: boolean, message: function}>} Result indicating pass/fail status and description.
+   */
   async toBeAccessible(received, customOptions = {}) {
     let element = received;
     let wrapperToCleanup = null;
