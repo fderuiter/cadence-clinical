@@ -209,7 +209,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "eisf_document": {"create", "read", "update", "delete", "sync"},
         # Medical Coding
         "medical_coding": {"create", "read", "update"},
-        "lab_range": {"create", "read", "update", "delete"},
+        "lab_range": {"create", "read", "update", "delete", "alert"},
     },
     ROLE_SPONSOR_DESIGNER: {
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
@@ -305,7 +305,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "eisf_document": {"create", "read", "update", "delete", "sync"},
         # Medical Coding
         "medical_coding": {"create", "read", "update"},
-        "lab_range": {"create", "read", "update", "delete"},
+        "lab_range": {"create", "read", "update", "delete", "alert"},
     },
     ROLE_SPONSOR_MM: {
         "study_design": {"read"},
@@ -336,7 +336,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "update",
         },  # 'Ans' (Answer query) maps to update/read
         "sdv": {"read"},
-        "lab_range": {"read"},
+        "lab_range": {"read", "alert"},
         "system_audit_logs": {"read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},
@@ -363,7 +363,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "update",
         },  # 'C/R/U (Draft)' maps to create/read/update
         "query_lifecycle": {"read", "update"},  # 'Ans' maps to update/read
-        "lab_range": {"read"},
+        "lab_range": {"read", "alert"},
         "system_audit_logs": {"read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},
@@ -408,7 +408,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "eisf_document": {"create", "read", "update", "delete", "sync"},
         # Medical Coding
         "medical_coding": {"read"},
-        "lab_range": {"create", "read", "update", "delete"},
+        "lab_range": {"create", "read", "update", "delete", "alert"},
     },
     "monitor": {
         "study_design": {"read"},
@@ -431,7 +431,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "quality_event": {"create", "read", "update"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
-        "lab_range": {"create", "read", "update", "delete"},
+        "lab_range": {"create", "read", "update", "delete", "alert"},
     },
     ROLE_SUBJECT: {
         "ecrf_data_entry": {"create", "update"},  # 'Diary' maps to create/update
@@ -561,7 +561,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "quality_audit_logs": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
-        "lab_range": {"create", "read", "update", "delete"},
+        "lab_range": {"create", "read", "update", "delete", "alert"},
     },
     "quality_manager": {
         "quality_event": {"create", "read", "update", "delete", "investigate"},
@@ -1190,6 +1190,55 @@ def require_permission(permission: str) -> Callable[[Principal], Principal]:
         return principal
 
     return dependency
+
+
+class StudyScopeChecker:
+    async def __call__(
+        self, request: Request, principal: Principal = Depends(get_principal)
+    ) -> Principal:
+        study_id = (
+            request.path_params.get("study_id")
+            or request.query_params.get("study_id")
+            or request.headers.get("X-Study-Id")
+            or request.headers.get("x-study-id")
+        )
+        if not study_id:
+            try:
+                content_type = request.headers.get("content-type", "")
+                if "application/json" in content_type:
+                    body_bytes = await request.body()
+                    if body_bytes:
+                        import json
+
+                        body = json.loads(body_bytes)
+                        if isinstance(body, dict):
+                            study_id = body.get("study_id") or body.get("id")
+
+                        async def receive():
+                            return {
+                                "type": "http.request",
+                                "body": body_bytes,
+                                "more_body": False,
+                            }
+
+                        request._receive = receive
+            except Exception:
+                pass
+
+        if study_id:
+            study_id = str(study_id).strip()
+
+        if study_id and not can_access_study(principal, study_id):
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: Insufficient scope access for this study.",
+            )
+
+        return principal
+
+
+def require_study_scope() -> StudyScopeChecker:
+    return StudyScopeChecker()
 
 
 def mask_payload(payload: Any, principal: Principal) -> Any:

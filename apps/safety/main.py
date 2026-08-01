@@ -1,11 +1,3 @@
-"""
-Safety & Pharmacovigilance Gateway Microservice.
-
-Scaffold and Gateway Integration (Phase 6).
-Provides secure E2B(R3) export and transmission endpoints, local persistence,
-and 21 CFR Part 11 compliant auditing.
-"""
-
 import copy
 import logging
 import os

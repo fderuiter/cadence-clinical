@@ -328,6 +328,9 @@ async def run_reconciliation(
     4. Invokes the pure comparison function.
     5. Persists the run + discrepancy records in Safety datastore.
     6. Returns the persisted run and discrepancy summaries.
+
+    Phase 7 Compliance: Ensures robust, secure automated alignment between EDC
+    observations and safety case records (PRD-SYS-001 / Trace-14).
     """
     exec_client = ExecutionClient()
     adapter = SafetyDatabaseAdapter(client=client)

@@ -121,7 +121,6 @@ export function createConditionRowHTML(
     rightFormId: "",
     ...initialData,
   };
-
   const formOptions = forms
     .map(
       (f) =>
@@ -287,7 +286,7 @@ export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
     .join("\n");
 
   return `
-    <div class="rule-editor-container" style="display: flex; flex-direction: column; gap: 16px;">
+    <div class="rule-editor-container" data-deid-ignore="deid-ignore" style="display: flex; flex-direction: column; gap: 16px;">
       <!-- Rule Type & Target definition -->
       <fieldset style="border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
         <legend style="padding: 0 8px; font-weight: bold; color: var(--accent);">Rule Type & Target Definition</legend>

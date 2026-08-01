@@ -1,10 +1,3 @@
-"""
-Safety Microservice Database Models (Phase 6).
-
-Defines persisted safety cases, export jobs, and immutable safety audit logs
-for 21 CFR Part 11 compliance.
-"""
-
 import uuid
 from datetime import datetime
 from typing import Any, Optional
