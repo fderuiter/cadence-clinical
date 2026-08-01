@@ -16,7 +16,7 @@ def test_live_db_halt_when_postgres_unreachable():
     env["USE_LIVE_DB"] = "true"
     # Point DATABASE_URL to an invalid port to simulate unreachable DB
     env["TEST_DATABASE_URL"] = (
-        "postgresql+asyncpg://cadence:cadence_password@localhost:5999/cadence_edc"
+        "postgresql+asyncpg://cadence:cadence_password@localhost:5999/cadence_edc"  # pragma: allowlist secret
     )
 
     res = subprocess.run(
