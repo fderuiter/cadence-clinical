@@ -49,6 +49,7 @@ def scan_for_inline_bypasses() -> list[tuple[str, int, str]]:
         "__pycache__",
         ".pytest_cache",
         "node_modules",
+        "tests",
     }
 
     try:
@@ -123,6 +124,7 @@ def scan_for_manifest_bypasses() -> list[tuple[str, int, str]]:
         "__pycache__",
         ".pytest_cache",
         "node_modules",
+        "tests",
     }
 
     try:
