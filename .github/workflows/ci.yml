@@ -78,10 +78,10 @@ jobs:
         if: always()
         run: python3 scripts/validate_adrs.py
 
-      - name: Run custom markdown validation
-        id: run_markdown
+      - name: Run documentation compilation
+        id: run_docs_build
         if: always()
-        run: python3 scripts/validate_markdown.py
+        run: pnpm docs:build
 
       - name: Run Requirements Traceability Validation
         id: run_traceability
