@@ -9,13 +9,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1929
-- **Passed:** 1929 🟢
-- **Total Automated Test Cases Run:** 1947
-- **Passed:** 1947 🟢
-- **Failed/Errors:** 0 🔴
+- **Total Automated Test Cases Run:** 1950
+- **Passed:** 1949 🟢
+- **Failed/Errors:** 1 🔴
 - **Skipped:** 0 ⚪
-- **Overall Operational Pass Rate:** 100.00%
+- **Overall Operational Pass Rate:** 99.95%
 
 ## 2. Installation Qualification (IQ)
 
@@ -23,7 +21,7 @@ The Installation Qualification verifies that the software execution environment,
 
 ### 2.1 System Environment Metadata
 - **Operating System / Platform:** linux (containerized target specification)
-- **Python Version:** 3.12.13 (Docker execution environment baseline)
+- **Python Version:** 3.12.12 (Docker execution environment baseline)
 - **Database Provider (Execution Engine):** PostgreSQL / SQLite in-memory fallback
 - **Graph Database Provider (Designer Engine):** Neo4j (mocked in unit suite)
 - **Identity Management Gateway:** Keycloak OIDC Router
@@ -1456,7 +1454,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_render_protocol_to_docx_gated_synopsis_only` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sanitize_filename` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_template_immutability` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_rendered_protocol_narrative_completeness` | `tests.test_protocol_narrative` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rendered_protocol_narrative_completeness` | `tests.test_protocol_narrative` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_synopsis_endpoint_end_to_end_flow` | `tests.test_protocol_narrative` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_metadata_invalid_version` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_metadata_missing_change_reason_on_version_bump` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
