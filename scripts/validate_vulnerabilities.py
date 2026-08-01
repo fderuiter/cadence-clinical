@@ -406,9 +406,13 @@ def main() -> None:
                 }
             )
         else:
-            matching_ids = [e for e in ledger_entries if e.get("vulnerability_id") == v_id]
+            matching_ids = [
+                e for e in ledger_entries if e.get("vulnerability_id") == v_id
+            ]
             if matching_ids:
-                exempted_packages = ", ".join(repr(e.get("package_name", "")) for e in matching_ids)
+                exempted_packages = ", ".join(
+                    repr(e.get("package_name", "")) for e in matching_ids
+                )
                 print(
                     f"[❌] {source_type} vulnerability {v_id} found in ledger, but exemption only applies to package(s): {exempted_packages}. "
                     f"It does not apply to active package: '{pkg}'. Blocked from automatic progression."
