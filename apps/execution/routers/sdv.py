@@ -12,7 +12,6 @@ from execution.sdv_transport_models import (
     BulkQueryGenerationResponse,
     BulkSdvSignOffRequest,
     BulkSdvSignOffResponse,
-    QueryTargetDescriptor,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field, model_validator
@@ -30,11 +29,10 @@ from apps.execution.database.models import (
 )
 from apps.execution.notifications_client import publish_notification
 from apps.execution.rtsm_authz import verify_site_access
-from apps.execution.trial_lock import TrialLockManager
-from packages.security import run_async
-from packages.security.signature_builder import CryptographicSignatureBuilder
 from apps.execution.sdv_helper import validate_and_upsert_sdv_target
+from apps.execution.trial_lock import TrialLockManager
 from apps.execution.tsdv import evaluate_tsdv_requirement
+from packages.security import run_async
 from packages.security.rbac import (
     ROLE_CRA,
     ROLE_DATA_MANAGER,
@@ -44,6 +42,7 @@ from packages.security.rbac import (
     require_permission,
     require_roles,
 )
+from packages.security.signature_builder import CryptographicSignatureBuilder
 
 router = APIRouter(prefix="/api/v1/execution", tags=["SDV/TSDV"])
 
@@ -562,7 +561,7 @@ async def bulk_sdv_signoff(
                         }
                     )
                     continue
-                elif payload.scope == "VISIT" and tid not in visit_map:
+                if payload.scope == "VISIT" and tid not in visit_map:
                     skipped_target_ids.append(tid)
                     skipped_targets_info.append(
                         {
@@ -571,7 +570,7 @@ async def bulk_sdv_signoff(
                         }
                     )
                     continue
-                elif payload.scope == "PAGE" and tid not in existing_pages:
+                if payload.scope == "PAGE" and tid not in existing_pages:
                     skipped_target_ids.append(tid)
                     skipped_targets_info.append(
                         {
