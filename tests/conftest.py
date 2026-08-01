@@ -101,7 +101,7 @@ async def drop_databases_async(worker_suffix: str):
 
 def run_sync(coro):
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
     except RuntimeError:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
