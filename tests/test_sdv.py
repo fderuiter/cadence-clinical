@@ -15,10 +15,10 @@ from apps.execution.database.models import (
     AuditLog,
     Base,
     ClinicalObservation,
-    ClinicalQuery,
     ClinicalSubject,
     ClinicalVisit,
     SDVSignOff,
+    ClinicalQuery,
 )
 from apps.execution.main import app
 from apps.execution.trial_lock import TrialLockManager
@@ -1098,13 +1098,11 @@ async def test_bulk_query_generation_happy_path_and_deduplication():
                 "domain": "VS",
                 "test_code": "DIABP",
                 "explanation": "Subject does not exist.",
-            },
-        ],
+            }
+        ]
     }
 
-    headers = get_v2_auth_headers(
-        roles="CRA", change_reason="Bulk Query Generation Test"
-    )
+    headers = get_v2_auth_headers(roles="CRA", change_reason="Bulk Query Generation Test")
 
     mock_publish = AsyncMock(return_value=True)
     with patch("apps.execution.routers.sdv.publish_notification", mock_publish):
@@ -1169,7 +1167,7 @@ async def test_bulk_query_generation_rbac_and_locks():
                 "test_code": "SYSBP",
                 "explanation": "Systolic check.",
             }
-        ],
+        ]
     }
 
     # Case 1: Non-CRA / Non-monitor role must be forbidden (403)

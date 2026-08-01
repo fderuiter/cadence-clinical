@@ -960,6 +960,17 @@ class LabReferenceRange(AuditedModel):
     low_bound = synonym("range_low")
     high_bound = synonym("range_high")
 
+    created_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), nullable=True
+    )
+    created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    reason_for_change: Mapped[Optional[str]] = mapped_column(
+        String(1000), nullable=True
+    )
+    version_index: Mapped[Optional[int]] = mapped_column(
+        Integer, default=1, nullable=True
+    )
+
 
 class LabTestMasterLegacy(AuditedModel):
     """Represents the legacy lab test master catalog.
@@ -1032,7 +1043,9 @@ class LabUnitConversion(AuditedModel):
     reason_for_change: Mapped[Optional[str]] = mapped_column(
         String(1000), nullable=True
     )
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    version_index: Mapped[Optional[int]] = mapped_column(
+        Integer, default=1, nullable=True
+    )
 
 
 class LabTestMaster(AuditedModel):

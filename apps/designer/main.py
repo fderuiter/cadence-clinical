@@ -1633,7 +1633,6 @@ async def promote_ingestion_candidate(
         Depends(require_permission("study_design:delete")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def retire_arm_endpoint(
     study_id: str,
@@ -1654,12 +1653,6 @@ async def retire_arm_endpoint(
             entity_id=arm_id,
             entity_type="arms",
         )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return SoAEntityCreatedResponse(id=arm_id)
@@ -1672,7 +1665,6 @@ async def retire_arm_endpoint(
         Depends(require_permission("study_design:delete")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def retire_epoch_endpoint(
     study_id: str,
@@ -1693,12 +1685,6 @@ async def retire_epoch_endpoint(
             entity_id=epoch_id,
             entity_type="epochs",
         )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return SoAEntityCreatedResponse(id=epoch_id)
@@ -1711,7 +1697,6 @@ async def retire_epoch_endpoint(
         Depends(require_permission("study_design:delete")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def retire_visit_endpoint(
     study_id: str,
@@ -1732,12 +1717,6 @@ async def retire_visit_endpoint(
             entity_id=visit_id,
             entity_type="visits",
         )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return SoAEntityCreatedResponse(id=visit_id)
@@ -1750,7 +1729,6 @@ async def retire_visit_endpoint(
         Depends(require_permission("study_design:delete")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def retire_procedure_endpoint(
     study_id: str,
@@ -1771,12 +1749,6 @@ async def retire_procedure_endpoint(
             entity_id=procedure_id,
             entity_type="procedures",
         )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return SoAEntityCreatedResponse(id=procedure_id)
@@ -1789,7 +1761,6 @@ async def retire_procedure_endpoint(
         Depends(require_permission("study_design:delete")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def retire_timing_window_endpoint(
     study_id: str,
@@ -1810,12 +1781,6 @@ async def retire_timing_window_endpoint(
             entity_id=timing_id,
             entity_type="timing_windows",
         )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return SoAEntityCreatedResponse(id=timing_id)
@@ -1828,7 +1793,6 @@ async def retire_timing_window_endpoint(
         Depends(require_permission("study_design:delete")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def retire_epoch_visit_endpoint(
     study_id: str,
@@ -1840,25 +1804,16 @@ async def retire_epoch_visit_endpoint(
     user_id = getattr(request.state, "user_id", "system")
     change_reason = resolve_change_reason(request, None)
 
-    try:
-        success = await retire_epoch_visit_link(
-            driver=driver,
-            study_version_id=version_id,
-            user_id=user_id,
-            change_reason=change_reason,
-            epoch_id=payload.epoch_id,
-            visit_id=payload.visit_id,
-        )
-        if not success:
-            raise HTTPException(
-                status_code=400, detail="Failed to retire epoch-visit link"
-            )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
+    success = await retire_epoch_visit_link(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        epoch_id=payload.epoch_id,
+        visit_id=payload.visit_id,
+    )
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to retire epoch-visit link")
     return SoALinkResponse()
 
 
@@ -1869,7 +1824,6 @@ async def retire_epoch_visit_endpoint(
         Depends(require_permission("study_design:delete")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def retire_visit_procedure_endpoint(
     study_id: str,
@@ -1881,25 +1835,18 @@ async def retire_visit_procedure_endpoint(
     user_id = getattr(request.state, "user_id", "system")
     change_reason = resolve_change_reason(request, None)
 
-    try:
-        success = await retire_visit_procedure_link(
-            driver=driver,
-            study_version_id=version_id,
-            user_id=user_id,
-            change_reason=change_reason,
-            visit_id=payload.visit_id,
-            procedure_id=payload.procedure_id,
+    success = await retire_visit_procedure_link(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        visit_id=payload.visit_id,
+        procedure_id=payload.procedure_id,
+    )
+    if not success:
+        raise HTTPException(
+            status_code=400, detail="Failed to retire visit-procedure link"
         )
-        if not success:
-            raise HTTPException(
-                status_code=400, detail="Failed to retire visit-procedure link"
-            )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
     return SoALinkResponse()
 
 
@@ -1910,7 +1857,6 @@ async def retire_visit_procedure_endpoint(
         Depends(require_permission("study_design:delete")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def retire_timing_endpoint(
     study_id: str,
@@ -1922,26 +1868,19 @@ async def retire_timing_endpoint(
     user_id = getattr(request.state, "user_id", "system")
     change_reason = resolve_change_reason(request, None)
 
-    try:
-        success = await retire_timing_link(
-            driver=driver,
-            study_version_id=version_id,
-            user_id=user_id,
-            change_reason=change_reason,
-            source_id=payload.source_id,
-            timing_id=payload.timing_id,
-            source_type=payload.source_type,
+    success = await retire_timing_link(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        source_id=payload.source_id,
+        timing_id=payload.timing_id,
+        source_type=payload.source_type,
+    )
+    if not success:
+        raise HTTPException(
+            status_code=400, detail="Failed to retire timing window link"
         )
-        if not success:
-            raise HTTPException(
-                status_code=400, detail="Failed to retire timing window link"
-            )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
     return SoALinkResponse()
 
 
@@ -1952,7 +1891,6 @@ async def retire_timing_endpoint(
         Depends(require_permission("study_design:delete")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def retire_arm_applicability_endpoint(
     study_id: str,
@@ -1964,26 +1902,19 @@ async def retire_arm_applicability_endpoint(
     user_id = getattr(request.state, "user_id", "system")
     change_reason = resolve_change_reason(request, None)
 
-    try:
-        success = await retire_arm_applicability_link(
-            driver=driver,
-            study_version_id=version_id,
-            user_id=user_id,
-            change_reason=change_reason,
-            arm_id=payload.arm_id,
-            target_id=payload.target_id,
-            target_type=payload.target_type,
+    success = await retire_arm_applicability_link(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        arm_id=payload.arm_id,
+        target_id=payload.target_id,
+        target_type=payload.target_type,
+    )
+    if not success:
+        raise HTTPException(
+            status_code=400, detail="Failed to retire arm applicability link"
         )
-        if not success:
-            raise HTTPException(
-                status_code=400, detail="Failed to retire arm applicability link"
-            )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
     return SoALinkResponse()
 
 
@@ -4518,7 +4449,6 @@ async def reorder_blocks_endpoint(
         Depends(require_permission("study_design:create")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def create_arm_endpoint(
     study_id: str,
@@ -4528,30 +4458,22 @@ async def create_arm_endpoint(
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, payload.change_reason)
+    change_reason = getattr(request.state, "change_reason", "system_operation")
 
-    try:
-        await create_study_arm(
-            driver=driver,
-            study_version_id=version_id,
-            user_id=user_id,
-            change_reason=change_reason,
-            arm_id=payload.id,
-            properties=payload.properties.model_dump(),
-        )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
+    await create_study_arm(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        arm_id=payload.id,
+        properties=payload.properties.model_dump(),
+    )
     return SoAEntityCreatedResponse(id=payload.id)
 
 
 @app.get(
     "/api/v1/studies/{study_id}/versions/{version_id}/arms/{arm_id}",
     response_model=SoAEntityDetail,
-    tags=["Designer_SoA"],
 )
 async def get_arm_endpoint(
     study_id: str,
@@ -4569,7 +4491,6 @@ async def get_arm_endpoint(
 @app.get(
     "/api/v1/studies/{study_id}/versions/{version_id}/arms",
     response_model=list[SoAEntityDetail],
-    tags=["Designer_SoA"],
 )
 async def list_arms_endpoint(
     study_id: str,
@@ -4588,7 +4509,6 @@ async def list_arms_endpoint(
         Depends(require_permission("study_design:update")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def update_arm_endpoint(
     study_id: str,
@@ -4599,7 +4519,7 @@ async def update_arm_endpoint(
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, payload.reason_for_change)
+    change_reason = getattr(request.state, "change_reason", "system_operation")
 
     try:
         await update_study_arm(
@@ -4610,12 +4530,6 @@ async def update_arm_endpoint(
             arm_id=arm_id,
             properties=payload.properties.model_dump(),
         )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return SoAEntityCreatedResponse(id=arm_id)
@@ -4632,7 +4546,6 @@ async def update_arm_endpoint(
         Depends(require_permission("study_design:create")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def create_epoch_endpoint(
     study_id: str,
@@ -4642,30 +4555,22 @@ async def create_epoch_endpoint(
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, payload.change_reason)
+    change_reason = getattr(request.state, "change_reason", "system_operation")
 
-    try:
-        await create_epoch(
-            driver=driver,
-            study_version_id=version_id,
-            user_id=user_id,
-            change_reason=change_reason,
-            epoch_id=payload.id,
-            properties=payload.properties.model_dump(),
-        )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
+    await create_epoch(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        epoch_id=payload.id,
+        properties=payload.properties.model_dump(),
+    )
     return SoAEntityCreatedResponse(id=payload.id)
 
 
 @app.get(
     "/api/v1/studies/{study_id}/versions/{version_id}/epochs/{epoch_id}",
     response_model=SoAEntityDetail,
-    tags=["Designer_SoA"],
 )
 async def get_epoch_endpoint(
     study_id: str,
@@ -4683,7 +4588,6 @@ async def get_epoch_endpoint(
 @app.get(
     "/api/v1/studies/{study_id}/versions/{version_id}/epochs",
     response_model=list[SoAEntityDetail],
-    tags=["Designer_SoA"],
 )
 async def list_epochs_endpoint(
     study_id: str,
@@ -4702,7 +4606,6 @@ async def list_epochs_endpoint(
         Depends(require_permission("study_design:update")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def update_epoch_endpoint(
     study_id: str,
@@ -4713,7 +4616,7 @@ async def update_epoch_endpoint(
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, payload.reason_for_change)
+    change_reason = getattr(request.state, "change_reason", "system_operation")
 
     try:
         await update_epoch(
@@ -4724,12 +4627,6 @@ async def update_epoch_endpoint(
             epoch_id=epoch_id,
             properties=payload.properties.model_dump(),
         )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return SoAEntityCreatedResponse(id=epoch_id)
@@ -4746,7 +4643,6 @@ async def update_epoch_endpoint(
         Depends(require_permission("study_design:create")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def create_visit_endpoint(
     study_id: str,
@@ -4756,30 +4652,22 @@ async def create_visit_endpoint(
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, payload.change_reason)
+    change_reason = getattr(request.state, "change_reason", "system_operation")
 
-    try:
-        await create_visit(
-            driver=driver,
-            study_version_id=version_id,
-            user_id=user_id,
-            change_reason=change_reason,
-            visit_id=payload.id,
-            properties=payload.properties.model_dump(),
-        )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
+    await create_visit(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        visit_id=payload.id,
+        properties=payload.properties.model_dump(),
+    )
     return SoAEntityCreatedResponse(id=payload.id)
 
 
 @app.get(
     "/api/v1/studies/{study_id}/versions/{version_id}/visits/{visit_id}",
     response_model=SoAEntityDetail,
-    tags=["Designer_SoA"],
 )
 async def get_visit_endpoint(
     study_id: str,
@@ -4797,7 +4685,6 @@ async def get_visit_endpoint(
 @app.get(
     "/api/v1/studies/{study_id}/versions/{version_id}/visits",
     response_model=list[SoAEntityDetail],
-    tags=["Designer_SoA"],
 )
 async def list_visits_endpoint(
     study_id: str,
@@ -4816,7 +4703,6 @@ async def list_visits_endpoint(
         Depends(require_permission("study_design:update")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def update_visit_endpoint(
     study_id: str,
@@ -4827,7 +4713,7 @@ async def update_visit_endpoint(
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, payload.reason_for_change)
+    change_reason = getattr(request.state, "change_reason", "system_operation")
 
     try:
         await update_visit(
@@ -4838,12 +4724,6 @@ async def update_visit_endpoint(
             visit_id=visit_id,
             properties=payload.properties.model_dump(),
         )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return SoAEntityCreatedResponse(id=visit_id)
@@ -4860,7 +4740,6 @@ async def update_visit_endpoint(
         Depends(require_permission("study_design:create")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def create_procedure_endpoint(
     study_id: str,
@@ -4870,30 +4749,22 @@ async def create_procedure_endpoint(
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, payload.change_reason)
+    change_reason = getattr(request.state, "change_reason", "system_operation")
 
-    try:
-        await create_procedure(
-            driver=driver,
-            study_version_id=version_id,
-            user_id=user_id,
-            change_reason=change_reason,
-            procedure_id=payload.id,
-            properties=payload.properties.model_dump(),
-        )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
+    await create_procedure(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        procedure_id=payload.id,
+        properties=payload.properties.model_dump(),
+    )
     return SoAEntityCreatedResponse(id=payload.id)
 
 
 @app.get(
     "/api/v1/studies/{study_id}/versions/{version_id}/procedures/{procedure_id}",
     response_model=SoAEntityDetail,
-    tags=["Designer_SoA"],
 )
 async def get_procedure_endpoint(
     study_id: str,
@@ -4911,7 +4782,6 @@ async def get_procedure_endpoint(
 @app.get(
     "/api/v1/studies/{study_id}/versions/{version_id}/procedures",
     response_model=list[SoAEntityDetail],
-    tags=["Designer_SoA"],
 )
 async def list_procedures_endpoint(
     study_id: str,
@@ -4930,7 +4800,6 @@ async def list_procedures_endpoint(
         Depends(require_permission("study_design:update")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def update_procedure_endpoint(
     study_id: str,
@@ -4941,7 +4810,7 @@ async def update_procedure_endpoint(
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, payload.reason_for_change)
+    change_reason = getattr(request.state, "change_reason", "system_operation")
 
     try:
         await update_procedure(
@@ -4952,12 +4821,6 @@ async def update_procedure_endpoint(
             procedure_id=procedure_id,
             properties=payload.properties.model_dump(),
         )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return SoAEntityCreatedResponse(id=procedure_id)
@@ -4974,7 +4837,6 @@ async def update_procedure_endpoint(
         Depends(require_permission("study_design:create")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def create_timing_window_endpoint(
     study_id: str,
@@ -4984,30 +4846,22 @@ async def create_timing_window_endpoint(
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, payload.change_reason)
+    change_reason = getattr(request.state, "change_reason", "system_operation")
 
-    try:
-        await create_timing_window(
-            driver=driver,
-            study_version_id=version_id,
-            user_id=user_id,
-            change_reason=change_reason,
-            timing_id=payload.id,
-            properties=payload.properties.model_dump(),
-        )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
+    await create_timing_window(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        timing_id=payload.id,
+        properties=payload.properties.model_dump(),
+    )
     return SoAEntityCreatedResponse(id=payload.id)
 
 
 @app.get(
     "/api/v1/studies/{study_id}/versions/{version_id}/timing-windows/{timing_id}",
     response_model=SoAEntityDetail,
-    tags=["Designer_SoA"],
 )
 async def get_timing_window_endpoint(
     study_id: str,
@@ -5025,7 +4879,6 @@ async def get_timing_window_endpoint(
 @app.get(
     "/api/v1/studies/{study_id}/versions/{version_id}/timing-windows",
     response_model=list[SoAEntityDetail],
-    tags=["Designer_SoA"],
 )
 async def list_timing_windows_endpoint(
     study_id: str,
@@ -5044,7 +4897,6 @@ async def list_timing_windows_endpoint(
         Depends(require_permission("study_design:update")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def update_timing_window_endpoint(
     study_id: str,
@@ -5055,7 +4907,7 @@ async def update_timing_window_endpoint(
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, payload.reason_for_change)
+    change_reason = getattr(request.state, "change_reason", "system_operation")
 
     try:
         await update_timing_window(
@@ -5066,12 +4918,6 @@ async def update_timing_window_endpoint(
             timing_id=timing_id,
             properties=payload.properties.model_dump(),
         )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return SoAEntityCreatedResponse(id=timing_id)
@@ -5088,7 +4934,6 @@ async def update_timing_window_endpoint(
         Depends(require_permission("study_design:update")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def link_epoch_visit_endpoint(
     study_id: str,
@@ -5098,27 +4943,18 @@ async def link_epoch_visit_endpoint(
 ) -> SoALinkResponse:
     driver = await get_neo4j_driver(request)
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, None)
+    change_reason = getattr(request.state, "change_reason", "system_operation")
 
-    try:
-        success = await link_epoch_to_visit(
-            driver=driver,
-            study_version_id=version_id,
-            user_id=user_id,
-            change_reason=change_reason,
-            epoch_id=payload.epoch_id,
-            visit_id=payload.visit_id,
-        )
-        if not success:
-            raise HTTPException(
-                status_code=400, detail="Failed to link epoch and visit"
-            )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
+    success = await link_epoch_to_visit(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        epoch_id=payload.epoch_id,
+        visit_id=payload.visit_id,
+    )
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to link epoch and visit")
     return SoALinkResponse()
 
 
@@ -5130,7 +4966,6 @@ async def link_epoch_visit_endpoint(
         Depends(require_permission("study_design:update")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def link_visit_procedure_endpoint(
     study_id: str,
@@ -5140,27 +4975,20 @@ async def link_visit_procedure_endpoint(
 ) -> SoALinkResponse:
     driver = await get_neo4j_driver(request)
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, None)
+    change_reason = getattr(request.state, "change_reason", "system_operation")
 
-    try:
-        success = await link_visit_to_procedure(
-            driver=driver,
-            study_version_id=version_id,
-            user_id=user_id,
-            change_reason=change_reason,
-            visit_id=payload.visit_id,
-            procedure_id=payload.procedure_id,
+    success = await link_visit_to_procedure(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        visit_id=payload.visit_id,
+        procedure_id=payload.procedure_id,
+    )
+    if not success:
+        raise HTTPException(
+            status_code=400, detail="Failed to link visit and procedure"
         )
-        if not success:
-            raise HTTPException(
-                status_code=400, detail="Failed to link visit and procedure"
-            )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
     return SoALinkResponse()
 
 
@@ -5172,7 +5000,6 @@ async def link_visit_procedure_endpoint(
         Depends(require_permission("study_design:update")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def link_timing_endpoint(
     study_id: str,
@@ -5182,28 +5009,19 @@ async def link_timing_endpoint(
 ) -> SoALinkResponse:
     driver = await get_neo4j_driver(request)
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, None)
+    change_reason = getattr(request.state, "change_reason", "system_operation")
 
-    try:
-        success = await link_visit_or_procedure_to_timing(
-            driver=driver,
-            study_version_id=version_id,
-            user_id=user_id,
-            change_reason=change_reason,
-            source_id=payload.source_id,
-            timing_id=payload.timing_id,
-            source_type=payload.source_type,
-        )
-        if not success:
-            raise HTTPException(
-                status_code=400, detail="Failed to link to timing window"
-            )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
+    success = await link_visit_or_procedure_to_timing(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        source_id=payload.source_id,
+        timing_id=payload.timing_id,
+        source_type=payload.source_type,
+    )
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to link to timing window")
     return SoALinkResponse()
 
 
@@ -5215,7 +5033,6 @@ async def link_timing_endpoint(
         Depends(require_permission("study_design:update")),
         Depends(require_study_scope()),
     ],
-    tags=["Designer_SoA"],
 )
 async def link_arm_applicability_endpoint(
     study_id: str,
@@ -5225,98 +5042,29 @@ async def link_arm_applicability_endpoint(
 ) -> SoALinkResponse:
     driver = await get_neo4j_driver(request)
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, None)
+    change_reason = getattr(request.state, "change_reason", "system_operation")
 
-    try:
-        success = await link_arm_applicability(
-            driver=driver,
-            study_version_id=version_id,
-            user_id=user_id,
-            change_reason=change_reason,
-            arm_id=payload.arm_id,
-            target_id=payload.target_id,
-            target_type=payload.target_type,
-        )
-        if not success:
-            raise HTTPException(
-                status_code=400, detail="Failed to link arm applicability"
-            )
-    except ImmutabilityViolationError:
-        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
-    except ConcurrentLockingError:
-        raise HTTPException(status_code=409, detail="CONCURRENT_LOCKING_CONFLICT")
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="INVALID_OR_MISSING_SIGNATURE")
+    success = await link_arm_applicability(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        arm_id=payload.arm_id,
+        target_id=payload.target_id,
+        target_type=payload.target_type,
+    )
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to link arm applicability")
     return SoALinkResponse()
 
 
 # --- SoA Matrix Projection Endpoint ---
 
 
-async def get_latest_version_id(driver, study_id: str) -> str | None:
-    if driver is None:
-        from apps.designer.db import MOCK_STUDY_VERSIONS
-
-        versions = MOCK_STUDY_VERSIONS.get(study_id, [])
-        if versions:
-            latest_ver = sorted(versions, key=lambda x: x.get("version_index", 0))[-1]
-            return latest_ver.get("id")
-        return None
-
-    query = """
-    MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion)
-    WHERE NOT (sv)<-[:PREVIOUS_VERSION]-()
-    RETURN sv.id as id
-    """
-    async with driver.session() as session:
-        res = await session.run(query, study_id=study_id)
-        record = await res.single()
-        if record:
-            return record["id"]
-        # Fallback if there is a previous version but not strictly matched, or just any version
-        query_any = """
-        MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion)
-        RETURN sv.id as id
-        ORDER BY sv.version_index DESC
-        LIMIT 1
-        """
-        res_any = await session.run(query_any, study_id=study_id)
-        record_any = await res_any.single()
-        if record_any:
-            return record_any["id"]
-    return None
-
-
-@app.get(
-    "/api/v1/studies/{study_id}/soa",
-    response_model=SoAMatrixView,
-    status_code=status.HTTP_200_OK,
-    tags=["Designer_SoA"],
-)
-async def get_soa_matrix_projection_latest(
-    study_id: str,
-    request: Request,
-) -> SoAMatrixView:
-    """
-    Returns the assembled Schedule of Activities (SoA) presentation matrix for the latest version.
-    Assembles the arm x epoch x visit x procedure structure with timing/conditional metadata.
-    """
-    driver = await get_neo4j_driver(request)
-    version_id = await get_latest_version_id(driver, study_id)
-    if not version_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No study version found for study {study_id}.",
-        )
-    matrix = await get_soa_matrix_projection(driver, version_id)
-    return SoAMatrixView(**matrix)
-
-
 @app.get(
     "/api/v1/studies/{study_id}/versions/{version_id}/soa-projection",
     response_model=SoAMatrixView,
     status_code=status.HTTP_200_OK,
-    tags=["Designer_SoA"],
 )
 async def get_soa_projection_endpoint(
     study_id: str,
