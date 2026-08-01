@@ -3034,97 +3034,12 @@ async def get_meddra_code(
     from apps.execution.coding import search_dictionary
 
     async with db_manager.get_session_maker()() as session:
-        res = await search_dictionary(
+        return await search_dictionary(
             session=session,
             term=term,
             dictionary_type="MEDDRA",
             version=version,
             target_level=target_level.value if target_level else None,
-        )
-
-        matches = []
-        if res.get("match"):
-            parent_match = res["match"]
-            score = parent_match.get("score", 0.0)
-            if parent_match.get("hierarchies"):
-                for h in parent_match.get("hierarchies", []):
-                    matches.append(
-                        MedDRACodeMatch(
-                            llt_code=h.get("llt_code") or "",
-                            llt_name=h.get("llt_name") or "",
-                            pt_code=h.get("pt_code") or "",
-                            pt_name=h.get("pt_name") or "",
-                            hlt_code=h.get("hlt_code") or "",
-                            hlt_name=h.get("hlt_name") or "",
-                            hlgt_code=h.get("hlgt_code") or "",
-                            hlgt_name=h.get("hlgt_name") or "",
-                            soc_code=h.get("soc_code") or "",
-                            soc_name=h.get("soc_name") or "",
-                            primary_soc_flag=h.get("primary_soc_flag"),
-                            score=score,
-                        )
-                    )
-            else:
-                is_llt = parent_match.get("level") == "LLT"
-                matches.append(
-                    MedDRACodeMatch(
-                        llt_code=parent_match.get("code") if is_llt else "",
-                        llt_name=parent_match.get("term_name") if is_llt else "",
-                        pt_code=parent_match.get("code") if not is_llt else "",
-                        pt_name=parent_match.get("term_name") if not is_llt else "",
-                        hlt_code="",
-                        hlt_name="",
-                        hlgt_code="",
-                        hlgt_name="",
-                        soc_code="",
-                        soc_name="",
-                        primary_soc_flag=None,
-                        score=score,
-                    )
-                )
-        elif res.get("suggestions"):
-            for sug in res["suggestions"]:
-                score = sug.get("score", 0.0)
-                if sug.get("hierarchies"):
-                    for h in sug.get("hierarchies", []):
-                        matches.append(
-                            MedDRACodeMatch(
-                                llt_code=h.get("llt_code") or "",
-                                llt_name=h.get("llt_name") or "",
-                                pt_code=h.get("pt_code") or "",
-                                pt_name=h.get("pt_name") or "",
-                                hlt_code=h.get("hlt_code") or "",
-                                hlt_name=h.get("hlt_name") or "",
-                                hlgt_code=h.get("hlgt_code") or "",
-                                hlgt_name=h.get("hlgt_name") or "",
-                                soc_code=h.get("soc_code") or "",
-                                soc_name=h.get("soc_name") or "",
-                                primary_soc_flag=h.get("primary_soc_flag"),
-                                score=score,
-                            )
-                        )
-                else:
-                    is_llt = sug.get("level") == "LLT"
-                    matches.append(
-                        MedDRACodeMatch(
-                            llt_code=sug.get("code") if is_llt else "",
-                            llt_name=sug.get("term_name") if is_llt else "",
-                            pt_code=sug.get("code") if not is_llt else "",
-                            pt_name=sug.get("term_name") if not is_llt else "",
-                            hlt_code="",
-                            hlt_name="",
-                            hlgt_code="",
-                            hlgt_name="",
-                            soc_code="",
-                            soc_name="",
-                            primary_soc_flag=None,
-                            score=score,
-                        )
-                    )
-
-        return MedDRACodingResult(
-            status=res.get("status", "UNCODABLE"),
-            matches=matches,
         )
 
 
