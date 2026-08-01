@@ -3078,7 +3078,7 @@ async def get_whodrug_code(
 
     async with db_manager.get_session_maker()() as session:
         try:
-            res = await search_dictionary(
+            return await search_dictionary(
                 session=session,
                 term=term,
                 dictionary_type="WHODRUG",
@@ -3086,61 +3086,6 @@ async def get_whodrug_code(
             )
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
-
-        matches = []
-        if res.get("match"):
-            m = res["match"]
-            matches.append(
-                WHODrugCodeMatch(
-                    drug_code=m.get("drug_code") or "",
-                    preferred_name=m.get("preferred_name") or "",
-                    drug_name=m.get("drug_name"),
-                    score=m.get("score", 0.0),
-                    atc_context=[
-                        WHODrugATCContext(
-                            atc_code=a.get("atc_code") or "",
-                            description=a.get("description") or "",
-                        )
-                        for a in m.get("atc_context", [])
-                    ],
-                    ingredients=[
-                        WHODrugIngredientItem(
-                            ingredient_code=i.get("ingredient_code") or "",
-                            ingredient_name=i.get("ingredient_name") or "",
-                        )
-                        for i in m.get("ingredients", [])
-                    ],
-                )
-            )
-        elif res.get("suggestions"):
-            for sug in res["suggestions"]:
-                matches.append(
-                    WHODrugCodeMatch(
-                        drug_code=sug.get("drug_code") or "",
-                        preferred_name=sug.get("preferred_name") or "",
-                        drug_name=sug.get("drug_name"),
-                        score=sug.get("score", 0.0),
-                        atc_context=[
-                            WHODrugATCContext(
-                                atc_code=a.get("atc_code") or "",
-                                description=a.get("description") or "",
-                            )
-                            for a in sug.get("atc_context", [])
-                        ],
-                        ingredients=[
-                            WHODrugIngredientItem(
-                                ingredient_code=i.get("ingredient_code") or "",
-                                ingredient_name=i.get("ingredient_name") or "",
-                            )
-                            for i in sug.get("ingredients", [])
-                        ],
-                    )
-                )
-
-        return WHODrugCodingResult(
-            status=res.get("status", "UNCODABLE"),
-            matches=matches,
-        )
 
 
 @app.post(

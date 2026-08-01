@@ -9,13 +9,13 @@ from .service import (
 )
 
 __all__ = [
-    "normalize_term",
     "CodingCache",
     "coding_cache",
-    "match_verbatim_term",
-    "search_dictionary",
-    "list_coding_assignments",
     "get_coding_assignment",
+    "list_coding_assignments",
+    "match_verbatim_term",
+    "normalize_term",
     "process_coding_action",
+    "search_dictionary",
     "trigger_impact_analysis",
 ]
