@@ -18,30 +18,37 @@
       </button>
     </div>
     <div class="query-panel-body">
-      <!-- NONE state -->
+      <!-- NONE state (Only CRAs or DMs can raise new queries) -->
       <div v-if="status === 'NONE'" class="query-create-section">
-        <p class="query-panel-instruction">Raise a query for this field:</p>
-        <div class="form-group">
-          <label :for="`query-message-${id}`">Discrepancy Message</label>
-          <textarea
-            :id="`query-message-${id}`"
-            v-model="messageInput"
-            placeholder="Enter clinical discrepancy details..."
-            required
-          ></textarea>
-        </div>
-        <button
-          type="button"
-          class="btn-submit-query"
-          :data-field-id="id"
-          data-action="create-query"
-          @click="handleSubmitQuery"
-        >
-          Submit Query
-        </button>
+        <template v-if="canManageQueries">
+          <p class="query-panel-instruction">Raise a query for this field:</p>
+          <div class="form-group">
+            <label :for="`query-message-${id}`">Discrepancy Message</label>
+            <textarea
+              :id="`query-message-${id}`"
+              v-model="messageInput"
+              placeholder="Enter clinical discrepancy details..."
+              required
+            ></textarea>
+          </div>
+          <button
+            type="button"
+            class="btn-submit-query"
+            :data-field-id="id"
+            data-action="create-query"
+            @click="handleSubmitQuery"
+          >
+            Submit Query
+          </button>
+        </template>
+        <template v-else>
+          <p style="font-size: 0.85rem; color: #64748b; font-style: italic;">
+            Raising queries is restricted to clinical monitors (CRA) and data managers.
+          </p>
+        </template>
       </div>
 
-      <!-- OPEN / REOPENED state -->
+      <!-- OPEN / REOPENED state (CRCs/Coordinators can respond/answer) -->
       <div
         v-else-if="status === 'OPEN' || status === 'REOPENED'"
         class="query-details"
@@ -81,7 +88,7 @@
         </div>
       </div>
 
-      <!-- ANSWERED state -->
+      <!-- ANSWERED state (Only CRAs/DMs can close/reopen) -->
       <div v-else-if="status === 'ANSWERED'" class="query-details">
         <div class="query-status-badge badge-answered">Status: ANSWERED</div>
         <p class="query-current-msg">
@@ -96,6 +103,7 @@
           {{ query.respondedAt || "N/A" }}
         </p>
         <div
+          v-if="canManageQueries"
           class="query-actions-section"
           style="margin-top: 12px; display: flex; gap: 8px"
         >
@@ -117,6 +125,9 @@
           >
             Reopen Query
           </button>
+        </div>
+        <div v-else style="margin-top: 12px; font-size: 0.85rem; color: #64748b; font-style: italic;">
+          Query resolution is restricted to clinical monitors (CRA) and data managers.
         </div>
       </div>
 
@@ -145,6 +156,8 @@
 import { ref, computed, watch } from "vue";
 import { useFocusTrap } from "@/composables/useFocusTrap";
 import { useEscapeClose } from "@/composables/useEscapeClose";
+import { useAuthStore } from "../../stores/auth";
+import { getActivePinia } from "pinia";
 
 const props = defineProps({
   id: {
@@ -172,6 +185,19 @@ useEscapeClose(() => emit("close-panel"));
 
 const messageInput = ref("");
 const responseInput = ref("");
+
+// CRA / Monitor, Data Manager, or admin roles can manage queries (Close/Reopen/Create)
+const canManageQueries = computed(() => {
+  if (!getActivePinia()) {
+    return true; // default fallback for direct mount unit tests where Pinia is not installed
+  }
+  const authStore = useAuthStore();
+  const roles = authStore.normalizedRoles || [];
+  // Ensure we also support mock data manager role in RulesView
+  return roles.some((role) =>
+    ["cra", "monitor", "data_manager", "sponsor_admin", "admin", "sponsor_designer"].includes(role)
+  );
+});
 
 const status = computed(() => {
   return props.query && props.query.status

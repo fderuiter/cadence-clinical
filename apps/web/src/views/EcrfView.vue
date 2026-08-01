@@ -8,10 +8,107 @@
       </p>
     </div>
 
+    <!-- Active User Role Badge & CRA Mode Toggle (for Sub-Issue 10) -->
+    <div
+      style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 20px;
+      "
+    >
+      <div style="font-size: 0.9rem;">
+        Active Role:
+        <span
+          class="badge"
+          style="
+            background-color: var(--accent);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+          "
+          >{{ activeUserRole.toUpperCase() }}</span
+        >
+      </div>
+
+      <!-- Let user select role in demo mode to test Site Coordinator (CRC) vs Monitor (CRA) workflows -->
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <label for="role-tester-select" style="font-size: 0.8rem; font-weight: bold;"
+          >Demo Role Toggle:</label
+        >
+        <select
+          id="role-tester-select"
+          v-model="demoRole"
+          style="padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border);"
+        >
+          <option value="site_investigator">Site Coordinator / CRC</option>
+          <option value="cra">CRA Monitor (SDV Enabled)</option>
+        </select>
+      </div>
+    </div>
+
     <div class="grid-2">
       <!-- Dynamic eCRF Form -->
       <div class="card">
         <div class="card-title">Subject eCRF Data Entry Form</div>
+
+        <!-- Sub-Issue 9: Subject & Visit Selection Panel -->
+        <div
+          style="
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+          "
+        >
+          <div class="form-group" style="flex: 1;">
+            <label for="ecrf-subject-selector" style="font-weight: bold;"
+              >Active Subject ID</label
+            >
+            <select
+              id="ecrf-subject-selector"
+              v-model="selectedSubjectId"
+              @change="loadEcrfSession"
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+              "
+            >
+              <option value="SUBJ-001">SUBJ-001 (Mock Subject)</option>
+              <option value="SUBJ-002">SUBJ-002 (Screened Cohort)</option>
+              <option value="SUBJ-003">SUBJ-003 (Post-Randomization)</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label for="ecrf-visit-selector" style="font-weight: bold;"
+              >Active Visit / Encounter</label
+            >
+            <select
+              id="ecrf-visit-selector"
+              v-model="selectedVisitId"
+              @change="loadEcrfSession"
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+              "
+            >
+              <option value="Screening">Screening / Day -7</option>
+              <option value="Week2">Week 2 Treatment</option>
+              <option value="Week4">Week 4 Treatment</option>
+            </select>
+          </div>
+        </div>
+
         <form
           id="form-VS_DEMO"
           class="clinical-form clinical-form-grid"
@@ -22,23 +119,64 @@
           "
           @submit.prevent
         >
-          <ClinicalFormField
-            v-for="field in store.ecrfFields"
-            v-show="store.fieldVisibility[field.id] !== false"
-            :key="field.id"
-            :field="field"
-            :model-value="store.formValues[field.id]"
-            :query="store.formQueries[field.id]"
-            :error="getValidationError(field)"
-            :lookup-status="lookupStatuses[field.id]"
-            @update:model-value="store.formValues[field.id] = $event"
-            @input="handleLookupInput(field, $event)"
-            @change="(val, target) => handleFieldChange(field, val, target)"
-            @create-query="createQuery(field.id, $event)"
-            @respond-query="respondQuery(field.id, $event)"
-            @close-query="closeQuery(field.id)"
-            @reopen-query="reopenQuery(field.id)"
-          />
+          <template v-for="field in store.ecrfFields" :key="field.id">
+            <div
+              v-show="store.fieldVisibility[field.id] !== false"
+              :style="`grid-column: span ${field.gridSpan || 12}; display: flex; flex-direction: column; gap: 8px;`"
+              style="margin-bottom: 8px;"
+            >
+              <ClinicalFormField
+                :field="field"
+                :model-value="store.formValues[field.id]"
+                :query="store.formQueries[field.id]"
+                :error="getValidationError(field)"
+                :lookup-status="lookupStatuses[field.id]"
+                @update:model-value="store.formValues[field.id] = $event"
+                @input="handleLookupInput(field, $event)"
+                @change="(val, target) => handleFieldChange(field, val, target)"
+                @create-query="createQuery(field.id, $event)"
+                @respond-query="respondQuery(field.id, $event)"
+                @close-query="closeQuery(field.id)"
+                @reopen-query="reopenQuery(field.id)"
+              />
+
+              <!-- Sub-Issue 10: CRA Monitoring and SDV (Source Document Verification) checkbox -->
+              <div
+                v-if="isCraUser"
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  background-color: #f0fdf4;
+                  border: 1px dashed #bbf7d0;
+                  padding: 8px;
+                  border-radius: 4px;
+                  margin-top: -6px;
+                "
+                class="sdv-box"
+              >
+                <input
+                  :id="`sdv-${field.id}`"
+                  type="checkbox"
+                  :checked="sdvStates[getSdvKey(field.id)] === true"
+                  @change="handleSdvToggle(field.id, $event.target.checked)"
+                  style="cursor: pointer;"
+                />
+                <label
+                  :for="`sdv-${field.id}`"
+                  style="
+                    font-size: 0.8rem;
+                    color: #166534;
+                    font-weight: 600;
+                    margin: 0;
+                    cursor: pointer;
+                  "
+                >
+                  Source Document Verified (SDV)
+                </label>
+              </div>
+            </div>
+          </template>
         </form>
 
         <div class="form-actions">
@@ -143,7 +281,7 @@
         class="card"
         style="display: flex; flex-direction: column; gap: 16px"
       >
-        <div class="card-title">PI Sign-Off Worklist & Verification</div>
+        <div class="card-title">PI Sign-Off Worklist &amp; Verification</div>
         <p style="font-size: 0.85rem; color: #475569; margin-bottom: 4px">
           Perform a 21 CFR Part 11 compliant electronic signature. This action
           requires re-authenticating the Principal Investigator credentials to
@@ -277,7 +415,7 @@
         "
       >
         <div class="card-title">
-          Ultimate CRF Builder: Protocol Ingestion & Review
+          Ultimate CRF Builder: Protocol Ingestion &amp; Review
         </div>
         <p style="font-size: 0.85rem; color: #475569">
           Upload a clinical protocol document (PDF/DOCX) to automatically
@@ -642,7 +780,7 @@
             "
           >
             <div class="form-group">
-              <label for="promote-change-reason" style="font-weight: bold"
+              <label for="promote-change-reason" style="font-weight: bold;"
                 >Promotion Change Reason (Mandatory)</label
               >
               <input
@@ -809,7 +947,7 @@
             class="btn btn-primary"
             @click="confirmReauth"
           >
-            Verify & Confirm
+            Verify &amp; Confirm
           </button>
         </div>
       </div>
@@ -955,6 +1093,95 @@ function handleLookupInput(field, value) {
   getDebouncedLookup(fieldId)(value);
 }
 
+// Sub-Issue 9 & 10 Subject, Visit, and SDV states
+const selectedSubjectId = ref("SUBJ-001");
+const selectedVisitId = ref("Screening");
+const ecrfSessions = reactive({});
+const sdvStates = reactive({}); // keyed by `${subjectId}:${visitId}:${fieldId}`
+
+// Role Tester Toggle support
+const demoRole = ref("site_investigator");
+
+const activeUserRole = computed(() => {
+  if (authStore.isAuthenticated) {
+    const roles = authStore.normalizedRoles || [];
+    if (roles.includes("cra") || roles.includes("monitor")) return "cra";
+    if (roles.includes("site_investigator") || roles.includes("crc")) return "site_investigator";
+    return roles[0] || "site_investigator";
+  }
+  return demoRole.value;
+});
+
+const isCraUser = computed(() => {
+  return activeUserRole.value === "cra";
+});
+
+function getSessionKey() {
+  return `${selectedSubjectId.value}:${selectedVisitId.value}`;
+}
+
+function getSdvKey(fieldId) {
+  return `${selectedSubjectId.value}:${selectedVisitId.value}:${fieldId}`;
+}
+
+// Handle SDV Toggle (Sub-Issue 10)
+function handleSdvToggle(fieldId, checked) {
+  pendingSdvToggle.value = { fieldId, checked };
+  showReasonModal.value = true;
+}
+
+const pendingSdvToggle = ref(null);
+
+function loadEcrfSession() {
+  const key = getSessionKey();
+  if (!ecrfSessions[key]) {
+    ecrfSessions[key] = {
+      values: {},
+      queries: {},
+    };
+    store.ecrfFields.forEach((f) => {
+      ecrfSessions[key].values[f.id] = "";
+    });
+  }
+
+  // Swap Form values and queries references
+  store.formValues = ecrfSessions[key].values;
+  store.formQueries = ecrfSessions[key].queries;
+
+  store.evaluateRules();
+  // Initialize terminology lookups
+  store.ecrfFields.forEach((field) => {
+    if (field.type === "concept_code" && store.formValues[field.id]) {
+      performConceptCodeValidation(field.id, store.formValues[field.id]);
+    }
+  });
+}
+
+// Save active form state back to sessions deep-watched
+watch(
+  () => store.formValues,
+  (newValues) => {
+    const key = getSessionKey();
+    if (!ecrfSessions[key]) {
+      ecrfSessions[key] = { values: {}, queries: {} };
+    }
+    ecrfSessions[key].values = newValues;
+  },
+  { deep: true }
+);
+
+watch(
+  () => store.formQueries,
+  (newQueries) => {
+    const key = getSessionKey();
+    if (!ecrfSessions[key]) {
+      ecrfSessions[key] = { values: {}, queries: {} };
+    }
+    ecrfSessions[key].queries = newQueries;
+  },
+  { deep: true }
+);
+
 // Deep watch formValues to evaluate rules debounced
 watch(
   () => store.formValues,
@@ -965,13 +1192,7 @@ watch(
 );
 
 onMounted(() => {
-  store.evaluateRules();
-  // Initialize lookup validation for any pre-populated concept_code fields on mount
-  store.ecrfFields.forEach((field) => {
-    if (field.type === "concept_code" && store.formValues[field.id]) {
-      performConceptCodeValidation(field.id, store.formValues[field.id]);
-    }
-  });
+  loadEcrfSession();
 });
 
 // Reason Modal States
@@ -1043,9 +1264,32 @@ function cancelChange() {
   }
   showReasonModal.value = false;
   pendingValueChange.value = null;
+  pendingSdvToggle.value = null;
 }
 
 function saveChange(finalReason) {
+  if (pendingSdvToggle.value) {
+    const { fieldId, checked } = pendingSdvToggle.value;
+    const sKey = getSdvKey(fieldId);
+    sdvStates[sKey] = checked;
+
+    store.addLedgerBlock(
+      "SDV_TOGGLE",
+      {
+        subjectId: selectedSubjectId.value,
+        visitId: selectedVisitId.value,
+        fieldId,
+        is_sdv_verified: checked,
+      },
+      finalReason
+    );
+
+    pendingSdvToggle.value = null;
+    showReasonModal.value = false;
+    alert(`Source Document Verification (SDV) status updated and logged!`);
+    return;
+  }
+
   if (!pendingValueChange.value) return;
 
   commitChange(
@@ -1069,6 +1313,8 @@ function commitChange(field, oldValue, newValue, reason) {
       cdash: field.cdash || "",
       oldValue,
       newValue,
+      subjectId: selectedSubjectId.value,
+      visitId: selectedVisitId.value,
     },
     reason
   );
@@ -1076,10 +1322,7 @@ function commitChange(field, oldValue, newValue, reason) {
 
 // Query Operations
 function createQuery(fieldId, msgFromComponent = null) {
-  const msg =
-    msgFromComponent !== null
-      ? msgFromComponent
-      : (queryInputs[fieldId] || "").trim();
+  const msg = msgFromComponent !== null ? msgFromComponent : "";
   if (!msg) {
     alert("Please enter a discrepancy message!");
     return;
@@ -1088,23 +1331,25 @@ function createQuery(fieldId, msgFromComponent = null) {
   const queryObj = {
     status: "OPEN",
     message: msg,
-    createdBy: "Data Monitor (Offline Client)",
+    createdBy: `${activeUserRole.value} (Client Monitor)`,
     createdAt: new Date().toISOString().slice(0, 10),
   };
 
   store.formQueries[fieldId] = queryObj;
   store.addLedgerBlock(
     "QUERY_CREATE",
-    { fieldId, query: queryObj },
+    {
+      fieldId,
+      query: queryObj,
+      subjectId: selectedSubjectId.value,
+      visitId: selectedVisitId.value,
+    },
     `Raised discrepancy: "${msg}"`
   );
 }
 
 function respondQuery(fieldId, respFromComponent = null) {
-  const resp =
-    respFromComponent !== null
-      ? respFromComponent
-      : (queryResponses[fieldId] || "").trim();
+  const resp = respFromComponent !== null ? respFromComponent : "";
   if (!resp) {
     alert("Please enter a response!");
     return;
@@ -1113,12 +1358,17 @@ function respondQuery(fieldId, respFromComponent = null) {
   const queryObj = store.formQueries[fieldId];
   queryObj.status = "ANSWERED";
   queryObj.response = resp;
-  queryObj.respondedBy = "Clinical Investigator (Offline Client)";
+  queryObj.respondedBy = "Clinical Investigator / CRC";
   queryObj.respondedAt = new Date().toISOString().slice(0, 10);
 
   store.addLedgerBlock(
     "QUERY_RESPOND",
-    { fieldId, query: queryObj },
+    {
+      fieldId,
+      query: queryObj,
+      subjectId: selectedSubjectId.value,
+      visitId: selectedVisitId.value,
+    },
     `Responded to query: "${resp}"`
   );
 }
@@ -1180,7 +1430,7 @@ async function confirmReauth() {
     if (fieldId) {
       const queryObj = store.formQueries[fieldId];
       queryObj.status = "CLOSED";
-      queryObj.closedBy = `${username} (Offline Client)`;
+      queryObj.closedBy = `${username} (CRA Monitor)`;
       queryObj.closedAt = new Date().toISOString().slice(0, 10);
 
       const fieldMeta = store.ecrfFields.find((f) => f.id === fieldId);
@@ -1194,13 +1444,13 @@ async function confirmReauth() {
         {
           fieldId,
           studyId: store.currentUsdm.studyId || "STUDY-USDM-001",
-          subjectId: "SUBJ-001",
-          visitId: "Screening",
+          subjectId: selectedSubjectId.value,
+          visitId: selectedVisitId.value,
           domain,
           testCode,
           query: queryObj,
         },
-        "Discrepancy resolved and closed permanently."
+        "Discrepancy resolved and closed permanently by monitor."
       );
       pendingCloseQueryFieldId.value = null;
     }
@@ -1314,8 +1564,13 @@ function reopenQuery(fieldId) {
 
   store.addLedgerBlock(
     "QUERY_REOPEN",
-    { fieldId, query: queryObj },
-    "Investigator response was rejected. Query reopened."
+    {
+      fieldId,
+      query: queryObj,
+      subjectId: selectedSubjectId.value,
+      visitId: selectedVisitId.value,
+    },
+    "Investigator response was rejected by clinical monitor."
   );
 }
 
@@ -1326,7 +1581,11 @@ function clearForm() {
   });
   store.addLedgerBlock(
     "FORM_CLEAR",
-    { formId: "VS_DEMO" },
+    {
+      formId: "VS_DEMO",
+      subjectId: selectedSubjectId.value,
+      visitId: selectedVisitId.value,
+    },
     "All eCRF form fields cleared by clinical staff."
   );
 }
@@ -1360,6 +1619,8 @@ function submitEcrf() {
     "SESSION_SUBMIT",
     {
       formId: "VS_DEMO",
+      subjectId: selectedSubjectId.value,
+      visitId: selectedVisitId.value,
       formValues: store.formValues,
       formQueries: store.formQueries,
     },
