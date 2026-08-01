@@ -6,7 +6,7 @@ implementations for permuted-block, stratified-block, and Pocock-Simon dynamic m
 
 import abc
 import random
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -18,19 +18,19 @@ class RandomizationConfigSchema(BaseModel):
         ...,
         description="Type of algorithm. Must be 'PERMUTED_BLOCK', 'STRATIFIED_BLOCK', or 'MINIMIZATION'.",
     )
-    arms_ratios: Dict[str, int] = Field(
+    arms_ratios: dict[str, int] = Field(
         ...,
         description="Mapping of treatment arm names to target ratios.",
     )
-    stratification_factors: Optional[Union[List[str], Dict[str, List[str]]]] = Field(
+    stratification_factors: list[str] | dict[str, list[str]] | None = Field(
         default=None,
         description="Active stratification factors as list of names or dict of names to allowed categories.",
     )
-    block_sizes: Optional[List[int]] = Field(
+    block_sizes: list[int] | None = Field(
         default=None,
         description="Allowed block sizes for block-based algorithms.",
     )
-    factor_weights: Optional[Dict[str, float]] = Field(
+    factor_weights: dict[str, float] | None = Field(
         default=None,
         description="Optional weights for stratification factors under minimization.",
     )
@@ -38,7 +38,7 @@ class RandomizationConfigSchema(BaseModel):
         default=0.8,
         description="Pocock-Simon biased coin probability for assigning to the preferred arm.",
     )
-    seed: Optional[int] = Field(
+    seed: int | None = Field(
         default=None,
         description="Optional seed for deterministic, reproducible allocations.",
     )
@@ -115,8 +115,8 @@ class RandomizationConfigSchema(BaseModel):
 
 
 def generate_canonical_stratum_key(
-    subject_factors: Optional[Dict[str, Any]],
-    active_factors: Optional[List[str]],
+    subject_factors: dict[str, Any] | None,
+    active_factors: list[str] | None,
 ) -> str:
     """Generates a stable, canonical stratum key from stratification factors."""
     if not active_factors:
@@ -154,11 +154,11 @@ class RandomizationStrategy(abc.ABC):
     @abc.abstractmethod
     def allocate(
         self,
-        subject_factors: Optional[Dict[str, Any]] = None,
-        sequence: Optional[List[str]] = None,
+        subject_factors: dict[str, Any] | None = None,
+        sequence: list[str] | None = None,
         block_index: int = 0,
-        previous_allocations: Optional[List[Dict[str, Any]]] = None,
-    ) -> Dict[str, Any]:
+        previous_allocations: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
         """Performs treatment allocation based on the concrete strategy."""
         pass
 
@@ -168,9 +168,9 @@ class BlockAllocationBase(RandomizationStrategy):
 
     def _allocate_block(
         self,
-        sequence: Optional[List[str]],
+        sequence: list[str] | None,
         block_index: int,
-    ) -> Tuple[str, List[str], int]:
+    ) -> tuple[str, list[str], int]:
         ratio_sum = sum(self.config.arms_ratios.values())
         block_sizes = self.config.block_sizes or [ratio_sum]
 
@@ -197,11 +197,11 @@ class PermutedBlockStrategy(BlockAllocationBase):
 
     def allocate(
         self,
-        subject_factors: Optional[Dict[str, Any]] = None,
-        sequence: Optional[List[str]] = None,
+        subject_factors: dict[str, Any] | None = None,
+        sequence: list[str] | None = None,
         block_index: int = 0,
-        previous_allocations: Optional[List[Dict[str, Any]]] = None,
-    ) -> Dict[str, Any]:
+        previous_allocations: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
         allocated_arm, updated_seq, updated_idx = self._allocate_block(
             sequence=sequence,
             block_index=block_index,
@@ -219,11 +219,11 @@ class StratifiedBlockStrategy(BlockAllocationBase):
 
     def allocate(
         self,
-        subject_factors: Optional[Dict[str, Any]] = None,
-        sequence: Optional[List[str]] = None,
+        subject_factors: dict[str, Any] | None = None,
+        sequence: list[str] | None = None,
         block_index: int = 0,
-        previous_allocations: Optional[List[Dict[str, Any]]] = None,
-    ) -> Dict[str, Any]:
+        previous_allocations: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
         active_factors = []
         if self.config.stratification_factors:
             if isinstance(self.config.stratification_factors, dict):
@@ -249,11 +249,11 @@ class PocockSimonMinimizationStrategy(RandomizationStrategy):
 
     def allocate(
         self,
-        subject_factors: Optional[Dict[str, Any]] = None,
-        sequence: Optional[List[str]] = None,
+        subject_factors: dict[str, Any] | None = None,
+        sequence: list[str] | None = None,
         block_index: int = 0,
-        previous_allocations: Optional[List[Dict[str, Any]]] = None,
-    ) -> Dict[str, Any]:
+        previous_allocations: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
         if subject_factors is None:
             raise ValueError("subject_factors must be provided for minimization.")
         if previous_allocations is None:
@@ -273,7 +273,7 @@ class PocockSimonMinimizationStrategy(RandomizationStrategy):
         k_arms = len(arms)
 
         # Imbalance score for each potential arm assignment
-        imbalance_scores: Dict[str, float] = {}
+        imbalance_scores: dict[str, float] = {}
 
         for candidate_arm in arms:
             total_imbalance = 0.0
@@ -375,11 +375,11 @@ class RTSMAllocator:
 
     def allocate(
         self,
-        subject_factors: Optional[Dict[str, Any]] = None,
-        sequence: Optional[List[str]] = None,
+        subject_factors: dict[str, Any] | None = None,
+        sequence: list[str] | None = None,
         block_index: int = 0,
-        previous_allocations: Optional[List[Dict[str, Any]]] = None,
-    ) -> Dict[str, Any]:
+        previous_allocations: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
         """Delegate allocation to the configured strategy."""
         return self.strategy.allocate(
             subject_factors=subject_factors,

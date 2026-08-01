@@ -4,7 +4,7 @@ Requirements: PRD-SYS-001
 """
 
 import uuid
-from typing import Any, Dict
+from typing import Any
 
 from cdisc.branch_models import (
     AmendmentComparisonResponse,
@@ -46,7 +46,7 @@ class ProtocolBranchManager:
         )
 
     def compare_branches(
-        self, base_study: Dict[str, Any], draft_study: Dict[str, Any]
+        self, base_study: dict[str, Any], draft_study: dict[str, Any]
     ) -> AmendmentComparisonResponse:
         """Perform block-level visual diff comparison between baseline and draft protocol.
 
@@ -129,7 +129,7 @@ class ProtocolBranchManager:
 
     def merge_amendment_branch(
         self, branch: ProtocolBranch, change_reason: str, approved_by: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Merge approved amendment branch into master protocol with GxP audit log.
 
         Args:

@@ -7,12 +7,12 @@ delegatable significant trial-related duties in compliance with 21 CFR Part 11,
 EU Annex 11, and ICH E6(R2).
 """
 
-from enum import Enum
+from enum import StrEnum
 
 from audit import AuditFields  # noqa: F401
 
 
-class OrganizationType(str, Enum):
+class OrganizationType(StrEnum):
     """
     Standard organization types involved in clinical trials.
     """
@@ -24,7 +24,7 @@ class OrganizationType(str, Enum):
     SITE = "site"
 
 
-class ClinicalStaffRole(str, Enum):
+class ClinicalStaffRole(StrEnum):
     """
     Standard clinical staff role vocabulary from docs/SDLC/05_Security_Compliance_Audit_Spec.md,
     reused across organization directory and delegation of authority records. Includes the
@@ -38,7 +38,7 @@ class ClinicalStaffRole(str, Enum):
     EXTERNAL_MONITOR = "External Monitor"
 
 
-class TrialDuty(str, Enum):
+class TrialDuty(StrEnum):
     """
     Controlled vocabulary of delegatable significant trial-related duties aligned with ICH E6(R2).
     """

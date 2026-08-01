@@ -2,8 +2,8 @@ import asyncio
 import contextlib
 import logging
 import os
-from datetime import date, datetime, timezone
-from typing import Any, List, Optional
+from datetime import UTC, date, datetime
+from typing import Any
 
 from sqlalchemy import select
 
@@ -16,23 +16,23 @@ from packages.security.context import (
 
 logger = logging.getLogger("etmf-expiration-scanner")
 
-_scanner_task: Optional[asyncio.Task] = None
+_scanner_task: asyncio.Task | None = None
 _should_run: bool = False
 
 
 def determine_warning_window(
     expiration_date: datetime,
     now: datetime,
-    warning_windows: List[int] = [7, 30, 90],
-) -> Optional[str]:
+    warning_windows: list[int] = [7, 30, 90],
+) -> str | None:
     """
     Determines which window (e.g. "90", "30", "7", or "EXPIRED") a document's expiration falls into.
     """
     # Ensure both are timezone-aware datetimes
     if expiration_date.tzinfo is None:
-        expiration_date = expiration_date.replace(tzinfo=timezone.utc)
+        expiration_date = expiration_date.replace(tzinfo=UTC)
     if now.tzinfo is None:
-        now = now.replace(tzinfo=timezone.utc)
+        now = now.replace(tzinfo=UTC)
 
     if expiration_date <= now:
         return "EXPIRED"
@@ -53,7 +53,7 @@ async def execute_expiration_scan_cycle(session_maker: Any) -> None:
     Runs a single cycle of the document expiration alert scanning.
     Identifies documents approaching or past expiration and persistently records alert states.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Get warning windows config
     env_windows = os.getenv("ETMF_EXPIRATION_WARNING_WINDOWS")
@@ -86,7 +86,7 @@ async def execute_expiration_scan_cycle(session_maker: Any) -> None:
             doc_expiry = doc.expiration_date
             if isinstance(doc_expiry, date) and not isinstance(doc_expiry, datetime):
                 doc_expiry = datetime.combine(doc_expiry, datetime.min.time()).replace(
-                    tzinfo=timezone.utc
+                    tzinfo=UTC
                 )
 
             window = determine_warning_window(doc_expiry, now, warning_windows)
@@ -251,7 +251,7 @@ async def dispatch_undispatched_alerts(session_maker: Any) -> None:
 
 
 async def start_background_etmf_expiration_scanner(
-    session_maker: Any, interval: Optional[float] = None
+    session_maker: Any, interval: float | None = None
 ) -> None:
     """
     Start the asynchronous background eTMF expiration scanner thread.

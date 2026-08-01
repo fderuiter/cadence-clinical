@@ -1,7 +1,6 @@
 import logging
 import os
 import time
-from typing import Optional, Tuple
 
 import httpx
 
@@ -12,7 +11,7 @@ logger = logging.getLogger("etmf-notifications-client")
 
 async def publish_expiration_notification(
     payload: dict,
-) -> Tuple[bool, Optional[str], Optional[str]]:
+) -> tuple[bool, str | None, str | None]:
     """
     Sends a POST request to {NOTIFICATIONS_URL}/api/v1/notifications.
     Uses HMAC-SHA256 Gateway signature V2 for secure internal service authentication.

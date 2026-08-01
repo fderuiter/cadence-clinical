@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 import packages  # noqa: F401
 
@@ -19,9 +19,9 @@ class LiveSubjectMigrationEngine:
         subject_id: str,
         old_version: str,
         new_version: str,
-        form_submissions: List[Dict[str, Any]],
-        field_mapping: Dict[str, str],
-    ) -> Dict[str, Any]:
+        form_submissions: list[dict[str, Any]],
+        field_mapping: dict[str, str],
+    ) -> dict[str, Any]:
         """Migrate subject eCRF form submissions from old protocol version to new version.
 
         Args:

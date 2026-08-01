@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 import packages  # noqa: F401
 
@@ -15,8 +15,8 @@ class StudyVersionDiffEngine:
     """
 
     def compare_usdm_snapshots(
-        self, snapshot_v1: Dict[str, Any], snapshot_v2: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, snapshot_v1: dict[str, Any], snapshot_v2: dict[str, Any]
+    ) -> dict[str, Any]:
         """Compare two USDM protocol version snapshots and generate structured diff report.
 
         Args:
@@ -39,7 +39,7 @@ class StudyVersionDiffEngine:
         added_activities = [v2_acts[aid] for aid in sorted(added_act_ids)]
         removed_activities = [v1_acts[aid] for aid in sorted(removed_act_ids)]
 
-        modified_fields: List[Dict[str, Any]] = []
+        modified_fields: list[dict[str, Any]] = []
         for aid in sorted(common_act_ids):
             a1 = v1_acts[aid]
             a2 = v2_acts[aid]

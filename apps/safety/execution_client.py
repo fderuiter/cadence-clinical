@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 from fastapi import HTTPException
@@ -11,8 +11,8 @@ from packages.security.signing import generate_gateway_signature
 logger = logging.getLogger("safety-execution-client")
 
 # For local in-process testing / short-circuit overrides
-mock_ae_records: Optional[Dict[str, Any]] = None
-mock_meddra_resolution: Optional[Dict[str, Any]] = None
+mock_ae_records: dict[str, Any] | None = None
+mock_meddra_resolution: dict[str, Any] | None = None
 
 
 class ExecutionClient:
@@ -23,7 +23,7 @@ class ExecutionClient:
 
     def __init__(
         self,
-        base_url: Optional[str] = None,
+        base_url: str | None = None,
         timeout: float = 10.0,
     ) -> None:
         self.base_url = (
@@ -31,7 +31,7 @@ class ExecutionClient:
         ).rstrip("/")
         self.timeout = timeout
 
-    def _get_auth_headers(self, change_reason: str = "") -> Dict[str, str]:
+    def _get_auth_headers(self, change_reason: str = "") -> dict[str, str]:
         """Generates V2 signed Gateway headers for the safety service."""
         gateway_secret_env = os.getenv(
             "GATEWAY_SECRET", "internal-gateway-secret-12345"
@@ -65,8 +65,8 @@ class ExecutionClient:
         }
 
     async def fetch_ae_data(
-        self, study_id: str, client: Optional[httpx.AsyncClient] = None
-    ) -> Dict[str, List[Dict[str, Any]]]:
+        self, study_id: str, client: httpx.AsyncClient | None = None
+    ) -> dict[str, list[dict[str, Any]]]:
         """
         Fetch AE Dataset-JSON records (both IG.AE and IG.SUPPAE) from EDC execution service.
         Returns parsed itemGroupData maps for downstream mapping.
@@ -106,7 +106,7 @@ class ExecutionClient:
             clinical_data = data.get("clinicalData", {})
             item_groups = clinical_data.get("itemGroupData", {})
 
-            result: Dict[str, List[Dict[str, Any]]] = {"AE": [], "SUPPAE": []}
+            result: dict[str, list[dict[str, Any]]] = {"AE": [], "SUPPAE": []}
 
             for ig_key, ig_data in item_groups.items():
                 domain_key = ig_key.replace("IG.", "")
@@ -145,8 +145,8 @@ class ExecutionClient:
         term: str,
         version: str = "26.0",
         target_level: str = "LLT",
-        client: Optional[httpx.AsyncClient] = None,
-    ) -> Dict[str, Any]:
+        client: httpx.AsyncClient | None = None,
+    ) -> dict[str, Any]:
         """
         Resolve a verbatim Adverse Event term using execution service's medical coding dictionaries endpoint.
         Returns the parsed MedDRACodingResult hierarchy.

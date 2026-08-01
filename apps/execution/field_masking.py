@@ -6,12 +6,12 @@ and RTSM Randomization Records based on granular PermissionEnum and unblinded ac
 Requirements: PRD-SYS-001, 21 CFR Part 11
 """
 
-from typing import Any, Dict, List, Set
+from typing import Any
 
 from packages.security.permissions import PermissionEnum
 
 # Fields subject to unblinded access protection (blinded treatment arms, doses, kit numbers)
-BLINDED_TREATMENT_FIELDS: Set[str] = {
+BLINDED_TREATMENT_FIELDS: set[str] = {
     "treatment_arm",
     "unblinded_dose",
     "kit_number",
@@ -20,7 +20,7 @@ BLINDED_TREATMENT_FIELDS: Set[str] = {
 }
 
 # Fields subject to PII/PHI redaction
-PII_PHI_FIELDS: Set[str] = {
+PII_PHI_FIELDS: set[str] = {
     "ssn",
     "social_security_number",
     "first_name",
@@ -35,10 +35,10 @@ MASKED_REPLACEMENT_TEXT = "***MASKED***"
 
 
 def mask_clinical_record(
-    record: Dict[str, Any],
-    permissions: Set[PermissionEnum],
+    record: dict[str, Any],
+    permissions: set[PermissionEnum],
     unblinded_access: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Mask sensitive blinded fields and PII in a single clinical record dictionary.
 
     Args:
@@ -84,10 +84,10 @@ def mask_clinical_record(
 
 
 def mask_clinical_records_list(
-    records: List[Dict[str, Any]],
-    permissions: Set[PermissionEnum],
+    records: list[dict[str, Any]],
+    permissions: set[PermissionEnum],
     unblinded_access: bool = False,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Mask sensitive blinded fields and PII across a list of clinical records.
 
     Args:

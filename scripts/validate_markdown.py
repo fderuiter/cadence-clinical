@@ -912,7 +912,7 @@ def process_markdown_file(
     if codebase_map is None:
         codebase_map = {}
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             lines = f.readlines()
     except Exception as e:
         add_error(file_path, 1, f"Failed to read file: {e}")

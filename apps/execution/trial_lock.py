@@ -1,7 +1,6 @@
 import json
 import logging
 import time
-from typing import List
 
 from apps.execution.notifications_client import publish_notification
 from packages.security import run_async
@@ -18,7 +17,7 @@ logger = logging.getLogger("NotificationRouter")
 class NotificationRouter:
     """Routes alerts to designated safety leads and security representatives."""
 
-    def send_email(self, recipients: List[str], message: str):
+    def send_email(self, recipients: list[str], message: str):
         """Sends an email notification to the specified recipients."""
         try:
             category = "SYSTEM"
@@ -63,7 +62,7 @@ class NotificationRouter:
         except Exception as e:
             logger.error("Failed to send email notification: %s", e, exc_info=True)
 
-    def send_sms(self, phone_numbers: List[str], message: str):
+    def send_sms(self, phone_numbers: list[str], message: str):
         """Sends an SMS notification to the specified phone numbers."""
         try:
             category = "SYSTEM"
@@ -119,7 +118,7 @@ class NotificationRouter:
         except Exception as e:
             logger.error("Failed to send webhook notification: %s", e, exc_info=True)
 
-    def send_dashboard_notification(self, recipients: List[str], payload: dict):
+    def send_dashboard_notification(self, recipients: list[str], payload: dict):
         """Sends a dashboard notification to the specified recipients."""
         try:
             # 1. SDV-drop check

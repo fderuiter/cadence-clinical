@@ -2,7 +2,7 @@ import copy
 import logging
 import os
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -41,7 +41,7 @@ class SafetyCaseICSRCreate(BaseModel):
         ..., description="Worldwide unique identifier for this safety case"
     )
     patient_id: str = Field(..., description="Unique subject/patient identifier")
-    case_data: Dict[str, Any] = Field(
+    case_data: dict[str, Any] = Field(
         ..., description="The structured ICSR case JSON payload"
     )
 
@@ -52,7 +52,7 @@ class SafetyCaseICSRResponse(BaseModel):
     id: str
     worldwide_unique_case_id: str
     patient_id: str
-    case_data: Dict[str, Any]
+    case_data: dict[str, Any]
     created_at: str
     created_by: str
     reason_for_change: str
@@ -69,9 +69,9 @@ class SafetyExportJobResponse(BaseModel):
     id: str
     job_name: str
     status: str
-    output: Optional[str] = None
-    error: Optional[str] = None
-    error_message: Optional[str] = None
+    output: str | None = None
+    error: str | None = None
+    error_message: str | None = None
     created_at: str
     created_by: str
     reason_for_change: str
@@ -84,11 +84,11 @@ class SafetyAuditLogResponse(BaseModel):
     id: str
     created_at: str
     created_by: str
-    reason_for_change: Optional[str] = None
+    reason_for_change: str | None = None
     version_index: int
     action: str
     details: str
-    record_id: Optional[str] = None
+    record_id: str | None = None
 
 
 class SAEReconciliationRunRequest(BaseModel):
@@ -103,9 +103,9 @@ class SAEDiscrepancyResponse(BaseModel):
     source: str
     case_event_key: str
     field_name: str
-    expected_value: Optional[str] = None
-    actual_value: Optional[str] = None
-    meddra_version: Optional[str] = None
+    expected_value: str | None = None
+    actual_value: str | None = None
+    meddra_version: str | None = None
     created_at: str
     created_by: str
     reason_for_change: str
@@ -122,7 +122,7 @@ class SAEReconciliationRunResponse(BaseModel):
     created_by: str
     reason_for_change: str
     version_index: int
-    discrepancies: List[SAEDiscrepancyResponse] = []
+    discrepancies: list[SAEDiscrepancyResponse] = []
 
 
 class SAEReconciliationJobRequest(BaseModel):
@@ -135,9 +135,9 @@ class SAEReconciliationJobResponse(BaseModel):
     id: str
     study_id: str
     status: str
-    error_message: Optional[str] = None
-    run_id: Optional[str] = None
-    result_summary: Optional[Dict[str, Any]] = None
+    error_message: str | None = None
+    run_id: str | None = None
+    result_summary: dict[str, Any] | None = None
     created_at: str
     created_by: str
     reason_for_change: str
@@ -181,8 +181,8 @@ async def write_safety_audit_log(
     user_id: str,
     action: str,
     details: str,
-    record_id: Optional[str] = None,
-    change_reason: Optional[str] = None,
+    record_id: str | None = None,
+    change_reason: str | None = None,
     version_index: int = 1,
 ) -> None:
     """
@@ -236,7 +236,7 @@ def map_job_to_response(job: ExportJob) -> SafetyExportJobResponse:
 
 
 def map_run_to_response(
-    run: SAEReconciliationRun, discrepancies: List[SAEDiscrepancy]
+    run: SAEReconciliationRun, discrepancies: list[SAEDiscrepancy]
 ) -> SAEReconciliationRunResponse:
     return SAEReconciliationRunResponse(
         id=run.id,
@@ -267,7 +267,7 @@ def map_run_to_response(
 
 
 def map_job_to_reconciliation_response(
-    job: SAEReconciliationJob, result_summary: Optional[Dict[str, Any]] = None
+    job: SAEReconciliationJob, result_summary: dict[str, Any] | None = None
 ) -> SAEReconciliationJobResponse:
     return SAEReconciliationJobResponse(
         id=job.id,
@@ -284,8 +284,8 @@ def map_job_to_reconciliation_response(
 
 
 async def get_job_result_summary(
-    session: AsyncSession, run_id: Optional[str]
-) -> Optional[Dict[str, Any]]:
+    session: AsyncSession, run_id: str | None
+) -> dict[str, Any] | None:
     if not run_id:
         return None
     try:
@@ -356,12 +356,12 @@ async def create_safety_case(
     return map_case_to_response(case)
 
 
-@app.get("/api/v1/safety/cases", response_model=List[SafetyCaseICSRResponse])
+@app.get("/api/v1/safety/cases", response_model=list[SafetyCaseICSRResponse])
 async def list_safety_cases(
     request: Request,
-    patient_id: Optional[str] = None,
+    patient_id: str | None = None,
     session: AsyncSession = Depends(get_db_session),
-) -> List[SafetyCaseICSRResponse]:
+) -> list[SafetyCaseICSRResponse]:
     """
     List all safety cases, optionally filtered by patient ID.
     """
@@ -463,11 +463,11 @@ async def create_export_job(
     return map_job_to_response(job)
 
 
-@app.get("/api/v1/safety/export-jobs", response_model=List[SafetyExportJobResponse])
+@app.get("/api/v1/safety/export-jobs", response_model=list[SafetyExportJobResponse])
 async def list_export_jobs(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-) -> List[SafetyExportJobResponse]:
+) -> list[SafetyExportJobResponse]:
     """
     List all safety export jobs.
     """
@@ -523,11 +523,11 @@ async def get_export_job(
 
 
 # Audit Logs Retrieval Endpoint
-@app.get("/api/v1/safety/audit-logs", response_model=List[SafetyAuditLogResponse])
+@app.get("/api/v1/safety/audit-logs", response_model=list[SafetyAuditLogResponse])
 async def list_safety_audit_logs(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-) -> List[SafetyAuditLogResponse]:
+) -> list[SafetyAuditLogResponse]:
     """
     Retrieve safety audit logs in descending chronological order.
     """
@@ -735,6 +735,220 @@ async def trigger_sae_reconciliation(
     return map_run_to_response(run, discrepancies)
 
 
+# Helper alert and background task implementation
+async def send_medical_monitor_alert(
+    job_id: str,
+    run_id: str,
+    study_id: str,
+    discrepancy_count: int,
+    test_client: Any | None,
+    session: AsyncSession,
+    user_id: str,
+    change_reason: str,
+) -> None:
+    import os
+    import time
+
+    import httpx
+
+    from packages.security.signing import generate_gateway_signature
+
+    gateway_secret_env = os.getenv("GATEWAY_SECRET")
+    if not gateway_secret_env:
+        raise RuntimeError(
+            "GATEWAY_SECRET environment variable is not set. "
+            "Refusing to sign internal requests with a default/empty secret."
+        )
+    gateway_secret = gateway_secret_env.encode("utf-8")
+
+    caller_user_id = "safety-service"
+    roles = "sponsor_statistician"
+    timestamp = str(time.time())
+
+    signature = generate_gateway_signature(
+        user_id=caller_user_id,
+        roles=roles,
+        timestamp=timestamp,
+        secret=gateway_secret,
+        change_reason=change_reason,
+    )
+
+    headers = {
+        "X-User-Id": caller_user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": signature,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+    }
+
+    payload = {
+        "recipient_role": "sponsor_mm",
+        "category": "ALERTS",
+        "priority": "HIGH",
+        "channels": "IN_APP",
+        "message_content": f"SAE reconciliation run {run_id} identified {discrepancy_count} discrepancies for study {study_id}.",
+        "related_entity_id": run_id,
+        "related_entity_type": "SAEReconciliationRun",
+    }
+
+    notifications_url = os.getenv("NOTIFICATIONS_URL") or "http://localhost:8006"
+    url = f"{notifications_url.rstrip('/')}/api/v1/notifications"
+
+    try:
+        if test_client is not None:
+            response = await test_client.post(
+                url, json=payload, headers=headers, timeout=10.0
+            )
+        else:
+            async with httpx.AsyncClient(timeout=10.0) as cli:
+                response = await cli.post(url, json=payload, headers=headers)
+
+        if response.status_code == 201:
+            logger.info("Successfully dispatched alert to Sponsor Medical Monitor.")
+            await write_safety_audit_log(
+                session=session,
+                user_id=user_id,
+                action="RECONCILIATION_ALERT_SENT",
+                details=f"Sponsor Medical Monitor alert successfully dispatched for run {run_id}. Identified {discrepancy_count} discrepancies.",
+                record_id=job_id,
+                change_reason=change_reason,
+            )
+        else:
+            logger.error(
+                f"Notifications service returned error {response.status_code}: {response.text}"
+            )
+            await write_safety_audit_log(
+                session=session,
+                user_id=user_id,
+                action="RECONCILIATION_ALERT_FAILED",
+                details=f"Sponsor Medical Monitor alert dispatch failed with status {response.status_code}.",
+                record_id=job_id,
+                change_reason=change_reason,
+            )
+    except Exception as e:
+        logger.exception("Failed to dispatch Sponsor Medical Monitor alert")
+        await write_safety_audit_log(
+            session=session,
+            user_id=user_id,
+            action="RECONCILIATION_ALERT_FAILED",
+            details=f"Sponsor Medical Monitor alert dispatch exception: {str(e)[:200]}.",
+            record_id=job_id,
+            change_reason=change_reason,
+        )
+
+
+async def reconciliation_worker(
+    job_id: str,
+    study_id: str,
+    user_id: str,
+    change_reason: str,
+    test_client: Any | None = None,
+) -> None:
+    session_maker = db_manager.get_session_maker()
+    async with session_maker() as session:
+        try:
+            # 1. Update status to PROCESSING
+            stmt = select(SAEReconciliationJob).where(SAEReconciliationJob.id == job_id)
+            result = await session.execute(stmt)
+            job = result.scalars().first()
+            if not job:
+                logger.error(f"Reconciliation job {job_id} not found in database.")
+                return
+
+            job.status = "PROCESSING"
+            await session.flush()
+
+            await write_safety_audit_log(
+                session=session,
+                user_id=user_id,
+                action="RECONCILIATION_JOB_PROCESSING",
+                details=f"SAE reconciliation job {job_id} status changed to PROCESSING.",
+                record_id=job_id,
+                change_reason=change_reason,
+            )
+            await session.commit()
+
+            # 2. Run reconciliation logic
+            from apps.safety.reconciliation import run_reconciliation
+
+            results = await run_reconciliation(
+                study_id=study_id,
+                session=session,
+                created_by=user_id,
+                reason_for_change=change_reason,
+                client=test_client,
+            )
+
+            run = results["run"]
+            discrepancies = results["discrepancies"]
+
+            # 3. Update status to COMPLETED
+            stmt = select(SAEReconciliationJob).where(SAEReconciliationJob.id == job_id)
+            result = await session.execute(stmt)
+            job = result.scalars().first()
+            if job:
+                job.status = "COMPLETED"
+                job.run_id = run.id
+                await session.flush()
+
+                await write_safety_audit_log(
+                    session=session,
+                    user_id=user_id,
+                    action="RECONCILIATION_JOB_COMPLETED",
+                    details=f"SAE reconciliation job {job_id} status changed to COMPLETED. Created run {run.id}.",
+                    record_id=job_id,
+                    change_reason=change_reason,
+                )
+                await session.commit()
+
+                # 4. Handle alerts for material discrepancies
+                if len(discrepancies) > 0:
+                    await send_medical_monitor_alert(
+                        job_id=job_id,
+                        run_id=run.id,
+                        study_id=study_id,
+                        discrepancy_count=len(discrepancies),
+                        test_client=test_client,
+                        session=session,
+                        user_id=user_id,
+                        change_reason=change_reason,
+                    )
+                    await session.commit()
+
+        except Exception as e:
+            logger.exception(f"Error processing reconciliation job {job_id}")
+            # Ensure safe transition to FAILED with a sanitized, non-PII error message.
+            # Roll back any failed/dirty session state before issuing new DML.
+            try:
+                await session.rollback()
+                stmt = select(SAEReconciliationJob).where(
+                    SAEReconciliationJob.id == job_id
+                )
+                result = await session.execute(stmt)
+                job = result.scalars().first()
+                if job:
+                    job.status = "FAILED"
+                    # Truncate to first line and 200 chars to prevent PII leakage
+                    # via exception messages that may contain subject IDs or URLs.
+                    err_msg = str(type(e).__name__)
+                    await session.flush()
+
+                    await write_safety_audit_log(
+                        session=session,
+                        user_id=user_id,
+                        action="RECONCILIATION_JOB_FAILED",
+                        details=f"SAE reconciliation job {job_id} status changed to FAILED. Error type: {err_msg}",
+                        record_id=job_id,
+                        change_reason=change_reason,
+                    )
+                    await session.commit()
+            except Exception as inner_e:
+                logger.error(
+                    f"Failed to record FAILED status for job {job_id}: {inner_e}"
+                )
+
+
 # SAE Reconciliation jobs endpoints
 @app.post(
     "/api/v1/safety/reconciliation/jobs",
@@ -805,14 +1019,14 @@ async def trigger_sae_reconciliation_job(
 
 @app.get(
     "/api/v1/safety/reconciliation/jobs",
-    response_model=List[SAEReconciliationJobResponse],
+    response_model=list[SAEReconciliationJobResponse],
 )
 async def list_reconciliation_jobs(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     limit: int = 50,
     offset: int = 0,
-) -> List[SAEReconciliationJobResponse]:
+) -> list[SAEReconciliationJobResponse]:
     """
     List safety reconciliation jobs with pagination.
 
@@ -893,12 +1107,12 @@ async def get_reconciliation_job(
 
 @app.get(
     "/api/v1/safety/reconciliation/runs",
-    response_model=List[SAEReconciliationRunResponse],
+    response_model=list[SAEReconciliationRunResponse],
 )
 async def list_reconciliation_runs(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-) -> List[SAEReconciliationRunResponse]:
+) -> list[SAEReconciliationRunResponse]:
     """
     List all safety reconciliation runs.
     """

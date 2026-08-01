@@ -7,10 +7,9 @@ Requirements: PRD-SYS-001, 21 CFR Part 11
 """
 
 import enum
-from typing import Dict, List, Set, Union
 
 
-class PermissionEnum(str, enum.Enum):
+class PermissionEnum(enum.StrEnum):
     """Granular permission definitions across Cadence Clinical platform."""
 
     # Core Read & Audit Permissions
@@ -48,7 +47,7 @@ class PermissionEnum(str, enum.Enum):
     ARCHIVE_EXPORT = "archive:export"
 
 
-class RoleEnum(str, enum.Enum):
+class RoleEnum(enum.StrEnum):
     """Canonical system roles within Cadence Clinical eClinical platform."""
 
     SPONSOR_ADMIN = "SponsorAdmin"
@@ -62,7 +61,7 @@ class RoleEnum(str, enum.Enum):
 
 
 # Canonical Role to Permission Matrix Mapping
-ROLE_PERMISSIONS_MAP: Dict[str, Set[PermissionEnum]] = {
+ROLE_PERMISSIONS_MAP: dict[str, set[PermissionEnum]] = {
     RoleEnum.SPONSOR_ADMIN.value: {
         PermissionEnum.STUDY_READ,
         PermissionEnum.AUDIT_VIEW,
@@ -134,7 +133,7 @@ ROLE_PERMISSIONS_MAP: Dict[str, Set[PermissionEnum]] = {
 }
 
 # Role aliases normalization mapping
-_ROLE_ALIASES_MAP: Dict[str, str] = {
+_ROLE_ALIASES_MAP: dict[str, str] = {
     "sponsor_admin": RoleEnum.SPONSOR_ADMIN.value,
     "sponsor": RoleEnum.SPONSOR_ADMIN.value,
     "designer": RoleEnum.SPONSOR_DESIGNER.value,
@@ -176,7 +175,7 @@ def normalize_role_name(role: str) -> str:
     return cleaned
 
 
-def get_permissions_for_role(role: str) -> Set[PermissionEnum]:
+def get_permissions_for_role(role: str) -> set[PermissionEnum]:
     """Retrieve the set of granular permissions assigned to a given role.
 
     Args:
@@ -189,7 +188,7 @@ def get_permissions_for_role(role: str) -> Set[PermissionEnum]:
     return ROLE_PERMISSIONS_MAP.get(canonical_role, set())
 
 
-def get_permissions_for_roles(roles: List[str]) -> Set[PermissionEnum]:
+def get_permissions_for_roles(roles: list[str]) -> set[PermissionEnum]:
     """Retrieve the aggregated set of permissions across multiple assigned roles.
 
     Args:
@@ -198,15 +197,13 @@ def get_permissions_for_roles(roles: List[str]) -> Set[PermissionEnum]:
     Returns:
         Aggregated set of PermissionEnum members granted across all input roles.
     """
-    aggregated: Set[PermissionEnum] = set()
+    aggregated: set[PermissionEnum] = set()
     for r in roles:
         aggregated.update(get_permissions_for_role(r))
     return aggregated
 
 
-def has_permission(
-    roles: Union[str, List[str]], required_permission: PermissionEnum
-) -> bool:
+def has_permission(roles: str | list[str], required_permission: PermissionEnum) -> bool:
     """Check if any of the provided roles possess the required permission.
 
     Args:

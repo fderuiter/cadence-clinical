@@ -13,7 +13,8 @@
         <div class="header-badges" style="display: flex; gap: 8px">
           <span class="badge gxp">21 CFR Part 11</span>
           <span class="badge">GAMP 5</span>
-          <span class="badge">IEC 62304</span> <!-- deid: ignore -->
+          <span class="badge">IEC 62304</span>
+          <!-- deid: ignore -->
         </div>
         <div
           class="user-status-card"

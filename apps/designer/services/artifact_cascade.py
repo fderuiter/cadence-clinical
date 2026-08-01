@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import Any, Dict
+from typing import Any
 
 from cdisc.cascade_models import CascadedFormTemplate, CascadeSummaryReport
 
@@ -17,7 +17,7 @@ class ArtifactCascadeEngine:
     """
 
     def cascade_protocol_to_downstream(
-        self, study_payload: Dict[str, Any], amendment_version: int = 1
+        self, study_payload: dict[str, Any], amendment_version: int = 1
     ) -> CascadeSummaryReport:
         """Propagate protocol graph specifications into downstream eCRFs, SoAs, and rules.
 

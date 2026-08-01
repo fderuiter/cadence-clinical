@@ -104,7 +104,7 @@ def parse_srs(filepath: str) -> set[str]:
     if not os.path.exists(filepath):
         return requirements
 
-    with open(filepath, "r", encoding="utf-8") as f:
+    with open(filepath, encoding="utf-8") as f:
         content = f.read()
 
     # Pattern used in generate_rtm.py: e.g. * **Trace 1: Shadow Schema Retention:**
@@ -129,7 +129,7 @@ def parse_prd(filepath: str) -> set[str]:
     if not os.path.exists(filepath):
         return requirements
 
-    with open(filepath, "r", encoding="utf-8") as f:
+    with open(filepath, encoding="utf-8") as f:
         content = f.read()
 
     # Pattern used in generate_rtm.py: e.g. #### PRD-SYS-001:

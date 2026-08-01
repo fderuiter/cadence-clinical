@@ -4,7 +4,7 @@ Requirements: PRD-SYS-001
 """
 
 import time
-from typing import AsyncGenerator, Dict
+from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio
@@ -155,7 +155,7 @@ def get_eisf_auth_headers(
     roles: str = "crc",
     site_id: str = None,
     change_reason: str = "Valid Change Reason",
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """Helper to generate valid gateway V2 signed headers for testing.
 
     Requirements: PRD-SYS-001

@@ -6,7 +6,7 @@ ordered narrative sections, synopsis data, and an SoA matrix using the shared re
 It resolves usdm:ref markup recursively, validates display metadata, and enforces strict uniqueness.
 """
 
-from typing import Any, Dict, List, Set
+from typing import Any
 
 import usdm_model
 from bs4 import BeautifulSoup
@@ -142,13 +142,13 @@ def resolve_text_references(text: str, study: usdm_model.Study) -> str:
 
 def assemble_narrative_sections(
     study: usdm_model.Study,
-) -> List[NarrativeSectionView]:
+) -> list[NarrativeSectionView]:
     """
     Assembles narrative sections and subsections from the USDM Study object.
     Enforces narrative display rules and unique section numbering.
     """
-    narrative_content_map: Dict[str, usdm_model.NarrativeContent] = {}
-    narrative_item_map: Dict[str, usdm_model.NarrativeContentItem] = {}
+    narrative_content_map: dict[str, usdm_model.NarrativeContent] = {}
+    narrative_item_map: dict[str, usdm_model.NarrativeContentItem] = {}
 
     # 1. Collect all NarrativeContent from documentedBy
     if study.documentedBy:
@@ -167,13 +167,13 @@ def assemble_narrative_sections(
                     narrative_item_map[item.id] = item
 
     # 3. Identify Root Sections (NarrativeContent not nested inside any other childIds)
-    child_ids_set: Set[str] = set()
+    child_ids_set: set[str] = set()
     for nc in narrative_content_map.values():
         if nc.childIds:
             child_ids_set.update(nc.childIds)
 
     # Roots should preserve their original documentedBy ordering
-    root_sections_ordered: List[usdm_model.NarrativeContent] = []
+    root_sections_ordered: list[usdm_model.NarrativeContent] = []
     if study.documentedBy:
         for doc in study.documentedBy:
             if doc.versions:
@@ -183,7 +183,7 @@ def assemble_narrative_sections(
                             if nc.id not in child_ids_set:
                                 root_sections_ordered.append(nc)
 
-    displayed_section_numbers: Set[str] = set()
+    displayed_section_numbers: set[str] = set()
 
     def build_section(
         nc: usdm_model.NarrativeContent, order_in_parent: int
@@ -202,8 +202,8 @@ def assemble_narrative_sections(
                 )
             displayed_section_numbers.add(sec_num)
 
-        subsections: List[NarrativeSectionView] = []
-        items: List[NarrativeItemView] = []
+        subsections: list[NarrativeSectionView] = []
+        items: list[NarrativeItemView] = []
         child_order = 1
 
         # Process direct content item if contentItemId exists
@@ -262,7 +262,7 @@ def assemble_narrative_sections(
             derived_from_soa=bool(derived_from_soa),
         )
 
-    assembled_roots: List[NarrativeSectionView] = []
+    assembled_roots: list[NarrativeSectionView] = []
     for idx, root_nc in enumerate(root_sections_ordered):
         assembled_roots.append(build_section(root_nc, idx + 1))
 
@@ -449,19 +449,19 @@ def assemble_soa_matrix(study: usdm_model.Study) -> SoAMatrixView:
     """
     Assembles Schedule of Activities (SoAMatrixView) from the USDM Study object.
     """
-    epochs_list: List[SoAHeaderEpoch] = []
-    encounters_list: List[SoAHeaderEncounter] = []
-    rows_list: List[SoARowView] = []
+    epochs_list: list[SoAHeaderEpoch] = []
+    encounters_list: list[SoAHeaderEncounter] = []
+    rows_list: list[SoARowView] = []
 
     # Map for encounter -> epoch relationship and cell-applicability mappings
-    encounter_to_epoch: Dict[str, str] = {}
-    encounter_epoch_activities: Dict[tuple, Set[str]] = {}
-    encounter_epoch_details: Dict[tuple, str] = {}
+    encounter_to_epoch: dict[str, str] = {}
+    encounter_epoch_activities: dict[tuple, set[str]] = {}
+    encounter_epoch_details: dict[tuple, str] = {}
 
     # Unique identifiers trackers to avoid duplicates
-    epoch_ids_added: Set[str] = set()
-    encounter_ids_added: Set[str] = set()
-    activity_ids_added: Set[str] = set()
+    epoch_ids_added: set[str] = set()
+    encounter_ids_added: set[str] = set()
+    activity_ids_added: set[str] = set()
 
     # 1. First build mappings from schedule timelines & activity instances
     if study.versions:

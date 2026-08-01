@@ -4,7 +4,7 @@ import datetime as dt
 import functools
 import re
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from neo4j.exceptions import TransientError
 from protocol_authoring.models import (
@@ -76,7 +76,7 @@ def bump_version(version_tag: str, bump_type: str) -> str:
     return prefix + ".".join(str(p) for p in parts)
 
 
-def verify_version_signature(version_props: Dict[str, Any]) -> bool:
+def verify_version_signature(version_props: dict[str, Any]) -> bool:
     """
     Verifies that the provided study version properties have a valid canonical signature.
     Supports both the new GxP payload structure and the legacy payload schema for backward compatibility.
@@ -224,7 +224,7 @@ async def assert_study_version_mutable(tx, study_version_id: str):
 
 
 async def assert_graph_mutable(
-    tx, study_id: Optional[str] = None, object_id: Optional[str] = None
+    tx, study_id: str | None = None, object_id: str | None = None
 ):
     """
     Ensures that the study or library object is in a mutable state (DRAFT or ACTIVE).
@@ -306,7 +306,7 @@ async def assert_graph_mutable(
 
 
 async def assert_library_object_mutable(
-    driver_or_tx, object_id: str, version: Optional[int] = None
+    driver_or_tx, object_id: str, version: int | None = None
 ):
     """
     Asserts that a library object/version is not referenced by an active/active-recruiting study
@@ -476,7 +476,7 @@ async def create_study_version(
             return record["id"] if record else None
 
 
-def serialize_library_props(props: Dict[str, Any]) -> Dict[str, Any]:
+def serialize_library_props(props: dict[str, Any]) -> dict[str, Any]:
     import json
 
     new_props = dict(props)
@@ -488,7 +488,7 @@ def serialize_library_props(props: Dict[str, Any]) -> Dict[str, Any]:
     return new_props
 
 
-def deserialize_library_props(props: Dict[str, Any]) -> Dict[str, Any]:
+def deserialize_library_props(props: dict[str, Any]) -> dict[str, Any]:
     import json
 
     new_props = dict(props)
@@ -502,7 +502,7 @@ def deserialize_library_props(props: Dict[str, Any]) -> Dict[str, Any]:
 async def create_library_object_version(
     driver,
     object_id: str,
-    new_properties: Dict[str, Any],
+    new_properties: dict[str, Any],
     is_amendment: bool = False,
     bypass_immutability: bool = False,
 ):
@@ -600,7 +600,7 @@ async def create_library_object_version(
 
 async def get_latest_library_object(
     driver, object_id: str, sponsor_id: str, tenant_id: str = "tenant_default"
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """
     Retrieves the latest version of a specific library object under a sponsor and tenant.
     """
@@ -642,7 +642,7 @@ async def get_library_object_by_version(
     sponsor_id: str,
     version: int,
     tenant_id: str = "tenant_default",
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """
     Retrieves a specific version of a library object under a sponsor and tenant.
     """
@@ -684,7 +684,7 @@ async def get_library_object_by_version(
 
 async def get_library_object_history(
     driver, object_id: str, sponsor_id: str, tenant_id: str = "tenant_default"
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Retrieves the full version history of a library object under a sponsor and tenant,
     ordered from earliest version to latest version (by version ascending).
@@ -721,11 +721,11 @@ async def get_library_object_history(
 async def list_library_objects(
     driver,
     sponsor_id: str,
-    object_type: Optional[str] = None,
+    object_type: str | None = None,
     limit: int = 50,
-    starting_after: Optional[str] = None,
+    starting_after: str | None = None,
     tenant_id: str = "tenant_default",
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Lists the latest version of each library object under a sponsor and tenant,
     supporting optional filtering by object type and Stripe-style cursor-compatible ordering.
@@ -790,7 +790,7 @@ async def list_library_objects(
 
 @with_transaction_retry()
 async def update_study_properties(
-    driver, study_id: str, user_id: str, change_reason: str, properties: Dict[str, Any]
+    driver, study_id: str, user_id: str, change_reason: str, properties: dict[str, Any]
 ):
     """
     Requirement 2: Discrete action nodes connected to modified fields via BEFORE and AFTER relationships.
@@ -858,7 +858,7 @@ async def update_study_properties(
 
 async def get_study_differences(
     driver, study_id: str, action_id1: str, action_id2: str
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Requirement 3: Compute human-readable field-level differences between any two version actions of a study.
     Also covers: "A study designer can retrieve a flat list of field-level differences between any two version actions of a study."
@@ -904,7 +904,7 @@ async def create_rule_node(
     user_id: str,
     change_reason: str,
     rule_id: str,
-    rule_data: Dict[str, Any],
+    rule_data: dict[str, Any],
 ):
     """
     Creates a new versioned rule under a study.
@@ -984,7 +984,7 @@ async def update_rule_node(
     rule_id: str,
     user_id: str,
     change_reason: str,
-    rule_data: Dict[str, Any],
+    rule_data: dict[str, Any],
 ):
     """
     Updates an existing rule by creating a new version.
@@ -1130,7 +1130,7 @@ async def delete_rule_node(
             return record["version_index"] if record else None
 
 
-async def get_rules_from_graph(driver, study_id: str) -> List[Dict[str, Any]]:
+async def get_rules_from_graph(driver, study_id: str) -> list[dict[str, Any]]:
     """
     Retrieves all active rules (not soft-deleted) for a study.
     """
@@ -1153,7 +1153,7 @@ async def get_rules_from_graph(driver, study_id: str) -> List[Dict[str, Any]]:
         return rules
 
 
-_amendment_locks: Dict[str, asyncio.Lock] = {}
+_amendment_locks: dict[str, asyncio.Lock] = {}
 
 
 @with_transaction_retry()
@@ -1163,7 +1163,7 @@ async def amend_protocol_version(
     user_id: str,
     change_reason: str,
     bump_type: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Implements the formal Designer amendment fork operation without altering the source version.
     Returns a dict with:
@@ -1519,7 +1519,7 @@ async def amend_protocol_version(
 
 
 # --- In-Memory fallbacks for SoA Entity Persistence ---
-MOCK_SOA_DATA: Dict[str, Dict[str, Any]] = {}
+MOCK_SOA_DATA: dict[str, dict[str, Any]] = {}
 
 
 def _init_mock_soa(study_version_id: str):
@@ -1544,7 +1544,7 @@ async def create_study_arm(
     user_id: str,
     change_reason: str,
     arm_id: str,
-    properties: Dict[str, Any],
+    properties: dict[str, Any],
 ) -> str:
     if driver is None:
         assert_mock_study_version_mutable(study_version_id)
@@ -1634,7 +1634,7 @@ async def update_study_arm(
     user_id: str,
     change_reason: str,
     arm_id: str,
-    properties: Dict[str, Any],
+    properties: dict[str, Any],
 ) -> str:
     if driver is None:
         assert_mock_study_version_mutable(study_version_id)
@@ -1728,7 +1728,7 @@ async def create_epoch(
     user_id: str,
     change_reason: str,
     epoch_id: str,
-    properties: Dict[str, Any],
+    properties: dict[str, Any],
 ) -> str:
     if driver is None:
         assert_mock_study_version_mutable(study_version_id)
@@ -1811,7 +1811,7 @@ async def update_epoch(
     user_id: str,
     change_reason: str,
     epoch_id: str,
-    properties: Dict[str, Any],
+    properties: dict[str, Any],
 ) -> str:
     if driver is None:
         assert_mock_study_version_mutable(study_version_id)
@@ -1898,7 +1898,7 @@ async def create_visit(
     user_id: str,
     change_reason: str,
     visit_id: str,
-    properties: Dict[str, Any],
+    properties: dict[str, Any],
 ) -> str:
     if driver is None:
         assert_mock_study_version_mutable(study_version_id)
@@ -1981,7 +1981,7 @@ async def update_visit(
     user_id: str,
     change_reason: str,
     visit_id: str,
-    properties: Dict[str, Any],
+    properties: dict[str, Any],
 ) -> str:
     if driver is None:
         assert_mock_study_version_mutable(study_version_id)
@@ -2068,7 +2068,7 @@ async def create_procedure(
     user_id: str,
     change_reason: str,
     procedure_id: str,
-    properties: Dict[str, Any],
+    properties: dict[str, Any],
 ) -> str:
     if driver is None:
         assert_mock_study_version_mutable(study_version_id)
@@ -2151,7 +2151,7 @@ async def update_procedure(
     user_id: str,
     change_reason: str,
     procedure_id: str,
-    properties: Dict[str, Any],
+    properties: dict[str, Any],
 ) -> str:
     if driver is None:
         assert_mock_study_version_mutable(study_version_id)
@@ -2238,7 +2238,7 @@ async def create_timing_window(
     user_id: str,
     change_reason: str,
     timing_id: str,
-    properties: Dict[str, Any],
+    properties: dict[str, Any],
 ) -> str:
     if driver is None:
         assert_mock_study_version_mutable(study_version_id)
@@ -2321,7 +2321,7 @@ async def update_timing_window(
     user_id: str,
     change_reason: str,
     timing_id: str,
-    properties: Dict[str, Any],
+    properties: dict[str, Any],
 ) -> str:
     if driver is None:
         assert_mock_study_version_mutable(study_version_id)
@@ -2516,7 +2516,7 @@ async def get_section_status(
 
 
 async def assert_section_not_locked(
-    driver, study_version_id: str, section_id: Optional[str]
+    driver, study_version_id: str, section_id: str | None
 ):
     """
     Raises ImmutabilityViolationError if the target section is in a locked or approved state.
@@ -2538,7 +2538,7 @@ async def transition_section_status(
     actor_id: str,
     actor_role: str,
     reason_for_change: str,
-    signature_manifestation: Optional[Dict[str, Any]] = None,
+    signature_manifestation: dict[str, Any] | None = None,
 ) -> SectionReviewTransition:
     """
     Transitions the review status of an ICH section, complying with Part 11 and logging history.
@@ -2560,7 +2560,7 @@ async def transition_section_status(
         actor_id=actor_id,
         actor_role=actor_role,
         reason_for_change=reason_for_change,
-        timestamp=dt.datetime.now(dt.timezone.utc),
+        timestamp=dt.datetime.now(dt.UTC),
     )
 
     if driver is None:
@@ -2607,7 +2607,7 @@ async def transition_section_status(
 
 async def get_section_transitions(
     driver, study_version_id: str, section_id: str
-) -> List[SectionReviewTransition]:
+) -> list[SectionReviewTransition]:
     """
     Retrieves the chronological audit log of all transitions for a section.
     """
@@ -2675,7 +2675,7 @@ async def create_comment_thread(
     thread_id = f"th_{uuid.uuid4().hex[:12]}"
     comment_id = f"co_{uuid.uuid4().hex[:12]}"
 
-    now = dt.datetime.now(dt.timezone.utc)
+    now = dt.datetime.now(dt.UTC)
     comment = Comment(
         comment_id=comment_id,
         thread_id=thread_id,
@@ -2740,7 +2740,7 @@ async def create_comment_thread(
 
 async def get_comment_threads(
     driver, study_version_id: str, section_id: str
-) -> List[CommentThread]:
+) -> list[CommentThread]:
     """
     Lists all comment threads and comments for a specific section.
     """
@@ -2847,7 +2847,7 @@ async def add_comment_to_thread(
     await assert_section_not_locked(driver, study_version_id, thread.section_id)
 
     comment_id = f"co_{uuid.uuid4().hex[:12]}"
-    now = dt.datetime.now(dt.timezone.utc)
+    now = dt.datetime.now(dt.UTC)
     comment = Comment(
         comment_id=comment_id,
         thread_id=thread_id,
@@ -2950,7 +2950,7 @@ async def create_suggestion(
     await assert_section_not_locked(driver, study_version_id, block.get("section_id"))
 
     suggestion_id = f"su_{uuid.uuid4().hex[:12]}"
-    now = dt.datetime.now(dt.timezone.utc)
+    now = dt.datetime.now(dt.UTC)
 
     suggestion = Suggestion(
         suggestion_id=suggestion_id,
@@ -3004,7 +3004,7 @@ async def create_suggestion(
 
 async def get_suggestions(
     driver, study_version_id: str, block_id: str
-) -> List[Suggestion]:
+) -> list[Suggestion]:
     """
     Retrieves all suggestions anchored to a block.
     """
@@ -3109,7 +3109,7 @@ async def decide_suggestion(
 
     await assert_section_not_locked(driver, study_version_id, block.get("section_id"))
 
-    now = dt.datetime.now(dt.timezone.utc)
+    now = dt.datetime.now(dt.UTC)
 
     if decision == "accept":
         # Check stale-version
@@ -3171,7 +3171,7 @@ async def decide_suggestion(
     return suggestion
 
 
-_approval_locks: Dict[str, asyncio.Lock] = {}
+_approval_locks: dict[str, asyncio.Lock] = {}
 
 
 @with_transaction_retry()
@@ -3181,8 +3181,8 @@ async def approve_study_version_delta(
     version_id: str,
     user_id: str,
     change_reason: str,
-    signature_manifestation_payload: Dict[str, Any],
-) -> Dict[str, Any]:
+    signature_manifestation_payload: dict[str, Any],
+) -> dict[str, Any]:
     """
     Saves the APPROVED status and the signature manifestation in the study version record
     and records an Action in the append-only history.
@@ -3604,7 +3604,7 @@ async def link_arm_applicability(
             return record["success"] if record else False
 
 
-async def get_soa_matrix_projection(driver, study_version_id: str) -> Dict[str, Any]:
+async def get_soa_matrix_projection(driver, study_version_id: str) -> dict[str, Any]:
     """
     Returns a read-only projection representing the complete matrix shape (SoAMatrixView).
     Consistently handles both real Neo4j driver or the mock/in-memory fallback, and
@@ -3905,7 +3905,7 @@ async def create_block(
     user_id: str,
     change_reason: str,
     block_id: str,
-    properties: Dict[str, Any],
+    properties: dict[str, Any],
 ) -> str:
     await assert_section_not_locked(
         driver, study_version_id, properties.get("section_id")
@@ -3997,7 +3997,7 @@ async def update_block(
     user_id: str,
     change_reason: str,
     block_id: str,
-    properties: Dict[str, Any],
+    properties: dict[str, Any],
 ) -> str:
     existing_block = await get_block(driver, study_version_id, block_id)
     if existing_block:
@@ -4188,7 +4188,7 @@ async def get_block(
     driver,
     study_version_id: str,
     block_id: str,
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     if driver is None:
         _init_mock_soa(study_version_id)
         block = MOCK_SOA_DATA[study_version_id]["blocks"].get(block_id)
@@ -4214,7 +4214,7 @@ async def get_block(
 async def list_blocks(
     driver,
     study_version_id: str,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     if driver is None:
         _init_mock_soa(study_version_id)
         blocks = [
@@ -4243,7 +4243,7 @@ async def reorder_blocks(
     study_version_id: str,
     user_id: str,
     change_reason: str,
-    block_ids_ordered: List[str],
+    block_ids_ordered: list[str],
 ) -> bool:
     for b_id in block_ids_ordered:
         existing_block = await get_block(driver, study_version_id, b_id)
@@ -4373,7 +4373,7 @@ async def create_form(
     user_id: str,
     change_reason: str,
     form_id: str,
-    properties: Dict[str, Any],
+    properties: dict[str, Any],
 ) -> str:
     if driver is None:
         assert_mock_study_version_mutable(study_version_id)
@@ -4706,15 +4706,15 @@ async def compute_graph_diff(
 
 
 # --- Library Object Instantiation Support ---
-MOCK_LIBRARY_INSTANCES: Dict[str, List[Dict[str, Any]]] = {}
+MOCK_LIBRARY_INSTANCES: dict[str, list[dict[str, Any]]] = {}
 
 
 async def check_library_object_exists_any_sponsor(
     driver,
     object_id: str,
-    version: Optional[int] = None,
+    version: int | None = None,
     tenant_id: str = "tenant_default",
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """
     Looks up a library object across all sponsors under the same tenant to verify its existence
     and retrieve its metadata (including sponsor_id).
@@ -4762,7 +4762,7 @@ async def check_library_object_exists_any_sponsor(
 
 async def check_study_exists_any_sponsor(
     driver, study_id: str, tenant_id: str = "tenant_default"
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """
     Looks up a Study across all sponsors under the same tenant to verify existence and check sponsor ownership.
     """
@@ -4792,11 +4792,11 @@ async def instantiate_library_object_in_study(
     driver,
     study_id: str,
     library_object_id: str,
-    version: Optional[int],
+    version: int | None,
     sponsor_id: str,
     user_id: str,
     tenant_id: str = "tenant_default",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Clones a selected library object/version into a study as a distinct study-scoped object.
     Records an INSTANTIATED_FROM relationship containing source linkage for traceability.
@@ -4911,11 +4911,11 @@ async def update_library_instance_in_study(
     driver,
     study_id: str,
     instance_id: str,
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
     sponsor_id: str,
     user_id: str,
     tenant_id: str = "tenant_default",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Updates the payload of a study-scoped library instance.
     Leaves the parent library object completely immutable.
@@ -5036,7 +5036,7 @@ async def get_library_instance_in_study(
     instance_id: str,
     sponsor_id: str,
     tenant_id: str = "tenant_default",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Retrieves a study-scoped library instance and its linked source metadata.
     """
@@ -5128,7 +5128,7 @@ async def create_eligibility_criterion(
     user_id: str,
     change_reason: str,
     criterion_id: str,
-    criterion_data: Dict[str, Any],
+    criterion_data: dict[str, Any],
 ) -> str:
     """
     Creates a new stable EligibilityCriterion root node and its first version EligibilityCriterionVersion.
@@ -5247,7 +5247,7 @@ async def update_eligibility_criterion(
     criterion_id: str,
     user_id: str,
     change_reason: str,
-    criterion_data: Dict[str, Any],
+    criterion_data: dict[str, Any],
 ) -> int:
     """
     Bumps version index and creates a new EligibilityCriterionVersion node connected to previous one.
@@ -5360,7 +5360,7 @@ async def update_eligibility_criterion(
 
 async def get_eligibility_criteria_from_graph(
     driver, study_id: str
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Retrieves all non-deleted active eligibility criteria for a specific clinical study.
     """

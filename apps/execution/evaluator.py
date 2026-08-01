@@ -3,7 +3,7 @@ Deterministic, semantically matching Python AST evaluator for execution-side che
 Supports comparison/null semantics, arithmetic, relative paths, and indexed-repeat consistently.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 def resolve_relative_path(path: str) -> str:
@@ -31,8 +31,8 @@ def get_node_attribute(node: Any, attr: str) -> Any:
 
 def evaluate_ast(
     node: Any,
-    context: Optional[Dict[str, Any]] = None,
-    current_indices: Optional[Dict[str, int]] = None,
+    context: dict[str, Any] | None = None,
+    current_indices: dict[str, int] | None = None,
 ) -> Any:
     """
     Deterministically evaluates an ExpressionNode AST against the given data context.

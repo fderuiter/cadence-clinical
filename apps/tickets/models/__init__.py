@@ -4,7 +4,7 @@ SQLAlchemy models for the Tickets service.
 
 import uuid
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, event, func
@@ -19,7 +19,7 @@ class Base(DeclarativeBase):
     pass
 
 
-class TicketCategory(str, Enum):
+class TicketCategory(StrEnum):
     """
     Enum representing categories of support tickets.
     """
@@ -31,7 +31,7 @@ class TicketCategory(str, Enum):
     OTHER = "OTHER"
 
 
-class TicketPriority(str, Enum):
+class TicketPriority(StrEnum):
     """
     Enum representing priority levels of support tickets.
     """
@@ -42,7 +42,7 @@ class TicketPriority(str, Enum):
     CRITICAL = "CRITICAL"
 
 
-class TicketStatus(str, Enum):
+class TicketStatus(StrEnum):
     """
     Enum representing statuses of support tickets.
     """
@@ -118,41 +118,31 @@ class Ticket(Base):
         String(50), default=TicketStatus.OPEN, nullable=False
     )
     reporter: Mapped[str] = mapped_column(String(255), nullable=False)
-    assignee_user: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    assignee_role: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    assignee_user: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    assignee_role: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Organization / Site / Study scope
-    org_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
-    site_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
-    study_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
+    org_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    site_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    study_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
 
     # Related entity link details
-    related_entity_type: Mapped[Optional[str]] = mapped_column(
-        String(100), nullable=True
-    )
-    related_entity_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    related_entity_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    related_entity_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Optional due date
-    due_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    due_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Escalation/SLA Tracking
-    last_escalated_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime, nullable=True
-    )
-    last_escalation_notified_at: Mapped[Optional[datetime]] = mapped_column(
+    last_escalated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_escalation_notified_at: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True
     )
     escalation_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
-    workflow_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    action_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    signature_action: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    workflow_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    action_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    signature_action: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Soft delete
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -212,7 +202,7 @@ class TicketAuditLog(Base):
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
-    ticket_id: Mapped[Optional[str]] = mapped_column(
+    ticket_id: Mapped[str | None] = mapped_column(
         String(36),
         ForeignKey("tickets.id", ondelete="SET NULL"),
         nullable=True,
@@ -222,14 +212,12 @@ class TicketAuditLog(Base):
         DateTime, default=func.now(), nullable=False, index=True
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    reason_for_change: Mapped[Optional[str]] = mapped_column(
-        String(1000), nullable=True
-    )
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     action: Mapped[str] = mapped_column(String(100), nullable=False)
     details: Mapped[str] = mapped_column(String(1000), nullable=False)
-    record_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    record_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Relationships
     ticket: Mapped[Optional["Ticket"]] = relationship(back_populates="audit_logs")

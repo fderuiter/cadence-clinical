@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import secrets
-from typing import Optional
 
 import sqlalchemy.exc
 from sqlalchemy import select
@@ -30,7 +29,7 @@ logger = logging.getLogger("randomization-service")
 async def _randomize_subject_tx(
     study_id: str,
     subject_id: str,
-    kit_reference: Optional[str] = None,
+    kit_reference: str | None = None,
 ) -> SubjectRandomization:
     session = get_session()
 
@@ -207,7 +206,7 @@ async def randomize_subject(
     subject_id: str,
     change_reason: str,
     user_id: str,
-    kit_reference: Optional[str] = None,
+    kit_reference: str | None = None,
 ) -> SubjectRandomization:
     """
     Service to randomize a subject for a study with bounded retries

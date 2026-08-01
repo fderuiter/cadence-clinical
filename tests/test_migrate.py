@@ -83,6 +83,107 @@ async def test_run_migrations_real_sqlite():
     await run_migrations("sqlite+aiosqlite:///:memory:")
 
 
+@pytest.mark.asyncio
+async def test_lab_reference_ranges_evolution():
+    """
+    Test that lab_reference_ranges schema is evolved correctly with audit columns.
+
+    Requirements: PRD-SYS-001
+    """
+    from sqlalchemy import inspect, text
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    from apps.execution.database.migrate import upgrade_existing_tables
+
+    db_url = "sqlite+aiosqlite:///:memory:"
+    engine = create_async_engine(db_url, echo=False)
+
+    try:
+        async with engine.begin() as conn:
+            # Create lab_reference_ranges table manually with a subset of columns (no GxP audit columns)
+            await conn.execute(
+                text(
+                    """
+                    CREATE TABLE lab_reference_ranges (
+                        id VARCHAR(36) PRIMARY KEY,
+                        study_id VARCHAR(255) NOT NULL,
+                        test_code VARCHAR(100) NOT NULL,
+                        test_name VARCHAR(255) NOT NULL,
+                        lab_source VARCHAR(50) NOT NULL,
+                        site_id VARCHAR(255)
+                    );
+                    """
+                )
+            )
+
+            # Let's inspect before migration
+            def get_cols(sync_conn):
+                insp = inspect(sync_conn)
+                return [col["name"] for col in insp.get_columns("lab_reference_ranges")]
+
+            cols_before = await conn.run_sync(get_cols)
+            assert "created_at" not in cols_before
+            assert "created_by" not in cols_before
+            assert "reason_for_change" not in cols_before
+            assert "version_index" not in cols_before
+
+            # Now run the upgrade process
+            await upgrade_existing_tables(conn)
+
+            # Check after migration
+            cols_after = await conn.run_sync(get_cols)
+            assert "created_at" in cols_after
+            assert "created_by" in cols_after
+            assert "reason_for_change" in cols_after
+            assert "version_index" in cols_after
+
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_new_tables_metadata_creation():
+    """
+    Test that the new tables are created automatically during Base.metadata.create_all.
+
+    Requirements: PRD-SYS-001
+    """
+    import os
+    import tempfile
+
+    from sqlalchemy import inspect
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    from apps.execution.database.migrate import run_migrations
+
+    # Create a temporary file name for SQLite
+    temp_dir = tempfile.gettempdir()
+    db_file = os.path.join(temp_dir, "test_migrate_temp.db")
+    if os.path.exists(db_file):
+        os.remove(db_file)
+
+    db_url = f"sqlite+aiosqlite:///{db_file}"
+    try:
+        await run_migrations(db_url)
+
+        engine = create_async_engine(db_url, echo=False)
+        try:
+            async with engine.begin() as conn:
+
+                def check_tables(sync_conn):
+                    insp = inspect(sync_conn)
+                    return insp.get_table_names()
+
+                tables = await conn.run_sync(check_tables)
+                assert "lab_test_masters" in tables
+                assert "lab_unit_conversions" in tables
+        finally:
+            await engine.dispose()
+    finally:
+        if os.path.exists(db_file):
+            os.remove(db_file)
+
+
 def test_placeholders():
     from apps.execution.database import provision_tenant, rollback
 

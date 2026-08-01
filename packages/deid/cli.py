@@ -4,7 +4,6 @@ import os
 import shutil
 import subprocess
 import sys
-from typing import List, Tuple
 
 from packages.deid.detector import DeidDetector
 from packages.deid.models import ComplianceProfile
@@ -29,7 +28,7 @@ TEXT_EXTENSIONS = {
 }
 
 
-def load_gitignore_patterns(root_dir: str) -> List[Tuple[bool, str]]:
+def load_gitignore_patterns(root_dir: str) -> list[tuple[bool, str]]:
     """Loads and parses gitignore patterns from the repository's .gitignore file.
 
     Args:
@@ -43,7 +42,7 @@ def load_gitignore_patterns(root_dir: str) -> List[Tuple[bool, str]]:
     if not os.path.exists(gitignore_path):
         return patterns
     try:
-        with open(gitignore_path, "r", encoding="utf-8", errors="ignore") as f:
+        with open(gitignore_path, encoding="utf-8", errors="ignore") as f:
             for line in f:
                 line = line.strip()
                 if not line or line.startswith("#"):
@@ -57,7 +56,7 @@ def load_gitignore_patterns(root_dir: str) -> List[Tuple[bool, str]]:
 
 
 def is_locally_ignored(
-    path: str, patterns: List[Tuple[bool, str]], root_dir: str
+    path: str, patterns: list[tuple[bool, str]], root_dir: str
 ) -> bool:
     """Checks if a given path matches gitignore patterns using a local fallback engine.
 
@@ -100,7 +99,7 @@ def is_locally_ignored(
     return ignored
 
 
-def filter_git_ignored_files(files: List[str], cwd: str) -> List[str]:
+def filter_git_ignored_files(files: list[str], cwd: str) -> list[str]:
     """Filters a list of file paths by querying 'git check-ignore' if git is available.
 
     Args:
@@ -164,7 +163,7 @@ def should_scan_file(file_path: str) -> bool:
     return ext in TEXT_EXTENSIONS
 
 
-def get_line_and_col(content: str, offset: int) -> Tuple[int, int]:
+def get_line_and_col(content: str, offset: int) -> tuple[int, int]:
     """Computes the 1-based line number and column index for a given character offset.
 
     Args:
@@ -182,7 +181,7 @@ def get_line_and_col(content: str, offset: int) -> Tuple[int, int]:
 
 def scan_file(
     file_path: str, detector: DeidDetector, profile: ComplianceProfile
-) -> List[dict]:
+) -> list[dict]:
     """Scans a single file for compliance violations using the specified detector.
 
     Args:
@@ -194,7 +193,7 @@ def scan_file(
         List[dict]: A list of violation dictionaries detailing findings.
     """
     try:
-        with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+        with open(file_path, encoding="utf-8", errors="replace") as f:
             content = f.read()
     except Exception as e:
         print(f"Error reading file {file_path}: {e}", file=sys.stderr)
@@ -337,7 +336,7 @@ def is_excluded_path(path: str, root_dir: str) -> bool:
     )
 
 
-def get_files_to_scan(paths: List[str], root_dir: str) -> List[str]:
+def get_files_to_scan(paths: list[str], root_dir: str) -> list[str]:
     """Resolves and filters all candidate files to scan from input paths and root.
 
     Args:

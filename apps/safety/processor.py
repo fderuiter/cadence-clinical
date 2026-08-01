@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 from sqlalchemy import select
@@ -21,8 +21,8 @@ async def write_safety_audit_log(
     user_id: str,
     action: str,
     details: str,
-    record_id: Optional[str] = None,
-    change_reason: Optional[str] = None,
+    record_id: str | None = None,
+    change_reason: str | None = None,
     version_index: int = 1,
 ) -> None:
     """
@@ -44,7 +44,7 @@ async def send_medical_monitor_alert(
     run_id: str,
     study_id: str,
     discrepancy_count: int,
-    test_client: Optional[Any],
+    test_client: Any | None,
     session: AsyncSession,
     user_id: str,
     change_reason: str,
@@ -139,7 +139,7 @@ async def process_sae_reconciliation(
     study_id: str,
     user_id: str,
     change_reason: str,
-    test_client: Optional[Any] = None,
+    test_client: Any | None = None,
 ) -> None:
     session_maker = db_manager.get_session_maker()
     with audit_context(user_id, change_reason):

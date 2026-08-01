@@ -7,7 +7,7 @@ Requirements: PRD-SYS-001
 import os
 import re
 import sys
-from typing import Any, Dict
+from typing import Any
 
 # Inject 'core-models' path into sys.path
 _core_models_path = os.path.abspath(
@@ -97,7 +97,7 @@ PATIENT_FIXTURES = [
 ]
 
 
-def make_patient_context(patient: Dict[str, Any]) -> Dict[str, Any]:
+def make_patient_context(patient: dict[str, Any]) -> dict[str, Any]:
     """Dynamically construct standard and namespaced keys from patient attributes."""
     context = {}
     for k, v in patient.items():
@@ -150,7 +150,7 @@ class ProtocolQualitySentinel:
     """
 
     def evaluate_protocol_quality(
-        self, study_payload: Dict[str, Any]
+        self, study_payload: dict[str, Any]
     ) -> ProtocolQualityScore:
         """Audit authored protocol payload and compute quality score and burden index.
 

@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def apply_watermark(content: str, mime_type: str, user_id: str, user_role: str) -> str:
@@ -19,7 +19,7 @@ def apply_watermark(content: str, mime_type: str, user_id: str, user_role: str) 
     Returns:
         str: The watermarked content string.
     """
-    now_utc = datetime.now(timezone.utc).isoformat()
+    now_utc = datetime.now(UTC).isoformat()
     marker = "CONFIDENTIAL — Auditor Copy"
     watermark_msg = (
         f"{marker} | Access by: {user_id} ({user_role}) | UTC Time: {now_utc}"

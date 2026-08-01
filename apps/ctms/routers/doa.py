@@ -5,8 +5,8 @@ Requirements: PRD-SYS-001
 
 import importlib
 import os
-from datetime import datetime, timezone
-from typing import Any, Dict
+from datetime import UTC, datetime
+from typing import Any
 
 from ctms.doa_transport_models import (
     DelegationTaskRequest,
@@ -104,7 +104,7 @@ async def delegate_site_tasks(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Assign site trial task delegation requiring Principal Investigator sign-off.
 
     Requirements: PRD-SYS-001
@@ -152,7 +152,7 @@ async def revoke_site_tasks(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Revoke or end a delegated trial duty with reason for change.
 
     Requirements: PRD-SYS-001
@@ -170,7 +170,7 @@ async def revoke_site_tasks(
     change_reason = principal.change_reason or payload.reason_for_change
 
     delegation.is_active = False
-    delegation.end_date = datetime.now(timezone.utc).date().isoformat()
+    delegation.end_date = datetime.now(UTC).date().isoformat()
     delegation.version_index += 1
     delegation.reason_for_change = change_reason
     session.add(delegation)
@@ -195,7 +195,7 @@ async def sign_off_delegation(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Endorse Delegation of Authority task assignment with Principal Investigator eSignature.
 
     Requirements: PRD-SYS-001

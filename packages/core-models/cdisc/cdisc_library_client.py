@@ -7,7 +7,7 @@ from the official CDISC Library API or local repository standards cache.
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, Field
@@ -21,7 +21,7 @@ LOCAL_CDISC_DIR = REPO_ROOT / "docs" / "CDISC" / "Library"
 class CdiscLibraryConfig(BaseModel):
     """Configuration for CDISC Library API Client."""
 
-    api_key: Optional[str] = Field(
+    api_key: str | None = Field(
         default=None,
         description="API key for api.library.cdisc.org",
     )
@@ -44,8 +44,8 @@ class CdiscProductSummary(BaseModel):
 
     title: str
     version: str
-    href: Optional[str] = None
-    description: Optional[str] = None
+    href: str | None = None
+    description: str | None = None
 
 
 class CdashDomainDefinition(BaseModel):
@@ -53,19 +53,19 @@ class CdashDomainDefinition(BaseModel):
 
     domain_code: str
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     version: str = "2.3"
-    fields: List[Dict[str, Any]] = Field(default_factory=list)
+    fields: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class SdtmDomainDefinition(BaseModel):
     """SDTM domain specification definition."""
 
     domain_code: str
-    structure: Optional[str] = None
-    description: Optional[str] = None
+    structure: str | None = None
+    description: str | None = None
     version: str = "3.4"
-    variables: List[Dict[str, Any]] = Field(default_factory=list)
+    variables: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class CodelistTerm(BaseModel):
@@ -74,7 +74,7 @@ class CodelistTerm(BaseModel):
     concept_id: str
     submission_value: str
     preferred_term: str
-    definition: Optional[str] = None
+    definition: str | None = None
 
 
 class CodelistDefinition(BaseModel):
@@ -83,7 +83,7 @@ class CodelistDefinition(BaseModel):
     codelist_code: str
     name: str
     extensible: bool = False
-    terms: List[CodelistTerm] = Field(default_factory=list)
+    terms: list[CodelistTerm] = Field(default_factory=list)
 
 
 class CdiscLibraryClient:
@@ -94,8 +94,8 @@ class CdiscLibraryClient:
 
     def __init__(
         self,
-        config: Optional[CdiscLibraryConfig] = None,
-        client: Optional[httpx.AsyncClient] = None,
+        config: CdiscLibraryConfig | None = None,
+        client: httpx.AsyncClient | None = None,
     ) -> None:
         """Initialize CDISC Library Client.
 
@@ -105,9 +105,9 @@ class CdiscLibraryClient:
         """
         self.config = config or CdiscLibraryConfig()
         self._external_client = client
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: httpx.AsyncClient | None = None
 
-    def _build_headers(self) -> Dict[str, str]:
+    def _build_headers(self) -> dict[str, str]:
         """Build HTTP headers for request."""
         headers = {
             "Accept": "application/json",
@@ -145,7 +145,7 @@ class CdiscLibraryClient:
             )
         return self._client
 
-    async def get_products(self) -> List[CdiscProductSummary]:
+    async def get_products(self) -> list[CdiscProductSummary]:
         """Fetch list of available CDISC products from API or local catalog.
 
         Returns:
@@ -159,7 +159,7 @@ class CdiscLibraryClient:
                 )
                 if response.status_code == 200:
                     data = response.json()
-                    products: List[CdiscProductSummary] = []
+                    products: list[CdiscProductSummary] = []
                     links = data.get("_links", {})
                     for key, val in links.items():
                         if isinstance(val, dict):

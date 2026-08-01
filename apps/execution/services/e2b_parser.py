@@ -4,7 +4,7 @@ Requirements: PRD-SYS-001
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import defusedxml.ElementTree as ET
 from execution.safety_models import (
@@ -70,7 +70,7 @@ class E2BR3Parser:
         expedited = expedited_raw in ("true", "1", "yes")
 
         case_id = f"sae_{uuid.uuid4().hex[:8]}"
-        now_iso = datetime.now(timezone.utc).isoformat()
+        now_iso = datetime.now(UTC).isoformat()
 
         return SAECaseRecord(
             case_id=case_id,

@@ -1,7 +1,7 @@
 import base64
 import hashlib
-from datetime import date, datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, date, datetime
+from typing import Any
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes
@@ -33,24 +33,24 @@ async def ingest_tmf_document(
     mime_type: str,
     created_by: str,
     created_role: str,
-    site_id: Optional[str] = None,
-    idempotency_key: Optional[str] = None,
-    assigned_sites: Optional[List[str]] = None,
-    zone: Optional[int] = None,
-    section: Optional[str] = None,
-    artifact_code: Optional[str] = None,
-    taxonomy_version: Optional[str] = None,
-    metadata_json: Optional[Dict[str, Any]] = None,
+    site_id: str | None = None,
+    idempotency_key: str | None = None,
+    assigned_sites: list[str] | None = None,
+    zone: int | None = None,
+    section: str | None = None,
+    artifact_code: str | None = None,
+    taxonomy_version: str | None = None,
+    metadata_json: dict[str, Any] | None = None,
     audit_action: str = "INGEST",
-    audit_details: Optional[str] = None,
-    reason_for_change: Optional[str] = None,
-    protocol_version: Optional[ProtocolVersionRef] = None,
-    issue_date: Optional[date] = None,
-    expiration_date: Optional[date] = None,
-    document_owner_id: Optional[str] = None,
-    correlation_key: Optional[str] = None,
-    content_checksum: Optional[str] = None,
-    source_system: Optional[str] = None,
+    audit_details: str | None = None,
+    reason_for_change: str | None = None,
+    protocol_version: ProtocolVersionRef | None = None,
+    issue_date: date | None = None,
+    expiration_date: date | None = None,
+    document_owner_id: str | None = None,
+    correlation_key: str | None = None,
+    content_checksum: str | None = None,
+    source_system: str | None = None,
 ) -> TMFDocument:
     """Service layer workflow for eTMF document ingestion.
 
@@ -223,7 +223,7 @@ async def ingest_tmf_document(
         if not signer_name:
             signer_name = created_by or "system"
 
-        now_utc = datetime.now(timezone.utc)
+        now_utc = datetime.now(UTC)
         sig_man = SignatureManifestation(
             signer_id=signer_name,
             timestamp=now_utc,
@@ -388,7 +388,7 @@ async def ingest_tmf_document(
             ):
                 resolved_expiration_date = datetime.combine(
                     resolved_expiration_date, datetime.min.time()
-                ).replace(tzinfo=timezone.utc)
+                ).replace(tzinfo=UTC)
 
             doc = TMFDocument(
                 study_id=study_id,

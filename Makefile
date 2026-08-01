@@ -17,7 +17,7 @@ BOLD  := \033[1m
 ##@ Setup
 
 setup: ## Install all Python + Node deps, Playwright browsers, and pre-commit hooks
-	uv sync --python 3.11 --all-extras
+	uv sync --python 3.12 --all-extras
 	uv run playwright install chromium
 	uv run pre-commit install --install-hooks
 	pnpm install --frozen-lockfile

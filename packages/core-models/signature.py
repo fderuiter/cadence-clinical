@@ -1,12 +1,11 @@
-from datetime import timezone
-from enum import Enum
-from typing import Optional
+from datetime import UTC
+from enum import StrEnum
 
 from datetime_helpers import AwareDatetime
 from pydantic import BaseModel, Field
 
 
-class SigningReason(str, Enum):
+class SigningReason(StrEnum):
     """Controlled reasons for creating an electronic signature in compliance with 21 CFR Part 11."""
 
     AUTHOR = "AUTHOR"
@@ -24,7 +23,7 @@ class SigningReason(str, Enum):
     SITE_VISIT_SIGN_OFF = "SITE_VISIT_SIGN_OFF"
 
 
-class ApprovalStatus(str, Enum):
+class ApprovalStatus(StrEnum):
     """Controlled statuses for records requiring approval workflows."""
 
     PENDING = "PENDING"
@@ -51,7 +50,7 @@ class SignatureManifestation(BaseModel):
     ip_address: str = Field(
         ..., description="The network IP address of the client application."
     )
-    user_agent: Optional[str] = Field(
+    user_agent: str | None = Field(
         None, description="The user agent or device context of the client application."
     )
     sha256_hash: str = Field(
@@ -59,15 +58,15 @@ class SignatureManifestation(BaseModel):
     )
 
     # Cryptographic fields
-    signature: Optional[str] = Field(
+    signature: str | None = Field(
         None,
         description="Base64-encoded asymmetric cryptographic signature of the canonical manifestation bytes.",
     )
-    certificate_pem: Optional[str] = Field(
+    certificate_pem: str | None = Field(
         None,
         description="PEM-encoded X.509 public-key certificate bound to this signature.",
     )
-    key_identifier: Optional[str] = Field(
+    key_identifier: str | None = Field(
         None,
         description="Unique identifier captured from the signing key or certificate.",
     )
@@ -80,9 +79,9 @@ class SignatureManifestation(BaseModel):
         # Ensure timestamp is normalized to UTC and serialized to a standard ISO-8601 string
         ts_utc = self.timestamp
         if ts_utc.tzinfo is None:
-            ts_utc = ts_utc.replace(tzinfo=timezone.utc)
+            ts_utc = ts_utc.replace(tzinfo=UTC)
         else:
-            ts_utc = ts_utc.astimezone(timezone.utc)
+            ts_utc = ts_utc.astimezone(UTC)
 
         payload = {
             "signer_id": self.signer_id,
