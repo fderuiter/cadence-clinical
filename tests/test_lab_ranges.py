@@ -573,11 +573,11 @@ def test_evaluate_lab_value_all_indicators():
 
 @pytest.mark.asyncio
 async def test_lab_reference_range_synonyms_and_audit():
-    """Verify synonym columns map to physical columns without affecting audit-field behavior.
-    """
+    """Verify synonym columns map to physical columns without affecting audit-field behavior."""
+    from sqlalchemy import select
+
     from apps.execution.database.core import db_manager
     from apps.execution.database.models import Base, LabReferenceRange
-    from sqlalchemy import select
 
     db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
     try:
@@ -605,7 +605,9 @@ async def test_lab_reference_range_synonyms_and_audit():
         # Re-open and assert
         async with session_maker() as session:
             result = await session.execute(
-                select(LabReferenceRange).where(LabReferenceRange.study_id == "STUDY-SYN")
+                select(LabReferenceRange).where(
+                    LabReferenceRange.study_id == "STUDY-SYN"
+                )
             )
             saved = result.scalar_one()
 
