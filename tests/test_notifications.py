@@ -452,7 +452,7 @@ async def test_email_delivery_channel_success():
     mock_smtp_client = AsyncMock()
     with patch("aiosmtplib.SMTP", return_value=mock_smtp_client):
         await poll_and_dispatch()
-        # Wait up to 8 seconds for the background task to update the status to SUCCESS
+        # Wait for the background task to complete
         from apps.notifications.main import active_tasks
 
         if active_tasks:

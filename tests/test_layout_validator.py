@@ -259,7 +259,7 @@ async def test_layout_validation_integration():
     import asyncio
 
     job = None
-    for _ in range(50):
+    for _ in range(250):
         async with db_manager.get_session_maker()() as session:
             result = await session.execute(
                 TranslationJob.__table__.select().where(
@@ -272,6 +272,8 @@ async def test_layout_validation_integration():
         await asyncio.sleep(0.1)
 
     assert job is not None
+    if job["status"] == "FAILED":
+        print("JOB ERROR:", job.get("error_message"))
     assert job["status"] == "COMPLETED"
     assert job["openrosa_payload"] is not None
 

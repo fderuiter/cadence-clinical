@@ -362,7 +362,7 @@ def test_public_entry_point_whodrug() -> None:
     """Verify the stable public entry point parses successfully using file path and auto-detection."""
     content = "N02BA01SALICYLIC ACID AND DERIVATIVES\n"
     with tempfile.NamedTemporaryFile(
-        mode="w+", delete=False, suffix="atc.txt", encoding="utf-8"
+        mode="w+", delete=False, prefix="atc_test_", suffix="_atc.txt", encoding="utf-8"
     ) as temp_file:
         temp_file.write(content)
         temp_path = temp_file.name
