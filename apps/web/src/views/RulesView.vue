@@ -1,8 +1,5 @@
 <template>
-  <div
-    id="section-rules"
-    class="dashboard-section active"
-  >
+  <div id="section-rules" class="dashboard-section active">
     <div class="section-header">
       <h2>Interactive Rules Designer</h2>
       <p>
@@ -13,21 +10,20 @@
     </div>
 
     <!-- Authorization Gating check -->
-    <div
-      v-if="!hasEditAccess"
-      class="card rules-gating-banner"
-    >
+    <div v-if="!hasEditAccess" class="card rules-gating-banner">
       <div class="rules-gating-content">
         <span class="rules-gating-icon">🚫</span>
         <div>
-          <h3 class="rules-gating-title">
+          <h3
+            style="color: var(--error); font-weight: bold; margin-bottom: 8px"
+          >
             21 CFR Part 11 Role Gating - Access Denied
           </h3>
           <p class="rules-gating-text">
-            You do not have the required <strong>DATA_MANAGER</strong> role to
-            view or interact with clinical rules and queries. Please
-            authenticate with an authorized data management token or consult
-            your system administrator.
+            You do not have the required <strong>STUDY_DESIGNER</strong> or
+            <strong>DATA_MANAGER</strong> role to view or interact with clinical
+            rules and queries. Please authenticate with an authorized token or
+            consult your system administrator.
           </p>
         </div>
       </div>
@@ -94,7 +90,8 @@
             <span
               v-if="loadingRules"
               style="font-size: 0.85rem; color: #64748b; font-weight: normal"
-            >Loading...</span>
+              >Loading...</span
+            >
           </div>
 
           <!-- Connection Error Banner if any -->
@@ -148,7 +145,8 @@
                       font-size: 0.95rem;
                       font-family: monospace;
                     "
-                  >{{ rule.id }}</strong>
+                    >{{ rule.id }}</strong
+                  >
                   <div style="display: flex; gap: 6px">
                     <button
                       class="btn"
@@ -199,7 +197,8 @@
                         font-size: 0.7rem;
                         padding: 2px 6px;
                       "
-                    >{{ rule.type }}</span>
+                      >{{ rule.type }}</span
+                    >
                   </div>
                   <div v-if="rule.type === 'skip_logic'">
                     <strong>Action:</strong> {{ rule.action }} field
@@ -207,13 +206,17 @@
                   </div>
                   <div v-else-if="rule.type === 'constraint'">
                     <strong>Target Field:</strong>
-                    <code>{{ rule.target_field }}</code> <br>
+                    <code>{{ rule.target_field }}</code> <br />
                     <strong>Discrepancy Message:</strong>
-                    <span style="font-style: italic; color: var(--primary)">"{{ rule.query_message }}"</span>
+                    <span style="font-style: italic; color: var(--primary)"
+                      >"{{ rule.query_message }}"</span
+                    >
                   </div>
                   <div v-else-if="rule.type === 'cross_form_check'">
                     <strong>Discrepancy Message:</strong>
-                    <span style="font-style: italic; color: var(--primary)">"{{ rule.query_message }}"</span>
+                    <span style="font-style: italic; color: var(--primary)"
+                      >"{{ rule.query_message }}"</span
+                    >
                   </div>
                 </div>
                 <div
@@ -258,10 +261,7 @@
           class="card"
           style="display: flex; flex-direction: column"
         >
-          <div
-            class="card-title"
-            style="margin-bottom: 16px"
-          >
+          <div class="card-title" style="margin-bottom: 16px">
             {{ editingRuleId ? "Edit Clinical Rule" : "Compose Clinical Rule" }}
           </div>
 
@@ -345,10 +345,7 @@
                     margin-bottom: 8px;
                   "
                 >
-                  <div
-                    v-for="(f, i) in previewFailures"
-                    :key="i"
-                  >
+                  <div v-for="(f, i) in previewFailures" :key="i">
                     ⚠️ {{ f }}
                   </div>
                 </div>
@@ -367,10 +364,7 @@
                   v-if="previewCircularCycles.length > 0"
                   style="color: var(--error); font-weight: 600"
                 >
-                  <div
-                    v-for="(c, i) in previewCircularCycles"
-                    :key="i"
-                  >
+                  <div v-for="(c, i) in previewCircularCycles" :key="i">
                     🚨 {{ c }}
                   </div>
                 </div>
@@ -408,10 +402,7 @@
       </div>
 
       <!-- Tab 2: Query Life-Cycle Dashboard & History Viewer (Sub-Issue 11) -->
-      <div
-        v-else-if="activeTab === 'queries'"
-        class="card"
-      >
+      <div v-else-if="activeTab === 'queries'" class="card">
         <div
           class="card-title"
           style="
@@ -477,7 +468,7 @@
                 border-radius: 4px;
                 font-size: 0.85rem;
               "
-            >
+            />
             <button
               class="btn btn-primary"
               style="font-size: 0.85rem"
@@ -486,10 +477,7 @@
               Search Dictionary
             </button>
           </div>
-          <div
-            v-if="dictSearching"
-            style="font-size: 0.8rem; color: #64748b"
-          >
+          <div v-if="dictSearching" style="font-size: 0.8rem; color: #64748b">
             Querying dictionaries...
           </div>
           <div
@@ -519,37 +507,19 @@
         </div>
 
         <!-- Queries Table -->
-        <table
-          class="clinical-visit-matrix"
-          style="width: 100%"
-        >
+        <table class="clinical-visit-matrix" style="width: 100%">
           <thead>
             <tr>
-              <th scope="col">
-                ID
-              </th>
-              <th scope="col">
-                Subject / Visit
-              </th>
-              <th scope="col">
-                Field
-              </th>
-              <th scope="col">
-                Discrepancy Message / Responses
-              </th>
-              <th scope="col">
-                Status
-              </th>
-              <th scope="col">
-                Actions
-              </th>
+              <th scope="col">ID</th>
+              <th scope="col">Subject / Visit</th>
+              <th scope="col">Field</th>
+              <th scope="col">Discrepancy Message / Responses</th>
+              <th scope="col">Status</th>
+              <th scope="col">Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="q in dashboardQueries"
-              :key="q.id"
-            >
+            <tr v-for="q in dashboardQueries" :key="q.id">
               <td>
                 <strong style="font-family: monospace">{{ q.id }}</strong>
               </td>
@@ -559,26 +529,17 @@
               </td>
               <td>
                 <div><strong>Query:</strong> {{ q.message }}</div>
-                <div
-                  v-if="q.response"
-                  style="color: #0369a1; margin-top: 4px"
-                >
+                <div v-if="q.response" style="color: #0369a1; margin-top: 4px">
                   <strong>Response:</strong> "{{ q.response }}" (Responded by:
                   {{ q.respondedBy }} on {{ q.respondedAt }})
                 </div>
-                <div
-                  v-if="q.closedBy"
-                  style="color: #15803d; margin-top: 4px"
-                >
+                <div v-if="q.closedBy" style="color: #15803d; margin-top: 4px">
                   <strong>Closed:</strong> by {{ q.closedBy }} on
                   {{ q.closedAt }}
                 </div>
               </td>
               <td>
-                <span
-                  class="badge"
-                  :class="getBadgeClass(q.status)"
-                >{{
+                <span class="badge" :class="getBadgeClass(q.status)">{{
                   q.status
                 }}</span>
               </td>
@@ -614,9 +575,7 @@
                     Add Response
                   </button>
                 </div>
-                <div v-else>
-                  -
-                </div>
+                <div v-else>-</div>
               </td>
             </tr>
           </tbody>
@@ -643,13 +602,6 @@ import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { apiClient } from "../api/apiClient";
 import ReasonModal from "../components/ReasonModal.vue";
-import {
-  createRuleEditorHTML,
-  serializeConditionsTree,
-  deserializeConditionsTree,
-  generateGatewaySignature,
-  generateCanonicalSignature,
-} from "ui";
 
 const rulesReasonOptions = [
   { value: "Initial Entry", text: "Initial Data Entry" },
@@ -949,15 +901,13 @@ function handleEditorInput(e) {
     }
   }
 }
-
 // Fetch active rules from backend REST API
 async function fetchRules() {
   loadingRules.value = true;
   connectionError.value = false;
   try {
-    const signedHeaders = await getSignedGatewayHeaders("Fetch clinical rules");
     const response = await apiClient.get(`/api/v1/studies/study_1/rules`, {
-      headers: signedHeaders,
+      changeReason: "Fetch clinical rules",
     });
     activeRules.value = response;
   } catch (err) {
@@ -1008,7 +958,66 @@ function handleTypeChange() {
 
 // Serialize vue forms to Pydantic Expression tree
 function serializeConditions() {
-  return serializeConditionsTree(conditions.value, matchOperator.value);
+  const operands = [];
+  conditions.value.forEach((cond) => {
+    if (!cond.fieldId) return; // Skip incomplete
+
+    const leftRef = {
+      type: "field_ref",
+      field_ref: {
+        field_id: cond.fieldId,
+        form_id: cond.formId || null,
+      },
+    };
+
+    if (cond.operator === "is_empty" || cond.operator === "is_not_empty") {
+      operands.push({
+        type: "function",
+        operator: cond.operator,
+        operands: [leftRef],
+      });
+    } else {
+      let rightNode;
+      if (cond.rightType === "constant") {
+        let val = cond.rightValue;
+        if (val === "true") val = true;
+        else if (val === "false") val = false;
+        else if (!isNaN(parseFloat(val))) val = parseFloat(val);
+
+        rightNode = {
+          type: "constant",
+          value: val,
+        };
+      } else {
+        rightNode = {
+          type: "field_ref",
+          field_ref: {
+            field_id: cond.rightFieldId || "",
+          },
+        };
+      }
+
+      operands.push({
+        type: "comparison",
+        operator: cond.operator,
+        operands: [leftRef, rightNode],
+      });
+    }
+  });
+
+  if (operands.length === 0) {
+    return { type: "constant", value: true };
+  }
+
+  if (operands.length === 1) {
+    return operands[0];
+  }
+
+  return {
+    type: "logical",
+    operator: matchOperator.value,
+    operands: operands,
+  };
 }
 
 // Dry-run preview REST API compilation
@@ -1026,22 +1035,10 @@ async function triggerPreview() {
   };
 
   try {
-    const signedHeaders = await getSignedGatewayHeaders(
-      "Rule compilation preview"
-    );
-
-    try {
-      await apiClient.post(`/api/v1/studies/study_1/rules/validate`, payload, {
-        headers: signedHeaders,
-      });
-    } catch (vErr) {
-      console.warn("Live-validation endpoint returned errors:", vErr);
-    }
-
     const data = await apiClient.post(
       `/api/v1/studies/study_1/rules/preview`,
       payload,
-      { headers: signedHeaders }
+      { changeReason: "Rule compilation preview" }
     );
     previewXpath.value = data.xpath;
     previewFailures.value = data.failures || [];
@@ -1111,6 +1108,34 @@ function traverseRefs(node) {
   return refs;
 }
 
+// Deserialize condition node back into local state
+function deserializeNode(node) {
+  if (node.type === "comparison") {
+    const left = node.operands[0];
+    const right = node.operands[1];
+    return {
+      formId: left.field_ref ? left.field_ref.form_id || "" : "",
+      fieldId: left.field_ref ? left.field_ref.field_id || "" : "",
+      operator: node.operator || "==",
+      rightType: right.type === "field_ref" ? "field_ref" : "constant",
+      rightValue: right.type === "constant" ? String(right.value) : "",
+      rightFieldId:
+        right.type === "field_ref" ? right.field_ref.field_id || "" : "",
+    };
+  } else if (node.type === "function") {
+    const left = node.operands[0];
+    return {
+      formId: left.field_ref ? left.field_ref.form_id || "" : "",
+      fieldId: left.field_ref ? left.field_ref.field_id || "" : "",
+      operator: node.operator || "is_empty",
+      rightType: "constant",
+      rightValue: "",
+      rightFieldId: "",
+    };
+  }
+  return null;
+}
+
 function openRuleEditor(rule = null) {
   if (rule) {
     editingRuleId.value = rule.id;
@@ -1120,10 +1145,20 @@ function openRuleEditor(rule = null) {
     targetForm.value = rule.target_form || "";
     queryMessage.value = rule.query_message || "";
 
-    const deserialized = deserializeConditionsTree(rule.condition);
-    conditions.value = deserialized.conditions;
-    matchOperator.value = deserialized.matchOperator;
-
+    conditions.value = [];
+    if (rule.condition) {
+      const node = rule.condition;
+      if (node.type === "logical" && node.operands) {
+        matchOperator.value = node.operator || "and";
+        node.operands.forEach((operand) => {
+          const row = deserializeNode(operand);
+          if (row) conditions.value.push(row);
+        });
+      } else {
+        const row = deserializeNode(node);
+        if (row) conditions.value.push(row);
+      }
+    }
     if (conditions.value.length === 0) {
       addConditionRow();
     }
@@ -1227,39 +1262,16 @@ async function confirmChangeReason(reasonText) {
         ? `/api/v1/studies/study_1/rules/${editingRuleId.value}`
         : `/api/v1/studies/study_1/rules`;
 
-      const signedHeaders = await getSignedGatewayHeaders(reasonText);
-
       let saved;
-      try {
-        if (isEdit) {
-          saved = await apiClient.put(url, action.payload, {
-            headers: signedHeaders,
-          });
-        } else {
-          saved = await apiClient.post(url, action.payload, {
-            headers: signedHeaders,
-          });
-        }
-      } catch (err) {
-        console.warn("Save API failed, falling back to local mock save:", err);
-        saved = {
-          id: isEdit
-            ? editingRuleId.value
-            : `rule_${Math.floor(Math.random() * 1000)}`,
-          type: action.payload.type,
-          target_field: action.payload.target_field,
-          target_form: action.payload.target_form,
-          action: action.payload.action,
-          query_message: action.payload.query_message,
-          condition: action.payload.condition,
-          compiled_xpath: previewXpath.value || "(Local fallback compiled)",
-        };
+      if (isEdit) {
+        saved = await apiClient.put(url, action.payload, {
+          changeReason: reasonText,
+        });
+      } else {
+        saved = await apiClient.post(url, action.payload, {
+          changeReason: reasonText,
+        });
       }
-
-      const canonicalSig = await generateCanonicalSignature(
-        action.payload,
-        "internal-ledger-signing-key-12345"
-      );
 
       // Sync verified record into compliance ledger
       await store.addLedgerBlock(
@@ -1268,9 +1280,7 @@ async function confirmChangeReason(reasonText) {
           ruleId: saved.id,
           type: saved.type,
           xpath: saved.compiled_xpath || previewXpath.value,
-          signature: canonicalSig,
-          payload: action.payload,
-          headers: signedHeaders,
+          headers: {},
         },
         reasonText
       );
@@ -1278,24 +1288,14 @@ async function confirmChangeReason(reasonText) {
       alert(`Rule successfully compiled and signed save verified!`);
     } else if (action.type === "delete") {
       const url = `/api/v1/studies/study_1/rules/${action.ruleId}`;
-      let signedHeaders;
-      try {
-        signedHeaders = await getSignedGatewayHeaders(reasonText);
-        await apiClient.delete(url, { headers: signedHeaders });
-      } catch (err) {
-        console.warn(
-          "Delete API failed, falling back to local mock delete:",
-          err
-        );
-        signedHeaders = {};
-      }
+      await apiClient.delete(url, { changeReason: reasonText });
 
       // Sync deletion block
       await store.addLedgerBlock(
         "RULE_DELETE",
         {
           ruleId: action.ruleId,
-          headers: signedHeaders,
+          headers: {},
         },
         reasonText
       );
@@ -1339,49 +1339,5 @@ onMounted(async () => {
 .rule-card:hover {
   border-color: var(--accent) !important;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
-}
-
-.rules-gating-banner {
-  border-left: 4px solid var(--error);
-  background-color: var(--error-bg);
-  padding: 24px;
-}
-
-.rules-gating-content {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-}
-
-.rules-gating-icon {
-  font-size: 2rem;
-}
-
-.rules-gating-title {
-  color: var(--error);
-  font-weight: bold;
-  margin-bottom: 8px;
-}
-
-.rules-gating-text {
-  color: var(--neutral-dark);
-  font-size: 0.95rem;
-  line-height: 1.6;
-}
-
-.rule-card-item {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
-  background-color: var(--neutral-light);
-  transition: all 0.2s;
-}
-
-.rule-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 8px;
 }
 </style>
