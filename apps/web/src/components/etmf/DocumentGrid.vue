@@ -14,6 +14,11 @@
       <button
         class="btn btn-primary upload-trigger-btn"
         :disabled="!selectedArtifactCode"
+        :aria-label="
+          selectedArtifactCode
+            ? 'Upload Regulated Document for artifact ' + selectedArtifactCode
+            : 'Upload Regulated Document'
+        "
         @click="openUploadModal"
       >
         <span>📤</span> Upload Regulated Document
@@ -72,6 +77,9 @@
               <button
                 class="btn btn-sm btn-outline-primary"
                 title="View Watermarked PDF Preview"
+                :aria-label="
+                  'Preview secure watermarked document ' + doc.filename
+                "
                 @click="$emit('preview', doc)"
               >
                 👁️ Preview
@@ -83,11 +91,24 @@
     </div>
 
     <!-- GxP Electronic Record Drag & Drop Upload Modal -->
-    <div v-if="showUploadModal" class="modal-backdrop">
+    <div
+      v-if="showUploadModal"
+      ref="uploadModalRef"
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Document Ingestion Modal"
+    >
       <div class="modal-card upload-modal">
         <div class="modal-header">
           <h3>FDA 21 CFR Part 11 Compliant Document Ingestion</h3>
-          <button class="close-modal-btn" @click="closeUploadModal">×</button>
+          <button
+            class="close-modal-btn"
+            aria-label="Close modal"
+            @click="closeUploadModal"
+          >
+            ×
+          </button>
         </div>
 
         <div class="modal-body">
@@ -103,10 +124,15 @@
           <div
             class="drag-drop-zone"
             :class="{ 'is-dragging': isDragging }"
+            tabindex="0"
+            role="button"
+            aria-label="Drag and drop your regulated PDF here, or press Enter or Space to browse."
             @dragover.prevent="onDragOver"
             @dragleave.prevent="onDragLeave"
             @drop.prevent="onDrop"
             @click="triggerFileSelect"
+            @keydown.enter="triggerFileSelect"
+            @keydown.space.prevent="triggerFileSelect"
           >
             <input
               ref="fileInputRef"
@@ -115,7 +141,7 @@
               accept=".pdf"
               @change="onFileSelected"
             />
-            <div class="drop-prompt-content">
+            <div class="drop-prompt-content" aria-hidden="true">
               <span class="upload-cloud-icon">☁️</span>
               <p v-if="!selectedFile" class="drop-text">
                 Drag and drop your regulated PDF here, or
@@ -221,7 +247,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { ref, watch, nextTick, onUnmounted } from "vue";
 import { useEtmfStore } from "../../stores/etmf";
 
 defineProps({
@@ -244,6 +270,7 @@ const uploadError = ref("");
 // Selected File reference
 const selectedFile = ref(null);
 const fileInputRef = ref(null);
+const uploadModalRef = ref(null);
 
 // Form Fields
 const studyId = ref("STUDY-USDM-001");
@@ -251,6 +278,85 @@ const siteId = ref("");
 const artifactCode = ref("");
 const artifactType = ref("");
 const reasonForChange = ref("");
+
+let previousActiveElement = null;
+
+const handleUploadModalKeyDown = (e) => {
+  if (e.key === "Escape") {
+    closeUploadModal();
+    return;
+  }
+  if (e.key !== "Tab") return;
+  if (!uploadModalRef.value) return;
+
+  const focusableElements = Array.from(
+    uploadModalRef.value.querySelectorAll(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+  ).filter((el) => {
+    const style = window.getComputedStyle(el);
+    return (
+      style.display !== "none" &&
+      style.visibility !== "hidden" &&
+      (el.offsetWidth > 0 || el.offsetHeight > 0)
+    );
+  });
+
+  if (focusableElements.length === 0) {
+    e.preventDefault();
+    return;
+  }
+
+  const firstEl = focusableElements[0];
+  const lastEl = focusableElements[focusableElements.length - 1];
+
+  if (e.shiftKey) {
+    if (
+      document.activeElement === firstEl ||
+      !uploadModalRef.value.contains(document.activeElement)
+    ) {
+      e.preventDefault();
+      lastEl.focus();
+    }
+  } else {
+    if (
+      document.activeElement === lastEl ||
+      !uploadModalRef.value.contains(document.activeElement)
+    ) {
+      e.preventDefault();
+      firstEl.focus();
+    }
+  }
+};
+
+watch(showUploadModal, async (newVal) => {
+  if (newVal) {
+    previousActiveElement = document.activeElement;
+    await nextTick();
+    document.addEventListener("keydown", handleUploadModalKeyDown);
+    if (uploadModalRef.value) {
+      const focusable = uploadModalRef.value.querySelectorAll(
+        "button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled])"
+      );
+      if (focusable && focusable.length > 0) {
+        focusable[0].focus();
+      }
+    }
+  } else {
+    document.removeEventListener("keydown", handleUploadModalKeyDown);
+    if (
+      previousActiveElement &&
+      document.body.contains(previousActiveElement) &&
+      typeof previousActiveElement.focus === "function"
+    ) {
+      previousActiveElement.focus();
+    }
+  }
+});
+
+onUnmounted(() => {
+  document.removeEventListener("keydown", handleUploadModalKeyDown);
+});
 
 // Listen for artifact selections on the store to update current context
 watch(
