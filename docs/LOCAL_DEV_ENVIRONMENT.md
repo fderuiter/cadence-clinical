@@ -94,6 +94,9 @@ The local containerized cluster orchestrates **13 primary services** defined in 
 | **`interop`** | `8004:8004` | `apps/interop/` | Shared workspace: `/app/interop.db` (SQLite) | Interoperability gateway for integrations like external patient registries and mobile ePRO ingestion. |
 | **`tickets`** | `8009:8009` | `apps/tickets/` | Shared workspace: `/app/tickets.db` (SQLite) | Communication and query tickets workflow between sites, monitors, and data managers. |
 | **`notifications`** | `8006:8006` | `apps/notifications/` | Shared workspace: `/app/notifications.db` (SQLite) | Dispatches emails/alerts, maps notification templates, and provides webhook relays. |
+| **`safety`** | `8008:8008` | `apps/safety/` | Shared workspace: `/app/safety.db` (SQLite) | Serious Adverse Event (SAE) processing, E2B intake, and clinical safety reconciliation. |
+| **`org`** | `8012:8010` | `apps/org/` | Connected to `postgres` | Organization Directory service managing personnel assignments, site registration, and study relationships. |
+| **`eisf`** | `8010:8010` | `apps/eisf/` | Shared workspace: `/app/eisf.db` (SQLite) | Electronic Investigator Site File (eISF) system for site-level document and investigator binder compliance. |
 | **`gateway`** | `8000:8000` | `apps/gateway/` | N/A | Central routing reverse-proxy exposing unified endpoint routing to individual backend APIs. |
 | **`subject-portal`** | `5174:5174` | `apps/subject-portal/` | N/A | Patient-facing SPA (Vue and Node.js) for completing diaries, surveys, and reviewing profile metrics. |
 
