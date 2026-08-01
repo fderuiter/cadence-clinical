@@ -1267,6 +1267,9 @@
     },
     "/api/v1/execution/tsdv/config": {
       "post": {
+        "tags": [
+          "SDV/TSDV"
+        ],
         "summary": "Create Or Update Tsdv Config",
         "description": "Create or update Targeted SDV (TSDV) configuration for a study.\n\nRestricts config writes to CRA/Data Manager roles with GxP change justifications.",
         "operationId": "create_or_update_tsdv_config_api_v1_execution_tsdv_config_post",
@@ -1306,8 +1309,11 @@
     },
     "/api/v1/execution/tsdv/config/{study_id}": {
       "get": {
+        "tags": [
+          "SDV/TSDV"
+        ],
         "summary": "Get Tsdv Config",
-        "description": "Retrieve Targeted SDV (TSDV) configuration for a study.",
+        "description": "Retrieve existing TSDV configuration for a study.",
         "operationId": "get_tsdv_config_api_v1_execution_tsdv_config__study_id__get",
         "parameters": [
           {
@@ -1346,6 +1352,9 @@
     },
     "/api/v1/execution/tsdv/required": {
       "get": {
+        "tags": [
+          "SDV/TSDV"
+        ],
         "summary": "Evaluate Tsdv Rule",
         "description": "Evaluate Targeted SDV (TSDV) requirement for a given context.\n\nCalculates deterministic sampling decisions and returns component results with an audit explanation.",
         "operationId": "evaluate_tsdv_rule_api_v1_execution_tsdv_required_get",
@@ -1427,6 +1436,9 @@
     },
     "/api/v1/execution/sdv/signoff": {
       "post": {
+        "tags": [
+          "SDV/TSDV"
+        ],
         "summary": "Sdv Signoff",
         "description": "CRA/monitor-gated SDV sign-off endpoint for Field, Page, or Visit scopes.",
         "operationId": "sdv_signoff_api_v1_execution_sdv_signoff_post",
@@ -1434,7 +1446,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SDVSignoffCreate"
+                "$ref": "#/components/schemas/SDVSignOffRequest"
               }
             }
           },
@@ -1446,7 +1458,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SDVSignoffResponse"
+                  "$ref": "#/components/schemas/SDVSignOffResponse"
                 }
               }
             }
@@ -9929,141 +9941,6 @@
           "is_verified"
         ],
         "title": "SDVSignOffResponse",
-        "description": "Pydantic response schema for SDV sign-off."
-      },
-      "SDVSignoffCreate": {
-        "properties": {
-          "scope": {
-            "$ref": "#/components/schemas/SDVScopeEnum"
-          },
-          "target_id": {
-            "type": "string",
-            "title": "Target Id"
-          },
-          "subject_id": {
-            "type": "string",
-            "title": "Subject Id"
-          },
-          "study_id": {
-            "type": "string",
-            "title": "Study Id"
-          },
-          "site_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Site Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "scope",
-          "target_id",
-          "subject_id",
-          "study_id"
-        ],
-        "title": "SDVSignoffCreate",
-        "description": "Pydantic request schema for SDV sign-off."
-      },
-      "SDVSignoffResponse": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "scope": {
-            "type": "string",
-            "title": "Scope"
-          },
-          "target_id": {
-            "type": "string",
-            "title": "Target Id"
-          },
-          "subject_id": {
-            "type": "string",
-            "title": "Subject Id"
-          },
-          "study_id": {
-            "type": "string",
-            "title": "Study Id"
-          },
-          "site_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Site Id"
-          },
-          "is_verified": {
-            "type": "boolean",
-            "title": "Is Verified"
-          },
-          "verified_by": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Verified By"
-          },
-          "verified_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Verified At"
-          },
-          "dropped_reason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Dropped Reason"
-          },
-          "dropped_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Dropped At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "scope",
-          "target_id",
-          "subject_id",
-          "study_id",
-          "is_verified"
-        ],
-        "title": "SDVSignoffResponse",
         "description": "Pydantic response schema for SDV sign-off."
       },
       "SafetyDispatchRequest": {

@@ -12,7 +12,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from tmf_reference_model import (
     get_active_catalog,
-    resolve_artifact,
     validate_hierarchy,
 )
 
@@ -62,54 +61,30 @@ async def ingest_tmf_document(
     # 1. Determine TMF taxonomy version
     tax_version = taxonomy_version or get_active_catalog().version
 
-    code_input = artifact_code
-    name_input = artifact_type
+    # 2 & 3. Classify and resolve artifact, section, and zone via the shared classification service
+    from apps.etmf.classification_service import classify_tmf_document
 
-    # 2. Map/Normalize the document classification for FORM_1572, FINANCIAL_DISCLOSURE, and PROTOCOL_SIGNOFF
-    doc_type = None
-    if (
-        name_input == "FORM_1572"
-        or code_input == "05.02.01"
-        or name_input == "FDA Form 1572"
-    ):
-        doc_type = "FORM_1572"
-        name_input = "FDA Form 1572"
-        code_input = "05.02.01"
-    elif (
-        name_input == "FINANCIAL_DISCLOSURE"
-        or code_input == "05.02.02"
-        or name_input == "Financial Disclosure"
-    ):
-        doc_type = "FINANCIAL_DISCLOSURE"
-        name_input = "Financial Disclosure"
-        code_input = "05.02.02"
-    elif (
-        name_input == "PROTOCOL_SIGNOFF"
-        or code_input == "01.01.03"
-        or name_input == "Protocol Sign-off"
-    ):
-        doc_type = "PROTOCOL_SIGNOFF"
-        name_input = "Protocol Sign-off"
-        code_input = "01.01.03"
-
-    # 3. Resolve artifact, section, and zone via the shared catalog API
-    # If artifact_code is not explicitly supplied, check if artifact_type is a code
-    if not code_input and name_input and name_input.strip().replace(".", "").isdigit():
-        code_input = name_input.strip()
-        name_input = None
-
-    try:
-        resolved = resolve_artifact(
-            version=tax_version, code=code_input, name=name_input
+    hint = artifact_code or artifact_type
+    classification = classify_tmf_document(
+        filename=filename, artifact_type=hint, version=tax_version
+    )
+    if classification is None:
+        raise ValueError(
+            f"Validation Error: Could not resolve artifact for input '{hint}' or filename '{filename}'."
         )
-    except ValueError as e:
-        raise ValueError(f"Validation Error: {str(e)}")
 
-    res_zone = resolved["zone"].code
-    res_section = resolved["section"].code
-    artifact_obj = resolved["artifact"]
-    resolved_artifact_code = artifact_obj.code
-    canonical_artifact_type = artifact_obj.name
+    res_zone = classification.resolved_zone
+    res_section = classification.resolved_section
+    resolved_artifact_code = classification.artifact_code
+    canonical_artifact_type = classification.artifact_type
+
+    doc_type = None
+    if resolved_artifact_code == "05.02.01":
+        doc_type = "FORM_1572"
+    elif resolved_artifact_code == "05.02.02":
+        doc_type = "FINANCIAL_DISCLOSURE"
+    elif resolved_artifact_code == "01.01.03":
+        doc_type = "PROTOCOL_SIGNOFF"
 
     # Validate and normalize site_id
     resolved_site_id = site_id

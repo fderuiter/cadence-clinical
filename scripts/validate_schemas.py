@@ -167,6 +167,7 @@ if __name__ == "__main__":
             out_file = os.path.join(export_dir, f"{name}_openapi.json")
             with open(out_file, "w") as f:
                 json.dump(schema, f, indent=2)
+                f.write("\n")
             print(f"  - Exported {out_file}")
 
     sys.exit(0)
