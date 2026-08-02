@@ -4,7 +4,7 @@ Requirements: PRD-SYS-001
 """
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -67,7 +67,7 @@ class OfflineBatchSyncResponse(BaseModel):
     )
 
 
-class ConflictStrategyEnum(str, Enum):
+class ConflictStrategyEnum(StrEnum):
     """Explicit validated conflict resolution strategies.
 
     Requirements: PRD-SYS-001
@@ -84,7 +84,9 @@ class EPROOfflineMarker(BaseModel):
     Requirements: PRD-SYS-001
     """
 
-    sequence_number: int = Field(..., description="The queue order sequence from device")
+    sequence_number: int = Field(
+        ..., description="The queue order sequence from device"
+    )
     client_id: str = Field(..., description="Unique identifier for the mobile device")
     conflict_strategy: ConflictStrategyEnum = Field(
         ConflictStrategyEnum.CLIENT_WINS,
@@ -109,7 +111,9 @@ class EPROOfflineEntry(BaseModel):
     device_timestamp: datetime = Field(
         ..., description="ISO 8601 timestamp when the entry was created on device"
     )
-    answers: dict[str, Any] = Field(..., description="The questionnaire response key-values")
+    answers: dict[str, Any] = Field(
+        ..., description="The questionnaire response key-values"
+    )
     offline_sync_markers: EPROOfflineMarker = Field(
         ..., description="The offline sync queue conflict tracking parameters"
     )
@@ -134,15 +138,31 @@ class EPROSubmitResponse(BaseModel):
 
     status: str = Field(..., description="Sync resolution status")
     id: str | None = Field(None, description="Unique record identifier")
-    subject_id: str | None = Field(None, description="Pseudonymized identifier of the subject")
-    diary_id: str | None = Field(None, description="Unique identifier for the diary or survey")
-    answers: dict[str, Any] | None = Field(None, description="The questionnaire response key-values")
+    subject_id: str | None = Field(
+        None, description="Pseudonymized identifier of the subject"
+    )
+    diary_id: str | None = Field(
+        None, description="Unique identifier for the diary or survey"
+    )
+    answers: dict[str, Any] | None = Field(
+        None, description="The questionnaire response key-values"
+    )
     sync_status: str | None = Field(None, description="Sync resolution status")
-    version_index: int | None = Field(None, description="The current version of the record")
-    query: dict[str, Any] | None = Field(None, description="Optional clinical query detail")
-    signature_validation: dict[str, Any] | None = Field(None, description="Signature validation status")
-    reconciliation_result: dict[str, Any] | None = Field(None, description="Reconciliation details")
-    audit_details: dict[str, Any] | None = Field(None, description="Audit entry details")
+    version_index: int | None = Field(
+        None, description="The current version of the record"
+    )
+    query: dict[str, Any] | None = Field(
+        None, description="Optional clinical query detail"
+    )
+    signature_validation: dict[str, Any] | None = Field(
+        None, description="Signature validation status"
+    )
+    reconciliation_result: dict[str, Any] | None = Field(
+        None, description="Reconciliation details"
+    )
+    audit_details: dict[str, Any] | None = Field(
+        None, description="Audit entry details"
+    )
 
 
 class EPROBulkSyncResponse(BaseModel):
@@ -157,7 +177,9 @@ class EPROBulkSyncResponse(BaseModel):
     updated_count: int = Field(..., description="Number of updated records")
     ignored_count: int = Field(..., description="Number of ignored records")
     conflict_count: int = Field(..., description="Number of conflicts encountered")
-    results: list[EPROSubmitResponse] = Field(..., description="Per-item processing results")
+    results: list[EPROSubmitResponse] = Field(
+        ..., description="Per-item processing results"
+    )
 
 
 class EPROPersistedEntryResponse(BaseModel):
@@ -172,12 +194,20 @@ class EPROPersistedEntryResponse(BaseModel):
     device_timestamp: datetime = Field(
         ..., description="ISO 8601 timestamp when the entry was created on device"
     )
-    answers: dict[str, Any] = Field(..., description="The questionnaire response key-values")
+    answers: dict[str, Any] = Field(
+        ..., description="The questionnaire response key-values"
+    )
     sync_status: str = Field(..., description="Sync resolution status")
     # Mandatory GxP Audit Fields
-    created_at: datetime = Field(..., description="The timestamp when the record was created")
-    created_by: str = Field(..., description="The identity of the user who created the record")
-    reason_for_change: str = Field(..., description="The 21 CFR Part 11 reason for change")
+    created_at: datetime = Field(
+        ..., description="The timestamp when the record was created"
+    )
+    created_by: str = Field(
+        ..., description="The identity of the user who created the record"
+    )
+    reason_for_change: str = Field(
+        ..., description="The 21 CFR Part 11 reason for change"
+    )
     version_index: int = Field(..., description="The current version of the record")
 
 
@@ -189,15 +219,29 @@ class SubjectNotificationResponse(BaseModel):
 
     id: str = Field(..., description="Unique notification identifier")
     subject_id: str = Field(..., description="Unique subject identifier")
-    assignment_id: str | None = Field(None, description="Optional associated assignment identifier")
-    due_at: datetime = Field(..., description="The timestamp when the assignment is due")
+    assignment_id: str | None = Field(
+        None, description="Optional associated assignment identifier"
+    )
+    due_at: datetime = Field(
+        ..., description="The timestamp when the assignment is due"
+    )
     channel: str = Field(..., description="The channel of delivery")
     delivery_status: str = Field(..., description="The status of delivery")
-    is_read: bool = Field(..., description="Flag indicating if the notification is read")
-    read_at: datetime | None = Field(None, description="The timestamp when the notification was read")
-    created_at: datetime = Field(..., description="The timestamp when the record was created")
-    created_by: str = Field(..., description="The identity of the user who created the record")
-    reason_for_change: str = Field(..., description="The 21 CFR Part 11 reason for change")
+    is_read: bool = Field(
+        ..., description="Flag indicating if the notification is read"
+    )
+    read_at: datetime | None = Field(
+        None, description="The timestamp when the notification was read"
+    )
+    created_at: datetime = Field(
+        ..., description="The timestamp when the record was created"
+    )
+    created_by: str = Field(
+        ..., description="The identity of the user who created the record"
+    )
+    reason_for_change: str = Field(
+        ..., description="The 21 CFR Part 11 reason for change"
+    )
     version_index: int = Field(..., description="The current version of the record")
 
 
@@ -207,4 +251,6 @@ class AcknowledgeNotificationRequest(BaseModel):
     Requirements: PRD-SYS-001
     """
 
-    reason_for_change: str = Field(..., description="21 CFR Part 11 compliant reason for change")
+    reason_for_change: str = Field(
+        ..., description="21 CFR Part 11 compliant reason for change"
+    )

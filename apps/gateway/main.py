@@ -20,8 +20,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 import packages  # noqa: F401
 from apps.gateway.routers.cdisc import router as cdisc_router
-from apps.gateway.routers.usdm import router as usdm_router
 from apps.gateway.routers.ecoa import router as ecoa_router
+from apps.gateway.routers.usdm import router as usdm_router
 
 
 def validate_environment() -> None:
@@ -670,12 +670,24 @@ async def get_openapi_json() -> Response:
             pass
 
     # Merge native gateway router specs (cdisc, usdm, ecoa) only if at least one downstream spec succeeded
-    if any([
-        designer_spec, execution_spec, etmf_spec, interop_spec, ctms_spec,
-        notifications_spec, quality_spec, safety_spec, tickets_spec, org_spec, eisf_spec
-    ]):
+    if any(
+        [
+            designer_spec,
+            execution_spec,
+            etmf_spec,
+            interop_spec,
+            ctms_spec,
+            notifications_spec,
+            quality_spec,
+            safety_spec,
+            tickets_spec,
+            org_spec,
+            eisf_spec,
+        ]
+    ):
         try:
             from fastapi.openapi.utils import get_openapi
+
             native_openapi = get_openapi(
                 title="Cadence Clinical - API Gateway",
                 version="0.1.0",
@@ -683,7 +695,9 @@ async def get_openapi_json() -> Response:
             )
             for path_str, path_item in native_openapi.get("paths", {}).items():
                 merged["paths"][path_str] = path_item
-            for schema_name, schema_val in native_openapi.get("components", {}).get("schemas", {}).items():
+            for schema_name, schema_val in (
+                native_openapi.get("components", {}).get("schemas", {}).items()
+            ):
                 merged["components"]["schemas"][schema_name] = schema_val
         except Exception:
             pass

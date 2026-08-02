@@ -15,7 +15,6 @@ import {
   updateSubmissionStatus,
   clearAllSubmissions,
   initSessionKey,
-  clearSessionKey,
 } from "./sync-queue.js";
 
 // Mock Data fallbacks for high-fidelity offline/sandbox usage
@@ -1653,7 +1652,8 @@ async function syncOfflineQueue() {
 
 // Bootstrap Initialization
 async function initializeApp() {
-  const sessionMaterial = state.session.token || state.session.userId || "demo-material";
+  const sessionMaterial =
+    state.session.token || state.session.userId || "demo-material";
   try {
     await initSessionKey(sessionMaterial);
   } catch (err) {
