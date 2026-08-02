@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import httpx
@@ -90,8 +90,14 @@ def client_staff() -> TestClient:
 @pytest.fixture
 def client_unauthorized() -> TestClient:
     # A user that has no roles corresponding to eCOA permissions
-    app.dependency_overrides[get_current_user] = lambda: {"sub": "user_anon", "roles": ["anonymous"], "tenant_id": "tenant_test"}
-    app.dependency_overrides[get_principal] = lambda: Principal(user_id="user_anon", roles=["anonymous"], assigned_sites=[], assigned_studies=[])
+    app.dependency_overrides[get_current_user] = lambda: {
+        "sub": "user_anon",
+        "roles": ["anonymous"],
+        "tenant_id": "tenant_test",
+    }
+    app.dependency_overrides[get_principal] = lambda: Principal(
+        user_id="user_anon", roles=["anonymous"], assigned_sites=[], assigned_studies=[]
+    )
     client = TestClient(app)
     yield client
     app.dependency_overrides.pop(get_current_user, None)
@@ -106,7 +112,9 @@ def client_unauthenticated() -> TestClient:
     return TestClient(app)
 
 
-def test_submit_epro_entry_authorized(client_subject: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_submit_epro_entry_authorized(
+    client_subject: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Validate authorized subject submit returns 201 Created and forwards successfully.
 
     Requirements: PRD-SYS-001
@@ -127,7 +135,7 @@ def test_submit_epro_entry_authorized(client_subject: TestClient, monkeypatch: p
             "sequence_number": 1,
             "client_id": "device_alice",
             "conflict_strategy": "CLIENT_WINS",
-        }
+        },
     }
 
     response = client_subject.post("/api/v1/ecoa/epro/submit", json=payload)
@@ -148,7 +156,7 @@ def test_submit_epro_entry_cross_subject_block(client_subject: TestClient) -> No
     Requirements: PRD-SYS-001
     """
     payload = {
-        "subject_id": "subject_bob", # Mismatched with authenticated alice
+        "subject_id": "subject_bob",  # Mismatched with authenticated alice
         "diary_id": "diary_01",
         "device_timestamp": datetime.now(UTC).isoformat(),
         "answers": {"pain_score": 3},
@@ -156,7 +164,7 @@ def test_submit_epro_entry_cross_subject_block(client_subject: TestClient) -> No
             "sequence_number": 1,
             "client_id": "device_bob",
             "conflict_strategy": "CLIENT_WINS",
-        }
+        },
     }
 
     response = client_subject.post("/api/v1/ecoa/epro/submit", json=payload)
@@ -164,7 +172,9 @@ def test_submit_epro_entry_cross_subject_block(client_subject: TestClient) -> No
     assert response.json()["detail"] == "Access denied"
 
 
-def test_bulk_sync_epro_entries_authorized(client_subject: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_bulk_sync_epro_entries_authorized(
+    client_subject: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Validate bulk sync requests are successfully processed and authorized.
 
     Requirements: PRD-SYS-001
@@ -179,7 +189,7 @@ def test_bulk_sync_epro_entries_authorized(client_subject: TestClient, monkeypat
             "updated_count": 0,
             "ignored_count": 0,
             "conflict_count": 0,
-            "results": [{"status": "CREATED", "id": "sub_123"}]
+            "results": [{"status": "CREATED", "id": "sub_123"}],
         },
     )
     monkeypatch.setattr(GatewayBaseClient, "request", mock_request)
@@ -195,7 +205,7 @@ def test_bulk_sync_epro_entries_authorized(client_subject: TestClient, monkeypat
                     "sequence_number": 1,
                     "client_id": "device_alice",
                     "conflict_strategy": "CLIENT_WINS",
-                }
+                },
             }
         ]
     }
@@ -215,7 +225,7 @@ def test_bulk_sync_epro_entries_cross_subject_block(client_subject: TestClient) 
     payload = {
         "submissions": [
             {
-                "subject_id": "subject_bob", # Mismatched
+                "subject_id": "subject_bob",  # Mismatched
                 "diary_id": "diary_01",
                 "device_timestamp": datetime.now(UTC).isoformat(),
                 "answers": {"pain_score": 3},
@@ -223,7 +233,7 @@ def test_bulk_sync_epro_entries_cross_subject_block(client_subject: TestClient) 
                     "sequence_number": 1,
                     "client_id": "device_bob",
                     "conflict_strategy": "CLIENT_WINS",
-                }
+                },
             }
         ]
     }
@@ -251,7 +261,9 @@ def test_ecoa_unauthenticated_block(client_unauthenticated: TestClient) -> None:
     assert response.status_code == 401
 
 
-def test_get_subject_assignments_authorized(client_subject: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_subject_assignments_authorized(
+    client_subject: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Validate reading subject assignments returns 200 OK for assigned subject.
 
     Requirements: PRD-SYS-001
@@ -271,29 +283,37 @@ def test_get_subject_assignments_authorized(client_subject: TestClient, monkeypa
                 "created_at": datetime.now(UTC).isoformat(),
                 "created_by": "staff_user",
                 "reason_for_change": "Initial assignment",
-                "version_index": 1
+                "version_index": 1,
             }
         ],
     )
     monkeypatch.setattr(GatewayBaseClient, "request", mock_request)
 
-    response = client_subject.get("/api/v1/ecoa/assignments/subject/subject_alice?study_id=study_test_1")
+    response = client_subject.get(
+        "/api/v1/ecoa/assignments/subject/subject_alice?study_id=study_test_1"
+    )
     assert response.status_code == 200
     assert len(response.json()) == 1
     assert response.json()[0]["id"] == "assign_123"
 
 
-def test_get_subject_assignments_cross_subject_block(client_subject: TestClient) -> None:
+def test_get_subject_assignments_cross_subject_block(
+    client_subject: TestClient,
+) -> None:
     """Validate reading other subject assignments is blocked with 403 Forbidden.
 
     Requirements: PRD-SYS-001
     """
-    response = client_subject.get("/api/v1/ecoa/assignments/subject/subject_bob?study_id=study_test_1")
+    response = client_subject.get(
+        "/api/v1/ecoa/assignments/subject/subject_bob?study_id=study_test_1"
+    )
     assert response.status_code == 403
     assert response.json()["detail"] == "Access denied"
 
 
-def test_get_subject_compliance_authorized(client_subject: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_subject_compliance_authorized(
+    client_subject: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Validate retrieving subject compliance metrics.
 
     Requirements: PRD-SYS-001
@@ -307,12 +327,14 @@ def test_get_subject_compliance_authorized(client_subject: TestClient, monkeypat
             "completed_count": 1,
             "pending_count": 0,
             "overdue_count": 0,
-            "assignments": []
+            "assignments": [],
         },
     )
     monkeypatch.setattr(GatewayBaseClient, "request", mock_request)
 
-    response = client_subject.get("/api/v1/ecoa/subjects/subject_alice/compliance?study_id=study_test_1")
+    response = client_subject.get(
+        "/api/v1/ecoa/subjects/subject_alice/compliance?study_id=study_test_1"
+    )
     assert response.status_code == 200
     assert response.json()["compliance_rate"] == 100.0
 
@@ -322,12 +344,16 @@ def test_get_subject_compliance_cross_subject_block(client_subject: TestClient) 
 
     Requirements: PRD-SYS-001
     """
-    response = client_subject.get("/api/v1/ecoa/subjects/subject_bob/compliance?study_id=study_test_1")
+    response = client_subject.get(
+        "/api/v1/ecoa/subjects/subject_bob/compliance?study_id=study_test_1"
+    )
     assert response.status_code == 403
     assert response.json()["detail"] == "Access denied"
 
 
-def test_get_subject_instruments_authorized(client_subject: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_subject_instruments_authorized(
+    client_subject: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Validate retrieving instruments for subject.
 
     Requirements: PRD-SYS-001
@@ -346,28 +372,36 @@ def test_get_subject_instruments_authorized(client_subject: TestClient, monkeypa
                 "created_at": datetime.now(UTC).isoformat(),
                 "created_by": "staff_user",
                 "reason_for_change": "Initial",
-                "version_index": 1
+                "version_index": 1,
             }
         ],
     )
     monkeypatch.setattr(GatewayBaseClient, "request", mock_request)
 
-    response = client_subject.get("/api/v1/ecoa/subjects/subject_alice/instruments?study_id=study_test_1")
+    response = client_subject.get(
+        "/api/v1/ecoa/subjects/subject_alice/instruments?study_id=study_test_1"
+    )
     assert response.status_code == 200
     assert len(response.json()) == 1
 
 
-def test_get_subject_instruments_cross_subject_block(client_subject: TestClient) -> None:
+def test_get_subject_instruments_cross_subject_block(
+    client_subject: TestClient,
+) -> None:
     """Validate retrieving other subject instruments is blocked.
 
     Requirements: PRD-SYS-001
     """
-    response = client_subject.get("/api/v1/ecoa/subjects/subject_bob/instruments?study_id=study_test_1")
+    response = client_subject.get(
+        "/api/v1/ecoa/subjects/subject_bob/instruments?study_id=study_test_1"
+    )
     assert response.status_code == 403
     assert response.json()["detail"] == "Access denied"
 
 
-def test_get_subject_notifications_authorized(client_subject: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_subject_notifications_authorized(
+    client_subject: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Validate retrieving notifications for subject.
 
     Requirements: PRD-SYS-001
@@ -388,28 +422,36 @@ def test_get_subject_notifications_authorized(client_subject: TestClient, monkey
                 "created_at": datetime.now(UTC).isoformat(),
                 "created_by": "system",
                 "reason_for_change": "Automated",
-                "version_index": 1
+                "version_index": 1,
             }
         ],
     )
     monkeypatch.setattr(GatewayBaseClient, "request", mock_request)
 
-    response = client_subject.get("/api/v1/ecoa/subjects/subject_alice/notifications?study_id=study_test_1")
+    response = client_subject.get(
+        "/api/v1/ecoa/subjects/subject_alice/notifications?study_id=study_test_1"
+    )
     assert response.status_code == 200
     assert len(response.json()) == 1
 
 
-def test_get_subject_notifications_cross_subject_block(client_subject: TestClient) -> None:
+def test_get_subject_notifications_cross_subject_block(
+    client_subject: TestClient,
+) -> None:
     """Validate retrieving other subject notifications is blocked.
 
     Requirements: PRD-SYS-001
     """
-    response = client_subject.get("/api/v1/ecoa/subjects/subject_bob/notifications?study_id=study_test_1")
+    response = client_subject.get(
+        "/api/v1/ecoa/subjects/subject_bob/notifications?study_id=study_test_1"
+    )
     assert response.status_code == 403
     assert response.json()["detail"] == "Access denied"
 
 
-def test_acknowledge_notification_authorized(client_subject: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_acknowledge_notification_authorized(
+    client_subject: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Validate acknowledging a notification.
 
     Requirements: PRD-SYS-001
@@ -429,18 +471,23 @@ def test_acknowledge_notification_authorized(client_subject: TestClient, monkeyp
             "created_at": datetime.now(UTC).isoformat(),
             "created_by": "system",
             "reason_for_change": "Subject acked",
-            "version_index": 2
+            "version_index": 2,
         },
     )
     monkeypatch.setattr(GatewayBaseClient, "request", mock_request)
 
     payload = {"reason_for_change": "Read notification"}
-    response = client_subject.post("/api/v1/ecoa/notifications/notif_123/acknowledge?study_id=study_test_1", json=payload)
+    response = client_subject.post(
+        "/api/v1/ecoa/notifications/notif_123/acknowledge?study_id=study_test_1",
+        json=payload,
+    )
     assert response.status_code == 200
     assert response.json()["is_read"] is True
 
 
-def test_acknowledge_notification_cross_subject_block(client_subject: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_acknowledge_notification_cross_subject_block(
+    client_subject: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Validate acknowledging notification belonging to another subject is blocked.
 
     Requirements: PRD-SYS-001
@@ -450,7 +497,7 @@ def test_acknowledge_notification_cross_subject_block(client_subject: TestClient
         status_code=200,
         json={
             "id": "notif_123",
-            "subject_id": "subject_bob", # Mismatched owner returned from interop
+            "subject_id": "subject_bob",  # Mismatched owner returned from interop
             "assignment_id": "assign_123",
             "due_at": datetime.now(UTC).isoformat(),
             "channel": "EMAIL",
@@ -460,18 +507,23 @@ def test_acknowledge_notification_cross_subject_block(client_subject: TestClient
             "created_at": datetime.now(UTC).isoformat(),
             "created_by": "system",
             "reason_for_change": "Automated",
-            "version_index": 1
+            "version_index": 1,
         },
     )
     monkeypatch.setattr(GatewayBaseClient, "request", mock_request)
 
     payload = {"reason_for_change": "Bob's notification"}
-    response = client_subject.post("/api/v1/ecoa/notifications/notif_123/acknowledge?study_id=study_test_1", json=payload)
+    response = client_subject.post(
+        "/api/v1/ecoa/notifications/notif_123/acknowledge?study_id=study_test_1",
+        json=payload,
+    )
     assert response.status_code == 403
     assert response.json()["detail"] == "Access denied"
 
 
-def test_staff_authoring_instruments(client_staff: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_staff_authoring_instruments(
+    client_staff: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Validate that staff roles can author new instruments.
 
     Requirements: PRD-SYS-001
@@ -489,7 +541,7 @@ def test_staff_authoring_instruments(client_staff: TestClient, monkeypatch: pyte
             "created_at": datetime.now(UTC).isoformat(),
             "created_by": "staff_user",
             "reason_for_change": "Author scale",
-            "version_index": 1
+            "version_index": 1,
         },
     )
     monkeypatch.setattr(GatewayBaseClient, "request", mock_request)
@@ -501,7 +553,7 @@ def test_staff_authoring_instruments(client_staff: TestClient, monkeypatch: pyte
         "items": {"pain": "score"},
         "response_types": {"pain": {"type": "numeric"}},
         "scoring_metadata": {},
-        "reason_for_change": "Author scale"
+        "reason_for_change": "Author scale",
     }
 
     response = client_staff.post("/api/v1/ecoa/instruments", json=payload)
@@ -509,7 +561,9 @@ def test_staff_authoring_instruments(client_staff: TestClient, monkeypatch: pyte
     assert response.json()["id"] == "inst_123"
 
 
-def test_staff_authoring_assignments(client_staff: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_staff_authoring_assignments(
+    client_staff: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Validate that staff roles can assign instruments.
 
     Requirements: PRD-SYS-001
@@ -528,7 +582,7 @@ def test_staff_authoring_assignments(client_staff: TestClient, monkeypatch: pyte
             "created_at": datetime.now(UTC).isoformat(),
             "created_by": "staff_user",
             "reason_for_change": "Assigning",
-            "version_index": 1
+            "version_index": 1,
         },
     )
     monkeypatch.setattr(GatewayBaseClient, "request", mock_request)
@@ -541,7 +595,7 @@ def test_staff_authoring_assignments(client_staff: TestClient, monkeypatch: pyte
         "end_date": datetime.now(UTC).isoformat(),
         "recurrence_pattern": "DAILY",
         "due_at": datetime.now(UTC).isoformat(),
-        "reason_for_change": "Assigning"
+        "reason_for_change": "Assigning",
     }
 
     response = client_staff.post("/api/v1/ecoa/assignments", json=payload)
