@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+// Dedicated end-to-end accessibility testing suite verifying full WCAG 2.1 AA compliance
 test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
   test.beforeEach(async ({ page }) => {
     // Intercept API calls to supply live mock data when running in authenticated mode
