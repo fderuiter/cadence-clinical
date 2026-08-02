@@ -86,14 +86,14 @@ test.describe("eTMF Document Management Workflow", () => {
       // Verify page layout complies with basic WCAG standards
       const pageAudit = await new AxeBuilder({ page })
         .include("#app")
-        .disableRules(["color-contrast"])
+        .exclude(".watermark-overlay-container")
         .analyze();
       expect(pageAudit.violations).toEqual([]);
 
       // Verify preview modal behaves accessibly under active state
       const previewAudit = await new AxeBuilder({ page })
         .include(".secure-preview-panel")
-        .disableRules(["color-contrast"])
+        .exclude(".watermark-overlay-container")
         .analyze();
       expect(previewAudit.violations).toEqual([]);
     } finally {
@@ -132,7 +132,7 @@ test.describe("eTMF Document Management Workflow", () => {
       // Verify signature capture modal complies with basic WCAG standards in its active state
       const modalAudit = await new AxeBuilder({ page })
         .include("#signature-capture-modal")
-        .disableRules(["color-contrast"])
+        .exclude(".watermark-overlay-container")
         .analyze();
       expect(modalAudit.violations).toEqual([]);
 
