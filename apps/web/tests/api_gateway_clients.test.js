@@ -266,7 +266,10 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
       );
 
       // 3. autoFile
-      const autoFilePayload = { filename: "cv.pdf", artifact_type: "Investigator CV" };
+      const autoFilePayload = {
+        filename: "cv.pdf",
+        artifact_type: "Investigator CV",
+      };
       await etmfService.autoFile(autoFilePayload);
       expect(mockFetch).toHaveBeenLastCalledWith(
         "http://localhost:8000/api/v1/etmf/classify",
@@ -277,8 +280,13 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
       );
 
       // 4. tagDocument
-      const tagPayload = { artifact_code: "05.02.03", artifact_type: "Investigator CV" };
-      await etmfService.tagDocument("DOC-01", tagPayload, { changeReason: "Manual re-classification" });
+      const tagPayload = {
+        artifact_code: "05.02.03",
+        artifact_type: "Investigator CV",
+      };
+      await etmfService.tagDocument("DOC-01", tagPayload, {
+        changeReason: "Manual re-classification",
+      });
       expect(mockFetch).toHaveBeenLastCalledWith(
         "http://localhost:8000/api/v1/etmf/documents/DOC-01/classify",
         expect.objectContaining({

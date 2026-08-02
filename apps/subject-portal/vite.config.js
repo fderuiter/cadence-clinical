@@ -26,17 +26,15 @@ export default defineConfig({
     globals: true,
     setupFiles: [path.resolve(__dirname, "./tests/setup.js")],
     coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      include: [
-        "sync-queue.js"
-      ],
+      provider: "v8",
+      reporter: ["text", "json", "html"],
+      include: ["sync-queue.js"],
       thresholds: {
         lines: 80,
         functions: 80,
         branches: 80,
-        statements: 80
-      }
-    }
+        statements: 80,
+      },
+    },
   },
 });

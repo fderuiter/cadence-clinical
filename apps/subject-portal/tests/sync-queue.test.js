@@ -11,7 +11,7 @@ import {
   getQueuedSubmissions,
   getAllSubmissions,
   updateSubmissionStatus,
-  clearAllSubmissions
+  clearAllSubmissions,
 } from "../sync-queue.js";
 
 describe("sync-queue secure storage and sync capabilities", () => {
@@ -107,9 +107,9 @@ describe("sync-queue secure storage and sync capabilities", () => {
   });
 
   it("should reject updateSubmissionStatus if submission not found", async () => {
-    await expect(
-      updateSubmissionStatus(999, "SUBMITTED")
-    ).rejects.toThrow("Submission 999 not found");
+    await expect(updateSubmissionStatus(999, "SUBMITTED")).rejects.toThrow(
+      "Submission 999 not found"
+    );
   });
 
   it("should update submission status and return decrypted submission", async () => {
@@ -146,7 +146,7 @@ describe("sync-queue secure storage and sync capabilities", () => {
       configurable: true,
       writable: true,
     });
-    
+
     // Triggering database salt generation fallback
     const id1 = await getClientId();
     expect(id1).toBeDefined();
@@ -161,7 +161,9 @@ describe("sync-queue secure storage and sync capabilities", () => {
   it("should generate clientId with fallback when randomUUID is unavailable", async () => {
     const origCrypto = globalThis.crypto;
     Object.defineProperty(globalThis, "crypto", {
-      value: { getRandomValues: origCrypto ? origCrypto.getRandomValues : undefined },
+      value: {
+        getRandomValues: origCrypto ? origCrypto.getRandomValues : undefined,
+      },
       configurable: true,
       writable: true,
     });
