@@ -243,6 +243,53 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
         expect.objectContaining({ method: "POST" })
       );
     });
+
+    it("routes taxonomy retrieval, auto-file suggestion, and document tagging correctly", async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({}),
+      });
+
+      // 1. getTaxonomy without version
+      await etmfService.getTaxonomy();
+      expect(mockFetch).toHaveBeenLastCalledWith(
+        "http://localhost:8000/api/v1/etmf/taxonomy",
+        expect.objectContaining({ method: "GET" })
+      );
+
+      // 2. getTaxonomy with version
+      await etmfService.getTaxonomy("v3.2.0-complete");
+      expect(mockFetch).toHaveBeenLastCalledWith(
+        "http://localhost:8000/api/v1/etmf/taxonomy?version=v3.2.0-complete",
+        expect.objectContaining({ method: "GET" })
+      );
+
+      // 3. autoFile
+      const autoFilePayload = { filename: "cv.pdf", artifact_type: "Investigator CV" };
+      await etmfService.autoFile(autoFilePayload);
+      expect(mockFetch).toHaveBeenLastCalledWith(
+        "http://localhost:8000/api/v1/etmf/classify",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify(autoFilePayload),
+        })
+      );
+
+      // 4. tagDocument
+      const tagPayload = { artifact_code: "05.02.03", artifact_type: "Investigator CV" };
+      await etmfService.tagDocument("DOC-01", tagPayload, { changeReason: "Manual re-classification" });
+      expect(mockFetch).toHaveBeenLastCalledWith(
+        "http://localhost:8000/api/v1/etmf/documents/DOC-01/classify",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify(tagPayload),
+          headers: expect.objectContaining({
+            "X-Change-Reason": "Manual re-classification",
+          }),
+        })
+      );
+    });
   });
 
   describe("Interop Service Module", () => {

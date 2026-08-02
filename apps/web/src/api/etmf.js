@@ -98,4 +98,47 @@ export const etmfService = {
       `/api/v1/econsent/archival-status?${query.toString()}`
     );
   },
+
+  /**
+   * Retrieves the browsable eTMF taxonomy tree.
+   * @param {string} [version] - Optional taxonomy version.
+   * @param {Object} [options] - Additional request options.
+   * @returns {Promise<Object>} The taxonomy catalog tree.
+   */
+  getTaxonomy(version, options = {}) {
+    const query = new URLSearchParams();
+    if (version !== undefined && version !== null) {
+      query.append("version", version);
+    }
+    const queryString = query.toString();
+    const path = queryString
+      ? `/api/v1/etmf/taxonomy?${queryString}`
+      : "/api/v1/etmf/taxonomy";
+    return apiClient.get(path, options);
+  },
+
+  /**
+   * Provides automatic classification/auto-filing suggestions for a document.
+   * @param {Object} payload - Ingestion parameters including filename.
+   * @param {Object} [options] - Additional request options.
+   * @returns {Promise<Object>} The auto-classification result.
+   */
+  autoFile(payload, options = {}) {
+    return apiClient.post("/api/v1/etmf/classify", payload, options);
+  },
+
+  /**
+   * Mutates the taxonomy classification/tags for an existing document.
+   * @param {string} documentId - The unique document identifier.
+   * @param {Object} payload - The new classification tag details.
+   * @param {Object} [options] - Additional options including changeReason.
+   * @returns {Promise<Object>} The updated document metadata.
+   */
+  tagDocument(documentId, payload, options = {}) {
+    return apiClient.post(
+      `/api/v1/etmf/documents/${documentId}/classify`,
+      payload,
+      options
+    );
+  },
 };
