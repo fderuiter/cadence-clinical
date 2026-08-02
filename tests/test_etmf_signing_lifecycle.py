@@ -418,6 +418,9 @@ async def test_etmf_post_signature_locking():
 async def test_etmf_signing_failure_logging_and_blocking(monkeypatch):
     """Verify failed document signatures block state progression and log failure.
 
+    This ensures that signature validation failures are logged correctly
+    and the status transitions are prevented on invalid signature manifestation.
+
     Requirements: Trace-13
     """
     client = TestClient(app)
