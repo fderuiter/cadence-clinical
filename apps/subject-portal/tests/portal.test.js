@@ -602,6 +602,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
 
     it("demonstrates proper encryption, key-derivation, decryption, and error handling on decryption failure", async () => {
       const portal = await import("../index.js");
+      // eslint-disable-next-line no-unused-vars
       const { initSessionKey, clearSessionKey, getQueuedSubmissions, getAllSubmissions, queueSubmission } = await import("../sync-queue.js");
 
       // 1. Initializing session key and clearing database for clean state

@@ -15,6 +15,7 @@ import {
   updateSubmissionStatus,
   clearAllSubmissions,
   initSessionKey,
+  // eslint-disable-next-line no-unused-vars
   clearSessionKey,
 } from "./sync-queue.js";
 
