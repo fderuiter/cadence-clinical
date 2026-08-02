@@ -144,6 +144,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 6. Frontend & Design System
 - [2026-08-02: Centralized Accessibility Matcher and 80 Percent Coverage Gate](2026-08-02-centralized-accessibility-matcher-and-80-percent-coverage-gate.md)
+- [2026-08-02: Centralized Accessibility Matcher and Code Coverage Gates](2026-08-02-centralized-accessibility-matcher-and-code-coverage-gates.md)
 - [2026-07-31: Viewport-Aware Grid Inspector for eCRF designer](2026-07-31-viewport-aware-grid-inspector.md)
 - [2026-07-31: Clinical Code Lookup Input Helper in Shared UI Package](2026-07-31-clinical-code-lookup-input-helper-in-shared-ui-package.md)
 - [2026-07-31: Vue SPA Component Smoke Test and Vitest Pipeline Integration](2026-07-31-vue-spa-component-smoke-test-and-vitest-pipeline-integration.md)
