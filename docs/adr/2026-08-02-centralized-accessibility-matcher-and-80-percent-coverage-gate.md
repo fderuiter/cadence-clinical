@@ -9,42 +9,59 @@
 
 ## 1. Context & Problem Statement
 
-Prior to this decision, the frontend continuous integration (CI) pipeline did not enforce automated code coverage thresholds. Additionally, the custom `toBeAccessible` testing matcher (which wraps `axe-core`) was coupled to the main web application (`apps/web`). This led to duplicated testing setups and configuration fragmentation in the patient portal (`apps/subject-portal`), increasing the risk of accessibility regressions and lowering overall engineering standards. 
+Maintaining strict Web Content Accessibility Guidelines (WCAG) 2.1 Compliance is a fundamental business requirement for patient-facing (eCOA/ePRO) clinical software platforms. Previously, our custom `toBeAccessible` testing matcher (which wraps `axe-core`) was coupled tightly to the main clinical dashboard web application (`apps/web`). This structure led to duplicate testing configurations, fragmented implementations in the patient portal (`apps/subject-portal`), and lack of automated enforcement gates. 
 
-To satisfy clinical, GxP, and WCAG 2.1 compliance requirements across all clinical and patient-facing applications, a centralized testing utility framework is needed along with an enforced **80% code coverage gate** in CI.
+Additionally, our frontend continuous integration (CI) pipelines lacked enforced code coverage thresholds, introducing risks of regression and code quality fragmentation. We need a clean, unified engineering pattern to centralize testing utilities and enforce an 80% code coverage threshold in CI to guarantee quality assurance and accessibility compliance under system requirement PRD-SYS-001.
 
 ## 2. Decision Drivers & Constraints
 
-* **Compliance Requirements:** Ensure absolute WCAG 2.1 compliance across patient-facing (`apps/subject-portal`) and investigator-facing (`apps/web`) interfaces (PRD-SYS-001).
-* **Engineering Uniformity:** Standardize on an 80% test coverage gate (statements, branches, functions, lines) globally, aligning the frontend with our existing backend standard.
-* **Dry Principle:** Eliminate duplicated code, boilerplate, and dependency overhead in individual applications' testing environments.
+* **Maintainability & DRY Principle:** Testing assertions should not be copy-pasted across isolated frontend applications.
+* **WCAG 2.1 Compliance Enforcement:** Guardrails must ensure that both professional portal and patient portal widgets are strictly audited for screen-readers, contrast ratio, and layout (PRD-SYS-001).
+* **Standardized Code Quality:** Aligning frontend test suites with the existing 80% coverage standard enforced on the backend.
+* **Developer Velocity:** Centralized matchers must be easily importable with zero boilerplate.
 
 ## 3. Options Considered
 
-1. **Option A (Selected):** Extract the accessibility testing matcher to a shared package (`packages/ui/accessibility-matcher.js`), expose it through the package entrypoint, and configure both applications to import the centralized helper. Enforce a hard 80% Vitest coverage gate in both workspace apps.
-2. **Option B (Alternative):** Maintain independent copies of the `toBeAccessible` matcher and `axe-core` dependencies in each frontend application, relying on manual checklist verification to ensure coverage remains acceptable.
+### Option 1: Fragmented Testing Setups (Status Quo)
+Keep custom testing setup files separately configured inside each application workspace, running independent coverage checks without rigid gating rules.
+* **Pros:**
+  * ✅ Quick setup for individual applications.
+* **Cons:**
+  * ❌ Severe duplicate configurations across `apps/web` and `apps/subject-portal`.
+  * ❌ Lack of uniform accessibility criteria or global rulesets.
+  * ❌ No automated mechanism blocks pull requests with low-quality or untested code.
+
+### Option 2: Shared Testing Package with Enforced Gating (Selected)
+Extract custom Jest/Vitest matchers (e.g. `toBeAccessible`) to a shared workspace package (`packages/ui`), expose them globally, and configure rigid Vitest coverage threshold gates requiring 80% coverage for lines, functions, branches, and statements.
+* **Pros:**
+  * ✅ Perfect architectural separation of concerns (dry utility package).
+  * ✅ Guarantees 80% test coverage gate is automatically executed in CI.
+  * ✅ Allows easy global extension of WCAG rules across all current and future portals.
+* **Cons:**
+  * ❌ Minor build config orchestration required via `pnpm` workspaces.
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A**. This approach provides a single source of truth for custom assertions and guarantees that code coverage cannot regress below the 80% threshold. It cleanly separates shared component architecture utilities from application-specific code, making our clinical platform modular and robust.
+**Chosen Option:** Option 2 (Option A).
+By packaging the custom `toBeAccessible` matcher within `packages/ui` and distributing it as a shared dependency, we eliminate configuration fragmentation. Incorporating a mandatory Vitest 80% coverage gate guarantees that all newly authored components and routes are thoroughly validated, keeping our platform compliant with PRD-SYS-001.
 
 ## 5. Consequences & Trade-offs
 
-* **Positive:**
-  * Zero-duplication testing setup across all current and future frontend applications.
-  * Automated block on PRs if test coverage drops below 80%.
-  * Standardized assertions ensure consistent accessibility auditing.
-* **Negative:**
-  * Developers must write high-quality, comprehensive tests alongside all new UI components, which may slightly increase initial development time but significantly lowers regression costs.
+* **Positive Impact:**
+  * Standardized accessibility testing setup across all client modules.
+  * Fail-closed gates in CI block any contributions failing to maintain coverage or containing accessibility violations.
+* **Negative Impact / Technical Debt:**
+  * Workspace packages have slight compile/resolve overhead during developer bootstrap.
+* **Mitigation Strategy:**
+  * Pre-configured scripts automate bootstrapping via `pnpm` workspace hooks.
 
 ## 6. Implementation & Verification
 
-* **Target files/packages modified:**
-  * `packages/ui/accessibility-matcher.js` — Core centralized matcher wrapping `axe-core`.
-  * `packages/ui/index.js` — Exposes the matcher globally.
-  * `apps/web/tests/setup.js` & `apps/subject-portal/tests/setup.js` — Unified registration of the matcher.
-  * `apps/web/vitest.config.js` & `apps/subject-portal/vite.config.js` — Configure Vitest to enforce 80% thresholds.
-* **Verification:**
-  * Ran local test suite: `pnpm -r test` runs and measures coverage above 80%.
-  * Validation checks pass cleanly.
-
+* **Affected Repositories / Services:**
+  * `packages/ui`: Centralized the `toBeAccessible` matcher and updated public entrypoints (`packages/ui/accessibility-matcher.js`, `packages/ui/index.js`).
+  * `apps/web`: Replaced local matcher setup with shared package imports in `apps/web/tests/setup.js` and `apps/web/vitest.config.js`.
+  * `apps/subject-portal`: Standardized configuration in `apps/subject-portal/tests/setup.js` and `apps/subject-portal/vite.config.js` to import `toBeAccessible` from `@cadence/ui`.
+  * `package.json` & individual config files: Configured the Vitest coverage thresholds.
+* **Verification Plan:**
+  * Running `pnpm run test` executes unified unit tests verifying coverage meets the 80% statement, branch, and function thresholds.
+  * Running `python3 scripts/validate_adrs.py` validates the format, requirements mapping, and chronology of this ADR.
