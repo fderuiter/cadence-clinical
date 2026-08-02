@@ -9,8 +9,6 @@ Requirements: PRD-SYS-001
 import os
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-
 from execution.epro_transport_models import (
     InstrumentCreate,
     InstrumentResponse,
@@ -26,12 +24,12 @@ from execution.offline_models import (
     EPROSubmitResponse,
     SubjectNotificationResponse,
 )
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+
 from packages.security.gateway_client import GatewayBaseClient
 from packages.security.middleware import get_current_user
 from packages.security.rbac import (
     Principal,
-    get_principal,
-    has_permission,
     require_permission,
     require_study_scope,
 )
