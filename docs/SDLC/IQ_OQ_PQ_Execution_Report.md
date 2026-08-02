@@ -9,11 +9,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1930
-- **Passed:** 1929 🟢
-- **Failed/Errors:** 1 🔴
+- **Total Automated Test Cases Run:** 1948
+- **Passed:** 1948 🟢
+- **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
-- **Overall Operational Pass Rate:** 99.95%
+- **Overall Operational Pass Rate:** 100.00%
 
 ## 2. Installation Qualification (IQ)
 
@@ -1056,6 +1056,24 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_gateway_cdisc_products_authenticated` | `tests.test_gateway_cdisc` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_cdisc_sdtm_domain_authenticated` | `tests.test_gateway_cdisc` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_cdisc_unauthenticated_returns_401` | `tests.test_gateway_cdisc` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_acknowledge_notification_authorized` | `tests.test_gateway_ecoa` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_acknowledge_notification_cross_subject_block` | `tests.test_gateway_ecoa` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_bulk_sync_epro_entries_authorized` | `tests.test_gateway_ecoa` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_bulk_sync_epro_entries_cross_subject_block` | `tests.test_gateway_ecoa` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ecoa_unauthenticated_block` | `tests.test_gateway_ecoa` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ecoa_unauthorized_role_block` | `tests.test_gateway_ecoa` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_subject_assignments_authorized` | `tests.test_gateway_ecoa` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_subject_assignments_cross_subject_block` | `tests.test_gateway_ecoa` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_subject_compliance_authorized` | `tests.test_gateway_ecoa` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_subject_compliance_cross_subject_block` | `tests.test_gateway_ecoa` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_subject_instruments_authorized` | `tests.test_gateway_ecoa` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_subject_instruments_cross_subject_block` | `tests.test_gateway_ecoa` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_subject_notifications_authorized` | `tests.test_gateway_ecoa` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_subject_notifications_cross_subject_block` | `tests.test_gateway_ecoa` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_staff_authoring_assignments` | `tests.test_gateway_ecoa` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_staff_authoring_instruments` | `tests.test_gateway_ecoa` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_submit_epro_entry_authorized` | `tests.test_gateway_ecoa` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_submit_epro_entry_cross_subject_block` | `tests.test_gateway_ecoa` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_usdm_export_authenticated` | `tests.test_gateway_usdm` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_usdm_import_authenticated` | `tests.test_gateway_usdm` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_usdm_unauthenticated_returns_401` | `tests.test_gateway_usdm` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1410,7 +1428,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_merge_amendment_branch` | `tests.test_protocol_comparison` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_build_docx_template` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_as_docx_success` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_export_protocol_as_pdf_success` | `tests.test_protocol_export` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_export_protocol_as_pdf_success` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_etmf_forwarding_best_effort` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_etmf_forwarding_strict_failure` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_generation_auditing` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |

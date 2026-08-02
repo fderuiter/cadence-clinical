@@ -21,6 +21,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import packages  # noqa: F401
 from apps.gateway.routers.cdisc import router as cdisc_router
 from apps.gateway.routers.usdm import router as usdm_router
+from apps.gateway.routers.ecoa import router as ecoa_router
 
 
 def validate_environment() -> None:
@@ -67,6 +68,7 @@ app = FastAPI(
 
 app.include_router(cdisc_router, prefix="/api/v1/cdisc", tags=["CDISC Standards"])
 app.include_router(usdm_router, prefix="/api/v1/usdm", tags=["USDM Data Flow"])
+app.include_router(ecoa_router, prefix="/api/v1/ecoa", tags=["eCOA"])
 
 # CORS configuration
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
@@ -664,6 +666,25 @@ async def get_openapi_json() -> Response:
                 interop_spec.get("components", {}).get("schemas", {}).items()
             ):
                 merged["components"]["schemas"][f"Interop_{schema_name}"] = schema_val
+        except Exception:
+            pass
+
+    # Merge native gateway router specs (cdisc, usdm, ecoa) only if at least one downstream spec succeeded
+    if any([
+        designer_spec, execution_spec, etmf_spec, interop_spec, ctms_spec,
+        notifications_spec, quality_spec, safety_spec, tickets_spec, org_spec, eisf_spec
+    ]):
+        try:
+            from fastapi.openapi.utils import get_openapi
+            native_openapi = get_openapi(
+                title="Cadence Clinical - API Gateway",
+                version="0.1.0",
+                routes=app.routes,
+            )
+            for path_str, path_item in native_openapi.get("paths", {}).items():
+                merged["paths"][path_str] = path_item
+            for schema_name, schema_val in native_openapi.get("components", {}).get("schemas", {}).items():
+                merged["components"]["schemas"][schema_name] = schema_val
         except Exception:
             pass
 
