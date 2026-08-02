@@ -3,6 +3,7 @@ import axe from "axe-core";
 /**
  * Asserts that a standard DOM Element, raw HTML string, or Vue test wrapper is WCAG accessible.
  * Runs an asynchronous accessibility audit using axe-core and reports violations clearly.
+ * This helper is centralized in packages/ui to serve both apps/web and apps/subject-portal.
  *
  * @param {Element|string|Object} received - The target DOM Element, raw HTML string, or Vue Wrapper.
  * @param {Object} [customOptions={}] - Optional options to override the default rules and configuration.
