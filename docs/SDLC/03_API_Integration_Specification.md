@@ -5282,6 +5282,163 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/doa/delegate:
+    post:
+      tags:
+      - DOA
+      summary: Delegate Task Endpoint
+      operationId: delegate_task_endpoint_api_v1_execution_doa_delegate_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DelegateTaskRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DOADelegationRecordResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/doa/endorse:
+    post:
+      tags:
+      - DOA
+      summary: Approve Delegation Endpoint
+      operationId: approve_delegation_endpoint_api_v1_execution_doa_endorse_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveDelegationRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DOADelegationRecordResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/doa/endorse_task:
+    post:
+      tags:
+      - DOA
+      summary: Approve Task Endpoint
+      operationId: approve_task_endpoint_api_v1_execution_doa_endorse_task_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveTaskDelegationRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DOADelegationRecordResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/doa/revoke:
+    post:
+      tags:
+      - DOA
+      summary: Revoke Delegation Endpoint
+      operationId: revoke_delegation_endpoint_api_v1_execution_doa_revoke_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeDelegationRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DOADelegationRecordResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/doa/staff:
+    post:
+      tags:
+      - DOA
+      summary: Create Staff Endpoint
+      operationId: create_staff_endpoint_api_v1_execution_doa_staff_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteStaffMemberRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteStaffMemberResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/doa/audit-logs:
+    get:
+      tags:
+      - DOA
+      summary: Get Audit Logs Endpoint
+      operationId: get_audit_logs_endpoint_api_v1_execution_doa_audit_logs_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/DOAAuditLogResponse'
+                type: array
+                title: Response Get Audit Logs Endpoint Api V1 Execution Doa Audit Logs Get
+  /api/v1/execution/doa/delegations:
+    get:
+      tags:
+      - DOA
+      summary: Get Delegations Endpoint
+      operationId: get_delegations_endpoint_api_v1_execution_doa_delegations_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/DOADelegationRecordResponse'
+                type: array
+                title: Response Get Delegations Endpoint Api V1 Execution Doa Delegations Get
   /api/v1/offline/sync-batch:
     post:
       tags:
@@ -5437,6 +5594,8 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/tsdv/config:
     post:
+      tags:
+      - SDV/TSDV
       summary: Create Or Update Tsdv Config
       description: 'Create or update Targeted SDV (TSDV) configuration for a study.
 
@@ -5464,8 +5623,10 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/tsdv/config/{study_id}:
     get:
+      tags:
+      - SDV/TSDV
       summary: Get Tsdv Config
-      description: Retrieve Targeted SDV (TSDV) configuration for a study.
+      description: Retrieve existing TSDV configuration for a study.
       operationId: get_tsdv_config_api_v1_execution_tsdv_config__study_id__get
       parameters:
       - name: study_id
@@ -5489,6 +5650,8 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/tsdv/required:
     get:
+      tags:
+      - SDV/TSDV
       summary: Evaluate Tsdv Rule
       description: 'Evaluate Targeted SDV (TSDV) requirement for a given context.
 
@@ -5539,6 +5702,8 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/sdv/signoff:
     post:
+      tags:
+      - SDV/TSDV
       summary: Sdv Signoff
       description: CRA/monitor-gated SDV sign-off endpoint for Field, Page, or Visit scopes.
       operationId: sdv_signoff_api_v1_execution_sdv_signoff_post
@@ -5546,7 +5711,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SDVSignoffCreate'
+              $ref: '#/components/schemas/SDVSignOffRequest'
         required: true
       responses:
         '200':
@@ -5554,7 +5719,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SDVSignoffResponse'
+                $ref: '#/components/schemas/SDVSignOffResponse'
         '422':
           description: Validation Error
           content:
@@ -5581,6 +5746,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BulkSdvSignOffResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/queries/generate:
+    post:
+      tags:
+      - SDV/TSDV
+      summary: Bulk Generate Queries
+      description: CRA/monitor-gated bulk query generation endpoint.
+      operationId: bulk_generate_queries_api_v1_execution_queries_generate_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkQueryGenerationRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkQueryGenerationResponse'
         '422':
           description: Validation Error
           content:
@@ -5672,6 +5863,68 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SubjectResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/subjects/{subject_id}/consents:
+    post:
+      summary: Record Subject Consent Endpoint
+      description: Record/upload a signed informed consent form (ICF) for a subject, clearing any requires_reconsent gate.
+      operationId: record_subject_consent_endpoint_api_v1_execution_subjects__subject_id__consents_post
+      parameters:
+      - name: subject_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subject Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubjectConsentRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubjectConsentResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/subjects/{subject_id}/consent:
+    post:
+      summary: Record Subject Consent Endpoint
+      description: Record/upload a signed informed consent form (ICF) for a subject, clearing any requires_reconsent gate.
+      operationId: record_subject_consent_endpoint_api_v1_execution_subjects__subject_id__consent_post
+      parameters:
+      - name: subject_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subject Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubjectConsentRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubjectConsentResponse'
         '422':
           description: Validation Error
           content:
@@ -6466,7 +6719,10 @@ paths:
   /api/v1/dictionaries/meddra/code:
     get:
       summary: Get Meddra Code
-      description: Performs coding or interactive auto-complete lookup on adverse events using version-aware matcher.
+      description: 'Performs coding or interactive auto-complete lookup on adverse events using version-aware matcher.
+
+
+        Phase 17 / Epic #109 dictionary lookup endpoint.'
       operationId: get_meddra_code_api_v1_dictionaries_meddra_code_get
       parameters:
       - name: term
@@ -6509,7 +6765,10 @@ paths:
   /api/v1/dictionaries/whodrug/code:
     get:
       summary: Get Whodrug Code
-      description: Performs coding or interactive lookup on WHODrug database using version-aware matcher.
+      description: 'Performs coding or interactive lookup on WHODrug database using version-aware matcher.
+
+
+        Phase 17 / Epic #109 drug dictionary lookup endpoint.'
       operationId: get_whodrug_code_api_v1_dictionaries_whodrug_code_get
       parameters:
       - name: term
@@ -8891,6 +9150,11 @@ components:
           description: Unique identifier for the epoch.
         properties:
           $ref: '#/components/schemas/EpochProperties'
+        change_reason:
+          type: string
+          title: Change Reason
+          description: Change reason for audit trail
+          default: Created epoch
       type: object
       required:
       - id
@@ -8943,6 +9207,11 @@ components:
           description: Unique identifier for the procedure.
         properties:
           $ref: '#/components/schemas/ProcedureProperties'
+        change_reason:
+          type: string
+          title: Change Reason
+          description: Change reason for audit trail
+          default: Created procedure
       type: object
       required:
       - id
@@ -9002,6 +9271,11 @@ components:
           description: Unique identifier for the study arm.
         properties:
           $ref: '#/components/schemas/StudyArmProperties'
+        change_reason:
+          type: string
+          title: Change Reason
+          description: Change reason for audit trail
+          default: Created study arm
       type: object
       required:
       - id
@@ -9038,6 +9312,11 @@ components:
           description: Unique identifier for the timing window.
         properties:
           $ref: '#/components/schemas/TimingWindowProperties'
+        change_reason:
+          type: string
+          title: Change Reason
+          description: Change reason for audit trail
+          default: Created timing window
       type: object
       required:
       - id
@@ -10980,6 +11259,11 @@ components:
       properties:
         properties:
           $ref: '#/components/schemas/EpochProperties'
+        reason_for_change:
+          type: string
+          title: Reason For Change
+          description: Reason for change for audit trail
+          default: Updated epoch
       type: object
       required:
       - properties
@@ -11018,6 +11302,11 @@ components:
       properties:
         properties:
           $ref: '#/components/schemas/ProcedureProperties'
+        reason_for_change:
+          type: string
+          title: Reason For Change
+          description: Reason for change for audit trail
+          default: Updated procedure
       type: object
       required:
       - properties
@@ -11026,6 +11315,11 @@ components:
       properties:
         properties:
           $ref: '#/components/schemas/StudyArmProperties'
+        reason_for_change:
+          type: string
+          title: Reason For Change
+          description: Reason for change for audit trail
+          default: Updated study arm
       type: object
       required:
       - properties
@@ -11034,6 +11328,11 @@ components:
       properties:
         properties:
           $ref: '#/components/schemas/TimingWindowProperties'
+        reason_for_change:
+          type: string
+          title: Reason For Change
+          description: Reason for change for audit trail
+          default: Updated timing window
       type: object
       required:
       - properties
@@ -11284,6 +11583,11 @@ components:
           description: Unique identifier for the visit.
         properties:
           $ref: '#/components/schemas/VisitProperties'
+        change_reason:
+          type: string
+          title: Change Reason
+          description: Change reason for audit trail
+          default: Created visit
       type: object
       required:
       - id
@@ -11293,6 +11597,11 @@ components:
       properties:
         properties:
           $ref: '#/components/schemas/VisitProperties'
+        reason_for_change:
+          type: string
+          title: Reason For Change
+          description: Reason for change for audit trail
+          default: Updated visit
       type: object
       required:
       - properties
@@ -11342,6 +11651,49 @@ components:
 
 
         Requirements: PRD-SYS-001'
+    ApproveDelegationRequest:
+      properties:
+        delegation_id:
+          type: string
+          title: Delegation Id
+        pi_user_id:
+          type: string
+          title: Pi User Id
+        password:
+          type: string
+          title: Password
+        totp_code:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Totp Code
+      type: object
+      required:
+      - delegation_id
+      - pi_user_id
+      - password
+      title: ApproveDelegationRequest
+    ApproveTaskDelegationRequest:
+      properties:
+        delegation_id:
+          type: string
+          title: Delegation Id
+        pi_user_id:
+          type: string
+          title: Pi User Id
+        signature_hash:
+          type: string
+          title: Signature Hash
+        reason_for_change:
+          type: string
+          title: Reason For Change
+      type: object
+      required:
+      - delegation_id
+      - pi_user_id
+      - signature_hash
+      - reason_for_change
+      title: ApproveTaskDelegationRequest
     BatchSignOffRequest:
       properties:
         study_id:
@@ -11526,6 +11878,91 @@ components:
       - dia_tmf_code
       - reason_for_change
       title: Body_upload_document_api_v1_documents_upload_post
+    BulkQueryGenerationRequest:
+      properties:
+        study_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Study Id
+          description: Target protocol study ID
+        site_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Site Id
+          description: Optional target site identifier
+        subject_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subject Id
+          description: Optional target subject identifier
+        targets:
+          items:
+            $ref: '#/components/schemas/QueryTargetDescriptor'
+          type: array
+          title: Targets
+          description: List of query target coordinate fields and explanations
+        reason_for_change:
+          type: string
+          title: Reason For Change
+          description: Mandatory GxP 21 CFR Part 11 justification reason
+      type: object
+      required:
+      - targets
+      - reason_for_change
+      title: BulkQueryGenerationRequest
+      description: 'Request payload to execute bulk clinical query generation.
+
+
+        Requirements: PRD-SYS-001'
+    BulkQueryGenerationResponse:
+      properties:
+        batch_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Batch Id
+          description: Unique bulk query batch identifier
+        audit_tx:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Audit Tx
+          description: Immutable GxP audit ledger transaction ID
+        generated_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Generated Count
+          description: Legacy generated query count
+        generated_query_ids:
+          items:
+            type: string
+          type: array
+          title: Generated Query Ids
+          description: List of generated unique query IDs
+        skipped_targets:
+          items:
+            $ref: '#/components/schemas/QueryTargetDescriptor'
+          type: array
+          title: Skipped Targets
+          description: List of target descriptors that were skipped due to already having an active query
+        timestamp_utc:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Timestamp Utc
+          description: UTC ISO timestamp of query generation execution
+      type: object
+      required:
+      - generated_query_ids
+      title: BulkQueryGenerationResponse
+      description: 'Response payload following bulk query generation execution.
+
+
+        Requirements: PRD-SYS-001'
     BulkSdvSignOffRequest:
       properties:
         study_id:
@@ -11556,6 +11993,11 @@ components:
           - type: 'null'
           title: Site Id
           description: Optional site identifier for the targets
+        signing_reason:
+          type: string
+          title: Signing Reason
+          description: GxP Part 11 signature meaning or reason
+          default: CRA/monitor-gated bulk SDV sign-off
       type: object
       required:
       - study_id
@@ -11570,6 +12012,47 @@ components:
         Requirements: PRD-SYS-001'
     BulkSdvSignOffResponse:
       properties:
+        bulk_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Bulk Id
+          description: Unique bulk signature operation identifier
+        content_digest:
+          type: string
+          title: Content Digest
+          description: SHA-256 digest of bulk signed data
+        timestamp_utc:
+          type: string
+          title: Timestamp Utc
+          description: UTC ISO timestamp of signature execution
+        audit_tx:
+          type: string
+          title: Audit Tx
+          description: Immutable GxP audit ledger transaction ID
+        verified_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Verified Count
+          description: Total number of successfully verified SDV items
+        verified_target_ids:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Verified Target Ids
+          description: List of target IDs that were successfully signed
+        skipped_targets:
+          anyOf:
+          - items:
+              additionalProperties: true
+              type: object
+            type: array
+          - type: 'null'
+          title: Skipped Targets
+          description: List of skipped targets with details on skip reasons
         signed_count:
           type: integer
           title: Signed Count
@@ -11586,26 +12069,14 @@ components:
           type: array
           title: Skipped Target Ids
           description: List of target IDs that were skipped or already signed
-        content_digest:
-          type: string
-          title: Content Digest
-          description: SHA-256 digest of bulk signed data
-        timestamp_utc:
-          type: string
-          title: Timestamp Utc
-          description: UTC ISO timestamp of signature execution
-        audit_tx:
-          type: string
-          title: Audit Tx
-          description: Immutable GxP audit ledger transaction ID
       type: object
       required:
-      - signed_count
-      - signed_target_ids
-      - skipped_target_ids
       - content_digest
       - timestamp_utc
       - audit_tx
+      - signed_count
+      - signed_target_ids
+      - skipped_target_ids
       title: BulkSdvSignOffResponse
       description: 'Response payload following bulk SDV sign-off execution.
 
@@ -11848,10 +12319,10 @@ components:
           title: Hierarchy
         suggestions:
           anyOf:
-          - additionalProperties: true
-            type: object
           - items: {}
             type: array
+          - additionalProperties: true
+            type: object
           - type: 'null'
           title: Suggestions
         domain:
@@ -12005,6 +12476,88 @@ components:
 
 
         Requirements: PRD-SYS-001'
+    DOAAuditLogResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        user_id:
+          type: string
+          title: User Id
+        action:
+          type: string
+          title: Action
+        details:
+          type: string
+          title: Details
+        timestamp:
+          type: string
+          format: date-time
+          title: Timestamp
+      type: object
+      required:
+      - id
+      - user_id
+      - action
+      - details
+      - timestamp
+      title: DOAAuditLogResponse
+    DOADelegationRecordResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        site_id:
+          type: string
+          title: Site Id
+        staff_user_id:
+          type: string
+          title: Staff User Id
+        task_code:
+          type: string
+          title: Task Code
+        pi_user_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Pi User Id
+        status:
+          type: string
+          title: Status
+        pi_signature_hash:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Pi Signature Hash
+        pi_approved_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Pi Approved At
+        end_date:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: End Date
+        reason_for_change:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Reason For Change
+        is_active:
+          type: boolean
+          title: Is Active
+      type: object
+      required:
+      - id
+      - site_id
+      - staff_user_id
+      - task_code
+      - status
+      - is_active
+      title: DOADelegationRecordResponse
     DOASignOffRequest:
       properties:
         record_id:
@@ -12192,6 +12745,31 @@ components:
 
 
         Requirements: PRD-SYS-001'
+    DelegateTaskRequest:
+      properties:
+        site_id:
+          type: string
+          title: Site Id
+        staff_user_id:
+          type: string
+          title: Staff User Id
+        task_code:
+          type: string
+          title: Task Code
+        pi_user_id:
+          type: string
+          title: Pi User Id
+        reason_for_change:
+          type: string
+          title: Reason For Change
+      type: object
+      required:
+      - site_id
+      - staff_user_id
+      - task_code
+      - pi_user_id
+      - reason_for_change
+      title: DelegateTaskRequest
     Demographics:
       properties:
         name:
@@ -13077,8 +13655,9 @@ components:
           title: Soc Name
         primary_soc_flag:
           anyOf:
-          - $ref: '#/components/schemas/PrimarySocFlagEnum'
+          - type: string
           - type: 'null'
+          title: Primary Soc Flag
         score:
           type: number
           title: Score
@@ -13535,12 +14114,49 @@ components:
 
 
         Requirements: PRD-SYS-001'
-    PrimarySocFlagEnum:
+    ProtocolVersionRef:
+      properties:
+        study_id:
+          type: string
+          title: Study Id
+          description: Unique identifier of the clinical study (e.g. 'STUDY-101').
+        version_tag:
+          type: string
+          title: Version Tag
+          description: The semantic or alphanumeric version tag representing the protocol version (e.g. '1.0', 'v2.1').
+        version_index:
+          type: integer
+          title: Version Index
+          description: Chronological, incrementing index of the protocol version (must be >= 1).
+        status:
+          $ref: '#/components/schemas/ProtocolVersionStatus'
+          description: Current controlled status of this protocol version.
+      type: object
+      required:
+      - study_id
+      - version_tag
+      - version_index
+      - status
+      title: ProtocolVersionRef
+      description: 'Pydantic v2 model representing a reference to a specific clinical trial protocol version.
+
+
+        This contract is shared between Execution, eTMF, and other services to prevent
+
+        the duplication of ad-hoc protocol reference fields and ensure consistent cross-service
+
+        payload structures, validation, and serialization.'
+    ProtocolVersionStatus:
       type: string
       enum:
-      - Y
-      - N
-      title: PrimarySocFlagEnum
+      - DRAFT
+      - ACTIVE
+      - LOCKED
+      - PUBLISHED
+      - ARCHIVED
+      - FROZEN
+      title: ProtocolVersionStatus
+      description: Controlled vocabulary of statuses for a clinical protocol or study version.
     PublishAmendmentRequest:
       properties:
         study_id:
@@ -13790,6 +14406,65 @@ components:
       - response
       title: QueryRespond
       description: Pydantic schema for responding to an open query.
+    QueryTargetDescriptor:
+      properties:
+        study_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Study Id
+          description: Target study trial identifier
+        subject_id:
+          type: string
+          title: Subject Id
+          description: Target clinical trial subject ID
+        visit_id:
+          type: string
+          title: Visit Id
+          description: Target visit identifier
+        domain:
+          type: string
+          title: Domain
+          description: Target SDTM domain code
+        test_code:
+          type: string
+          title: Test Code
+          description: Target clinical test code
+        observation_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Observation Id
+          description: Optional target unique clinical observation ID
+        form_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Form Id
+          description: Optional form identifier
+        field_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Field Id
+          description: Optional field identifier
+        explanation:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Explanation
+          description: Contextual explanation/issue description triggering query generation
+      type: object
+      required:
+      - subject_id
+      - visit_id
+      - domain
+      - test_code
+      title: QueryTargetDescriptor
+      description: 'Coordinate fields representing the specific target of a query.
+
+
+        Requirements: PRD-SYS-001'
     QueryUpdate:
       properties:
         status:
@@ -13912,6 +14587,24 @@ components:
 
 
         Requirements: PRD-SYS-001'
+    RevokeDelegationRequest:
+      properties:
+        delegation_id:
+          type: string
+          title: Delegation Id
+        end_date:
+          type: string
+          format: date-time
+          title: End Date
+        reason_for_change:
+          type: string
+          title: Reason For Change
+      type: object
+      required:
+      - delegation_id
+      - end_date
+      - reason_for_change
+      title: RevokeDelegationRequest
     SAEReconcileRequest:
       properties:
         study_id:
@@ -14032,89 +14725,6 @@ components:
       - is_verified
       title: SDVSignOffResponse
       description: Pydantic response schema for SDV sign-off.
-    SDVSignoffCreate:
-      properties:
-        scope:
-          $ref: '#/components/schemas/SDVScopeEnum'
-        target_id:
-          type: string
-          title: Target Id
-        subject_id:
-          type: string
-          title: Subject Id
-        study_id:
-          type: string
-          title: Study Id
-        site_id:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Site Id
-      type: object
-      required:
-      - scope
-      - target_id
-      - subject_id
-      - study_id
-      title: SDVSignoffCreate
-      description: Pydantic request schema for SDV sign-off.
-    SDVSignoffResponse:
-      properties:
-        id:
-          type: string
-          title: Id
-        scope:
-          type: string
-          title: Scope
-        target_id:
-          type: string
-          title: Target Id
-        subject_id:
-          type: string
-          title: Subject Id
-        study_id:
-          type: string
-          title: Study Id
-        site_id:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Site Id
-        is_verified:
-          type: boolean
-          title: Is Verified
-        verified_by:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Verified By
-        verified_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Verified At
-        dropped_reason:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Dropped Reason
-        dropped_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Dropped At
-      type: object
-      required:
-      - id
-      - scope
-      - target_id
-      - subject_id
-      - study_id
-      - is_verified
-      title: SDVSignoffResponse
-      description: Pydantic response schema for SDV sign-off.
     SafetyDispatchRequest:
       properties:
         study_id:
@@ -14195,6 +14805,60 @@ components:
       - FIELD_BASED
       - COMBINED
       title: SamplingModelEnum
+    SiteStaffMemberRequest:
+      properties:
+        site_id:
+          type: string
+          title: Site Id
+        staff_user_id:
+          type: string
+          title: Staff User Id
+        name:
+          type: string
+          title: Name
+        email:
+          type: string
+          title: Email
+        has_gcp_training:
+          type: boolean
+          title: Has Gcp Training
+          default: true
+      type: object
+      required:
+      - site_id
+      - staff_user_id
+      - name
+      - email
+      title: SiteStaffMemberRequest
+    SiteStaffMemberResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        site_id:
+          type: string
+          title: Site Id
+        staff_user_id:
+          type: string
+          title: Staff User Id
+        name:
+          type: string
+          title: Name
+        email:
+          type: string
+          title: Email
+        has_gcp_training:
+          type: boolean
+          title: Has Gcp Training
+      type: object
+      required:
+      - id
+      - site_id
+      - staff_user_id
+      - name
+      - email
+      - has_gcp_training
+      title: SiteStaffMemberResponse
     StudyEvent:
       properties:
         study_id:
@@ -14210,6 +14874,73 @@ components:
       - payload
       title: StudyEvent
       description: "Pydantic model representing an incoming study publication event.\n\nAttributes:\n    study_id (str): The unique identifier of the study.\n    payload (dict[str, Any]): The raw USDM protocol payload."
+    SubjectConsentRequest:
+      properties:
+        protocol_version:
+          $ref: '#/components/schemas/ProtocolVersionRef'
+        icf_signed:
+          type: boolean
+          title: Icf Signed
+        icf_signed_date:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Icf Signed Date
+        requires_reconsent:
+          type: boolean
+          title: Requires Reconsent
+          default: false
+      type: object
+      required:
+      - protocol_version
+      - icf_signed
+      title: SubjectConsentRequest
+      description: Pydantic schema for recording a subject's consent to a protocol version.
+    SubjectConsentResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        subject_id:
+          type: string
+          title: Subject Id
+        study_id:
+          type: string
+          title: Study Id
+        version_tag:
+          type: string
+          title: Version Tag
+        version_index:
+          type: integer
+          title: Version Index
+        icf_signed:
+          type: boolean
+          title: Icf Signed
+        icf_signed_date:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Icf Signed Date
+        requires_reconsent:
+          type: boolean
+          title: Requires Reconsent
+        version:
+          type: integer
+          title: Version
+      type: object
+      required:
+      - id
+      - subject_id
+      - study_id
+      - version_tag
+      - version_index
+      - icf_signed
+      - requires_reconsent
+      - version
+      title: SubjectConsentResponse
+      description: Pydantic schema returning subject consent details.
     SubjectCreate:
       properties:
         subject_id:
@@ -14989,6 +15720,12 @@ components:
       description: Pydantic schema returning visit details.
     WHODrugATCContext:
       properties:
+        atc_code:
+          type: string
+          title: Atc Code
+        description:
+          type: string
+          title: Description
         code:
           anyOf:
           - type: string
@@ -14999,17 +15736,10 @@ components:
           - type: string
           - type: 'null'
           title: Text
-        atc_code:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Atc Code
-        description:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Description
       type: object
+      required:
+      - atc_code
+      - description
       title: WHODrugATCContext
     WHODrugCodeLookupResponse:
       properties:
@@ -15032,6 +15762,12 @@ components:
       title: WHODrugCodeLookupResponse
     WHODrugIngredientItem:
       properties:
+        ingredient_code:
+          type: string
+          title: Ingredient Code
+        ingredient_name:
+          type: string
+          title: Ingredient Name
         code:
           anyOf:
           - type: string
@@ -15042,39 +15778,18 @@ components:
           - type: string
           - type: 'null'
           title: Name
-        ingredient_code:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Ingredient Code
-        ingredient_name:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Ingredient Name
       type: object
+      required:
+      - ingredient_code
+      - ingredient_name
       title: WHODrugIngredientItem
     WHODrugMatch:
       properties:
-        code:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Code
-        name:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Name
         drug_code:
-          anyOf:
-          - type: string
-          - type: 'null'
+          type: string
           title: Drug Code
         preferred_name:
-          anyOf:
-          - type: string
-          - type: 'null'
+          type: string
           title: Preferred Name
         drug_name:
           anyOf:
@@ -15090,20 +15805,32 @@ components:
           type: array
           title: Ingredients
           default: []
-        atc:
-          items:
-            $ref: '#/components/schemas/WHODrugATCContext'
-          type: array
-          title: Atc
-          default: []
         atc_context:
           items:
             $ref: '#/components/schemas/WHODrugATCContext'
           type: array
           title: Atc Context
           default: []
+        code:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Code
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        atc:
+          items:
+            $ref: '#/components/schemas/WHODrugATCContext'
+          type: array
+          title: Atc
+          default: []
       type: object
       required:
+      - drug_code
+      - preferred_name
       - score
       title: WHODrugMatch
 ```
