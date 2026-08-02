@@ -1,4 +1,4 @@
-# Automated layout and WCAG accessibility verification tests utilizing Playwright and axe-core.
+# Comprehensive automated layout and WCAG accessibility verification tests utilizing Playwright and axe-core.
 import os
 import tempfile
 
