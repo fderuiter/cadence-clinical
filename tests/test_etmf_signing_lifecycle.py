@@ -470,4 +470,3 @@ async def test_etmf_signing_failure_logging_and_blocking(monkeypatch):
 
         fail_log = next(log for log in logs if log.action == "SIGNATURE_FAILED")
         assert "Signature verification failed" in fail_log.details
-
