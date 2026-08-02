@@ -449,7 +449,7 @@ def test_gateway_rate_limiting(monkeypatch: pytest.MonkeyPatch) -> None:
     rate_limiter.requests.clear()
 
     try:
-        with TestClient(app) as client:
+        with TestClient(app, client=("127.0.0.99", 50000)) as client:
             # First request - should be allowed (returns 200 for openapi.json)
             # Use mock to prevent actual HTTP calls or use path that doesn't trigger remote fetches
             response1 = client.get("/docs")

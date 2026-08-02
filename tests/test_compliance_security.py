@@ -149,11 +149,20 @@ def test_gateway_raises_runtime_error_if_secret_missing(monkeypatch):
 
     import pytest
 
+    # Store original module to prevent desynchronizing other tests in the same process
+    original_module = sys.modules.get("apps.gateway.main")
+
     monkeypatch.delenv("GATEWAY_SECRET", raising=False)
     sys.modules.pop("apps.gateway.main", None)
-    with pytest.raises(RuntimeError) as exc_info:
-        importlib.import_module("apps.gateway.main")
-    assert "GATEWAY_SECRET environment variable is missing" in str(exc_info.value)
+    try:
+        with pytest.raises(RuntimeError) as exc_info:
+            importlib.import_module("apps.gateway.main")
+        assert "GATEWAY_SECRET environment variable is missing" in str(exc_info.value)
+    finally:
+        if original_module is not None:
+            sys.modules["apps.gateway.main"] = original_module
+        else:
+            sys.modules.pop("apps.gateway.main", None)
 
 
 def test_designer_signing_raises_runtime_error_if_secret_missing(monkeypatch):
