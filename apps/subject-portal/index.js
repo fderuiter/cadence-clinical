@@ -15,7 +15,6 @@ import {
   updateSubmissionStatus,
   clearAllSubmissions,
   initSessionKey,
-  clearSessionKey,
 } from "./sync-queue.js";
 
 // Mock Data fallbacks for high-fidelity offline/sandbox usage

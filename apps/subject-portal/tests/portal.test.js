@@ -606,7 +606,6 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
         initSessionKey,
         clearSessionKey,
         getQueuedSubmissions,
-        getAllSubmissions,
         queueSubmission,
       } = await import("../sync-queue.js");
 
