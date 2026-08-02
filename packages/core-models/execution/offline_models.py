@@ -4,7 +4,7 @@ Requirements: PRD-SYS-001
 """
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -67,7 +67,7 @@ class OfflineBatchSyncResponse(BaseModel):
     )
 
 
-class ConflictStrategyEnum(str, Enum):
+class ConflictStrategyEnum(StrEnum):
     """Explicit validated conflict resolution strategies.
 
     Requirements: PRD-SYS-001
