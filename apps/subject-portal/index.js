@@ -15,7 +15,6 @@ import {
   updateSubmissionStatus,
   clearAllSubmissions,
   initSessionKey,
-  clearSessionKey,
 } from "./sync-queue.js";
 
 // Mock Data fallbacks for high-fidelity offline/sandbox usage
@@ -1653,7 +1652,8 @@ async function syncOfflineQueue() {
 
 // Bootstrap Initialization
 async function initializeApp() {
-  const sessionMaterial = state.session.token || state.session.userId || "demo-material";
+  const sessionMaterial =
+    state.session.token || state.session.userId || "demo-material";
   try {
     await initSessionKey(sessionMaterial);
   } catch (err) {
@@ -1704,42 +1704,66 @@ async function initializeApp() {
 
   // Graceful OIDC Keycloak setup
   if (typeof window !== "undefined" && !window.__MOCK_TEST_ENV__) {
+    let storageUser = null;
+    let storageToken = null;
     try {
-      const KeycloakClass =
-        window.Keycloak || (await import("keycloak-js")).default;
-      if (KeycloakClass) {
-        const keycloak = new KeycloakClass({
-          url: "http://localhost:8080/",
-          realm: "cadence",
-          clientId: "cadence-web",
-        });
+      storageUser =
+        sessionStorage.getItem("mock_user_id") ||
+        localStorage.getItem("mock_user_id");
+      storageToken =
+        sessionStorage.getItem("mock_token") ||
+        localStorage.getItem("mock_token");
+    } catch (e) {
+      console.warn("Storage access failed:", e);
+    }
 
-        await keycloak.init({
-          onLoad: "check-sso",
-          pkceMethod: "S256",
-        });
+    if (storageUser && storageToken) {
+      state.session.userId = storageUser;
+      state.session.token = storageToken;
+      state.session.isOfflineMode = false;
+      state.session.isDemoMode = false;
+      console.log(
+        "Session verified via injected storage credentials for subject:",
+        state.session.userId
+      );
+    } else {
+      try {
+        const KeycloakClass =
+          window.Keycloak || (await import("keycloak-js")).default;
+        if (KeycloakClass) {
+          const keycloak = new KeycloakClass({
+            url: "http://localhost:8080/",
+            realm: "cadence",
+            clientId: "cadence-web",
+          });
 
-        if (keycloak.authenticated) {
-          state.session.userId = keycloak.subject || "subject_001";
-          state.session.token = keycloak.token;
-          state.session.isOfflineMode = false;
-          state.session.isDemoMode = false;
-          console.log(
-            "OIDC Session Verified for subject:",
-            state.session.userId
-          );
+          await keycloak.init({
+            onLoad: "check-sso",
+            pkceMethod: "S256",
+          });
+
+          if (keycloak.authenticated) {
+            state.session.userId = keycloak.subject || "subject_001";
+            state.session.token = keycloak.token;
+            state.session.isOfflineMode = false;
+            state.session.isDemoMode = false;
+            console.log(
+              "OIDC Session Verified for subject:",
+              state.session.userId
+            );
+          } else {
+            state.session.isDemoMode = true;
+          }
         } else {
           state.session.isDemoMode = true;
         }
-      } else {
+      } catch (err) {
         state.session.isDemoMode = true;
+        console.warn(
+          "Keycloak login failed or offline. Continuing in sandbox demo mode:",
+          err.message
+        );
       }
-    } catch (err) {
-      state.session.isDemoMode = true;
-      console.warn(
-        "Keycloak login failed or offline. Continuing in sandbox demo mode:",
-        err.message
-      );
     }
   } else {
     // If window.__MOCK_TEST_ENV__ is true, we keep state.session.isDemoMode as-is (e.g. tests can override or drive it)

@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build --base=/subject-portal/",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
@@ -15,6 +16,8 @@
     "vue": "^3.5.40"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.62.1",
     "@vitejs/plugin-vue": "^6.0.8",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.1.1",
