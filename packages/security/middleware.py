@@ -135,7 +135,9 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
     @property
     def gateway_secret(self) -> bytes:
         """Dynamically resolve gateway secret from environment to support runtime configuration and test overrides."""
-        return os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()  # pragma: allowlist secret
+        return os.getenv(
+            "GATEWAY_SECRET", "internal-gateway-secret-12345"
+        ).encode()  # pragma: allowlist secret
 
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]

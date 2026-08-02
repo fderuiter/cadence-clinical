@@ -144,9 +144,11 @@ def test_gateway_raises_runtime_error_if_secret_missing(monkeypatch):
 
     Requirements: PRD-SYS-001
     """
-    import sys
     import importlib
+    import sys
+
     import pytest
+
     monkeypatch.delenv("GATEWAY_SECRET", raising=False)
     sys.modules.pop("apps.gateway.main", None)
     with pytest.raises(RuntimeError) as exc_info:
@@ -160,7 +162,9 @@ def test_designer_signing_raises_runtime_error_if_secret_missing(monkeypatch):
     Requirements: PRD-SYS-001
     """
     import pytest
+
     from apps.designer.delta import verify_version_signature
+
     monkeypatch.delenv("SIGNING_SECRET", raising=False)
     with pytest.raises(RuntimeError) as exc_info:
         verify_version_signature({"signature": "some_signature"})
@@ -169,13 +173,16 @@ def test_designer_signing_raises_runtime_error_if_secret_missing(monkeypatch):
 
 def test_security_audit_scanner_detection_and_bypass():
     """Verify that the security scanner detects hardcoded environment fallbacks and honors inline bypass comments."""
-    import tempfile
     import os
+    import tempfile
+
     from scripts.audit_security import scan_file_for_secrets
 
     # Case 1: Line has a hardcoded environment fallback
     with tempfile.NamedTemporaryFile(suffix=".py", mode="w+", delete=False) as f:
-        f.write('GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")\n')
+        f.write(
+            'GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")\n'
+        )
         f.flush()
         try:
             findings = scan_file_for_secrets(f.name)
@@ -186,11 +193,12 @@ def test_security_audit_scanner_detection_and_bypass():
 
     # Case 2: Line has a hardcoded environment fallback but with an explicit inline bypass annotation
     with tempfile.NamedTemporaryFile(suffix=".py", mode="w+", delete=False) as f:
-        f.write('GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # pragma: allowlist secret\n')
+        f.write(
+            'GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # pragma: allowlist secret\n'
+        )
         f.flush()
         try:
             findings = scan_file_for_secrets(f.name)
             assert len(findings) == 0
         finally:
             os.unlink(f.name)
-

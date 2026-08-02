@@ -72,7 +72,9 @@ async def resolve_personnel_assignments(keycloak_user_id: str) -> dict[str, Any]
             "assigned_studies": [],
         }
 
-    org_service_url = os.getenv("ORG_SERVICE_URL", "http://localhost:8012")  # pragma: allowlist secret
+    org_service_url = os.getenv(
+        "ORG_SERVICE_URL", "http://localhost:8012"
+    )  # pragma: allowlist secret
     user_id = "security-service"
     roles = "admin"
     change_reason = "Internal Principal Enrichment"
