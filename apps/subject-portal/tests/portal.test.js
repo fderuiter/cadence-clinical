@@ -600,6 +600,54 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       );
     });
 
+    it("demonstrates proper encryption, key-derivation, decryption, and error handling on decryption failure", async () => {
+      const portal = await import("../index.js");
+      const { initSessionKey, clearSessionKey, getQueuedSubmissions, getAllSubmissions, queueSubmission } = await import("../sync-queue.js");
+
+      // 1. Initializing session key and clearing database for clean state
+      await portal.clearAllSubmissions();
+      await initSessionKey("my-super-secret-session-material");
+
+      // 2. Queueing submission should successfully encrypt fields on write
+      const answersPayload = { vssbp: "120", vsdpb: "80", vshr: "72" };
+      const queuedItem = await queueSubmission({
+        subject_id: "subject_abc",
+        diary_id: "inst_daily_diary",
+        assignment_id: "assign_abc",
+        answers: answersPayload,
+        change_reason: "test offline encryption",
+        username: "user_abc",
+      });
+
+      // Verify returned queued item from memory/db has encrypted data (is base64 string, not raw object/string)
+      expect(typeof queuedItem.answers).toBe("string");
+      expect(queuedItem.answers).not.toEqual(answersPayload);
+      expect(queuedItem.subject_id).not.toBe("subject_abc");
+      expect(queuedItem.username).not.toBe("user_abc");
+
+      // 3. Decrypt on read should succeed with correct key
+      const queuedSubmissions = await getQueuedSubmissions();
+      expect(queuedSubmissions).toHaveLength(1);
+      const readItem = queuedSubmissions[0];
+      expect(readItem.answers).toEqual(answersPayload);
+      expect(readItem.subject_id).toBe("subject_abc");
+      expect(readItem.username).toBe("user_abc");
+      expect(readItem.status).toBe("QUEUED");
+
+      // 4. Decrypt on read should handle error gracefully when key is cleared/invalid
+      clearSessionKey();
+      const erroredSubmissions = await getQueuedSubmissions();
+      expect(erroredSubmissions).toHaveLength(1);
+      const erroredItem = erroredSubmissions[0];
+      expect(erroredItem.status).toBe("DECRYPTION_ERROR");
+      expect(erroredItem.answers).toBeUndefined();
+      expect(erroredItem.subject_id).toBeUndefined();
+      expect(erroredItem.username).toBeUndefined();
+
+      // Clean up by re-initializing key for next tests
+      await initSessionKey("demo-material");
+    });
+
     it("displays conflict resolution outcomes (MERGED, IGNORED_SERVER_WINS) cleanly without discarding", async () => {
       const portal = await import("../index.js");
       await portal.initializeApp();

@@ -14,6 +14,8 @@ import {
   getAllSubmissions,
   updateSubmissionStatus,
   clearAllSubmissions,
+  initSessionKey,
+  clearSessionKey,
 } from "./sync-queue.js";
 
 // Mock Data fallbacks for high-fidelity offline/sandbox usage
@@ -1651,6 +1653,13 @@ async function syncOfflineQueue() {
 
 // Bootstrap Initialization
 async function initializeApp() {
+  const sessionMaterial = state.session.token || state.session.userId || "demo-material";
+  try {
+    await initSessionKey(sessionMaterial);
+  } catch (err) {
+    console.warn("Failed to initialize session key:", err);
+  }
+
   // Mount Vue application
   if (typeof document !== "undefined") {
     const appEl = document.getElementById("app");
