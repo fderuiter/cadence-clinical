@@ -709,3 +709,6 @@ export function createClinicalVisitMatrix(visitsOrSoa, forms = []) {
   tableHtml += `</tbody></table>`;
   return tableHtml;
 }
+
+export { toBeAccessible } from "./accessibility-matcher.js";
+

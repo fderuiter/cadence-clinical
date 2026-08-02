@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build --base=/subject-portal/",
-    "test": "vitest run",
+    "test": "vitest run --coverage",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
@@ -20,6 +20,7 @@
     "jsdom": "^29.1.1",
     "keycloak-js": "^26.2.4",
     "vite": "^8.1.5",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "@vitest/coverage-v8": "^4.1.10"
   }
 }
