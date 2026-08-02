@@ -86,6 +86,7 @@ def is_excluded(filepath: str) -> bool:
     Returns:
         True if the file is excluded, False otherwise.
     """
+    # Normalize paths to handle cross-platform slash differences (Windows vs Unix)
     normalized = filepath.replace("\\", "/")
     parts = normalized.split("/")
     return any(part in EXCLUDED_PATHS for part in parts)
