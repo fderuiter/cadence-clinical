@@ -344,7 +344,7 @@ async def test_in_memory_accessibility_auditing():
       <body>
         <!-- valid input with label/aria-label -->
         <input type="text" id="age" aria-label="Patient Age" style="width: 150px; height: 30px;" />
-        
+
         <!-- invalid button (no discernible name/label AND low contrast) -->
         <button id="my-button">Click Me</button>
       </body>
