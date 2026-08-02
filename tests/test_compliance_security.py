@@ -137,3 +137,49 @@ def test_security_audit_script():
     """
     success = run_security_audit(root_dir="packages/security")
     assert success is True
+
+
+def test_security_audit_targeted_files(tmp_path):
+    """Verify automated security audit handles targeted files and identifies secrets.
+
+    Requirements: PRD-SYS-001, 21 CFR Part 11
+    """
+    # Create a temporary file with a secret
+    secret_file = tmp_path / "secret_file.txt"
+    secret_file.write_text(
+        "aws_secret_access_key = '0123456789012345678901234567890123456789'",
+        encoding="utf-8",
+    )  # pragma: allowlist secret
+
+    # Create a clean temporary file
+    clean_file = tmp_path / "clean_file.txt"
+    clean_file.write_text("This is a clean file without any secrets.", encoding="utf-8")
+
+    # Scanning only the clean file should pass
+    success_clean = run_security_audit(files=[str(clean_file)])
+    assert success_clean is True
+
+    # Scanning the file with secret should fail
+    success_secret = run_security_audit(files=[str(secret_file)])
+    assert success_secret is False
+
+
+def test_security_audit_exclusions(tmp_path):
+    """Verify automated security audit skips excluded paths and directories.
+
+    Requirements: PRD-SYS-001, 21 CFR Part 11
+    """
+    # Create an excluded directory inside the temp path
+    node_modules_dir = tmp_path / "node_modules"
+    node_modules_dir.mkdir()
+
+    # Create a file inside that directory containing a secret
+    secret_file = node_modules_dir / "secret_key.txt"
+    secret_file.write_text(
+        "aws_secret_access_key = '0123456789012345678901234567890123456789'",
+        encoding="utf-8",
+    )  # pragma: allowlist secret
+
+    # Running scan on this file should skip it because it's inside an excluded path (node_modules)
+    success = run_security_audit(files=[str(secret_file)])
+    assert success is True
