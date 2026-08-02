@@ -23,7 +23,11 @@ async function getOrGenerateSalt() {
         const newSalt = new Uint8Array(16);
         if (typeof crypto !== "undefined" && crypto.getRandomValues) {
           crypto.getRandomValues(newSalt);
-        } else if (typeof globalThis !== "undefined" && globalThis.crypto && globalThis.crypto.getRandomValues) {
+        } else if (
+          typeof globalThis !== "undefined" &&
+          globalThis.crypto &&
+          globalThis.crypto.getRandomValues
+        ) {
           globalThis.crypto.getRandomValues(newSalt);
         } else {
           for (let i = 0; i < 16; i++) {
@@ -138,7 +142,9 @@ export async function queueSubmission({
   username,
 }) {
   if (!inMemorySessionKey) {
-    throw new Error("Encryption key not initialized. Cannot queue submission securely.");
+    throw new Error(
+      "Encryption key not initialized. Cannot queue submission securely."
+    );
   }
 
   const db = await openDatabase();
@@ -194,13 +200,22 @@ async function decryptRecord(record) {
 
   try {
     if (typeof decrypted.answers === "string") {
-      decrypted.answers = await decryptAESGCM(decrypted.answers, inMemorySessionKey);
+      decrypted.answers = await decryptAESGCM(
+        decrypted.answers,
+        inMemorySessionKey
+      );
     }
     if (typeof decrypted.subject_id === "string") {
-      decrypted.subject_id = await decryptAESGCM(decrypted.subject_id, inMemorySessionKey);
+      decrypted.subject_id = await decryptAESGCM(
+        decrypted.subject_id,
+        inMemorySessionKey
+      );
     }
     if (typeof decrypted.username === "string") {
-      decrypted.username = await decryptAESGCM(decrypted.username, inMemorySessionKey);
+      decrypted.username = await decryptAESGCM(
+        decrypted.username,
+        inMemorySessionKey
+      );
     }
     return decrypted;
   } catch (err) {
