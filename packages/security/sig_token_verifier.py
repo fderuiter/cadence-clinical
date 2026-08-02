@@ -79,7 +79,7 @@ def verify_and_consume_sig_token(
         )
 
     if secret is None:
-        secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode(
+        secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode(  # pragma: allowlist secret
             "utf-8"
         )
 

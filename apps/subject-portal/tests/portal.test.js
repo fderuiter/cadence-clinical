@@ -602,7 +602,13 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
 
     it("demonstrates proper encryption, key-derivation, decryption, and error handling on decryption failure", async () => {
       const portal = await import("../index.js");
-      const { initSessionKey, clearSessionKey, getQueuedSubmissions, getAllSubmissions, queueSubmission } = await import("../sync-queue.js");
+      const {
+        initSessionKey,
+        clearSessionKey,
+        getQueuedSubmissions,
+        getAllSubmissions,
+        queueSubmission,
+      } = await import("../sync-queue.js");
 
       // 1. Initializing session key and clearing database for clean state
       await portal.clearAllSubmissions();

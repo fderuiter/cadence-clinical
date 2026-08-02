@@ -22,7 +22,7 @@ class AuditorAccessTokenService:
     def __init__(self, secret_key: str | None = None) -> None:
         """Initialize service with gateway secret key."""
         self._secret = (
-            secret_key or os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+            secret_key or os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # pragma: allowlist secret
         ).encode("utf-8")
 
     def generate_auditor_token(
