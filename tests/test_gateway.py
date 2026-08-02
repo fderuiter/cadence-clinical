@@ -445,7 +445,7 @@ def test_gateway_rate_limiting(monkeypatch: pytest.MonkeyPatch) -> None:
 
     # Set tight limits for testing
     rate_limiter.max_requests = 2
-    rate_limiter.window_seconds = 5.0
+    rate_limiter.window_seconds = 100.0
     rate_limiter.requests.clear()
 
     try:
