@@ -1,4 +1,4 @@
-# ADR-251: GxP Compliance Reporting CI Alignment and Local Dependency Configuration
+# ADR-252: GxP Compliance Reporting CI Alignment and Local Dependency Configuration
 
 * **Status:** Accepted
 * **Date:** 2026-09-06
