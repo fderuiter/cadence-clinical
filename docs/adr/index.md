@@ -129,6 +129,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 5. Compliance, Audit & Governance
 - [2026-07-31: GxP 21 CFR Part 11 eConsent Audit Trails](2026-07-31-gxp-21-cfr-part-11-econsent-audit-trails.md)
+- [2026-09-06: GxP Compliance Reporting CI Alignment and Local Dependency Configuration](2026-09-06-gxp-compliance-reporting-ci-alignment.md)
 
 - [2026-07-22: ADR 2026-07-22: Audit Log Design](2026-07-22-audit-log-design.md)
 - [2026-07-22: 2026-07-22 Compliance Tracing and Automated Trial Locks](2026-07-22-compliance-tracing-and-automated-trial-locks.md)
@@ -213,3 +214,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-01: Developer-Centric Architecture Alignment and Automated Drift Gating](2026-08-01-dev-centric-alignment-and-automated-drift-gating.md)
 - [2026-09-04: Dynamic Port Diagnostics and Fallback Realignment](2026-09-04-dynamic-port-diagnostics-and-fallback-realignment.md)
 - [2026-09-05: Extend Centralized Permission Matrix for eCOA and ePRO](2026-09-05-extend-centralized-permission-matrix-for-ecoa.md)
+- [2026-09-06: GxP Compliance Reporting CI Alignment and Local Dependency Configuration](2026-09-06-gxp-compliance-reporting-ci-alignment.md)
