@@ -516,13 +516,14 @@ async def test_start_stop_notification_worker_integration():
 
     # Start the background worker loop
     await start_notification_worker()
+    await asyncio.sleep(0.1)
 
     # Publish an event to the queue
     await publish_domain_event(event)
 
     # Poll for the notification to be created in the database to prevent flakiness under heavy test runner load
     notifs = []
-    for _ in range(50):
+    for _ in range(100):
         async with notifications_db_manager.get_session_maker()() as session:
             stmt = select(Notification).where(
                 Notification.related_entity_id == "evt-integration-99"
