@@ -13,6 +13,7 @@ describe("CSS Assets and Package Exports", () => {
     expect(pkg.exports["."]).toBe("./index.js");
     expect(pkg.exports["./tokens.css"]).toBe("./tokens.css");
     expect(pkg.exports["./responsive.css"]).toBe("./responsive.css");
+    expect(pkg.exports["./package.json"]).toBe("./package.json");
   });
 
   it("should have tokens.css with correct root custom properties", () => {
