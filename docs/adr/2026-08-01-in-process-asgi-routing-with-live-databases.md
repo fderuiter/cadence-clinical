@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-Currently, our end-to-end integration tests rely on mock drivers and in-memory Neo4j simulators to validate the digital thread from Metadata Registry (MDR) to Electronic Data Capture (EDC). While fast, this abstraction lets query syntax errors, schema constraint violations, and transaction rollback anomalies escape into staging and production environments. 
+Currently, our end-to-end integration tests rely on mock drivers and in-memory Neo4j simulators to validate the digital thread from Metadata Registry (MDR) to Electronic Data Capture (EDC). While fast, this abstraction lets query syntax errors, schema constraint violations, and transaction rollback anomalies escape into staging and production environments.
 
 To bridge this gap without introducing the performance overhead of spawning separate background processes or dynamic Docker testcontainers, we are integrating live database engines directly into our in-process ASGI test execution loop. This approach ensures full-fidelity schema and constraint validation while maintaining local execution times under 30 seconds.
 
