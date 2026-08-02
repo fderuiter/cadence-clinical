@@ -1,0 +1,149 @@
+/* Responsive Layout and Grid Helpers for Cadence Clinical Platform */
+
+/* 1. Mobile-First Stack-to-Grid Layout Helpers */
+
+/* Default stack (single column) on mobile, becomes 12-column grid on tablet (768px) and up */
+.responsive-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md, 16px);
+}
+
+@media (min-width: 768px) {
+  .responsive-grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+}
+
+/* Helper to map span classes on grid items */
+.grid-span-1 {
+  grid-column: span 1 / span 1;
+}
+.grid-span-2 {
+  grid-column: span 2 / span 2;
+}
+.grid-span-3 {
+  grid-column: span 3 / span 3;
+}
+.grid-span-4 {
+  grid-column: span 4 / span 4;
+}
+.grid-span-5 {
+  grid-column: span 5 / span 5;
+}
+.grid-span-6 {
+  grid-column: span 6 / span 6;
+}
+.grid-span-7 {
+  grid-column: span 7 / span 7;
+}
+.grid-span-8 {
+  grid-column: span 8 / span 8;
+}
+.grid-span-9 {
+  grid-column: span 9 / span 9;
+}
+.grid-span-10 {
+  grid-column: span 10 / span 10;
+}
+.grid-span-11 {
+  grid-column: span 11 / span 11;
+}
+.grid-span-12 {
+  grid-column: span 12 / span 12;
+}
+
+/* 2. Grid Helpers modeled on .grid-layout & .grid-2 conventions */
+
+/* .grid-layout-responsive: 1 column on mobile/tablet, 1fr 2fr on larger screens (900px or tablet up) */
+.grid-layout-responsive {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-xl, 24px);
+}
+
+@media (min-width: 900px) {
+  .grid-layout-responsive {
+    grid-template-columns: 1fr 2fr;
+  }
+}
+
+/* .grid-2-responsive: 1 column on mobile, 2 columns on tablet and up */
+.grid-2-responsive {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-xl, 24px);
+}
+
+@media (min-width: 768px) {
+  .grid-2-responsive {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* 3. Container Widths per Breakpoint */
+.container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--spacing-xl, 24px);
+  padding-right: var(--spacing-xl, 24px);
+}
+
+@media (min-width: 576px) {
+  .container {
+    max-width: 540px;
+  }
+}
+
+@media (min-width: 768px) {
+  .container {
+    max-width: 720px;
+    padding-left: var(--spacing-2xl, 32px);
+    padding-right: var(--spacing-2xl, 32px);
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    max-width: 960px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .container {
+    max-width: 1140px;
+  }
+}
+
+/* 4. Touch-Target Sizing Helpers */
+.touch-target,
+.min-touch-target {
+  min-height: var(--touch-target-min, 44px);
+  min-width: var(--touch-target-min, 44px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ensure interactive elements like buttons and input selectors comply with touch-targets when applied */
+.touch-target-interactive {
+  min-height: var(--touch-target-min, 44px);
+  box-sizing: border-box;
+}
+
+/* 5. Horizontal-Scroll Table Wrapper */
+.scrollable-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: var(--spacing-md, 16px);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+}
+
+.scrollable-table-wrapper table {
+  width: 100%;
+  min-width: 600px; /* Force scroll on narrow screens if table has multiple columns */
+  border-collapse: collapse;
+}
