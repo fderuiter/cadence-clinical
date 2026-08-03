@@ -102,6 +102,13 @@ from apps.designer.delta import (
     list_blocks,
     list_library_objects,
     reorder_blocks,
+    reorder_arms,
+    reorder_epochs,
+    reorder_visits,
+    reorder_procedures,
+    assign_activities_to_visit,
+    assign_visits_to_arm,
+    assign_visits_to_epoch,
     retire_arm_applicability_link,
     retire_epoch_visit_link,
     retire_soa_entity,
@@ -228,6 +235,13 @@ from apps.designer.soa_models import (
     UpdateStudyArmRequest,
     UpdateTimingWindowRequest,
     UpdateVisitRequest,
+    ArmReorderRequest,
+    EpochReorderRequest,
+    VisitReorderRequest,
+    ProcedureReorderRequest,
+    ActivityAssignmentRequest,
+    VisitToArmAssignmentRequest,
+    VisitToEpochAssignmentRequest,
 )
 
 
@@ -5156,6 +5170,224 @@ async def get_soa_projection_endpoint(
     driver = await get_neo4j_driver(request)
     matrix = await get_soa_matrix_projection(driver, version_id)
     return SoAMatrixView(**matrix)
+
+
+# --- Reordering and Assignment Endpoints ---
+
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/arms/reorder",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    dependencies=[
+        Depends(require_permission("study_design:reorder")),
+        Depends(require_study_scope()),
+    ],
+)
+async def reorder_arms_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: ArmReorderRequest,
+    request: Request,
+) -> dict:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    # Order IDs by requested sequence
+    ordered_ids = [item.arm_id for item in sorted(payload.arms, key=lambda x: x.sequence)]
+    await reorder_arms(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        arm_ids_ordered=ordered_ids,
+    )
+    return {"status": "success", "message": "Arms reordered successfully"}
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/epochs/reorder",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    dependencies=[
+        Depends(require_permission("study_design:reorder")),
+        Depends(require_study_scope()),
+    ],
+)
+async def reorder_epochs_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: EpochReorderRequest,
+    request: Request,
+) -> dict:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    ordered_ids = [item.epoch_id for item in sorted(payload.epochs, key=lambda x: x.sequence)]
+    await reorder_epochs(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        epoch_ids_ordered=ordered_ids,
+    )
+    return {"status": "success", "message": "Epochs reordered successfully"}
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/visits/reorder",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    dependencies=[
+        Depends(require_permission("study_design:reorder")),
+        Depends(require_study_scope()),
+    ],
+)
+async def reorder_visits_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: VisitReorderRequest,
+    request: Request,
+) -> dict:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    ordered_ids = [item.visit_id for item in sorted(payload.visits, key=lambda x: x.sequence)]
+    await reorder_visits(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        visit_ids_ordered=ordered_ids,
+    )
+    return {"status": "success", "message": "Visits reordered successfully"}
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/procedures/reorder",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    dependencies=[
+        Depends(require_permission("study_design:reorder")),
+        Depends(require_study_scope()),
+    ],
+)
+async def reorder_procedures_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: ProcedureReorderRequest,
+    request: Request,
+) -> dict:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    ordered_ids = [item.procedure_id for item in sorted(payload.procedures, key=lambda x: x.sequence)]
+    await reorder_procedures(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        procedure_ids_ordered=ordered_ids,
+    )
+    return {"status": "success", "message": "Procedures reordered successfully"}
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/assignments/activities",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    dependencies=[
+        Depends(require_permission("study_design:update")),
+        Depends(require_study_scope()),
+    ],
+)
+async def assign_activities_to_visit_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: ActivityAssignmentRequest,
+    request: Request,
+) -> dict:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    # Use procedure_ids if populated, otherwise activity_ids
+    proc_ids = payload.procedure_ids or payload.activity_ids
+    if not proc_ids:
+        raise HTTPException(status_code=400, detail="Procedure IDs list cannot be empty")
+
+    await assign_activities_to_visit(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        visit_id=payload.visit_id,
+        procedure_ids=proc_ids,
+    )
+    return {"status": "success", "message": "Activities assigned successfully"}
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/assignments/arms",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    dependencies=[
+        Depends(require_permission("study_design:update")),
+        Depends(require_study_scope()),
+    ],
+)
+async def assign_visits_to_arm_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: VisitToArmAssignmentRequest,
+    request: Request,
+) -> dict:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    await assign_visits_to_arm(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        arm_id=payload.arm_id,
+        visit_ids=payload.visit_ids,
+    )
+    return {"status": "success", "message": "Visits assigned to arm successfully"}
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/assignments/epochs",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    dependencies=[
+        Depends(require_permission("study_design:update")),
+        Depends(require_study_scope()),
+    ],
+)
+async def assign_visits_to_epoch_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: VisitToEpochAssignmentRequest,
+    request: Request,
+) -> dict:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    await assign_visits_to_epoch(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        epoch_id=payload.epoch_id,
+        visit_ids=payload.visit_ids,
+    )
+    return {"status": "success", "message": "Visits assigned to epoch successfully"}
 
 
 @app.get(
