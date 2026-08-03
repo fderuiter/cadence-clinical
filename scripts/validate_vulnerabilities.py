@@ -187,6 +187,57 @@ def scan_for_manifest_bypasses() -> list[tuple[str, int, str]]:
     return violations
 
 
+def scan_for_config_bypasses() -> list[tuple[str, int, str]]:
+    """Scan all .npmrc and .pnpmrc files recursively for audit override bypasses.
+
+    This identifies configurations that attempt to skip, disable, or alter audit gates.
+
+    Returns:
+        list[tuple[str, int, str]]: A list of tuples containing (file_path, line_number, error_message)
+            where bypasses were found.
+    """
+    violations: list[tuple[str, int, str]] = []
+    excluded_dirs = {
+        ".git",
+        ".venv",
+        "venv",
+        "__pycache__",
+        ".pytest_cache",
+        "node_modules",
+        "tests",
+    }
+
+    bypass_pattern = re.compile(
+        r"audit\s*=\s*(?:false|skip)|audit-level\b|vulnerabilities\s*=\s*false",
+        re.IGNORECASE,
+    )
+
+    try:
+        for root, dirs, files in os.walk(REPO_ROOT):
+            dirs[:] = [d for d in dirs if d not in excluded_dirs]
+
+            for file in files:
+                if file in {".npmrc", ".pnpmrc"}:
+                    file_path = os.path.join(root, file)
+                    try:
+                        with open(file_path, encoding="utf-8", errors="ignore") as f:
+                            for line_num, line in enumerate(f, 1):
+                                if bypass_pattern.search(line):
+                                    violations.append(
+                                        (
+                                            file_path,
+                                            line_num,
+                                            f"Audit configuration bypass detected: {line.strip()}",
+                                        )
+                                    )
+                    except Exception:
+                        pass
+    except Exception:
+        pass
+
+    return violations
+
+
 def load_and_validate_ledger(
     ledger_path: str,
 ) -> tuple[list[dict[str, Any]], list[str]]:
@@ -391,33 +442,157 @@ def extract_active_frontend_vulnerabilities(
         return [], f"Failed to parse JSON output from pnpm audit: {e}"
 
     vulns_list: list[dict[str, Any]] = []
-    advisories = data.get("advisories", {})
-    for adv_id, adv in advisories.items():
-        v_id = adv.get("github_advisory_id") or adv.get("id") or str(adv_id)
-        if not isinstance(v_id, str):
-            v_id = str(v_id)
-        module_name = adv.get("module_name")
 
-        findings = adv.get("findings", [])
-        version = "unknown"
-        if findings and isinstance(findings, list):
-            version = findings[0].get("version", "unknown")
+    # Detect legacy schema: "advisories" key exists
+    if "advisories" in data:
+        advisories = data.get("advisories", {})
+        for adv_id, adv in advisories.items():
+            v_id = adv.get("github_advisory_id") or adv.get("id") or str(adv_id)
+            if not isinstance(v_id, str):
+                v_id = str(v_id)
+            module_name = adv.get("module_name")
 
-        vulns_list.append(
-            {
-                "vulnerability_id": v_id,
-                "package_name": module_name,
-                "version": version,
-                "description": adv.get("title", ""),
-                "fix_versions": adv.get("patched_versions", ""),
-            }
-        )
+            findings = adv.get("findings", [])
+            version = "unknown"
+            if findings and isinstance(findings, list):
+                version = findings[0].get("version", "unknown")
+
+            vulns_list.append(
+                {
+                    "vulnerability_id": v_id,
+                    "package_name": module_name,
+                    "version": version,
+                    "description": adv.get("title", ""),
+                    "fix_versions": adv.get("patched_versions", ""),
+                }
+            )
+
+    # Detect modern schema: "vulnerabilities" key exists
+    elif "vulnerabilities" in data:
+        vulnerabilities = data.get("vulnerabilities", {})
+        for pkg_name, vuln in vulnerabilities.items():
+            via_list = vuln.get("via", [])
+            if not isinstance(via_list, list):
+                via_list = [via_list]
+
+            # If via is empty, use the vuln itself as the source
+            if not via_list:
+                via_list = [vuln]
+
+            for via in via_list:
+                if isinstance(via, str):
+                    # In npm/pnpm audit, string entries in "via" indicate a dependency relationship.
+                    # The actual advisory is defined under that dependency's package name.
+                    # To avoid duplicate or ID-less entries, we skip string entries.
+                    continue
+
+                if isinstance(via, dict):
+                    module_name = (
+                        via.get("name")
+                        or via.get("dependency")
+                        or vuln.get("name")
+                        or vuln.get("dependency")
+                        or pkg_name
+                    )
+
+                    # Extract vulnerability ID (GHSA, CVE, or source ID)
+                    v_id = None
+                    url = via.get("url") or vuln.get("url")
+                    if url and isinstance(url, str):
+                        match = re.search(r"(GHSA-[a-zA-Z0-9-]+)", url, re.IGNORECASE)
+                        if match:
+                            v_id = match.group(1).upper()
+
+                    if not v_id:
+                        cves = via.get("cves") or vuln.get("cves") or []
+                        if cves and isinstance(cves, list):
+                            v_id = cves[0]
+
+                    if not v_id:
+                        v_id = via.get("github_advisory_id") or vuln.get("github_advisory_id")
+
+                    if not v_id:
+                        source = via.get("source") or vuln.get("source")
+                        if source:
+                            source_str = str(source)
+                            if "GHSA-" in source_str or "CVE-" in source_str:
+                                v_id = source_str
+                            else:
+                                v_id = source_str
+
+                    if not v_id:
+                        v_id = "unknown"
+
+                    # Extract installed version
+                    version = via.get("version") or vuln.get("version")
+                    if not version:
+                        findings = via.get("findings") or vuln.get("findings") or []
+                        if findings and isinstance(findings, list):
+                            version = findings[0].get("version")
+                    if not version:
+                        version = "unknown"
+
+                    # Extract/calculate patched versions
+                    vuln_range = via.get("range") or vuln.get("range") or "unknown"
+                    fix_versions = via.get("patched_versions") or via.get("fix") or vuln.get("patched_versions")
+                    if not fix_versions and vuln_range and vuln_range != "unknown":
+                        # Helper logic to extract patched version from range
+                        parts = [p.strip() for p in vuln_range.split("||")]
+                        fixed_parts = []
+                        for part in parts:
+                            match_less_eq = re.search(r"<=([0-9.]+)", part)
+                            if match_less_eq:
+                                fixed_parts.append(f">{match_less_eq.group(1)}")
+                                continue
+                            match_less = re.search(r"<([0-9.]+)", part)
+                            if match_less:
+                                fixed_parts.append(f">={match_less.group(1)}")
+                                continue
+                        if fixed_parts:
+                            fix_versions = " || ".join(fixed_parts)
+                        else:
+                            fix_versions = vuln_range
+                    if not fix_versions:
+                        fix_versions = "unknown"
+
+                    description = (
+                        via.get("title")
+                        or via.get("description")
+                        or vuln.get("title")
+                        or vuln.get("description")
+                        or ""
+                    )
+
+                    vulns_list.append(
+                        {
+                            "vulnerability_id": v_id,
+                            "package_name": module_name,
+                            "version": version,
+                            "description": description,
+                            "fix_versions": fix_versions,
+                        }
+                    )
+
     return vulns_list, ""
 
 
 def main() -> None:
     """Core verification orchestrator."""
     print("--- Starting GxP FMEA-Aligned Vulnerability Exemption Ledger Validation ---")
+
+    # Step 0: Check command-line arguments for attempts to bypass
+    for arg in sys.argv[1:]:
+        if arg in [
+            "-i",
+            "--ignore-vuln",
+            "--ignore-vulnerability",
+            "--skip-audit",
+            "--bypass",
+        ]:
+            print(
+                f"\n[!] GxP Compliance Failure: Command-line bypass flag detected: {arg}"
+            )
+            sys.exit(1)
 
     ledger_path = os.path.join(
         REPO_ROOT, "docs/SDLC/vulnerability_exclusions_ledger.json"
@@ -440,6 +615,16 @@ def main() -> None:
             "\n[!] GxP Compliance Failure: Manifest (package.json) vulnerability bypasses detected:"
         )
         for file_path, line_num, line_content in manifest_violations:
+            print(f"    - {file_path}:{line_num} -> {line_content}")
+
+    # Step 1c: Scan for .npmrc and .pnpmrc bypass configurations
+    print("Scanning .npmrc and .pnpmrc files for audit bypass configurations...")
+    config_violations = scan_for_config_bypasses()
+    if config_violations:
+        print(
+            "\n[!] GxP Compliance Failure: Configuration (.npmrc/.pnpmrc) vulnerability bypasses detected:"
+        )
+        for file_path, line_num, line_content in config_violations:
             print(f"    - {file_path}:{line_num} -> {line_content}")
 
     # Step 2: Validate ledger entries
@@ -580,6 +765,7 @@ def main() -> None:
     all_passed = (
         not inline_violations
         and not manifest_violations
+        and not config_violations
         and not ledger_errors
         and not has_unapproved_vulns
         and not audit_error
@@ -591,7 +777,7 @@ def main() -> None:
     summary_data = {
         "all_passed": all_passed,
         "vulnerabilities": processed_vulns,
-        "inline_violations": inline_violations + manifest_violations,
+        "inline_violations": inline_violations + manifest_violations + config_violations,
         "ledger_errors": ledger_errors,
     }
 
@@ -605,6 +791,7 @@ def main() -> None:
     print("\n--- GxP Security Compliance Validation Report ---")
     print(f"Inline bypass violations: {len(inline_violations)}")
     print(f"Manifest bypass violations: {len(manifest_violations)}")
+    print(f"Config bypass violations: {len(config_violations)}")
     print(f"Ledger schema/FMEA errors: {len(ledger_errors)}")
     print(f"Active Python vulnerabilities: {len(active_vulnerabilities)}")
     print(f"Active Frontend vulnerabilities: {len(active_frontend_vulnerabilities)}")
