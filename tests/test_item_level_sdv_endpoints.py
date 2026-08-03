@@ -1,6 +1,3 @@
-import hashlib
-import hmac
-import json
 import time
 from datetime import UTC, datetime
 
@@ -381,10 +378,14 @@ async def test_cascading_signature_deletion_on_observation_change():
         session.add(so_visit)
 
     # 2. Update clinical value of the observation (e.g. correcting a typo)
-    with audit_context(user_id="site-coord", change_reason="Typo corrected in observation"):
+    with audit_context(
+        user_id="site-coord", change_reason="Typo corrected in observation"
+    ):
         async with db_manager.get_session_maker()() as session:
             res = await session.execute(
-                select(ClinicalObservation).where(ClinicalObservation.id == "OBS-CASC-1")
+                select(ClinicalObservation).where(
+                    ClinicalObservation.id == "OBS-CASC-1"
+                )
             )
             obs_edit = res.scalar_one()
             obs_edit.value = 115.0
