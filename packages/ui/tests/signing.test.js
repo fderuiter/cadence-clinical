@@ -12,6 +12,7 @@ import {
 } from "../index.js";
 import { encryptAESGCM, decryptAESGCM, deriveSessionKey } from "../signing.js";
 
+// Verification tests for Version 2 cryptographic signature payload structures.
 describe("canonicalSerialize", () => {
   it("serializes primitives identically to Python", () => {
     expect(canonicalSerialize("test")).toBe('"test"');
