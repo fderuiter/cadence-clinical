@@ -13,15 +13,31 @@
  * @returns {string} The canonically serialized JSON string.
  */
 export function canonicalSerialize(payload) {
+  if (payload === undefined) {
+    return undefined;
+  }
+  if (payload instanceof Date) {
+    return JSON.stringify(payload);
+  }
   if (payload === null || typeof payload !== "object") {
     return JSON.stringify(payload);
   }
   if (Array.isArray(payload)) {
     return (
-      "[" + payload.map((item) => canonicalSerialize(item)).join(",") + "]"
+      "[" +
+      payload
+        .map((item) => {
+          if (item === undefined) return "null";
+          const res = canonicalSerialize(item);
+          return res === undefined ? "null" : res;
+        })
+        .join(",") +
+      "]"
     );
   }
-  const sortedKeys = Object.keys(payload).sort();
+  const sortedKeys = Object.keys(payload)
+    .filter((key) => payload[key] !== undefined)
+    .sort();
   const sortedObjStr = sortedKeys
     .map((key) => {
       const val = payload[key];
@@ -310,7 +326,7 @@ export function validateField(
         fieldMeta.constraint.condition || fieldMeta.constraint,
         context
       );
-      if (isOk === false) {
+      if (!isOk) {
         return {
           valid: false,
           message:
@@ -343,7 +359,7 @@ export async function buildLedgerBlock(
   reason,
   prevHash
 ) {
-  const payloadString = `${index}|${timestamp}|${action}|${JSON.stringify(details)}|${reason}|${prevHash}`;
+  const payloadString = `${index}|${timestamp}|${action}|${canonicalSerialize(details)}|${reason}|${prevHash}`;
   const hash = await sha256(payloadString);
   return {
     index,

@@ -163,4 +163,86 @@ describe("eConsent Presentation and Gating Utilities", () => {
       });
     });
   });
+
+  describe("normalizeApprovedConsent - Defensive Guarding & Step Types Parsing", () => {
+    it("provides safe fallbacks for missing optional metadata and clause fields without throwing", () => {
+      const minimalContent = {
+        clauses: [
+          null, // skip null clause safely
+          {
+            // missing optional title and text and version_index
+            clause_id: "clause-opt",
+          },
+        ],
+        workflow_steps: [
+          null, // skip null step safely
+          {
+            // missing step_id/type
+          },
+        ],
+      };
+
+      const result = normalizeApprovedConsent(minimalContent);
+      expect(result).toHaveLength(3); // 1 metadata + 1 clause + 1 workflow step
+
+      // Metadata fallback check
+      expect(result[0]).toEqual({
+        id: "metadata",
+        type: "metadata",
+        title: "Informed Consent Form",
+        metadata: {
+          template_id: "",
+          study_id: "",
+          protocol_version: "",
+          version_index: null,
+          language_code: "",
+          requires_reconsent: false,
+        },
+      });
+
+      // Clause fallback check
+      expect(result[1]).toEqual({
+        id: "clause-opt",
+        type: "clause",
+        title: "Untitled Clause",
+        content: "",
+        version_index: null,
+      });
+
+      // Workflow step fallback check
+      expect(result[2]).toEqual({
+        id: "workflow-step-1", // step 0 is skipped because it's null, index of iteration is 1
+        type: "workflow_step",
+        title: "Signature Requirement",
+        step: {},
+      });
+    });
+
+    it("correctly handles step_type field when step.type is not specified", () => {
+      const contentWithStepTypes = {
+        template_name: "Consent Form V3",
+        workflow_steps: [
+          { step_type: "comprehension_check", question: "All good?" },
+          { step_type: "signature_requirement", role: "investigator" },
+        ],
+      };
+
+      const result = normalizeApprovedConsent(contentWithStepTypes);
+      expect(result).toHaveLength(3); // 1 metadata + 2 steps
+
+      expect(result[1]).toEqual({
+        id: "workflow-step-0",
+        type: "workflow_step",
+        title: "Comprehension Check",
+        step: { step_type: "comprehension_check", question: "All good?" },
+      });
+
+      expect(result[2]).toEqual({
+        id: "workflow-step-1",
+        type: "workflow_step",
+        title: "Signature Requirement",
+        step: { step_type: "signature_requirement", role: "investigator" },
+      });
+    });
+  });
 });
