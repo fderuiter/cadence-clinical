@@ -133,6 +133,12 @@ runPreflightChecks();
 try {
   // 1. Run validation scripts
   console.log('--- Step 1: Pre-Build Validation ---');
+  try {
+    console.log('Building shared UI primitives package first...');
+    runCommand(`${pnpmCmd} --filter ui build`);
+  } catch (err) {
+    console.warn('Warning: Shared UI primitives package build failed, continuing anyway...');
+  }
   runCommand('python3 scripts/validate_adrs.py');
   runCommand('python3 scripts/validate_markdown.py');
 
