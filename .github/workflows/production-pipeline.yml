@@ -30,6 +30,28 @@ jobs:
       - name: Create Isolated Output Directory
         run: mkdir -p tmp_etmf
 
+      # Set up pnpm and Node.js for frontend vulnerability audit
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # Install pip-audit inside the virtual environment for python vulnerability audit
+      - name: Install Audit Tools
+        run: |
+          uv pip install pip-audit
+
+      # Run GxP Dependency & Vulnerability Audit Gate
+      - name: Run GxP Dependency Validation
+        run: |
+          python scripts/validate_vulnerabilities.py
+
       - name: Generate Reports with Overrides
         run: |
           python scripts/generate_rtm.py --output-dir tmp_etmf --dynamic-timestamp
