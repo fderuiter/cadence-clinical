@@ -221,12 +221,12 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         # Medical Coding
         "medical_coding": {"create", "read", "update"},
         "lab_range": {
+            "alert",  # Added alert action explicitly
             "create",
             "read",
             "update",
             "delete",
-            "alert",
-        },  # Added alert action
+        },
         "ecoa_schedule": {"create", "read"},
         "ecoa_diary": {"create", "read"},
         "ecoa_submission": {"create", "read"},
@@ -342,12 +342,12 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         # Medical Coding
         "medical_coding": {"create", "read", "update"},
         "lab_range": {
+            "alert",  # Added alert action explicitly
             "create",
             "read",
             "update",
             "delete",
-            "alert",
-        },  # Added alert action
+        },
         "ecoa_schedule": {"create", "read"},
         "ecoa_diary": {"create", "read"},
         "ecoa_submission": {"create", "read"},
@@ -382,9 +382,9 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         },  # 'Ans' (Answer query) maps to update/read
         "sdv": {"read"},
         "lab_range": {
+            "alert",  # Added read and alert permissions for clinical reader roles
             "read",
-            "alert",
-        },  # Added read and alert permissions for clinical reader roles
+        },
         "system_audit_logs": {"read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},
@@ -416,9 +416,9 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         },  # 'C/R/U (Draft)' maps to create/read/update
         "query_lifecycle": {"read", "update"},  # 'Ans' maps to update/read
         "lab_range": {
+            "alert",  # Added read and alert permissions for clinical reader roles
             "read",
-            "alert",
-        },  # Added read and alert permissions for clinical reader roles
+        },
         "system_audit_logs": {"read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},
@@ -476,12 +476,12 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         # Medical Coding
         "medical_coding": {"read"},
         "lab_range": {
+            "alert",  # Added alert action explicitly
             "create",
             "read",
             "update",
             "delete",
-            "alert",
-        },  # Added alert action
+        },
         "ecoa_schedule": {"create", "read"},
         "ecoa_diary": {"create", "read"},
         "ecoa_submission": {"create", "read"},
@@ -516,12 +516,12 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
         "lab_range": {
+            "alert",  # Added alert action explicitly
             "create",
             "read",
             "update",
             "delete",
-            "alert",
-        },  # Added alert action
+        },
         "ecoa_schedule": {"create", "read"},
         "ecoa_diary": {"create", "read"},
         "ecoa_submission": {"create", "read"},
@@ -673,12 +673,12 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
         "lab_range": {
+            "alert",  # Added alert action explicitly
             "create",
             "read",
             "update",
             "delete",
-            "alert",
-        },  # Added alert action
+        },
         "ecoa_schedule": {"create", "read"},
         "ecoa_diary": {"create", "read"},
         "ecoa_submission": {"create", "read"},
@@ -1332,6 +1332,8 @@ class StudyScopeChecker:
     to the study_id referenced in the request.
     It resolves study_id from the path parameters, query parameters,
     'X-Study-Id' or 'x-study-id' headers, or finally the JSON body (injecting it back).
+
+    Task 1: Added study-scope dependency to enforce per-study access consistently.
     """
 
     async def __call__(

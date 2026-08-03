@@ -1575,3 +1575,40 @@ def test_etmf_taxonomy_and_tag_permissions() -> None:
         assert has_permission(p, "etmf_document:tag") is False, (
             f"Role '{role}' should NOT have etmf_document:tag"
         )
+
+
+def test_task1_and_2_explicit_verification() -> None:
+    """Explicitly verify that require_study_scope and lab_range alert permissions are properly set.
+
+    Requirements: PRD-SYS-001
+    """
+    from packages.security.rbac import (
+        ROLE_CRA_CANONICAL,
+        ROLE_CRC,
+        ROLE_INVESTIGATOR,
+        ROLE_SPONSOR_DM,
+        ROLE_SYSADMIN,
+        Principal,
+        has_permission,
+        require_study_scope,
+    )
+
+    # Verify task 1: require_study_scope dependency factory exists and returns a StudyScopeChecker
+    dependency = require_study_scope()
+    assert dependency.__class__.__name__ == "StudyScopeChecker"
+
+    # Verify task 2: alert permission on lab_range exists for required roles
+    roles_with_alert = [
+        ROLE_SYSADMIN,
+        ROLE_SPONSOR_DM,
+        ROLE_CRA_CANONICAL,
+        "monitor",
+        "admin",
+        ROLE_INVESTIGATOR,
+        ROLE_CRC,
+    ]
+    for role in roles_with_alert:
+        p = Principal(user_id="test_task_2", roles=[role])
+        assert has_permission(p, "lab_range:alert") is True, (
+            f"Role {role} must have 'lab_range:alert' permission"
+        )

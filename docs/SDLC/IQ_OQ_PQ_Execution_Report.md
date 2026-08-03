@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1974
-- **Passed:** 1974 🟢
+- **Total Automated Test Cases Run:** 1975
+- **Passed:** 1975 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1582,6 +1582,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_rtsm_role_aliases_normalization` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rtsm_role_aware_masking` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rtsm_role_permissions` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_task1_and_2_explicit_verification` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_is_auditor_allows_auditors` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_is_auditor_denies_non_auditors` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_not_auditor_allows_others` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
