@@ -2183,6 +2183,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_public_entry_point_whodrug` | `tests.test_whodrug_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_strict_referential_validation_triggers` | `tests.test_whodrug_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_whodrug_parser_init_validation` | `tests.test_whodrug_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_catalog_cross_version_integrity` | `tests.validation.dia_tmf_validation_suite` | PRD-TMF-001 | 🟢 PASSED | < 1s |
+| `test_milestone_mandatory_artifacts` | `tests.validation.dia_tmf_validation_suite` | PRD-TMF-004 | 🟢 PASSED | < 1s |
+| `test_site_level_classification_drift` | `tests.validation.dia_tmf_validation_suite` | PRD-TMF-001, PRD-TMF-003 | 🟢 PASSED | < 1s |
 | `test_cdisc_xml_structure_validation` | `tests.validation.environment_integrity_suite` | PRD-MDR-001 | 🟢 PASSED | < 1s |
 | `test_cryptographic_tamper_evident_safeguards` | `tests.validation.environment_integrity_suite` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_environment_integrity` | `tests.validation.environment_integrity_suite` | PRD-SYS-001 | 🟢 PASSED | < 1s |
