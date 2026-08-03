@@ -170,6 +170,7 @@ def step_run_tests(dry_run: bool) -> None:
             [
                 "uv",
                 "run",
+                "--all-extras",
                 "pytest",
                 "-n",
                 "2",
@@ -187,6 +188,7 @@ def step_run_tests(dry_run: bool) -> None:
             [
                 "uv",
                 "run",
+                "--all-extras",
                 "pytest",
                 "--junitxml",
                 "report_notif.xml",
@@ -201,6 +203,7 @@ def step_run_tests(dry_run: bool) -> None:
             [
                 "uv",
                 "run",
+                "--all-extras",
                 "pytest",
                 "--junitxml",
                 "report_integration.xml",
@@ -214,6 +217,7 @@ def step_run_tests(dry_run: bool) -> None:
             [
                 "uv",
                 "run",
+                "--all-extras",
                 "pytest",
                 "tests/validation",
                 "-o",
@@ -254,7 +258,7 @@ def step_generate_rtm(dry_run: bool) -> None:
     print("STEP 2 / 3 — Generating GxP compliance docs")
     print("=" * 60)
 
-    cmd = ["uv", "run", "python", "scripts/generate_rtm.py"]
+    cmd = ["uv", "run", "--all-extras", "python", "scripts/generate_rtm.py"]
     if dry_run:
         cmd.append("--validate")
         print("⏭  [dry-run] Running generate_rtm.py --validate (read-only).")

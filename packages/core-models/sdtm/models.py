@@ -210,7 +210,7 @@ class AE(AuditableModel):
         return normalize_seriousness(v)
 
     @model_validator(mode="after")
-    def validate_ae_dates(self) -> "AE":
+    def validate_ae_dates(self) -> AE:
         if self.AESTDTC and self.AEENDTC:
             s_clean = re.sub(r"[^\d]", "", self.AESTDTC)
             e_clean = re.sub(r"[^\d]", "", self.AEENDTC)
@@ -368,7 +368,7 @@ class CM(AuditableModel):
         return validate_dtc_format(v)
 
     @model_validator(mode="after")
-    def validate_cm_dates(self) -> "CM":
+    def validate_cm_dates(self) -> CM:
         if self.CMSTDTC and self.CMENDTC:
             s_clean = re.sub(r"[^\d]", "", self.CMSTDTC)
             e_clean = re.sub(r"[^\d]", "", self.CMENDTC)

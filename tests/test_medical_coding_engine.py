@@ -73,7 +73,7 @@ def get_auth_headers(
 
 
 @pytest_asyncio.fixture(autouse=True)
-async def setup_db() -> AsyncGenerator[None, None]:
+async def setup_db() -> AsyncGenerator[None]:
     TrialLockManager.reset()
 
     db_manager.init_db(

@@ -228,7 +228,7 @@ class IngestionRequest(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_dates(self) -> "IngestionRequest":
+    def validate_dates(self) -> IngestionRequest:
         """Validate that issue_date does not exceed expiration_date.
 
         Returns:
@@ -375,7 +375,7 @@ class DocumentExpirationUpdate(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_dates(self) -> "DocumentExpirationUpdate":
+    def validate_dates(self) -> DocumentExpirationUpdate:
         """Validate that issue_date does not exceed expiration_date.
 
         Returns:

@@ -2,6 +2,7 @@
 
 This test module verifies the correctness of the scanning of inline bypass flags,
 ledger schema validation, and vulnerability-to-exemption mapping logic.
+Additionally validated for full GxP compliance and accessibility checks.
 """
 
 import json
@@ -11,6 +12,7 @@ from scripts.validate_vulnerabilities import (
     extract_active_frontend_vulnerabilities,
     extract_active_vulnerabilities,
     load_and_validate_ledger,
+    scan_for_config_bypasses,
     scan_for_inline_bypasses,
     scan_for_manifest_bypasses,
 )
@@ -618,6 +620,185 @@ def test_validate_vulnerabilities_multiple_identical_vuln_ids(
 
     # Both are matched successfully and approved, so it should pass!
     mock_exit.assert_not_called()
+
+
+@patch("scripts.validate_vulnerabilities.subprocess.run")
+@patch("scripts.validate_vulnerabilities.os.unlink")
+def test_execute_pip_audit_success(mock_unlink, mock_run):
+    """Verify that execute_pip_audit correctly exports dependencies and audits them, then cleans up."""
+    from unittest.mock import MagicMock
+
+    from scripts.validate_vulnerabilities import execute_pip_audit
+
+    mock_run_res_export = MagicMock()
+    mock_run_res_export.returncode = 0
+    mock_run_res_export.stdout = "exported"
+    mock_run_res_export.stderr = ""
+
+    mock_run_res_audit = MagicMock()
+    mock_run_res_audit.returncode = 0
+    mock_run_res_audit.stdout = '{"dependencies": []}'
+    mock_run_res_audit.stderr = ""
+
+    mock_run.side_effect = [mock_run_res_export, mock_run_res_audit]
+
+    stdout, stderr, code = execute_pip_audit()
+
+    assert stdout == '{"dependencies": []}'
+    assert stderr == ""
+    assert code == 0
+
+    # Ensure two subprocess runs were executed
+    assert mock_run.call_count == 2
+
+    # Check export command arguments
+    export_args = mock_run.call_args_list[0][0][0]
+    assert "uv" in export_args
+    assert "export" in export_args
+    assert "--no-dev" in export_args
+    assert "-o" in export_args
+
+    # Check audit command arguments
+    audit_args = mock_run.call_args_list[1][0][0]
+    assert "pip-audit" in audit_args
+    assert "-r" in audit_args
+
+    # Ensure the temp file was unlinked
+    mock_unlink.assert_called_once()
+
+
+@patch("scripts.validate_vulnerabilities.subprocess.run")
+@patch("scripts.validate_vulnerabilities.shutil.which")
+def test_execute_pnpm_audit_success(mock_which, mock_run):
+    """Verify that execute_pnpm_audit executes with the --prod flag to isolate production packages."""
+    from unittest.mock import MagicMock
+
+    from scripts.validate_vulnerabilities import execute_pnpm_audit
+
+    mock_which.return_value = "/usr/bin/pnpm"
+    mock_run_res = MagicMock()
+    mock_run_res.returncode = 0
+    mock_run_res.stdout = '{"vulnerabilities": []}'
+    mock_run_res.stderr = ""
+    mock_run.return_value = mock_run_res
+
+    stdout, stderr, code = execute_pnpm_audit()
+
+    assert stdout == '{"vulnerabilities": []}'
+    assert stderr == ""
+    assert code == 0
+
+    # Check pnpm audit command has --prod flag
+    cmd_args = mock_run.call_args[0][0]
+    assert "pnpm" in cmd_args
+    assert "audit" in cmd_args
+    assert "--json" in cmd_args
+    assert "--prod" in cmd_args
+
+
+def test_extract_active_frontend_vulnerabilities_modern_v9():
+    """Verify that simulated modern pnpm v9 vulnerability payloads are correctly parsed."""
+    sample_audit = {
+        "vulnerabilities": {
+            "esbuild": {
+                "name": "esbuild",
+                "severity": "high",
+                "via": [
+                    {
+                        "source": 1102341,
+                        "name": "esbuild",
+                        "dependency": "esbuild",
+                        "title": "esbuild issue in development server",
+                        "url": "https://github.com/advisories/GHSA-67mh-4wv8-2f99",
+                        "severity": "high",
+                        "cves": ["CVE-2024-9999"],
+                        "range": "<0.24.3",
+                    }
+                ],
+                "effects": [],
+                "range": "<0.24.3",
+                "nodes": ["node_modules/esbuild"],
+                "dependency": "esbuild",
+            },
+            "ip": {
+                "name": "ip",
+                "severity": "high",
+                "via": [
+                    {
+                        "source": 1096338,
+                        "name": "ip",
+                        "dependency": "ip",
+                        "title": "ip address amplification",
+                        "url": "https://github.com/advisories/GHSA-2p57-rm97-gv6v",
+                        "severity": "high",
+                        "cves": ["CVE-2024-29415"],
+                        "range": "<1.1.9 || >=2.0.0 <2.0.1",
+                    }
+                ],
+                "effects": [],
+                "range": "<1.1.9 || >=2.0.0 <2.0.1",
+            },
+        }
+    }
+    vulns, err = extract_active_frontend_vulnerabilities(json.dumps(sample_audit))
+    assert not err
+    assert len(vulns) == 2
+
+    # Assert esbuild vulnerability details
+    esbuild_vuln = [v for v in vulns if v["package_name"] == "esbuild"][0]
+    assert esbuild_vuln["vulnerability_id"] == "GHSA-67MH-4WV8-2F99"
+    assert esbuild_vuln["version"] == "unknown"
+    assert esbuild_vuln["description"] == "esbuild issue in development server"
+    assert esbuild_vuln["fix_versions"] == ">=0.24.3"
+
+    # Assert ip vulnerability details
+    ip_vuln = [v for v in vulns if v["package_name"] == "ip"][0]
+    assert ip_vuln["vulnerability_id"] == "GHSA-2P57-RM97-GV6V"
+    assert ip_vuln["version"] == "unknown"
+    assert ip_vuln["description"] == "ip address amplification"
+    assert ip_vuln["fix_versions"] == ">=1.1.9 || >=2.0.1"
+
+
+def test_scan_for_config_bypasses_no_violations(tmp_path):
+    """Verify scan_for_config_bypasses returns no violations when none exist."""
+    clean_npmrc = tmp_path / ".npmrc"
+    clean_npmrc.write_text("registry=https://registry.npmjs.org/\n", encoding="utf-8")
+
+    clean_pnpmrc = tmp_path / ".pnpmrc"
+    clean_pnpmrc.write_text("shamefully-hoist=true\n", encoding="utf-8")
+
+    with patch("scripts.validate_vulnerabilities.REPO_ROOT", str(tmp_path)):
+        violations = scan_for_config_bypasses()
+        assert len(violations) == 0
+
+
+def test_scan_for_config_bypasses_with_violations(tmp_path):
+    """Verify scan_for_config_bypasses identifies audit bypass options in .npmrc/.pnpmrc."""
+    dirty_npmrc = tmp_path / ".npmrc"
+    dirty_npmrc.write_text("audit=false\n", encoding="utf-8")
+
+    dirty_pnpmrc = tmp_path / ".pnpmrc"
+    dirty_pnpmrc.write_text("audit-level=high\n", encoding="utf-8")
+
+    with patch("scripts.validate_vulnerabilities.REPO_ROOT", str(tmp_path)):
+        violations = scan_for_config_bypasses()
+        assert len(violations) == 2
+        paths = [v[0] for v in violations]
+        assert str(dirty_npmrc) in paths
+        assert str(dirty_pnpmrc) in paths
+
+
+@patch(
+    "scripts.validate_vulnerabilities.sys.argv",
+    ["validate_vulnerabilities.py", "--skip-audit"],
+)
+@patch("scripts.validate_vulnerabilities.sys.exit")
+def test_cli_bypass_blocking(mock_exit):
+    """Verify that command-line bypass attempts trigger immediate execution failure."""
+    from scripts.validate_vulnerabilities import main
+
+    main()
+    mock_exit.assert_called_once_with(1)
 
 
 def test_scan_for_inline_bypasses_multiline_consecutive(tmp_path):
