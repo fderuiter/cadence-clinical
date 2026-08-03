@@ -254,8 +254,9 @@ async def test_concurrent_library_version_increments(concurrency_runner):
 
 @pytest.mark.asyncio
 async def test_reorder_visits_mock():
-    from apps.designer.delta import MOCK_SOA_DATA, reorder_visits, create_visit
     from apps.designer.db import MOCK_STUDY_VERSIONS
+    from apps.designer.delta import MOCK_SOA_DATA, create_visit, reorder_visits
+
     MOCK_SOA_DATA.clear()
     MOCK_STUDY_VERSIONS.clear()
 
@@ -272,15 +273,29 @@ async def test_reorder_visits_mock():
 
     # Create visits
     await create_visit(
-        None, study_version_id, "user1", "create v1", "visit_1", {"name": "Visit 1", "sequence": 1}
+        None,
+        study_version_id,
+        "user1",
+        "create v1",
+        "visit_1",
+        {"name": "Visit 1", "sequence": 1},
     )
     await create_visit(
-        None, study_version_id, "user1", "create v2", "visit_2", {"name": "Visit 2", "sequence": 2}
+        None,
+        study_version_id,
+        "user1",
+        "create v2",
+        "visit_2",
+        {"name": "Visit 2", "sequence": 2},
     )
 
     # Reorder
     res = await reorder_visits(
-        None, study_version_id, "user1", "reorder visits change reason", ["visit_2", "visit_1"]
+        None,
+        study_version_id,
+        "user1",
+        "reorder visits change reason",
+        ["visit_2", "visit_1"],
     )
     assert res is True
 
@@ -310,6 +325,7 @@ async def test_reorder_visits_mock():
 @pytest.mark.asyncio
 async def test_reorder_visits_real():
     from apps.designer.delta import reorder_visits
+
     driver_mock = MagicMock()
     session_mock = AsyncMock()
     session_ctx = AsyncMock()
@@ -340,8 +356,14 @@ async def test_reorder_visits_real():
 
     # Check queries
     calls = tx_mock.run.call_args_list
-    assert "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true" in calls[0][0][0]
-    assert "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_VISIT]->(v:Visit)" in calls[1][0][0]
+    assert (
+        "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true"
+        in calls[0][0][0]
+    )
+    assert (
+        "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_VISIT]->(v:Visit)"
+        in calls[1][0][0]
+    )
     assert "CREATE (a:Action" in calls[2][0][0]
     assert "CREATE (new_v:Visit" in calls[3][0][0]
     assert "CREATE (new_v:Visit" in calls[4][0][0]
@@ -349,13 +371,14 @@ async def test_reorder_visits_real():
 
 @pytest.mark.asyncio
 async def test_assign_activities_to_visit_mock():
+    from apps.designer.db import MOCK_STUDY_VERSIONS
     from apps.designer.delta import (
         MOCK_SOA_DATA,
         assign_activities_to_visit,
-        create_visit,
         create_procedure,
+        create_visit,
     )
-    from apps.designer.db import MOCK_STUDY_VERSIONS
+
     MOCK_SOA_DATA.clear()
     MOCK_STUDY_VERSIONS.clear()
 
@@ -381,7 +404,12 @@ async def test_assign_activities_to_visit_mock():
     )
 
     res = await assign_activities_to_visit(
-        None, study_version_id, "user1", "assign proceds", "visit_1", ["proc_1", "proc_2"]
+        None,
+        study_version_id,
+        "user1",
+        "assign proceds",
+        "visit_1",
+        ["proc_1", "proc_2"],
     )
     assert res is True
 
@@ -394,6 +422,7 @@ async def test_assign_activities_to_visit_mock():
 @pytest.mark.asyncio
 async def test_assign_activities_to_visit_real():
     from apps.designer.delta import assign_activities_to_visit
+
     driver_mock = MagicMock()
     session_mock = AsyncMock()
     session_ctx = AsyncMock()
@@ -418,7 +447,12 @@ async def test_assign_activities_to_visit_real():
     ]
 
     res = await assign_activities_to_visit(
-        driver_mock, "sv_real_assign", "user1", "assign proceds", "visit_1", ["proc_1", "proc_2"]
+        driver_mock,
+        "sv_real_assign",
+        "user1",
+        "assign proceds",
+        "visit_1",
+        ["proc_1", "proc_2"],
     )
     assert res is True
     assert tx_mock.run.call_count == 4

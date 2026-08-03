@@ -2,40 +2,16 @@
 Tests for shared SoA models module in core-models.
 """
 
-from datetime import UTC, datetime
 import pytest
-from pydantic import ValidationError
-
 from protocol_authoring import (
     ActivityAssignmentRequest,
-    AuditMetadata,
-    CreateEpochRequest,
-    CreateProcedureRequest,
-    CreateStudyArmRequest,
-    CreateTimingWindowRequest,
-    CreateVisitRequest,
     Epoch,
     EpochProperties,
-    LinkArmApplicabilityRequest,
-    LinkEpochVisitRequest,
-    LinkTimingRequest,
-    LinkVisitProcedureRequest,
     Procedure,
     ProcedureProperties,
-    ProjectionCell,
-    SoAEntityCreatedResponse,
-    SoAEntityDetail,
-    SoALinkResponse,
-    SoAMatrixProjectionResponse,
     StudyArm,
-    StudyArmProperties,
     TimingWindow,
     TimingWindowProperties,
-    UpdateEpochRequest,
-    UpdateProcedureRequest,
-    UpdateStudyArmRequest,
-    UpdateTimingWindowRequest,
-    UpdateVisitRequest,
     Visit,
     VisitProperties,
     VisitReorderItem,
@@ -211,21 +187,27 @@ def test_properties_payload_contracts():
     props_epoch = EpochProperties(epoch_name="Screening", sequence=1)
     assert props_epoch.epoch_name == "Screening"
 
-    with pytest.raises(ValueError, match="Either 'name' or 'epoch_name' must be provided"):
+    with pytest.raises(
+        ValueError, match="Either 'name' or 'epoch_name' must be provided"
+    ):
         EpochProperties(sequence=1)
 
     # VisitProperties
     props_visit = VisitProperties(encounter_name="Week 1", sequence=1)
     assert props_visit.encounter_name == "Week 1"
 
-    with pytest.raises(ValueError, match="Either 'name' or 'encounter_name' must be provided"):
+    with pytest.raises(
+        ValueError, match="Either 'name' or 'encounter_name' must be provided"
+    ):
         VisitProperties(sequence=1)
 
     # ProcedureProperties
     props_proc = ProcedureProperties(activity_name="Fasting ECG")
     assert props_proc.activity_name == "Fasting ECG"
 
-    with pytest.raises(ValueError, match="Either 'name' or 'activity_name' must be provided"):
+    with pytest.raises(
+        ValueError, match="Either 'name' or 'activity_name' must be provided"
+    ):
         ProcedureProperties()
 
     # TimingWindowProperties
@@ -262,5 +244,8 @@ def test_activity_assignment_request():
     assert req_proc.procedure_ids == ["p1", "p2"]
 
     # Neither provided
-    with pytest.raises(ValueError, match="At least one of 'procedure_ids' or 'activity_ids' must be provided"):
+    with pytest.raises(
+        ValueError,
+        match="At least one of 'procedure_ids' or 'activity_ids' must be provided",
+    ):
         ActivityAssignmentRequest(visit_id="v1")
