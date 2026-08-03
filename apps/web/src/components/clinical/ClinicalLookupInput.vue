@@ -138,7 +138,7 @@ defineEmits([
 const isQueryOpen = ref(false);
 
 const showError = computed(() => {
-  return props.error && props.modelValue !== "";
+  return !!props.error;
 });
 
 const stateClass = computed(() => {

@@ -1,3 +1,5 @@
+@import "../../packages/ui/tokens.css";
+
 /* eCOA Subject Portal failure styles */
 @import "../../packages/ui/tokens.css";
 
@@ -610,9 +612,44 @@ body {
 
 .form-group select:focus,
 .form-group textarea:focus,
-.form-group input:focus {
-  outline: 2px solid transparent;
-  border-color: var(--primary);
+.form-group input:focus,
+.clinical-input input:focus {
+  outline: none;
+  border-color: var(--border);
+}
+
+.form-group select:focus-visible,
+.form-group textarea:focus-visible,
+.form-group input:focus-visible,
+.clinical-input input:focus-visible {
+  outline: 2px solid var(--color-accent) !important;
+  outline-offset: 2px !important;
+  border-color: var(--color-accent) !important;
+}
+
+/* Programmatic validation flags on patient portal inputs display the standard visual error border */
+/* Invalid inputs retain their red error border when receiving keyboard focus instead of displaying a conflicting blue or teal ring */
+.has-error input,
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border: 1px solid var(--color-error) !important;
+  background-color: var(--color-error-bg) !important;
+}
+
+.has-error input:focus,
+.has-error input:focus-visible,
+input[aria-invalid="true"]:focus,
+input[aria-invalid="true"]:focus-visible,
+select[aria-invalid="true"]:focus,
+select[aria-invalid="true"]:focus-visible,
+textarea[aria-invalid="true"]:focus,
+textarea[aria-invalid="true"]:focus-visible {
+  border: 1px solid var(--color-error) !important;
+  background-color: var(--color-error-bg) !important;
+  box-shadow: none !important;
+  outline: 2px solid var(--color-error) !important;
+  outline-offset: 2px !important;
 }
 
 /* Clinical forms rendering adjustments */
