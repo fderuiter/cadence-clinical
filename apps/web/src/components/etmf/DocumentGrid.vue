@@ -46,38 +46,109 @@
             </td>
           </tr>
           <tr
-            v-for="doc in paginatedDocuments"
+            v-for="(doc, rIndex) in paginatedDocuments"
             :key="doc.id"
             class="document-row"
           >
-            <td class="doc-name-cell">
+            <td
+              :tabindex="0"
+              @click="selectCell(rIndex, 0)"
+              @keydown="handleCellKeyDown($event, rIndex, 0, doc)"
+              :class="{ 'cell-active': activeRowIndex === rIndex && activeColIndex === 0 }"
+              :data-row="rIndex"
+              :data-col="0"
+              class="doc-name-cell"
+            >
               <span class="file-icon">📄</span>
               <span class="filename" :title="doc.filename">{{
                 doc.filename
               }}</span>
             </td>
-            <td>
-              <span class="taxonomy-pill">
+            <td
+              :tabindex="isEditing && activeRowIndex === rIndex && activeColIndex === 1 ? -1 : 0"
+              @click="selectCell(rIndex, 1)"
+              @dblclick="startEditing(rIndex, doc)"
+              @keydown="handleCellKeyDown($event, rIndex, 1, doc)"
+              :class="{ 'cell-active': activeRowIndex === rIndex && activeColIndex === 1 }"
+              :data-row="rIndex"
+              :data-col="1"
+            >
+              <div v-if="isEditing && activeRowIndex === rIndex && activeColIndex === 1" class="inline-edit-container">
+                <select
+                  v-model="tempTaxonomyCode"
+                  class="form-control inline-select"
+                  @change="commitTaxonomy(doc)"
+                  @keydown="handleSelectKeyDown($event, doc)"
+                  @blur="cancelEditing"
+                  ref="inlineSelectRef"
+                >
+                  <option
+                    v-for="opt in taxonomyOptions"
+                    :key="opt.code"
+                    :value="opt.code"
+                  >
+                    Z{{ getZoneAndSectionFromCode(opt.code).zone }} - S{{ getZoneAndSectionFromCode(opt.code).section }} [{{ opt.code }}] ({{ opt.name }})
+                  </option>
+                </select>
+              </div>
+              <span v-else class="taxonomy-pill">
                 Z{{ doc.zone }} - S{{ doc.section }} [{{ doc.artifact_code }}]
               </span>
             </td>
-            <td>
+            <td
+              :tabindex="0"
+              @click="selectCell(rIndex, 2)"
+              @keydown="handleCellKeyDown($event, rIndex, 2, doc)"
+              :class="{ 'cell-active': activeRowIndex === rIndex && activeColIndex === 2 }"
+              :data-row="rIndex"
+              :data-col="2"
+            >
               <span class="version-tag">v{{ doc.version_index }}.0</span>
             </td>
-            <td>
+            <td
+              :tabindex="0"
+              @click="selectCell(rIndex, 3)"
+              @keydown="handleCellKeyDown($event, rIndex, 3, doc)"
+              :class="{ 'cell-active': activeRowIndex === rIndex && activeColIndex === 3 }"
+              :data-row="rIndex"
+              :data-col="3"
+            >
               <span class="status-badge" :class="getStatusClass(doc.status)">
                 {{ formatStatus(doc.status) }}
               </span>
             </td>
-            <td>
+            <td
+              :tabindex="0"
+              @click="selectCell(rIndex, 4)"
+              @keydown="handleCellKeyDown($event, rIndex, 4, doc)"
+              :class="{ 'cell-active': activeRowIndex === rIndex && activeColIndex === 4 }"
+              :data-row="rIndex"
+              :data-col="4"
+            >
               <div class="user-meta">
                 <span class="username">{{ doc.created_by }}</span>
               </div>
             </td>
-            <td class="date-cell">
+            <td
+              :tabindex="0"
+              @click="selectCell(rIndex, 5)"
+              @keydown="handleCellKeyDown($event, rIndex, 5, doc)"
+              :class="{ 'cell-active': activeRowIndex === rIndex && activeColIndex === 5 }"
+              :data-row="rIndex"
+              :data-col="5"
+              class="date-cell"
+            >
               {{ doc.formattedCreatedAt }}
             </td>
-            <td class="actions-cell">
+            <td
+              :tabindex="0"
+              @click="selectCell(rIndex, 6)"
+              @keydown="handleCellKeyDown($event, rIndex, 6, doc)"
+              :class="{ 'cell-active': activeRowIndex === rIndex && activeColIndex === 6 }"
+              :data-row="rIndex"
+              :data-col="6"
+              class="actions-cell"
+            >
               <button
                 class="btn btn-sm btn-outline-primary"
                 title="View Watermarked PDF Preview"
@@ -303,6 +374,7 @@
 <script setup>
 import { ref, computed, watch, nextTick, onUnmounted } from "vue";
 import { useEtmfStore } from "../../stores/etmf";
+import { etmfService } from "../../api/etmf";
 
 const props = defineProps({
   documents: {
@@ -314,6 +386,212 @@ const props = defineProps({
 defineEmits(["preview"]);
 
 const etmfStore = useEtmfStore();
+
+// 2D Interactive Grid selection & editing state
+const activeRowIndex = ref(-1);
+const activeColIndex = ref(-1);
+const isEditing = ref(false);
+const tempTaxonomyCode = ref("");
+const inlineSelectRef = ref(null);
+
+const taxonomyOptions = computed(() => {
+  const allNodes = Object.values(etmfStore.folderLookup);
+  const seenCodes = new Set();
+  const options = [];
+  for (const node of allNodes) {
+    if (node.type === "artifact" && node.code && !seenCodes.has(node.code)) {
+      seenCodes.add(node.code);
+      options.push(node);
+    }
+  }
+  return options;
+});
+
+function getZoneAndSectionFromCode(code) {
+  if (!code) return { zone: 1, section: "01.01" };
+  const parts = code.split(".");
+  const zone = parseInt(parts[0]) || 1;
+  const section = parts.slice(0, 2).join(".");
+  return { zone, section };
+}
+
+function selectCell(rIndex, cIndex) {
+  activeRowIndex.value = rIndex;
+  activeColIndex.value = cIndex;
+  focusActiveCell();
+}
+
+async function focusActiveCell() {
+  await nextTick();
+  const activeEl = document.querySelector(`.documents-table td[data-row="${activeRowIndex.value}"][data-col="${activeColIndex.value}"]`);
+  if (activeEl && typeof activeEl.focus === "function") {
+    activeEl.focus();
+  }
+}
+
+async function startEditing(rIndex, doc) {
+  activeColIndex.value = 1;
+  activeRowIndex.value = rIndex;
+  tempTaxonomyCode.value = doc.artifact_code;
+  isEditing.value = true;
+  await nextTick();
+  if (inlineSelectRef.value) {
+    const el = Array.isArray(inlineSelectRef.value) ? inlineSelectRef.value[0] : inlineSelectRef.value;
+    if (el && typeof el.focus === "function") {
+      el.focus();
+    }
+  }
+}
+
+function cancelEditing() {
+  setTimeout(() => {
+    if (isEditing.value) {
+      isEditing.value = false;
+      focusActiveCell();
+    }
+  }, 150);
+}
+
+async function commitTaxonomy(doc) {
+  if (!isEditing.value) return;
+
+  const targetCode = tempTaxonomyCode.value;
+  const selectedNode = etmfStore.folderLookup[targetCode];
+  if (!selectedNode) {
+    cancelEditing();
+    return;
+  }
+
+  const { zone, section } = getZoneAndSectionFromCode(targetCode);
+
+  try {
+    await etmfService.tagDocument(
+      doc.id,
+      {
+        zone,
+        section,
+        artifact_code: targetCode,
+      },
+      {
+        changeReason: "Corrected taxonomy classification via interactive grid navigation",
+      }
+    );
+
+    await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
+  } catch (err) {
+    console.error("Failed to tag/classify document:", err);
+  } finally {
+    isEditing.value = false;
+    focusActiveCell();
+  }
+}
+
+function copyActiveCellValue(doc) {
+  let val;
+  switch (activeColIndex.value) {
+    case 0:
+      val = doc.filename || "";
+      break;
+    case 1:
+      val = `Z${doc.zone} - S${doc.section} [${doc.artifact_code}]`;
+      break;
+    case 2:
+      val = `v${doc.version_index}.0`;
+      break;
+    case 3:
+      val = formatStatus(doc.status);
+      break;
+    case 4:
+      val = doc.created_by || "";
+      break;
+    case 5:
+      val = doc.formattedCreatedAt || "";
+      break;
+    case 6:
+      val = "Preview";
+      break;
+    default:
+      return;
+  }
+
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+    navigator.clipboard.writeText(val)
+      .catch((err) => {
+        console.error("Clipboard copy failed:", err);
+      });
+  } else {
+    const textarea = document.createElement("textarea");
+    textarea.value = val;
+    textarea.style.position = "fixed";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    try {
+      document.execCommand("copy");
+    } catch (err) {
+      console.error("Fallback copy failed:", err);
+    }
+    document.body.removeChild(textarea);
+  }
+}
+
+function handleCellKeyDown(event, rIndex, cIndex, doc) {
+  if (isEditing.value && activeRowIndex.value === rIndex && activeColIndex.value === 1) {
+    return;
+  }
+
+  const maxRows = paginatedDocuments.value.length;
+  const maxCols = 7;
+
+  let handled = false;
+
+  if ((event.ctrlKey || event.metaKey) && (event.key === "c" || event.key === "C")) {
+    handled = true;
+    copyActiveCellValue(doc);
+  } else if (event.key === "ArrowUp") {
+    if (activeRowIndex.value > 0) {
+      activeRowIndex.value--;
+      handled = true;
+    }
+  } else if (event.key === "ArrowDown") {
+    if (activeRowIndex.value < maxRows - 1) {
+      activeRowIndex.value++;
+      handled = true;
+    }
+  } else if (event.key === "ArrowLeft") {
+    if (activeColIndex.value > 0) {
+      activeColIndex.value--;
+      handled = true;
+    }
+  } else if (event.key === "ArrowRight") {
+    if (activeColIndex.value < maxCols - 1) {
+      activeColIndex.value++;
+      handled = true;
+    }
+  } else if (event.key === "Enter") {
+    if (cIndex === 1) {
+      handled = true;
+      startEditing(rIndex, doc);
+    }
+  }
+
+  if (handled) {
+    event.preventDefault();
+    focusActiveCell();
+  }
+}
+
+function handleSelectKeyDown(event, doc) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    event.stopPropagation();
+    commitTaxonomy(doc);
+  } else if (event.key === "Escape") {
+    event.preventDefault();
+    event.stopPropagation();
+    cancelEditing();
+  }
+}
 
 const selectedArtifactCode = ref("");
 const showUploadModal = ref(false);
@@ -429,9 +707,18 @@ watch(
   () => props.documents,
   () => {
     currentPage.value = 1;
+    activeRowIndex.value = -1;
+    activeColIndex.value = -1;
+    isEditing.value = false;
   },
   { deep: true }
 );
+
+watch(currentPage, () => {
+  activeRowIndex.value = -1;
+  activeColIndex.value = -1;
+  isEditing.value = false;
+});
 
 const totalItems = computed(() => formattedDocuments.value.length);
 const totalPages = computed(
@@ -1068,5 +1355,35 @@ async function submitUpload() {
 .next-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* 2D Interactive Grid styles */
+.documents-table td {
+  cursor: cell;
+}
+
+.documents-table td * {
+  cursor: initial;
+}
+
+.documents-table td:focus,
+.documents-table td.cell-active {
+  outline: 2px solid #0284c7; /* High contrast sky/blue */
+  outline-offset: -2px;
+  background-color: #f0f9ff !important;
+}
+
+.inline-edit-container {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.inline-select {
+  width: 100%;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  height: auto;
+  border-radius: 4px;
 }
 </style>
