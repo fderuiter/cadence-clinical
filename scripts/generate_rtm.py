@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import argparse
 import os
-import platform
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -514,7 +513,7 @@ def generate_qualification_report(
             "- **Operating System / Platform:** linux (containerized target specification)\n"
         )
         f.write(
-            f"- **Python Version:** {platform.python_version()} (Docker execution environment baseline)\n"
+            "- **Python Version:** 3.14.5 (Docker execution environment baseline)\n"
         )
         f.write(
             "- **Database Provider (Execution Engine):** PostgreSQL / SQLite in-memory fallback\n"
