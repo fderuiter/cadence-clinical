@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1915
-- **Passed:** 1915 🟢
+- **Total Automated Test Cases Run:** 1977
+- **Passed:** 1977 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -390,8 +390,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_crypto_verifier_valid_signature` | `tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_signing_raises_runtime_error_if_secret_missing` | `tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_raises_runtime_error_if_secret_missing` | `tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_security_audit_exclusions` | `tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_security_audit_scanner_detection_and_bypass` | `tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_security_audit_script` | `tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_security_audit_targeted_files` | `tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_check_dict_for_value` | `tests.test_concept_locks` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_concept_mutations_locked_active_recruiting` | `tests.test_concept_locks` | PRD-MDR-002 | 🟢 PASSED | < 1s |
 | `test_concept_mutations_unreferenced` | `tests.test_concept_locks` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -901,6 +903,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_signature_document_routing_and_classification` | `tests.test_etmf_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_lifecycle_with_mock_signature` | `tests.test_etmf_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_post_signature_locking` | `tests.test_etmf_signing_lifecycle` | Trace-13 | 🟢 PASSED | < 1s |
+| `test_etmf_signing_failure_logging_and_blocking` | `tests.test_etmf_signing_lifecycle` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_signing_happy_path` | `tests.test_etmf_signing_lifecycle` | Trace-13 | 🟢 PASSED | < 1s |
 | `test_etmf_signing_reauth_failures` | `tests.test_etmf_signing_lifecycle` | Trace-13 | 🟢 PASSED | < 1s |
 | `test_auto_quarantine_site_level_no_site_id` | `tests.test_etmf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1504,6 +1507,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_can_access_site` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cross_site_query_read_isolation` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cross_site_unblind_denied_with_alert` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ecoa_diary_alert_permissions` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_audit_logs_gated_to_auditors` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_document_transition_auditor_forbidden` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_edl_creation_auditor_forbidden` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2062,8 +2066,16 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_load_and_validate_ledger_rpn_threshold` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_load_and_validate_ledger_valid` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scan_exits_successfully_on_unreadable_files` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scan_for_inline_bypasses_comments_and_empty_lines` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scan_for_inline_bypasses_logical_boundary_reset` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scan_for_inline_bypasses_multiline_consecutive` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scan_for_inline_bypasses_multiline_out_of_scope` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scan_for_inline_bypasses_multiline_three_lines` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scan_for_inline_bypasses_no_violations` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scan_for_inline_bypasses_same_line_boundary_reset` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scan_for_inline_bypasses_shell_boundary_reset` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scan_for_inline_bypasses_with_violations` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scan_for_inline_bypasses_yaml_folded_vs_literal` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scan_for_manifest_bypasses` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_vulnerabilities_compound_matching` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_vulnerabilities_multiple_identical_vuln_ids` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2106,6 +2118,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_submission_locks` | `tests.validation.prd_compliance_traceability_tests` | PRD-SUB-005 | 🟢 PASSED | < 1s |
 | `test_submission_version_control` | `tests.validation.prd_compliance_traceability_tests` | PRD-SUB-002 | 🟢 PASSED | < 1s |
 | `test_system_generated_validation_queries` | `tests.validation.prd_compliance_traceability_tests` | PRD-QRY-002 | 🟢 PASSED | < 1s |
+| `test_environment_integrity_assertions` | `tests.validation.test_path_boundary_linter` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_linter_negative_cases` | `tests.validation.test_path_boundary_linter` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_linter_positive_cases` | `tests.validation.test_path_boundary_linter` | *Regression/Helper* | 🟢 PASSED | < 1s |
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 

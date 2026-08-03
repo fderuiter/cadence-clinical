@@ -30,7 +30,10 @@ fix: ## Auto-fix all ruff lint violations and reformat code (safe to run anytime
 	uv run ruff format .
 	@echo "$(CYAN)✔ Lint + format complete.$(RESET)"
 
-lint: ## Check lint (no auto-fix)
+lint-paths: ## Run lightweight path-pattern boundary linter
+	python3 scripts/validate_path_patterns.py --all
+
+lint: lint-paths ## Check lint (no auto-fix)
 	pnpm -r lint
 	uv run ruff check .
 
