@@ -259,6 +259,45 @@ def build_comment_body(
     checked_traceability = (
         "[x]" if outcomes.get("traceability") in ("success", "passed") else "[ ]"
     )
+    checked_lint = (
+        "[x]"
+        if outcomes.get("lint") in ("success", "passed")
+        and outcomes.get("frontend") in ("success", "passed")
+        else "[ ]"
+    )
+    checked_docs = (
+        "[x]"
+        if outcomes.get("lint") in ("success", "passed")
+        and outcomes.get("adr") in ("success", "passed")
+        else "[ ]"
+    )
+    checked_test = "[x]" if outcomes.get("test") in ("success", "passed") else "[ ]"
+    checked_adr = "[x]" if outcomes.get("adr") in ("success", "passed") else "[ ]"
+    checked_suite = (
+        "[x]"
+        if all(
+            outcomes.get(k) in ("success", "passed")
+            for k in [
+                "lint",
+                "test",
+                "frontend",
+                "adr",
+                "audit",
+                "deid",
+                "traceability",
+            ]
+        )
+        else "[ ]"
+    )
+    conflict_outcome = outcomes.get("conflict", "success")
+    checked_conflict = (
+        "[x]"
+        if (
+            not conflict_outcome
+            or conflict_outcome.lower() in ("success", "passed", "no", "false")
+        )
+        else "[ ]"
+    )
 
     conflict_val = outcomes.get("conflict", "success").lower()
     if conflict_val in ("failure", "failed", "true", "yes"):
@@ -466,13 +505,13 @@ When merge conflicts occur, execute the following resolution sequence:
 
 ### Part 4: Principal-Level PR Summary Checklist
 Before approving a PR or signing off on a merged state, verify completion of this checklist:
-*   [ ] **Type Safety & Linting:** Code strictly complies with the project's type-checking and linting configurations.
-*   [ ] **Documentation:** Comprehensive docstrings exist on all public functions/classes, and workspace docs reflect any data flow changes.
-*   [ ] **Test Coverage:** Unit and/or integration tests are added under the appropriate test directory, maintaining the 80% coverage threshold.
+*   {checked_lint} **Type Safety & Linting:** Code strictly complies with the project's type-checking and linting configurations.
+*   {checked_docs} **Documentation:** Comprehensive docstrings exist on all public functions/classes, and workspace docs reflect any data flow changes.
+*   {checked_test} **Test Coverage:** Unit and/or integration tests are added under the appropriate test directory, maintaining the 80% coverage threshold.
 *   {checked_traceability} **Requirements Traceability:** SRS and PRD requirements are fully mapped to automated verification tests.
-*   [ ] **Architectural Intent:** An ADR is added to the architecture logs if major new design patterns or dependencies were introduced.
-*   [ ] **Clean Verification Suite:** All local checks (test runner, linter, type-checker) pass successfully without warnings or errors.
-*   [ ] **Conflict-Free:** All Git conflict markers and lockfile discrepancies are fully resolved.
+*   {checked_adr} **Architectural Intent:** An ADR is added to the architecture logs if major new design patterns or dependencies were introduced.
+*   {checked_suite} **Clean Verification Suite:** All local checks (test runner, linter, type-checker) pass successfully without warnings or errors.
+*   {checked_conflict} **Conflict-Free:** All Git conflict markers and lockfile discrepancies are fully resolved.
 </details>
 """
 

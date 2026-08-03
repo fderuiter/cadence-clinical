@@ -211,7 +211,7 @@ For the RTM to track your test, add a requirement ID to the test docstring:
 async def test_enrollment_transition():
     """Validate subject state machine on enrollment.
 
-    Requirements: PRD-SYS-042
+    @req:PRD-SYS-042
     """
     ...
 ```
