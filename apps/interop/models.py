@@ -133,8 +133,12 @@ class SubjectAssignment(Base):
     due_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Missing-diary alert dedup state
-    last_missed_alert_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    last_missed_alert_notified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_missed_alert_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
+    last_missed_alert_notified_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(

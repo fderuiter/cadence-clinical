@@ -1552,15 +1552,15 @@ async def test_require_study_scope_extraction() -> None:
 def test_visit_windowing_rbac_permissions() -> None:
     """Verify that visit_windowing permissions are mapped correctly for rbac.py roles."""
     from packages.security.rbac import (
-        ROLE_SYSADMIN,
+        ROLE_CRA_CANONICAL,
+        ROLE_CRC,
+        ROLE_INVESTIGATOR,
+        ROLE_REVIEWER,
         ROLE_SPONSOR_DESIGNER,
         ROLE_SPONSOR_DM,
         ROLE_SPONSOR_MM,
         ROLE_SPONSOR_STATISTICIAN,
-        ROLE_REVIEWER,
-        ROLE_INVESTIGATOR,
-        ROLE_CRC,
-        ROLE_CRA_CANONICAL,
+        ROLE_SYSADMIN,
         Principal,
         has_permission,
     )
@@ -1617,9 +1617,18 @@ def test_visit_windowing_granular_permissions() -> None:
         assert has_permission(role, PermissionEnum.VISIT_WINDOWING_READ) is True
 
     # Non-read/write roles should not have access (e.g. Subject)
-    assert has_permission(RoleEnum.SUBJECT.value, PermissionEnum.VISIT_WINDOWING_READ) is False
-    assert has_permission(RoleEnum.SUBJECT.value, PermissionEnum.VISIT_WINDOWING_CREATE) is False
-    assert has_permission(RoleEnum.SUBJECT.value, PermissionEnum.VISIT_WINDOWING_UPDATE) is False
+    assert (
+        has_permission(RoleEnum.SUBJECT.value, PermissionEnum.VISIT_WINDOWING_READ)
+        is False
+    )
+    assert (
+        has_permission(RoleEnum.SUBJECT.value, PermissionEnum.VISIT_WINDOWING_CREATE)
+        is False
+    )
+    assert (
+        has_permission(RoleEnum.SUBJECT.value, PermissionEnum.VISIT_WINDOWING_UPDATE)
+        is False
+    )
 
 
 def test_etmf_taxonomy_and_tag_permissions() -> None:
