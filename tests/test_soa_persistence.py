@@ -128,8 +128,39 @@ async def test_mock_soa_entity_lifecycle():
         user_id="user_1",
         change_reason="Add timing",
         timing_id="timing_w1",
-        properties={"name": "Standard collection window"},
+        properties={
+            "name": "Standard collection window",
+            "anchor_reference": "Visit 1",
+            "target_day": 7,
+            "min_offset": -2,
+            "max_offset": 2,
+        },
     )
+
+    tw = MOCK_SOA_DATA[study_version_id]["timing_windows"]["timing_w1"]
+    assert tw["anchor_reference"] == "Visit 1"
+    assert tw["target_day"] == 7
+    assert tw["min_offset"] == -2
+    assert tw["max_offset"] == 2
+
+    await update_timing_window(
+        driver=None,
+        study_version_id=study_version_id,
+        user_id="user_1",
+        change_reason="Update timing window",
+        timing_id="timing_w1",
+        properties={
+            "name": "Standard collection window",
+            "anchor_reference": "Visit 1",
+            "target_day": 7,
+            "min_offset": -3,
+            "max_offset": 3,
+        },
+    )
+
+    tw_updated = MOCK_SOA_DATA[study_version_id]["timing_windows"]["timing_w1"]
+    assert tw_updated["min_offset"] == -3
+    assert tw_updated["max_offset"] == 3
 
     # 6. Link entities
     await link_epoch_to_visit(
@@ -350,6 +381,7 @@ def test_soa_domain_models_schema_alignment():
         SoAMatrixProjectionResponse,
         StudyArm,
         TimingWindow,
+        TimingWindowProperties,
         Visit,
     )
 
@@ -446,6 +478,21 @@ def test_soa_domain_models_schema_alignment():
     assert tw_valid.conditional is True
     assert tw_valid.reason == "Required only for sub-cohort A"
 
+    # Test TimingWindowProperties with the new fields
+    tw_prop_valid = TimingWindowProperties(
+        name="Standard Visit Window",
+        anchor_reference="Visit 1",
+        target_day=7,
+        min_offset=-2,
+        max_offset=2,
+        conditional=True,
+        reason="Required only for sub-cohort A",
+    )
+    assert tw_prop_valid.anchor_reference == "Visit 1"
+    assert tw_prop_valid.target_day == 7
+    assert tw_prop_valid.min_offset == -2
+    assert tw_prop_valid.max_offset == 2
+
     # Test failure when conditional is True but reason is empty/missing
     import pytest
 
@@ -455,6 +502,40 @@ def test_soa_domain_models_schema_alignment():
             study_version_id="sv_123",
             name="Invalid conditional timing",
             conditional=True,
+            created_by="designer_user",
+        )
+
+    # Test invalid offset ordering on TimingWindow Properties and Domain Model
+    with pytest.raises(ValueError, match="Field 'min_offset' must be less than or equal to 'max_offset'."):
+        TimingWindowProperties(
+            name="Invalid window",
+            min_offset=5,
+            max_offset=2,
+        )
+
+    with pytest.raises(ValueError, match="Field 'min_offset' must be less than or equal to 'max_offset'."):
+        TimingWindow(
+            id="tw_invalid_offset",
+            study_version_id="sv_123",
+            name="Invalid window",
+            min_offset=5,
+            max_offset=2,
+            created_by="designer_user",
+        )
+
+    # Test negative target day on TimingWindow Properties and Domain Model
+    with pytest.raises(ValueError, match="Field 'target_day' cannot be negative."):
+        TimingWindowProperties(
+            name="Invalid target day",
+            target_day=-1,
+        )
+
+    with pytest.raises(ValueError, match="Field 'target_day' cannot be negative."):
+        TimingWindow(
+            id="tw_invalid_day",
+            study_version_id="sv_123",
+            name="Invalid target day",
+            target_day=-1,
             created_by="designer_user",
         )
 
