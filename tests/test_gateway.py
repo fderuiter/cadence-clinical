@@ -678,7 +678,7 @@ def test_gateway_subject_role_routing_restrictions(
 
 def test_signature_verification_success(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    # @req:Trace-15
+    # @req:Trace-17
     Test successful re-authentication.
     """
     monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
@@ -712,7 +712,7 @@ def test_signature_verification_invalid_credentials(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    # @req:Trace-15
+    # @req:Trace-17
     Test re-authentication with invalid credentials.
     """
     monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
@@ -757,7 +757,7 @@ def test_signature_verification_role_insufficient(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    # @req:Trace-15
+    # @req:Trace-17
     Test re-authentication for a user with insufficient roles.
     """
     monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
@@ -790,7 +790,7 @@ def test_signature_verification_study_designer_role_allowed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    # @req:Trace-15
+    # @req:Trace-17
     Test re-authentication for a user with study_designer/sponsor_designer roles.
     """
     monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
@@ -822,7 +822,7 @@ def test_signature_verification_study_designer_role_allowed(
 
 def test_signature_gated_mutation_enforcement(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    # @req:Trace-15
+    # @req:Trace-17
     Test that signature-gated mutations require a valid sig_token.
     """
     monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
@@ -927,7 +927,7 @@ def test_gateway_sponsor_claim_extraction(monkeypatch: pytest.MonkeyPatch) -> No
 
 def test_signature_verification_with_batch_id(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    # @req:Trace-15
+    # @req:Trace-17
     Test successful re-authentication with an optional batch_id.
     """
     monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
@@ -971,7 +971,7 @@ def test_signature_token_altered_signature_rejected(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    # @req:Trace-15
+    # @req:Trace-17
     Test that an altered or tampered signature token is rejected.
     """
     monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
@@ -1019,7 +1019,7 @@ def test_signature_token_credentials_not_logged_or_returned(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     """
-    # @req:Trace-15
+    # @req:Trace-17
     Test that user credentials/passwords are neither logged nor returned.
     """
     monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
@@ -1188,7 +1188,7 @@ def test_signature_gated_mutation_expired_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    # @req:Trace-15
+    # @req:Trace-17
     Test that expired sig_tokens are rejected.
     """
     monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
@@ -1233,7 +1233,7 @@ def test_signature_gated_mutation_mismatched_action(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    # @req:Trace-15
+    # @req:Trace-17
     Test that sig_tokens bound to a different action/path are rejected.
     """
     monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
@@ -1527,7 +1527,7 @@ async def test_eisf_gateway_site_isolation_propagation(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    # @req:Trace-16
+    # @req:Trace-18
     Contract test: Verify that valid gateway-signed identity/site scope headers
     are propagated to eISF, and that eISF correctly enforces site isolation
     (returning 403 and logging SECURITY_ALERT on mismatch).
@@ -1604,7 +1604,7 @@ def test_gateway_proxy_eisf_headers_propagation(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    # @req:Trace-16
+    # @req:Trace-18
     Verify that when proxying to eISF, the gateway successfully extracts site_id from JWT
     and propagates it along with signature version 2 headers unchanged to the eISF proxy path.
     """

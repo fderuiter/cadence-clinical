@@ -489,7 +489,7 @@ class MockAsyncClientForAlertFailure:
 
 @pytest.mark.asyncio
 async def test_alert_dispatch_failure_non_2xx():
-    # @req:Trace-14
+    # @req:Trace-15
     mock_client = MockAsyncClientForAlertFailure(simulate_exception=False)
     app.state.test_httpx_client = mock_client
 
@@ -525,7 +525,7 @@ async def test_alert_dispatch_failure_non_2xx():
 
 @pytest.mark.asyncio
 async def test_alert_dispatch_failure_exception():
-    # @req:Trace-14
+    # @req:Trace-15
     mock_client = MockAsyncClientForAlertFailure(simulate_exception=True)
     app.state.test_httpx_client = mock_client
 
