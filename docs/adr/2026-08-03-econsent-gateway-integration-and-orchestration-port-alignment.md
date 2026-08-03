@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-Clinical developers and integration engineers faced friction because the eConsent API was missing from the central documentation catalog (the Gateway's aggregated OpenAPI spec). Additionally, multi-site clinical demonstrations and local testing experienced port conflicts and routing failures due to overlapping host port mappings and internal ports (such as the CTMS port overlapping with Quality, and Org port overlapping with eISF). 
+Clinical developers and integration engineers faced friction because the eConsent API was missing from the central documentation catalog (the Gateway's aggregated OpenAPI spec). Additionally, multi-site clinical demonstrations and local testing experienced port conflicts and routing failures due to overlapping host port mappings and internal ports (such as the CTMS port overlapping with Quality, and Org port overlapping with eISF).
 
 To eliminate these routing failures and documentation gaps, we need to cleanly integrate the eConsent service into the API gateway, expose its OpenAPI schemas dynamically under the `Econsent_` namespace, and realign the local container port assignments to completely eliminate port conflicts while maintaining direct microservice accessibility for local developer testing.
 
@@ -25,7 +25,7 @@ This decision implements and traces back to requirement **PRD-SYS-001**.
 
 ### Option A: Gateway Schema Aggregation and Orchestration Port Realignment (Selected)
 
-* **Overview:** 
+* **Overview:**
   - Modify the gateway (`apps/gateway/main.py`) to dynamically query, validate, prefix, and merge eConsent OpenAPI specs under the `Econsent_` namespace prefix.
   - Map gateway paths `/econsent` and `/api/v1/econsent` to the `econsent` container.
   - Realign port assignments to preserve 1:1 host-to-container parity:

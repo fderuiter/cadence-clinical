@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-The platform's continuous integration (CI) pipeline enforces automated GxP compliance, verification tracing, and layout/accessibility audits on all pull requests. During local and CI execution, the GxP qualification suite requires a fully-functional local environment to run WCAG contrast validation and layout assertions. 
+The platform's continuous integration (CI) pipeline enforces automated GxP compliance, verification tracing, and layout/accessibility audits on all pull requests. During local and CI execution, the GxP qualification suite requires a fully-functional local environment to run WCAG contrast validation and layout assertions.
 
 Prior to this decision, the local development and test execution environments lacked the necessary frontend node dependencies (specifically `axe-core`) required by the layout validator to perform accessibility audits. This caused silent layout test validation failures or layout verification suite exclusions. In addition, Python import sorting, unused variables, and type compatibility definitions within newly introduced eCOA/ePRO gateway routing logic had minor inconsistencies that triggered linting failures under Ruff and ESLint gating checks.
 
