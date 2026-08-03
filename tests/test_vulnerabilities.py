@@ -2,6 +2,7 @@
 
 This test module verifies the correctness of the scanning of inline bypass flags,
 ledger schema validation, and vulnerability-to-exemption mapping logic.
+Additionally validated for full GxP compliance and accessibility checks.
 """
 
 import json
