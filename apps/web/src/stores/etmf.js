@@ -13,6 +13,28 @@ export const useEtmfStore = defineStore("etmf", {
 
   getters: {
     documents: (state) => state.documentsList,
+    folderLookup: (state) => {
+      const lookup = {};
+      const traverse = (node, parent = null) => {
+        if (!node) return;
+        const mapped = {
+          ...node,
+          parentCode: parent ? (parent.code || parent.id) : null,
+        };
+        // Key by both node id and code (if available) to guarantee instant O(1) lookups
+        if (node.id) {
+          lookup[node.id] = mapped;
+        }
+        if (node.code) {
+          lookup[node.code] = mapped;
+        }
+        if (node.children) {
+          node.children.forEach(child => traverse(child, node));
+        }
+      };
+      state.binderTree.forEach(node => traverse(node, null));
+      return lookup;
+    }
   },
 
   actions: {
