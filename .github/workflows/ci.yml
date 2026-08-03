@@ -14,6 +14,8 @@ jobs:
   style:
     name: Style and Lint Verification
     runs-on: ubuntu-latest
+    env:
+      RTM_DRAFT: "true"
     permissions:
       contents: read
     outputs:
@@ -285,7 +287,7 @@ jobs:
           fi
 
       - name: Run frontend unit tests
-        run: pnpm -r test
+        run: pnpm -r --workspace-concurrency=1 test
 
       - name: Run backend unit tests and coverage
         id: run_tests
