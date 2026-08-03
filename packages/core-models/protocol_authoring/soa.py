@@ -206,7 +206,22 @@ class TimingWindow(AuditFields):
     @model_validator(mode="after")
     def validate_conditional_timing_reason(self) -> TimingWindow:
         if self.conditional and (not self.reason or not self.reason.strip()):
-            raise ValueError("A non-empty 'reason' must be provided")
+            raise ValueError(
+                "A non-empty 'reason' must be provided when timing/applicability is conditional."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_numeric_ranges(self) -> TimingWindow:
+        if self.max_offset is not None and self.max_offset < 0:
+            raise ValueError("max_offset must not be negative.")
+        if self.min_offset is not None and self.max_offset is not None:
+            if self.min_offset > self.max_offset:
+                raise ValueError(
+                    "Field 'min_offset' must be less than or equal to 'max_offset'. min_offset must not be greater than max_offset."
+                )
+        if self.target_day is not None and self.target_day < 0:
+            raise ValueError("Field 'target_day' cannot be negative.")
         return self
 
 
@@ -312,6 +327,12 @@ class TimingWindowProperties(BaseModel):
         min_length=1,
         description="Label or duration specification of the timing window.",
     )
+    anchor_reference: str | None = Field(
+        None, description="Anchor reference, e.g. a visit name."
+    )
+    target_day: int | None = Field(None, description="Target scheduled day.")
+    min_offset: int | None = Field(None, description="Minimum day offset.")
+    max_offset: int | None = Field(None, description="Maximum day offset.")
     conditional: bool | None = Field(
         None,
         description="Flag indicating if the timing or applicability is conditional.",
@@ -325,7 +346,22 @@ class TimingWindowProperties(BaseModel):
     @model_validator(mode="after")
     def validate_conditional_timing_reason(self) -> TimingWindowProperties:
         if self.conditional and (not self.reason or not self.reason.strip()):
-            raise ValueError("A non-empty 'reason' must be provided")
+            raise ValueError(
+                "A non-empty 'reason' must be provided when timing/applicability is conditional."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_numeric_ranges(self) -> TimingWindowProperties:
+        if self.max_offset is not None and self.max_offset < 0:
+            raise ValueError("max_offset must not be negative.")
+        if self.min_offset is not None and self.max_offset is not None:
+            if self.min_offset > self.max_offset:
+                raise ValueError(
+                    "Field 'min_offset' must be less than or equal to 'max_offset'. min_offset must not be greater than max_offset."
+                )
+        if self.target_day is not None and self.target_day < 0:
+            raise ValueError("Field 'target_day' cannot be negative.")
         return self
 
 
@@ -582,3 +618,41 @@ class ActivityAssignmentRequest(BaseModel):
         elif self.activity_ids and not self.procedure_ids:
             self.procedure_ids = self.activity_ids
         return self
+
+
+class ArmReorderItem(BaseModel):
+    arm_id: str = Field(..., min_length=1)
+    sequence: int = Field(..., ge=1)
+
+
+class ArmReorderRequest(BaseModel):
+    arms: list[ArmReorderItem] = Field(...)
+
+
+class EpochReorderItem(BaseModel):
+    epoch_id: str = Field(..., min_length=1)
+    sequence: int = Field(..., ge=1)
+
+
+class EpochReorderRequest(BaseModel):
+    epochs: list[EpochReorderItem] = Field(...)
+
+
+class ProcedureReorderItem(BaseModel):
+    procedure_id: str = Field(..., min_length=1)
+    sequence: int = Field(..., ge=1)
+
+
+class ProcedureReorderRequest(BaseModel):
+    procedures: list[ProcedureReorderItem] = Field(...)
+
+
+class VisitToArmAssignmentRequest(BaseModel):
+    arm_id: str = Field(..., min_length=1)
+    visit_ids: list[str] = Field(..., min_length=1)
+
+
+class VisitToEpochAssignmentRequest(BaseModel):
+    epoch_id: str = Field(..., min_length=1)
+    visit_ids: list[str] = Field(..., min_length=1)
+
