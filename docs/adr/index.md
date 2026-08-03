@@ -163,6 +163,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-17: Interactive Mermaid Diagrams and Responsive Layout Controls](2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md)
 
 ### 7. DevOps, Tooling & CI/CD
+- [2026-08-03: Lightweight Path Pattern Boundary Linter](2026-08-03-lightweight-path-pattern-boundary-linter.md)
+- [2026-08-02: Dual-Mode Secret Scanner for Pre-Commit and CI Validation](2026-08-02-dual-mode-secret-scanner-for-pre-commit-and-ci-validation.md)
 - [2026-08-01: In-Process ASGI Routing with Live Databases](2026-08-01-in-process-asgi-routing-with-live-databases.md)
 - [2026-07-31: Upgrade Environments to Python 3.12](2026-07-31-upgrade-environments-to-python-312.md)
 
@@ -215,7 +217,9 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-01: Developer-Centric Architecture Alignment and Automated Drift Gating](2026-08-01-dev-centric-alignment-and-automated-drift-gating.md)
 - [2026-09-04: Dynamic Port Diagnostics and Fallback Realignment](2026-09-04-dynamic-port-diagnostics-and-fallback-realignment.md)
 - [2026-09-05: Extend Centralized Permission Matrix for eCOA and ePRO](2026-09-05-extend-centralized-permission-matrix-for-ecoa.md)
+- [2026-08-02: ADR-120: Refactor Signature Validations and Enforce Ruff S101](2026-08-02-refactor-signature-validations-and-enforce-ruff-s101.md)
 - [2026-08-02: Subject Portal Accessibility Auditing and Verification](2026-08-02-subject-portal-playwright-a11y-verification.md)
 - [2026-09-06: GxP Compliance Reporting CI Alignment and Local Dependency Configuration](2026-09-06-gxp-compliance-reporting-ci-alignment.md)
 - [2026-08-02: ADR-[NUMBER]: Enforce Strict Fail-Closed Secrets Validation and Narrow Scanner Exclusions](2026-08-02-enforce-strict-fail-closed-secrets-validation-and-narrow-scanner-exclusions.md)
 - [2026-09-06: Enforce Strict Fail-Closed Environment Rules and Narrow Scanner Exclusions](2026-09-06-enforce-strict-fail-closed-environment-rules.md)
+- [2026-09-07: Extend Centralized Permission Matrix for eCOA Diary Alert Actions](2026-09-07-extend-ecoa-diary-alert-permissions.md)

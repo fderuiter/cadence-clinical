@@ -41,9 +41,13 @@ automated pipelines.
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
+
+# Mark that the GxP sync process is running, so spawned scripts know they aren't run directly.
+os.environ["GXP_SYNC_RUNNING"] = "1"
 
 # Files that must be committed to keep CI green and compliant.
 GXP_DOCS = [
