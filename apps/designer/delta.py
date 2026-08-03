@@ -3474,6 +3474,29 @@ async def link_visit_to_procedure(
             return record["success"] if record else False
 
 
+async def assign_activities_to_visit(
+    driver,
+    study_version_id: str,
+    user_id: str,
+    change_reason: str,
+    visit_id: str,
+    procedure_ids: list[str],
+) -> bool:
+    """
+    Links multiple procedures (activities) to a visit, reusing link_visit_to_procedure.
+    """
+    for procedure_id in procedure_ids:
+        await link_visit_to_procedure(
+            driver,
+            study_version_id,
+            user_id,
+            change_reason,
+            visit_id,
+            procedure_id,
+        )
+    return True
+
+
 @with_transaction_retry()
 async def link_visit_or_procedure_to_timing(
     driver,
@@ -4380,6 +4403,126 @@ async def reorder_blocks(
                     user_id=user_id,
                     change_reason=change_reason,
                     new_order=idx + 1,
+                )
+
+            return True
+
+
+@with_transaction_retry()
+async def reorder_visits(
+    driver,
+    study_version_id: str,
+    user_id: str,
+    change_reason: str,
+    visit_ids_ordered: list[str],
+) -> bool:
+    """
+    Reorders visits by updating their sequence sequentially.
+    """
+    # 1. Perform mock path reorder
+    if driver is None:
+        assert_mock_study_version_mutable(study_version_id)
+        _init_mock_soa(study_version_id)
+        store = MOCK_SOA_DATA[study_version_id]["visits"]
+
+        # Validate that the supplied visit_ids exist and are not deleted or retired
+        for v_id in visit_ids_ordered:
+            if v_id not in store or store[v_id].get("is_deleted", False) or store[v_id].get("is_retired", False):
+                raise ValueError(f"Visit {v_id} not found or is deleted")
+
+        action_id = str(uuid.uuid4())
+        action_log = {
+            "id": action_id,
+            "user_id": user_id,
+            "change_reason": change_reason,
+            "timestamp": dt.datetime.now().isoformat(),
+            "type": "REORDER",
+            "before_order": {v_id: store[v_id].get("sequence") for v_id in visit_ids_ordered},
+            "after_order": {},
+        }
+
+        # Sequence-assign orders (sequence = idx + 1)
+        for idx, v_id in enumerate(visit_ids_ordered):
+            old_node = store[v_id]
+            new_node = {
+                **old_node,
+                "sequence": idx + 1,
+                "version_index": old_node.get("version_index", 1) + 1,
+                "created_by": user_id,
+                "created_at": dt.datetime.now().isoformat(),
+                "reason_for_change": change_reason,
+            }
+            store[v_id] = new_node
+            action_log["after_order"][v_id] = idx + 1
+
+        MOCK_SOA_DATA[study_version_id]["actions"].append(action_log)
+        return True
+
+    # 2. Neo4j transaction-safe atomic path reorder
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            await assert_study_version_mutable(tx, study_version_id)
+            # Take pessimistic lock on StudyVersion
+            await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
+                study_version_id=study_version_id,
+            )
+
+            # Retrieve existing active visits to validate
+            existing_res = await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_VISIT]->(v:Visit) WHERE coalesce(v.is_deleted, false) = false AND coalesce(v.is_retired, false) = false RETURN v.id as id",
+                study_version_id=study_version_id,
+            )
+            existing_ids = {r["id"] for r in await existing_res.all()}
+
+            for v_id in visit_ids_ordered:
+                if v_id not in existing_ids:
+                    raise ValueError(f"Visit {v_id} not found or is deleted")
+
+            action_id = str(uuid.uuid4())
+            # Create a single Action node for the entire batch operation
+            await tx.run(
+                """
+                CREATE (a:Action {
+                    id: $action_id,
+                    user_id: $user_id,
+                    change_reason: $change_reason,
+                    timestamp: datetime(),
+                    type: "REORDER"
+                })
+                """,
+                action_id=action_id,
+                user_id=user_id,
+                change_reason=change_reason,
+            )
+
+            # Update each visit to its new rank position
+            for idx, v_id in enumerate(visit_ids_ordered):
+                query = """
+                MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_VISIT]->(old_v:Visit {id: $visit_id})
+                MATCH (a:Action {id: $action_id})
+                CREATE (new_v:Visit {id: $visit_id})
+                SET new_v += properties(old_v)
+                SET new_v.sequence = $new_sequence
+                SET new_v.version_index = old_v.version_index + 1
+                SET new_v.created_at = datetime()
+                SET new_v.created_by = $user_id
+                SET new_v.reason_for_change = $change_reason
+                CREATE (sv)-[:HAS_VISIT]->(new_v)
+                DELETE r
+                CREATE (new_v)-[:PREVIOUS_VERSION]->(old_v)
+                CREATE (a)-[:AFTER]->(new_v)
+                CREATE (a)-[:BEFORE]->(old_v)
+                """
+                await tx.run(
+                    query,
+                    study_version_id=study_version_id,
+                    visit_id=v_id,
+                    action_id=action_id,
+                    user_id=user_id,
+                    change_reason=change_reason,
+                    new_sequence=idx + 1,
                 )
 
             return True
