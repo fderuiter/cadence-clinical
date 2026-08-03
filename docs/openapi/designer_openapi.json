@@ -5672,6 +5672,426 @@
         }
       }
     },
+    "/api/v1/studies/{study_id}/versions/{version_id}/arms/reorder": {
+      "post": {
+        "summary": "Reorder Arms Endpoint",
+        "operationId": "reorder_arms_endpoint_api_v1_studies__study_id__versions__version_id__arms_reorder_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArmReorderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Reorder Arms Endpoint Api V1 Studies  Study Id  Versions  Version Id  Arms Reorder Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{study_id}/versions/{version_id}/epochs/reorder": {
+      "post": {
+        "summary": "Reorder Epochs Endpoint",
+        "operationId": "reorder_epochs_endpoint_api_v1_studies__study_id__versions__version_id__epochs_reorder_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EpochReorderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Reorder Epochs Endpoint Api V1 Studies  Study Id  Versions  Version Id  Epochs Reorder Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{study_id}/versions/{version_id}/visits/reorder": {
+      "post": {
+        "summary": "Reorder Visits Endpoint",
+        "operationId": "reorder_visits_endpoint_api_v1_studies__study_id__versions__version_id__visits_reorder_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VisitReorderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Reorder Visits Endpoint Api V1 Studies  Study Id  Versions  Version Id  Visits Reorder Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{study_id}/versions/{version_id}/procedures/reorder": {
+      "post": {
+        "summary": "Reorder Procedures Endpoint",
+        "operationId": "reorder_procedures_endpoint_api_v1_studies__study_id__versions__version_id__procedures_reorder_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcedureReorderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Reorder Procedures Endpoint Api V1 Studies  Study Id  Versions  Version Id  Procedures Reorder Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{study_id}/versions/{version_id}/assignments/activities": {
+      "post": {
+        "summary": "Assign Activities To Visit Endpoint",
+        "operationId": "assign_activities_to_visit_endpoint_api_v1_studies__study_id__versions__version_id__assignments_activities_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivityAssignmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Assign Activities To Visit Endpoint Api V1 Studies  Study Id  Versions  Version Id  Assignments Activities Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{study_id}/versions/{version_id}/assignments/arms": {
+      "post": {
+        "summary": "Assign Visits To Arm Endpoint",
+        "operationId": "assign_visits_to_arm_endpoint_api_v1_studies__study_id__versions__version_id__assignments_arms_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VisitToArmAssignmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Assign Visits To Arm Endpoint Api V1 Studies  Study Id  Versions  Version Id  Assignments Arms Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{study_id}/versions/{version_id}/assignments/epochs": {
+      "post": {
+        "summary": "Assign Visits To Epoch Endpoint",
+        "operationId": "assign_visits_to_epoch_endpoint_api_v1_studies__study_id__versions__version_id__assignments_epochs_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VisitToEpochAssignmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Assign Visits To Epoch Endpoint Api V1 Studies  Study Id  Versions  Version Id  Assignments Epochs Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/studies/{study_id}/versions/diff": {
       "get": {
         "summary": "Get Versions Diff Endpoint",
@@ -5899,6 +6319,34 @@
   },
   "components": {
     "schemas": {
+      "ActivityAssignmentRequest": {
+        "properties": {
+          "visit_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Visit Id"
+          },
+          "procedure_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Procedure Ids"
+          },
+          "activity_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Activity Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "visit_id"
+        ],
+        "title": "ActivityAssignmentRequest"
+      },
       "ActivityReport": {
         "properties": {
           "epoch_id": {
@@ -6230,6 +6678,42 @@
         ],
         "title": "ArmPayload",
         "description": "Arm-specific payload validation containing arm attributes."
+      },
+      "ArmReorderItem": {
+        "properties": {
+          "arm_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Arm Id"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Sequence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "arm_id",
+          "sequence"
+        ],
+        "title": "ArmReorderItem"
+      },
+      "ArmReorderRequest": {
+        "properties": {
+          "arms": {
+            "items": {
+              "$ref": "#/components/schemas/ArmReorderItem"
+            },
+            "type": "array",
+            "title": "Arms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "arms"
+        ],
+        "title": "ArmReorderRequest"
       },
       "AttritionStep": {
         "properties": {
@@ -7803,6 +8287,42 @@
         "title": "EpochProperties",
         "description": "Properties specific to a Study Epoch."
       },
+      "EpochReorderItem": {
+        "properties": {
+          "epoch_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Epoch Id"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Sequence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "epoch_id",
+          "sequence"
+        ],
+        "title": "EpochReorderItem"
+      },
+      "EpochReorderRequest": {
+        "properties": {
+          "epochs": {
+            "items": {
+              "$ref": "#/components/schemas/EpochReorderItem"
+            },
+            "type": "array",
+            "title": "Epochs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "epochs"
+        ],
+        "title": "EpochReorderRequest"
+      },
       "ExpressionNode-Input": {
         "properties": {
           "type": {
@@ -8789,6 +9309,42 @@
         "type": "object",
         "title": "ProcedureProperties",
         "description": "Properties specific to a clinical Procedure / Activity."
+      },
+      "ProcedureReorderItem": {
+        "properties": {
+          "procedure_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Procedure Id"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Sequence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "procedure_id",
+          "sequence"
+        ],
+        "title": "ProcedureReorderItem"
+      },
+      "ProcedureReorderRequest": {
+        "properties": {
+          "procedures": {
+            "items": {
+              "$ref": "#/components/schemas/ProcedureReorderItem"
+            },
+            "type": "array",
+            "title": "Procedures"
+          }
+        },
+        "type": "object",
+        "required": [
+          "procedures"
+        ],
+        "title": "ProcedureReorderRequest"
       },
       "PromoteRequest": {
         "properties": {
@@ -10687,6 +11243,88 @@
         ],
         "title": "VisitProperties",
         "description": "Properties specific to a Visit / Encounter."
+      },
+      "VisitReorderItem": {
+        "properties": {
+          "visit_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Visit Id"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Sequence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "visit_id",
+          "sequence"
+        ],
+        "title": "VisitReorderItem"
+      },
+      "VisitReorderRequest": {
+        "properties": {
+          "visits": {
+            "items": {
+              "$ref": "#/components/schemas/VisitReorderItem"
+            },
+            "type": "array",
+            "title": "Visits"
+          }
+        },
+        "type": "object",
+        "required": [
+          "visits"
+        ],
+        "title": "VisitReorderRequest"
+      },
+      "VisitToArmAssignmentRequest": {
+        "properties": {
+          "arm_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Arm Id"
+          },
+          "visit_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Visit Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "arm_id",
+          "visit_ids"
+        ],
+        "title": "VisitToArmAssignmentRequest"
+      },
+      "VisitToEpochAssignmentRequest": {
+        "properties": {
+          "epoch_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Epoch Id"
+          },
+          "visit_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Visit Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "epoch_id",
+          "visit_ids"
+        ],
+        "title": "VisitToEpochAssignmentRequest"
       },
       "apps__designer__library__CreateVisitRequest": {
         "properties": {
