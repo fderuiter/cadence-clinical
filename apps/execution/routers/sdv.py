@@ -13,10 +13,9 @@ from execution.sdv_transport_models import (
     BulkSdvSignOffRequest,
     BulkSdvSignOffResponse,
     SdvFlagRequest,
-    SdvResolveRequest,
     SdvFlagResponse,
+    SdvResolveRequest,
     SdvResolveResponse,
-    SdvFlagSeverity,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, model_validator
@@ -691,7 +690,30 @@ async def sdv_flag(
     principal: Principal = Depends(require_permission("sdv:flag")),
     _study_scope: Principal = Depends(require_study_scope()),
 ) -> SdvFlagResponse:
-    """Flag clinical observations with a mandatory reason."""
+    """Flag clinical observations with a mandatory reason.
+
+    This endpoint allows authorized monitors/CRAs to flag clinical observations
+    associated with a specific study and subject. It enforces strict RBAC
+    and GxP 21 CFR Part 11 compliant audit logging.
+
+    Args:
+        payload (SdvFlagRequest): The request payload containing study, subject,
+            and the specific target fields/observations to flag, along with
+            mandatory reasons and severities.
+        principal (Principal): The authenticated security principal representing the
+            user calling the endpoint. Must have 'sdv:flag' permission.
+        _study_scope (Principal): Required Dependency that checks for appropriate
+            study scoping.
+
+    Returns:
+        SdvFlagResponse: Response containing flag registration metadata,
+            the content cryptographic digest, and audit transaction identifier.
+
+    Raises:
+        HTTPException: 400 Bad Request if mandatory parameters are missing or blank,
+            403 Forbidden if the user lacks access to the study or site, or 404
+            Not Found if the subject or clinical observations do not exist.
+    """
     if not payload.reason_for_change or not payload.reason_for_change.strip():
         raise HTTPException(
             status_code=400, detail="GxP Part 11: reason_for_change cannot be blank."
@@ -845,7 +867,30 @@ async def sdv_resolve(
     principal: Principal = Depends(require_permission("sdv:flag")),
     _study_scope: Principal = Depends(require_study_scope()),
 ) -> SdvResolveResponse:
-    """Resolve flags on clinical observations."""
+    """Resolve flags on clinical observations.
+
+    This endpoint allows authorized monitors/CRAs to resolve previously flagged
+    clinical observations. It clears the flagging state and logs the action
+    securely within a GxP-compliant transaction.
+
+    Args:
+        payload (SdvResolveRequest): The request payload containing study, subject,
+            and the target observation IDs to resolve, as well as a mandatory
+            reason for the change.
+        principal (Principal): The authenticated security principal representing the
+            user calling the endpoint. Must have 'sdv:flag' permission.
+        _study_scope (Principal): Required Dependency that checks for appropriate
+            study scoping.
+
+    Returns:
+        SdvResolveResponse: Response containing resolution registration metadata,
+            the content cryptographic digest, and audit transaction identifier.
+
+    Raises:
+        HTTPException: 400 Bad Request if mandatory parameters or targets are missing,
+            403 Forbidden if the user lacks access, or 404 Not Found if the subject
+            or observations do not exist.
+    """
     if not payload.reason_for_change or not payload.reason_for_change.strip():
         raise HTTPException(
             status_code=400, detail="GxP Part 11: reason_for_change cannot be blank."
@@ -859,7 +904,9 @@ async def sdv_resolve(
         resolve_ids.extend([t.target_id for t in payload.targets])
 
     if not resolve_ids:
-        raise HTTPException(status_code=400, detail="No target IDs specified to resolve.")
+        raise HTTPException(
+            status_code=400, detail="No target IDs specified to resolve."
+        )
 
     # Check study access
     if not can_access_study(principal, payload.study_id):
