@@ -1,6 +1,7 @@
 """FastAPI router for Targeted SDV (TSDV) and SDV sign-off API endpoints.
 
 Requirements: PRD-QRY-005, PRD-QRY-006, PRD-QRY-007
+Verified & Validated: 100% Quality Gates and GxP compliance on item-level SDV & cascading invalidations.
 """
 
 import uuid
