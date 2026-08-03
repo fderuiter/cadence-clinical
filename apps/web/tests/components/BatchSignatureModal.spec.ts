@@ -18,13 +18,13 @@ describe("BatchSignatureModal.vue", () => {
   beforeEach(() => {
     pinia = createPinia();
     setActivePinia(pinia);
-    
+
     // Spy on the real apiClient directly
     vi.spyOn(apiClient, "get").mockResolvedValue([]);
     vi.spyOn(apiClient, "post").mockResolvedValue({});
     vi.spyOn(apiClient, "put").mockResolvedValue({});
     vi.spyOn(apiClient, "delete").mockResolvedValue({});
-    
+
     vi.clearAllMocks();
   });
 
