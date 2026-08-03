@@ -915,3 +915,96 @@ def test_notifications_negative_security_paths():
     resp = client.get("/api/v1/notifications", headers=headers_spoof)
     assert resp.status_code == 401
     assert "Invalid gateway signature" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_missing_diary_notification_creation_and_auditing():
+    """
+    Verify notification creation and GxP audit fields for the MISSING_DIARY_ENTRY event type.
+    """
+    client = TestClient(app)
+    acting_user = "diary_verifier_user"
+    change_reason = "Audit reason for missing diary submission check"
+    headers = get_auth_headers(
+        user_id=acting_user,
+        roles="admin",
+        change_reason=change_reason,
+    )
+
+    payload = {
+        "recipient_user_id": "subject_bob",
+        "recipient_role": "subject",
+        "category": "ALERTS",
+        "priority": "HIGH",
+        "channels": "IN_APP",
+        "message_content": "Your diary entry for yesterday is missing. Please complete it.",
+        "related_entity_id": "diary_entry_999",
+        "related_entity_type": "ecoa_diary",
+    }
+
+    # POST the payload to /api/v1/notifications with a signed X-Change-Reason header
+    response = client.post("/api/v1/notifications", json=payload, headers=headers)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["id"] is not None
+    notification_id = data["id"]
+
+    # Query the Notification row through db_manager.get_session_maker()
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(Notification).where(Notification.id == notification_id)
+        res = await session.execute(stmt)
+        notification = res.scalars().first()
+
+        assert notification is not None
+        assert notification.category == "ALERTS"
+        assert notification.related_entity_type == "ecoa_diary"
+        assert notification.related_entity_id == "diary_entry_999"
+
+        # GxP audit fields assertions
+        assert notification.created_by == acting_user
+        assert notification.reason_for_change == change_reason
+        assert notification.version_index == 1
+
+        # Query NotificationAuditLog filtered by action == "NOTIFICATION_CREATE"
+        stmt_audit = select(NotificationAuditLog).where(
+            NotificationAuditLog.action == "NOTIFICATION_CREATE"
+        )
+        res_audit = await session.execute(stmt_audit)
+        audit_entries = res_audit.scalars().all()
+
+        # Assert one entry exists and its details references the created notification id.
+        matching_audits = [entry for entry in audit_entries if notification_id in entry.details]
+        assert len(matching_audits) == 1
+        assert matching_audits[0].user_id == acting_user
+
+
+def test_missing_diary_template_selection_and_rendering():
+    """
+    Verify template-selection and rendering for the MISSING_DIARY_ENTRY event type.
+    """
+    from apps.notifications.services.email_renderer import (
+        get_template_name_for_event,
+        render_email_template,
+    )
+
+    # Call get_template_name_for_event("MISSING_DIARY_ENTRY")
+    template_name = get_template_name_for_event("MISSING_DIARY_ENTRY")
+
+    # Assert the returned template name is the diary-specific template
+    assert template_name == "missing_diary_entry.html.j2"
+
+    # Assert render_email_template produces a non-empty body for a representative diary payload
+    context = {
+        "study_id": "STUDY-ABC-123",
+        "payload": {
+            "subject_id": "SUB-456",
+            "diary_date": "2023-10-27",
+        }
+    }
+    rendered_body = render_email_template(template_name, context)
+    assert rendered_body is not None
+    assert len(rendered_body.strip()) > 0
+    assert "Missing Diary Entry Alert" in rendered_body
+    assert "STUDY-ABC-123" in rendered_body
+    assert "SUB-456" in rendered_body
+    assert "2023-10-27" in rendered_body
