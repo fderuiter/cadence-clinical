@@ -961,7 +961,7 @@ async function submitUpload() {
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 24px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9; /* deid-ignore */
   padding-bottom: 16px;
 }
 
@@ -1005,12 +1005,12 @@ async function submitUpload() {
   color: #475569;
   font-weight: 600;
   padding: 12px 16px;
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 2px solid #e2e8f0; /* deid-ignore */
 }
 
 .documents-table td {
   padding: 14px 16px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0; /* deid-ignore */
   color: #334155;
   vertical-align: middle;
 }
@@ -1044,7 +1044,7 @@ async function submitUpload() {
 .taxonomy-pill {
   font-family: monospace;
   font-size: 0.8rem;
-  background-color: #f1f5f9;
+  background-color: #f1f5f9; /* deid-ignore */
   color: #475569;
   padding: 3px 8px;
   border-radius: 4px;
@@ -1068,7 +1068,7 @@ async function submitUpload() {
 }
 
 .status-draft {
-  background-color: #f1f5f9;
+  background-color: #f1f5f9; /* deid-ignore */
   color: #64748b;
 }
 
@@ -1088,7 +1088,7 @@ async function submitUpload() {
 }
 
 .status-default {
-  background-color: #e2e8f0;
+  background-color: #e2e8f0; /* deid-ignore */
   color: #475569;
 }
 
@@ -1133,7 +1133,7 @@ async function submitUpload() {
   justify-content: space-between;
   align-items: center;
   padding: 16px 24px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0; /* deid-ignore */
 }
 
 .modal-header h3 {
@@ -1272,7 +1272,7 @@ async function submitUpload() {
 }
 
 .form-control[readonly] {
-  background-color: #f1f5f9;
+  background-color: #f1f5f9; /* deid-ignore */
   color: #64748b;
   cursor: not-allowed;
 }
@@ -1291,7 +1291,7 @@ async function submitUpload() {
   justify-content: flex-end;
   gap: 12px;
   margin-top: 24px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid #e2e8f0; /* deid-ignore */
   padding-top: 16px;
 }
 
@@ -1355,7 +1355,7 @@ async function submitUpload() {
   align-items: center;
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid #e2e8f0; /* deid-ignore */
 }
 
 .pagination-info {
@@ -1388,7 +1388,7 @@ async function submitUpload() {
 }
 
 .page-num-btn:hover {
-  background-color: #f1f5f9;
+  background-color: #f1f5f9; /* deid-ignore */
   border-color: #cbd5e1;
 }
 
@@ -1417,7 +1417,7 @@ async function submitUpload() {
 .documents-table td.cell-active {
   outline: 2px solid #0284c7; /* High contrast sky/blue */
   outline-offset: -2px;
-  background-color: #f0f9ff !important;
+  background-color: #f0f9ff !important; /* deid-ignore */
 }
 
 .inline-edit-container {
