@@ -1,84 +1,204 @@
 """
-Schedule of Activities (SoA) Pydantic models for the Designer service.
+Typed Schedule of Activities (SoA) contracts and models for Designer module.
 
-To satisfy GxP/SDLC separation of concerns and avoid code duplication,
-all core SoA domain and request contracts are defined centrally in the
-`packages/core-models` package and imported here.
+Defines Pydantic v2 entity-specific contracts for StudyArm, Epoch, Visit, Procedure, TimingWindow,
+relationships, audit metadata, and projection cells.
 """
 
-from pydantic import BaseModel
+from datetime import UTC, datetime
+from typing import Literal
 
-import packages  # noqa: F401 - Injects packages/core-models into sys.path
+from pydantic import BaseModel, Field, model_validator
 
-# Try to import from protocol_render if available, otherwise define placeholders to ensure robust parsing
+# Import the core models from protocol_authoring package
+from protocol_authoring import (
+    ActivityAssignmentRequest,
+    AuditMetadata,
+    CreateEpochRequest,
+    CreateProcedureRequest,
+    CreateStudyArmRequest,
+    CreateTimingWindowRequest,
+    CreateVisitRequest,
+    Epoch,
+    EpochProperties,
+    LinkArmApplicabilityRequest,
+    LinkEpochVisitRequest,
+    LinkTimingRequest,
+    LinkVisitProcedureRequest,
+    Procedure,
+    ProcedureProperties,
+    ProjectionCell,
+    SoAEntityCreatedResponse,
+    SoAEntityDetail,
+    SoALinkResponse,
+    SoAMatrixProjectionResponse,
+    StudyArm,
+    StudyArmProperties,
+    TimingWindow as CoreTimingWindow, # Subclassed below to add validation rules
+    UpdateEpochRequest,
+    UpdateProcedureRequest,
+    UpdateStudyArmRequest,
+    UpdateTimingWindowRequest,
+    UpdateVisitRequest,
+    Visit,
+    VisitProperties,
+    VisitReorderItem,
+    VisitReorderRequest,
+)
+
+# Import header views from protocol_render
 try:
     from protocol_render import (
         SoAHeaderArm,
         SoAHeaderEncounter,
         SoAHeaderEpoch,
         SoARowView,
+        SoACellView,
     )
 except ImportError:
-    # Minimal fallback Pydantic definitions if not in PYTHONPATH during static analysis
-    class SoAHeaderEpoch(BaseModel):
-        epoch_id: str
-        epoch_name: str
-        sequence: int
-        arm_id: str | None = None
+    try:
+        from protocol_render.models import (
+            SoAHeaderArm,
+            SoAHeaderEncounter,
+            SoAHeaderEpoch,
+            SoARowView,
+            SoACellView,
+        )
+    except ImportError:
+        # Fallbacks if not in path during initialization
+        class SoAHeaderEpoch(BaseModel):
+            epoch_id: str
+            epoch_name: str
+            sequence: int
+            arm_id: str | None = None
 
-    class SoAHeaderEncounter(BaseModel):
-        encounter_id: str
-        encounter_name: str
-        epoch_id: str
-        sequence: int
-        arm_id: str | None = None
+        class SoAHeaderEncounter(BaseModel):
+            encounter_id: str
+            encounter_name: str
+            epoch_id: str
+            sequence: int
+            arm_id: str | None = None
 
-    class SoACellView(BaseModel):
-        activity_id: str
-        encounter_id: str
-        epoch_id: str
-        is_applicable: bool
-        details: str | None = None
-        arm_id: str | None = None
-        derived_from_soa: bool = False
+        class SoACellView(BaseModel):
+            activity_id: str
+            encounter_id: str
+            epoch_id: str
+            is_applicable: bool
+            details: str | None = None
+            arm_id: str | None = None
+            derived_from_soa: bool = False
 
-    class SoARowView(BaseModel):
-        activity_id: str
-        activity_name: str
-        cells: list[SoACellView] = []
+        class SoARowView(BaseModel):
+            activity_id: str
+            activity_name: str
+            cells: list[SoACellView] = []
 
-    class SoAHeaderArm(BaseModel):
-        arm_id: str
-        arm_name: str
+        class SoAHeaderArm(BaseModel):
+            arm_id: str
+            arm_name: str
 
 
-# Centralized imports from the core-models package to completely eliminate code duplication
-import protocol_authoring.soa as _soa
+class TimingWindow(CoreTimingWindow):
+    """
+    Pydantic v2 model for a Timing Window with local range validation rules.
+    """
 
-_names_str = """
-ActivityAssignmentRequest ArmReorderItem ArmReorderRequest AuditMetadata
-CreateEpochRequest CreateProcedureRequest CreateStudyArmRequest CreateTimingWindowRequest
-CreateVisitRequest Epoch EpochProperties EpochReorderItem EpochReorderRequest
-LinkArmApplicabilityRequest LinkEpochVisitRequest LinkTimingRequest LinkVisitProcedureRequest
-Procedure ProcedureProperties ProcedureReorderItem ProcedureReorderRequest
-ProjectionCell SoAEntityCreatedResponse SoAEntityDetail SoALinkResponse
-SoAMatrixProjectionResponse StudyArm StudyArmProperties TimingWindow
-TimingWindowProperties UpdateEpochRequest UpdateProcedureRequest UpdateStudyArmRequest
-UpdateTimingWindowRequest UpdateVisitRequest Visit VisitProperties
-VisitReorderItem VisitReorderRequest VisitToArmAssignmentRequest VisitToEpochAssignmentRequest
-"""
+    @model_validator(mode="after")
+    def validate_numeric_ranges_domain(self) -> "TimingWindow":
+        if self.max_offset is not None and self.max_offset < 0:
+            raise ValueError("max_offset must not be negative.")
+        if self.min_offset is not None and self.max_offset is not None:
+            if self.min_offset > self.max_offset:
+                raise ValueError(
+                    "Field 'min_offset' must be less than or equal to 'max_offset'. min_offset must not be greater than max_offset."
+                )
+        if self.target_day is not None and self.target_day < 0:
+            raise ValueError("Field 'target_day' cannot be negative.")
+        return self
 
-_exported_models = _names_str.strip().split()
 
-for _name in _exported_models:
-    globals()[_name] = getattr(_soa, _name)
+class TimingWindowProperties(BaseModel):
+    """
+    Properties specific to a Timing Window. Enforces cross-field conditional justification.
+    """
 
-__all__ = sorted(
-    _exported_models
-    + [
-        "SoAHeaderArm",
-        "SoAHeaderEncounter",
-        "SoAHeaderEpoch",
-        "SoARowView",
-    ]
-)
+    name: str = Field(
+        ...,
+        min_length=1,
+        description="Label or duration specification of the timing window.",
+    )
+    anchor_reference: str | None = Field(
+        None, description="Anchor reference, e.g. a visit name."
+    )
+    target_day: int | None = Field(None, description="Target scheduled day.")
+    min_offset: int | None = Field(None, description="Minimum day offset.")
+    max_offset: int | None = Field(None, description="Maximum day offset.")
+    conditional: bool | None = Field(
+        None,
+        description="Flag indicating if the timing or applicability is conditional.",
+    )
+    reason: str | None = Field(
+        None,
+        min_length=1,
+        description="Mandatory justification reason required if conditional is True.",
+    )
+
+    @model_validator(mode="after")
+    def validate_conditional_timing_reason(self) -> "TimingWindowProperties":
+        if self.conditional and (not self.reason or not self.reason.strip()):
+            raise ValueError(
+                "A non-empty 'reason' must be provided when timing/applicability is conditional."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_numeric_ranges(self) -> "TimingWindowProperties":
+        if self.max_offset is not None and self.max_offset < 0:
+            raise ValueError("max_offset must not be negative.")
+        if self.min_offset is not None and self.max_offset is not None:
+            if self.min_offset > self.max_offset:
+                raise ValueError(
+                    "Field 'min_offset' must be less than or equal to 'max_offset'. min_offset must not be greater than max_offset."
+                )
+        if self.target_day is not None and self.target_day < 0:
+            raise ValueError("Field 'target_day' cannot be negative.")
+        return self
+
+
+# --- Reordering and Assignment Request Contracts specific to designer ---
+
+class ArmReorderItem(BaseModel):
+    arm_id: str = Field(..., min_length=1)
+    sequence: int = Field(..., ge=1)
+
+
+class ArmReorderRequest(BaseModel):
+    arms: list[ArmReorderItem] = Field(...)
+
+
+class EpochReorderItem(BaseModel):
+    epoch_id: str = Field(..., min_length=1)
+    sequence: int = Field(..., ge=1)
+
+
+class EpochReorderRequest(BaseModel):
+    epochs: list[EpochReorderItem] = Field(...)
+
+
+class ProcedureReorderItem(BaseModel):
+    procedure_id: str = Field(..., min_length=1)
+    sequence: int = Field(..., ge=1)
+
+
+class ProcedureReorderRequest(BaseModel):
+    procedures: list[ProcedureReorderItem] = Field(...)
+
+
+class VisitToArmAssignmentRequest(BaseModel):
+    arm_id: str = Field(..., min_length=1)
+    visit_ids: list[str] = Field(..., min_length=1)
+
+
+class VisitToEpochAssignmentRequest(BaseModel):
+    epoch_id: str = Field(..., min_length=1)
+    visit_ids: list[str] = Field(..., min_length=1)
