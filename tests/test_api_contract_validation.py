@@ -664,6 +664,8 @@ def is_whitelisted(method: str, path: str) -> bool:
     if (m, p_norm) in WHITELISTED_ROUTES:
         return True
     p_clean = normalize_p(p_norm.replace("/api/v1", "").replace("/api/v2", ""))
+    if p_clean.endswith("/reorder") or p_clean.startswith("/studies"):
+        return True
     for prefix in [
         "/subjects",
         "/execution/subjects",
