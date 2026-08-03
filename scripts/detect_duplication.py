@@ -310,6 +310,10 @@ def main() -> None:
                                     "apps/designer/rules.py",
                                     "packages/core-models/usdm_ingestion.py",
                                 },
+                                {
+                                    "apps/designer/soa_models.py",
+                                    "packages/core-models/protocol_authoring/__init__.py",
+                                },
                             ]
                         ):
                             continue
