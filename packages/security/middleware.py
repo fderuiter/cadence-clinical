@@ -482,7 +482,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
             current_tenant_id.reset(tenant_token)
 
 
-def require_gateway_permission(required_permission: "PermissionEnum") -> Callable:
+def require_gateway_permission(required_permission: PermissionEnum) -> Callable:
     """FastAPI route dependency to enforce a specific granular PermissionEnum.
 
     Args:

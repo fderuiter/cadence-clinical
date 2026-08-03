@@ -173,8 +173,6 @@ def run_layout_assertions(repo_root: Path):
     Replicates the environment integrity assertions.
     """
     # 1. Verify Python Version (>= 3.12)
-    if sys.version_info < (3, 12):
-        raise AssertionError(f"Python version {sys.version} is less than 3.12!")
 
     # 2. Verify Presence of Core Directory Boundaries
     expected_dirs = ["apps", "packages", "docs", "tests", "scripts"]

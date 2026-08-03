@@ -87,6 +87,124 @@ async def test_lab_master_migrations():
 
 
 @pytest.mark.asyncio
+async def test_migration_upgrade_and_idempotency_explicit():
+    """
+    Task 3: Confirm the migration creates the catalog tables and backfills the reference-range audit columns.
+    Assert run_migrations() creates lab_test_masters and lab_unit_conversions with version_index,
+    and that lab_reference_ranges gains created_at, created_by, reason_for_change, and version_index.
+    Assert that the migration is idempotent.
+    """
+    from sqlalchemy import text
+
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+        db_path = tmp.name
+
+    try:
+        db_url = f"sqlite+aiosqlite:///{db_path}"
+        engine = create_async_engine(db_url)
+
+        # 1. Create legacy schema for lab_reference_ranges
+        async with engine.begin() as conn:
+            await conn.execute(
+                text("""
+                CREATE TABLE lab_reference_ranges (
+                    id VARCHAR(36) PRIMARY KEY,
+                    study_id VARCHAR(255) NOT NULL,
+                    test_code VARCHAR(100) NOT NULL,
+                    test_name VARCHAR(255) NOT NULL,
+                    lab_source VARCHAR(50) NOT NULL,
+                    site_id VARCHAR(255),
+                    unit VARCHAR(50),
+                    normalized_unit VARCHAR(50),
+                    sex VARCHAR(50),
+                    age_low FLOAT,
+                    age_high FLOAT,
+                    range_low FLOAT,
+                    range_high FLOAT,
+                    critical_low FLOAT,
+                    critical_high FLOAT,
+                    version INTEGER,
+                    is_deleted BOOLEAN
+                );
+                """)
+            )
+            # Insert a legacy row
+            await conn.execute(
+                text("""
+                INSERT INTO lab_reference_ranges (
+                    id, study_id, test_code, test_name, lab_source, version, is_deleted
+                ) VALUES (
+                    'legacy-r-1', 'STUDY-GX-9', 'WBC', 'White Blood Cells', 'CENTRAL', 1, 0
+                );
+                """)
+            )
+        await engine.dispose()
+
+        # 2. Run migrations first time
+        await run_migrations(db_url)
+
+        # 3. Assert schema gains columns and creates tables
+        engine = create_async_engine(db_url)
+        try:
+            async with engine.connect() as conn:
+                def get_columns_explicit(sync_conn):
+                    insp = inspect(sync_conn)
+                    tables = insp.get_table_names()
+                    ref_cols = [c["name"] for c in insp.get_columns("lab_reference_ranges")]
+                    master_cols = [c["name"] for c in insp.get_columns("lab_test_masters")]
+                    conv_cols = [c["name"] for c in insp.get_columns("lab_unit_conversions")]
+                    return tables, ref_cols, master_cols, conv_cols
+
+                tables, ref_cols, master_cols, conv_cols = await conn.run_sync(get_columns_explicit)
+
+                # Assert tables exist
+                assert "lab_test_masters" in tables
+                assert "lab_unit_conversions" in tables
+
+                # Assert audit columns in lab_reference_ranges
+                assert "created_at" in ref_cols
+                assert "created_by" in ref_cols
+                assert "reason_for_change" in ref_cols
+                assert "version_index" in ref_cols
+
+                # Assert version_index in both catalog tables
+                assert "version_index" in master_cols
+                assert "version_index" in conv_cols
+
+                # Assert legacy row gained defaulted version_index=1
+                row = (await conn.execute(
+                    text("SELECT version_index FROM lab_reference_ranges WHERE id = 'legacy-r-1';")
+                )).fetchone()
+                assert row is not None
+                assert row[0] == 1
+
+        finally:
+            await engine.dispose()
+
+        # 4. Run migrations second time (idempotency check)
+        await run_migrations(db_url)
+
+        # 5. Assert idempotency (did not fail, columns did not duplicate)
+        engine = create_async_engine(db_url)
+        try:
+            async with engine.connect() as conn:
+                tables, ref_cols, master_cols, conv_cols = await conn.run_sync(get_columns_explicit)
+                assert "lab_test_masters" in tables
+                assert "lab_unit_conversions" in tables
+
+                # Check exact count of version_index column (it should be exactly 1, not duplicate)
+                assert ref_cols.count("version_index") == 1
+                assert master_cols.count("version_index") == 1
+                assert conv_cols.count("version_index") == 1
+        finally:
+            await engine.dispose()
+
+    finally:
+        if os.path.exists(db_path):
+            os.remove(db_path)
+
+
+@pytest.mark.asyncio
 async def test_lab_reference_range_migration_upgrade_and_idempotency():
     """
     Assert that migration upgrade adds columns to lab_reference_ranges,

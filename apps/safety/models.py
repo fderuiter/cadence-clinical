@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, event, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -105,7 +105,7 @@ class SAEReconciliationRun(Base):
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
-    discrepancies: Mapped[list["SAEDiscrepancy"]] = relationship(
+    discrepancies: Mapped[list[SAEDiscrepancy]] = relationship(
         "SAEDiscrepancy", back_populates="run", cascade="all, delete-orphan"
     )
 
@@ -141,7 +141,7 @@ class SAEDiscrepancy(Base):
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
-    run: Mapped["SAEReconciliationRun"] = relationship(
+    run: Mapped[SAEReconciliationRun] = relationship(
         "SAEReconciliationRun", back_populates="discrepancies"
     )
 
@@ -173,7 +173,7 @@ class SAEReconciliationJob(Base):
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
-    run: Mapped[Optional["SAEReconciliationRun"]] = relationship("SAEReconciliationRun")
+    run: Mapped[SAEReconciliationRun | None] = relationship("SAEReconciliationRun")
 
     @property
     def error_message(self) -> str | None:
