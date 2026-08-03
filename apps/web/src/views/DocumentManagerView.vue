@@ -47,7 +47,8 @@ onMounted(() => {
   if (route && route.query) {
     if (route.query.studyId) clinicalStore.activeStudyId = route.query.studyId;
     if (route.query.siteId) clinicalStore.activeSiteId = route.query.siteId;
-    if (route.query.subjectId) clinicalStore.activeSubjectId = route.query.subjectId;
+    if (route.query.subjectId)
+      clinicalStore.activeSubjectId = route.query.subjectId;
     if (route.query.visitId) clinicalStore.activeVisitId = route.query.visitId;
   }
   etmfStore.fetchBinderTree();

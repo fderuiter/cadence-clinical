@@ -3,13 +3,13 @@ import { mount } from "@vue/test-utils";
 import { ref, defineComponent, nextTick } from "vue";
 import { useFocusTrap } from "../src/composables/useFocusTrap";
 import { useEscapeClose } from "../src/composables/useEscapeClose";
-import ClinicalQueryPanel from "../src/components/clinical/ClinicalQueryPanel.vue";
-import ClinicalInput from "../src/components/clinical/ClinicalInput.vue";
 import {
   createClinicalLookupInput,
   createSoaBuilderMatrix,
   createClinicalVisitMatrix,
   createConditionRowHTML,
+  ClinicalQueryPanel,
+  ClinicalInput,
 } from "ui";
 
 // Helper component for testing useFocusTrap directly

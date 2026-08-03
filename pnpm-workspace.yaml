@@ -9,3 +9,21 @@ onlyBuiltDependencies:
   - esbuild
   - "@shikijs/core"
   - shiki
+
+minimumReleaseAgeExclude:
+  - "@rolldown/binding-android-arm64"
+  - "@rolldown/binding-darwin-arm64"
+  - "@rolldown/binding-darwin-x64"
+  - "@rolldown/binding-freebsd-x64"
+  - "@rolldown/binding-linux-arm-gnueabihf"
+  - "@rolldown/binding-linux-arm64-gnu"
+  - "@rolldown/binding-linux-arm64-musl"
+  - "@rolldown/binding-linux-ppc64-gnu"
+  - "@rolldown/binding-linux-s390x-gnu"
+  - "@rolldown/binding-linux-x64-gnu"
+  - "@rolldown/binding-linux-x64-musl"
+  - "@rolldown/binding-openharmony-arm64"
+  - "@rolldown/binding-win32-arm64-msvc"
+  - "@rolldown/binding-win32-x64-msvc"
+  - "nanoid"
+  - "rolldown"

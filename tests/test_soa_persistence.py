@@ -256,6 +256,7 @@ async def test_timing_window_validation_rules():
         min_offset=-2,
         max_offset=3,
         created_by="user1",
+        reason_for_change="valid tw test",
     )
     assert tw.min_offset == -2
     assert tw.max_offset == 3
@@ -267,6 +268,7 @@ async def test_timing_window_validation_rules():
             name="Invalid Max",
             max_offset=-5,
             created_by="user1",
+            reason_for_change="invalid max offset test",
         )
 
     with pytest.raises(
@@ -280,6 +282,7 @@ async def test_timing_window_validation_rules():
             min_offset=5,
             max_offset=4,
             created_by="user1",
+            reason_for_change="invalid offset test",
         )
 
 
@@ -404,6 +407,23 @@ def test_soa_domain_models_schema_alignment():
     assert arm.created_by == "designer_user"
     assert arm.reason_for_change == "Initial arm definition"
 
+    # Assert model derivations and field-level GxP validations
+    from audit import AuditFields, Part11AuditMixin
+    assert issubclass(StudyArm, AuditFields)
+    assert issubclass(StudyArm, Part11AuditMixin)
+    assert isinstance(arm.version_index, int)
+
+    # Assert reason_for_change requirement
+    import pytest
+    with pytest.raises(Exception):
+        StudyArm(
+            id="arm_no_rfc",
+            study_version_id="sv_123",
+            name="No RFC Arm",
+            arm_type="Active",
+            created_by="designer_user",
+        )
+
     # Test synonym matching during before model validator
     arm_synonym = StudyArm(
         id="arm_2",
@@ -411,6 +431,7 @@ def test_soa_domain_models_schema_alignment():
         name="Placebo Arm",
         type="Placebo",  # maps to arm_type
         created_by="designer_user",
+        reason_for_change="synonym test",
     )
     assert arm_synonym.arm_type == "Placebo"
 
@@ -421,6 +442,7 @@ def test_soa_domain_models_schema_alignment():
         name="Screening",
         sequence_order=1,
         created_by="designer_user",
+        reason_for_change="epoch test",
     )
     assert epoch.name == "Screening"
     assert epoch.sequence_order == 1
@@ -431,6 +453,7 @@ def test_soa_domain_models_schema_alignment():
         epoch_name="Treatment",  # maps to name
         sequence=2,  # maps to sequence_order
         created_by="designer_user",
+        reason_for_change="epoch syn test",
     )
     assert epoch_synonym.name == "Treatment"
     assert epoch_synonym.sequence_order == 2
@@ -445,6 +468,7 @@ def test_soa_domain_models_schema_alignment():
         visit_window_days=7,
         arm_ids=["arm_1", "arm_2"],
         created_by="designer_user",
+        reason_for_change="visit test",
     )
     assert visit.name == "Week 1 Visit"
     assert visit.epoch_id == "epoch_2"
@@ -459,6 +483,7 @@ def test_soa_domain_models_schema_alignment():
         visit_ids=["visit_1"],
         arm_ids=["arm_1"],
         created_by="designer_user",
+        reason_for_change="proc test",
     )
     assert proc.name == "Lab Blood Draw"
     assert proc.visit_ids == ["visit_1"]
@@ -476,6 +501,7 @@ def test_soa_domain_models_schema_alignment():
         conditional=True,
         reason="Required only for sub-cohort A",
         created_by="designer_user",
+        reason_for_change="tw test",
     )
     assert tw_valid.conditional is True
     assert tw_valid.reason == "Required only for sub-cohort A"
@@ -496,8 +522,6 @@ def test_soa_domain_models_schema_alignment():
     assert tw_prop_valid.max_offset == 2
 
     # Test failure when conditional is True but reason is empty/missing
-    import pytest
-
     with pytest.raises(ValueError, match="A non-empty 'reason' must be provided"):
         TimingWindow(
             id="tw_invalid",
@@ -505,12 +529,13 @@ def test_soa_domain_models_schema_alignment():
             name="Invalid conditional timing",
             conditional=True,
             created_by="designer_user",
+            reason_for_change="invalid tw test",
         )
 
     # Test invalid offset ordering on TimingWindow Properties and Domain Model
     with pytest.raises(
         ValueError,
-        match="min_offset must not be greater than max_offset|Field 'min_offset' must be less than or equal to 'max_offset'",
+        match="Field 'min_offset' must be less than or equal to 'max_offset'.",
     ):
         TimingWindowProperties(
             name="Invalid window",
@@ -520,7 +545,7 @@ def test_soa_domain_models_schema_alignment():
 
     with pytest.raises(
         ValueError,
-        match="min_offset must not be greater than max_offset|Field 'min_offset' must be less than or equal to 'max_offset'",
+        match="Field 'min_offset' must be less than or equal to 'max_offset'.",
     ):
         TimingWindow(
             id="tw_invalid_offset",
@@ -529,6 +554,7 @@ def test_soa_domain_models_schema_alignment():
             min_offset=5,
             max_offset=2,
             created_by="designer_user",
+            reason_for_change="tw invalid offset test",
         )
 
     # Test negative target day on TimingWindow Properties and Domain Model
@@ -545,6 +571,7 @@ def test_soa_domain_models_schema_alignment():
             name="Invalid target day",
             target_day=-1,
             created_by="designer_user",
+            reason_for_change="tw invalid day test",
         )
 
     # 6. Test Matrix Projection Response Response Envelope

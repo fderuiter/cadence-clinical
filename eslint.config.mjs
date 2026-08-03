@@ -32,6 +32,6 @@ export default [
       "vuejs-accessibility/no-static-element-interactions": "warn",
       "vuejs-accessibility/form-control-has-label": "warn",
     },
-    files: ["apps/**/*.js", "packages/**/*.js", "apps/**/*.vue"],
+    files: ["apps/**/*.js", "packages/**/*.js", "apps/**/*.vue", "packages/**/*.vue"],
   }
 ];

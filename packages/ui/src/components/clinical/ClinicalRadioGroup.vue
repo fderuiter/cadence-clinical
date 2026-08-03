@@ -62,10 +62,7 @@ const props = defineProps({
   },
 });
 
-defineEmits([
-  "update:modelValue",
-  "change",
-]);
+defineEmits(["update:modelValue", "change"]);
 
 const normalizedOptions = computed(() => {
   return props.options.map((opt) => {

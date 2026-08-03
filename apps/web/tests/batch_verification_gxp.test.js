@@ -1,13 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import { useRoute, useRouter } from "vue-router";
+import { useRouter } from "vue-router";
 import { useClinicalStore } from "../src/stores/clinical";
 import { useAuthStore } from "../src/stores/auth";
 import { useNotificationsStore } from "../src/stores/notifications";
 import { soaClient } from "../src/api/soaClient";
 import EcrfView from "../src/views/EcrfView.vue";
-import NotificationsView from "../src/views/NotificationsView.vue";
 
 // Mock the router hooks
 vi.mock("vue-router", () => {
@@ -69,7 +68,7 @@ describe("Batch Source Data Verification and GxP Compliance Flow Tests", () => {
   });
 
   it("successfully parses route query parameters and preserves study/site context on land", () => {
-    const wrapper = mount(EcrfView, {
+    mount(EcrfView, {
       global: {
         plugins: [pinia],
       },
@@ -123,7 +122,7 @@ describe("Batch Source Data Verification and GxP Compliance Flow Tests", () => {
     expect(wrapper.vm.reauthAction).toBe("BULK_SDV");
 
     // Execute Signature
-    wrapper.vm.reauthPassword = "CorrectPassword123";
+    wrapper.vm.reauthPassword = "CorrectPassword123"; // pragma: allowlist secret
     await wrapper.vm.confirmReauth();
 
     // Expect verifySignature and batchSignOff to have been called
@@ -158,7 +157,7 @@ describe("Batch Source Data Verification and GxP Compliance Flow Tests", () => {
     wrapper.vm.initiateBatchVerify();
 
     // Set password and simulate compliance 65-second lockout delay
-    wrapper.vm.reauthPassword = "CorrectPassword123";
+    wrapper.vm.reauthPassword = "CorrectPassword123"; // pragma: allowlist secret
     wrapper.vm.simulateDelay = true;
 
     // Confirm (Exposing token timeout rejection)
@@ -200,7 +199,9 @@ describe("Batch Source Data Verification and GxP Compliance Flow Tests", () => {
       (n) => n.category === "ALERTS" && n.priority === "HIGH"
     );
     expect(activeAlerts.length).toBe(1);
-    expect(activeAlerts[0].message_content).toContain("Verification cleared automatically");
+    expect(activeAlerts[0].message_content).toContain(
+      "Verification cleared automatically"
+    );
     expect(activeAlerts[0].related_entity_id).toBe("vssbp");
   });
 });

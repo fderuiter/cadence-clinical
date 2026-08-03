@@ -9,6 +9,12 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
     const pinia = createPinia();
     setActivePinia(pinia);
 
+    if (typeof window !== "undefined") {
+      delete window.keycloakInstance;
+      window.sessionStorage.clear();
+      window.localStorage.clear();
+    }
+
     // Always reset router to initial route before each test
     await router.push("/login");
   });
@@ -167,6 +173,61 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
 
       await router.push("/");
       expect(router.currentRoute.value.path).toBe("/mdr");
+    });
+  });
+
+  describe("Active Keycloak Session Verification & Role Anti-Spoofing", () => {
+    it("should block routing and redirect to login when local storage/session storage values are spoofed but active Keycloak session is missing or invalid", async () => {
+      const authStore = useAuthStore();
+      
+      // Simulate altered/spoofed local state
+      authStore.isAuthenticated = true;
+      authStore.isDemoMode = false;
+      authStore.rawRoles = ["Sponsor Admin"]; // Spoofed admin role
+      
+      // Mock an invalid/missing Keycloak session
+      window.keycloakInstance = {
+        authenticated: false,
+        updateToken: async () => { throw new Error("Invalid session"); },
+      };
+
+      await router.push("/mdr");
+
+      // Should be redirected to /login because session is invalid/missing
+      expect(router.currentRoute.value.path).toBe("/login");
+      expect(router.currentRoute.value.query.redirect).toBe("/mdr");
+      
+      // Pinia store state should have been cleaned
+      expect(authStore.isAuthenticated).toBe(false);
+      expect(authStore.rawRoles).toEqual([]);
+    });
+
+    it("should successfully block navigation to restricted route if spoofed local storage roles don't match active Keycloak session roles", async () => {
+      const authStore = useAuthStore();
+      
+      // Simulate altered/spoofed local state
+      authStore.isAuthenticated = true;
+      authStore.isDemoMode = false;
+      authStore.rawRoles = ["Sponsor Admin"]; // Spoofed admin role
+      
+      // Mock active Keycloak session with a different, non-admin role (e.g., CRC)
+      window.keycloakInstance = {
+        authenticated: true,
+        token: "real-token",
+        tokenParsed: {
+          sub: "user-id",
+          preferred_username: "user",
+          realm_access: {
+            roles: ["Site Investigator"], // Actual role is CRC, not admin/designer
+          },
+        },
+        updateToken: async () => true,
+      };
+
+      await router.push("/mdr");
+
+      // Should be redirected to /forbidden because real role doesn't have access to /mdr
+      expect(router.currentRoute.value.path).toBe("/forbidden");
     });
   });
 });

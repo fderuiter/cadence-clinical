@@ -5,16 +5,20 @@
     :class="[
       tag === 'fieldset' ? 'clinical-radio-grid' : 'clinical-input',
       { 'has-error': showError, [`grid-span-${gridSpan}`]: true },
-      extraClass
+      extraClass,
     ]"
     :style="`grid-column: span ${gridSpan};`"
     v-bind="attributes"
   >
-    <legend v-if="tag === 'fieldset'">{{ label }}</legend>
+    <legend v-if="tag === 'fieldset'">
+      {{ label }}
+    </legend>
     <label v-else :for="id">{{ label }}</label>
 
-    <div :class="tag === 'fieldset' ? 'radio-options-wrapper' : 'input-wrapper'">
-      <slot :id="id"></slot>
+    <div
+      :class="tag === 'fieldset' ? 'radio-options-wrapper' : 'input-wrapper'"
+    >
+      <slot :id="id" />
 
       <!-- Query Flag -->
       <ClinicalQueryFlag
@@ -26,7 +30,7 @@
     </div>
 
     <!-- Additional markup like lookup status indicators -->
-    <slot name="after-input"></slot>
+    <slot name="after-input" />
 
     <!-- Validation Error -->
     <div v-if="showError" class="validation-error-msg">
@@ -87,12 +91,7 @@ const props = defineProps({
   },
 });
 
-defineEmits([
-  "create-query",
-  "respond-query",
-  "close-query",
-  "reopen-query",
-]);
+defineEmits(["create-query", "respond-query", "close-query", "reopen-query"]);
 
 const isQueryOpen = ref(false);
 

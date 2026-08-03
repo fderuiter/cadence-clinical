@@ -2478,6 +2478,625 @@ async def link_epoch_to_visit(
             return record["success"] if record else False
 
 
+@with_transaction_retry()
+async def reorder_arms(
+    driver,
+    study_version_id: str,
+    user_id: str,
+    change_reason: str,
+    arm_ids_ordered: list[str],
+) -> bool:
+    """
+    Reorders study arms by updating their sequence sequentially.
+    """
+    if driver is None:
+        assert_mock_study_version_mutable(study_version_id)
+        _init_mock_soa(study_version_id)
+        store = MOCK_SOA_DATA[study_version_id]["arms"]
+
+        for a_id in arm_ids_ordered:
+            if a_id not in store or store[a_id].get("is_deleted", False) or store[a_id].get("is_retired", False):
+                raise ValueError(f"Arm {a_id} not found or is deleted")
+
+        action_id = str(uuid.uuid4())
+        action_log = {
+            "id": action_id,
+            "user_id": user_id,
+            "change_reason": change_reason,
+            "timestamp": dt.datetime.now().isoformat(),
+            "type": "REORDER",
+            "before_order": {a_id: store[a_id].get("sequence") for a_id in arm_ids_ordered},
+            "after_order": {},
+        }
+
+        for idx, a_id in enumerate(arm_ids_ordered):
+            old_node = store[a_id]
+            new_node = {
+                **old_node,
+                "sequence": idx + 1,
+                "version_index": old_node.get("version_index", 1) + 1,
+                "created_by": user_id,
+                "created_at": dt.datetime.now().isoformat(),
+                "reason_for_change": change_reason,
+            }
+            store[a_id] = new_node
+            action_log["after_order"][a_id] = idx + 1
+
+        MOCK_SOA_DATA[study_version_id]["actions"].append(action_log)
+        return True
+
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            await assert_study_version_mutable(tx, study_version_id)
+            await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
+                study_version_id=study_version_id,
+            )
+
+            existing_res = await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_ARM]->(a:StudyArm) WHERE coalesce(a.is_deleted, false) = false AND coalesce(a.is_retired, false) = false RETURN a.id as id",
+                study_version_id=study_version_id,
+            )
+            existing_ids = {r["id"] for r in await existing_res.all()}
+
+            for a_id in arm_ids_ordered:
+                if a_id not in existing_ids:
+                    raise ValueError(f"Arm {a_id} not found or is deleted")
+
+            action_id = str(uuid.uuid4())
+            await tx.run(
+                """
+                CREATE (a:Action {
+                    id: $action_id,
+                    user_id: $user_id,
+                    change_reason: $change_reason,
+                    timestamp: datetime(),
+                    type: "REORDER"
+                })
+                """,
+                action_id=action_id,
+                user_id=user_id,
+                change_reason=change_reason,
+            )
+
+            for idx, a_id in enumerate(arm_ids_ordered):
+                query = """
+                MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_ARM]->(old_a:StudyArm {id: $arm_id})
+                MATCH (a:Action {id: $action_id})
+                CREATE (new_a:StudyArm {id: $arm_id})
+                SET new_a += properties(old_a)
+                SET new_a.sequence = $new_sequence
+                SET new_a.version_index = old_a.version_index + 1
+                SET new_a.created_at = datetime()
+                SET new_a.created_by = $user_id
+                SET new_a.reason_for_change = $change_reason
+                CREATE (sv)-[:HAS_ARM]->(new_a)
+                DELETE r
+                CREATE (new_a)-[:PREVIOUS_VERSION]->(old_a)
+                CREATE (a)-[:AFTER]->(new_a)
+                CREATE (a)-[:BEFORE]->(old_a)
+                """
+                await tx.run(
+                    query,
+                    study_version_id=study_version_id,
+                    arm_id=a_id,
+                    action_id=action_id,
+                    user_id=user_id,
+                    change_reason=change_reason,
+                    new_sequence=idx + 1,
+                )
+
+            return True
+
+
+@with_transaction_retry()
+async def reorder_epochs(
+    driver,
+    study_version_id: str,
+    user_id: str,
+    change_reason: str,
+    epoch_ids_ordered: list[str],
+) -> bool:
+    """
+    Reorders study epochs by updating their sequence sequentially.
+    """
+    if driver is None:
+        assert_mock_study_version_mutable(study_version_id)
+        _init_mock_soa(study_version_id)
+        store = MOCK_SOA_DATA[study_version_id]["epochs"]
+
+        for e_id in epoch_ids_ordered:
+            if e_id not in store or store[e_id].get("is_deleted", False) or store[e_id].get("is_retired", False):
+                raise ValueError(f"Epoch {e_id} not found or is deleted")
+
+        action_id = str(uuid.uuid4())
+        action_log = {
+            "id": action_id,
+            "user_id": user_id,
+            "change_reason": change_reason,
+            "timestamp": dt.datetime.now().isoformat(),
+            "type": "REORDER",
+            "before_order": {e_id: store[e_id].get("sequence") for e_id in epoch_ids_ordered},
+            "after_order": {},
+        }
+
+        for idx, e_id in enumerate(epoch_ids_ordered):
+            old_node = store[e_id]
+            new_node = {
+                **old_node,
+                "sequence": idx + 1,
+                "sequence_order": idx + 1,
+                "version_index": old_node.get("version_index", 1) + 1,
+                "created_by": user_id,
+                "created_at": dt.datetime.now().isoformat(),
+                "reason_for_change": change_reason,
+            }
+            store[e_id] = new_node
+            action_log["after_order"][e_id] = idx + 1
+
+        MOCK_SOA_DATA[study_version_id]["actions"].append(action_log)
+        return True
+
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            await assert_study_version_mutable(tx, study_version_id)
+            await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
+                study_version_id=study_version_id,
+            )
+
+            existing_res = await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_EPOCH]->(e:Epoch) WHERE coalesce(e.is_deleted, false) = false AND coalesce(e.is_retired, false) = false RETURN e.id as id",
+                study_version_id=study_version_id,
+            )
+            existing_ids = {r["id"] for r in await existing_res.all()}
+
+            for e_id in epoch_ids_ordered:
+                if e_id not in existing_ids:
+                    raise ValueError(f"Epoch {e_id} not found or is deleted")
+
+            action_id = str(uuid.uuid4())
+            await tx.run(
+                """
+                CREATE (a:Action {
+                    id: $action_id,
+                    user_id: $user_id,
+                    change_reason: $change_reason,
+                    timestamp: datetime(),
+                    type: "REORDER"
+                })
+                """,
+                action_id=action_id,
+                user_id=user_id,
+                change_reason=change_reason,
+            )
+
+            for idx, e_id in enumerate(epoch_ids_ordered):
+                query = """
+                MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_EPOCH]->(old_e:Epoch {id: $epoch_id})
+                MATCH (a:Action {id: $action_id})
+                CREATE (new_e:Epoch {id: $epoch_id})
+                SET new_e += properties(old_e)
+                SET new_e.sequence = $new_sequence
+                SET new_e.sequence_order = $new_sequence
+                SET new_e.version_index = old_e.version_index + 1
+                SET new_e.created_at = datetime()
+                SET new_e.created_by = $user_id
+                SET new_e.reason_for_change = $change_reason
+                CREATE (sv)-[:HAS_EPOCH]->(new_e)
+                DELETE r
+                CREATE (new_e)-[:PREVIOUS_VERSION]->(old_e)
+                CREATE (a)-[:AFTER]->(new_e)
+                CREATE (a)-[:BEFORE]->(old_e)
+                """
+                await tx.run(
+                    query,
+                    study_version_id=study_version_id,
+                    epoch_id=e_id,
+                    action_id=action_id,
+                    user_id=user_id,
+                    change_reason=change_reason,
+                    new_sequence=idx + 1,
+                )
+
+            return True
+
+
+@with_transaction_retry()
+async def reorder_procedures(
+    driver,
+    study_version_id: str,
+    user_id: str,
+    change_reason: str,
+    procedure_ids_ordered: list[str],
+) -> bool:
+    """
+    Reorders study procedures by updating their sequence sequentially.
+    """
+    if driver is None:
+        assert_mock_study_version_mutable(study_version_id)
+        _init_mock_soa(study_version_id)
+        store = MOCK_SOA_DATA[study_version_id]["procedures"]
+
+        for p_id in procedure_ids_ordered:
+            if p_id not in store or store[p_id].get("is_deleted", False) or store[p_id].get("is_retired", False):
+                raise ValueError(f"Procedure {p_id} not found or is deleted")
+
+        action_id = str(uuid.uuid4())
+        action_log = {
+            "id": action_id,
+            "user_id": user_id,
+            "change_reason": change_reason,
+            "timestamp": dt.datetime.now().isoformat(),
+            "type": "REORDER",
+            "before_order": {p_id: store[p_id].get("sequence") for p_id in procedure_ids_ordered},
+            "after_order": {},
+        }
+
+        for idx, p_id in enumerate(procedure_ids_ordered):
+            old_node = store[p_id]
+            new_node = {
+                **old_node,
+                "sequence": idx + 1,
+                "version_index": old_node.get("version_index", 1) + 1,
+                "created_by": user_id,
+                "created_at": dt.datetime.now().isoformat(),
+                "reason_for_change": change_reason,
+            }
+            store[p_id] = new_node
+            action_log["after_order"][p_id] = idx + 1
+
+        MOCK_SOA_DATA[study_version_id]["actions"].append(action_log)
+        return True
+
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            await assert_study_version_mutable(tx, study_version_id)
+            await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
+                study_version_id=study_version_id,
+            )
+
+            existing_res = await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_PROCEDURE]->(p:Procedure) WHERE coalesce(p.is_deleted, false) = false AND coalesce(p.is_retired, false) = false RETURN p.id as id",
+                study_version_id=study_version_id,
+            )
+            existing_ids = {r["id"] for r in await existing_res.all()}
+
+            for p_id in procedure_ids_ordered:
+                if p_id not in existing_ids:
+                    raise ValueError(f"Procedure {p_id} not found or is deleted")
+
+            action_id = str(uuid.uuid4())
+            await tx.run(
+                """
+                CREATE (a:Action {
+                    id: $action_id,
+                    user_id: $user_id,
+                    change_reason: $change_reason,
+                    timestamp: datetime(),
+                    type: "REORDER"
+                })
+                """,
+                action_id=action_id,
+                user_id=user_id,
+                change_reason=change_reason,
+            )
+
+            for idx, p_id in enumerate(procedure_ids_ordered):
+                query = """
+                MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_PROCEDURE]->(old_p:Procedure {id: $procedure_id})
+                MATCH (a:Action {id: $action_id})
+                CREATE (new_p:Procedure {id: $procedure_id})
+                SET new_p += properties(old_p)
+                SET new_p.sequence = $new_sequence
+                SET new_p.version_index = old_p.version_index + 1
+                SET new_p.created_at = datetime()
+                SET new_p.created_by = $user_id
+                SET new_p.reason_for_change = $change_reason
+                CREATE (sv)-[:HAS_PROCEDURE]->(new_p)
+                DELETE r
+                CREATE (new_p)-[:PREVIOUS_VERSION]->(old_p)
+                CREATE (a)-[:AFTER]->(new_p)
+                CREATE (a)-[:BEFORE]->(old_p)
+                """
+                await tx.run(
+                    query,
+                    study_version_id=study_version_id,
+                    procedure_id=p_id,
+                    action_id=action_id,
+                    user_id=user_id,
+                    change_reason=change_reason,
+                    new_sequence=idx + 1,
+                )
+
+            return True
+
+
+@with_transaction_retry()
+async def assign_visits_to_arm(
+    driver,
+    study_version_id: str,
+    user_id: str,
+    change_reason: str,
+    arm_id: str,
+    visit_ids: list[str],
+) -> bool:
+    """
+    Assigns multiple visits to an arm. Bumps version_index of the arm and of target visits.
+    """
+    if driver is None:
+        assert_mock_study_version_mutable(study_version_id)
+        _init_mock_soa(study_version_id)
+
+        # Validate arm
+        arm_store = MOCK_SOA_DATA[study_version_id]["arms"]
+        if arm_id not in arm_store:
+            raise ValueError(f"Arm {arm_id} not found")
+
+        # Bump arm version
+        old_arm = arm_store[arm_id]
+        new_arm = {
+            **old_arm,
+            "version_index": old_arm.get("version_index", 1) + 1,
+            "reason_for_change": change_reason,
+        }
+        arm_store[arm_id] = new_arm
+
+        visit_store = MOCK_SOA_DATA[study_version_id]["visits"]
+        for v_id in visit_ids:
+            if v_id not in visit_store:
+                raise ValueError(f"Visit {v_id} not found")
+            # Bump visit version
+            old_visit = visit_store[v_id]
+            new_visit = {
+                **old_visit,
+                "version_index": old_visit.get("version_index", 1) + 1,
+                "reason_for_change": change_reason,
+            }
+            visit_store[v_id] = new_visit
+
+            # Establish link
+            await link_arm_applicability(None, study_version_id, user_id, change_reason, arm_id, v_id, target_type="visit")
+        return True
+
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            await assert_study_version_mutable(tx, study_version_id)
+            await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
+                study_version_id=study_version_id,
+            )
+
+            # Bump Arm
+            arm_check = await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_ARM]->(old_arm:StudyArm {id: $arm_id}) RETURN old_arm.id",
+                study_version_id=study_version_id,
+                arm_id=arm_id,
+            )
+            if not await arm_check.single():
+                raise ValueError(f"Arm {arm_id} not found")
+
+            # Duplicate Arm node with incremented version_index
+            action_id = str(uuid.uuid4())
+            arm_query = """
+            MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_ARM]->(old_arm:StudyArm {id: $arm_id})
+            CREATE (new_arm:StudyArm {id: $arm_id})
+            SET new_arm += properties(old_arm)
+            SET new_arm.version_index = old_arm.version_index + 1
+            SET new_arm.created_at = datetime()
+            SET new_arm.created_by = $user_id
+            SET new_arm.reason_for_change = $change_reason
+            CREATE (sv)-[:HAS_ARM]->(new_arm)
+            DELETE r
+            CREATE (new_arm)-[:PREVIOUS_VERSION]->(old_arm)
+            CREATE (a:Action {
+                id: $action_id,
+                user_id: $user_id,
+                change_reason: $change_reason,
+                timestamp: datetime()
+            })
+            CREATE (a)-[:AFTER]->(new_arm)
+            CREATE (a)-[:BEFORE]->(old_arm)
+            RETURN new_arm.id as id
+            """
+            await tx.run(arm_query, study_version_id=study_version_id, arm_id=arm_id, user_id=user_id, change_reason=change_reason, action_id=action_id)
+
+            for v_id in visit_ids:
+                visit_check = await tx.run(
+                    "MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_VISIT]->(old_v:Visit {id: $visit_id}) RETURN old_v.id",
+                    study_version_id=study_version_id,
+                    visit_id=v_id,
+                )
+                if not await visit_check.single():
+                    raise ValueError(f"Visit {v_id} not found")
+
+                # Duplicate Visit node with incremented version_index
+                visit_action_id = str(uuid.uuid4())
+                visit_query = """
+                MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_VISIT]->(old_v:Visit {id: $visit_id})
+                CREATE (new_v:Visit {id: $visit_id})
+                SET new_v += properties(old_v)
+                SET new_v.version_index = old_v.version_index + 1
+                SET new_v.created_at = datetime()
+                SET new_v.created_by = $user_id
+                SET new_v.reason_for_change = $change_reason
+                CREATE (sv)-[:HAS_VISIT]->(new_v)
+                DELETE r
+                CREATE (new_v)-[:PREVIOUS_VERSION]->(old_v)
+                CREATE (a:Action {
+                    id: $action_id,
+                    user_id: $user_id,
+                    change_reason: $change_reason,
+                    timestamp: datetime()
+                })
+                CREATE (a)-[:AFTER]->(new_v)
+                CREATE (a)-[:BEFORE]->(old_v)
+                RETURN new_v.id as id
+                """
+                await tx.run(visit_query, study_version_id=study_version_id, visit_id=v_id, user_id=user_id, change_reason=change_reason, action_id=visit_action_id)
+
+                # Link new Arm and new Visit
+                link_query = """
+                MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_ARM]->(arm:StudyArm {id: $arm_id})
+                MATCH (sv)-[:HAS_VISIT]->(v:Visit {id: $visit_id})
+                MERGE (arm)-[r:APPLICABLE_TO]->(v)
+                CREATE (a:Action {
+                    id: $action_id,
+                    user_id: $user_id,
+                    change_reason: $change_reason,
+                    timestamp: datetime()
+                })
+                CREATE (a)-[:AFTER]->(arm)
+                """
+                await tx.run(link_query, study_version_id=study_version_id, arm_id=arm_id, visit_id=v_id, user_id=user_id, change_reason=change_reason, action_id=str(uuid.uuid4()))
+
+            return True
+
+
+@with_transaction_retry()
+async def assign_visits_to_epoch(
+    driver,
+    study_version_id: str,
+    user_id: str,
+    change_reason: str,
+    epoch_id: str,
+    visit_ids: list[str],
+) -> bool:
+    """
+    Assigns multiple visits to an epoch. Bumps version_index of the epoch and of target visits.
+    """
+    if driver is None:
+        assert_mock_study_version_mutable(study_version_id)
+        _init_mock_soa(study_version_id)
+
+        # Validate epoch
+        epoch_store = MOCK_SOA_DATA[study_version_id]["epochs"]
+        if epoch_id not in epoch_store:
+            raise ValueError(f"Epoch {epoch_id} not found")
+
+        # Bump epoch version
+        old_epoch = epoch_store[epoch_id]
+        new_epoch = {
+            **old_epoch,
+            "version_index": old_epoch.get("version_index", 1) + 1,
+            "reason_for_change": change_reason,
+        }
+        epoch_store[epoch_id] = new_epoch
+
+        visit_store = MOCK_SOA_DATA[study_version_id]["visits"]
+        for v_id in visit_ids:
+            if v_id not in visit_store:
+                raise ValueError(f"Visit {v_id} not found")
+            # Bump visit version
+            old_visit = visit_store[v_id]
+            new_visit = {
+                **old_visit,
+                "version_index": old_visit.get("version_index", 1) + 1,
+                "reason_for_change": change_reason,
+            }
+            visit_store[v_id] = new_visit
+
+            # Establish link
+            await link_epoch_to_visit(None, study_version_id, user_id, change_reason, epoch_id, v_id)
+        return True
+
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            await assert_study_version_mutable(tx, study_version_id)
+            await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
+                study_version_id=study_version_id,
+            )
+
+            # Bump Epoch
+            epoch_check = await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_EPOCH]->(old_e:Epoch {id: $epoch_id}) RETURN old_e.id",
+                study_version_id=study_version_id,
+                epoch_id=epoch_id,
+            )
+            if not await epoch_check.single():
+                raise ValueError(f"Epoch {epoch_id} not found")
+
+            action_id = str(uuid.uuid4())
+            epoch_query = """
+            MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_EPOCH]->(old_e:Epoch {id: $epoch_id})
+            CREATE (new_e:Epoch {id: $epoch_id})
+            SET new_e += properties(old_e)
+            SET new_e.version_index = old_e.version_index + 1
+            SET new_e.created_at = datetime()
+            SET new_e.created_by = $user_id
+            SET new_e.reason_for_change = $change_reason
+            CREATE (sv)-[:HAS_EPOCH]->(new_e)
+            DELETE r
+            CREATE (new_e)-[:PREVIOUS_VERSION]->(old_e)
+            CREATE (a:Action {
+                id: $action_id,
+                user_id: $user_id,
+                change_reason: $change_reason,
+                timestamp: datetime()
+            })
+            CREATE (a)-[:AFTER]->(new_e)
+            CREATE (a)-[:BEFORE]->(old_e)
+            RETURN new_e.id as id
+            """
+            await tx.run(epoch_query, study_version_id=study_version_id, epoch_id=epoch_id, user_id=user_id, change_reason=change_reason, action_id=action_id)
+
+            for v_id in visit_ids:
+                visit_check = await tx.run(
+                    "MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_VISIT]->(old_v:Visit {id: $visit_id}) RETURN old_v.id",
+                    study_version_id=study_version_id,
+                    visit_id=v_id,
+                )
+                if not await visit_check.single():
+                    raise ValueError(f"Visit {v_id} not found")
+
+                visit_action_id = str(uuid.uuid4())
+                visit_query = """
+                MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_VISIT]->(old_v:Visit {id: $visit_id})
+                CREATE (new_v:Visit {id: $visit_id})
+                SET new_v += properties(old_v)
+                SET new_v.version_index = old_v.version_index + 1
+                SET new_v.created_at = datetime()
+                SET new_v.created_by = $user_id
+                SET new_v.reason_for_change = $change_reason
+                CREATE (sv)-[:HAS_VISIT]->(new_v)
+                DELETE r
+                CREATE (new_v)-[:PREVIOUS_VERSION]->(old_v)
+                CREATE (a:Action {
+                    id: $action_id,
+                    user_id: $user_id,
+                    change_reason: $change_reason,
+                    timestamp: datetime()
+                })
+                CREATE (a)-[:AFTER]->(new_v)
+                CREATE (a)-[:BEFORE]->(old_v)
+                RETURN new_v.id as id
+                """
+                await tx.run(visit_query, study_version_id=study_version_id, visit_id=v_id, user_id=user_id, change_reason=change_reason, action_id=visit_action_id)
+
+                link_query = """
+                MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_EPOCH]->(ep:Epoch {id: $epoch_id})
+                MATCH (sv)-[:HAS_VISIT]->(v:Visit {id: $visit_id})
+                MERGE (ep)-[r:HAS_VISIT]->(v)
+                CREATE (a:Action {
+                    id: $action_id,
+                    user_id: $user_id,
+                    change_reason: $change_reason,
+                    timestamp: datetime()
+                })
+                CREATE (a)-[:AFTER]->(ep)
+                """
+                await tx.run(link_query, study_version_id=study_version_id, epoch_id=epoch_id, visit_id=v_id, user_id=user_id, change_reason=change_reason, action_id=str(uuid.uuid4()))
+
+            return True
+
+
 # =====================================================================
 # Collaborative Review, Comments, Suggestions & Section Review Locking
 # =====================================================================

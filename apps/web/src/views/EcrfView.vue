@@ -131,12 +131,19 @@
           "
         >
           <div style="font-size: 0.9rem; font-weight: 600; color: #1e40af">
-            Selected {{ selectedBatchFields.length }} fields for Batch Source Data Verification
+            Selected {{ selectedBatchFields.length }} fields for Batch Source
+            Data Verification
           </div>
           <button
             id="btn-batch-verify"
             class="btn btn-primary"
-            style="background-color: #2563eb; color: white; font-weight: bold; padding: 6px 12px; font-size: 0.85rem;"
+            style="
+              background-color: #2563eb;
+              color: white;
+              font-weight: bold;
+              padding: 6px 12px;
+              font-size: 0.85rem;
+            "
             @click="initiateBatchVerify"
           >
             Batch Verify Selected ({{ selectedBatchFields.length }})
@@ -227,9 +234,9 @@
               >
                 <input
                   :id="`batch-sdv-${field.id}`"
+                  v-model="selectedBatchFields"
                   type="checkbox"
                   :value="field.id"
-                  v-model="selectedBatchFields"
                   style="cursor: pointer"
                   class="batch-sdv-checkbox"
                 />
@@ -1001,14 +1008,31 @@
               "
             />
           </div>
-          <div class="form-group" style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+          <div
+            class="form-group"
+            style="
+              margin-bottom: 12px;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+            "
+          >
             <input
               id="reauth-simulate-delay"
-              type="checkbox"
               v-model="simulateDelay"
-              style="cursor: pointer;"
+              type="checkbox"
+              style="cursor: pointer"
             />
-            <label for="reauth-simulate-delay" style="font-size: 0.8rem; color: #64748b; font-weight: 500; cursor: pointer; margin: 0;">
+            <label
+              for="reauth-simulate-delay"
+              style="
+                font-size: 0.8rem;
+                color: #64748b;
+                font-weight: 500;
+                cursor: pointer;
+                margin: 0;
+              "
+            >
               Simulate 65s delay (FDA 21 CFR Part 11 Timeout Test)
             </label>
           </div>
@@ -1043,10 +1067,9 @@ import { useRoute } from "vue-router";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
-import { validateField, debounce } from "ui"; // Consolidating debounce onto shared packages/ui (PR #566 alignment)
+import { validateField, debounce, ClinicalFormField } from "ui"; // Consolidating debounce onto shared packages/ui (PR #566 alignment)
 import { evaluateAST } from "../evaluator.js";
 import { terminologyClient } from "../api/terminologyClient";
-import ClinicalFormField from "../components/clinical/ClinicalFormField.vue";
 import ReasonModal from "../components/ReasonModal.vue";
 import ConflictResolutionModal from "../components/ConflictResolutionModal.vue";
 import { useSyncStore } from "../stores/sync";
@@ -1230,7 +1253,8 @@ function initiateBatchVerify() {
     return;
   }
   reauthAction.value = "BULK_SDV";
-  reauthUsername.value = store.user.username || authStore.identity?.username || "fderuiter";
+  reauthUsername.value =
+    store.user.username || authStore.identity?.username || "fderuiter";
   reauthPassword.value = "";
   reauthTotp.value = "";
   reauthError.value = "";
@@ -1312,8 +1336,16 @@ onMounted(() => {
     if (route.query.visitId) {
       store.activeVisitId = route.query.visitId;
       const vId = String(route.query.visitId);
-      if (vId.toLowerCase().includes("week2") || vId.toLowerCase().includes("week 2")) selectedVisitId.value = "Week2";
-      else if (vId.toLowerCase().includes("week4") || vId.toLowerCase().includes("week 4")) selectedVisitId.value = "Week4";
+      if (
+        vId.toLowerCase().includes("week2") ||
+        vId.toLowerCase().includes("week 2")
+      )
+        selectedVisitId.value = "Week2";
+      else if (
+        vId.toLowerCase().includes("week4") ||
+        vId.toLowerCase().includes("week 4")
+      )
+        selectedVisitId.value = "Week4";
       else selectedVisitId.value = "Screening";
     }
   }
@@ -1454,7 +1486,11 @@ function commitChange(field, oldValue, newValue, reason) {
     try {
       const notifStore = useNotificationsStore();
       const newNotif = {
-        id: "notif-sdv-clear-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4),
+        id:
+          "notif-sdv-clear-" +
+          Date.now() +
+          "-" +
+          Math.random().toString(36).substr(2, 4),
         recipient_user_id: store.user.username || "fderuiter",
         recipient_role: "monitor",
         category: "ALERTS",
@@ -1747,7 +1783,7 @@ async function confirmReauth() {
       if (simulateDelay.value) {
         tokenRequestedAt -= 65000; // shift back to simulate 65s expired token
       }
-      
+
       // 1. Obtain signature token
       const reauthRes = await soaClient.verifySignature(
         {
@@ -1765,11 +1801,13 @@ async function confirmReauth() {
       // Check for compliance lockout: 60-second authentication window limit
       const elapsed = (Date.now() - tokenRequestedAt) / 1000;
       if (elapsed > 60) {
-        throw new Error("Compliance Lockout: The electronic signature verification token is older than 60 seconds.");
+        throw new Error(
+          "Compliance Lockout: The electronic signature verification token is older than 60 seconds."
+        );
       }
 
       // 2. Call batch sign-off API
-      const signoffRes = await soaClient.batchSignOff(
+      await soaClient.batchSignOff(
         {
           studyId,
           targetType: "FORM",
