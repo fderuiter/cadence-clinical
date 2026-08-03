@@ -1,3 +1,8 @@
+"""
+Cadence Clinical - FHIR / eSource & eCOA Sync Gateway
+Imports shared eCOA transport models from packages/core-models (PRD-ECOA-001).
+"""
+
 import os
 from datetime import UTC, datetime, timezone
 from enum import StrEnum

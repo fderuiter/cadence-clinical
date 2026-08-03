@@ -1353,8 +1353,8 @@ def test_ecoa_diary_alert_permissions() -> None:
         ROLE_LEAD_INVESTIGATOR,
         ROLE_PRINCIPAL_INVESTIGATOR,
         ROLE_SPONSOR_DM,
-        ROLE_SYSADMIN,
         ROLE_SUBJECT,
+        ROLE_SYSADMIN,
         Principal,
         has_permission,
     )
@@ -1634,7 +1634,7 @@ def test_etmf_taxonomy_and_tag_permissions() -> None:
         )
 
 
-def test_ecoa_diary_alert_permissions() -> None:
+def test_ecoa_diary_alert_permissions_secondary() -> None:
     """Verify that ecoa_diary alert permission is mapped correctly for the requested roles."""
     from packages.security.rbac import (
         ROLE_AUTHORIZED_ER_PHYSICIAN,
@@ -1685,3 +1685,58 @@ def test_ecoa_diary_alert_permissions() -> None:
     subject = Principal(user_id="subj1", roles=[ROLE_SUBJECT])
     assert has_permission(subject, "ecoa_diary:read") is True
     assert has_permission(subject, "ecoa_diary:alert") is False
+
+
+def test_ecoa_permissions_and_transport_models() -> None:
+    """Verify eCOA authorization rules and shared transport model contracts.
+
+    Checks:
+    1. eCOA permission matrix entries exist in ROLE_PERMISSIONS for staff roles.
+    2. ROLE_SUBJECT possesses only read access on schedule/diary, while having create on submission.
+    3. Shared transport models are importable and contain study_id.
+
+    @req:PRD-ECOA-001
+    """
+    from execution.epro_transport_models import (
+        InstrumentCreate,
+        SubjectAssignmentCreate,
+    )
+
+    from packages.security.rbac import (
+        ROLE_CRC,
+        ROLE_INVESTIGATOR,
+        ROLE_SPONSOR_DM,
+        ROLE_SUBJECT,
+        ROLE_SYSADMIN,
+        Principal,
+        has_permission,
+    )
+
+    sysadmin = Principal(user_id="sys1", roles=[ROLE_SYSADMIN])
+    dm = Principal(user_id="dm1", roles=[ROLE_SPONSOR_DM])
+    investigator = Principal(user_id="inv1", roles=[ROLE_INVESTIGATOR])
+    crc = Principal(user_id="crc1", roles=[ROLE_CRC])
+    subject = Principal(user_id="subj1", roles=[ROLE_SUBJECT])
+
+    # Staff roles have read and create on ecoa_schedule, ecoa_diary, ecoa_submission
+    for p in (sysadmin, dm, investigator, crc):
+        assert has_permission(p, "ecoa_schedule:create") is True
+        assert has_permission(p, "ecoa_schedule:read") is True
+        assert has_permission(p, "ecoa_diary:create") is True
+        assert has_permission(p, "ecoa_diary:read") is True
+        assert has_permission(p, "ecoa_submission:create") is True
+        assert has_permission(p, "ecoa_submission:read") is True
+
+    # Subject role lacks create on schedule/diary, but has create and read on submission
+    assert has_permission(subject, "ecoa_schedule:create") is False
+    assert has_permission(subject, "ecoa_schedule:read") is True
+    assert has_permission(subject, "ecoa_diary:create") is False
+    assert has_permission(subject, "ecoa_diary:read") is True
+    assert has_permission(subject, "ecoa_submission:create") is True
+    assert has_permission(subject, "ecoa_submission:read") is True
+
+    # Validate that shared models contain study_id as a required string field
+    assert "study_id" in InstrumentCreate.model_fields
+    assert InstrumentCreate.model_fields["study_id"].annotation is str
+    assert "study_id" in SubjectAssignmentCreate.model_fields
+    assert SubjectAssignmentCreate.model_fields["study_id"].annotation is str

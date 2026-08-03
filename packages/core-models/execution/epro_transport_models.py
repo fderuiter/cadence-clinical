@@ -1,3 +1,8 @@
+"""
+Shared eCOA and ePRO Pydantic transport models.
+Includes study_id for proper study-scoping of definitions and assignments (PRD-ECOA-001).
+"""
+
 from datetime import datetime
 from typing import Any
 

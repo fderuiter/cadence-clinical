@@ -1,3 +1,8 @@
+"""
+Centralized RBAC authorization engine for the Cadence Clinical Platform.
+eCOA Authorization (PRD-ECOA-001) added for ecoa_schedule, ecoa_diary, and ecoa_submission.
+"""
+
 from collections.abc import Callable
 from typing import Any
 
