@@ -4427,7 +4427,11 @@ async def reorder_visits(
 
         # Validate that the supplied visit_ids exist and are not deleted or retired
         for v_id in visit_ids_ordered:
-            if v_id not in store or store[v_id].get("is_deleted", False) or store[v_id].get("is_retired", False):
+            if (
+                v_id not in store
+                or store[v_id].get("is_deleted", False)
+                or store[v_id].get("is_retired", False)
+            ):
                 raise ValueError(f"Visit {v_id} not found or is deleted")
 
         action_id = str(uuid.uuid4())
@@ -4437,7 +4441,9 @@ async def reorder_visits(
             "change_reason": change_reason,
             "timestamp": dt.datetime.now().isoformat(),
             "type": "REORDER",
-            "before_order": {v_id: store[v_id].get("sequence") for v_id in visit_ids_ordered},
+            "before_order": {
+                v_id: store[v_id].get("sequence") for v_id in visit_ids_ordered
+            },
             "after_order": {},
         }
 
