@@ -321,6 +321,31 @@ async def test_capture_rejections() -> None:
         assert res.status_code == 401
         assert res.json()["detail"] == "REAUTHENTICATION_REQUIRED"
 
+        # 7. Reject on replayed signature token (Replay Attack)
+        sig_token_replay = get_sig_token(action="capture-consent")
+        headers_replay = get_gateway_headers(sig_token=sig_token_replay)
+
+        from packages.security.sig_token_verifier import token_consumption_cache
+
+        token_consumption_cache.reset()
+
+        # First capture with the token succeeds
+        res_first = await client.post(
+            "/api/v1/econsent/templates/template-pub/versions/1/capture-consent",
+            json=payload,
+            headers=headers_replay,
+        )
+        assert res_first.status_code == 201
+
+        # Second capture attempt with the SAME token must be rejected (replay blocked)
+        res_second = await client.post(
+            "/api/v1/econsent/templates/template-pub/versions/1/capture-consent",
+            json=payload,
+            headers=headers_replay,
+        )
+        assert res_second.status_code == 401
+        assert res_second.json()["detail"] == "REAUTHENTICATION_REQUIRED"
+
 
 @pytest.mark.asyncio
 async def test_signature_tamper_detection() -> None:

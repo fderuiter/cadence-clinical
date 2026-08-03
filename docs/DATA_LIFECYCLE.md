@@ -495,12 +495,13 @@ The Native 21 CFR Part 11 eSignature Lifecycle governs the progression of clinic
 To secure electronic records without propagating raw credentials across service boundaries, the architecture enforces a strict dual-layer authorization-manifestation design:
 
 ### Layer 1: Gateway Signature Token Authorization (Short-Lived Intent)
-- **Path**: `apps/gateway/main.py` ➔ `packages/security/middleware.py`
+- **Path**: `apps/gateway/main.py` ➔ `packages/security/middleware.py` (In downstream microservices, verified and consumed via `packages/security/sig_token_verifier.py`)
 - **Mechanism**: The user re-enters their password (and optional TOTP) into the reusable Vue 3 component `apps/web/src/components/SignatureCaptureModal.vue`. The API Gateway validates these credentials against Keycloak and issues a short-lived **Signature Token (`X-Sig-Token`)** signed via HS256 with `GATEWAY_SECRET`.
 - **Properties**:
   - **Temporal Limitation**: Hard expired in **60 seconds** (`exp = iat + 60.0`).
-  - **Single-Use Replay Prevention**: Contains a unique UUID `jti` verified against an in-memory/distributed cache to block replay attacks.
-  - **Action & Identity Binding**: Explicitly bound to the executing user (`sub` claim) and the exact REST endpoint route (`action` claim).
+  - **Single-Use Replay Prevention**: Centralized single-use tracking using the `verify_and_consume_sig_token` helper from the shared security package. The `jti` UUID claim is registered within a thread-safe `TokenConsumptionCache` to prevent replay attacks.
+  - **Action & Identity Binding**: Explicitly bound to the executing user (`sub` claim) and the exact REST endpoint route or semantic action (`action` claim).
+  - **Domain-Specific Local Gating**: While signature token verification is centralized, downstream microservices (such as the `econsent` application) apply local gating rules (e.g., verifying that the action is bound to `"capture-consent"`) to keep application business logic generic and clean.
 
 ### Layer 2: Certificate-Bound Record Manifestation (Persistent Non-Repudiation)
 - **Path**: `apps/etmf/main.py` or `apps/designer/main.py`
@@ -537,6 +538,9 @@ The Part 11 eSignature workflow is fully realized and integrated across the foll
   - `apps/etmf/main.py` (Sign-off endpoint: `POST /api/v1/etmf/documents/{document_id}/sign-off`)
   - `apps/etmf/models.py` (Persistence schema: `TMFDocument.signature_manifestation`)
   - `tests/test_etmf_signing_lifecycle.py` (E2E signing lifecycle and Merkle seal verification)
+- **eConsent Service Execution**:
+  - `apps/econsent/main.py` (Consent capture endpoint: `POST /api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent`)
+  - `tests/test_econsent_capture.py` (Validates centralized token consumption, missing/invalid token rejections, and replay attack prevention returning `401 REAUTHENTICATION_REQUIRED`)
 - **Metadata Designer Execution**:
   - `apps/designer/main.py` (Protocol approval endpoint: `POST /api/v1/studies/{study_id}/versions/{version_id}/approve`)
   - `apps/designer/delta.py` (Approve study delta and lock protocol graph nodes)
