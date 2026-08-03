@@ -84,7 +84,7 @@ jobs:
       - name: Run Requirements Traceability Validation
         id: run_traceability
         if: always()
-        run: uv run python scripts/generate_rtm.py --validate
+        run: uv run python scripts/generate_rtm.py --validate --draft
 
       - name: Run code duplication verification
         id: run_duplication
