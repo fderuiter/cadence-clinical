@@ -231,7 +231,7 @@ async def list_coding_assignments(
             try:
                 status_enum = CodingState[status.upper()]
                 stmt = stmt.where(ClinicalCodingAssignment.status == status_enum)
-            except KeyError, ValueError:
+            except (KeyError, ValueError):  # fmt: skip
                 stmt = stmt.where(ClinicalCodingAssignment.status == status)
     if verbatim_text:
         stmt = stmt.where(ClinicalCodingAssignment.verbatim_text == verbatim_text)
@@ -247,7 +247,7 @@ async def list_coding_assignments(
                 stmt = stmt.where(
                     ClinicalCodingAssignment.dictionary_type == dict_type_enum
                 )
-            except KeyError, ValueError:
+            except (KeyError, ValueError):  # fmt: skip
                 stmt = stmt.where(
                     ClinicalCodingAssignment.dictionary_type == dictionary_type
                 )
@@ -301,7 +301,7 @@ async def process_coding_action(
     if not resolved_actor or resolved_actor == "system":
         try:
             resolved_actor = current_user_id.get() or "system"
-        except LookupError, ValueError:
+        except (LookupError, ValueError):  # fmt: skip
             resolved_actor = "system"
 
     # 1. Fetch existing assignment

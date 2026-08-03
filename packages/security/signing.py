@@ -384,7 +384,7 @@ def verify_inbound_email_signature(
         ts = float(timestamp)
         if abs(time.time() - ts) > 300:
             return False
-    except ValueError, TypeError:
+    except (ValueError, TypeError):  # fmt: skip
         return False
 
     # 2. Replay Protection
