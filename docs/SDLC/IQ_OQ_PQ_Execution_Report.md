@@ -9,11 +9,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1952
-- **Passed:** 1950 🟢
-- **Failed/Errors:** 2 🔴
+- **Total Automated Test Cases Run:** 1974
+- **Passed:** 1974 🟢
+- **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
-- **Overall Operational Pass Rate:** 99.90%
+- **Overall Operational Pass Rate:** 100.00%
 
 ## 2. Installation Qualification (IQ)
 
@@ -412,7 +412,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_fhir_esource_readiness_prefill` | `tests.test_crf_builder_compliance` | PRD-CRF-007, PRD-CRF-008, Trace-23, Trace-24 | 🟢 PASSED | < 1s |
 | `test_gxp_change_reason_justification` | `tests.test_crf_builder_compliance` | PRD-CRF-010, PRD-CRF-011, Trace-26, Trace-27 | 🟢 PASSED | < 1s |
 | `test_immutable_audit_attribution` | `tests.test_crf_builder_compliance` | PRD-CRF-011, PRD-CRF-012, Trace-27, Trace-28 | 🟢 PASSED | < 1s |
-| `test_in_memory_accessibility_auditing` | `tests.test_crf_builder_compliance` | PRD-CRF-015, Trace-31 | 🔴 FAILED | < 1s |
+| `test_in_memory_accessibility_auditing` | `tests.test_crf_builder_compliance` | PRD-CRF-015, Trace-31 | 🟢 PASSED | < 1s |
 | `test_real_time_contextual_preview` | `tests.test_crf_builder_compliance` | PRD-CRF-002, PRD-CRF-003, Trace-18, Trace-19 | 🟢 PASSED | < 1s |
 | `test_regulatory_protocol_document_export` | `tests.test_crf_builder_compliance` | PRD-CRF-008, PRD-CRF-009, Trace-24, Trace-25 | 🟢 PASSED | < 1s |
 | `test_role_based_authorization_gates` | `tests.test_crf_builder_compliance` | PRD-CRF-009, PRD-CRF-010, Trace-25, Trace-26 | 🟢 PASSED | < 1s |
@@ -434,7 +434,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_fhir_esource_readiness_cdash_pre_fill` | `tests.test_crf_requirements_mapping` | PRD-CRF-007, Trace-23 | 🟢 PASSED | < 1s |
 | `test_gxp_change_reason_justification` | `tests.test_crf_requirements_mapping` | PRD-CRF-010, Trace-26 | 🟢 PASSED | < 1s |
 | `test_immutable_audit_attribution` | `tests.test_crf_requirements_mapping` | PRD-CRF-011, Trace-27 | 🟢 PASSED | < 1s |
-| `test_in_memory_accessibility_auditing` | `tests.test_crf_requirements_mapping` | PRD-CRF-015, Trace-31 | 🔴 FAILED | < 1s |
+| `test_in_memory_accessibility_auditing` | `tests.test_crf_requirements_mapping` | PRD-CRF-015, Trace-31 | 🟢 PASSED | < 1s |
 | `test_real_time_contextual_preview` | `tests.test_crf_requirements_mapping` | PRD-CRF-002, Trace-18 | 🟢 PASSED | < 1s |
 | `test_regulatory_and_protocol_document_export` | `tests.test_crf_requirements_mapping` | PRD-CRF-008, Trace-24 | 🟢 PASSED | < 1s |
 | `test_role_based_authorization_gates` | `tests.test_crf_requirements_mapping` | PRD-CRF-009, Trace-25 | 🟢 PASSED | < 1s |
@@ -954,7 +954,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_eisf_to_etmf_e2e_boundaries` | `tests.test_etmf_sync_provenance` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_redaction_derivative_safety` | `tests.test_etmf_sync_provenance` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sealer_retains_and_validates_reason_for_change` | `tests.test_etmf_sync_provenance` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_auto_file_endpoint` | `tests.test_etmf_taxonomy` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_classification_service_direct` | `tests.test_etmf_taxonomy` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_classify_endpoints` | `tests.test_etmf_taxonomy` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_taxonomy_endpoint` | `tests.test_etmf_taxonomy` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1227,6 +1226,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_unit_conversion_create_valid` | `tests.test_lab_schemas` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_unit_conversion_record_valid` | `tests.test_lab_schemas` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_unit_conversion_response_valid` | `tests.test_lab_schemas` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1348,6 +1352,24 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_run_migrations_success` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_detect_phi_patterns` | `tests.test_ner_scrubber` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scrub_phi_redaction` | `tests.test_ner_scrubber` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_start_stop_notification_worker_integration` | `tests.test_notification_worker` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_worker_gxp_exponential_retry_and_dlq` | `tests.test_notification_worker` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_worker_resolves_cra_for_document_expiry` | `tests.test_notification_worker` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_worker_resolves_crc_for_edc_query` | `tests.test_notification_worker` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_worker_resolves_safety_officer_for_sae_flag` | `tests.test_notification_worker` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_direct_transition_open_to_resolved` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_email_delivery_channel_failure_and_exhaustion` | `tests.test_notifications` | PRD-SYS-003 | 🟢 PASSED | < 1s |
+| `test_email_delivery_channel_success` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_lifecycle_transitions_and_justifications` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_multi_channel_edge_case_in_app_succeeds_email_exhausts` | `tests.test_notifications` | PRD-SYS-003 | 🟢 PASSED | < 1s |
+| `test_notification_creation_and_auditing` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notification_detail_visibility` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notification_list_visibility_and_filtering` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notifications_database_schema_creation` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notifications_health_check` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notifications_negative_security_paths` | `tests.test_notifications` | PRD-SYS-004 | 🟢 PASSED | < 1s |
+| `test_webhook_delivery_channel_failure_and_retry_backoff` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_webhook_delivery_channel_success` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_offline_sync_batch_success_and_idempotency` | `tests.test_offline_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_offline_sync_batch_update_action` | `tests.test_offline_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_offline_batch_sync_success` | `tests.test_offline_sync` | *Regression/Helper* | 🟢 PASSED | < 1s |
