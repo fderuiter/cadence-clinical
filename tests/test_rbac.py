@@ -1714,3 +1714,90 @@ def test_etmf_taxonomy_and_tag_permissions() -> None:
         assert has_permission(p, "etmf_document:tag") is False, (
             f"Role '{role}' should NOT have etmf_document:tag"
         )
+
+
+def test_soa_rbac_permissions() -> None:
+    """Verify that soa permissions are mapped correctly for rbac.py roles."""
+    from packages.security.rbac import (
+        ROLE_CRA_CANONICAL,
+        ROLE_CRC,
+        ROLE_INVESTIGATOR,
+        ROLE_REVIEWER,
+        ROLE_SPONSOR_DESIGNER,
+        ROLE_SPONSOR_DM,
+        ROLE_SPONSOR_MM,
+        ROLE_SPONSOR_STATISTICIAN,
+        ROLE_SYSADMIN,
+        ROLE_AUDITOR_CANONICAL,
+        ROLE_PRINCIPAL_INVESTIGATOR,
+        ROLE_AUTHORIZED_ER_PHYSICIAN,
+        ROLE_LEAD_INVESTIGATOR,
+        Principal,
+        has_permission,
+    )
+
+    sysadmin = Principal(user_id="sys1", roles=[ROLE_SYSADMIN])
+    designer = Principal(user_id="des1", roles=[ROLE_SPONSOR_DESIGNER])
+    admin = Principal(user_id="admin1", roles=["admin"])
+
+    dm = Principal(user_id="dm1", roles=[ROLE_SPONSOR_DM])
+    mm = Principal(user_id="mm1", roles=[ROLE_SPONSOR_MM])
+    stat = Principal(user_id="stat1", roles=[ROLE_SPONSOR_STATISTICIAN])
+    reviewer = Principal(user_id="rev1", roles=[ROLE_REVIEWER])
+    investigator = Principal(user_id="inv1", roles=[ROLE_INVESTIGATOR])
+    crc = Principal(user_id="crc1", roles=[ROLE_CRC])
+    cra = Principal(user_id="cra1", roles=[ROLE_CRA_CANONICAL])
+    monitor = Principal(user_id="mon1", roles=["monitor"])
+    auditor = Principal(user_id="aud1", roles=[ROLE_AUDITOR_CANONICAL])
+
+    # Derived investigator roles through _PI_BASE_PERMISSIONS
+    pi = Principal(user_id="pi1", roles=[ROLE_PRINCIPAL_INVESTIGATOR])
+    er_phys = Principal(user_id="er1", roles=[ROLE_AUTHORIZED_ER_PHYSICIAN])
+    lead_inv = Principal(user_id="lead1", roles=[ROLE_LEAD_INVESTIGATOR])
+
+    # Sysadmin, Sponsor Designer, and Admin must have create, read, update, delete
+    for p in (sysadmin, designer, admin):
+        assert has_permission(p, "soa:create") is True
+        assert has_permission(p, "soa:read") is True
+        assert has_permission(p, "soa:update") is True
+        assert has_permission(p, "soa:delete") is True
+
+    # Read-only roles must have read only
+    for p in (dm, mm, stat, reviewer, investigator, crc, cra, monitor, auditor, pi, er_phys, lead_inv):
+        assert has_permission(p, "soa:read") is True
+        assert has_permission(p, "soa:create") is False
+        assert has_permission(p, "soa:update") is False
+        assert has_permission(p, "soa:delete") is False
+
+
+def test_soa_granular_permissions() -> None:
+    """Verify that SOA_* granular permissions map correctly in permissions.py."""
+    from packages.security.permissions import PermissionEnum, RoleEnum, has_permission
+
+    # Create & Update/Manage roles: SponsorAdmin, SponsorDesigner
+    for role in (RoleEnum.SPONSOR_ADMIN.value, RoleEnum.SPONSOR_DESIGNER.value):
+        assert has_permission(role, PermissionEnum.SOA_MANAGE) is True
+        assert has_permission(role, PermissionEnum.SOA_READ) is True
+
+    # Read-only roles: SponsorAdmin, SponsorDesigner, PrincipalInvestigator, ClinicalResearchCoordinator, ClinicalResearchAssociate, DataManager, Auditor
+    read_roles = (
+        RoleEnum.SPONSOR_ADMIN.value,
+        RoleEnum.SPONSOR_DESIGNER.value,
+        RoleEnum.PRINCIPAL_INVESTIGATOR.value,
+        RoleEnum.CRC.value,
+        RoleEnum.CRA.value,
+        RoleEnum.DATA_MANAGER.value,
+        RoleEnum.AUDITOR.value,
+    )
+    for role in read_roles:
+        assert has_permission(role, PermissionEnum.SOA_READ) is True
+
+    # Non-read/write roles should not have access (e.g. Subject)
+    assert (
+        has_permission(RoleEnum.SUBJECT.value, PermissionEnum.SOA_READ)
+        is False
+    )
+    assert (
+        has_permission(RoleEnum.SUBJECT.value, PermissionEnum.SOA_MANAGE)
+        is False
+    )
