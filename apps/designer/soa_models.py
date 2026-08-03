@@ -308,9 +308,6 @@ class TimingWindow(SoAAuditMixin):
             )
         if self.max_offset is not None and self.max_offset < 0:
             raise ValueError("max_offset must not be negative.")
-        if self.min_offset is not None and self.max_offset is not None:
-            if self.min_offset > self.max_offset:
-                raise ValueError("min_offset must not be greater than max_offset.")
         return self
 
     @model_validator(mode="after")
@@ -318,7 +315,7 @@ class TimingWindow(SoAAuditMixin):
         if self.min_offset is not None and self.max_offset is not None:
             if self.min_offset > self.max_offset:
                 raise ValueError(
-                    "Field 'min_offset' must be less than or equal to 'max_offset'."
+                    "Field 'min_offset' must be less than or equal to 'max_offset'. min_offset must not be greater than max_offset."
                 )
         if self.target_day is not None and self.target_day < 0:
             raise ValueError("Field 'target_day' cannot be negative.")
@@ -451,9 +448,6 @@ class TimingWindowProperties(BaseModel):
             )
         if self.max_offset is not None and self.max_offset < 0:
             raise ValueError("max_offset must not be negative.")
-        if self.min_offset is not None and self.max_offset is not None:
-            if self.min_offset > self.max_offset:
-                raise ValueError("min_offset must not be greater than max_offset.")
         return self
 
     @model_validator(mode="after")
@@ -461,7 +455,7 @@ class TimingWindowProperties(BaseModel):
         if self.min_offset is not None and self.max_offset is not None:
             if self.min_offset > self.max_offset:
                 raise ValueError(
-                    "Field 'min_offset' must be less than or equal to 'max_offset'."
+                    "Field 'min_offset' must be less than or equal to 'max_offset'. min_offset must not be greater than max_offset."
                 )
         if self.target_day is not None and self.target_day < 0:
             raise ValueError("Field 'target_day' cannot be negative.")
