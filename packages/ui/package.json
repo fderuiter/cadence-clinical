@@ -10,7 +10,7 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "test": "vitest run",
+    "test": "vitest run --testTimeout=30000",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
@@ -18,6 +18,9 @@
   "author": "",
   "license": "ISC",
   "type": "module",
+  "dependencies": {
+    "axe-core": "^4.12.1"
+  },
   "devDependencies": {
     "vite": "^8.1.5",
     "vitest": "^4.1.10"
