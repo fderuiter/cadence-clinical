@@ -1,3 +1,17 @@
 {
-  "duplicates": []
+  "duplicates": [
+    {
+      "loc1": {
+        "file": "apps/web/src/style.css",
+        "start": 901,
+        "end": 918
+      },
+      "loc2": {
+        "file": "apps/subject-portal/style.css",
+        "start": 773,
+        "end": 790
+      },
+      "preview": ".touch-target,\n.min-touch-target,\n.touch-target-interactive {\n..."
+    }
+  ]
 }

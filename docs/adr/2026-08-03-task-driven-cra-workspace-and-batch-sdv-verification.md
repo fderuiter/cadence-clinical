@@ -34,7 +34,7 @@ To support efficient monitoring workflows and maintain strict compliance with re
   * ❌ High probability of missing post-verification field modifications due to lack of automated clear mechanisms and notifications.
 
 ### Option 2: Centralized Task Workspace Routing & Multi-Select Batch SDV (Selected)
-* **Overview:** 
+* **Overview:**
   1. Display direct deep links with `studyId`, `siteId`, `subjectId`, and `visitId` query parameters inside a centralized notification inbox (`NotificationsView.vue`).
   2. Synchronize store states upon land across `EcrfView.vue`, `CtmsView.vue`, and `DocumentManagerView.vue`.
   3. Integrate GxP-compliant checkbox components adjacent to clinical fields, prompting a unified dual-factor electronic re-authentication modal for bulk signing.

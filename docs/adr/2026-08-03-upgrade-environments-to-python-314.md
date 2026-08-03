@@ -9,9 +9,9 @@
 
 ## 1. Context & Problem Statement
 
-Standardizing our runtime baseline ensures absolute environmental consistency and compliance correctness across all deployment layers. Historically, developers and central execution workloads ran on older environments (such as Python 3.12). 
+Standardizing our runtime baseline ensures absolute environmental consistency and compliance correctness across all deployment layers. Historically, developers and central execution workloads ran on older environments (such as Python 3.12).
 
-Standardizing all development workspaces, GitHub Actions automation, and Docker deployment targets on a modern unified **Python 3.14** baseline ensures that we eliminate architectural overhead, dynamic runtime drift, and compilation/linting variations across testing and production environments. 
+Standardizing all development workspaces, GitHub Actions automation, and Docker deployment targets on a modern unified **Python 3.14** baseline ensures that we eliminate architectural overhead, dynamic runtime drift, and compilation/linting variations across testing and production environments.
 
 This traces to requirement **PRD-SYS-001** (GxP Environment Consistency and System Integrity).
 

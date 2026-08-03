@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-Our shared clinical workflow components rely on custom template engines instead of standard UI frameworks. While this keeps our runtime environment lightweight and dependency-free, it caused these components to bypass our standard automated linter checks. As a result, critical accessibility gaps went unnoticed: screen reader users could not understand grid compliance data in schedule matrices, discern form validation errors, or comprehend the context of dynamic action buttons. 
+Our shared clinical workflow components rely on custom template engines instead of standard UI frameworks. While this keeps our runtime environment lightweight and dependency-free, it caused these components to bypass our standard automated linter checks. As a result, critical accessibility gaps went unnoticed: screen reader users could not understand grid compliance data in schedule matrices, discern form validation errors, or comprehend the context of dynamic action buttons.
 
 Ensuring full WCAG compliance is a strict requirement for supporting inclusive, safe, and regulatory-compliant clinical trials. This decision addresses how we implement WCAG compliance directly into our shared template builders.
 

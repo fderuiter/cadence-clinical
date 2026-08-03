@@ -40,4 +40,3 @@ Greater GxP compliance, zero bypass of quality gates, and automated merging of s
 Requires a `GH_TOKEN` or `GITHUB_TOKEN` with write-access to repository rulesets in GitHub Actions. Future modifications or renaming of continuous integration jobs must be kept in close sync with `.github/rulesets/main.json`.
 
 This decision implements requirements under Trace-7.
-
