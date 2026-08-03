@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1976
-- **Passed:** 1976 🟢
+- **Total Automated Test Cases Run:** 1977
+- **Passed:** 1977 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -2117,6 +2117,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_submission_locks` | `tests.validation.prd_compliance_traceability_tests` | PRD-SUB-005 | 🟢 PASSED | < 1s |
 | `test_submission_version_control` | `tests.validation.prd_compliance_traceability_tests` | PRD-SUB-002 | 🟢 PASSED | < 1s |
 | `test_system_generated_validation_queries` | `tests.validation.prd_compliance_traceability_tests` | PRD-QRY-002 | 🟢 PASSED | < 1s |
+| `test_environment_integrity_assertions` | `tests.validation.test_path_boundary_linter` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_linter_negative_cases` | `tests.validation.test_path_boundary_linter` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_linter_positive_cases` | `tests.validation.test_path_boundary_linter` | *Regression/Helper* | 🟢 PASSED | < 1s |
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 

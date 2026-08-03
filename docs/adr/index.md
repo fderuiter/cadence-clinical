@@ -163,6 +163,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-17: Interactive Mermaid Diagrams and Responsive Layout Controls](2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md)
 
 ### 7. DevOps, Tooling & CI/CD
+- [2026-08-03: Lightweight Path Pattern Boundary Linter](2026-08-03-lightweight-path-pattern-boundary-linter.md)
 - [2026-08-02: Dual-Mode Secret Scanner for Pre-Commit and CI Validation](2026-08-02-dual-mode-secret-scanner-for-pre-commit-and-ci-validation.md)
 - [2026-08-01: In-Process ASGI Routing with Live Databases](2026-08-01-in-process-asgi-routing-with-live-databases.md)
 - [2026-07-31: Upgrade Environments to Python 3.12](2026-07-31-upgrade-environments-to-python-312.md)
