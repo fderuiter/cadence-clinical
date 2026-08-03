@@ -1,21 +1,32 @@
 <template>
-  <div
+  <fieldset
     :id="`field-container-${id}`"
-    class="clinical-input"
-    :class="{ 'has-error': showError, [`grid-span-${gridSpan}`]: true }"
+    class="clinical-radio-grid"
+    :class="`grid-span-${gridSpan}`"
     :style="`grid-column: span ${gridSpan};`"
-    v-bind="attributes"
   >
-    <label :for="id">{{ label }}</label>
-    <div class="input-wrapper">
-      <input
-        :id="id"
-        type="text"
-        :name="id"
-        :value="modelValue"
-        @input="$emit('update:modelValue', $event.target.value)"
-        @change="$emit('change', $event.target.value, $event.target)"
-      />
+    <legend>{{ label }}</legend>
+    <div class="radio-options-wrapper">
+      <div class="radio-options">
+        <div
+          v-for="(opt, idx) in normalizedOptions"
+          :key="idx"
+          class="radio-option"
+        >
+          <input
+            :id="`${id}_option_${idx}`"
+            type="radio"
+            :name="id"
+            :value="opt.value"
+            :checked="modelValue === opt.value"
+            @change="
+              $emit('update:modelValue', opt.value);
+              $emit('change', opt.value, $event.target);
+            "
+          >
+          <label :for="`${id}_option_${idx}`">{{ opt.label }}</label>
+        </div>
+      </div>
 
       <!-- Query Flag -->
       <ClinicalQueryFlag
@@ -24,11 +35,6 @@
         :is-open="isQueryOpen"
         @click="isQueryOpen = !isQueryOpen"
       />
-    </div>
-
-    <!-- Validation Error -->
-    <div v-if="showError" class="validation-error-msg">
-      {{ error }}
     </div>
 
     <!-- Query Panel -->
@@ -42,7 +48,7 @@
       @close-query="$emit('close-query')"
       @reopen-query="$emit('reopen-query')"
     />
-  </div>
+  </fieldset>
 </template>
 
 <script setup>
@@ -59,6 +65,10 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  options: {
+    type: Array,
+    default: () => [],
+  },
   modelValue: {
     type: [String, Number],
     default: "",
@@ -70,14 +80,6 @@ const props = defineProps({
   gridSpan: {
     type: [Number, String],
     default: 12,
-  },
-  error: {
-    type: String,
-    default: null,
-  },
-  attributes: {
-    type: Object,
-    default: () => ({}),
   },
 });
 
@@ -92,7 +94,15 @@ defineEmits([
 
 const isQueryOpen = ref(false);
 
-const showError = computed(() => {
-  return !!props.error;
+const normalizedOptions = computed(() => {
+  return props.options.map((opt) => {
+    if (typeof opt === "string") {
+      return { value: opt, label: opt };
+    }
+    return {
+      value: opt.value !== undefined ? opt.value : opt.label,
+      label: opt.label !== undefined ? opt.label : opt.value,
+    };
+  });
 });
 </script>

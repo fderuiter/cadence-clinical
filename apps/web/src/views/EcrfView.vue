@@ -966,10 +966,9 @@ import { ref, reactive, watch, onMounted, computed } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
-import { validateField, debounce } from "ui"; // Consolidating debounce onto shared packages/ui (PR #566 alignment)
+import { validateField, debounce, ClinicalFormField } from "ui"; // Consolidating debounce onto shared packages/ui (PR #566 alignment)
 import { evaluateAST } from "../evaluator.js";
 import { terminologyClient } from "../api/terminologyClient";
-import ClinicalFormField from "../components/clinical/ClinicalFormField.vue";
 import ReasonModal from "../components/ReasonModal.vue";
 import ConflictResolutionModal from "../components/ConflictResolutionModal.vue";
 import { useSyncStore } from "../stores/sync";

@@ -1,11 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
-import ClinicalInput from "../src/components/clinical/ClinicalInput.vue";
-import ClinicalRadioGroup from "../src/components/clinical/ClinicalRadioGroup.vue";
-import ClinicalLookupInput from "../src/components/clinical/ClinicalLookupInput.vue";
-import ClinicalFormField from "../src/components/clinical/ClinicalFormField.vue";
-import ClinicalQueryFlag from "../src/components/clinical/ClinicalQueryFlag.vue";
-import ClinicalQueryPanel from "../src/components/clinical/ClinicalQueryPanel.vue";
+import {
+  ClinicalInput,
+  ClinicalRadioGroup,
+  ClinicalLookupInput,
+  ClinicalFormField,
+  ClinicalQueryFlag,
+  ClinicalQueryPanel,
+} from "ui";
 
 describe("ClinicalQueryFlag.vue", () => {
   it("renders with status NONE correctly", () => {

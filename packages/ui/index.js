@@ -742,3 +742,19 @@ export function createClinicalVisitMatrix(visitsOrSoa, forms = []) {
 }
 
 export { toBeAccessible } from "./accessibility-matcher.js";
+
+import ClinicalFormField from "./src/components/clinical/ClinicalFormField.vue";
+import ClinicalInput from "./src/components/clinical/ClinicalInput.vue";
+import ClinicalRadioGroup from "./src/components/clinical/ClinicalRadioGroup.vue";
+import ClinicalLookupInput from "./src/components/clinical/ClinicalLookupInput.vue";
+import ClinicalQueryFlag from "./src/components/clinical/ClinicalQueryFlag.vue";
+import ClinicalQueryPanel from "./src/components/clinical/ClinicalQueryPanel.vue";
+
+export {
+  ClinicalFormField,
+  ClinicalInput,
+  ClinicalRadioGroup,
+  ClinicalLookupInput,
+  ClinicalQueryFlag,
+  ClinicalQueryPanel,
+};
