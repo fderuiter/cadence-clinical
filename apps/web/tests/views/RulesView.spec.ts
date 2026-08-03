@@ -24,12 +24,15 @@ vi.mock("../../src/api/apiClient", () => {
                 type: "comparison",
                 operator: ">",
                 operands: [
-                  { type: "field_ref", field_ref: { field_id: "pulse", form_id: "form_vs" } },
-                  { type: "constant", value: 100 }
-                ]
+                  {
+                    type: "field_ref",
+                    field_ref: { field_id: "pulse", form_id: "form_vs" },
+                  },
+                  { type: "constant", value: 100 },
+                ],
               },
-              compiled_xpath: "/clinical_data/form_vs/pulse > 100"
-            }
+              compiled_xpath: "/clinical_data/form_vs/pulse > 100",
+            },
           ]);
         }
         return Promise.resolve([]);
@@ -39,28 +42,28 @@ vi.mock("../../src/api/apiClient", () => {
           return Promise.resolve({
             xpath: "/clinical_data/form_vs/pulse > 100",
             failures: [],
-            circular_cycles: []
+            circular_cycles: [],
           });
         }
         if (url.includes("/rules")) {
           return Promise.resolve({
             id: "rule_mock_saved",
             ...payload,
-            compiled_xpath: "/clinical_data/form_vs/pulse > 100"
+            compiled_xpath: "/clinical_data/form_vs/pulse > 100",
           });
         }
         return Promise.resolve({});
       }),
       put: vi.fn().mockResolvedValue({}),
-      delete: vi.fn().mockResolvedValue({})
-    }
+      delete: vi.fn().mockResolvedValue({}),
+    },
   };
 });
 
 // Setup mock router
 const router = createRouter({
   history: createWebHistory(),
-  routes: [{ path: "/rules", component: RulesView }]
+  routes: [{ path: "/rules", component: RulesView }],
 });
 
 describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () => {
@@ -91,8 +94,8 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
 
     const wrapper = mount(RulesView, {
       global: {
-        plugins: [pinia, router]
-      }
+        plugins: [pinia, router],
+      },
     });
 
     await flushPromises();
@@ -110,8 +113,8 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
   it("renders ruleset list and opens visual editor workspace for authorized roles", async () => {
     const wrapper = mount(RulesView, {
       global: {
-        plugins: [pinia, router]
-      }
+        plugins: [pinia, router],
+      },
     });
 
     await flushPromises();
@@ -124,7 +127,10 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
     expect(wrapper.find(".tab-btn-rules").exists()).toBe(true);
 
     // List of active rules should be fetched and rendered
-    expect(apiClient.get).toHaveBeenCalledWith("/api/v1/studies/study_1/rules", expect.any(Object));
+    expect(apiClient.get).toHaveBeenCalledWith(
+      "/api/v1/studies/study_1/rules",
+      expect.any(Object)
+    );
 
     expect(wrapper.text()).toContain("rule_1");
     expect(wrapper.text()).toContain("pulse_details");
@@ -133,8 +139,8 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
   it("composes, compiles, and links custom rules to active visual fields", async () => {
     const wrapper = mount(RulesView, {
       global: {
-        plugins: [pinia, router]
-      }
+        plugins: [pinia, router],
+      },
     });
 
     await flushPromises();
@@ -164,8 +170,8 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
   it("gates saving rules with mandatory 21 CFR Part 11 / EU Annex 11 reason audit checks", async () => {
     const wrapper = mount(RulesView, {
       global: {
-        plugins: [pinia, router]
-      }
+        plugins: [pinia, router],
+      },
     });
 
     await flushPromises();
@@ -180,7 +186,9 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
     wrapper.vm.targetField = "pulse";
 
     // Find the Save Signed Rule button
-    const saveBtn = wrapper.findAll("button").find(b => b.text().includes("Save Signed Rule"));
+    const saveBtn = wrapper
+      .findAll("button")
+      .find((b) => b.text().includes("Save Signed Rule"));
     expect(saveBtn).toBeDefined();
     await saveBtn!.trigger("click");
 
@@ -192,13 +200,17 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
     // Confirming transition with a valid reason registers a block in the compliance ledger
     const initialLedgerSize = clinicalStore.ledgerBlocks.length;
 
-    await wrapper.vm.confirmChangeReason("Added logical safety check for pulse metrics");
+    await wrapper.vm.confirmChangeReason(
+      "Added logical safety check for pulse metrics"
+    );
 
     // Ledger blocks should have a new RULE_SAVE audit block
     expect(clinicalStore.ledgerBlocks.length).toBe(initialLedgerSize + 1);
-    expect(clinicalStore.ledgerBlocks[clinicalStore.ledgerBlocks.length - 1].action).toBe("RULE_SAVE");
-    expect(clinicalStore.ledgerBlocks[clinicalStore.ledgerBlocks.length - 1].reason).toBe(
-      "Added logical safety check for pulse metrics"
-    );
+    expect(
+      clinicalStore.ledgerBlocks[clinicalStore.ledgerBlocks.length - 1].action
+    ).toBe("RULE_SAVE");
+    expect(
+      clinicalStore.ledgerBlocks[clinicalStore.ledgerBlocks.length - 1].reason
+    ).toBe("Added logical safety check for pulse metrics");
   });
 });

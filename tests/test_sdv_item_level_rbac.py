@@ -14,8 +14,13 @@ from execution.sdv_transport_models import (
 )
 from pydantic import ValidationError
 
-from packages.security.permissions import PermissionEnum, RoleEnum
-from packages.security.permissions import has_permission as has_perm_granular
+from packages.security.permissions import (
+    PermissionEnum,
+    RoleEnum,
+)
+from packages.security.permissions import (
+    has_permission as has_perm_granular,
+)
 from packages.security.rbac import (
     ROLE_AUDITOR_CANONICAL,
     ROLE_CRA_CANONICAL,
