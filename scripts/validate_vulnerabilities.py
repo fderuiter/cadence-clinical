@@ -456,6 +456,9 @@ def execute_pip_audit() -> tuple[str, str, int]:
             "--all-packages",
             "--no-dev",
             "--no-emit-project",
+            "--no-hashes",
+            "--no-emit-local",
+            "--no-emit-workspace",
             "-o",
             temp_file_path,
         ]
