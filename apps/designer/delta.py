@@ -2495,7 +2495,11 @@ async def reorder_arms(
         store = MOCK_SOA_DATA[study_version_id]["arms"]
 
         for a_id in arm_ids_ordered:
-            if a_id not in store or store[a_id].get("is_deleted", False) or store[a_id].get("is_retired", False):
+            if (
+                a_id not in store
+                or store[a_id].get("is_deleted", False)
+                or store[a_id].get("is_retired", False)
+            ):
                 raise ValueError(f"Arm {a_id} not found or is deleted")
 
         action_id = str(uuid.uuid4())
@@ -2505,7 +2509,9 @@ async def reorder_arms(
             "change_reason": change_reason,
             "timestamp": dt.datetime.now().isoformat(),
             "type": "REORDER",
-            "before_order": {a_id: store[a_id].get("sequence") for a_id in arm_ids_ordered},
+            "before_order": {
+                a_id: store[a_id].get("sequence") for a_id in arm_ids_ordered
+            },
             "after_order": {},
         }
 
@@ -2607,7 +2613,11 @@ async def reorder_epochs(
         store = MOCK_SOA_DATA[study_version_id]["epochs"]
 
         for e_id in epoch_ids_ordered:
-            if e_id not in store or store[e_id].get("is_deleted", False) or store[e_id].get("is_retired", False):
+            if (
+                e_id not in store
+                or store[e_id].get("is_deleted", False)
+                or store[e_id].get("is_retired", False)
+            ):
                 raise ValueError(f"Epoch {e_id} not found or is deleted")
 
         action_id = str(uuid.uuid4())
@@ -2617,7 +2627,9 @@ async def reorder_epochs(
             "change_reason": change_reason,
             "timestamp": dt.datetime.now().isoformat(),
             "type": "REORDER",
-            "before_order": {e_id: store[e_id].get("sequence") for e_id in epoch_ids_ordered},
+            "before_order": {
+                e_id: store[e_id].get("sequence") for e_id in epoch_ids_ordered
+            },
             "after_order": {},
         }
 
@@ -2721,7 +2733,11 @@ async def reorder_procedures(
         store = MOCK_SOA_DATA[study_version_id]["procedures"]
 
         for p_id in procedure_ids_ordered:
-            if p_id not in store or store[p_id].get("is_deleted", False) or store[p_id].get("is_retired", False):
+            if (
+                p_id not in store
+                or store[p_id].get("is_deleted", False)
+                or store[p_id].get("is_retired", False)
+            ):
                 raise ValueError(f"Procedure {p_id} not found or is deleted")
 
         action_id = str(uuid.uuid4())
@@ -2731,7 +2747,9 @@ async def reorder_procedures(
             "change_reason": change_reason,
             "timestamp": dt.datetime.now().isoformat(),
             "type": "REORDER",
-            "before_order": {p_id: store[p_id].get("sequence") for p_id in procedure_ids_ordered},
+            "before_order": {
+                p_id: store[p_id].get("sequence") for p_id in procedure_ids_ordered
+            },
             "after_order": {},
         }
 
@@ -2860,7 +2878,15 @@ async def assign_visits_to_arm(
             visit_store[v_id] = new_visit
 
             # Establish link
-            await link_arm_applicability(None, study_version_id, user_id, change_reason, arm_id, v_id, target_type="visit")
+            await link_arm_applicability(
+                None,
+                study_version_id,
+                user_id,
+                change_reason,
+                arm_id,
+                v_id,
+                target_type="visit",
+            )
         return True
 
     async with driver.session() as session:
@@ -2904,7 +2930,14 @@ async def assign_visits_to_arm(
             CREATE (a)-[:BEFORE]->(old_arm)
             RETURN new_arm.id as id
             """
-            await tx.run(arm_query, study_version_id=study_version_id, arm_id=arm_id, user_id=user_id, change_reason=change_reason, action_id=action_id)
+            await tx.run(
+                arm_query,
+                study_version_id=study_version_id,
+                arm_id=arm_id,
+                user_id=user_id,
+                change_reason=change_reason,
+                action_id=action_id,
+            )
 
             for v_id in visit_ids:
                 visit_check = await tx.run(
@@ -2938,7 +2971,14 @@ async def assign_visits_to_arm(
                 CREATE (a)-[:BEFORE]->(old_v)
                 RETURN new_v.id as id
                 """
-                await tx.run(visit_query, study_version_id=study_version_id, visit_id=v_id, user_id=user_id, change_reason=change_reason, action_id=visit_action_id)
+                await tx.run(
+                    visit_query,
+                    study_version_id=study_version_id,
+                    visit_id=v_id,
+                    user_id=user_id,
+                    change_reason=change_reason,
+                    action_id=visit_action_id,
+                )
 
                 # Link new Arm and new Visit
                 link_query = """
@@ -2953,7 +2993,15 @@ async def assign_visits_to_arm(
                 })
                 CREATE (a)-[:AFTER]->(arm)
                 """
-                await tx.run(link_query, study_version_id=study_version_id, arm_id=arm_id, visit_id=v_id, user_id=user_id, change_reason=change_reason, action_id=str(uuid.uuid4()))
+                await tx.run(
+                    link_query,
+                    study_version_id=study_version_id,
+                    arm_id=arm_id,
+                    visit_id=v_id,
+                    user_id=user_id,
+                    change_reason=change_reason,
+                    action_id=str(uuid.uuid4()),
+                )
 
             return True
 
@@ -3002,7 +3050,9 @@ async def assign_visits_to_epoch(
             visit_store[v_id] = new_visit
 
             # Establish link
-            await link_epoch_to_visit(None, study_version_id, user_id, change_reason, epoch_id, v_id)
+            await link_epoch_to_visit(
+                None, study_version_id, user_id, change_reason, epoch_id, v_id
+            )
         return True
 
     async with driver.session() as session:
@@ -3045,7 +3095,14 @@ async def assign_visits_to_epoch(
             CREATE (a)-[:BEFORE]->(old_e)
             RETURN new_e.id as id
             """
-            await tx.run(epoch_query, study_version_id=study_version_id, epoch_id=epoch_id, user_id=user_id, change_reason=change_reason, action_id=action_id)
+            await tx.run(
+                epoch_query,
+                study_version_id=study_version_id,
+                epoch_id=epoch_id,
+                user_id=user_id,
+                change_reason=change_reason,
+                action_id=action_id,
+            )
 
             for v_id in visit_ids:
                 visit_check = await tx.run(
@@ -3078,7 +3135,14 @@ async def assign_visits_to_epoch(
                 CREATE (a)-[:BEFORE]->(old_v)
                 RETURN new_v.id as id
                 """
-                await tx.run(visit_query, study_version_id=study_version_id, visit_id=v_id, user_id=user_id, change_reason=change_reason, action_id=visit_action_id)
+                await tx.run(
+                    visit_query,
+                    study_version_id=study_version_id,
+                    visit_id=v_id,
+                    user_id=user_id,
+                    change_reason=change_reason,
+                    action_id=visit_action_id,
+                )
 
                 link_query = """
                 MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_EPOCH]->(ep:Epoch {id: $epoch_id})
@@ -3092,7 +3156,15 @@ async def assign_visits_to_epoch(
                 })
                 CREATE (a)-[:AFTER]->(ep)
                 """
-                await tx.run(link_query, study_version_id=study_version_id, epoch_id=epoch_id, visit_id=v_id, user_id=user_id, change_reason=change_reason, action_id=str(uuid.uuid4()))
+                await tx.run(
+                    link_query,
+                    study_version_id=study_version_id,
+                    epoch_id=epoch_id,
+                    visit_id=v_id,
+                    user_id=user_id,
+                    change_reason=change_reason,
+                    action_id=str(uuid.uuid4()),
+                )
 
             return True
 

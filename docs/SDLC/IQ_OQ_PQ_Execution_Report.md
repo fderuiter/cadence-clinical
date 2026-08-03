@@ -12,9 +12,9 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1982
+- **Total Automated Test Cases Run:** 1991
 - **Passed:** 0 🟢
-- **Unverified (Draft):** 1982 ⚪
+- **Unverified (Draft):** 1991 ⚪
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 0.00%
@@ -54,6 +54,20 @@ aiosqlite                0.22.1
 annotated-doc            0.0.4
 annotated-types          0.7.0
 anyio                    4.14.2
+apps-compliance          0.1.0
+apps-ctms                0.1.0
+apps-designer            0.1.0
+apps-econsent            0.1.0
+apps-eisf                0.1.0
+apps-etmf                0.1.0
+apps-execution           0.1.0
+apps-gateway             0.1.0
+apps-interop             0.1.0
+apps-notifications       0.1.0
+apps-org                 0.1.0
+apps-quality             0.1.0
+apps-safety              0.1.0
+apps-tickets             0.1.0
 asyncpg                  0.31.0
 attrs                    26.1.0
 babel                    2.18.0
@@ -111,6 +125,11 @@ neo4j                    6.2.0
 nodeenv                  1.10.0
 numpy                    2.5.1
 openpyxl                 3.1.5
+packages-core-models     0.1.0
+packages-database        0.1.0
+packages-deid            0.1.0
+packages-security        0.1.0
+packages-storage         0.1.0
 packageurl-python        0.17.6
 packaging                26.2
 pandas                   3.0.3
@@ -1567,6 +1586,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_rtsm_role_aliases_normalization` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_rtsm_role_aware_masking` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_rtsm_role_permissions` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_soa_granular_permissions` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_soa_rbac_permissions` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_verify_is_auditor_allows_auditors` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_verify_is_auditor_denies_non_auditors` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_verify_not_auditor_allows_others` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
@@ -1738,6 +1759,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_bulk_sdv_signoff_rbac_and_idempotency` | `tests.test_sdv` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
 | `test_sdv_automatic_verification_drop_compliance` | `tests.test_sdv` | PRD-QRY-006 | ⚪ UNVERIFIED | N/A |
 | `test_sdv_signoff_endpoints_rbac_and_target_validation` | `tests.test_sdv` | PRD-QRY-005 | ⚪ UNVERIFIED | N/A |
+| `test_flag_target_descriptor_validation` | `tests.test_sdv_item_level_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_sdv_flag_granular_permissions` | `tests.test_sdv_item_level_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_sdv_flag_rbac_permissions` | `tests.test_sdv_item_level_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_sdv_flag_request_validation` | `tests.test_sdv_item_level_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_sdv_flag_severity_enum` | `tests.test_sdv_item_level_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_sdv_resolve_request_validation` | `tests.test_sdv_item_level_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_sdv_response_structures` | `tests.test_sdv_item_level_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_clinical_observation_sdv_defaults` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-007 | ⚪ UNVERIFIED | N/A |
 | `test_item_level_sdv_data_model_and_state_machine` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005 | ⚪ UNVERIFIED | N/A |
 | `test_sdv_automatic_verification_drop` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-006 | ⚪ UNVERIFIED | N/A |

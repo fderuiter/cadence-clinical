@@ -7,6 +7,38 @@ exclude = [
     "apps/execution/database/models.py"
 ]
 
+[tool.uv.workspace]
+members = [
+    "apps/*",
+    "packages/*"
+]
+exclude = [
+    "apps/web",
+    "apps/subject-portal",
+    "packages/ui"
+]
+
+[tool.uv.sources]
+packages-security = { workspace = true }
+packages-database = { workspace = true }
+packages-deid = { workspace = true }
+packages-storage = { workspace = true }
+packages-core-models = { workspace = true }
+apps-compliance = { workspace = true }
+apps-ctms = { workspace = true }
+apps-designer = { workspace = true }
+apps-econsent = { workspace = true }
+apps-eisf = { workspace = true }
+apps-etmf = { workspace = true }
+apps-execution = { workspace = true }
+apps-gateway = { workspace = true }
+apps-interop = { workspace = true }
+apps-notifications = { workspace = true }
+apps-org = { workspace = true }
+apps-quality = { workspace = true }
+apps-safety = { workspace = true }
+apps-tickets = { workspace = true }
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
