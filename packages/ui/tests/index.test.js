@@ -46,6 +46,8 @@ describe("createClinicalLookupInput", () => {
     expect(html).toContain("lookup-invalid");
     expect(html).toContain("❌");
     expect(html).toContain("Invalid code.");
+    expect(html).toContain('aria-invalid="true"');
+    expect(html).toContain('aria-describedby="lookup-status-test-id"');
   });
 
   it("generates degraded status correctly", () => {
@@ -58,6 +60,8 @@ describe("createClinicalLookupInput", () => {
     expect(html).toContain("lookup-degraded");
     expect(html).toContain("⚠️");
     expect(html).toContain("Terminology service degraded.");
+    expect(html).toContain('aria-describedby="lookup-status-test-id"');
+    expect(html).not.toContain('aria-invalid="true"');
   });
 });
 
@@ -113,6 +117,7 @@ describe("Rule Builder Widgets & Serialization Helpers", () => {
       expect(html).toContain('class="cond-field"');
       expect(html).toContain('class="cond-operator"');
       expect(html).toContain('class="cond-right-type"');
+      expect(html).toContain('aria-label="Remove Condition Element #1"');
     });
 
     it("pre-populates fields based on initialData", () => {
@@ -129,6 +134,7 @@ describe("Rule Builder Widgets & Serialization Helpers", () => {
       expect(html).toContain('value=">" selected');
       expect(html).toContain('value="constant" selected');
       expect(html).toContain('value="140"');
+      expect(html).toContain('aria-label="Remove Condition Element #2"');
     });
   });
 
@@ -276,6 +282,14 @@ describe("Schedule of Activities Matrix Components", () => {
       expect(html).toContain("Mandatory");
       expect(html).toContain("status-conditional");
       expect(html).toContain("status-optional");
+      // Screen-reader-only labels verification
+      expect(html).toContain('class="sr-only"');
+      expect(html).toContain(
+        "Form: Blood Draw, Visit: Active Arm - Treatment Phase A - Week 1, Status: Mandatory"
+      );
+      expect(html).toContain(
+        "Form: Blood Draw, Visit: Placebo Arm - Treatment Phase B - Week 1, Status: Optional"
+      );
     });
   });
 
@@ -298,6 +312,10 @@ describe("Schedule of Activities Matrix Components", () => {
       expect(html).toContain("DM");
       expect(html).toContain("status-complete");
       expect(html).toContain("status-pending");
+      // Screen-reader-only labels verification for flat fallback matrix
+      expect(html).toContain('class="sr-only"');
+      expect(html).toContain("Form: DM, Visit: V1, Status: Complete");
+      expect(html).toContain("Form: DM, Visit: V2, Status: Pending");
     });
 
     it("returns error message when flat visits are empty", () => {

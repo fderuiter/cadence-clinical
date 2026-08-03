@@ -161,7 +161,9 @@ JWKS_URL = os.getenv(
     "http://keycloak:8080/realms/cadence/protocol/openid-connect/certs",  # deid-ignore
 )
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "RS256")
-GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+GATEWAY_SECRET = os.getenv("GATEWAY_SECRET")
+if not GATEWAY_SECRET:
+    raise RuntimeError("GATEWAY_SECRET environment variable is missing")
 
 SERVICES = {
     "designer": os.getenv("DESIGNER_URL", "http://localhost:8001"),

@@ -84,9 +84,10 @@ def create_mock_study_version(study_id: str, version_data: dict[str, Any]):
         if "base_version" in version_data and version_data["base_version"] is not None:
             payload["base_version"] = version_data["base_version"]
 
-        secret = os.getenv(
-            "SIGNING_SECRET", "designer-amendment-secure-key-12345"
-        ).encode("utf-8")
+        secret_env = os.getenv("SIGNING_SECRET")
+        if not secret_env:
+            raise RuntimeError("SIGNING_SECRET environment variable is missing")
+        secret = secret_env.encode("utf-8")
         version_data["signature"] = generate_canonical_signature(payload, secret)
 
     MOCK_STUDY_VERSIONS[study_id].append(version_data)
