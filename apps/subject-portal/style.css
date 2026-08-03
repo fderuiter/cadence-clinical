@@ -810,3 +810,98 @@ a:focus-visible,
   color: var(--color-accent, #4338ca) !important;
   border-color: var(--color-border, #e2e8f0) !important;
 }
+
+/* Toast Notifications */
+.toast-container {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  border-radius: 8px;
+  padding: 16px 20px;
+  min-width: 300px;
+  max-width: 450px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-main);
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  animation: slide-in 0.3s ease-out;
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.toast.fade-out {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.toast-success {
+  border-left-color: var(--success);
+  background-color: #f0fdf4;
+}
+
+.toast-error {
+  border-left-color: var(--danger);
+  background-color: #fef2f2;
+}
+
+.toast-warning {
+  border-left-color: var(--warning);
+  background-color: #fffbeb;
+}
+
+.toast-info {
+  border-left-color: var(--primary);
+  background-color: #eff6ff;
+}
+
+/* Persistent Network Status Bar */
+.network-status-bar {
+  padding: 10px 24px;
+  background-color: var(--warning-bg);
+  color: var(--warning);
+  border-bottom: 1px solid var(--warning);
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: slide-down 0.3s ease-out;
+  margin-bottom: 20px;
+  border-radius: 8px;
+}
+
+@keyframes slide-down {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+

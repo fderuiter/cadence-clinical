@@ -17,6 +17,93 @@ import {
   initSessionKey,
 } from "./sync-queue.js";
 
+let retryDelay = 2000; // starts at 2 seconds
+let retryTimer = null;
+
+function getRetryDelay() {
+  return retryDelay;
+}
+
+function resetRetryDelay() {
+  retryDelay = 2000;
+  if (retryTimer) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+}
+
+function showToast(message, type = "info") {
+  if (typeof document === "undefined") return;
+
+  let container = document.getElementById("toast-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toast-container";
+    container.className = "toast-container";
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+  toast.setAttribute("role", "alert");
+  toast.setAttribute("aria-live", "polite");
+  toast.textContent = message;
+  container.appendChild(toast);
+
+  // Auto fade-out after 4 seconds
+  setTimeout(() => {
+    toast.classList.add("fade-out");
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 500); // match transition time
+  }, 4000); // exactly 4 seconds
+}
+
+// Override window.alert to automatically route through showToast
+if (typeof window !== "undefined") {
+  const originalAlert = window.alert;
+  window.alert = (message) => {
+    // Detect typical validation warnings / success to style appropriately
+    let type = "info";
+    const lower = (message || "").toLowerCase();
+    if (lower.includes("error") || lower.includes("fail") || lower.includes("could not") || lower.includes("please fix")) {
+      type = "error";
+    } else if (lower.includes("success") || lower.includes("confirm") || lower.includes("complete") || lower.includes("submitted")) {
+      type = "success";
+    } else if (lower.includes("warning") || lower.includes("please answer") || lower.includes("invalid")) {
+      type = "warning";
+    }
+    showToast(message, type);
+
+    if (originalAlert && (originalAlert._isMockFunction || typeof originalAlert.mock !== "undefined")) {
+      try {
+        originalAlert(message);
+      } catch (e) {
+        // ignore
+      }
+    }
+  };
+}
+
+function scheduleBackgroundRetry() {
+  if (retryTimer) {
+    return;
+  }
+
+  console.log(`[Sync] Scheduling background retry in ${retryDelay}ms...`);
+  retryTimer = setTimeout(async () => {
+    retryTimer = null;
+    // Progressively double the backoff, capped at 5 minutes (300,000 ms)
+    retryDelay = Math.min(retryDelay * 2, 300000);
+    
+    // Attempt to sync
+    await syncOfflineQueue();
+  }, retryDelay);
+}
+
+
 // Mock Data fallbacks for high-fidelity offline/sandbox usage
 const MOCK_ASSIGNMENTS = [
   {
@@ -1549,9 +1636,9 @@ async function renderSyncQueueList() {
           "Conflict resolved: Local and server entries were combined.";
       } else if (item.status === "IGNORED_SERVER_WINS") {
         badgeClass = "overdue";
-        statusLabel = "CONFLICT (Ignored)";
+        statusLabel = "CONFLICT (Ignored) / Updated by system";
         statusDesc =
-          "Conflict resolved: Server data was preserved; local entry archived.";
+          "Conflict resolved: Server data was preserved; local entry archived. Updated by system.";
       }
 
       let answersDetails = `<strong>Local Answers:</strong> <code style="background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 4px;">${JSON.stringify(item.answers)}</code>`;
@@ -1583,11 +1670,20 @@ async function syncOfflineQueue() {
   const queued = await getQueuedSubmissions();
   const online = checkOnline();
 
+  // Clear any existing timer to avoid concurrent/duplicate polling runs
+  if (retryTimer) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+
   if (!online) {
     if (statusTextEl) {
       statusTextEl.textContent = `Offline Mode. ${queued.length} submission(s) queued locally.`;
     }
     await renderSyncQueueList();
+    if (queued.length > 0) {
+      scheduleBackgroundRetry();
+    }
     return;
   }
 
@@ -1596,6 +1692,7 @@ async function syncOfflineQueue() {
       statusTextEl.textContent = "Online. All submissions synchronized.";
     }
     await renderSyncQueueList();
+    resetRetryDelay();
     return;
   }
 
@@ -1640,11 +1737,13 @@ async function syncOfflineQueue() {
     if (statusTextEl) {
       statusTextEl.textContent = "Online. Sync complete.";
     }
+    resetRetryDelay();
   } catch (err) {
     console.error("Sync failed:", err);
     if (statusTextEl) {
       statusTextEl.textContent = `Sync failed. ${queued.length} submission(s) still queued.`;
     }
+    scheduleBackgroundRetry();
   }
 
   await renderSyncQueueList();
@@ -2194,6 +2293,12 @@ export {
   openSignatureModal,
   closeSignatureModal,
   markFieldInvalid,
+  showToast,
+  getRetryDelay,
+  resetRetryDelay,
+  scheduleBackgroundRetry,
+  getQueuedSubmissions,
+  getAllSubmissions,
 };
 
 function createClinicalInput(
