@@ -1,10 +1,9 @@
 [tool.ruff]
 line-length = 88
-target-version = "py311"
+target-version = "py312"
 exclude = [
     ".git",
     ".venv",
-    "apps/execution/database/models.py"
 ]
 
 [tool.ruff.format]

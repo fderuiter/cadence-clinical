@@ -182,9 +182,7 @@ class ClinicalSubject(AuditedModel):
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
     # site_id column for site-level locks (Task 3)
-    site_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
+    site_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     encrypted_demographics: Mapped[str] = mapped_column(String, nullable=True)
 
     status: Mapped[str] = mapped_column(String(50), default="SCREENING", nullable=False)
@@ -193,7 +191,7 @@ class ClinicalSubject(AuditedModel):
     unblinded_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     unblinded_by: Mapped[str] = mapped_column(String(255), nullable=True)
     unblinded_reason: Mapped[str] = mapped_column(String(1000), nullable=True)
-    unblinded_signature: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    unblinded_signature: Mapped[str | None] = mapped_column(String, nullable=True)
     withdrawn_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     withdrawal_reason: Mapped[str] = mapped_column(String(1000), nullable=True)
     randomization_id: Mapped[str] = mapped_column(String(36), nullable=True)
@@ -201,9 +199,9 @@ class ClinicalSubject(AuditedModel):
     enrollment_index: Mapped[int] = mapped_column(Integer, nullable=True)
 
     # RTSM / Randomization fields
-    treatment_group: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    randomization_seed: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    investigational_product_id: Mapped[Optional[str]] = mapped_column(
+    treatment_group: Mapped[str | None] = mapped_column(String, nullable=True)
+    randomization_seed: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    investigational_product_id: Mapped[str | None] = mapped_column(
         String(255), nullable=True
     )
 
@@ -281,9 +279,7 @@ class SubjectConsent(AuditedModel):
 
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    site_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
+    site_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     version_tag: Mapped[str] = mapped_column(String(50), nullable=False)
     version_index: Mapped[int] = mapped_column(Integer, nullable=False)
     icf_signed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -302,18 +298,16 @@ class ConsentFormRecord(AuditedModel):
     __tablename__ = "consent_form_records"
 
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    site_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
+    site_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     icf_version_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    printed_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    relationship_to_subject: Mapped[Optional[str]] = mapped_column(
+    printed_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    relationship_to_subject: Mapped[str | None] = mapped_column(
         String(50), nullable=True
     )
-    signature_svg: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    otp_auth_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    signature_svg: Mapped[str | None] = mapped_column(String, nullable=True)
+    otp_auth_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="PENDING", nullable=False)
-    signed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    signed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
 
@@ -326,35 +320,29 @@ class ConsentSignature(AuditedModel):
     __tablename__ = "consent_signatures"
 
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    site_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
+    site_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     icf_version_id: Mapped[str] = mapped_column(String(100), nullable=False)
     printed_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    signature_svg_data: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    signature_svg: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    otp_auth_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    signature_svg_data: Mapped[str | None] = mapped_column(String, nullable=True)
+    signature_svg: Mapped[str | None] = mapped_column(String, nullable=True)
+    otp_auth_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
     meaning: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
         default="I agree to participate in this research study",
     )
-    cryptographic_token: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True
-    )
-    verification_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    signed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    cryptographic_token: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    verification_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    signed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     timestamp: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )
     status: Mapped[str] = mapped_column(String(50), default="SIGNED", nullable=False)
-    created_at: Mapped[Optional[datetime]] = mapped_column(
+    created_at: Mapped[datetime | None] = mapped_column(
         DateTime, server_default=func.now(), nullable=True
     )
-    created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    reason_for_change: Mapped[Optional[str]] = mapped_column(
-        String(1000), nullable=True
-    )
+    created_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
 
 
 @event.listens_for(ConsentSignature, "before_update")
@@ -413,15 +401,9 @@ class ClinicalVisit(AuditedModel):
     visit_name: Mapped[str] = mapped_column(String(255), nullable=False)
     visit_date: Mapped[datetime] = mapped_column(DateTime, default=func.now())
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    site_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
-    protocol_version_tag: Mapped[Optional[str]] = mapped_column(
-        String(50), nullable=True
-    )
-    protocol_version_index: Mapped[Optional[int]] = mapped_column(
-        Integer, nullable=True
-    )
+    site_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    protocol_version_tag: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    protocol_version_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class ClinicalObservation(AuditedModel):
@@ -453,9 +435,7 @@ class ClinicalObservation(AuditedModel):
 
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    site_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
+    site_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     visit_id: Mapped[str] = mapped_column(String(255), nullable=True)
     domain: Mapped[str] = mapped_column(String(50), nullable=False)
     observation_date: Mapped[datetime] = mapped_column(DateTime, default=func.now())
@@ -491,12 +471,8 @@ class ClinicalObservation(AuditedModel):
     reference_range_low: Mapped[float] = mapped_column(Float, nullable=True)
     reference_range_high: Mapped[float] = mapped_column(Float, nullable=True)
 
-    protocol_version_tag: Mapped[Optional[str]] = mapped_column(
-        String(50), nullable=True
-    )
-    protocol_version_index: Mapped[Optional[int]] = mapped_column(
-        Integer, nullable=True
-    )
+    protocol_version_tag: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    protocol_version_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # New range evaluation fields (Task 2)
     range_indicator: Mapped[str] = mapped_column(String(50), nullable=True)
@@ -537,9 +513,7 @@ class ClinicalQuery(AuditedModel):
     )
 
     study_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
-    site_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
+    site_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     subject_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     visit_id: Mapped[str] = mapped_column(String(255), index=True, nullable=True)
     domain: Mapped[str] = mapped_column(String(50), index=True, nullable=True)
@@ -599,9 +573,7 @@ class SDVSignOff(AuditedModel):
     target_id: Mapped[str] = mapped_column(String(255), nullable=False)
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    site_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
+    site_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     verified_by: Mapped[str] = mapped_column(String(255), nullable=True)
     verified_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
@@ -945,13 +917,11 @@ class LabReferenceRange(AuditedModel):
     critical_high: Mapped[float] = mapped_column(Float, nullable=True)
 
     # GxP 21 CFR Part 11 Audit fields
-    created_at: Mapped[Optional[datetime]] = mapped_column(
+    created_at: Mapped[datetime | None] = mapped_column(
         DateTime, server_default=func.now(), nullable=True
     )
-    created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    reason_for_change: Mapped[Optional[str]] = mapped_column(
-        String(1000), nullable=True
-    )
+    created_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # Synonyms for backward compatibility
@@ -960,16 +930,12 @@ class LabReferenceRange(AuditedModel):
     low_bound = synonym("range_low")
     high_bound = synonym("range_high")
 
-    created_at: Mapped[Optional[datetime]] = mapped_column(
+    created_at: Mapped[datetime | None] = mapped_column(
         DateTime, server_default=func.now(), nullable=True
     )
-    created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    reason_for_change: Mapped[Optional[str]] = mapped_column(
-        String(1000), nullable=True
-    )
-    version_index: Mapped[Optional[int]] = mapped_column(
-        Integer, default=1, nullable=True
-    )
+    created_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    version_index: Mapped[int | None] = mapped_column(Integer, default=1, nullable=True)
 
 
 class LabTestMasterLegacy(AuditedModel):
@@ -990,20 +956,16 @@ class LabTestMasterLegacy(AuditedModel):
     study_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     test_code: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
     test_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    default_unit: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    normalized_unit: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    loinc_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    default_unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    normalized_unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    loinc_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
-    created_at: Mapped[Optional[datetime]] = mapped_column(
+    created_at: Mapped[datetime | None] = mapped_column(
         DateTime, server_default=func.now(), nullable=True
     )
-    created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    reason_for_change: Mapped[Optional[str]] = mapped_column(
-        String(1000), nullable=True
-    )
-    version_index: Mapped[Optional[int]] = mapped_column(
-        Integer, default=1, nullable=True
-    )
+    created_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    version_index: Mapped[int | None] = mapped_column(Integer, default=1, nullable=True)
 
 
 class LabUnitConversion(AuditedModel):
@@ -1034,18 +996,14 @@ class LabUnitConversion(AuditedModel):
     from_unit: Mapped[str] = mapped_column(String(50), nullable=False)
     to_unit: Mapped[str] = mapped_column(String(50), nullable=False)
     factor: Mapped[float] = mapped_column(Float, nullable=False)
-    offset: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    offset: Mapped[float | None] = mapped_column(Float, nullable=True)
 
-    created_at: Mapped[Optional[datetime]] = mapped_column(
+    created_at: Mapped[datetime | None] = mapped_column(
         DateTime, server_default=func.now(), nullable=True
     )
-    created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    reason_for_change: Mapped[Optional[str]] = mapped_column(
-        String(1000), nullable=True
-    )
-    version_index: Mapped[Optional[int]] = mapped_column(
-        Integer, default=1, nullable=True
-    )
+    created_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    version_index: Mapped[int | None] = mapped_column(Integer, default=1, nullable=True)
 
 
 class LabTestMaster(AuditedModel):
@@ -1068,16 +1026,14 @@ class LabTestMaster(AuditedModel):
     test_name: Mapped[str] = mapped_column(String(255), nullable=False)
     default_unit: Mapped[str] = mapped_column(String(50), nullable=False)
     normalized_unit: Mapped[str] = mapped_column(String(50), nullable=False)
-    loinc_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    loinc_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # GxP 21 CFR Part 11 Audit fields
-    created_at: Mapped[Optional[datetime]] = mapped_column(
+    created_at: Mapped[datetime | None] = mapped_column(
         DateTime, server_default=func.now(), nullable=True
     )
-    created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    reason_for_change: Mapped[Optional[str]] = mapped_column(
-        String(1000), nullable=True
-    )
+    created_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
 
@@ -1109,9 +1065,7 @@ class FormSubmission(AuditedModel):
     )
 
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    site_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
+    site_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
     visit_id: Mapped[str] = mapped_column(String(255), nullable=True)
     form_id: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -1212,9 +1166,7 @@ class PendingPredecessorCheck(AuditedModel):
     __table_args__ = (Index("idx_pending_pred_subject_rule", "subject_id", "rule_id"),)
 
     subject_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
-    site_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
+    site_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     study_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     current_visit_id: Mapped[str] = mapped_column(String(255), nullable=True)
     current_visit_name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -1380,10 +1332,10 @@ class MigrationRule(AuditedModel):
     rule_type: Mapped[str] = mapped_column(
         String(50), nullable=False
     )  # "rename", "add", "remove"
-    source_field: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    target_field: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    default_value_string: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    default_value_float: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    source_field: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    target_field: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    default_value_string: Mapped[str | None] = mapped_column(String, nullable=True)
+    default_value_float: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
 class ComplianceChangeRequest(AuditedModel):
@@ -1395,14 +1347,14 @@ class ComplianceChangeRequest(AuditedModel):
     __tablename__ = "compliance_change_requests"
 
     setting_key: Mapped[str] = mapped_column(String(255), nullable=False)
-    old_value: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    new_value: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    old_value: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    new_value: Mapped[str | None] = mapped_column(String(255), nullable=True)
     requested_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason: Mapped[str] = mapped_column(String(1000), nullable=False)
     status: Mapped[str] = mapped_column(
         String(50), default="PENDING_APPROVAL", nullable=False
     )
-    impact_assessment: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    impact_assessment: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     signatures: Mapped[list["ChangeApprovalSignature"]] = relationship(
         "ChangeApprovalSignature",
@@ -1443,9 +1395,7 @@ class ComprehensionQuizResult(AuditedModel):
     __tablename__ = "comprehension_quiz_results"
 
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    site_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
+    site_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     icf_version_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     score: Mapped[float] = mapped_column(Float, nullable=False)
     passed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -1512,9 +1462,9 @@ class DOADelegationRecord(AuditedModel):
     )
     pi_user_id: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    pi_approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    pi_signature_hash: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
-    end_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    pi_approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    pi_signature_hash: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    end_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
@@ -1543,5 +1493,5 @@ class ProcessedOfflineBatch(Base):
     __tablename__ = "processed_offline_batches"
 
     client_batch_id: Mapped[str] = mapped_column(String(255), primary_key=True)
-    device_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    device_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     synced_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())

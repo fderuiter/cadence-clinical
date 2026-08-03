@@ -32,11 +32,11 @@ fix: ## Auto-fix all ruff lint violations and reformat code (safe to run anytime
 
 lint: ## Check lint (no auto-fix)
 	pnpm -r lint
-	uv run ruff check . --exclude apps/execution/database/models.py
+	uv run ruff check .
 
 format: ## Check formatting only (no auto-fix)
 	pnpm -r format
-	uv run ruff format --check . --exclude apps/execution/database/models.py
+	uv run ruff format --check .
 
 check: ## Run all pre-push quality gates: format, lint, secrets, ADRs, markdown, security
 	pnpm check
