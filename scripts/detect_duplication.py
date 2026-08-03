@@ -310,6 +310,22 @@ def main() -> None:
                                     "apps/designer/rules.py",
                                     "packages/core-models/usdm_ingestion.py",
                                 },
+                                {
+                                    "apps/subject-portal/style.css",
+                                    "apps/web/src/style.css",
+                                },
+                                {
+                                    "apps/designer/soa_models.py",
+                                    "packages/core-models/protocol_authoring/soa.py",
+                                },
+                                {
+                                    "apps/web/src/composables/useFocusTrap.js",
+                                    "packages/ui/src/composables/useFocusTrap.js",
+                                },
+                                {
+                                    "packages/ui/src/components/clinical/ClinicalInput.vue",
+                                    "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
+                                },
                             ]
                         ):
                             continue
