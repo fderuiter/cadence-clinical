@@ -20,14 +20,14 @@ export const ROLE_ALIASES = {
 export const useAuthStore = defineStore("auth", {
   state: () => {
     let saved = {};
-    if (typeof window !== "undefined" && window.localStorage) {
+    if (typeof window !== "undefined" && window.sessionStorage) {
       try {
-        const stored = window.localStorage.getItem("cadence_auth");
+        const stored = window.sessionStorage.getItem("cadence_auth");
         if (stored) {
           saved = JSON.parse(stored);
         }
       } catch (e) {
-        console.error("Failed to parse auth from localStorage", e);
+        console.error("Failed to parse auth from sessionStorage", e);
       }
     }
     return {
@@ -81,8 +81,8 @@ export const useAuthStore = defineStore("auth", {
   },
   actions: {
     persist() {
-      if (typeof window !== "undefined" && window.localStorage) {
-        window.localStorage.setItem(
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        window.sessionStorage.setItem(
           "cadence_auth",
           JSON.stringify({
             isAuthenticated: this.isAuthenticated,
@@ -128,6 +128,10 @@ export const useAuthStore = defineStore("auth", {
       if (window.keycloakInstance && !this.isDemoMode) {
         await window.keycloakInstance.login(options);
       } else {
+        const isProduction = import.meta.env.PROD || import.meta.env.MODE === "production";
+        if (isProduction) {
+          throw new Error("Offline login fallback is disabled in production environments.");
+        }
         console.warn(
           "Keycloak not initialized or running in demo mode. Logging in with offline mock."
         );
@@ -149,6 +153,10 @@ export const useAuthStore = defineStore("auth", {
       if (window.keycloakInstance && !this.isDemoMode) {
         await window.keycloakInstance.logout(options);
       } else {
+        const isProduction = import.meta.env.PROD || import.meta.env.MODE === "production";
+        if (isProduction) {
+          throw new Error("Offline logout fallback is disabled in production environments.");
+        }
         console.warn(
           "Keycloak not initialized or running in demo mode. Logging out from offline mock."
         );
