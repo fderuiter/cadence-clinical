@@ -147,15 +147,24 @@ async def test_migration_upgrade_and_idempotency_explicit():
         engine = create_async_engine(db_url)
         try:
             async with engine.connect() as conn:
+
                 def get_columns_explicit(sync_conn):
                     insp = inspect(sync_conn)
                     tables = insp.get_table_names()
-                    ref_cols = [c["name"] for c in insp.get_columns("lab_reference_ranges")]
-                    master_cols = [c["name"] for c in insp.get_columns("lab_test_masters")]
-                    conv_cols = [c["name"] for c in insp.get_columns("lab_unit_conversions")]
+                    ref_cols = [
+                        c["name"] for c in insp.get_columns("lab_reference_ranges")
+                    ]
+                    master_cols = [
+                        c["name"] for c in insp.get_columns("lab_test_masters")
+                    ]
+                    conv_cols = [
+                        c["name"] for c in insp.get_columns("lab_unit_conversions")
+                    ]
                     return tables, ref_cols, master_cols, conv_cols
 
-                tables, ref_cols, master_cols, conv_cols = await conn.run_sync(get_columns_explicit)
+                tables, ref_cols, master_cols, conv_cols = await conn.run_sync(
+                    get_columns_explicit
+                )
 
                 # Assert tables exist
                 assert "lab_test_masters" in tables
@@ -172,9 +181,13 @@ async def test_migration_upgrade_and_idempotency_explicit():
                 assert "version_index" in conv_cols
 
                 # Assert legacy row gained defaulted version_index=1
-                row = (await conn.execute(
-                    text("SELECT version_index FROM lab_reference_ranges WHERE id = 'legacy-r-1';")
-                )).fetchone()
+                row = (
+                    await conn.execute(
+                        text(
+                            "SELECT version_index FROM lab_reference_ranges WHERE id = 'legacy-r-1';"
+                        )
+                    )
+                ).fetchone()
                 assert row is not None
                 assert row[0] == 1
 
@@ -188,7 +201,9 @@ async def test_migration_upgrade_and_idempotency_explicit():
         engine = create_async_engine(db_url)
         try:
             async with engine.connect() as conn:
-                tables, ref_cols, master_cols, conv_cols = await conn.run_sync(get_columns_explicit)
+                tables, ref_cols, master_cols, conv_cols = await conn.run_sync(
+                    get_columns_explicit
+                )
                 assert "lab_test_masters" in tables
                 assert "lab_unit_conversions" in tables
 

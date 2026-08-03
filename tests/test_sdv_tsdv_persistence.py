@@ -677,7 +677,9 @@ async def test_item_level_sdv_data_model_and_state_machine():
     async with db_manager.get_session_maker()() as session:
         # Check ClinicalObservation
         obs_res = await session.execute(
-            select(ClinicalObservation).where(ClinicalObservation.subject_id == "SUBJ-FLAG-01")
+            select(ClinicalObservation).where(
+                ClinicalObservation.subject_id == "SUBJ-FLAG-01"
+            )
         )
         saved_obs = obs_res.scalar_one()
         assert saved_obs.is_sdv_flagged is False
@@ -723,7 +725,9 @@ async def test_item_level_sdv_data_model_and_state_machine():
 
     async with db_manager.get_session_maker()() as session:
         obs_res = await session.execute(
-            select(ClinicalObservation).where(ClinicalObservation.subject_id == "SUBJ-FLAG-01")
+            select(ClinicalObservation).where(
+                ClinicalObservation.subject_id == "SUBJ-FLAG-01"
+            )
         )
         updated_obs = obs_res.scalar_one()
         assert updated_obs.is_sdv_flagged is True

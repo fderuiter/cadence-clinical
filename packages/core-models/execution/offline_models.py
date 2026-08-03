@@ -10,7 +10,9 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 # Recursive JSON value type representation
-type JsonValue = str | int | float | bool | None | list[JsonValue] | dict[str, JsonValue]
+type JsonValue = (
+    str | int | float | bool | None | list[JsonValue] | dict[str, JsonValue]
+)
 
 # Submission status for ePRO reconciliation
 EPROSubmissionStatus = Literal[
@@ -272,16 +274,30 @@ class EPROSubmissionResponse(BaseModel):
 
     status: EPROSubmissionStatus = Field(..., description="Sync reconciliation status")
     id: str | None = Field(None, description="Unique record identifier")
-    subject_id: str | None = Field(None, description="Pseudonymized identifier of the subject")
-    diary_id: str | None = Field(None, description="Unique identifier for the diary or survey")
-    answers: dict[str, JsonValue] | None = Field(None, description="The questionnaire response key-values")
+    subject_id: str | None = Field(
+        None, description="Pseudonymized identifier of the subject"
+    )
+    diary_id: str | None = Field(
+        None, description="Unique identifier for the diary or survey"
+    )
+    answers: dict[str, JsonValue] | None = Field(
+        None, description="The questionnaire response key-values"
+    )
     sync_status: str | None = Field(None, description="Sync resolution status")
 
     # GxP audit fields
-    created_at: datetime | None = Field(None, description="The timestamp when the record was created")
-    created_by: str | None = Field(None, description="The identity of the user who created the record")
-    reason_for_change: str | None = Field(None, description="The 21 CFR Part 11 reason for change")
-    version_index: int | None = Field(None, description="The current version of the record")
+    created_at: datetime | None = Field(
+        None, description="The timestamp when the record was created"
+    )
+    created_by: str | None = Field(
+        None, description="The identity of the user who created the record"
+    )
+    reason_for_change: str | None = Field(
+        None, description="The 21 CFR Part 11 reason for change"
+    )
+    version_index: int | None = Field(
+        None, description="The current version of the record"
+    )
 
 
 class SubjectNotificationResponse(BaseModel):
@@ -337,10 +353,14 @@ class EPROScheduleItemResponse(BaseModel):
 
     id: str | None = Field(None, description="Unique schedule item identifier")
     subject_id: str = Field(..., description="Pseudonymized identifier of the subject")
-    instrument_id: str = Field(..., description="Unique identifier for the assigned instrument")
+    instrument_id: str = Field(
+        ..., description="Unique identifier for the assigned instrument"
+    )
     start_date: datetime = Field(..., description="Start of the due/recurrence window")
     end_date: datetime = Field(..., description="End of the due/recurrence window")
-    recurrence_pattern: str | None = Field(None, description="Optional recurrence pattern like DAILY, WEEKLY")
+    recurrence_pattern: str | None = Field(
+        None, description="Optional recurrence pattern like DAILY, WEEKLY"
+    )
     due_at: datetime | None = Field(None, description="Optional specific due date/time")
 
     # GxP audit fields
@@ -364,9 +384,13 @@ class EPRODiaryFormDefinitionResponse(BaseModel):
 
     id: str | None = Field(None, description="Unique instrument identifier")
     name: str = Field(..., description="The name of the questionnaire/diary")
-    description: str | None = Field(None, description="Optional description of the diary form")
+    description: str | None = Field(
+        None, description="Optional description of the diary form"
+    )
     items: dict[str, JsonValue] = Field(..., description="Items/questions")
-    response_types: dict[str, JsonValue] = Field(..., description="Response types and options")
+    response_types: dict[str, JsonValue] = Field(
+        ..., description="Response types and options"
+    )
     scoring_metadata: dict[str, JsonValue] = Field(..., description="Scoring metadata")
 
     # GxP audit fields
