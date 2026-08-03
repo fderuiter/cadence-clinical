@@ -22,8 +22,12 @@ def test_permission_enum_export_sdtm():
     assert PermissionEnum.EXPORT_SDTM == "export:sdtm"
 
     # Ensure EXPORT_SDTM is mapped to the roles allowed to export (SponsorAdmin and DataManager)
-    assert PermissionEnum.EXPORT_SDTM in ROLE_PERMISSIONS_MAP[RoleEnum.SPONSOR_ADMIN.value]
-    assert PermissionEnum.EXPORT_SDTM in ROLE_PERMISSIONS_MAP[RoleEnum.DATA_MANAGER.value]
+    assert (
+        PermissionEnum.EXPORT_SDTM in ROLE_PERMISSIONS_MAP[RoleEnum.SPONSOR_ADMIN.value]
+    )
+    assert (
+        PermissionEnum.EXPORT_SDTM in ROLE_PERMISSIONS_MAP[RoleEnum.DATA_MANAGER.value]
+    )
 
 
 def test_can_access_study_fail_open():
@@ -75,7 +79,9 @@ async def test_require_study_scope_resolution_order():
             self.headers = headers or {}
             self.method = "GET"
 
-    principal = Principal(user_id="u1", roles=["sponsor_dm"], assigned_studies=["study1"])
+    principal = Principal(
+        user_id="u1", roles=["sponsor_dm"], assigned_studies=["study1"]
+    )
 
     # Match query parameter
     req = MockRequestQuery(query_params={"study_id": "study1"})
@@ -87,7 +93,9 @@ async def test_require_study_scope_resolution_order():
     with pytest.raises(HTTPException) as exc_info:
         await checker(req_mismatch, principal)
     assert exc_info.value.status_code == 403
-    assert exc_info.value.detail == "Forbidden: Insufficient scope access for this study."
+    assert (
+        exc_info.value.detail == "Forbidden: Insufficient scope access for this study."
+    )
 
     # 2. Resolve from path parameters
     req_path = MockRequestQuery(path_params={"study_id": "study1"}, query_params={})

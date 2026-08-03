@@ -915,3 +915,77 @@ def test_notifications_negative_security_paths():
     resp = client.get("/api/v1/notifications", headers=headers_spoof)
     assert resp.status_code == 401
     assert "Invalid gateway signature" in resp.json()["detail"]
+
+
+def test_missing_diary_alert_template_mapping():
+    """Verify that get_template_name_for_event maps MISSING_DIARY_ENTRY correctly.
+
+    @req:PRD-SYS-001
+    """
+    from apps.notifications.services.email_renderer import get_template_name_for_event
+
+    template_name = get_template_name_for_event("MISSING_DIARY_ENTRY")
+    assert template_name == "missing_diary_alert.html.j2"
+
+
+def test_missing_diary_alert_fallback_rendering():
+    """Verify in-memory fallback rendering works for missing diary alert event.
+
+    @req:PRD-SYS-001
+    """
+    from unittest.mock import patch
+
+    from apps.notifications.services.email_renderer import render_email_template
+
+    context = {
+        "study_id": "STUDY-X",
+        "event_id": "evt-123",
+        "timestamp_utc": "2026-10-10T12:00:00Z",
+        "payload": {
+            "subject_id": "SUBJ-001",
+            "diary_name": "Daily Sleep Log",
+            "expected_date": "2026-10-09",
+        },
+    }
+
+    # Temporarily patch TEMPLATE_DIR to non-existent to force in-memory fallback
+    with patch(
+        "apps.notifications.services.email_renderer.TEMPLATE_DIR", "/nonexistent"
+    ):
+        rendered = render_email_template("missing_diary_alert.html.j2", context)
+        assert "Missing eCOA/ePRO Diary Entry" in rendered
+        assert "STUDY-X" in rendered
+        assert "SUBJ-001" in rendered
+        assert "Daily Sleep Log" in rendered
+        assert "2026-10-09" in rendered
+
+
+def test_missing_diary_alert_disk_rendering():
+    """Verify disk-based template rendering works for missing diary alert.
+
+    @req:PRD-SYS-001
+    """
+    from apps.notifications.services.email_renderer import render_email_template
+
+    context = {
+        "study_id": "STUDY-X",
+        "event_id": "evt-123",
+        "timestamp_utc": "2026-10-10T12:00:00Z",
+        "payload": {
+            "subject_id": "SUBJ-001",
+            "diary_name": "Daily Sleep Log",
+            "expected_date": "2026-10-09",
+            "site_id": "SITE-A",
+        },
+    }
+
+    rendered = render_email_template("missing_diary_alert.html.j2", context)
+    assert "[ALERT] Missing eCOA/ePRO Diary Entry" in rendered
+    assert "STUDY-X" in rendered
+    assert "evt-123" in rendered
+    assert "SUBJ-001" in rendered
+    assert "Daily Sleep Log" in rendered
+    assert "2026-10-09" in rendered
+    assert "SITE-A" in rendered
+    assert "21 CFR Part 11" in rendered
+    assert "GxP" in rendered

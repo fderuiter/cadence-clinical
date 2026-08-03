@@ -9,10 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1994
-- **Passed:** 1994 🟢
-- **Total Automated Test Cases Run:** 1990
-- **Passed:** 1990 🟢
+- **Total Automated Test Cases Run:** 1997
+- **Passed:** 1997 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1371,6 +1369,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_email_delivery_channel_failure_and_exhaustion` | `tests.test_notifications` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_email_delivery_channel_success` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lifecycle_transitions_and_justifications` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_diary_alert_disk_rendering` | `tests.test_notifications` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_missing_diary_alert_fallback_rendering` | `tests.test_notifications` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_missing_diary_alert_template_mapping` | `tests.test_notifications` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_multi_channel_edge_case_in_app_succeeds_email_exhausts` | `tests.test_notifications` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_notification_creation_and_auditing` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_notification_detail_visibility` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
