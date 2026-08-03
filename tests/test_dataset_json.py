@@ -684,3 +684,58 @@ def test_validator_supp_dataset_linkage_and_structure():
     }
     dj = serialize_to_dataset_json(data=bundle_valid, study_id="STUDY-01")
     validate_dataset_json(dj)  # Should pass with no exception
+
+
+def test_serialize_db_last_modified_date_time():
+    """Verify serialization of dbLastModifiedDateTime and neutral header request."""
+    dm_records = [
+        {
+            "STUDYID": "STUDY-001",
+            "DOMAIN": "DM",
+            "USUBJID": "STUDY-001-SITE-A-SUBJ-001",
+            "SUBJID": "SUBJ-001",
+            "SEX": "M",
+            "RACE": "WHITE",
+            "ARM": "Active Arm",
+        }
+    ]
+
+    # Test passing a specific ISO 8601 string
+    test_dt = "2026-10-10T12:00:00Z"
+    dj = serialize_to_dataset_json(
+        data=dm_records,
+        study_id="STUDY-001",
+        db_last_modified_date_time=test_dt,
+    )
+    assert dj.dbLastModifiedDateTime == test_dt
+
+    # Test passing a neutral header request "neutral"
+    dj_neutral = serialize_to_dataset_json(
+        data=dm_records,
+        study_id="STUDY-001",
+        db_last_modified_date_time="neutral",
+    )
+    assert dj_neutral.dbLastModifiedDateTime == dj_neutral.creationDateTime
+
+    # Test passing "de-identified"
+    dj_deid = serialize_to_dataset_json(
+        data=dm_records,
+        study_id="STUDY-001",
+        db_last_modified_date_time="de-identified",
+    )
+    assert dj_deid.dbLastModifiedDateTime == dj_deid.creationDateTime
+
+    # Test passing "DEIDENTIFIED" (case insensitive)
+    dj_deid_upper = serialize_to_dataset_json(
+        data=dm_records,
+        study_id="STUDY-001",
+        db_last_modified_date_time="  DEIDENTIFIED  ",
+    )
+    assert dj_deid_upper.dbLastModifiedDateTime == dj_deid_upper.creationDateTime
+
+    # Test default is None
+    dj_default = serialize_to_dataset_json(
+        data=dm_records,
+        study_id="STUDY-001",
+    )
+    assert dj_default.dbLastModifiedDateTime is None

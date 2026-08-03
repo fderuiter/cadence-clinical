@@ -125,6 +125,9 @@ class DatasetJSON(BaseModel):
     )
     fileOID: str | None = Field(None, description="Unique identifier for this file")
     asOfDateTime: str | None = Field(None, description="As of timestamp")
+    dbLastModifiedDateTime: str | None = Field(
+        None, description="Database last modified timestamp"
+    )
     originator: str | None = Field(None, description="Originator of the data")
     sourceSystem: str | None = Field(None, description="Generating system")
     sourceSystemVersion: str | None = Field(

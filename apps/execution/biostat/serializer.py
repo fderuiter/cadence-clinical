@@ -345,6 +345,7 @@ def serialize_to_dataset_json(
     originator: str | None = None,
     source_system: str | None = None,
     source_system_version: str | None = None,
+    db_last_modified_date_time: str | None = None,
 ) -> DatasetJSON:
     """Serializes dataset lists or mapped bundles into CDISC Dataset-JSON structure."""
     item_group_data = {}
@@ -371,10 +372,19 @@ def serialize_to_dataset_json(
         itemGroupData=item_group_data,
     )
 
+    creation_dt = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+
+    actual_db_last_modified = db_last_modified_date_time
+    if db_last_modified_date_time is not None:
+        clean_val = db_last_modified_date_time.strip().lower()
+        if clean_val in ("neutral", "de-identified", "deidentified"):
+            actual_db_last_modified = creation_dt
+
     return DatasetJSON(
-        creationDateTime=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        creationDateTime=creation_dt,
         datasetJSONVersion="1.0.0",
         fileOID=file_oid,
+        dbLastModifiedDateTime=actual_db_last_modified,
         originator=originator,
         sourceSystem=source_system,
         sourceSystemVersion=source_system_version,
