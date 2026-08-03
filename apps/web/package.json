@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite",
+    "prebuild": "pnpm --filter ui build",
     "build": "vite build --base=/cadence-clinical/ && node ../../scripts/build-docs.js",
+    "pretest": "pnpm --filter ui build",
     "test": "vitest run --coverage",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
