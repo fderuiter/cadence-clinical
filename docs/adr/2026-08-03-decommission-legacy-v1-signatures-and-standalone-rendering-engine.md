@@ -11,6 +11,8 @@
 
 The platform previously maintained both legacy V1 cryptographic signature validation paths and a standalone PDF/HTML rendering engine alongside the newer V2 canonical JSON-based signature verification and unified rendering pipelines. Retaining these legacy systems increases the security attack surface, compromises GxP 21 CFR Part 11 electronic signature compliance trace boundaries, and introduces maintenance overhead. This ADR formalizes the complete decommission of all V1 signature verification pathways and standalone rendering logic.
 
+This decision implements requirements under Trace-13 and PRD-SYS-001.
+
 ## 2. Decision Drivers & Constraints
 
 * **Security & Compliance (PRD-SYS-001):** Enforce strict V2 canonical JSON signatures across all regulatory boundaries to guarantee non-repudiation and tamper evidence.
