@@ -2,19 +2,18 @@ import pytest
 from fastapi import HTTPException, Request
 from fastapi.testclient import TestClient
 
-from packages.security.rbac import (
-    Principal,
-    can_access_study,
-    get_principal,
-    require_study_scope,
-    StudyScopeChecker,
-)
+from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.permissions import (
-    PermissionEnum,
     ROLE_PERMISSIONS_MAP,
+    PermissionEnum,
     RoleEnum,
 )
-from packages.security.middleware import GatewayAuthMiddleware
+from packages.security.rbac import (
+    Principal,
+    StudyScopeChecker,
+    can_access_study,
+    require_study_scope,
+)
 
 
 def test_permission_enum_export_sdtm():
@@ -108,11 +107,12 @@ async def test_require_study_scope_resolution_order():
 @pytest.mark.asyncio
 async def test_gateway_auth_middleware_tenant_fallback():
     """Confirm GatewayAuthMiddleware dispatch handles X-Tenant-Id fallback correctly."""
-    from fastapi import FastAPI
-    from fastapi.responses import PlainTextResponse
     import hashlib
     import hmac
     import time
+
+    from fastapi import FastAPI
+    from fastapi.responses import PlainTextResponse
 
     app = FastAPI()
     app.add_middleware(GatewayAuthMiddleware)
