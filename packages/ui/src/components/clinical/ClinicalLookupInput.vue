@@ -19,7 +19,7 @@
           $emit('input', $event.target.value);
         "
         @change="$emit('change', $event.target.value, $event.target)"
-      >
+      />
 
       <!-- Query Flag -->
       <ClinicalQueryFlag
@@ -39,10 +39,7 @@
       role="status"
       aria-live="polite"
     >
-      <span
-        class="lookup-status-icon"
-        aria-hidden="true"
-      >{{
+      <span class="lookup-status-icon" aria-hidden="true">{{
         statusIcon
       }}</span>
       <span class="lookup-status-text">{{ ariaLiveMessage }}</span>
@@ -57,10 +54,7 @@
     />
 
     <!-- Active Clinical Lookup Field Validation Error -->
-    <div
-      v-if="showError"
-      class="validation-error-msg"
-    >
+    <div v-if="showError" class="validation-error-msg">
       {{ props.error }}
     </div>
 

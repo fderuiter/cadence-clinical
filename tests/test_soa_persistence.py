@@ -506,14 +506,20 @@ def test_soa_domain_models_schema_alignment():
         )
 
     # Test invalid offset ordering on TimingWindow Properties and Domain Model
-    with pytest.raises(ValueError, match="Field 'min_offset' must be less than or equal to 'max_offset'."):
+    with pytest.raises(
+        ValueError,
+        match="Field 'min_offset' must be less than or equal to 'max_offset'.",
+    ):
         TimingWindowProperties(
             name="Invalid window",
             min_offset=5,
             max_offset=2,
         )
 
-    with pytest.raises(ValueError, match="Field 'min_offset' must be less than or equal to 'max_offset'."):
+    with pytest.raises(
+        ValueError,
+        match="Field 'min_offset' must be less than or equal to 'max_offset'.",
+    ):
         TimingWindow(
             id="tw_invalid_offset",
             study_version_id="sv_123",
