@@ -490,7 +490,7 @@ def test_audit_context_variables_and_decorator() -> None:
 
 def test_downstream_signature_gated_endpoint_requires_sig_token() -> None:
     """
-    # @req:Trace-15
+    # @req:Trace-17
     Test that signature-gated endpoints in downstream microservices reject requests without X-Sig-Token.
     """
     client = TestClient(test_app)
@@ -522,7 +522,7 @@ def test_downstream_signature_gated_endpoint_requires_sig_token() -> None:
 
 def test_downstream_signature_gated_endpoint_valid_sig_token() -> None:
     """
-    # @req:Trace-15
+    # @req:Trace-17
     Test that a valid, bound, and unexpired X-Sig-Token permits access.
     """
     client = TestClient(test_app)
@@ -565,7 +565,7 @@ def test_downstream_signature_gated_endpoint_valid_sig_token() -> None:
 
 def test_downstream_signature_gated_endpoint_expired_token() -> None:
     """
-    # @req:Trace-15
+    # @req:Trace-17
     Test that an expired X-Sig-Token is rejected by downstream middleware.
     """
     client = TestClient(test_app)
@@ -608,7 +608,7 @@ def test_downstream_signature_gated_endpoint_expired_token() -> None:
 
 def test_downstream_signature_gated_endpoint_mismatched_action() -> None:
     """
-    # @req:Trace-15
+    # @req:Trace-17
     Test that a token bound to a different action/path is rejected by downstream middleware.
     """
     client = TestClient(test_app)
@@ -651,7 +651,7 @@ def test_downstream_signature_gated_endpoint_mismatched_action() -> None:
 
 def test_downstream_signature_gated_endpoint_replay_blocked() -> None:
     """
-    # @req:Trace-15
+    # @req:Trace-17
     Test that a token cannot be used twice (replay attack is blocked).
     """
     client = TestClient(test_app)
@@ -1035,7 +1035,7 @@ def test_middleware_tenant_signature_tampering_rejected() -> None:
 
 def test_verify_sig_token_helper_scenarios() -> None:
     """
-    # @req:Trace-15
+    # @req:Trace-17
     Test various verification outcomes directly using the extracted verify_sig_token helper.
     """
     from packages.security.middleware import downstream_replay_cache, verify_sig_token

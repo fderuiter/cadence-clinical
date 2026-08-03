@@ -71,7 +71,7 @@ def get_auth_headers(
 
 
 def test_tickets_health_check():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Verify health check of independent Tickets service is unauthenticated and works correctly.
     """
@@ -84,7 +84,7 @@ def test_tickets_health_check():
 
 
 def test_unauthenticated_requests_are_rejected():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Verify direct/untrusted requests are rejected by GatewayAuthMiddleware.
     """
@@ -96,7 +96,7 @@ def test_unauthenticated_requests_are_rejected():
 
 @pytest.mark.asyncio
 async def test_tickets_database_schema_creation():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Verify that tickets tables are created and queried successfully.
     """
@@ -110,9 +110,9 @@ async def test_tickets_database_schema_creation():
 
 @pytest.mark.asyncio
 async def test_tickets_lifecycle():
-    # @req:Trace-14
+    # @req:Trace-16
     """
-    # @req:Trace-14
+    # @req:Trace-16
     Verify that a ticket can be created, listed, viewed, and updated with proper GxP fields.
     """
     client = TestClient(app)
@@ -214,9 +214,9 @@ async def test_tickets_lifecycle():
 
 @pytest.mark.asyncio
 async def test_ticket_audit_log_immutable_ledger():
-    # @req:Trace-14
+    # @req:Trace-16
     """
-    # @req:Trace-14
+    # @req:Trace-16
     Verify TicketAuditLog is append-only and rejects updates/deletions.
     """
     client = TestClient(app)
@@ -271,7 +271,7 @@ async def test_ticket_audit_log_immutable_ledger():
 
 @pytest.mark.asyncio
 async def test_list_ticket_audit_logs_endpoint():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Verify list_ticket_audit_logs endpoint is protected and returns descending order logs.
     """
@@ -292,7 +292,7 @@ async def test_list_ticket_audit_logs_endpoint():
 
 
 def test_missing_change_reason_fails_mutations():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Verify mutations fail if X-Change-Reason is missing.
     """
@@ -311,7 +311,7 @@ def test_missing_change_reason_fails_mutations():
 
 
 def test_nonexistent_resources_return_404():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Verify 404 is returned when attempting to access nonexistent resources.
     """
@@ -324,7 +324,7 @@ def test_nonexistent_resources_return_404():
 
 
 def test_tickets_enums_and_models_attributes():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Verify enums and models attributes exist and conform to spec.
     """
@@ -351,7 +351,7 @@ def test_tickets_enums_and_models_attributes():
 
 @pytest.mark.asyncio
 async def test_comments_creation_and_retrieval_scoped():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Verify creation of ticket comments and efficient, ascending chronological retrieval.
     """
@@ -431,7 +431,7 @@ async def test_comments_creation_and_retrieval_scoped():
 
 @pytest.mark.asyncio
 async def test_ticket_scoped_audit_logs():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Verify audit records can be retrieved filtered by ticket_id.
     """
@@ -472,7 +472,7 @@ async def test_ticket_scoped_audit_logs():
 
 @pytest.mark.asyncio
 async def test_ticket_concurrent_reference_generation():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Verify ticket reference generation is unique and safe under concurrent creations.
     """
@@ -511,7 +511,7 @@ async def test_ticket_concurrent_reference_generation():
 
 @pytest.mark.asyncio
 async def test_tickets_rbac_auditor_cannot_mutate_but_can_read():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Verify that auditor/inspector roles cannot create or update tickets but can read them.
     """
@@ -562,7 +562,7 @@ async def test_tickets_rbac_auditor_cannot_mutate_but_can_read():
 
 @pytest.mark.asyncio
 async def test_tickets_terminal_state_rejection():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Verify that updates to terminal tickets (CLOSED) are rejected.
     """
@@ -602,7 +602,7 @@ async def test_tickets_terminal_state_rejection():
 
 @pytest.mark.asyncio
 async def test_tickets_get_by_reference():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Verify that ticket detail retrieval works by sequential reference as well as ID.
     """
@@ -632,7 +632,7 @@ async def test_tickets_get_by_reference():
 
 @pytest.mark.asyncio
 async def test_tickets_scope_aware_filtering():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Verify scope-aware filtering and access enforcement for site-scoped users.
     """
@@ -698,7 +698,7 @@ async def test_tickets_scope_aware_filtering():
 
 @pytest.mark.asyncio
 async def test_tickets_validation_invalid_enums():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Verify that invalid enum parameters or body payloads are rejected with 422 Unprocessable Entity.
     """
@@ -720,9 +720,9 @@ async def test_tickets_validation_invalid_enums():
 
 @pytest.mark.asyncio
 async def test_tickets_optimistic_locking_and_explicit_endpoints():
-    # @req:Trace-14
+    # @req:Trace-16
     """
-    # @req:Trace-14
+    # @req:Trace-16
     Verify:
     (a) optimistic locking 409 responses for mismatched version indexes,
     (b) 400 responses for invalid state transitions (undeclared),
@@ -903,7 +903,7 @@ async def test_tickets_optimistic_locking_and_explicit_endpoints():
 
 @pytest.mark.asyncio
 async def test_tickets_unauthorized_site_scope_blocking():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Verify 403 when a site-scoped principal attempts to create/list comments
     or list audit logs for a ticket outside of their scope.
@@ -959,7 +959,7 @@ async def test_tickets_unauthorized_site_scope_blocking():
 
 @pytest.mark.asyncio
 async def test_tickets_site_scope_filtering_audit_logs_unfiltered():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Verify site-scoped principals cannot view audit logs associated with tickets
     outside of their assigned sites when no ticket_id filter is passed.
@@ -1018,7 +1018,7 @@ async def test_tickets_site_scope_filtering_audit_logs_unfiltered():
 
 @pytest.mark.asyncio
 async def test_tickets_auditor_comments_access():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Verify that an auditor role is blocked from create_ticket_comment via verify_not_auditor,
     but is still able to read comments successfully.
@@ -1074,7 +1074,7 @@ async def test_tickets_auditor_comments_access():
 
 @pytest.mark.asyncio
 async def test_tickets_in_scope_success_and_self_audit():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Assert in-scope principals succeed on comment creation, retrieval, and audit list,
     and verify that self-audit entries (TICKET_COMMENT_CREATE, TICKET_COMMENTS_VIEW,
@@ -1148,7 +1148,7 @@ async def test_tickets_in_scope_success_and_self_audit():
 
 @pytest.mark.asyncio
 async def test_tickets_audit_logs_pagination():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Verify the paginated audit-log API behaves correctly under limit/offset.
     Seeds multiple ticket audit rows and asserts all paginated properties.
@@ -1203,7 +1203,7 @@ async def test_tickets_audit_logs_pagination():
 
 @pytest.mark.asyncio
 async def test_tickets_audit_logs_time_filtering():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Verify the audit log time-range filtering logic works using a ±1 minute window
     around a known record's created_at, as well as a future window.
@@ -1264,7 +1264,7 @@ async def test_tickets_audit_logs_time_filtering():
 
 @pytest.mark.asyncio
 async def test_tickets_audit_logs_query_boundaries():
-    # @req:Trace-14
+    # @req:Trace-16
     """
     Verify boundary validation on query parameters.
     Assert 422 responses for limit=0, limit=251, and offset=-1.
