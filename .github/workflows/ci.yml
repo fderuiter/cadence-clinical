@@ -15,6 +15,7 @@ jobs:
     name: Style and Lint Verification
     runs-on: ubuntu-latest
     env:
+      # Enable RTM draft mode in style verification job since tests do not run here
       RTM_DRAFT: "true"
     permissions:
       contents: read
