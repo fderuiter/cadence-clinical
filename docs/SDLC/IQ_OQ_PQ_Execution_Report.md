@@ -1803,6 +1803,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_sdv_automatic_verification_drop_compliance` | `tests.test_sdv` | PRD-QRY-006 | 🟢 PASSED | < 1s |
 | `test_sdv_signoff_endpoints_rbac_and_target_validation` | `tests.test_sdv` | PRD-QRY-005 | 🟢 PASSED | < 1s |
 | `test_clinical_observation_sdv_defaults` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-007 | 🟢 PASSED | < 1s |
+| `test_item_level_sdv_data_model_and_state_machine` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005 | 🟢 PASSED | < 1s |
 | `test_sdv_automatic_verification_drop` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-006 | 🟢 PASSED | < 1s |
 | `test_sdv_sign_off_persistence_and_audit` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005 | 🟢 PASSED | < 1s |
 | `test_sdv_signoff_endpoint_and_idempotency` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-006 | 🟢 PASSED | < 1s |

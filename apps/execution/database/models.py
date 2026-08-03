@@ -42,6 +42,16 @@ class QueryStatus(str, enum.Enum):
     CANCELLED = "CANCELLED"
 
 
+# Allowed transitions:
+# PENDING → VERIFIED, PENDING → FLAGGED, VERIFIED → FLAGGED, VERIFIED → DROPPED, FLAGGED → RESOLVED, FLAGGED → DROPPED, RESOLVED → FLAGGED
+class SDVStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    VERIFIED = "VERIFIED"
+    FLAGGED = "FLAGGED"
+    RESOLVED = "RESOLVED"
+    DROPPED = "DROPPED"
+
+
 class DictionaryType(str, enum.Enum):
     MEDDRA = "MEDDRA"
     WHODRUG = "WHODRUG"
@@ -463,6 +473,8 @@ class ClinicalObservation(AuditedModel):
         sdv_verified_by (str): Nullable identifier of the verifier/CRA.
         sdv_verified_at (datetime): Nullable timestamp of SDV verification.
         page_id (str): Nullable eCRF page/form grouping key.
+        is_sdv_flagged (bool): Non-null boolean indicating if field-level SDV is flagged.
+        sdv_flag_reason (str): Nullable reason text for field-level SDV flag.
     """
 
     __tablename__ = "clinical_observations"
@@ -493,6 +505,13 @@ class ClinicalObservation(AuditedModel):
     sdv_verified_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     # Phase 11: nullable string page/CRF grouping key
     page_id: Mapped[str] = mapped_column(String(255), nullable=True)
+
+    # Phase 25: field-level SDV flagged state column (Boolean, default False)
+    is_sdv_flagged: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    # Phase 25: field-level SDV flag reason column (nullable)
+    sdv_flag_reason: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
 
     # Lab reference range snapshot fields
     lab_source: Mapped[str] = mapped_column(String(50), nullable=True)
@@ -605,6 +624,17 @@ class SDVSignOff(AuditedModel):
         verified_at (datetime): Nullable timestamp of verification.
         dropped_reason (str): Nullable reason text for dropping/rescinding verification.
         dropped_at (datetime): Nullable timestamp when verification was dropped/rescinded.
+        status (str): Non-null state machine status (PENDING, VERIFIED, FLAGGED, RESOLVED, DROPPED).
+        flagged_by (str): Nullable identifier of the user who flagged the record.
+        flagged_at (datetime): Nullable timestamp of flagging.
+        flag_reason (str): Nullable reason text for flagging.
+        flag_severity (str): Nullable severity of the flag.
+        resolved_by (str): Nullable identifier of the user who resolved the flag.
+        resolved_at (datetime): Nullable timestamp when flag was resolved.
+        created_at (datetime): Nullable timestamp of creation.
+        created_by (str): Nullable identifier of the creator.
+        reason_for_change (str): Nullable reason for database modification.
+        version_index (int): Non-null incremental GxP version index.
     """
 
     __tablename__ = "sdv_sign_offs"
@@ -623,6 +653,28 @@ class SDVSignOff(AuditedModel):
     verified_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     dropped_reason: Mapped[str] = mapped_column(String(1000), nullable=True)
     dropped_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+
+    # Phase 25: state machine status column
+    status: Mapped[str] = mapped_column(
+        String(50), default="PENDING", nullable=False
+    )
+    # Phase 25: flag lifecycle columns
+    flagged_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    flagged_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    flag_reason: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+    flag_severity: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    resolved_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    # GxP 21 CFR Part 11 Audit fields
+    created_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), nullable=True
+    )
+    created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    reason_for_change: Mapped[Optional[str]] = mapped_column(
+        String(1000), nullable=True
+    )
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
 
 # Phase 11: TSDV configuration model for RBQM rules

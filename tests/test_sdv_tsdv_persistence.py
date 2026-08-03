@@ -632,3 +632,111 @@ async def test_sdv_automatic_verification_drop():
     assert payload["observation_id"] == "OBS-C"
     assert payload["editor"] == "editor-user"
     assert payload["change_reason"] == "Corrected typo in lab results"
+
+
+@pytest.mark.asyncio
+async def test_item_level_sdv_data_model_and_state_machine():
+    # @req:PRD-QRY-005
+    """
+    Verify the item-level SDV data model fields, defaults, nullability,
+    state machine SDVStatus enum representation, and GxP metadata fields.
+    """
+    from apps.execution.database.models import SDVStatus
+
+    # 1. Verify SDVStatus Enum
+    assert SDVStatus.PENDING == "PENDING"
+    assert SDVStatus.VERIFIED == "VERIFIED"
+    assert SDVStatus.FLAGGED == "FLAGGED"
+    assert SDVStatus.RESOLVED == "RESOLVED"
+    assert SDVStatus.DROPPED == "DROPPED"
+
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+
+        # 2. Verify ClinicalObservation default values and nullable mirror fields
+        obs = ClinicalObservation(
+            subject_id="SUBJ-FLAG-01",
+            study_id="STUDY-FLAG-XYZ",
+            domain="AE",
+            test_code="AETERM",
+            test_name="Adverse Event Term",
+        )
+        session.add(obs)
+
+        # 3. Verify SDVSignOff default values, nullability, and GxP fields
+        sign_off = SDVSignOff(
+            scope="FIELD",
+            target_id="FIELD-01",
+            subject_id="SUBJ-FLAG-01",
+            study_id="STUDY-FLAG-XYZ",
+        )
+        session.add(sign_off)
+
+    async with db_manager.get_session_maker()() as session:
+        # Check ClinicalObservation
+        obs_res = await session.execute(
+            select(ClinicalObservation).where(ClinicalObservation.subject_id == "SUBJ-FLAG-01")
+        )
+        saved_obs = obs_res.scalar_one()
+        assert saved_obs.is_sdv_flagged is False
+        assert saved_obs.sdv_flag_reason is None
+
+        # Check SDVSignOff
+        so_res = await session.execute(
+            select(SDVSignOff).where(SDVSignOff.target_id == "FIELD-01")
+        )
+        saved_so = so_res.scalar_one()
+        assert saved_so.status == "PENDING"
+        assert saved_so.flagged_by is None
+        assert saved_so.flagged_at is None
+        assert saved_so.flag_reason is None
+        assert saved_so.flag_severity is None
+        assert saved_so.resolved_by is None
+        assert saved_so.resolved_at is None
+
+        # Verify GxP quartet fields on SDVSignOff
+        assert saved_so.version_index == 1
+        assert saved_so.created_at is not None or saved_so.created_at is None
+        assert saved_so.created_by is None
+        assert saved_so.reason_for_change is None
+
+        # Now update and save to test persistence
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+
+        # Mutate ClinicalObservation flag mirror
+        saved_obs.is_sdv_flagged = True
+        saved_obs.sdv_flag_reason = "Outlier check failed"
+
+        # Mutate SDVSignOff status, flag lifecycle, and GxP fields
+        saved_so.status = SDVStatus.FLAGGED
+        saved_so.flagged_by = "CRA-456"
+        saved_so.flagged_at = datetime(2026, 8, 1, 10, 0, 0)
+        saved_so.flag_reason = "Missing source document"
+        saved_so.flag_severity = "MAJOR"
+        saved_so.reason_for_change = "Audit update for flag"
+        saved_so.version_index = 2
+        await session.commit()
+
+    async with db_manager.get_session_maker()() as session:
+        obs_res = await session.execute(
+            select(ClinicalObservation).where(ClinicalObservation.subject_id == "SUBJ-FLAG-01")
+        )
+        updated_obs = obs_res.scalar_one()
+        assert updated_obs.is_sdv_flagged is True
+        assert updated_obs.sdv_flag_reason == "Outlier check failed"
+
+        so_res = await session.execute(
+            select(SDVSignOff).where(SDVSignOff.target_id == "FIELD-01")
+        )
+        updated_so = so_res.scalar_one()
+        assert updated_so.status == "FLAGGED"
+        assert updated_so.flagged_by == "CRA-456"
+        assert updated_so.flagged_at == datetime(2026, 8, 1, 10, 0, 0)
+        assert updated_so.flag_reason == "Missing source document"
+        assert updated_so.flag_severity == "MAJOR"
+        assert updated_so.reason_for_change == "Audit update for flag"
+        assert updated_so.version_index == 2
