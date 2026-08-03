@@ -1,56 +1,30 @@
 <template>
-  <div
-    :id="`field-container-${id}`"
-    class="clinical-input"
-    :class="{ 'has-error': showError, [`grid-span-${gridSpan}`]: true }"
-    :style="`grid-column: span ${gridSpan};`"
-    v-bind="attributes"
+  <ClinicalFieldLayout
+    :id="id"
+    :label="label"
+    :query="query"
+    :grid-span="gridSpan"
+    :error="error"
+    :attributes="attributes"
+    tag="div"
   >
-    <label :for="id">{{ label }}</label>
-    <div class="input-wrapper">
+    <template #default="{ id: slotId }">
       <input
-        :id="id"
+        :id="slotId"
         type="text"
-        :name="id"
+        :name="slotId"
         :value="modelValue"
         @input="$emit('update:modelValue', $event.target.value)"
         @change="$emit('change', $event.target.value, $event.target)"
       />
-
-      <!-- Query Flag -->
-      <ClinicalQueryFlag
-        :id="id"
-        :query="query"
-        :is-open="isQueryOpen"
-        @click="isQueryOpen = !isQueryOpen"
-      />
-    </div>
-
-    <!-- Validation Error -->
-    <div v-if="showError" class="validation-error-msg">
-      {{ error }}
-    </div>
-
-    <!-- Query Panel -->
-    <ClinicalQueryPanel
-      v-if="isQueryOpen"
-      :id="id"
-      :query="query"
-      @close-panel="isQueryOpen = false"
-      @create-query="$emit('create-query', $event)"
-      @respond-query="$emit('respond-query', $event)"
-      @close-query="$emit('close-query')"
-      @reopen-query="$emit('reopen-query')"
-    />
-  </div>
+    </template>
+  </ClinicalFieldLayout>
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
-import ClinicalQueryFlag from "./ClinicalQueryFlag.vue";
-import ClinicalQueryPanel from "./ClinicalQueryPanel.vue";
+import ClinicalFieldLayout from "./ClinicalFieldLayout.vue";
 
-const props = defineProps({
+defineProps({
   id: {
     type: String,
     required: true,
@@ -84,15 +58,5 @@ const props = defineProps({
 defineEmits([
   "update:modelValue",
   "change",
-  "create-query",
-  "respond-query",
-  "close-query",
-  "reopen-query",
 ]);
-
-const isQueryOpen = ref(false);
-
-const showError = computed(() => {
-  return !!props.error;
-});
 </script>
