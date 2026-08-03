@@ -44,6 +44,9 @@
   },
   "homepage": "https://github.com/fderuiter/cadence-clinical#readme",
   "private": true,
+  "overrides": {
+    "postcss": "^8.5.23"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "axe-core": "^4.12.1",
