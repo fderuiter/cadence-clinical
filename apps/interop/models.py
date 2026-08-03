@@ -4,7 +4,7 @@
 
 import uuid
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -103,7 +103,7 @@ class Instrument(Base):
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # Relationships
-    assignments: Mapped[list["SubjectAssignment"]] = relationship(
+    assignments: Mapped[list[SubjectAssignment]] = relationship(
         "SubjectAssignment", back_populates="instrument", cascade="all, delete-orphan"
     )
 
@@ -149,7 +149,7 @@ class SubjectAssignment(Base):
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # Relationships
-    instrument: Mapped["Instrument"] = relationship(
+    instrument: Mapped[Instrument] = relationship(
         "Instrument", back_populates="assignments"
     )
 
@@ -191,9 +191,7 @@ class SubjectNotification(Base):
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # Relationships
-    assignment: Mapped[Optional["SubjectAssignment"]] = relationship(
-        "SubjectAssignment"
-    )
+    assignment: Mapped[SubjectAssignment | None] = relationship("SubjectAssignment")
 
 
 class EPROSubmissionDefeated(Base):

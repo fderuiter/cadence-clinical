@@ -1552,15 +1552,15 @@ async def test_require_study_scope_extraction() -> None:
 def test_visit_windowing_rbac_permissions() -> None:
     """Verify that visit_windowing permissions are mapped correctly for rbac.py roles."""
     from packages.security.rbac import (
-        ROLE_SYSADMIN,
+        ROLE_CRA_CANONICAL,
+        ROLE_CRC,
+        ROLE_INVESTIGATOR,
+        ROLE_REVIEWER,
         ROLE_SPONSOR_DESIGNER,
         ROLE_SPONSOR_DM,
         ROLE_SPONSOR_MM,
         ROLE_SPONSOR_STATISTICIAN,
-        ROLE_REVIEWER,
-        ROLE_INVESTIGATOR,
-        ROLE_CRC,
-        ROLE_CRA_CANONICAL,
+        ROLE_SYSADMIN,
         Principal,
         has_permission,
     )

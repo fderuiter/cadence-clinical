@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator, ConfigDict, AliasChoices
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 
 class VariableMetadata(BaseModel):

@@ -688,8 +688,14 @@ def test_validator_supp_dataset_linkage_and_structure():
 
 def test_cdisc_metadata_headers_and_aliases():
     """Verify CDISC metadata headers, validation aliases, and optional fields added to Dataset-JSON models."""
-    from apps.execution.biostat.models import DatasetJSON, DatasetJSONItemGroup, ClinicalData, VariableMetadata
     from pydantic import ValidationError
+
+    from apps.execution.biostat.models import (
+        ClinicalData,
+        DatasetJSON,
+        DatasetJSONItemGroup,
+        VariableMetadata,
+    )
 
     variables = [
         VariableMetadata(name="STUDYID", label="Study OID", type="string"),
