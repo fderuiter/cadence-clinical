@@ -125,7 +125,9 @@ class DatasetJSON(BaseModel):
     datasetJSONCreationDateTime: str = Field(
         default_factory=lambda: datetime.utcnow().isoformat() + "Z",
         serialization_alias="datasetJSONCreationDateTime",
-        validation_alias=AliasChoices("datasetJSONCreationDateTime", "creationDateTime"),
+        validation_alias=AliasChoices(
+            "datasetJSONCreationDateTime", "creationDateTime"
+        ),
         description="ISO 8601 creation timestamp",
     )
     datasetJSONVersion: str = Field(

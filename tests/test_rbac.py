@@ -1617,9 +1617,18 @@ def test_visit_windowing_granular_permissions() -> None:
         assert has_permission(role, PermissionEnum.VISIT_WINDOWING_READ) is True
 
     # Non-read/write roles should not have access (e.g. Subject)
-    assert has_permission(RoleEnum.SUBJECT.value, PermissionEnum.VISIT_WINDOWING_READ) is False
-    assert has_permission(RoleEnum.SUBJECT.value, PermissionEnum.VISIT_WINDOWING_CREATE) is False
-    assert has_permission(RoleEnum.SUBJECT.value, PermissionEnum.VISIT_WINDOWING_UPDATE) is False
+    assert (
+        has_permission(RoleEnum.SUBJECT.value, PermissionEnum.VISIT_WINDOWING_READ)
+        is False
+    )
+    assert (
+        has_permission(RoleEnum.SUBJECT.value, PermissionEnum.VISIT_WINDOWING_CREATE)
+        is False
+    )
+    assert (
+        has_permission(RoleEnum.SUBJECT.value, PermissionEnum.VISIT_WINDOWING_UPDATE)
+        is False
+    )
 
 
 def test_etmf_taxonomy_and_tag_permissions() -> None:

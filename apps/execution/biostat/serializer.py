@@ -373,7 +373,9 @@ def serialize_to_dataset_json(
     )
 
     return DatasetJSON(
-        datasetJSONCreationDateTime=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        datasetJSONCreationDateTime=datetime.now(UTC)
+        .isoformat()
+        .replace("+00:00", "Z"),
         datasetJSONVersion="1.0.0",
         fileOID=file_oid,
         originator=originator,

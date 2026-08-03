@@ -205,7 +205,9 @@ async def test_timing_window_validation_rules():
         )
 
     # 3. Test min_offset must not be greater than max_offset on TimingWindowProperties
-    with pytest.raises(ValueError, match="min_offset must not be greater than max_offset."):
+    with pytest.raises(
+        ValueError, match="min_offset must not be greater than max_offset."
+    ):
         TimingWindowProperties(
             name="Invalid Range",
             min_offset=3,
@@ -235,7 +237,9 @@ async def test_timing_window_validation_rules():
             created_by="user1",
         )
 
-    with pytest.raises(ValueError, match="min_offset must not be greater than max_offset."):
+    with pytest.raises(
+        ValueError, match="min_offset must not be greater than max_offset."
+    ):
         TimingWindow(
             id="tw_3",
             study_version_id="sv_123",
@@ -308,7 +312,9 @@ async def test_timing_window_update_carry_forward_neo4j():
     driver_mock, tx_mock = setup_driver_mock()
     tx_mock.run.side_effect = [
         AsyncMock(),  # lock sv
-        AsyncMock(single=AsyncMock(return_value={"id": "tw_1"})),  # check old timing window exists
+        AsyncMock(
+            single=AsyncMock(return_value={"id": "tw_1"})
+        ),  # check old timing window exists
         AsyncMock(single=AsyncMock(return_value={"id": "tw_1"})),  # update query
     ]
 
