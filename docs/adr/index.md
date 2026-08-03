@@ -224,3 +224,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-02: ADR-[NUMBER]: Enforce Strict Fail-Closed Secrets Validation and Narrow Scanner Exclusions](2026-08-02-enforce-strict-fail-closed-secrets-validation-and-narrow-scanner-exclusions.md)
 - [2026-09-06: Enforce Strict Fail-Closed Environment Rules and Narrow Scanner Exclusions](2026-09-06-enforce-strict-fail-closed-environment-rules.md)
 - [2026-08-03: Upgrade Environments to Python 3.14](2026-08-03-upgrade-environments-to-python-3-14.md)
+- [2026-09-07: Extend Centralized Permission Matrix for eCOA Diary Alert Actions](2026-09-07-extend-ecoa-diary-alert-permissions.md)
