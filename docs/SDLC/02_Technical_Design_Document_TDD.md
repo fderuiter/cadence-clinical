@@ -201,7 +201,7 @@ The Execution Service manages subject data capture (EDC) and clinical transactio
 The electronic Trial Master File (eTMF) and electronic Investigator Site File (eISF) services leverage a unified and immutable reference taxonomy modeling engine.
 * **Taxonomy Package (`packages/core-models/tmf_reference_model`):** Houses the memory-efficient and frozen Pydantic-typed catalog registry of DIA TMF Reference Model versions.
 * **The Cutover Decision:** The platform has cut over to `v3.2.0-complete` as the active default catalog version to prevent taxonomy drift. Legacy `v3.2.0` is fully retained for backward compatibility and reproducible pre-cutover record interpretation. Extended namespaces register Cadence-specific custom extensions in `v3.2.0-extended` with `is_extension=True`.
-* **Validation & Propagation:** Strict hierarchical integrity checks are performed centrally during ingestion using `resolve_artifact` and `validate_hierarchy`, rejecting invalid classifications with HTTP 422, while supporting automated/manual document redactions signed with symmetrically cryptographed manifests (HMAC-SHA256).
+* **Validation & Propagation:** Strict hierarchical integrity checks are performed centrally during ingestion using `resolve_artifact` and `validate_hierarchy`, rejecting invalid classifications with HTTP 422, while supporting automated/manual document redactions signed with symmetrically cryptographed manifests (HMAC-SHA256). The system is fully synchronized and GxP compliant.
 
 ### 2.4 Distributed Caching Layer
 Redis is deployed as a highly-available clustered setup in the isolated subnet tier. Its primary functions include:
