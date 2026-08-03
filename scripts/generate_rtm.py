@@ -39,7 +39,10 @@ def parse_srs(filepath):
             desc = match.group(3).strip()
             req_id = f"Trace-{num}"
             if req_id in requirements:
-                print(f"ERROR: Duplicate SRS requirement ID detected: '{req_id}' in {filepath}", file=sys.stderr)
+                print(
+                    f"ERROR: Duplicate SRS requirement ID detected: '{req_id}' in {filepath}",
+                    file=sys.stderr,
+                )
                 sys.exit(1)
             requirements[req_id] = {
                 "id": req_id,
@@ -67,7 +70,10 @@ def parse_prd(filepath):
             req_id = match.group(1).strip()
             title = match.group(2).strip()
             if req_id in requirements:
-                print(f"ERROR: Duplicate PRD requirement ID detected: '{req_id}' in {filepath}", file=sys.stderr)
+                print(
+                    f"ERROR: Duplicate PRD requirement ID detected: '{req_id}' in {filepath}",
+                    file=sys.stderr,
+                )
                 sys.exit(1)
             requirements[req_id] = {
                 "id": req_id,
@@ -702,12 +708,18 @@ def main():
     all_requirements = {}
     for k, v in prd_reqs.items():
         if k in all_requirements:
-            print(f"ERROR: Overlapping requirement ID detected across merged datasets: '{k}'", file=sys.stderr)
+            print(
+                f"ERROR: Overlapping requirement ID detected across merged datasets: '{k}'",
+                file=sys.stderr,
+            )
             sys.exit(1)
         all_requirements[k] = v
     for k, v in srs_reqs.items():
         if k in all_requirements:
-            print(f"ERROR: Overlapping requirement ID detected across merged datasets: '{k}'", file=sys.stderr)
+            print(
+                f"ERROR: Overlapping requirement ID detected across merged datasets: '{k}'",
+                file=sys.stderr,
+            )
             sys.exit(1)
         all_requirements[k] = v
 
