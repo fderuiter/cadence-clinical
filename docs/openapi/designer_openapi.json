@@ -10015,6 +10015,54 @@
             "title": "Name",
             "description": "Label or duration specification of the timing window."
           },
+          "anchor_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anchor Reference",
+            "description": "Anchor reference, e.g. a visit name."
+          },
+          "target_day": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Day",
+            "description": "Target scheduled day."
+          },
+          "min_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Offset",
+            "description": "Minimum day offset."
+          },
+          "max_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Offset",
+            "description": "Maximum day offset."
+          },
           "conditional": {
             "anyOf": [
               {

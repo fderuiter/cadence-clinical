@@ -115,6 +115,7 @@ def receive_before_flush(session: Session, flush_context, instances):
             "personnel_assignments",
             "delegations_of_authority",
             "org_audit_logs",
+            "org_training_logs",
             "safety_cases",
             "safety_export_jobs",
             "safety_audit_logs",

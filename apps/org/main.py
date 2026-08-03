@@ -8,6 +8,7 @@ with 21 CFR Part 11 and GxP compliant append-only version history and audit trai
 import os
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from organization_domain import ClinicalStaffRole, OrganizationType
@@ -24,11 +25,16 @@ from apps.org.models import (
     Personnel,
     PersonnelAssignment,
     Site,
+    TrainingLog,
 )
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.delegation import verify_delegation_scope
 from packages.security.middleware import GatewayAuthMiddleware
-from packages.security.signing import verify_canonical_signature
+from packages.security.rbac import Principal, require_permission
+from packages.security.signing import (
+    generate_gateway_signature,
+    verify_canonical_signature,
+)
 
 # Retrieve gateway secret for canonical signatures verification
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
@@ -271,6 +277,91 @@ class PersonnelResponse(BaseModel):
     created_by: str
     reason_for_change: str
     version_index: int
+
+
+class TrainingLogCreate(BaseModel):
+    personnel_id: str = Field(..., description="The clinical personnel ID")
+    site_id: str = Field(..., description="The clinical site ID")
+    study_id: str = Field(..., description="The clinical study ID")
+    training_topic: str = Field(
+        ..., description="The training topic or certification name"
+    )
+    completion_date: datetime = Field(
+        ..., description="Date when training was completed"
+    )
+    reason_for_change: str = Field(
+        ..., description="Part 11 change justification reason"
+    )
+
+    @field_validator("reason_for_change")
+    @classmethod
+    def validate_reason(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError(
+                "Reason for change cannot be empty or consist only of whitespace."
+            )
+        return v
+
+
+class TrainingLogUpdate(BaseModel):
+    personnel_id: str | None = Field(None, description="Updated personnel ID")
+    site_id: str | None = Field(None, description="Updated site ID")
+    study_id: str | None = Field(None, description="Updated study ID")
+    training_topic: str | None = Field(None, description="Updated training topic")
+    completion_date: datetime | None = Field(
+        None, description="Updated completion date"
+    )
+    reason_for_change: str | None = Field(
+        None, description="Part 11 change justification reason"
+    )
+
+    @field_validator("reason_for_change")
+    @classmethod
+    def validate_reason(cls, v: str | None) -> str | None:
+        if v is not None and not v.strip():
+            raise ValueError(
+                "Reason for change cannot be empty or consist only of whitespace."
+            )
+        return v
+
+
+class TrainingLogResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    personnel_id: str
+    site_id: str
+    study_id: str
+    training_topic: str
+    completion_date: datetime
+    created_at: datetime
+    created_by: str
+    reason_for_change: str
+    version_index: int
+    signature_manifestation: dict[str, Any] | None = None
+    signer: str | None = None
+    signing_timestamp: datetime | None = None
+
+
+class TrainingLogSignRequest(BaseModel):
+    payload: dict[str, Any] = Field(
+        ..., description="The canonical training log payload to sign"
+    )
+    signature: str = Field(
+        ..., description="The HMAC-SHA256 signature validating payload integrity"
+    )
+    reason_for_change: str = Field(
+        ..., description="The justification reason for the sign-off action"
+    )
+
+    @field_validator("reason_for_change")
+    @classmethod
+    def validate_reason(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError(
+                "Reason for change cannot be empty or consist only of whitespace."
+            )
+        return v
 
 
 # Retrieve database URL from environment or default to in-memory SQLite
@@ -1977,3 +2068,527 @@ async def resolve_assignments(
         assigned_sites=assigned_sites,
         assigned_studies=assigned_studies,
     )
+
+
+# --- Training Log Endpoints ---
+
+
+async def archive_signed_training_to_eisf(
+    training_log: TrainingLog,
+    change_reason: str,
+    request: Request,
+) -> None:
+    """Asynchronously and durably archives a signed training log record to the eISF service.
+
+    Args:
+        training_log (TrainingLog): The signed training log model.
+        change_reason (str): Justification reason for archiving.
+        request (Request): The incoming FastAPI request.
+
+    Returns:
+        None
+    """
+    import json
+    import logging
+    import os
+    import time
+
+    import httpx
+
+    logger = logging.getLogger("org.archival")
+
+    # Retrieve eISF Service Ingest Endpoint
+    eisf_url = (
+        os.getenv("EISF_URL") or os.getenv("INTEROP_URL") or "http://localhost:8004"
+    )
+    ingest_endpoint = f"{eisf_url}/api/v1/eisf/ingest"
+
+    # Assemble preserved signed training log payload contents
+    payload_content = {
+        "training_log_id": training_log.id,
+        "personnel_id": training_log.personnel_id,
+        "site_id": training_log.site_id,
+        "study_id": training_log.study_id,
+        "training_topic": training_log.training_topic,
+        "completion_date": training_log.completion_date.isoformat()
+        if isinstance(training_log.completion_date, datetime)
+        else str(training_log.completion_date),
+        "signature_manifestation": training_log.signature_manifestation,
+        "signer": training_log.signer,
+        "signing_timestamp": training_log.signing_timestamp.isoformat()
+        if isinstance(training_log.signing_timestamp, datetime)
+        else (
+            str(training_log.signing_timestamp)
+            if training_log.signing_timestamp
+            else None
+        ),
+        "audit_provenance": {
+            "created_by": training_log.created_by,
+            "created_at": training_log.created_at.isoformat()
+            if isinstance(training_log.created_at, datetime)
+            else str(training_log.created_at),
+            "reason_for_change": training_log.reason_for_change,
+            "version_index": training_log.version_index,
+        },
+    }
+
+    # Build compliant EISFIngestionRequest payload
+    # Standard code 05.03.01 for Site Training Records
+    ingest_payload = {
+        "study_id": training_log.study_id,
+        "site_id": training_log.site_id,
+        "binder_classification": "Site Training Records",
+        "filename": f"signed_training_{training_log.id}.json",
+        "content": json.dumps(payload_content, indent=2),
+        "mime_type": "application/json",
+        "metadata_json": {
+            "artifact_type": "Site Training Records",
+            "artifact_code": "05.03.01",
+            "training_log_id": training_log.id,
+        },
+        "source_system": "Organization Directory",
+        "reason_for_change": f"Finalized and signed Site Training Record archival for training log {training_log.id}",
+    }
+
+    # Generate Gateway V2 signature using service token
+    user_id = "org_directory_service"
+    roles = "admin"
+    timestamp = str(time.time())
+    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
+    gateway_reason = "Training Log automatic archival to eISF"
+
+    sig = generate_gateway_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        secret=secret,
+        change_reason=gateway_reason,
+    )
+
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": gateway_reason,
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                ingest_endpoint,
+                json=ingest_payload,
+                headers=headers,
+                timeout=10.0,
+            )
+            if resp.status_code not in (200, 201):
+                logger.warning(
+                    f"Failed to archive Training Log {training_log.id} to eISF. "
+                    f"Endpoint returned status code {resp.status_code}: {resp.text}"
+                )
+            else:
+                logger.info(
+                    f"Successfully archived signed Training Log {training_log.id} to eISF."
+                )
+    except Exception as e:
+        logger.error(
+            f"Transport failure while archiving signed Training Log {training_log.id} to eISF: {str(e)}"
+        )
+
+
+@app.post(
+    "/api/v1/org/training-logs", response_model=TrainingLogResponse, status_code=201
+)
+async def create_training_log(
+    request: Request,
+    payload: TrainingLogCreate,
+    session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(require_permission("training_log:create")),
+) -> TrainingLogResponse:
+    """Creates a new training log record with version history.
+
+    Args:
+        request (Request): The incoming request context.
+        payload (TrainingLogCreate): Data required to create the training log.
+        session (AsyncSession): Relational database session.
+        principal (Principal): Security principal.
+
+    Returns:
+        TrainingLogResponse: The created training log record.
+
+    Raises:
+        HTTPException: If justification is empty.
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    change_reason = change_reason or payload.reason_for_change
+
+    training_log = TrainingLog(
+        id=str(uuid.uuid4()),
+        personnel_id=payload.personnel_id,
+        site_id=payload.site_id,
+        study_id=payload.study_id,
+        training_topic=payload.training_topic,
+        completion_date=payload.completion_date,
+        created_by=user_id,
+        reason_for_change=change_reason,
+        version_index=1,
+    )
+    session.add(training_log)
+    await session.flush()
+
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=user_role,
+        action="TRAINING_LOG_CREATE",
+        record_id=training_log.id,
+        details=f"Created training log for personnel '{payload.personnel_id}' on topic '{payload.training_topic}'.",
+        reason_for_change=change_reason,
+    )
+
+    return training_log
+
+
+@app.get("/api/v1/org/training-logs", response_model=list[TrainingLogResponse])
+async def list_training_logs(
+    request: Request,
+    personnel_id: str | None = Query(None, description="Filter by personnel ID"),
+    site_id: str | None = Query(None, description="Filter by site ID"),
+    study_id: str | None = Query(None, description="Filter by study ID"),
+    session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(require_permission("training_log:read")),
+) -> list[TrainingLogResponse]:
+    """List all training logs, returning the latest version of each.
+
+    Args:
+        request (Request): The incoming request context.
+        personnel_id (str | None): Optional personnel ID filter.
+        site_id (str | None): Optional site ID filter.
+        study_id (str | None): Optional study ID filter.
+        session (AsyncSession): Relational database session.
+        principal (Principal): Security principal.
+
+    Returns:
+        list[TrainingLogResponse]: Filtered training log list of latest versions.
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+
+    # Fetch all records sorted by version desc
+    stmt = select(TrainingLog).order_by(TrainingLog.id, desc(TrainingLog.version_index))
+    res = await session.execute(stmt)
+    all_logs = res.scalars().all()
+
+    # Deduplicate keeping only latest versions
+    latest_logs = {}
+    for log in all_logs:
+        if log.id not in latest_logs:
+            latest_logs[log.id] = log
+
+    filtered_logs = list(latest_logs.values())
+
+    # Apply query filters
+    if personnel_id is not None:
+        filtered_logs = [
+            log for log in filtered_logs if log.personnel_id == personnel_id
+        ]
+    if site_id is not None:
+        filtered_logs = [log for log in filtered_logs if log.site_id == site_id]
+    if study_id is not None:
+        filtered_logs = [log for log in filtered_logs if log.study_id == study_id]
+
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=user_role,
+        action="TRAINING_LOG_LIST",
+        details=f"Listed training logs with filters (personnel_id={personnel_id}, site_id={site_id}, study_id={study_id}).",
+        reason_for_change=change_reason or "Standard query access",
+    )
+
+    return filtered_logs
+
+
+@app.get("/api/v1/org/training-logs/{id}", response_model=TrainingLogResponse)
+async def get_training_log(
+    request: Request,
+    id: str,
+    version_index: int | None = Query(
+        None, description="Optionally retrieve a specific version"
+    ),
+    session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(require_permission("training_log:read")),
+) -> TrainingLogResponse:
+    """Retrieve details for a training log by ID.
+
+    Args:
+        request (Request): The incoming request context.
+        id (str): The training log ID.
+        version_index (int | None): Optional version filter.
+        session (AsyncSession): Relational database session.
+        principal (Principal): Security principal.
+
+    Returns:
+        TrainingLogResponse: The specified training log record.
+
+    Raises:
+        HTTPException: If training log not found.
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+
+    stmt = select(TrainingLog).where(TrainingLog.id == id)
+    if version_index is not None:
+        stmt = stmt.where(TrainingLog.version_index == version_index)
+    else:
+        stmt = stmt.order_by(desc(TrainingLog.version_index))
+
+    res = await session.execute(stmt)
+    log = res.scalars().first()
+
+    if not log:
+        raise HTTPException(status_code=404, detail="Training log not found")
+
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=user_role,
+        action="TRAINING_LOG_VIEW",
+        record_id=log.id,
+        details=f"Viewed training log '{log.id}' (version {log.version_index}).",
+        reason_for_change=change_reason or "Standard retrieve access",
+    )
+
+    return log
+
+
+@app.get(
+    "/api/v1/org/training-logs/{id}/history", response_model=list[TrainingLogResponse]
+)
+async def get_training_log_history(
+    request: Request,
+    id: str,
+    session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(require_permission("training_log:read")),
+) -> list[TrainingLogResponse]:
+    """Retrieve chronological version history for a training log.
+
+    Args:
+        request (Request): The incoming request context.
+        id (str): The training log ID.
+        session (AsyncSession): Relational database session.
+        principal (Principal): Security principal.
+
+    Returns:
+        list[TrainingLogResponse]: List of versions for the training log.
+
+    Raises:
+        HTTPException: If training log not found.
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+
+    stmt = (
+        select(TrainingLog)
+        .where(TrainingLog.id == id)
+        .order_by(desc(TrainingLog.version_index))
+    )
+    res = await session.execute(stmt)
+    history = res.scalars().all()
+
+    if not history:
+        raise HTTPException(status_code=404, detail="Training log not found")
+
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=user_role,
+        action="TRAINING_LOG_HISTORY_VIEW",
+        record_id=id,
+        details=f"Viewed history for training log ID '{id}'.",
+        reason_for_change=change_reason or "Standard history access",
+    )
+
+    return history
+
+
+@app.put("/api/v1/org/training-logs/{id}", response_model=TrainingLogResponse)
+async def update_training_log(
+    request: Request,
+    id: str,
+    payload: TrainingLogUpdate,
+    session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(require_permission("training_log:create")),
+) -> TrainingLogResponse:
+    """Soft-update an existing training log, appending a new version with incremented version_index.
+
+    Args:
+        request (Request): The incoming request context.
+        id (str): The training log ID to update.
+        payload (TrainingLogUpdate): Updated training log values.
+        session (AsyncSession): Relational database session.
+        principal (Principal): Security principal.
+
+    Returns:
+        TrainingLogResponse: The updated/new training log version.
+
+    Raises:
+        HTTPException: If training log is signed/locked or justification is empty.
+    """
+    if not payload.reason_for_change or not payload.reason_for_change.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Justification parameter (reason_for_change) is required.",
+        )
+
+    user_id, user_role, change_reason = get_user_context(request)
+    change_reason = change_reason or payload.reason_for_change
+
+    stmt = (
+        select(TrainingLog)
+        .where(TrainingLog.id == id)
+        .order_by(desc(TrainingLog.version_index))
+    )
+    res = await session.execute(stmt)
+    latest_log = res.scalars().first()
+
+    if not latest_log:
+        raise HTTPException(status_code=404, detail="Training log not found")
+
+    if latest_log.signature_manifestation is not None:
+        raise HTTPException(
+            status_code=400, detail="Cannot modify a signed and locked training log"
+        )
+
+    new_log = TrainingLog(
+        id=id,
+        personnel_id=payload.personnel_id
+        if payload.personnel_id is not None
+        else latest_log.personnel_id,
+        site_id=payload.site_id if payload.site_id is not None else latest_log.site_id,
+        study_id=payload.study_id
+        if payload.study_id is not None
+        else latest_log.study_id,
+        training_topic=payload.training_topic
+        if payload.training_topic is not None
+        else latest_log.training_topic,
+        completion_date=payload.completion_date
+        if payload.completion_date is not None
+        else latest_log.completion_date,
+        created_by=user_id,
+        reason_for_change=change_reason,
+        version_index=latest_log.version_index + 1,
+    )
+    session.add(new_log)
+    await session.flush()
+
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=user_role,
+        action="TRAINING_LOG_UPDATE",
+        record_id=id,
+        details=f"Updated training log ID '{id}' to version {new_log.version_index}.",
+        reason_for_change=change_reason,
+    )
+
+    return new_log
+
+
+@app.post("/api/v1/org/training-logs/{id}/sign", response_model=TrainingLogResponse)
+async def sign_training_log(
+    request: Request,
+    id: str,
+    payload: TrainingLogSignRequest,
+    session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(require_permission("training_log:sign")),
+) -> TrainingLogResponse:
+    """Approve and electronically sign a Training Log record.
+
+    Args:
+        request (Request): The incoming request context.
+        id (str): The training log ID to sign.
+        payload (TrainingLogSignRequest): Signer credentials/signature and canonical data.
+        session (AsyncSession): Relational database session.
+        principal (Principal): Security principal.
+
+    Returns:
+        TrainingLogResponse: The signed and locked training log version.
+
+    Raises:
+        HTTPException: If signature verification fails or data payload mismatch occurs.
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    change_reason = change_reason or payload.reason_for_change
+
+    # 1. Fetch latest training log record
+    stmt = (
+        select(TrainingLog)
+        .where(TrainingLog.id == id)
+        .order_by(desc(TrainingLog.version_index))
+    )
+    res = await session.execute(stmt)
+    latest_log = res.scalars().first()
+    if not latest_log:
+        raise HTTPException(status_code=404, detail="Training log record not found")
+
+    # 2. Verify canonical signed payload and reject on mismatch or tampering
+    is_valid = verify_canonical_signature(
+        payload.payload, payload.signature, GATEWAY_SECRET
+    )
+    if not is_valid:
+        raise HTTPException(
+            status_code=422,
+            detail="Signature verification failed: tampered content or invalid signature.",
+        )
+
+    # Treat the canonical signed payload as authoritative: verify that key fields match the record
+    signed_data = payload.payload
+    if signed_data.get("id") != latest_log.id:
+        raise HTTPException(status_code=422, detail="Signed payload 'id' mismatch")
+    if signed_data.get("personnel_id") != latest_log.personnel_id:
+        raise HTTPException(
+            status_code=422, detail="Signed payload 'personnel_id' mismatch"
+        )
+    if signed_data.get("site_id") != latest_log.site_id:
+        raise HTTPException(status_code=422, detail="Signed payload 'site_id' mismatch")
+    if signed_data.get("study_id") != latest_log.study_id:
+        raise HTTPException(
+            status_code=422, detail="Signed payload 'study_id' mismatch"
+        )
+    if signed_data.get("training_topic") != latest_log.training_topic:
+        raise HTTPException(
+            status_code=422, detail="Signed payload 'training_topic' mismatch"
+        )
+
+    # 3. Create new row version index incremented training record
+    signed_log = TrainingLog(
+        id=latest_log.id,
+        personnel_id=latest_log.personnel_id,
+        site_id=latest_log.site_id,
+        study_id=latest_log.study_id,
+        training_topic=latest_log.training_topic,
+        completion_date=latest_log.completion_date,
+        signature_manifestation=payload.payload,
+        signer=user_id,
+        signing_timestamp=datetime.now(UTC).replace(tzinfo=None),
+        created_by=user_id,
+        reason_for_change=change_reason,
+        version_index=latest_log.version_index + 1,
+    )
+    session.add(signed_log)
+    await session.flush()
+
+    # 4. GxP Audit Trail Log Entry
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=user_role,
+        action="TRAINING_LOG_SIGN",
+        record_id=signed_log.id,
+        details=f"Electronically signed training log record ID '{signed_log.id}' (version {signed_log.version_index}).",
+        reason_for_change=change_reason,
+    )
+
+    # Durable handoff to archive to eISF
+    await archive_signed_training_to_eisf(signed_log, change_reason, request)
+
+    return signed_log

@@ -19,7 +19,7 @@ This decision implements requirements under **Trace-16**.
 
 ## 2. Decision Drivers & Constraints
 
-- **Single Port Rule:** The eISF service must reside on a unique, non-conflicting port (`8010`) to prevent collisions (such as the 8005/8007 CTMS/Quality collision pattern). Since the Organization Directory service (`apps/org`) previously bound to port `8010` on the host, we must shift the `org` host mapping to `8012` while retaining standard `8010` for eISF.
+- **Single Port Rule:** The eISF service must reside on a unique, non-conflicting port (`8010`) to prevent collisions (such as the 8005/8007 CTMS/Quality collision pattern). Since the Organization Directory service (`apps/org`) previously bound to port `8010` on the host, we shifted the `org` host and container mappings to `8012`, avoiding overlapping configurations, and we also mapped eConsent to port `8011` on both host and container.
 - **Site Isolation Integrity:** The gateway-routed eISF endpoints must inherit and validate Keycloak JWT claims, propagating gateway-signed site claims (`X-Site-Id`, `X-Gateway-Signature`) downstream unchanged so that `enforce_site_isolation` centrally rejects cross-site violations.
 - **Sync Reliability & Decoupling:** Site-level documents must flow to the eTMF securely without introducing circular dependency loops or exposing raw Protected Health Information (PHI).
 - **Standards & Precedents:** Retaining service-to-service signed handoffs aligns with established sync paradigms used in eCOA/interop and the eTMF inbound-email webhooks.
@@ -52,7 +52,7 @@ This decision implements requirements under **Trace-16**.
 
 ### Integrated Port Topology & Host Resolution
 - **eISF Service Port:** Bound to container port `8010` and exposed on the host as `"8010:8010"` to ensure direct local accessibility.
-- **Org Service Port:** Shifted on the host to `"8012:8010"` to completely eliminate port conflicts on local developer boxes, while keeping internal docker container networking on port `8010`.
+- **Org Service Port:** Shifted on the host and container to `"8012:8012"` to completely eliminate port conflicts on local developer boxes, aligning with the clean port assignments across the orchestration ecosystem.
 - **Gateway SERVICES Entry:** `"eisf": os.getenv("EISF_URL", "http://localhost:8010")`.
 
 ## 5. Consequences & Trade-offs

@@ -569,3 +569,315 @@ def test_doa_signoff_tampered_payload_rejected() -> None:
         headers=sign_headers,
     )
     assert sign_resp.status_code == 400
+
+
+# =====================================================================
+# 6. Training Log Endpoints and Compliance Tests
+# =====================================================================
+
+
+def test_training_log_crud_and_validation() -> None:
+    """Validate that training logs support full append-only CRUD, audit trail logging, and history retrieval.
+
+    @req:PRD-SYS-001
+    """
+    org_client = TestClient(org_app)
+    admin_headers = get_gxp_auth_headers("admin-1", "admin")
+
+    # 1. Create a training log record
+    create_payload = {
+        "personnel_id": "pers_test_01",
+        "site_id": "site_boston_01",
+        "study_id": "study_alpha",
+        "training_topic": "GCP Training Certificate",
+        "completion_date": datetime.now(UTC).isoformat(),
+        "reason_for_change": "Initial record creation",
+    }
+    create_resp = org_client.post(
+        "/api/v1/org/training-logs", json=create_payload, headers=admin_headers
+    )
+    assert create_resp.status_code == 201
+    log_data = create_resp.json()
+    log_id = log_data["id"]
+    assert log_data["training_topic"] == "GCP Training Certificate"
+    assert log_data["version_index"] == 1
+    assert log_data["reason_for_change"] in (
+        "Initial record creation",
+        "Valid Change Reason",
+    )
+
+    # 2. Retrieve the training log
+    get_resp = org_client.get(
+        f"/api/v1/org/training-logs/{log_id}", headers=admin_headers
+    )
+    assert get_resp.status_code == 200
+    assert get_resp.json()["id"] == log_id
+    assert get_resp.json()["version_index"] == 1
+
+    # 3. Soft-update (append-only version)
+    update_payload = {
+        "training_topic": "Updated GCP Training Certificate",
+        "reason_for_change": "Correction of certification name",
+    }
+    update_resp = org_client.put(
+        f"/api/v1/org/training-logs/{log_id}",
+        json=update_payload,
+        headers=admin_headers,
+    )
+    assert update_resp.status_code == 200
+    updated_data = update_resp.json()
+    assert updated_data["id"] == log_id
+    assert updated_data["training_topic"] == "Updated GCP Training Certificate"
+    assert updated_data["version_index"] == 2
+    assert updated_data["reason_for_change"] in (
+        "Correction of certification name",
+        "Valid Change Reason",
+    )
+
+    # 4. View history
+    history_resp = org_client.get(
+        f"/api/v1/org/training-logs/{log_id}/history", headers=admin_headers
+    )
+    assert history_resp.status_code == 200
+    history = history_resp.json()
+    assert len(history) == 2
+    assert history[0]["version_index"] == 2
+    assert history[1]["version_index"] == 1
+
+    # 5. List with filters
+    list_resp = org_client.get(
+        "/api/v1/org/training-logs?personnel_id=pers_test_01", headers=admin_headers
+    )
+    assert list_resp.status_code == 200
+    logs = list_resp.json()
+    assert len(logs) == 1
+    assert logs[0]["id"] == log_id
+    assert logs[0]["training_topic"] == "Updated GCP Training Certificate"
+
+
+@pytest.mark.asyncio
+async def test_training_log_signing_and_archival_handoff(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify successfully signing a Training Log triggers automated eISF archival handoff.
+
+    @req:PRD-SYS-003
+    """
+    captured_payloads = []
+
+    async def mock_eisf_ingest(*args, **kwargs):
+        url = args[1] if len(args) > 1 else kwargs.get("url", "")
+        json_data = kwargs.get("json")
+        headers_data = kwargs.get("headers")
+        captured_payloads.append((url, json_data, headers_data))
+        resp = MagicMock()
+        resp.status_code = 201
+        resp.text = '{"status": "success"}'
+        return resp
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", mock_eisf_ingest)
+
+    org_client = TestClient(org_app)
+    admin_headers = get_gxp_auth_headers("admin-1", "admin")
+
+    # 1. Create a training log record
+    create_payload = {
+        "personnel_id": "pers_test_02",
+        "site_id": "site_boston_01",
+        "study_id": "study_alpha",
+        "training_topic": "Part 11 Compliance Training",
+        "completion_date": "2026-08-01T10:00:00",
+        "reason_for_change": "Onboarding PI training record",
+    }
+    create_resp = org_client.post(
+        "/api/v1/org/training-logs", json=create_payload, headers=admin_headers
+    )
+    assert create_resp.status_code == 201
+    log_id = create_resp.json()["id"]
+
+    # 2. Cryptographically sign the record
+    canonical_payload = {
+        "id": log_id,
+        "personnel_id": "pers_test_02",
+        "site_id": "site_boston_01",
+        "study_id": "study_alpha",
+        "training_topic": "Part 11 Compliance Training",
+    }
+    valid_sig = generate_canonical_signature(canonical_payload, GATEWAY_SECRET)
+
+    sign_headers = get_gxp_auth_headers(
+        user_id="kc-pi-boston",
+        roles="Principal Investigator",
+        site_id="site_boston_01",
+    )
+    sign_headers["X-Sig-Token"] = generate_sig_token(
+        "kc-pi-boston", f"/api/v1/org/training-logs/{log_id}/sign"
+    )
+
+    sign_payload = {
+        "payload": canonical_payload,
+        "signature": valid_sig,
+        "reason_for_change": "I verify and electronically sign this training record",
+    }
+
+    sign_resp = org_client.post(
+        f"/api/v1/org/training-logs/{log_id}/sign",
+        json=sign_payload,
+        headers=sign_headers,
+    )
+    assert sign_resp.status_code == 200
+    signed_log = sign_resp.json()
+    assert signed_log["signer"] == "kc-pi-boston"
+    assert signed_log["signature_manifestation"] == canonical_payload
+    assert signed_log["version_index"] == 2
+
+    # 3. Try updating a signed/locked log - should be blocked
+    update_payload = {
+        "training_topic": "Mutilated topic",
+        "reason_for_change": "Attempting illegal post-signoff update",
+    }
+    update_resp = org_client.put(
+        f"/api/v1/org/training-logs/{log_id}",
+        json=update_payload,
+        headers=admin_headers,
+    )
+    assert update_resp.status_code == 400
+    assert (
+        "locked" in update_resp.json()["detail"]
+        or "signed" in update_resp.json()["detail"]
+    )
+
+    # 4. Assert that handoff POST to eISF was triggered with valid data
+    assert len(captured_payloads) == 1
+    url, captured_json, headers = captured_payloads[0]
+
+    assert "/api/v1/eisf/ingest" in url
+    assert captured_json["study_id"] == "study_alpha"
+    assert captured_json["site_id"] == "site_boston_01"
+    assert captured_json["binder_classification"] == "Site Training Records"
+    assert captured_json["filename"] == f"signed_training_{log_id}.json"
+    assert captured_json["source_system"] == "Organization Directory"
+    assert captured_json["metadata_json"]["artifact_code"] == "05.03.01"
+
+    content_data = json.loads(captured_json["content"])
+    assert content_data["training_log_id"] == log_id
+    assert content_data["signer"] == "kc-pi-boston"
+    assert content_data["signature_manifestation"] == canonical_payload
+
+
+def test_training_log_unauthorized_access() -> None:
+    """Verify that requests from unauthorized roles are rejected with 403 Forbidden.
+
+    @req:PRD-SYS-001
+    """
+    org_client = TestClient(org_app)
+    unauth_headers = get_gxp_auth_headers("subject-1", "Subject")
+
+    # Read should fail
+    get_resp = org_client.get("/api/v1/org/training-logs", headers=unauth_headers)
+    assert get_resp.status_code == 403
+
+    # Create should fail
+    create_payload = {
+        "personnel_id": "pers_test_03",
+        "site_id": "site_boston_01",
+        "study_id": "study_alpha",
+        "training_topic": "Some topic",
+        "completion_date": datetime.now(UTC).isoformat(),
+        "reason_for_change": "Unauthorised creation",
+    }
+    create_resp = org_client.post(
+        "/api/v1/org/training-logs", json=create_payload, headers=unauth_headers
+    )
+    assert create_resp.status_code == 403
+
+
+def test_training_log_update_missing_justification_fails() -> None:
+    """Verify that updates to existing logs fail with 400 Bad Request if justification is omitted.
+
+    @req:PRD-SYS-001
+    """
+    org_client = TestClient(org_app)
+    admin_headers = get_gxp_auth_headers("admin-1", "admin")
+
+    # 1. Create record
+    create_payload = {
+        "personnel_id": "pers_test_04",
+        "site_id": "site_boston_01",
+        "study_id": "study_alpha",
+        "training_topic": "GCP Training Certificate",
+        "completion_date": datetime.now(UTC).isoformat(),
+        "reason_for_change": "Initial record creation",
+    }
+    create_resp = org_client.post(
+        "/api/v1/org/training-logs", json=create_payload, headers=admin_headers
+    )
+    assert create_resp.status_code == 201
+    log_id = create_resp.json()["id"]
+
+    # 2. Update with omitted justification
+    update_payload = {
+        "training_topic": "Updated GCP Training Certificate",
+    }
+    update_resp = org_client.put(
+        f"/api/v1/org/training-logs/{log_id}",
+        json=update_payload,
+        headers=admin_headers,
+    )
+    assert update_resp.status_code == 400
+
+
+def test_training_log_invalid_signature_fails() -> None:
+    """Verify that signing with incorrect signature is rejected with a 422 Unprocessable Entity error.
+
+    @req:PRD-SYS-003
+    """
+    org_client = TestClient(org_app)
+    admin_headers = get_gxp_auth_headers("admin-1", "admin")
+
+    # 1. Create record
+    create_payload = {
+        "personnel_id": "pers_test_05",
+        "site_id": "site_boston_01",
+        "study_id": "study_alpha",
+        "training_topic": "GCP Training Certificate",
+        "completion_date": datetime.now(UTC).isoformat(),
+        "reason_for_change": "Initial record creation",
+    }
+    create_resp = org_client.post(
+        "/api/v1/org/training-logs", json=create_payload, headers=admin_headers
+    )
+    assert create_resp.status_code == 201
+    log_id = create_resp.json()["id"]
+
+    # 2. Try to sign with invalid signature
+    canonical_payload = {
+        "id": log_id,
+        "personnel_id": "pers_test_05",
+        "site_id": "site_boston_01",
+        "study_id": "study_alpha",
+        "training_topic": "GCP Training Certificate",
+    }
+    invalid_signature = "badsignature123abc"
+
+    sign_headers = get_gxp_auth_headers(
+        user_id="kc-pi-boston",
+        roles="Principal Investigator",
+        site_id="site_boston_01",
+    )
+    sign_headers["X-Sig-Token"] = generate_sig_token(
+        "kc-pi-boston", f"/api/v1/org/training-logs/{log_id}/sign"
+    )
+
+    sign_payload = {
+        "payload": canonical_payload,
+        "signature": invalid_signature,
+        "reason_for_change": "I verify and sign",
+    }
+
+    sign_resp = org_client.post(
+        f"/api/v1/org/training-logs/{log_id}/sign",
+        json=sign_payload,
+        headers=sign_headers,
+    )
+    assert sign_resp.status_code == 422
