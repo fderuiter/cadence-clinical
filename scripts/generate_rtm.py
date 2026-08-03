@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import argparse
 import os
-import platform
 import re
 import sys
 import xml.etree.ElementTree as ET
