@@ -54,6 +54,7 @@ share/python-wheels/
 # Testing, Linting & Coverage Tools
 # ------------------------------------------
 .pytest_cache/
+coverage/
 .ruff_cache/
 .mypy_cache/
 .pytype/
