@@ -215,6 +215,12 @@
     >
       {{ screenReaderAnnouncement }}
     </div>
+
+    <!-- Global Searchable Command Palette Overlay -->
+    <CommandPaletteOverlay
+      :is-open="isCommandPaletteOpen"
+      @close="isCommandPaletteOpen = false"
+    />
   </div>
 </template>
 
@@ -223,12 +229,22 @@ import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useAuthStore } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
 import { hasRequiredRole } from "../router";
+import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
 
 const authStore = useAuthStore();
 const clinicalStore = useClinicalStore();
 
 const screenReaderAnnouncement = ref("");
 let refreshTimer = null;
+
+const isCommandPaletteOpen = ref(false);
+
+const handleGlobalKeydown = (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+    e.preventDefault();
+    isCommandPaletteOpen.value = !isCommandPaletteOpen.value;
+  }
+};
 
 // Watch background session authentication silent refresh events
 watch(
@@ -245,6 +261,7 @@ watch(
 
 // Emulate quiet background token refresh events periodically in demo/sandbox modes
 onMounted(() => {
+  document.addEventListener("keydown", handleGlobalKeydown);
   refreshTimer = setInterval(() => {
     if (authStore.isAuthenticated) {
       screenReaderAnnouncement.value =
@@ -254,6 +271,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  document.removeEventListener("keydown", handleGlobalKeydown);
   if (refreshTimer) {
     clearInterval(refreshTimer);
   }
