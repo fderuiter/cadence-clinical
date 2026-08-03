@@ -231,6 +231,13 @@ def loaded_specs():
 
 
 _RAW_WHITELISTED_ROUTES = {
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/arms/reorder"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/epochs/reorder"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/visits/reorder"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/procedures/reorder"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/assignments/activities"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/assignments/arms"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/assignments/epochs"),
     ("post", "/api/v1/execution/queries/generate"),
     ("get", "/api/v1/studies/{study_id}/soa"),
     ("patch", "/subjects/{id}/state"),
