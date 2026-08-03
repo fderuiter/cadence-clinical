@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict, model_serializer, model_validator
 
 
 class VariableMetadata(BaseModel):
@@ -79,6 +79,19 @@ class DatasetJSONItemGroup(BaseModel):
         ...,
         description="List of rows, where each row is an ordered list of values corresponding to the items",
     )
+    itemGroupOID: str = Field(
+        default="IG.", description="Item group OID (e.g., 'IG.DM')"
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_item_group_oid(cls, values: Any) -> Any:
+        if isinstance(values, dict):
+            if "itemGroupOID" not in values or not values["itemGroupOID"] or values["itemGroupOID"] == "IG.":
+                name = values.get("name", "")
+                if name:
+                    values["itemGroupOID"] = f"IG.{name.upper()}"
+        return values
 
     @field_validator("itemData")
     @classmethod
@@ -101,6 +114,8 @@ class ClinicalData(BaseModel):
     itemGroupData: dict[str, DatasetJSONItemGroup] = Field(
         ..., description="Mapping of group names (e.g., 'IG.DM') to their datasets"
     )
+    dbLastModifiedDateTime: str | None = Field(None, description="Database last modified timestamp")
+    metaDataRef: str | None = Field(None, description="Metadata reference string or URI")
 
 
 class ReferenceData(BaseModel):
@@ -111,13 +126,18 @@ class ReferenceData(BaseModel):
     itemGroupData: dict[str, DatasetJSONItemGroup] = Field(
         ..., description="Mapping of group names to their datasets"
     )
+    dbLastModifiedDateTime: str | None = Field(None, description="Database last modified timestamp")
+    metaDataRef: str | None = Field(None, description="Metadata reference string or URI")
 
 
 class DatasetJSON(BaseModel):
     """Root model representing a CDISC Dataset-JSON document compliant with Pydantic v2."""
 
-    creationDateTime: str = Field(
+    model_config = ConfigDict(populate_by_name=True)
+
+    datasetJSONCreationDateTime: str = Field(
         default_factory=lambda: datetime.utcnow().isoformat() + "Z",
+        alias="creationDateTime",
         description="ISO 8601 creation timestamp",
     )
     datasetJSONVersion: str = Field(
@@ -134,8 +154,24 @@ class DatasetJSON(BaseModel):
     referenceData: ReferenceData | None = Field(
         None, description="Reference data block"
     )
+    dbLastModifiedDateTime: str | None = Field(None, description="Database last modified timestamp")
+    metaDataRef: str | None = Field(None, description="Metadata reference string or URI")
 
-    @field_validator("creationDateTime")
+    @property
+    def creationDateTime(self) -> str:
+        return self.datasetJSONCreationDateTime
+
+    @model_serializer(mode="wrap")
+    def serialize_both_creation_times(self, handler: Any) -> dict[str, Any]:
+        data = handler(self)
+        if isinstance(data, dict):
+            if "datasetJSONCreationDateTime" in data and "creationDateTime" not in data:
+                data["creationDateTime"] = data["datasetJSONCreationDateTime"]
+            elif "creationDateTime" in data and "datasetJSONCreationDateTime" not in data:
+                data["datasetJSONCreationDateTime"] = data["creationDateTime"]
+        return data
+
+    @field_validator("datasetJSONCreationDateTime")
     @classmethod
     def validate_timestamp(cls, v: str) -> str:
         # Just simple validation to ensure it looks like a datetime

@@ -684,3 +684,51 @@ def test_validator_supp_dataset_linkage_and_structure():
     }
     dj = serialize_to_dataset_json(data=bundle_valid, study_id="STUDY-01")
     validate_dataset_json(dj)  # Should pass with no exception
+
+
+def test_serialize_metadata_header_and_provenance():
+    """Verify that the extended metadata header and provenance fields are populated and serialized correctly."""
+    dm_records = [
+        {
+            "STUDYID": "STUDY-001",
+            "DOMAIN": "DM",
+            "USUBJID": "STUDY-001-SUBJ-001",
+            "SUBJID": "SUBJ-001",
+            "SEX": "M",
+            "RACE": "WHITE",
+            "ARM": "Active Arm",
+        }
+    ]
+
+    db_mod = "2026-09-01T12:00:00Z"
+    meta_ref = "https://metadata.cdisc.org/v1"
+
+    dj = serialize_to_dataset_json(
+        data=dm_records,
+        study_id="STUDY-001",
+        db_last_modified_datetime=db_mod,
+        meta_data_ref=meta_ref,
+    )
+
+    # 1. Check properties on the object directly
+    assert dj.datasetJSONCreationDateTime == dj.creationDateTime
+    assert dj.dbLastModifiedDateTime == db_mod
+    assert dj.metaDataRef == meta_ref
+    assert dj.clinicalData.dbLastModifiedDateTime == db_mod
+    assert dj.clinicalData.metaDataRef == meta_ref
+
+    # 2. Check itemGroupOID
+    assert "IG.DM" in dj.clinicalData.itemGroupData
+    group = dj.clinicalData.itemGroupData["IG.DM"]
+    assert group.itemGroupOID == "IG.DM"
+
+    # 3. Check serialized dictionary output (should emit both creation names)
+    dumped = dj.model_dump()
+    assert dumped["datasetJSONCreationDateTime"] == dumped["creationDateTime"]
+    assert dumped["dbLastModifiedDateTime"] == db_mod
+    assert dumped["metaDataRef"] == meta_ref
+    assert dumped["clinicalData"]["dbLastModifiedDateTime"] == db_mod
+    assert dumped["clinicalData"]["metaDataRef"] == meta_ref
+
+    # 4. Check validation with schema conformance remains valid
+    validate_dataset_json(dj)
