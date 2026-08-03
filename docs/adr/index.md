@@ -128,6 +128,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-31: Randomization and Trial Supply Management](2026-08-31-randomization-and-trial-supply-management.md)
 
 ### 5. Compliance, Audit & Governance
+- [2026-08-03: Fail-Safe GxP Document Generation and Draft Warning Banners](2026-08-03-fail-safe-gxp-document-generation-and-draft-warning-banners.md)
 - [2026-07-31: GxP 21 CFR Part 11 eConsent Audit Trails](2026-07-31-gxp-21-cfr-part-11-econsent-audit-trails.md)
 - [2026-09-06: GxP Compliance Reporting CI Alignment and Local Dependency Configuration](2026-09-06-gxp-compliance-reporting-ci-alignment.md)
 

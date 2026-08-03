@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2010
-- **Passed:** 2010 🟢
+- **Total Automated Test Cases Run:** 2034
+- **Passed:** 2034 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1131,6 +1131,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_subject_lock_and_unlock_lifecycle` | `tests.test_granular_locks_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_trial_lock_and_unlock_lifecycle` | `tests.test_granular_locks_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_visit_lock_and_unlock_lifecycle` | `tests.test_granular_locks_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_fail_fast_without_report_and_draft_flag` | `tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_missing_report_gxp_sync_dry_run` | `tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_success_with_draft_flag` | `tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_bulk_offline_sync` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compute_reminders_all_subjects_staff` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compute_reminders_by_subject_and_end_date_branch` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1186,6 +1189,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_evaluate_lab_value_all_indicators` | `tests.test_lab_ranges` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_is_deleted_filtering` | `tests.test_lab_ranges` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_synonyms_and_audit` | `tests.test_lab_ranges` | PRD-LAB-001 | 🟢 PASSED | < 1s |
+| `test_lab_reference_range_synonyms_update_and_audit` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_no_matching_rule_behavior` | `tests.test_lab_ranges` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_normal_boundaries_and_inclusion` | `tests.test_lab_ranges` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_sex_and_all_fallback` | `tests.test_lab_ranges` | PRD-LAB-001 | 🟢 PASSED | < 1s |
@@ -1206,35 +1210,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_task4_evaluate_lab_value_edge_cases` | `tests.test_lab_ranges` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_tie_breaking_with_none_bounds` | `tests.test_lab_ranges` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_unit_matching` | `tests.test_lab_ranges` | PRD-LAB-001 | 🟢 PASSED | < 1s |
-| `test_absent_boundaries` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_age_boundaries` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_convert_lab_unit_db_and_fallback` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_critical_boundaries_and_exclusion` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_deterministic_ties` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_evaluate_lab_value_all_indicators` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_is_deleted_filtering` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_lab_reference_range_synonyms_and_audit` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_lab_reference_range_synonyms_update_and_audit` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_no_matching_rule_behavior` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_normal_boundaries_and_inclusion` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_sex_and_all_fallback` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_site_and_source_precedence` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_task1_divergence_select_reference_range_vs_normalize_gender` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_task1_exact_m_rejected_against_f_only_range` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_task1_sex_alias_strings` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_task1_sex_u_matching` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_task2_age_inclusive_boundaries` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_task2_age_none_matching` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_task2_age_span_tie_breaking` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_task2_zero_and_negative_age_evaluation` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_task3_site_id_combinations` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_task3_study_id_isolation` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_task3_test_code_isolation` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_task3_unknown_lab_source_fallback` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_task4_convert_lab_unit_edge_cases` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_task4_evaluate_lab_value_edge_cases` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_tie_breaking_with_none_bounds` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_unit_matching` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_create_central_range_with_null_site_id_allowed` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_create_central_range_with_site_id_blocked` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_create_lab_reference_range_success` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |

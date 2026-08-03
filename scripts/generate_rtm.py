@@ -677,6 +677,12 @@ def main():
     )
     args = parser.parse_args()
 
+    # Automatically enable draft mode if the environment variable is set
+    if os.environ.get("RTM_DRAFT") or os.environ.get("GENERATE_RTM_DRAFT"):
+        env_val = os.environ.get("RTM_DRAFT") or os.environ.get("GENERATE_RTM_DRAFT")
+        if env_val.lower() not in ("0", "false", "no", "off"):
+            args.draft = True
+
     print(
         "Initializing Requirements Traceability Matrix & Qualification Log Generator..."
     )

@@ -11,6 +11,7 @@ def test_rtm_generation_with_cli_overrides(tmp_path):
         "--output-dir",
         str(output_dir),
         "--dynamic-timestamp",
+        "--draft",
     ]
 
     subprocess.run(cmd, capture_output=True, text=True, check=True)
@@ -40,6 +41,7 @@ def test_rtm_generation_conftest_hook_detection(tmp_path, monkeypatch):
     output_dir = tmp_path / "conftest_reports"
     monkeypatch.setenv("RTM_OUTPUT_DIR", str(output_dir))
     monkeypatch.setenv("RTM_DYNAMIC_TIMESTAMP", "true")
+    monkeypatch.setenv("RTM_DRAFT", "true")
 
     # Import conftest to run its hook function
     from tests.conftest import pytest_sessionfinish

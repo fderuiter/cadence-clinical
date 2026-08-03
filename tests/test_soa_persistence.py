@@ -237,7 +237,7 @@ async def test_timing_window_validation_rules():
 
     # 3. Test min_offset must not be greater than max_offset on TimingWindowProperties
     with pytest.raises(
-        ValueError, match="min_offset must not be greater than max_offset."
+        ValueError, match="Field 'min_offset' must be less than or equal to 'max_offset'."
     ):
         TimingWindowProperties(
             name="Invalid Range",
@@ -269,7 +269,7 @@ async def test_timing_window_validation_rules():
         )
 
     with pytest.raises(
-        ValueError, match="min_offset must not be greater than max_offset."
+        ValueError, match="Field 'min_offset' must be less than or equal to 'max_offset'."
     ):
         TimingWindow(
             id="tw_3",

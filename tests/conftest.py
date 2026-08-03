@@ -571,6 +571,14 @@ def pytest_sessionfinish(session, exitstatus):
             if dynamic_val.lower() not in ("", "0", "false", "no", "off"):
                 cmd.append("--dynamic-timestamp")
 
+        # Check for draft environment variable
+        draft_val = os.environ.get("RTM_DRAFT") or os.environ.get(
+            "GENERATE_RTM_DRAFT"
+        )
+        if draft_val is not None:
+            if draft_val.lower() not in ("", "0", "false", "no", "off"):
+                cmd.append("--draft")
+
         # To prevent local test execution speed penalties, avoid running the check
         # synchronously during local pytest executions (when GITHUB_ACTIONS is not 'true').
         # However, we run it synchronously if a custom output directory is set (such as
