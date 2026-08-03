@@ -47,6 +47,8 @@ def test_site_and_source_precedence():
     - If lab_source is LOCAL, an exact site match (score 3) beats a generic local match (score 2),
       which beats a CENTRAL fallback match (score 1).
     - If lab_source is CENTRAL, only CENTRAL ranges are matched.
+
+    @req:PRD-LAB-001
     """
     study = "STUDY-123"
     tcode = "WBC"
@@ -122,6 +124,8 @@ def test_age_boundaries():
     """Verify age boundaries and specificity:
     - Match rules where subject age is between age_low and age_high.
     - Specificity: both bounds (3) > single bound (2) > no bounds (1).
+
+    @req:PRD-LAB-001
     """
     study = "STUDY-123"
     tcode = "ALT"
@@ -181,6 +185,8 @@ def test_sex_and_all_fallback():
     - Subject sex 'M' matches 'M' (score 2) and fallback 'ALL' (score 1).
     - Subject sex 'F' matches 'F' (score 2) and fallback 'ALL' (score 1).
     - Subject sex 'U' or None matches only fallback 'ALL' (score 1).
+
+    @req:PRD-LAB-001
     """
     study = "STUDY-123"
     tcode = "HEMOGLOBIN"
@@ -221,7 +227,10 @@ def test_sex_and_all_fallback():
 
 
 def test_unit_matching():
-    """Verify that ranges are strictly filtered by the exact normalized unit."""
+    """Verify that ranges are strictly filtered by the exact normalized unit.
+
+    @req:PRD-LAB-001
+    """
     study = "STUDY-123"
     tcode = "CREATININE"
 
@@ -254,6 +263,8 @@ def test_normal_boundaries_and_inclusion():
     - If low_bound <= value <= high_bound, indicators must be "NORMAL".
     - If value < low_bound, indicator must be "LOW".
     - If value > high_bound, indicator must be "HIGH".
+
+    @req:PRD-LAB-001
     """
     r_normal = create_mock_range(low_bound=10.0, high_bound=20.0)
 
@@ -295,6 +306,8 @@ def test_critical_boundaries_and_exclusion():
     - Critical boundaries critical_low and critical_high are exclusive.
     - value < critical_low triggers "LOW LOW".
     - value > critical_high triggers "HIGH HIGH".
+
+    @req:PRD-LAB-001
     """
     r_critical = create_mock_range(
         low_bound=10.0, high_bound=20.0, critical_low=5.0, critical_high=25.0
@@ -327,7 +340,10 @@ def test_critical_boundaries_and_exclusion():
 
 
 def test_absent_boundaries():
-    """Verify behavior when some normal or critical bounds are absent/None."""
+    """Verify behavior when some normal or critical bounds are absent/None.
+
+    @req:PRD-LAB-001
+    """
     # Scenario 1: Only low_bound and critical_low present
     r_only_low = create_mock_range(
         low_bound=10.0, high_bound=None, critical_low=5.0, critical_high=None
@@ -356,7 +372,10 @@ def test_absent_boundaries():
 
 
 def test_no_matching_rule_behavior():
-    """Verify that when no matching rule/range exists, results are safe and clean."""
+    """Verify that when no matching rule/range exists, results are safe and clean.
+
+    @req:PRD-LAB-001
+    """
     indicator, out_of_range, bounds = evaluate_lab_value(42.0, None)
     assert indicator is None
     assert out_of_range is False
@@ -370,6 +389,8 @@ def test_deterministic_ties():
       - If age span is same, higher age_low (more specific) first.
       - If age boundaries are same, lower low_bound first.
       - Alphabetically by range ID string.
+
+    @req:PRD-LAB-001
     """
     study = "STUDY-123"
     tcode = "WBC"
@@ -413,6 +434,8 @@ def test_deterministic_ties():
 def test_tie_breaking_with_none_bounds():
     """Verify that tie-breaking handles ranges with missing age_high_val gracefully,
     and does not raise a TypeError (NoneType comparison).
+
+    @req:PRD-LAB-001
     """
     study = "STUDY-123"
     tcode = "WBC"
@@ -432,7 +455,10 @@ def test_tie_breaking_with_none_bounds():
 
 
 def test_is_deleted_filtering():
-    """Verify that soft-deleted ranges (is_deleted=True) are excluded from matching."""
+    """Verify that soft-deleted ranges (is_deleted=True) are excluded from matching.
+
+    @req:PRD-LAB-001
+    """
     study = "STUDY-123"
     tcode = "WBC"
     unit = "10^9/L"
@@ -456,7 +482,7 @@ def test_is_deleted_filtering():
 async def test_convert_lab_unit_db_and_fallback():
     """Verify test-code-aware unit conversion helper with database and fallback behavior.
 
-    Requirements: PRD-LAB-001
+    @req:PRD-LAB-001
     """
     from apps.execution.database.core import db_manager
     from apps.execution.database.models import Base, LabUnitConversion
@@ -589,6 +615,8 @@ async def test_lab_reference_range_synonyms_update_and_audit():
 def test_evaluate_lab_value_all_indicators():
     """Verify that evaluate_lab_value returns the expected lab_indicator values
     (NORMAL, LOW, HIGH, LOW LOW, HIGH HIGH, None) and lab_out_of_range boolean.
+
+    @req:PRD-LAB-001
     """
     # Create reference range with normal limits [10.0, 20.0] and critical limits [5.0, 25.0]
     r_range = create_mock_range(
@@ -644,7 +672,10 @@ def test_evaluate_lab_value_all_indicators():
 
 
 def test_task1_sex_u_matching():
-    """Add tests that pass literal sex="U" and confirm only ranges with sex_applicability in ALL/U/None/empty match."""
+    """Add tests that pass literal sex="U" and confirm only ranges with sex_applicability in ALL/U/None/empty match.
+
+    @req:PRD-LAB-001
+    """
     study = "STUDY-123"
     tcode = "WBC"
     unit = "10^9/L"
@@ -692,6 +723,8 @@ def test_task1_sex_u_matching():
 def test_task1_sex_alias_strings():
     """Add tests that pass sex alias strings ("Male", "Female", "Boy", "Girl", "Woman", "Man", "Unknown")
     into select_reference_range and assert the expected M/F/U matching outcome.
+
+    @req:PRD-LAB-001
     """
     study = "STUDY-123"
     tcode = "WBC"
@@ -739,7 +772,10 @@ def test_task1_sex_alias_strings():
 
 
 def test_task1_exact_m_rejected_against_f_only_range():
-    """Add a test that confirms an exact M observation is rejected against an F-only range (sex score 0 discard)."""
+    """Add a test that confirms an exact M observation is rejected against an F-only range (sex score 0 discard).
+
+    @req:PRD-LAB-001
+    """
     study = "STUDY-123"
     tcode = "WBC"
     unit = "10^9/L"
@@ -757,7 +793,8 @@ def test_task1_exact_m_rejected_against_f_only_range():
 def test_task1_divergence_select_reference_range_vs_normalize_gender():
     """Document the known divergence: the inline sex normalization in select_reference_range falls back
     to the raw uppercased string, while demographics.normalize_gender defaults to "U".
-    Add a test that pins the current select_reference_range behavior so the divergence is explicit.
+
+    @req:PRD-LAB-001
     """
     from apps.execution.demographics import normalize_gender
 
@@ -765,39 +802,57 @@ def test_task1_divergence_select_reference_range_vs_normalize_gender():
     tcode = "WBC"
     unit = "10^9/L"
 
-    # For an unmapped/custom string like "OTHER":
+    # For an unmapped/custom string like "OTHER" or "X":
     # 1. demographics.normalize_gender defaults to "U"
     assert normalize_gender("OTHER") == "U"
+    assert normalize_gender("X") == "U"
 
-    # 2. select_reference_range falls back to raw uppercased string ("OTHER").
-    # This means norm_sex becomes "OTHER". Since "OTHER" is not "M" or "F", it falls to the else branch
+    # 2. select_reference_range falls back to raw uppercased string ("OTHER" or "X").
+    # This means norm_sex becomes "OTHER" or "X". Since they are not "M" or "F", it falls to the else branch
     # of select_reference_range, matching ranges with sex_applicability in ("ALL", None, "", "U").
-    # Specifically, a candidate range with sex_applicability="OTHER" gets a sex_score of 0 because:
-    #   r_sex is "OTHER", which is not in ("ALL", None, "", "U").
-    # Thus, even though norm_sex is "OTHER", it cannot match an exact sex_applicability="OTHER" range!
+    # Specifically, a candidate range with sex_applicability="OTHER" or "X" gets a sex_score of 0 because:
+    #   r_sex is "OTHER" or "X", which is not in ("ALL", None, "", "U").
+    # Thus, even though norm_sex is "OTHER" or "X", it cannot match an exact sex_applicability="OTHER" or "X" range!
     r_other = create_mock_range(
         id="sex_other", test_code=tcode, normalized_unit=unit, sex_applicability="OTHER"
+    )
+    r_x = create_mock_range(
+        id="sex_x", test_code=tcode, normalized_unit=unit, sex_applicability="X"
     )
     r_all = create_mock_range(
         id="sex_all", test_code=tcode, normalized_unit=unit, sex_applicability="ALL"
     )
 
-    # Passing sex="OTHER" will NOT match the "OTHER" range
+    # Passing sex="OTHER" or "X" will NOT match the "OTHER" or "X" range
     matched_other = select_reference_range(
         [r_other], study, tcode, unit, "CENTRAL", sex="OTHER", age=30.0
     )
     assert matched_other is None
 
-    # Passing sex="OTHER" WILL match the "ALL" range
-    matched_all = select_reference_range(
+    matched_x = select_reference_range(
+        [r_x], study, tcode, unit, "CENTRAL", sex="X", age=30.0
+    )
+    assert matched_x is None
+
+    # Passing sex="OTHER" or "X" WILL match the "ALL" range
+    matched_all_other = select_reference_range(
         [r_all], study, tcode, unit, "CENTRAL", sex="OTHER", age=30.0
     )
-    assert matched_all is not None
-    assert matched_all["id"] == "sex_all"
+    assert matched_all_other is not None
+    assert matched_all_other["id"] == "sex_all"
+
+    matched_all_x = select_reference_range(
+        [r_all], study, tcode, unit, "CENTRAL", sex="X", age=30.0
+    )
+    assert matched_all_x is not None
+    assert matched_all_x["id"] == "sex_all"
 
 
 def test_task2_age_inclusive_boundaries():
-    """Add tests that assert inclusive boundary behavior when age == age_low and age == age_high."""
+    """Add tests that assert inclusive boundary behavior when age == age_low and age == age_high.
+
+    @req:PRD-LAB-001
+    """
     study = "STUDY-123"
     tcode = "WBC"
     unit = "10^9/L"
@@ -855,7 +910,10 @@ def test_task2_age_inclusive_boundaries():
 
 
 def test_task2_age_none_matching():
-    """Add a test that confirms age=None matches only unbounded ranges (score 1) and is discarded against bounded ranges."""
+    """Add a test that confirms age=None matches only unbounded ranges (score 1) and is discarded against bounded ranges.
+
+    @req:PRD-LAB-001
+    """
     study = "STUDY-123"
     tcode = "WBC"
     unit = "10^9/L"
@@ -900,47 +958,88 @@ def test_task2_age_none_matching():
 
 
 def test_task2_zero_and_negative_age_evaluation():
-    """Add tests for zero age and negative age values at evaluation time
-    (evaluation-time behavior, distinct from the create-time age_low < 0 validation).
+    """Add tests for zero age and negative age values at evaluation time.
+    - Pass age=0. Assert expected matching outcome against ranges with and without lower bounds.
+    - Pass negative age (e.g., age=-1). Assert evaluation-time behavior (distinct from create-time validation).
+
+    @req:PRD-LAB-001
     """
     study = "STUDY-123"
     tcode = "WBC"
     unit = "10^9/L"
 
-    # Create a range designed for infants (0 to 1 year)
+    # Range with lower bound (age_low=0.0, age_high=1.0)
     r_infant = create_mock_range(
         id="infant", test_code=tcode, normalized_unit=unit, age_low=0.0, age_high=1.0
     )
-    # Create a range designed for prenatal/gestational (negative age, e.g. -0.5 to 0.0)
+    # Range with age_low=5.0 (does not match age=0)
+    r_child = create_mock_range(
+        id="child", test_code=tcode, normalized_unit=unit, age_low=5.0, age_high=12.0
+    )
+    # Range without lower bound (age_low=None, age_high=5.0)
+    r_young = create_mock_range(
+        id="young", test_code=tcode, normalized_unit=unit, age_low=None, age_high=5.0
+    )
+    # Range designed for prenatal/gestational (negative age, e.g. -2.0 to 0.0)
     r_prenatal = create_mock_range(
-        id="prenatal", test_code=tcode, normalized_unit=unit, age_low=-0.5, age_high=0.0
+        id="prenatal", test_code=tcode, normalized_unit=unit, age_low=-2.0, age_high=0.0
     )
 
-    # 1. Test age = 0 at evaluation time (should match r_infant and r_prenatal)
-    # Under infant, matches because age_low=0.0 <= age=0.0 <= age_high=1.0
+    # 1. Test age = 0 at evaluation time against ranges with/without lower bounds
+    # Under infant (matches because age_low=0.0 <= age=0.0 <= age_high=1.0)
     matched_infant = select_reference_range(
         [r_infant], study, tcode, unit, "CENTRAL", sex="M", age=0.0
     )
     assert matched_infant is not None
     assert matched_infant["id"] == "infant"
 
-    # Under prenatal, matches because age_low=-0.5 <= age=0.0 <= age_high=0.0
+    # Under young (matches because age_low=None <= age=0.0 <= age_high=5.0)
+    matched_young = select_reference_range(
+        [r_young], study, tcode, unit, "CENTRAL", sex="M", age=0.0
+    )
+    assert matched_young is not None
+    assert matched_young["id"] == "young"
+
+    # Under prenatal (matches because age_low=-2.0 <= age=0.0 <= age_high=0.0)
     matched_prenatal = select_reference_range(
         [r_prenatal], study, tcode, unit, "CENTRAL", sex="M", age=0.0
     )
     assert matched_prenatal is not None
     assert matched_prenatal["id"] == "prenatal"
 
-    # 2. Test negative age (age = -0.2) should match r_prenatal but NOT r_infant
-    matched_neg = select_reference_range(
-        [r_infant, r_prenatal], study, tcode, unit, "CENTRAL", sex="M", age=-0.2
+    # Under child (does NOT match because age_low=5.0 > age=0.0)
+    matched_child = select_reference_range(
+        [r_child], study, tcode, unit, "CENTRAL", sex="M", age=0.0
     )
-    assert matched_neg is not None
-    assert matched_neg["id"] == "prenatal"
+    assert matched_child is None
+
+    # 2. Test negative age (e.g. age=-1) at evaluation time
+    # (Note: This is distinct from the create-time age_low < 0 validation)
+    # age=-1 should match r_prenatal (age_low=-2.0 <= -1 <= age_high=0.0) and r_young (age_low=None <= -1 <= age_high=5.0)
+    # but NOT r_infant (age_low=0.0)
+    matched_neg_prenatal = select_reference_range(
+        [r_prenatal], study, tcode, unit, "CENTRAL", sex="M", age=-1.0
+    )
+    assert matched_neg_prenatal is not None
+    assert matched_neg_prenatal["id"] == "prenatal"
+
+    matched_neg_young = select_reference_range(
+        [r_young], study, tcode, unit, "CENTRAL", sex="M", age=-1.0
+    )
+    assert matched_neg_young is not None
+    assert matched_neg_young["id"] == "young"
+
+    matched_neg_infant = select_reference_range(
+        [r_infant], study, tcode, unit, "CENTRAL", sex="M", age=-1.0
+    )
+    assert matched_neg_infant is None
 
 
 def test_task2_age_span_tie_breaking():
-    """Add a test that confirms age-span tie-breaking selects the narrower range when site and sex scores tie."""
+    """Add a test that confirms age-span tie-breaking selects the narrower range when site and sex scores tie.
+
+    @req:PRD-LAB-001
+    """
     study = "STUDY-123"
     tcode = "WBC"
     unit = "10^9/L"
@@ -972,7 +1071,10 @@ def test_task2_age_span_tie_breaking():
 
 
 def test_task3_study_id_isolation():
-    """Add a test that passes a study_id that does not match any candidate and asserts select_reference_range returns None."""
+    """Add a test that passes a study_id that does not match any candidate and asserts select_reference_range returns None.
+
+    @req:PRD-LAB-001
+    """
     study = "STUDY-123"
     tcode = "WBC"
     unit = "10^9/L"
@@ -989,7 +1091,10 @@ def test_task3_study_id_isolation():
 
 
 def test_task3_test_code_isolation():
-    """Add a test that passes a mismatched test_code and asserts no candidate matches."""
+    """Add a test that passes a mismatched test_code and asserts no candidate matches.
+
+    @req:PRD-LAB-001
+    """
     study = "STUDY-123"
     tcode = "WBC"
     unit = "10^9/L"
@@ -1006,7 +1111,11 @@ def test_task3_test_code_isolation():
 
 
 def test_task3_unknown_lab_source_fallback():
-    """Add a test with a lab_source value outside LOCAL/CENTRAL and assert the else branch falls back to CENTRAL-only matching."""
+    """Add a test with a lab_source value outside LOCAL and CENTRAL (e.g. "REGIONAL")
+    and assert the else branch falls back to CENTRAL-only matching.
+
+    @req:PRD-LAB-001
+    """
     study = "STUDY-123"
     tcode = "WBC"
     unit = "10^9/L"
@@ -1026,16 +1135,17 @@ def test_task3_unknown_lab_source_fallback():
         source="LOCAL",
     )
 
-    # If we pass lab_source="UNKNOWN", only the r_central range should match (the r_local range should be discarded, i.e., site_score = 0)
+    # If we pass lab_source="REGIONAL" (outside LOCAL and CENTRAL), only the r_central range should match
+    # (the r_local range should be discarded, i.e., site_score = 0)
     matched = select_reference_range(
-        [r_central, r_local], study, tcode, unit, "UNKNOWN", sex="M", age=30.0
+        [r_central, r_local], study, tcode, unit, "REGIONAL", sex="M", age=30.0
     )
     assert matched is not None
     assert matched["id"] == "r_central"
 
-    # Verify that if only the r_local range is present, passing "UNKNOWN" returns None
+    # Verify that if only the r_local range is present, passing "REGIONAL" returns None
     matched_local_only = select_reference_range(
-        [r_local], study, tcode, unit, "UNKNOWN", sex="M", age=30.0
+        [r_local], study, tcode, unit, "REGIONAL", sex="M", age=30.0
     )
     assert matched_local_only is None
 
@@ -1043,6 +1153,8 @@ def test_task3_unknown_lab_source_fallback():
 def test_task3_site_id_combinations():
     """Add a test with a range that has a site_id while the observation has none (and the reverse)
     and assert the expected site score outcome.
+
+    @req:PRD-LAB-001
     """
     study = "STUDY-123"
     tcode = "WBC"
@@ -1095,6 +1207,8 @@ async def test_task4_convert_lab_unit_edge_cases():
     - from_unit == to_unit no-op via UCUM.
     - incompatible-unit conversion that propagates ValueError from convert_unit.
     - confirms is_deleted LabUnitConversion rows are ignored and the UCUM fallback is used.
+
+    @req:PRD-LAB-001
     """
     from apps.execution.database.core import db_manager
     from apps.execution.database.models import Base, LabUnitConversion
@@ -1201,6 +1315,9 @@ def test_task4_evaluate_lab_value_edge_cases():
     - only normal bounds set (no critical bounds)
     - negative and zero lab values
     - values exactly equal to a critical boundary (inclusive normal boundary vs exclusive critical boundary)
+    - value exactly equal to normal bound stays NORMAL
+
+    @req:PRD-LAB-001
     """
     # 1. Only critical bounds set (no normal bounds)
     # low_bound=None, high_bound=None, critical_low=5.0, critical_high=25.0
@@ -1300,6 +1417,16 @@ def test_task4_evaluate_lab_value_edge_cases():
     assert ind == "HIGH"
     assert out_of_range is True
 
+    # Exactly equal to low_bound (10.0) -> NORMAL
+    ind, out_of_range, _ = evaluate_lab_value(10.0, r_exact_bounds)
+    assert ind == "NORMAL"
+    assert out_of_range is False
+
+    # Exactly equal to high_bound (20.0) -> NORMAL
+    ind, out_of_range, _ = evaluate_lab_value(20.0, r_exact_bounds)
+    assert ind == "NORMAL"
+    assert out_of_range is False
+
     # Slightly below critical_low (4.99) -> LOW LOW
     ind, out_of_range, _ = evaluate_lab_value(4.99, r_exact_bounds)
     assert ind == "LOW LOW"
@@ -1313,7 +1440,10 @@ def test_task4_evaluate_lab_value_edge_cases():
 
 @pytest.mark.asyncio
 async def test_lab_reference_range_synonyms_and_audit():
-    """Verify synonym columns map to physical columns without affecting audit-field behavior."""
+    """Verify synonym columns map to physical columns without affecting audit-field behavior.
+
+    @req:PRD-LAB-001
+    """
     from sqlalchemy import select
 
     from apps.execution.database.core import db_manager
