@@ -142,7 +142,7 @@ def evaluate_ast(
             try:
                 l_num = float(left_val)
                 r_num = float(right_val)
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 return None
 
             if operator == "+":
@@ -171,7 +171,7 @@ def evaluate_ast(
                 l_num = float(left_val)
                 r_num = float(right_val)
                 use_numeric = True
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 use_numeric = False
 
             l_cmp = l_num if use_numeric else str(left_val)
@@ -242,7 +242,7 @@ def evaluate_ast(
 
             try:
                 target_index = int(index_val)
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 return None
 
             field_name = target_path.split("/")[-1]

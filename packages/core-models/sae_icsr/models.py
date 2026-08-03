@@ -56,7 +56,7 @@ class VersionedModel(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_version_metadata(self) -> "VersionedModel":
+    def validate_version_metadata(self) -> VersionedModel:
         if self.version_index < 1:
             raise ValueError("version_index must be greater than or equal to 1")
         if self.version_index > 1:
@@ -145,7 +145,7 @@ class SeriousAdverseEvent(VersionedModel):
         return v
 
     @model_validator(mode="after")
-    def validate_date_sequence(self) -> "SeriousAdverseEvent":
+    def validate_date_sequence(self) -> SeriousAdverseEvent:
         if self.AESTDTC and self.AEENDTC:
             # Alphabetic comparison for standard CDISC DTC timestamps / partial dates
             s_clean = re.sub(r"[^\d]", "", self.AESTDTC)

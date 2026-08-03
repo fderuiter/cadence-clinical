@@ -50,7 +50,7 @@ class DocumentCreate(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_dates(self) -> "DocumentCreate":
+    def validate_dates(self) -> DocumentCreate:
         if self.issue_date and self.expiration_date:
             if self.issue_date > self.expiration_date:
                 raise ValueError("issue_date cannot be later than expiration_date")
@@ -80,7 +80,7 @@ class DocumentUpdate(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_dates(self) -> "DocumentUpdate":
+    def validate_dates(self) -> DocumentUpdate:
         if self.issue_date and self.expiration_date:
             if self.issue_date > self.expiration_date:
                 raise ValueError("issue_date cannot be later than expiration_date")
@@ -128,7 +128,7 @@ class EISFIngestionRequest(BaseModel):
         return data
 
     @model_validator(mode="after")
-    def validate_dates(self) -> "EISFIngestionRequest":
+    def validate_dates(self) -> EISFIngestionRequest:
         if self.issue_date and self.expiration_date:
             if self.issue_date > self.expiration_date:
                 raise ValueError("issue_date cannot be later than expiration_date")
@@ -171,7 +171,7 @@ class EISFSyncItem(BaseModel):
         return data
 
     @model_validator(mode="after")
-    def validate_dates(self) -> "EISFSyncItem":
+    def validate_dates(self) -> EISFSyncItem:
         if self.issue_date and self.expiration_date:
             if self.issue_date > self.expiration_date:
                 raise ValueError("issue_date cannot be later than expiration_date")
