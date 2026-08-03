@@ -51,4 +51,3 @@ The platform previously maintained both legacy V1 cryptographic signature valida
 
 * **Affected Repositories / Services:** `packages/security/rbac.py`, `apps/designer/`, `tests/`
 * **Verification Plan:** Verify through the comprehensive backend test suite that V1 endpoints are removed and V2 signature paths are robustly enforced.
-

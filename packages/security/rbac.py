@@ -141,6 +141,7 @@ ROLE_ALIASES = {
 ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     ROLE_SYSADMIN: {
         "visit_windowing": {"create", "read", "update"},
+        "soa": {"create", "read", "update", "delete"},
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
         "soa": {"create", "read", "update", "delete"},
         "global_library": {
@@ -239,6 +240,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     },
     ROLE_SPONSOR_DESIGNER: {
         "visit_windowing": {"create", "read", "update"},
+        "soa": {"create", "read", "update", "delete"},
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
         "soa": {"create", "read", "update", "delete"},
         "global_library": {
@@ -281,6 +283,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     },
     ROLE_REVIEWER: {
         "visit_windowing": {"read"},
+        "soa": {"read"},
         "study_design": {"read"},
         "soa": {"read"},
         "protocol_ingestion": {"upload", "read", "review", "promote"},
@@ -288,6 +291,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     },
     ROLE_SPONSOR_DM: {
         "visit_windowing": {"read"},
+        "soa": {"read"},
         "study_design": {"read", "approve"},
         "soa": {"read"},
         "global_library": {
@@ -370,6 +374,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     },
     ROLE_SPONSOR_MM: {
         "visit_windowing": {"read"},
+        "soa": {"read"},
         "study_design": {"read"},
         "soa": {"read"},
         "subject_enrollment": {"read"},
@@ -383,6 +388,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     },
     ROLE_SPONSOR_STATISTICIAN: {
         "visit_windowing": {"read"},
+        "soa": {"read"},
         "study_design": {"read"},
         "soa": {"read"},
         "system_audit_logs": {"read"},
@@ -393,6 +399,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     },
     ROLE_INVESTIGATOR: {
         "visit_windowing": {"read"},
+        "soa": {"read"},
         "study_design": {"read"},
         "soa": {"read"},
         "subject_enrollment": {"create", "read", "update"},
@@ -434,6 +441,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     },
     ROLE_CRC: {
         "visit_windowing": {"read"},
+        "soa": {"read"},
         "study_design": {"read"},
         "soa": {"read"},
         "subject_enrollment": {"create", "read", "update"},
@@ -474,6 +482,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     },
     ROLE_CRA_CANONICAL: {
         "visit_windowing": {"read"},
+        "soa": {"read"},
         "study_design": {"read"},
         "soa": {"read"},
         "subject_enrollment": {"read"},
@@ -532,6 +541,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     },
     "monitor": {
         "visit_windowing": {"read"},
+        "soa": {"read"},
         "study_design": {"read"},
         "soa": {"read"},
         "sdv": {
@@ -663,6 +673,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     },
     "admin": {
         "visit_windowing": {"create", "read", "update"},
+        "soa": {"create", "read", "update", "delete"},
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
         "soa": {"create", "read", "update", "delete"},
         "global_library": {

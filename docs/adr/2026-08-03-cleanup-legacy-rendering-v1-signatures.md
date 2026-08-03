@@ -54,7 +54,7 @@ This cleanup relates directly to the system integrity, code quality, and maintai
 ## 6. Implementation & Verification
 
 * **Affected Repositories / Services / Files:**
-  - `packages/security/rbac.py` (Decommission redundant legacy roles mappings)
+  - `packages/security/rbac.py` (Decommission redundant legacy roles mappings and align Schedule of Activities (SoA) permission mappings)
   - `apps/designer/soa_models.py` (Clean up forward type annotations)
   - `tests/test_api_contract_validation.py` (Whitelist active routes for reordering/assignments)
 * **Verification Plan:**

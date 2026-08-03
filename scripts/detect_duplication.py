@@ -353,6 +353,7 @@ def main() -> None:
         summary_path = os.path.join(REPO_ROOT, "duplication_summary.json")
         with open(summary_path, "w", encoding="utf-8") as f:
             json.dump(summary_data, f, indent=2)
+            f.write("\n")
     except Exception as e:
         print(f"Error writing duplication summary: {e}")
 
