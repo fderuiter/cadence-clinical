@@ -311,16 +311,16 @@ def main() -> None:
                                     "packages/core-models/usdm_ingestion.py",
                                 },
                                 {
+                                    "apps/designer/soa_models.py",
+                                    "packages/core-models/protocol_authoring/soa.py",
+                                },
+                                {
                                     "apps/web/src/style.css",
                                     "apps/subject-portal/style.css",
                                 },
                                 {
                                     "packages/ui/src/components/clinical/ClinicalInput.vue",
                                     "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
-                                },
-                                {
-                                    "apps/designer/soa_models.py",
-                                    "packages/core-models/protocol_authoring/soa.py",
                                 },
                                 {
                                     "apps/web/src/composables/useFocusTrap.js",
