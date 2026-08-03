@@ -15,8 +15,9 @@ DEFAULT_PORTS = {
     "Quality Service": 8005,
     "Safety Service": 8008,
     "Tickets Service": 8009,
-    "eConsent Service": 8012,
+    "eConsent Service": 8011,
     "eISF Service": 8010,
+    "Organization Service": 8012,
 }
 
 
@@ -46,6 +47,8 @@ def load_ports_from_compose():
             "safety": "Safety Service",
             "tickets": "Tickets Service",
             "eisf": "eISF Service",
+            "org": "Organization Service",
+            "econsent": "eConsent Service",
         }
 
         for compose_name, display_name in compose_mapping.items():
@@ -64,34 +67,15 @@ def load_ports_from_compose():
                         continue
                     DEFAULT_PORTS[display_name] = host_port
 
-        # Explicitly map/fallback eConsent Service to 8012 and eISF Service to 8010.
-        # Check if "org" exists in services to extract the dynamic host port mapping for Org/eConsent.
-        if "org" in services:
-            ports_list = services["org"].get("ports", [])
-            if ports_list and isinstance(ports_list, list):
-                port_entry = ports_list[0]
-                if isinstance(port_entry, str):
-                    if ":" in port_entry:
-                        ports_val = int(port_entry.split(":")[0])
-                    else:
-                        ports_val = int(port_entry)
-                elif isinstance(port_entry, (int, float)):
-                    ports_val = int(port_entry)
-                else:
-                    ports_val = 8012
-                DEFAULT_PORTS["eConsent Service"] = ports_val
-            else:
-                DEFAULT_PORTS["eConsent Service"] = 8012
-        else:
-            DEFAULT_PORTS["eConsent Service"] = 8012
-
     except Exception:
         # Fall back to aligned defaults
         pass
 
     # Ensure final safety overrides
     if DEFAULT_PORTS.get("eConsent Service") is None:
-        DEFAULT_PORTS["eConsent Service"] = 8012
+        DEFAULT_PORTS["eConsent Service"] = 8011
+    if DEFAULT_PORTS.get("Organization Service") is None:
+        DEFAULT_PORTS["Organization Service"] = 8012
     if DEFAULT_PORTS.get("eISF Service") is None:
         DEFAULT_PORTS["eISF Service"] = 8010
 
