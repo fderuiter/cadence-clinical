@@ -289,6 +289,12 @@ def get_installed_packages():
     return "\n".join(lines) + "\n"
 
 
+DRAFT_BANNER = """> ⚠️ **DRAFT ONLY — UNVERIFIED GxP COMPLIANCE DOCUMENT** ⚠️
+> *This document was generated in draft mode with missing test results. It is NOT eligible for GxP production release.*
+
+"""
+
+
 def generate_rtm_md(
     requirements,
     test_mappings,
@@ -296,12 +302,15 @@ def generate_rtm_md(
     test_cases_all,
     output_path,
     timestamp=None,
+    draft=False,
 ):
     if timestamp is None:
         timestamp = get_stable_timestamp()
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     with open(output_path, "w", encoding="utf-8") as f:
+        if draft:
+            f.write(DRAFT_BANNER)
         f.write("# Requirements Traceability Matrix (RTM)\n\n")
         f.write(f"*Generated on:* {timestamp}\n")
         f.write(
@@ -358,6 +367,7 @@ def generate_rtm_md(
             else:
                 test_links = []
                 all_passed = True
+                any_unverified = False
                 for m in mapped:
                     test_key = (
                         f"tests.{os.path.splitext(os.path.basename(m['file']))[0]}",
@@ -377,10 +387,14 @@ def generate_rtm_md(
 
                     if test_status != "PASSED":
                         all_passed = False
+                    if test_status == "UNVERIFIED":
+                        any_unverified = True
 
                     status_emoji = (
                         "🟢"
                         if test_status == "PASSED"
+                        else "⚪ (UNVERIFIED)"
+                        if test_status == "UNVERIFIED"
                         else "🔴"
                         if test_status in ("FAILED", "ERROR")
                         else "⚪"
@@ -390,7 +404,12 @@ def generate_rtm_md(
                     )
 
                 test_str = "<br>".join(test_links)
-                status_str = "✅ **Passed**" if all_passed else "❌ **Failed**"
+                if all_passed:
+                    status_str = "✅ **Passed**"
+                elif any_unverified:
+                    status_str = "⚠️ **Unverified**"
+                else:
+                    status_str = "❌ **Failed**"
 
             source_doc = "SRS" if "SRS" in req["source"] else "PRD"
             title_desc = f"**{req['title']}**"
@@ -425,6 +444,7 @@ def generate_qualification_report(
     test_cases_all,
     output_path,
     timestamp=None,
+    draft=False,
 ):
     if timestamp is None:
         timestamp = get_stable_timestamp()
@@ -433,12 +453,17 @@ def generate_qualification_report(
     # Analyze results
     total_run = len(test_results)
     passed_run = sum(1 for r in test_results.values() if r["status"] == "PASSED")
+    unverified_run = sum(
+        1 for r in test_results.values() if r["status"] == "UNVERIFIED"
+    )
     failed_run = sum(
         1 for r in test_results.values() if r["status"] in ("FAILED", "ERROR")
     )
     skipped_run = sum(1 for r in test_results.values() if r["status"] == "SKIPPED")
 
     with open(output_path, "w", encoding="utf-8") as f:
+        if draft:
+            f.write(DRAFT_BANNER)
         f.write(
             "# GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report\n\n"
         )
@@ -458,6 +483,8 @@ def generate_qualification_report(
         f.write("### Validation Result Summary\n")
         f.write(f"- **Total Automated Test Cases Run:** {total_run}\n")
         f.write(f"- **Passed:** {passed_run} 🟢\n")
+        if unverified_run > 0:
+            f.write(f"- **Unverified (Draft):** {unverified_run} ⚪\n")
         f.write(f"- **Failed/Errors:** {failed_run} 🔴\n")
         f.write(f"- **Skipped:** {skipped_run} ⚪\n")
         f.write(
@@ -537,14 +564,17 @@ def generate_qualification_report(
             status_emoji = (
                 "🟢 PASSED"
                 if res["status"] == "PASSED"
+                else "⚪ UNVERIFIED"
+                if res["status"] == "UNVERIFIED"
                 else (
                     "🔴 FAILED"
                     if res["status"] in ("FAILED", "ERROR")
                     else "⚪ SKIPPED"
                 )
             )
+            duration_val = "N/A" if res["status"] == "UNVERIFIED" else "< 1s"
             f.write(
-                f"| `{name}` | `{classname}` | {reqs_str} | {status_emoji} | < 1s |\n"
+                f"| `{name}` | `{classname}` | {reqs_str} | {status_emoji} | {duration_val} |\n"
             )
 
         f.write("\n## 4. Performance Qualification (PQ) & Scenario Validation\n\n")
@@ -640,6 +670,11 @@ def main():
         action="store_true",
         help="Exit with code 1 if any requirement is unmapped.",
     )
+    parser.add_argument(
+        "--draft",
+        action="store_true",
+        help="Generate draft files with unverified statuses (bypasses fail-fast check).",
+    )
     args = parser.parse_args()
 
     print(
@@ -672,17 +707,41 @@ def main():
         f"Parsed test results from {report_path}. Found {len(test_results)} test execution outcomes."
     )
 
-    # Fallback if report.xml does not exist: populate with scanned test cases as passed to make document readable
-    if not test_results:
-        print(
-            "Note: report.xml not found. Generating matrix with mock Passed statuses."
-        )
-        for (classname, name), info in test_cases_all.items():
-            test_results[(classname, name)] = {
-                "status": "PASSED",
-                "message": "",
-                "time": "0.01",
-            }
+    report_exists = os.path.exists(report_path) and os.path.getsize(report_path) > 0
+    if not report_exists:
+        if not args.draft:
+            print(
+                f"ERROR: Required test report '{report_path}' is missing. Failing fast to protect GxP data integrity.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        else:
+            print(
+                f"Note: '{report_path}' is missing. Draft mode enabled — generating draft reports with UNVERIFIED statuses."
+            )
+            for (classname, name), info in test_cases_all.items():
+                test_results[(classname, name)] = {
+                    "status": "UNVERIFIED",
+                    "message": "Test report missing.",
+                    "time": "0.0",
+                }
+    else:
+        if args.draft:
+            # If draft is enabled, make sure any missing test cases are explicitly marked UNVERIFIED instead of PASSED
+            for (classname, name), info in test_cases_all.items():
+                test_key = (classname, name)
+                found = test_key in test_results
+                if not found:
+                    for c, n in list(test_results.keys()):
+                        if n == name:
+                            found = True
+                            break
+                if not found:
+                    test_results[test_key] = {
+                        "status": "UNVERIFIED",
+                        "message": "Missing from test report.",
+                        "time": "0.0",
+                    }
 
     timestamp = (
         datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -699,6 +758,7 @@ def main():
         test_cases_all,
         rtm_out,
         timestamp=timestamp,
+        draft=args.draft,
     )
     print(f"Requirements Traceability Matrix successfully written to {rtm_out}")
 
@@ -711,6 +771,7 @@ def main():
         test_cases_all,
         qual_out,
         timestamp=timestamp,
+        draft=args.draft,
     )
     print(f"Qualification Execution Report successfully written to {qual_out}")
 
