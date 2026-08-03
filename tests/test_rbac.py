@@ -1353,8 +1353,8 @@ def test_ecoa_diary_alert_permissions() -> None:
         ROLE_LEAD_INVESTIGATOR,
         ROLE_PRINCIPAL_INVESTIGATOR,
         ROLE_SPONSOR_DM,
-        ROLE_SYSADMIN,
         ROLE_SUBJECT,
+        ROLE_SYSADMIN,
         Principal,
         has_permission,
     )
@@ -1632,56 +1632,3 @@ def test_etmf_taxonomy_and_tag_permissions() -> None:
         assert has_permission(p, "etmf_document:tag") is False, (
             f"Role '{role}' should NOT have etmf_document:tag"
         )
-
-
-def test_ecoa_diary_alert_permissions() -> None:
-    """Verify that ecoa_diary alert permission is mapped correctly for the requested roles."""
-    from packages.security.rbac import (
-        ROLE_AUTHORIZED_ER_PHYSICIAN,
-        ROLE_CRA_CANONICAL,
-        ROLE_CRC,
-        ROLE_INVESTIGATOR,
-        ROLE_LEAD_INVESTIGATOR,
-        ROLE_PRINCIPAL_INVESTIGATOR,
-        ROLE_SPONSOR_DM,
-        ROLE_SUBJECT,
-        ROLE_SYSADMIN,
-        Principal,
-        has_permission,
-    )
-
-    sysadmin = Principal(user_id="sys1", roles=[ROLE_SYSADMIN])
-    dm = Principal(user_id="dm1", roles=[ROLE_SPONSOR_DM])
-    admin = Principal(user_id="admin1", roles=["admin"])
-    cra = Principal(user_id="cra1", roles=[ROLE_CRA_CANONICAL])
-    monitor = Principal(user_id="mon1", roles=["monitor"])
-    system = Principal(user_id="sys2", roles=["system"])
-
-    investigator = Principal(user_id="inv1", roles=[ROLE_INVESTIGATOR])
-    crc = Principal(user_id="crc1", roles=[ROLE_CRC])
-
-    pi = Principal(user_id="pi1", roles=[ROLE_PRINCIPAL_INVESTIGATOR])
-    er_phys = Principal(user_id="er1", roles=[ROLE_AUTHORIZED_ER_PHYSICIAN])
-    lead_inv = Principal(user_id="lead1", roles=[ROLE_LEAD_INVESTIGATOR])
-
-    # All these roles must have both 'read' and 'alert' actions on ecoa_diary
-    for p in (
-        sysadmin,
-        dm,
-        admin,
-        cra,
-        monitor,
-        system,
-        investigator,
-        crc,
-        pi,
-        er_phys,
-        lead_inv,
-    ):
-        assert has_permission(p, "ecoa_diary:read") is True
-        assert has_permission(p, "ecoa_diary:alert") is True
-
-    # Negative assertion: Subject role must NOT have alert action, but should have read
-    subject = Principal(user_id="subj1", roles=[ROLE_SUBJECT])
-    assert has_permission(subject, "ecoa_diary:read") is True
-    assert has_permission(subject, "ecoa_diary:alert") is False
