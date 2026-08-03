@@ -479,7 +479,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "subject_enrollment": {"read"},
         "ecrf_data_entry": {"read"},
         "query_lifecycle": {"create", "read", "update", "delete"},
-        "sdv": {"create", "read", "update", "delete"},
+        "sdv": {"create", "read", "update", "delete", "flag"},  # Added flag action for item-level SDV flags
         "system_audit_logs": {"read"},
         "export_masked": {"read"},
         "regulatory_form": {"create", "read", "sign"},
@@ -528,7 +528,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "visit_windowing": {"read"},
         "soa": {"read"},
         "study_design": {"read"},
-        "sdv": {"create", "read", "update", "delete"},
+        "sdv": {"create", "read", "update", "delete", "flag"},  # Added flag action for item-level SDV flags
         "system_audit_logs": {"read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},
