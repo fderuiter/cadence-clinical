@@ -1353,8 +1353,8 @@ def test_ecoa_diary_alert_permissions() -> None:
         ROLE_LEAD_INVESTIGATOR,
         ROLE_PRINCIPAL_INVESTIGATOR,
         ROLE_SPONSOR_DM,
-        ROLE_SYSADMIN,
         ROLE_SUBJECT,
+        ROLE_SYSADMIN,
         Principal,
         has_permission,
     )
@@ -1549,6 +1549,88 @@ async def test_require_study_scope_extraction() -> None:
     assert "Forbidden" in exc_info.value.detail
 
 
+def test_visit_windowing_rbac_permissions() -> None:
+    """Verify that visit_windowing permissions are mapped correctly for rbac.py roles."""
+    from packages.security.rbac import (
+        ROLE_CRA_CANONICAL,
+        ROLE_CRC,
+        ROLE_INVESTIGATOR,
+        ROLE_REVIEWER,
+        ROLE_SPONSOR_DESIGNER,
+        ROLE_SPONSOR_DM,
+        ROLE_SPONSOR_MM,
+        ROLE_SPONSOR_STATISTICIAN,
+        ROLE_SYSADMIN,
+        Principal,
+        has_permission,
+    )
+
+    sysadmin = Principal(user_id="sys1", roles=[ROLE_SYSADMIN])
+    designer = Principal(user_id="des1", roles=[ROLE_SPONSOR_DESIGNER])
+    admin = Principal(user_id="admin1", roles=["admin"])
+
+    dm = Principal(user_id="dm1", roles=[ROLE_SPONSOR_DM])
+    mm = Principal(user_id="mm1", roles=[ROLE_SPONSOR_MM])
+    stat = Principal(user_id="stat1", roles=[ROLE_SPONSOR_STATISTICIAN])
+    reviewer = Principal(user_id="rev1", roles=[ROLE_REVIEWER])
+    investigator = Principal(user_id="inv1", roles=[ROLE_INVESTIGATOR])
+    crc = Principal(user_id="crc1", roles=[ROLE_CRC])
+    cra = Principal(user_id="cra1", roles=[ROLE_CRA_CANONICAL])
+    monitor = Principal(user_id="mon1", roles=["monitor"])
+
+    # Sysadmin, Sponsor Designer, and Admin must have create, read, update
+    for p in (sysadmin, designer, admin):
+        assert has_permission(p, "visit_windowing:create") is True
+        assert has_permission(p, "visit_windowing:read") is True
+        assert has_permission(p, "visit_windowing:update") is True
+        assert has_permission(p, "visit_windowing:delete") is False
+
+    # Sponsor DM, Sponsor MM, Sponsor Statistician, Reviewer, Investigator, CRC, CRA, and Monitor must have read only
+    for p in (dm, mm, stat, reviewer, investigator, crc, cra, monitor):
+        assert has_permission(p, "visit_windowing:read") is True
+        assert has_permission(p, "visit_windowing:create") is False
+        assert has_permission(p, "visit_windowing:update") is False
+        assert has_permission(p, "visit_windowing:delete") is False
+
+
+def test_visit_windowing_granular_permissions() -> None:
+    """Verify that VISIT_WINDOWING_* granular permissions map correctly in permissions.py."""
+    from packages.security.permissions import PermissionEnum, RoleEnum, has_permission
+
+    # Create & Update roles: SponsorAdmin, SponsorDesigner
+    for role in (RoleEnum.SPONSOR_ADMIN.value, RoleEnum.SPONSOR_DESIGNER.value):
+        assert has_permission(role, PermissionEnum.VISIT_WINDOWING_CREATE) is True
+        assert has_permission(role, PermissionEnum.VISIT_WINDOWING_UPDATE) is True
+        assert has_permission(role, PermissionEnum.VISIT_WINDOWING_READ) is True
+
+    # Read-only roles: SponsorAdmin, SponsorDesigner, PrincipalInvestigator, ClinicalResearchCoordinator, ClinicalResearchAssociate, DataManager, Auditor
+    read_roles = (
+        RoleEnum.SPONSOR_ADMIN.value,
+        RoleEnum.SPONSOR_DESIGNER.value,
+        RoleEnum.PRINCIPAL_INVESTIGATOR.value,
+        RoleEnum.CRC.value,
+        RoleEnum.CRA.value,
+        RoleEnum.DATA_MANAGER.value,
+        RoleEnum.AUDITOR.value,
+    )
+    for role in read_roles:
+        assert has_permission(role, PermissionEnum.VISIT_WINDOWING_READ) is True
+
+    # Non-read/write roles should not have access (e.g. Subject)
+    assert (
+        has_permission(RoleEnum.SUBJECT.value, PermissionEnum.VISIT_WINDOWING_READ)
+        is False
+    )
+    assert (
+        has_permission(RoleEnum.SUBJECT.value, PermissionEnum.VISIT_WINDOWING_CREATE)
+        is False
+    )
+    assert (
+        has_permission(RoleEnum.SUBJECT.value, PermissionEnum.VISIT_WINDOWING_UPDATE)
+        is False
+    )
+
+
 def test_etmf_taxonomy_and_tag_permissions() -> None:
     """Verify granular permissions for etmf_taxonomy resource and etmf_document tag action.
 
@@ -1632,56 +1714,3 @@ def test_etmf_taxonomy_and_tag_permissions() -> None:
         assert has_permission(p, "etmf_document:tag") is False, (
             f"Role '{role}' should NOT have etmf_document:tag"
         )
-
-
-def test_ecoa_diary_alert_permissions() -> None:
-    """Verify that ecoa_diary alert permission is mapped correctly for the requested roles."""
-    from packages.security.rbac import (
-        ROLE_AUTHORIZED_ER_PHYSICIAN,
-        ROLE_CRA_CANONICAL,
-        ROLE_CRC,
-        ROLE_INVESTIGATOR,
-        ROLE_LEAD_INVESTIGATOR,
-        ROLE_PRINCIPAL_INVESTIGATOR,
-        ROLE_SPONSOR_DM,
-        ROLE_SUBJECT,
-        ROLE_SYSADMIN,
-        Principal,
-        has_permission,
-    )
-
-    sysadmin = Principal(user_id="sys1", roles=[ROLE_SYSADMIN])
-    dm = Principal(user_id="dm1", roles=[ROLE_SPONSOR_DM])
-    admin = Principal(user_id="admin1", roles=["admin"])
-    cra = Principal(user_id="cra1", roles=[ROLE_CRA_CANONICAL])
-    monitor = Principal(user_id="mon1", roles=["monitor"])
-    system = Principal(user_id="sys2", roles=["system"])
-
-    investigator = Principal(user_id="inv1", roles=[ROLE_INVESTIGATOR])
-    crc = Principal(user_id="crc1", roles=[ROLE_CRC])
-
-    pi = Principal(user_id="pi1", roles=[ROLE_PRINCIPAL_INVESTIGATOR])
-    er_phys = Principal(user_id="er1", roles=[ROLE_AUTHORIZED_ER_PHYSICIAN])
-    lead_inv = Principal(user_id="lead1", roles=[ROLE_LEAD_INVESTIGATOR])
-
-    # All these roles must have both 'read' and 'alert' actions on ecoa_diary
-    for p in (
-        sysadmin,
-        dm,
-        admin,
-        cra,
-        monitor,
-        system,
-        investigator,
-        crc,
-        pi,
-        er_phys,
-        lead_inv,
-    ):
-        assert has_permission(p, "ecoa_diary:read") is True
-        assert has_permission(p, "ecoa_diary:alert") is True
-
-    # Negative assertion: Subject role must NOT have alert action, but should have read
-    subject = Principal(user_id="subj1", roles=[ROLE_SUBJECT])
-    assert has_permission(subject, "ecoa_diary:read") is True
-    assert has_permission(subject, "ecoa_diary:alert") is False

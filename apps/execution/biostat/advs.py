@@ -77,7 +77,7 @@ def derive_advs(
         if aval is not None and not isinstance(aval, (int, float)):
             try:
                 aval = float(aval)
-            except (ValueError, TypeError):
+            except (ValueError, TypeError):  # fmt: skip
                 aval = None
         advs_rec["AVAL"] = aval
 

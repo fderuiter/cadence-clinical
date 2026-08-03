@@ -1,7 +1,6 @@
 import uuid
 from datetime import datetime
 from enum import StrEnum
-from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -77,10 +76,10 @@ class Deviation(Base):
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
 
     # Relationships
-    root_cause_analysis: Mapped[Optional["RootCauseAnalysis"]] = relationship(
+    root_cause_analysis: Mapped[RootCauseAnalysis | None] = relationship(
         back_populates="deviation", uselist=False, cascade="all, delete-orphan"
     )
-    capa_records: Mapped[list["CAPARecord"]] = relationship(
+    capa_records: Mapped[list[CAPARecord]] = relationship(
         back_populates="deviation", cascade="all, delete-orphan"
     )
 
@@ -117,8 +116,8 @@ class RootCauseAnalysis(Base):
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
 
     # Relationships
-    deviation: Mapped["Deviation"] = relationship(back_populates="root_cause_analysis")
-    capa_records: Mapped[list["CAPARecord"]] = relationship(
+    deviation: Mapped[Deviation] = relationship(back_populates="root_cause_analysis")
+    capa_records: Mapped[list[CAPARecord]] = relationship(
         back_populates="rca", cascade="all, delete-orphan"
     )
 
@@ -168,10 +167,8 @@ class CAPARecord(Base):
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
 
     # Relationships
-    deviation: Mapped["Deviation"] = relationship(back_populates="capa_records")
-    rca: Mapped[Optional["RootCauseAnalysis"]] = relationship(
-        back_populates="capa_records"
-    )
+    deviation: Mapped[Deviation] = relationship(back_populates="capa_records")
+    rca: Mapped[RootCauseAnalysis | None] = relationship(back_populates="capa_records")
 
 
 class QualityAuditLog(Base):

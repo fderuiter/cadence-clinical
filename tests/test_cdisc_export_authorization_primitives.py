@@ -2,19 +2,18 @@ import pytest
 from fastapi import HTTPException, Request
 from fastapi.testclient import TestClient
 
-from packages.security.rbac import (
-    Principal,
-    can_access_study,
-    get_principal,
-    require_study_scope,
-    StudyScopeChecker,
-)
+from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.permissions import (
-    PermissionEnum,
     ROLE_PERMISSIONS_MAP,
+    PermissionEnum,
     RoleEnum,
 )
-from packages.security.middleware import GatewayAuthMiddleware
+from packages.security.rbac import (
+    Principal,
+    StudyScopeChecker,
+    can_access_study,
+    require_study_scope,
+)
 
 
 def test_permission_enum_export_sdtm():
@@ -23,8 +22,12 @@ def test_permission_enum_export_sdtm():
     assert PermissionEnum.EXPORT_SDTM == "export:sdtm"
 
     # Ensure EXPORT_SDTM is mapped to the roles allowed to export (SponsorAdmin and DataManager)
-    assert PermissionEnum.EXPORT_SDTM in ROLE_PERMISSIONS_MAP[RoleEnum.SPONSOR_ADMIN.value]
-    assert PermissionEnum.EXPORT_SDTM in ROLE_PERMISSIONS_MAP[RoleEnum.DATA_MANAGER.value]
+    assert (
+        PermissionEnum.EXPORT_SDTM in ROLE_PERMISSIONS_MAP[RoleEnum.SPONSOR_ADMIN.value]
+    )
+    assert (
+        PermissionEnum.EXPORT_SDTM in ROLE_PERMISSIONS_MAP[RoleEnum.DATA_MANAGER.value]
+    )
 
 
 def test_can_access_study_fail_open():
@@ -76,7 +79,9 @@ async def test_require_study_scope_resolution_order():
             self.headers = headers or {}
             self.method = "GET"
 
-    principal = Principal(user_id="u1", roles=["sponsor_dm"], assigned_studies=["study1"])
+    principal = Principal(
+        user_id="u1", roles=["sponsor_dm"], assigned_studies=["study1"]
+    )
 
     # Match query parameter
     req = MockRequestQuery(query_params={"study_id": "study1"})
@@ -88,7 +93,9 @@ async def test_require_study_scope_resolution_order():
     with pytest.raises(HTTPException) as exc_info:
         await checker(req_mismatch, principal)
     assert exc_info.value.status_code == 403
-    assert exc_info.value.detail == "Forbidden: Insufficient scope access for this study."
+    assert (
+        exc_info.value.detail == "Forbidden: Insufficient scope access for this study."
+    )
 
     # 2. Resolve from path parameters
     req_path = MockRequestQuery(path_params={"study_id": "study1"}, query_params={})
@@ -108,11 +115,12 @@ async def test_require_study_scope_resolution_order():
 @pytest.mark.asyncio
 async def test_gateway_auth_middleware_tenant_fallback():
     """Confirm GatewayAuthMiddleware dispatch handles X-Tenant-Id fallback correctly."""
-    from fastapi import FastAPI
-    from fastapi.responses import PlainTextResponse
     import hashlib
     import hmac
     import time
+
+    from fastapi import FastAPI
+    from fastapi.responses import PlainTextResponse
 
     app = FastAPI()
     app.add_middleware(GatewayAuthMiddleware)
@@ -125,7 +133,7 @@ async def test_gateway_auth_middleware_tenant_fallback():
 
     # GatewayAuthMiddleware expects gateway signature headers
     # Let's mock a valid signature token
-    gateway_secret = "internal-gateway-secret-12345"
+    gateway_secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
     user_id = "test_user"
     roles = "sponsor_dm"
     timestamp = str(time.time())

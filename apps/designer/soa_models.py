@@ -301,11 +301,16 @@ class TimingWindow(SoAAuditMixin):
     )
 
     @model_validator(mode="after")
-    def validate_conditional_timing_reason(self) -> "TimingWindow":
+    def validate_conditional_timing_reason(self) -> TimingWindow:
         if self.conditional and (not self.reason or not self.reason.strip()):
             raise ValueError(
                 "A non-empty 'reason' must be provided when timing/applicability is conditional."
             )
+        if self.max_offset is not None and self.max_offset < 0:
+            raise ValueError("max_offset must not be negative.")
+        if self.min_offset is not None and self.max_offset is not None:
+            if self.min_offset > self.max_offset:
+                raise ValueError("min_offset must not be greater than max_offset.")
         return self
 
     @model_validator(mode="after")
@@ -357,7 +362,7 @@ class EpochProperties(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_epoch_name_fields(self) -> "EpochProperties":
+    def validate_epoch_name_fields(self) -> EpochProperties:
         if not self.name and not self.epoch_name:
             raise ValueError(
                 "Either 'name' or 'epoch_name' must be provided and non-empty."
@@ -383,7 +388,7 @@ class VisitProperties(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_visit_name_fields(self) -> "VisitProperties":
+    def validate_visit_name_fields(self) -> VisitProperties:
         if not self.name and not self.encounter_name:
             raise ValueError(
                 "Either 'name' or 'encounter_name' must be provided and non-empty."
@@ -404,7 +409,7 @@ class ProcedureProperties(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_proc_name_fields(self) -> "ProcedureProperties":
+    def validate_proc_name_fields(self) -> ProcedureProperties:
         if not self.name and not self.activity_name:
             raise ValueError(
                 "Either 'name' or 'activity_name' must be provided and non-empty."
@@ -439,11 +444,16 @@ class TimingWindowProperties(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_conditional_timing_reason(self) -> "TimingWindowProperties":
+    def validate_conditional_timing_reason(self) -> TimingWindowProperties:
         if self.conditional and (not self.reason or not self.reason.strip()):
             raise ValueError(
                 "A non-empty 'reason' must be provided when timing/applicability is conditional."
             )
+        if self.max_offset is not None and self.max_offset < 0:
+            raise ValueError("max_offset must not be negative.")
+        if self.min_offset is not None and self.max_offset is not None:
+            if self.min_offset > self.max_offset:
+                raise ValueError("min_offset must not be greater than max_offset.")
         return self
 
     @model_validator(mode="after")
