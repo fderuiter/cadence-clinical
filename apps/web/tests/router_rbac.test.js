@@ -188,7 +188,9 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       // Mock an invalid/missing Keycloak session
       window.keycloakInstance = {
         authenticated: false,
-        updateToken: async () => { throw new Error("Invalid session"); },
+        updateToken: async () => {
+          throw new Error("Invalid session");
+        },
       };
 
       await router.push("/mdr");

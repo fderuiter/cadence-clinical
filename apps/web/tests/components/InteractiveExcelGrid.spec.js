@@ -178,7 +178,8 @@ describe("2D Interactive Excel-Like Grid (DocumentGrid.vue)", () => {
         artifact_code: "01.01.03",
       },
       {
-        changeReason: "Corrected taxonomy classification via interactive grid navigation",
+        changeReason:
+          "Corrected taxonomy classification via interactive grid navigation",
       }
     );
   });
