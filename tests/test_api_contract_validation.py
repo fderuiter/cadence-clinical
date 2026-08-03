@@ -602,6 +602,13 @@ _RAW_WHITELISTED_ROUTES = {
     ("get", "/subjects/{subject_id}"),
     ("get", "/api/v1/execution/visits/{visit_id}"),
     ("get", "/visits/{visit_id}"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/arms/reorder"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/epochs/reorder"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/visits/reorder"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/procedures/reorder"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/assignments/activities"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/assignments/arms"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/assignments/epochs"),
 }
 
 WHITELISTED_ROUTES = {
