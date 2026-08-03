@@ -39,6 +39,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
 
 ### 2. API Gateway, Security & Identity
+- [2026-08-02: Enforce Ruff Style and Formatting on API Gateway Routers](2026-08-02-enforce-ruff-style-and-formatting-on-api-gateway-routers.md)
 - [2026-08-01: Cryptographic Signature Verification Engine and Multi-Format Support](2026-08-01-cryptographic-signature-verification-engine-and-multi-format-support.md)
 - [2026-07-31: Extend Centralized Permission Matrix for Medical Coding](2026-07-31-extend-centralized-permission-matrix-for-medical-coding.md)
 - [2026-07-31: Decoupling Cross-Service Python Imports and Security RBAC Isolation](2026-07-31-decoupling-cross-service-python-imports-and-security-rbac-isolation.md)
@@ -128,6 +129,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 5. Compliance, Audit & Governance
 - [2026-07-31: GxP 21 CFR Part 11 eConsent Audit Trails](2026-07-31-gxp-21-cfr-part-11-econsent-audit-trails.md)
+- [2026-09-06: GxP Compliance Reporting CI Alignment and Local Dependency Configuration](2026-09-06-gxp-compliance-reporting-ci-alignment.md)
 
 - [2026-07-22: ADR 2026-07-22: Audit Log Design](2026-07-22-audit-log-design.md)
 - [2026-07-22: 2026-07-22 Compliance Tracing and Automated Trial Locks](2026-07-22-compliance-tracing-and-automated-trial-locks.md)
@@ -143,6 +145,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-18: Document Redaction Architecture, Regulatory Data-Handling, and Compliance Profiles](2026-08-18-document-redaction-architecture.md)
 
 ### 6. Frontend & Design System
+- [2026-08-20: Targeted E2E Contrast Enforcement and Style Token Upgrades](2026-08-20-targeted-e2e-contrast-enforcement-and-style-token-upgrades.md)
+- [2026-08-02: Implement WCAG compliance in shared clinical UI primitives](2026-08-02-implement-wcag-compliance-in-shared-clinical-ui-primitives.md)
 - [2026-07-31: Viewport-Aware Grid Inspector for eCRF designer](2026-07-31-viewport-aware-grid-inspector.md)
 - [2026-07-31: Clinical Code Lookup Input Helper in Shared UI Package](2026-07-31-clinical-code-lookup-input-helper-in-shared-ui-package.md)
 - [2026-07-31: Vue SPA Component Smoke Test and Vitest Pipeline Integration](2026-07-31-vue-spa-component-smoke-test-and-vitest-pipeline-integration.md)
@@ -212,3 +216,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-04: Dynamic Port Diagnostics and Fallback Realignment](2026-09-04-dynamic-port-diagnostics-and-fallback-realignment.md)
 - [2026-09-05: Extend Centralized Permission Matrix for eCOA and ePRO](2026-09-05-extend-centralized-permission-matrix-for-ecoa.md)
 - [2026-08-02: ADR-120: Refactor Signature Validations and Enforce Ruff S101](2026-08-02-refactor-signature-validations-and-enforce-ruff-s101.md)
+- [2026-08-02: Subject Portal Accessibility Auditing and Verification](2026-08-02-subject-portal-playwright-a11y-verification.md)
+- [2026-09-06: GxP Compliance Reporting CI Alignment and Local Dependency Configuration](2026-09-06-gxp-compliance-reporting-ci-alignment.md)
+- [2026-08-02: ADR-[NUMBER]: Enforce Strict Fail-Closed Secrets Validation and Narrow Scanner Exclusions](2026-08-02-enforce-strict-fail-closed-secrets-validation-and-narrow-scanner-exclusions.md)
+- [2026-09-06: Enforce Strict Fail-Closed Environment Rules and Narrow Scanner Exclusions](2026-09-06-enforce-strict-fail-closed-environment-rules.md)

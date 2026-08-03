@@ -3830,9 +3830,10 @@ async def transition_library_object_endpoint(
             "tenant_id": tenant_id,
             "created_by": latest.get("created_by") or user_id,
         }
-        secret = os.getenv(
-            "SIGNING_SECRET", "designer-amendment-secure-key-12345"
-        ).encode("utf-8")
+        secret_env = os.getenv("SIGNING_SECRET")
+        if not secret_env:
+            raise RuntimeError("SIGNING_SECRET environment variable is missing")
+        secret = secret_env.encode("utf-8")
         properties["signature"] = generate_canonical_signature(signing_payload, secret)
 
     try:

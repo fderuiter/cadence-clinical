@@ -137,3 +137,77 @@ def test_security_audit_script():
     """
     success = run_security_audit(root_dir="packages/security")
     assert success is True
+
+
+def test_gateway_raises_runtime_error_if_secret_missing(monkeypatch):
+    """Verify that the gateway service raises a RuntimeError on initialization if GATEWAY_SECRET is missing.
+
+    Requirements: PRD-SYS-001
+    """
+    import importlib
+    import sys
+
+    import pytest
+
+    # Store original module to prevent desynchronizing other tests in the same process
+    original_module = sys.modules.get("apps.gateway.main")
+
+    monkeypatch.delenv("GATEWAY_SECRET", raising=False)
+    sys.modules.pop("apps.gateway.main", None)
+    try:
+        with pytest.raises(RuntimeError) as exc_info:
+            importlib.import_module("apps.gateway.main")
+        assert "GATEWAY_SECRET environment variable is missing" in str(exc_info.value)
+    finally:
+        if original_module is not None:
+            sys.modules["apps.gateway.main"] = original_module
+        else:
+            sys.modules.pop("apps.gateway.main", None)
+
+
+def test_designer_signing_raises_runtime_error_if_secret_missing(monkeypatch):
+    """Verify that the study designer signing module raises a RuntimeError when generating or verifying if SIGNING_SECRET is missing.
+
+    Requirements: PRD-SYS-001
+    """
+    import pytest
+
+    from apps.designer.delta import verify_version_signature
+
+    monkeypatch.delenv("SIGNING_SECRET", raising=False)
+    with pytest.raises(RuntimeError) as exc_info:
+        verify_version_signature({"signature": "some_signature"})
+    assert "SIGNING_SECRET environment variable is missing" in str(exc_info.value)
+
+
+def test_security_audit_scanner_detection_and_bypass():
+    """Verify that the security scanner detects hardcoded environment fallbacks and honors inline bypass comments."""
+    import os
+    import tempfile
+
+    from scripts.audit_security import scan_file_for_secrets
+
+    # Case 1: Line has a hardcoded environment fallback
+    with tempfile.NamedTemporaryFile(suffix=".py", mode="w+", delete=False) as f:
+        f.write(
+            'GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")\n'
+        )
+        f.flush()
+        try:
+            findings = scan_file_for_secrets(f.name)
+            assert len(findings) == 1
+            assert "Hardcoded Environment Fallback" in findings[0]
+        finally:
+            os.unlink(f.name)
+
+    # Case 2: Line has a hardcoded environment fallback but with an explicit inline bypass annotation
+    with tempfile.NamedTemporaryFile(suffix=".py", mode="w+", delete=False) as f:
+        f.write(
+            'GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # pragma: allowlist secret\n'
+        )
+        f.flush()
+        try:
+            findings = scan_file_for_secrets(f.name)
+            assert len(findings) == 0
+        finally:
+            os.unlink(f.name)
