@@ -7,59 +7,6 @@ import { useAuthStore } from "../../src/stores/auth";
 import { useClinicalStore } from "../../src/stores/clinical";
 import { apiClient } from "../../src/api/apiClient";
 
-// Mock the apiClient to prevent actual backend requests
-vi.mock("../../src/api/apiClient", () => {
-  return {
-    apiClient: {
-      get: vi.fn().mockImplementation((url) => {
-        if (url.includes("/rules")) {
-          return Promise.resolve([
-            {
-              id: "rule_1",
-              type: "skip_logic",
-              target_field: "pulse_details",
-              target_form: "form_vs",
-              action: "show",
-              condition: {
-                type: "comparison",
-                operator: ">",
-                operands: [
-                  {
-                    type: "field_ref",
-                    field_ref: { field_id: "pulse", form_id: "form_vs" },
-                  },
-                  { type: "constant", value: 100 },
-                ],
-              },
-              compiled_xpath: "/clinical_data/form_vs/pulse > 100",
-            },
-          ]);
-        }
-        return Promise.resolve([]);
-      }),
-      post: vi.fn().mockImplementation((url, payload) => {
-        if (url.includes("/rules/preview") || url.includes("/rules/validate")) {
-          return Promise.resolve({
-            xpath: "/clinical_data/form_vs/pulse > 100",
-            failures: [],
-            circular_cycles: [],
-          });
-        }
-        if (url.includes("/rules")) {
-          return Promise.resolve({
-            id: "rule_mock_saved",
-            ...payload,
-            compiled_xpath: "/clinical_data/form_vs/pulse > 100",
-          });
-        }
-        return Promise.resolve({});
-      }),
-      put: vi.fn().mockResolvedValue({}),
-      delete: vi.fn().mockResolvedValue({}),
-    },
-  };
-});
-
 // Setup mock router
 const router = createRouter({
   history: createWebHistory(),
@@ -83,7 +30,60 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
     authStore.isDemoMode = false;
     authStore.rawRoles = ["Data Manager"];
 
+    // Spy on the real apiClient's methods directly to avoid caching/import path mismatches in Vitest
+    vi.spyOn(apiClient, "get").mockImplementation((url) => {
+      if (url.includes("/rules")) {
+        return Promise.resolve([
+          {
+            id: "rule_1",
+            type: "skip_logic",
+            target_field: "pulse_details",
+            target_form: "form_vs",
+            action: "show",
+            condition: {
+              type: "comparison",
+              operator: ">",
+              operands: [
+                {
+                  type: "field_ref",
+                  field_ref: { field_id: "pulse", form_id: "form_vs" },
+                },
+                { type: "constant", value: 100 },
+              ],
+            },
+            compiled_xpath: "/clinical_data/form_vs/pulse > 100",
+          },
+        ]);
+      }
+      return Promise.resolve([]);
+    });
+
+    vi.spyOn(apiClient, "post").mockImplementation((url, payload) => {
+      if (url.includes("/rules/preview") || url.includes("/rules/validate")) {
+        return Promise.resolve({
+          xpath: "/clinical_data/form_vs/pulse > 100",
+          failures: [],
+          circular_cycles: [],
+        });
+      }
+      if (url.includes("/rules")) {
+        return Promise.resolve({
+          id: "rule_mock_saved",
+          ...payload,
+          compiled_xpath: "/clinical_data/form_vs/pulse > 100",
+        });
+      }
+      return Promise.resolve({});
+    });
+
+    vi.spyOn(apiClient, "put").mockResolvedValue({});
+    vi.spyOn(apiClient, "delete").mockResolvedValue({});
+
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("gates workspace access to STUDY_DESIGNER or DATA_MANAGER roles and hides the designer if unauthorized", async () => {
