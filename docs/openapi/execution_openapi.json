@@ -1560,6 +1560,90 @@
         }
       }
     },
+    "/api/v1/execution/sdv/flag": {
+      "post": {
+        "tags": [
+          "SDV/TSDV"
+        ],
+        "summary": "Sdv Flag",
+        "description": "Flag clinical observations with a mandatory reason.",
+        "operationId": "sdv_flag_api_v1_execution_sdv_flag_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SdvFlagRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SdvFlagResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/sdv/resolve": {
+      "post": {
+        "tags": [
+          "SDV/TSDV"
+        ],
+        "summary": "Sdv Resolve",
+        "description": "Resolve flags on clinical observations.",
+        "operationId": "sdv_resolve_api_v1_execution_sdv_resolve_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SdvResolveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SdvResolveResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -7381,6 +7465,68 @@
         "title": "EISFTaxonomyCategoryEnum",
         "description": "DIA eISF / Regulatory Binder document taxonomy categories.\n\nRequirements: PRD-SYS-001"
       },
+      "FlagTargetDescriptor": {
+        "properties": {
+          "target_id": {
+            "type": "string",
+            "title": "Target Id",
+            "description": "The unique database or identifier of the item being flagged"
+          },
+          "observation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observation Id",
+            "description": "Optional associated clinical observation ID"
+          },
+          "form_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form Id",
+            "description": "Optional associated eCRF form ID"
+          },
+          "field_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Id",
+            "description": "Optional associated form field ID"
+          },
+          "flag_reason": {
+            "type": "string",
+            "title": "Flag Reason",
+            "description": "The per-item reasoning/justification for applying this flag"
+          },
+          "flag_severity": {
+            "$ref": "#/components/schemas/SdvFlagSeverity",
+            "description": "The severity level of the item-level SDV flag"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target_id",
+          "flag_reason",
+          "flag_severity"
+        ],
+        "title": "FlagTargetDescriptor",
+        "description": "Coordinate fields representing the specific target of an item-level SDV flag.\n\nRequirements: PRD-SYS-001"
+      },
       "FormSubmissionApprove": {
         "properties": {
           "signature_manifest": {
@@ -10304,6 +10450,277 @@
           "COMBINED"
         ],
         "title": "SamplingModelEnum"
+      },
+      "SdvFlagRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target protocol study ID"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Target subject ID"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope",
+            "description": "SDV scope boundary: FIELD, PAGE, or VISIT"
+          },
+          "targets": {
+            "items": {
+              "$ref": "#/components/schemas/FlagTargetDescriptor"
+            },
+            "type": "array",
+            "title": "Targets",
+            "description": "List of target descriptors representing items to flag"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory GxP 21 CFR Part 11 justification reason"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional site identifier for the targets"
+          },
+          "signing_reason": {
+            "type": "string",
+            "title": "Signing Reason",
+            "description": "GxP Part 11 signature meaning or reason",
+            "default": "CRA/monitor-gated bulk SDV sign-off"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "subject_id",
+          "scope",
+          "targets",
+          "reason_for_change"
+        ],
+        "title": "SdvFlagRequest",
+        "description": "Payload to request the addition of item-level SDV flags.\n\nRequirements: PRD-SYS-001"
+      },
+      "SdvFlagResponse": {
+        "properties": {
+          "flag_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flag Id",
+            "description": "Unique item-level flag operation identifier"
+          },
+          "content_digest": {
+            "type": "string",
+            "title": "Content Digest",
+            "description": "SHA-256 digest of flagged data"
+          },
+          "timestamp_utc": {
+            "type": "string",
+            "title": "Timestamp Utc",
+            "description": "UTC ISO timestamp of flag execution"
+          },
+          "audit_tx": {
+            "type": "string",
+            "title": "Audit Tx",
+            "description": "Immutable GxP audit ledger transaction ID"
+          },
+          "flagged_count": {
+            "type": "integer",
+            "title": "Flagged Count",
+            "description": "Total number of successfully flagged SDV items"
+          },
+          "flagged_target_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Flagged Target Ids",
+            "description": "List of target IDs that were successfully flagged"
+          },
+          "skipped_target_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skipped Target Ids",
+            "description": "List of target IDs that were skipped or already flagged"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content_digest",
+          "timestamp_utc",
+          "audit_tx",
+          "flagged_count",
+          "flagged_target_ids",
+          "skipped_target_ids"
+        ],
+        "title": "SdvFlagResponse",
+        "description": "Response payload following the application of item-level SDV flags.\n\nRequirements: PRD-SYS-001"
+      },
+      "SdvFlagSeverity": {
+        "type": "string",
+        "enum": [
+          "MINOR",
+          "MAJOR",
+          "CRITICAL"
+        ],
+        "title": "SdvFlagSeverity",
+        "description": "SDV flag severity levels.\n\nRequirements: PRD-SYS-001"
+      },
+      "SdvResolveRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target protocol study ID"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Target subject ID"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope",
+            "description": "SDV scope boundary: FIELD, PAGE, or VISIT"
+          },
+          "targets": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FlagTargetDescriptor"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targets",
+            "description": "Optional list of target descriptors to resolve"
+          },
+          "target_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Ids",
+            "description": "Optional flat list of target identifiers to resolve"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory GxP 21 CFR Part 11 justification reason"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional site identifier for the targets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "subject_id",
+          "scope",
+          "reason_for_change"
+        ],
+        "title": "SdvResolveRequest",
+        "description": "Payload to request the resolution of item-level SDV flags.\n\nRequirements: PRD-SYS-001"
+      },
+      "SdvResolveResponse": {
+        "properties": {
+          "resolution_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Id",
+            "description": "Unique item-level resolution operation identifier"
+          },
+          "content_digest": {
+            "type": "string",
+            "title": "Content Digest",
+            "description": "SHA-256 digest of resolved data"
+          },
+          "timestamp_utc": {
+            "type": "string",
+            "title": "Timestamp Utc",
+            "description": "UTC ISO timestamp of resolution execution"
+          },
+          "audit_tx": {
+            "type": "string",
+            "title": "Audit Tx",
+            "description": "Immutable GxP audit ledger transaction ID"
+          },
+          "resolved_count": {
+            "type": "integer",
+            "title": "Resolved Count",
+            "description": "Total number of successfully resolved SDV items"
+          },
+          "resolved_target_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Resolved Target Ids",
+            "description": "List of target IDs that were successfully resolved"
+          },
+          "skipped_target_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skipped Target Ids",
+            "description": "List of target IDs that were skipped or already resolved"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content_digest",
+          "timestamp_utc",
+          "audit_tx",
+          "resolved_count",
+          "resolved_target_ids",
+          "skipped_target_ids"
+        ],
+        "title": "SdvResolveResponse",
+        "description": "Response payload following the resolution of item-level SDV flags.\n\nRequirements: PRD-SYS-001"
       },
       "SiteStaffMemberRequest": {
         "properties": {
