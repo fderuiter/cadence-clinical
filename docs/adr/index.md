@@ -146,6 +146,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-18: Document Redaction Architecture, Regulatory Data-Handling, and Compliance Profiles](2026-08-18-document-redaction-architecture.md)
 
 ### 6. Frontend & Design System
+- [2026-08-03: Centralized Clinical Form Layout Wrapper](2026-08-03-centralized-clinical-form-layout-wrapper.md)
 - [2026-08-03: Optimized eTMF Document Registry with Store Indexing and Client-Side Pagination](2026-08-03-optimized-etmf-document-registry-with-store-indexing-and-client-side-pagination.md)
 - [2026-08-03: Harden Serialization (RFC 8785) and Implement eConsent Schema Guards](2026-08-03-harden-serialization-rfc-8785-and-implement-econsent-schema-guards.md)
 - [2026-08-03: Implement class-based touch target optimization for dense layouts](2026-08-03-implement-class-based-touch-target-optimization-for-dense-layouts.md)
