@@ -29,7 +29,8 @@ def parse_srs(filepath):
 
     # We look for Section 8 Trace 1, Trace 2, Trace 3
     # e.g., * **Trace 1: Shadow Schema Retention:** Database-level...
-    pattern = re.compile(r"\*\s*\*\*Trace\s*(\d+)\s*:\s*(.+?):\s*\*\*\s*(.*)")
+    # Update pattern to accept both hyphenated (Trace-14) and space-separated (Trace 14) formats
+    pattern = re.compile(r"\*\s*\*\*Trace[\s-]*(\d+)\s*:\s*(.+?):\s*\*\*\s*(.*)")
     for line in content.splitlines():
         match = pattern.search(line)
         if match:
@@ -37,6 +38,9 @@ def parse_srs(filepath):
             title = match.group(2).strip()
             desc = match.group(3).strip()
             req_id = f"Trace-{num}"
+            if req_id in requirements:
+                print(f"ERROR: Duplicate SRS requirement ID detected: '{req_id}' in {filepath}", file=sys.stderr)
+                sys.exit(1)
             requirements[req_id] = {
                 "id": req_id,
                 "title": title,
@@ -62,6 +66,9 @@ def parse_prd(filepath):
         if match:
             req_id = match.group(1).strip()
             title = match.group(2).strip()
+            if req_id in requirements:
+                print(f"ERROR: Duplicate PRD requirement ID detected: '{req_id}' in {filepath}", file=sys.stderr)
+                sys.exit(1)
             requirements[req_id] = {
                 "id": req_id,
                 "title": title,
@@ -691,10 +698,18 @@ def main():
     srs_reqs = parse_srs("docs/SRS.md")
     prd_reqs = parse_prd("docs/SDLC/01_Product_Requirements_Document_PRD.md")
 
-    # Merge both dicts
+    # Merge both dicts and verify no key overlap exists between the two
     all_requirements = {}
-    all_requirements.update(prd_reqs)
-    all_requirements.update(srs_reqs)
+    for k, v in prd_reqs.items():
+        if k in all_requirements:
+            print(f"ERROR: Overlapping requirement ID detected across merged datasets: '{k}'", file=sys.stderr)
+            sys.exit(1)
+        all_requirements[k] = v
+    for k, v in srs_reqs.items():
+        if k in all_requirements:
+            print(f"ERROR: Overlapping requirement ID detected across merged datasets: '{k}'", file=sys.stderr)
+            sys.exit(1)
+        all_requirements[k] = v
 
     print(
         f"Parsed {len(prd_reqs)} PRD requirements and {len(srs_reqs)} SRS requirements."

@@ -2,11 +2,11 @@ import pytest
 
 
 # @req:PRD-CRF-001
-# @req:Trace-17
+# @req:Trace-19
 @pytest.mark.asyncio
 async def test_crf_authoring_and_global_library_instantiation():
     # @req:PRD-CRF-001
-    # @req:Trace-17
+    # @req:Trace-19
     # Verifies loading, referencing, and instantiating version-controlled templates preserving strict link.
     from apps.designer.db import MOCK_LIBRARY_OBJECTS, MOCK_STUDIES
     from apps.designer.delta import (
@@ -42,11 +42,11 @@ async def test_crf_authoring_and_global_library_instantiation():
 
 
 # @req:PRD-CRF-002
-# @req:Trace-18
+# @req:Trace-20
 @pytest.mark.asyncio
 async def test_real_time_contextual_preview():
     # @req:PRD-CRF-002
-    # @req:Trace-18
+    # @req:Trace-20
     # Verifies high-fidelity contextual preview within the authoring canvas
     preview_data = {
         "layout_id": "layout_001",
@@ -59,11 +59,11 @@ async def test_real_time_contextual_preview():
 
 
 # @req:PRD-CRF-003
-# @req:Trace-19
+# @req:Trace-21
 @pytest.mark.asyncio
 async def test_collaborative_workspace_review_workflow():
     # @req:PRD-CRF-003
-    # @req:Trace-19
+    # @req:Trace-21
     # Verifies peer review sign-off status controls and gating layout modifications
     allowed_statuses = ["DRAFT", "IN_REVIEW", "APPROVED", "PUBLISHED", "ARCHIVED"]
     current_status = "APPROVED"
@@ -75,11 +75,11 @@ async def test_collaborative_workspace_review_workflow():
 
 
 # @req:PRD-CRF-004
-# @req:Trace-20
+# @req:Trace-22
 @pytest.mark.asyncio
 async def test_declarative_rule_generation_edit_checks():
     # @req:PRD-CRF-004
-    # @req:Trace-20
+    # @req:Trace-22
     # Verifies compiler generates CDISC USDM aligned rule structures compiled to XPath
     rule_definition = {
         "type": "skip_logic",
@@ -93,11 +93,11 @@ async def test_declarative_rule_generation_edit_checks():
 
 
 # @req:PRD-CRF-005
-# @req:Trace-21
+# @req:Trace-23
 @pytest.mark.asyncio
 async def test_simulation_dry_run_cycle_detection():
     # @req:PRD-CRF-005
-    # @req:Trace-21
+    # @req:Trace-23
     # Verifies dry-run cycle-detection aborts publication on loops
     # Create simple cyclic dependency: A -> B -> A
     dependency_graph = {"A": ["B"], "B": ["A"]}
@@ -124,11 +124,11 @@ async def test_simulation_dry_run_cycle_detection():
 
 
 # @req:PRD-CRF-006
-# @req:Trace-22
+# @req:Trace-24
 @pytest.mark.asyncio
 async def test_cdash_usdm_csv_mapping_fidelity():
     # @req:PRD-CRF-006
-    # @req:Trace-22
+    # @req:Trace-24
     # Verifies mapping maintains 100% data fidelity when parsing CDASH variables, USDM schema
     source_variables = [
         {"cdash": "AGE", "type": "NUM", "length": 3},
@@ -143,11 +143,11 @@ async def test_cdash_usdm_csv_mapping_fidelity():
 
 
 # @req:PRD-CRF-007
-# @req:Trace-23
+# @req:Trace-25
 @pytest.mark.asyncio
 async def test_fhir_esource_readiness_prefill():
     # @req:PRD-CRF-007
-    # @req:Trace-23
+    # @req:Trace-25
     # Verifies HL7 FHIR resource ingestion maps demographics/clinical variables to CDASH
     fhir_patient = {
         "resourceType": "Patient",
@@ -165,11 +165,11 @@ async def test_fhir_esource_readiness_prefill():
 
 
 # @req:PRD-CRF-008
-# @req:Trace-24
+# @req:Trace-26
 @pytest.mark.asyncio
 async def test_regulatory_protocol_document_export():
     # @req:PRD-CRF-008
-    # @req:Trace-24
+    # @req:Trace-26
     # Verifies clinical protocol rendering PDF/DOCX offloading to separate thread pools
     import concurrent.futures
 
@@ -184,11 +184,11 @@ async def test_regulatory_protocol_document_export():
 
 
 # @req:PRD-CRF-009
-# @req:Trace-25
+# @req:Trace-27
 @pytest.mark.asyncio
 async def test_role_based_authorization_gates():
     # @req:PRD-CRF-009
-    # @req:Trace-25
+    # @req:Trace-27
     # Verifies restriction of CRF creation to authorized roles while blocking investigator/auditor
     authorized_roles = ["sponsor_designer", "sponsor_dm", "sponsor_admin", "sysadmin"]
     blocked_roles = ["auditor", "investigator", "regulatory_inspector"]
@@ -205,11 +205,11 @@ async def test_role_based_authorization_gates():
 
 
 # @req:PRD-CRF-010
-# @req:Trace-26
+# @req:Trace-28
 @pytest.mark.asyncio
 async def test_gxp_change_reason_justification():
     # @req:PRD-CRF-010
-    # @req:Trace-26
+    # @req:Trace-28
     # Verifies save/update transition captures user-supplied justification of at least 10 chars
     def validate_change_reason(reason: str):
         if not reason or len(reason) < 10:
@@ -222,11 +222,11 @@ async def test_gxp_change_reason_justification():
 
 
 # @req:PRD-CRF-011
-# @req:Trace-27
+# @req:Trace-29
 @pytest.mark.asyncio
 async def test_immutable_audit_attribution():
     # @req:PRD-CRF-011
-    # @req:Trace-27
+    # @req:Trace-29
     # Verifies modifications write transaction-bound, append-only entries containing timestamp, userId, version
     audit_ledger = []
 
@@ -245,11 +245,11 @@ async def test_immutable_audit_attribution():
 
 
 # @req:PRD-CRF-012
-# @req:Trace-28
+# @req:Trace-30
 @pytest.mark.asyncio
 async def test_version_pinning_and_lock_enforcement():
     # @req:PRD-CRF-012
-    # @req:Trace-28
+    # @req:Trace-30
     # Verifies once marked APPROVED specific version pinned, update requires incrementing version by 1
     crf_design = {"status": "APPROVED", "version_index": 2, "payload": {}}
 
@@ -270,11 +270,11 @@ async def test_version_pinning_and_lock_enforcement():
 
 
 # @req:PRD-CRF-013
-# @req:Trace-29
+# @req:Trace-31
 @pytest.mark.asyncio
 async def test_site_tenant_data_isolation():
     # @req:PRD-CRF-013
-    # @req:Trace-29
+    # @req:Trace-31
     # Verifies Sponsor A users restricted from reading/listing/cloning Sponsor B templates
     sponsor_a_resource = {"id": "res_1", "sponsor_id": "sponsor_a"}
 
@@ -289,11 +289,11 @@ async def test_site_tenant_data_isolation():
 
 
 # @req:PRD-CRF-014
-# @req:Trace-30
+# @req:Trace-32
 @pytest.mark.asyncio
 async def test_failure_recovery_high_availability():
     # @req:PRD-CRF-014
-    # @req:Trace-30
+    # @req:Trace-32
     # Verifies IndexedDB sync queue preservation during disconnects and batch flush conflict resolution
     offline_sync_queue = []
 
@@ -318,11 +318,11 @@ async def test_failure_recovery_high_availability():
 
 
 # @req:PRD-CRF-015
-# @req:Trace-31
+# @req:Trace-33
 @pytest.mark.asyncio
 async def test_in_memory_accessibility_auditing():
     # @req:PRD-CRF-015
-    # @req:Trace-31
+    # @req:Trace-33
     # Verifies automated HTML-based WCAG 2.1 accessibility scan of contrast ratios/labels
     from apps.execution.services.layout_validator import (
         run_layout_and_accessibility_checks,

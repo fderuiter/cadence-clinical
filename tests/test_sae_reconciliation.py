@@ -598,7 +598,7 @@ async def test_reconciliation_persistence_and_audit():
 
 
 def test_pure_function_generate_stable_event_key():
-    # @req:Trace-14
+    # @req:Trace-15
     # USUBJID/AESEQ path
     sae_seq = SeriousAdverseEvent(
         subject_key="SUBJ-123",
@@ -624,7 +624,7 @@ def test_pure_function_generate_stable_event_key():
 
 
 def test_pure_function_normalize_edc_ae_to_sae():
-    # @req:Trace-14
+    # @req:Trace-15
     ae_dict = {
         "USUBJID": "SUBJ-789",
         "AETERM": "VOMITING",
@@ -641,7 +641,7 @@ def test_pure_function_normalize_edc_ae_to_sae():
 
 
 def test_pure_function_normalize_external_icsr_to_saes():
-    # @req:Trace-14
+    # @req:Trace-15
     icsr_dict = {
         "header": {
             "sender_organization": "SPONSOR_XYZ",
@@ -684,7 +684,7 @@ def test_pure_function_normalize_external_icsr_to_saes():
 
 @pytest.mark.asyncio
 async def test_reconciliation_runs_read_endpoints():
-    # @req:Trace-14
+    # @req:Trace-15
     class MockAsyncClient:
         async def get(self, url, headers=None, params=None, timeout=10.0):
             if "sdtm/AE" in url:
@@ -716,7 +716,7 @@ async def test_reconciliation_runs_read_endpoints():
 
 @pytest.mark.asyncio
 async def test_reconciliation_jobs_read_endpoints_and_gating():
-    # @req:Trace-14
+    # @req:Trace-15
     client = TestClient(app)
     headers = get_signed_headers(roles="safety_reviewer", change_reason="Retrieve jobs")
 
@@ -743,7 +743,7 @@ async def test_reconciliation_jobs_read_endpoints_and_gating():
 
 @pytest.mark.asyncio
 async def test_reconciliation_version_index_increment():
-    # @req:Trace-14
+    # @req:Trace-15
     class MockAsyncClient:
         async def get(self, url, headers=None, params=None, timeout=10.0):
             if "sdtm/AE" in url:
@@ -825,7 +825,7 @@ async def test_reconciliation_version_index_increment():
 
 
 def test_safety_mutations_negative_signatures():
-    # @req:Trace-14
+    # @req:Trace-15
     client = TestClient(app)
     endpoints = [
         ("/api/v1/safety/export", {"job_name": "Test Export", "icsr": {}}),
@@ -893,7 +893,7 @@ def test_safety_mutations_negative_signatures():
 
 
 def test_safety_reads_negative_signatures():
-    # @req:Trace-14
+    # @req:Trace-15
     client = TestClient(app)
     some_id = str(uuid.uuid4())
     endpoints = [

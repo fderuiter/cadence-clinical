@@ -96,7 +96,7 @@ async def setup_test_db():
 async def test_batch_sign_off_happy_path_form() -> None:
     """
     # @req:Trace-14
-    # @req:Trace-15
+    # @req:Trace-17
     Test successful batch sign-off using FORM target resolution.
     """
     async with httpx.AsyncClient(
@@ -346,7 +346,7 @@ async def test_batch_sign_off_pi_only() -> None:
 @pytest.mark.asyncio
 async def test_batch_sign_off_token_replay() -> None:
     """
-    # @req:Trace-15
+    # @req:Trace-17
     Test that signature token can be used exactly once and replay returns HTTP 401.
     """
     async with httpx.AsyncClient(
@@ -463,7 +463,7 @@ async def test_batch_sign_off_locks_and_atomic_rollback() -> None:
 async def test_batch_sign_off_mismatched_bindings_and_no_write() -> None:
     """
     # @req:Trace-14
-    # @req:Trace-15
+    # @req:Trace-17
     Test that a batch sign-off with mismatched binding (study, type, targets, reason) is rejected and does not write/modify any data.
     """
     async with httpx.AsyncClient(

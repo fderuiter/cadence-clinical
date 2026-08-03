@@ -1,4 +1,4 @@
-# @req:Trace-14
+# @req:Trace-16
 """
 In-process end-to-end integration and seam tests for tickets notifications.
 Exercises real gateway routing, ASGI-based service-to-service communication,
@@ -116,7 +116,7 @@ def route_tickets_to_notifications():
 @pytest.mark.asyncio
 async def test_end_to_end_tickets_and_notifications_handshake():
     """
-    # @req:Trace-14
+    # @req:Trace-16
     Verify that creating and assigning a ticket in Tickets service triggers an
     HMAC-signed request that successfully lands on the Notifications service over
     GatewayAuthMiddleware, registering the notification and delivery channels correctly.
@@ -183,7 +183,7 @@ async def test_end_to_end_tickets_and_notifications_handshake():
 @pytest.mark.asyncio
 async def test_escalation_worker_notifications_retry_mechanics():
     """
-    # @req:Trace-14
+    # @req:Trace-16
     Verify escalation worker overdue retry behavior:
     1. Escalate priority from LOW to MEDIUM with the notifications endpoint failing.
        Assert that priority is updated, but last_escalation_notified_at remains None (stale).

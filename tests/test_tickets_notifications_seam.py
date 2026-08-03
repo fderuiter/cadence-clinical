@@ -104,7 +104,7 @@ def intercept_notifications():
 @pytest.mark.asyncio
 async def test_end_to_end_ticket_creation_and_comment_flow(intercept_notifications):
     """
-    # @req:Trace-14
+    # @req:Trace-16
     Create a ticket and append a comment. Ensure the asynchronous background task
     generates V2 HMAC signatures, bypasses mocks, and successfully persists
     In-App notifications in the notifications DB with correct de-duplication related_entity_id tokens.
@@ -163,7 +163,7 @@ async def test_end_to_end_ticket_creation_and_comment_flow(intercept_notificatio
 @pytest.mark.asyncio
 async def test_end_to_end_escalation_worker_flow_and_retries(intercept_notifications):
     """
-    # @req:Trace-14
+    # @req:Trace-16
     Run an escalation cycle where first the notifications service is unavailable
     (failure leaves last_escalation_notified_at stale). Then restore the service
     and run a second cycle to verify successful retry (success stamps last_escalation_notified_at).
