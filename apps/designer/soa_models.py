@@ -5,11 +5,6 @@ Defines Pydantic v2 entity-specific contracts for StudyArm, Epoch, Visit, Proced
 relationships, audit metadata, and projection cells.
 """
 
-from datetime import UTC, datetime
-from typing import Literal
-
-from pydantic import BaseModel, Field, model_validator
-
 # Import the core models from protocol_authoring package
 from protocol_authoring import (
     ActivityAssignmentRequest,
@@ -34,7 +29,6 @@ from protocol_authoring import (
     SoAMatrixProjectionResponse,
     StudyArm,
     StudyArmProperties,
-    TimingWindow as CoreTimingWindow, # Subclassed below to add validation rules
     UpdateEpochRequest,
     UpdateProcedureRequest,
     UpdateStudyArmRequest,
@@ -45,24 +39,72 @@ from protocol_authoring import (
     VisitReorderItem,
     VisitReorderRequest,
 )
+from protocol_authoring import (
+    TimingWindow as CoreTimingWindow,  # Subclassed below to add validation rules
+)
+from pydantic import BaseModel, Field, model_validator
+
+__all__ = [
+    "TimingWindow",
+    "TimingWindowProperties",
+    "ArmReorderItem",
+    "ArmReorderRequest",
+    "EpochReorderItem",
+    "EpochReorderRequest",
+    "ProcedureReorderItem",
+    "ProcedureReorderRequest",
+    "VisitToArmAssignmentRequest",
+    "VisitToEpochAssignmentRequest",
+    "ActivityAssignmentRequest",
+    "AuditMetadata",
+    "CreateEpochRequest",
+    "CreateProcedureRequest",
+    "CreateStudyArmRequest",
+    "CreateTimingWindowRequest",
+    "CreateVisitRequest",
+    "Epoch",
+    "EpochProperties",
+    "LinkArmApplicabilityRequest",
+    "LinkEpochVisitRequest",
+    "LinkTimingRequest",
+    "LinkVisitProcedureRequest",
+    "Procedure",
+    "ProcedureProperties",
+    "ProjectionCell",
+    "SoAEntityCreatedResponse",
+    "SoAEntityDetail",
+    "SoALinkResponse",
+    "SoAMatrixProjectionResponse",
+    "StudyArm",
+    "StudyArmProperties",
+    "UpdateEpochRequest",
+    "UpdateProcedureRequest",
+    "UpdateStudyArmRequest",
+    "UpdateTimingWindowRequest",
+    "UpdateVisitRequest",
+    "Visit",
+    "VisitProperties",
+    "VisitReorderItem",
+    "VisitReorderRequest",
+]
 
 # Import header views from protocol_render
 try:
     from protocol_render import (
+        SoACellView,
         SoAHeaderArm,
         SoAHeaderEncounter,
         SoAHeaderEpoch,
         SoARowView,
-        SoACellView,
     )
 except ImportError:
     try:
         from protocol_render.models import (
+            SoACellView,
             SoAHeaderArm,
             SoAHeaderEncounter,
             SoAHeaderEpoch,
             SoARowView,
-            SoACellView,
         )
     except ImportError:
         # Fallbacks if not in path during initialization
@@ -104,7 +146,7 @@ class TimingWindow(CoreTimingWindow):
     """
 
     @model_validator(mode="after")
-    def validate_numeric_ranges_domain(self) -> "TimingWindow":
+    def validate_numeric_ranges_domain(self) -> TimingWindow:
         if self.max_offset is not None and self.max_offset < 0:
             raise ValueError("max_offset must not be negative.")
         if self.min_offset is not None and self.max_offset is not None:
@@ -144,7 +186,7 @@ class TimingWindowProperties(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_conditional_timing_reason(self) -> "TimingWindowProperties":
+    def validate_conditional_timing_reason(self) -> TimingWindowProperties:
         if self.conditional and (not self.reason or not self.reason.strip()):
             raise ValueError(
                 "A non-empty 'reason' must be provided when timing/applicability is conditional."
@@ -152,7 +194,7 @@ class TimingWindowProperties(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_numeric_ranges(self) -> "TimingWindowProperties":
+    def validate_numeric_ranges(self) -> TimingWindowProperties:
         if self.max_offset is not None and self.max_offset < 0:
             raise ValueError("max_offset must not be negative.")
         if self.min_offset is not None and self.max_offset is not None:
@@ -166,6 +208,7 @@ class TimingWindowProperties(BaseModel):
 
 
 # --- Reordering and Assignment Request Contracts specific to designer ---
+
 
 class ArmReorderItem(BaseModel):
     arm_id: str = Field(..., min_length=1)
