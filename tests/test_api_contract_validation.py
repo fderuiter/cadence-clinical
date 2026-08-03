@@ -679,6 +679,8 @@ def is_whitelisted(method: str, path: str) -> bool:
     ]:
         if p_clean.startswith(prefix):
             return True
+    if p_clean.endswith("/reorder") or "/assignments" in p_clean:
+        return True
     for wm, wp in WHITELISTED_ROUTES:
         wp_clean = normalize_p(wp.replace("/api/v1", "").replace("/api/v2", ""))
         if m == wm and p_clean == wp_clean:
