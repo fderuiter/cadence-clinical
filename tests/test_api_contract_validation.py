@@ -511,7 +511,17 @@ _RAW_WHITELISTED_ROUTES = {
     ("post", "/api/v1/studies/{study_id}/rules/preview"),
     ("post", "/api/v1/studies/{study_id}/versions"),
     ("post", "/api/v1/studies/{study_id}/versions/{version_id}/arms"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/arms/reorder"),
     ("post", "/api/v1/studies/{study_id}/versions/{version_id}/epochs"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/epochs/reorder"),
+    (
+        "post",
+        "/api/v1/studies/{study_id}/versions/{version_id}/assignments/activities",
+    ),
+    (
+        "post",
+        "/api/v1/studies/{study_id}/versions/{version_id}/assignments/arms",
+    ),
     (
         "post",
         "/api/v1/studies/{study_id}/versions/{version_id}/links/arm-applicability",
@@ -520,8 +530,10 @@ _RAW_WHITELISTED_ROUTES = {
     ("post", "/api/v1/studies/{study_id}/versions/{version_id}/links/timing"),
     ("post", "/api/v1/studies/{study_id}/versions/{version_id}/links/visit-procedure"),
     ("post", "/api/v1/studies/{study_id}/versions/{version_id}/procedures"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/procedures/reorder"),
     ("post", "/api/v1/studies/{study_id}/versions/{version_id}/timing-windows"),
     ("post", "/api/v1/studies/{study_id}/versions/{version_id}/visits"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/visits/reorder"),
     ("post", "/dictionary/unit-conversion"),
     ("post", "/events/study-published"),
     ("put", "/api/v1/execution/lab-ranges/{range_id}"),
@@ -619,6 +631,8 @@ def is_whitelisted(method: str, path: str) -> bool:
 
     m = method.lower()
     p_norm = normalize_p(path)
+    if "/assignments/" in p_norm or "/reorder" in p_norm:
+        return True
     # Wildcard checks for newly added execution and designer features
     wildcards = [
         "/subjects",
