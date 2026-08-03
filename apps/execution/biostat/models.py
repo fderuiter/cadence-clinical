@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class VariableMetadata(BaseModel):
@@ -69,6 +69,7 @@ class SUPPRecord(BaseModel):
 class DatasetJSONItemGroup(BaseModel):
     """Represents an itemGroupData object inside CDISC Dataset-JSON clinicalData/referenceData."""
 
+    itemGroupOID: str = Field(..., description="The 'IG.'-prefixed identifier of the item group")
     records: int = Field(..., description="Number of rows/records in the dataset")
     name: str = Field(..., description="Dataset name (e.g., 'DM')")
     label: str = Field(..., description="Dataset label (e.g., 'Demographics')")
@@ -98,6 +99,7 @@ class ClinicalData(BaseModel):
     metaDataVersionOID: str = Field(
         ..., description="Metadata version identifier (e.g., 'MDV.001')"
     )
+    metaDataRef: str | None = Field(None, description="External Define-XML metadata reference")
     itemGroupData: dict[str, DatasetJSONItemGroup] = Field(
         ..., description="Mapping of group names (e.g., 'IG.DM') to their datasets"
     )
@@ -108,6 +110,7 @@ class ReferenceData(BaseModel):
 
     studyOID: str = Field(..., description="Unique identifier for the study")
     metaDataVersionOID: str = Field(..., description="Metadata version identifier")
+    metaDataRef: str | None = Field(None, description="External Define-XML metadata reference")
     itemGroupData: dict[str, DatasetJSONItemGroup] = Field(
         ..., description="Mapping of group names to their datasets"
     )
@@ -116,13 +119,17 @@ class ReferenceData(BaseModel):
 class DatasetJSON(BaseModel):
     """Root model representing a CDISC Dataset-JSON document compliant with Pydantic v2."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     creationDateTime: str = Field(
         default_factory=lambda: datetime.utcnow().isoformat() + "Z",
+        alias="datasetJSONCreationDateTime",
         description="ISO 8601 creation timestamp",
     )
     datasetJSONVersion: str = Field(
         "1.0.0", description="The Dataset-JSON specification version"
     )
+    dbLastModifiedDateTime: str | None = Field(None, description="Source data last-modified time")
     fileOID: str | None = Field(None, description="Unique identifier for this file")
     asOfDateTime: str | None = Field(None, description="As of timestamp")
     originator: str | None = Field(None, description="Originator of the data")

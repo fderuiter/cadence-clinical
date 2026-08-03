@@ -329,6 +329,7 @@ def _build_item_group(
         item_data.append(row_values)
 
     return DatasetJSONItemGroup(
+        itemGroupOID=f"IG.{name_upper}",
         records=len(records),
         name=name_upper,
         label=label,

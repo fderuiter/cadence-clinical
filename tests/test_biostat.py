@@ -87,6 +87,7 @@ def test_dataset_json_integration_structure():
     ]
 
     item_group = DatasetJSONItemGroup(
+        itemGroupOID="IG.DM",
         records=2,
         name="DM",
         label="Demographics",
@@ -100,19 +101,37 @@ def test_dataset_json_integration_structure():
     clinical_data = ClinicalData(
         studyOID="STUDY.01",
         metaDataVersionOID="MDV.01",
+        metaDataRef="http://example.com/define.xml",
         itemGroupData={"IG.DM": item_group},
     )
 
     dj = DatasetJSON(
         creationDateTime="2026-07-29T12:00:00Z",
         datasetJSONVersion="1.0.0",
+        dbLastModifiedDateTime="2026-07-29T11:55:00Z",
         clinicalData=clinical_data,
     )
 
     assert dj.datasetJSONVersion == "1.0.0"
     assert dj.clinicalData is not None
+    assert dj.clinicalData.metaDataRef == "http://example.com/define.xml"
+    assert dj.dbLastModifiedDateTime == "2026-07-29T11:55:00Z"
     assert "IG.DM" in dj.clinicalData.itemGroupData
+    assert dj.clinicalData.itemGroupData["IG.DM"].itemGroupOID == "IG.DM"
     assert dj.clinicalData.itemGroupData["IG.DM"].records == 2
+
+    # Verify that populate_by_name works for alias "datasetJSONCreationDateTime"
+    dj_by_alias = DatasetJSON(
+        datasetJSONCreationDateTime="2026-07-29T12:00:00Z",
+        datasetJSONVersion="1.0.0",
+        clinicalData=clinical_data,
+    )
+    assert dj_by_alias.creationDateTime == "2026-07-29T12:00:00Z"
+
+    # Also verify serialization output includes the alias
+    dumped = dj_by_alias.model_dump(by_alias=True)
+    assert "datasetJSONCreationDateTime" in dumped
+    assert dumped["datasetJSONCreationDateTime"] == "2026-07-29T12:00:00Z"
 
     # Check validation on incorrect timestamp format
     with pytest.raises(ValidationError):
