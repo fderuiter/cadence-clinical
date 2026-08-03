@@ -162,6 +162,7 @@ flowchart TD
         tickets[tickets - Ticket tracking service]
         safety[safety - Clinical safety microservice]
         notifications[notifications - Notifications & Webhooks Dispatcher]
+        econsent[econsent - eConsent Services]
 
         %% Databases
         postgres[(postgres - Relational Database)]
@@ -176,6 +177,7 @@ flowchart TD
         sqlite_tickets[(tickets.db - local SQLite)]
         sqlite_safety[(safety.db - local SQLite)]
         sqlite_notifications[(notifications.db - local SQLite)]
+        sqlite_econsent[(econsent.db - local SQLite)]
     end
 
     %% Routing Flow
@@ -194,6 +196,7 @@ flowchart TD
     gateway --> tickets
     gateway --> safety
     gateway --> notifications
+    gateway --> econsent
 
     %% Shared storage connections
     designer --> neo4j
@@ -209,6 +212,7 @@ flowchart TD
     tickets --> sqlite_tickets
     safety --> sqlite_safety
     notifications --> sqlite_notifications
+    econsent --> sqlite_econsent
 
     %% Inter-service events
     etmf -->|Sync Webhooks / Email| notifications
