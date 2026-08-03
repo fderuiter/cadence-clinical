@@ -1,14 +1,14 @@
-<testsuites id="" name="" tests="5" failures="0" skipped="0" errors="0" time="18.168653">
-<testsuite name="portal-accessibility.spec.js" timestamp="2026-08-03T02:36:11.488Z" hostname="chromium" tests="5" failures="0" skipped="0" time="9.538" errors="0">
-<testcase name="Subject Portal Headless Accessibility Testing Suite › should successfully bypass third-party login and pass WCAG 2.1 AA audits on landing page" classname="portal-accessibility.spec.js" time="2.256">
+<testsuites id="" name="" tests="5" failures="0" skipped="0" errors="0" time="15.491052000000002">
+<testsuite name="portal-accessibility.spec.js" timestamp="2026-08-03T03:01:02.427Z" hostname="chromium" tests="5" failures="0" skipped="0" time="11.331" errors="0">
+<testcase name="Subject Portal Headless Accessibility Testing Suite › should successfully bypass third-party login and pass WCAG 2.1 AA audits on landing page" classname="portal-accessibility.spec.js" time="3.149">
 </testcase>
-<testcase name="Subject Portal Headless Accessibility Testing Suite › should pass accessibility audits in questionnaire form view" classname="portal-accessibility.spec.js" time="1.972">
+<testcase name="Subject Portal Headless Accessibility Testing Suite › should pass accessibility audits in questionnaire form view" classname="portal-accessibility.spec.js" time="2.083">
 </testcase>
-<testcase name="Subject Portal Headless Accessibility Testing Suite › should pass accessibility audits when showing validation error messages" classname="portal-accessibility.spec.js" time="1.956">
+<testcase name="Subject Portal Headless Accessibility Testing Suite › should pass accessibility audits when showing validation error messages" classname="portal-accessibility.spec.js" time="2.208">
 </testcase>
-<testcase name="Subject Portal Headless Accessibility Testing Suite › should pass accessibility audits on compliance score and history view" classname="portal-accessibility.spec.js" time="1.679">
+<testcase name="Subject Portal Headless Accessibility Testing Suite › should pass accessibility audits on compliance score and history view" classname="portal-accessibility.spec.js" time="2.235">
 </testcase>
-<testcase name="Subject Portal Headless Accessibility Testing Suite › should pass accessibility audits on inbox notifications view" classname="portal-accessibility.spec.js" time="1.675">
+<testcase name="Subject Portal Headless Accessibility Testing Suite › should pass accessibility audits on inbox notifications view" classname="portal-accessibility.spec.js" time="1.656">
 </testcase>
 </testsuite>
 </testsuites>
