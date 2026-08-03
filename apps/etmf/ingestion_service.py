@@ -62,7 +62,7 @@ async def ingest_tmf_document(
     tax_version = taxonomy_version or get_active_catalog().version
 
     # 2 & 3. Classify and resolve artifact, section, and zone via the shared classification service
-    from apps.etmf.classification_service import classify_tmf_document
+    from apps.etmf.classification_service import classify_tmf_document, resolve_document_type
 
     hint = artifact_code or artifact_type
     classification = classify_tmf_document(
@@ -78,13 +78,7 @@ async def ingest_tmf_document(
     resolved_artifact_code = classification.artifact_code
     canonical_artifact_type = classification.artifact_type
 
-    doc_type = None
-    if resolved_artifact_code == "05.02.01":
-        doc_type = "FORM_1572"
-    elif resolved_artifact_code == "05.02.02":
-        doc_type = "FINANCIAL_DISCLOSURE"
-    elif resolved_artifact_code == "01.01.03":
-        doc_type = "PROTOCOL_SIGNOFF"
+    doc_type = resolve_document_type(resolved_artifact_code)
 
     # Validate and normalize site_id
     resolved_site_id = site_id
