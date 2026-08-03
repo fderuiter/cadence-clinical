@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from tmf_reference_model import get_active_catalog, get_catalog
 
 from apps.etmf.classification_service import classify_tmf_document
-from packages.security.rbac import Principal, require_permission
+from packages.security.rbac import Principal, require_permission, require_study_scope
 
 router = APIRouter(prefix="/api/v1/etmf", tags=["Taxonomy"])
 
@@ -54,6 +54,9 @@ class AutoFileRequest(BaseModel):
     filename: str
     artifact_type: str | None = Field(None, description="Optional artifact type hint")
     free_text: str | None = Field(None, description="Optional free-text hint")
+    study_id: str | None = Field(
+        None, description="Optional study ID for scope enforcement"
+    )
 
 
 class AutoFileResponse(BaseModel):
@@ -126,6 +129,35 @@ async def suggest_classification(
 ) -> AutoFileResponse:
     """
     Provide automatic classification/auto-filing suggestions for a document.
+    """
+    res = classify_tmf_document(
+        filename=payload.filename,
+        artifact_type=payload.artifact_type,
+        free_text=payload.free_text,
+    )
+    if res is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Unable to auto-classify document with the provided parameters.",
+        )
+
+    return AutoFileResponse(
+        resolved_zone=res.resolved_zone,
+        resolved_section=res.resolved_section,
+        artifact_code=res.artifact_code,
+        artifact_type=res.artifact_type,
+        match_basis=res.match_basis,
+    )
+
+
+@router.post("/auto-file", response_model=AutoFileResponse)
+async def auto_file_suggestion(
+    payload: AutoFileRequest,
+    principal: Principal = Depends(require_permission("etmf_document:read")),
+    study_scope: Principal = Depends(require_study_scope()),
+) -> AutoFileResponse:
+    """
+    Provide automatic classification/auto-filing suggestions for a document with study scope.
     """
     res = classify_tmf_document(
         filename=payload.filename,
