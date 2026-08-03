@@ -584,10 +584,14 @@ main {
   margin-bottom: 6px;
 }
 
-.badge-open,
-.badge-reopened {
+.badge-open {
   background-color: var(--error-bg);
   color: var(--error);
+}
+
+.badge-reopened {
+  background-color: #e0e7ff;
+  color: var(--color-accent);
 }
 
 .badge-answered {
