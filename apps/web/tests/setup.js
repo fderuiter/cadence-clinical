@@ -38,10 +38,17 @@ class LocalStorageMock {
 }
 
 const localStorageInstance = new LocalStorageMock();
+const sessionStorageInstance = new LocalStorageMock();
 
 if (typeof window !== "undefined") {
   Object.defineProperty(window, "localStorage", {
     value: localStorageInstance,
+    writable: true,
+    configurable: true,
+  });
+
+  Object.defineProperty(window, "sessionStorage", {
+    value: sessionStorageInstance,
     writable: true,
     configurable: true,
   });

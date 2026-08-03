@@ -181,6 +181,23 @@ router.beforeEach(async (to) => {
   const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
 
   if (requiresAuth) {
+    // Verify active OIDC session integrity using Keycloak client APIs rather than trusting local/session storage
+    if (window.keycloakInstance && !authStore.isDemoMode) {
+      try {
+        await window.keycloakInstance.updateToken(5);
+        authStore.setAuth(window.keycloakInstance);
+      } catch (err) {
+        console.error("OIDC Active session integrity verification failed via Keycloak SDK:", err);
+        authStore.setAuth(null);
+        return { path: "/login", query: { redirect: to.fullPath } };
+      }
+
+      if (!window.keycloakInstance.authenticated) {
+        authStore.setAuth(null);
+        return { path: "/login", query: { redirect: to.fullPath } };
+      }
+    }
+
     if (!authStore.isAuthenticated) {
       // If we are not in demo mode, trigger Keycloak redirect or fallback to /login
       if (!authStore.isDemoMode) {
