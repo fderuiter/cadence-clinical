@@ -572,9 +572,7 @@ def pytest_sessionfinish(session, exitstatus):
                 cmd.append("--dynamic-timestamp")
 
         # Check for draft environment variable
-        draft_val = os.environ.get("RTM_DRAFT") or os.environ.get(
-            "GENERATE_RTM_DRAFT"
-        )
+        draft_val = os.environ.get("RTM_DRAFT") or os.environ.get("GENERATE_RTM_DRAFT")
         if draft_val is not None:
             if draft_val.lower() not in ("", "0", "false", "no", "off"):
                 cmd.append("--draft")
