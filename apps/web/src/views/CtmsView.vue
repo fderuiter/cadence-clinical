@@ -181,9 +181,21 @@
 </template>
 
 <script setup>
+import { onMounted } from "vue";
+import { useRoute } from "vue-router";
 import { useClinicalStore } from "../stores/clinical";
 
 const store = useClinicalStore();
+const route = useRoute();
+
+onMounted(() => {
+  if (route && route.query) {
+    if (route.query.studyId) store.activeStudyId = route.query.studyId;
+    if (route.query.siteId) store.activeSiteId = route.query.siteId;
+    if (route.query.subjectId) store.activeSubjectId = route.query.subjectId;
+    if (route.query.visitId) store.activeVisitId = route.query.visitId;
+  }
+});
 
 function achieveMilestone() {
   const nextM = store.currentCtmsData.milestones.find(

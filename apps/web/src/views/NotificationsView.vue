@@ -281,7 +281,6 @@
 
         <!-- Action Controls -->
         <div
-          v-if="notif.status !== 'RESOLVED'"
           style="
             display: flex;
             justify-content: flex-end;
@@ -291,6 +290,13 @@
             padding-top: 12px;
           "
         >
+          <button
+            class="btn btn-goto"
+            style="padding: 6px 12px; font-size: 0.8rem; background-color: var(--secondary-light, #e2e8f0); border: 1px solid var(--secondary, #cbd5e1); color: var(--primary, #1e293b);"
+            @click="goToTarget(notif)"
+          >
+            🔗 Go to Target
+          </button>
           <button
             v-if="notif.status === 'OPEN'"
             class="btn btn-acknowledge"
@@ -460,9 +466,39 @@
 
 <script setup>
 import { onMounted, ref, computed } from "vue";
+import { useRouter } from "vue-router";
 import { useNotificationsStore } from "../stores/notifications";
 
 const store = useNotificationsStore();
+const router = useRouter();
+
+const getDeepLink = (notif) => {
+  const category = (notif.category || '').toUpperCase();
+  const entityType = (notif.related_entity_type || '').toUpperCase();
+  
+  // Try to find if there is an associated study/site/subject/visit context
+  const studyId = notif.study_id || notif.studyId || 'STUDY-USDM-001';
+  const siteId = notif.site_id || notif.siteId || 'SITE-001';
+  const subjectId = notif.subject_id || notif.subjectId || notif.related_entity_id || 'SUBJ-001';
+  const visitId = notif.visit_id || notif.visitId || 'Screening';
+  
+  const query = { studyId, siteId, subjectId, visitId };
+
+  if (category === 'ECRF_QUERY' || category === 'DISCREPANCY' || entityType === 'FORM' || entityType === 'QUERY' || category === 'ALERTS') {
+    return { name: 'ecrf', query };
+  } else if (category === 'ETMF_EXPIRATION' || category === 'DOCUMENT' || entityType === 'DOCUMENT') {
+    return { name: 'etmf', query };
+  } else if (category === 'SITE_TICKET' || category === 'ACTION_ITEM' || category === 'ACTION_ITEMS' || entityType === 'TICKET') {
+    return { name: 'ctms', query };
+  }
+  
+  return { name: 'ctms', query };
+};
+
+const goToTarget = (notif) => {
+  const target = getDeepLink(notif);
+  router.push(target);
+};
 
 // Modal properties
 const showModal = ref(false);
