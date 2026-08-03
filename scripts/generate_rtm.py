@@ -3,6 +3,7 @@ import argparse
 import os
 import platform
 import re
+import sys
 import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
 
@@ -605,6 +606,19 @@ def generate_qualification_report(
 
 
 def main():
+    if os.environ.get("GXP_SYNC_RUNNING") != "1":
+        print("\n" + "!" * 72, file=sys.stderr)
+        print(
+            "WARNING: Direct invocation of scripts/generate_rtm.py is deprecated!",
+            file=sys.stderr,
+        )
+        print(
+            "Please use the unified orchestration script to sync compliance artifacts instead:",
+            file=sys.stderr,
+        )
+        print("    uv run python scripts/sync_gxp.py", file=sys.stderr)
+        print("!" * 72 + "\n", file=sys.stderr)
+
     parser = argparse.ArgumentParser(
         description="Generate Requirements Traceability Matrix and Qualification Execution Report."
     )
@@ -711,7 +725,6 @@ def main():
             print(f"Found {len(unmapped_list)} unmapped requirements:")
             for req_id in sorted(unmapped_list):
                 print(f"  - {req_id}")
-            import sys
 
             sys.exit(1)
         else:

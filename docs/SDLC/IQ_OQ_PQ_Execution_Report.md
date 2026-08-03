@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1923
-- **Passed:** 1923 🟢
+- **Total Automated Test Cases Run:** 1976
+- **Passed:** 1976 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -390,8 +390,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_crypto_verifier_valid_signature` | `tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_signing_raises_runtime_error_if_secret_missing` | `tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_raises_runtime_error_if_secret_missing` | `tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_security_audit_exclusions` | `tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_security_audit_scanner_detection_and_bypass` | `tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_security_audit_script` | `tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_security_audit_targeted_files` | `tests.test_compliance_security` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_check_dict_for_value` | `tests.test_concept_locks` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_concept_mutations_locked_active_recruiting` | `tests.test_concept_locks` | PRD-MDR-002 | 🟢 PASSED | < 1s |
 | `test_concept_mutations_unreferenced` | `tests.test_concept_locks` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -901,6 +903,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_signature_document_routing_and_classification` | `tests.test_etmf_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_lifecycle_with_mock_signature` | `tests.test_etmf_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_post_signature_locking` | `tests.test_etmf_signing_lifecycle` | Trace-13 | 🟢 PASSED | < 1s |
+| `test_etmf_signing_failure_logging_and_blocking` | `tests.test_etmf_signing_lifecycle` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_signing_happy_path` | `tests.test_etmf_signing_lifecycle` | Trace-13 | 🟢 PASSED | < 1s |
 | `test_etmf_signing_reauth_failures` | `tests.test_etmf_signing_lifecycle` | Trace-13 | 🟢 PASSED | < 1s |
 | `test_auto_quarantine_site_level_no_site_id` | `tests.test_etmf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
