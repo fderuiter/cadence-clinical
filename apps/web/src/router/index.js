@@ -187,7 +187,10 @@ router.beforeEach(async (to) => {
         await window.keycloakInstance.updateToken(5);
         authStore.setAuth(window.keycloakInstance);
       } catch (err) {
-        console.error("OIDC Active session integrity verification failed via Keycloak SDK:", err);
+        console.error(
+          "OIDC Active session integrity verification failed via Keycloak SDK:",
+          err
+        );
         authStore.setAuth(null);
         return { path: "/login", query: { redirect: to.fullPath } };
       }

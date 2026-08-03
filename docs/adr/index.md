@@ -39,6 +39,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
 
 ### 2. API Gateway, Security & Identity
+- [2026-08-03: Ruff Lint Alignment and Centralized RBAC Validation](2026-08-03-ruff-lint-alignment-and-centralized-rbac-validation.md)
 - [2026-08-03: eConsent Gateway Integration and Orchestration Port Alignment](2026-08-03-econsent-gateway-integration-and-orchestration-port-alignment.md)
 - [2026-08-02: Enforce Ruff Style and Formatting on API Gateway Routers](2026-08-02-enforce-ruff-style-and-formatting-on-api-gateway-routers.md)
 - [2026-08-01: Cryptographic Signature Verification Engine and Multi-Format Support](2026-08-01-cryptographic-signature-verification-engine-and-multi-format-support.md)
