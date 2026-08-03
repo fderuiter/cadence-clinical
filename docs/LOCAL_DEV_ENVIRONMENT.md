@@ -61,7 +61,7 @@ The codebase provides built-in utilities to simplify parallel feature developmen
   ```bash
   pnpm ports:check
   ```
-  *Detects active port listeners on ports 8000–8011 before launching local servers or tests, avoiding `address already in use` crashes.*
+  *Detects active port listeners on ports 8000–8012 before launching local servers or tests, avoiding `address already in use` crashes.*
 
 * **Ultra-Fast Parallel Testing**:
   ```bash
@@ -79,7 +79,7 @@ The codebase provides built-in utilities to simplify parallel feature developmen
 
 ## 2. Monorepo Service Catalog & Port Allocations
 
-The local containerized cluster orchestrates **13 primary services** defined in `docker/docker-compose.yml`.
+The local containerized cluster orchestrates **14 primary services** defined in `docker/docker-compose.yml`.
 
 | Service Name | Port Mapping (Host:Container) | Sub-directory | Primary Database / Storage | Purpose & Operational Description |
 | :--- | :--- | :--- | :--- | :--- |
@@ -89,14 +89,15 @@ The local containerized cluster orchestrates **13 primary services** defined in 
 | **`designer`** | `8001:8001` | `apps/designer/` | Connected to `neo4j` | Core Python service (FastAPI) responsible for clinical trial structure and CDISC schema definition. |
 | **`execution`** | `8002:8002` | `apps/execution/` | Connected to `postgres` | Electronic Data Capture (EDC) engine overseeing trial workflows, subject progression, and database-level audits. |
 | **`etmf`** | `8003:8003` | `apps/etmf/` | Shared workspace: `/app/tmf.db` (SQLite) | Electronic Trial Master File system managing GCP document structures, files, metadata taxonomy, and workflows. |
-| **`ctms`** | `8007:8005` | `apps/ctms/` | Shared workspace: `/app/ctms.db` (SQLite) | Clinical Trial Management System tracking trial sites, CRA monitoring, and visit scheduling. |
+| **`ctms`** | `8007:8007` | `apps/ctms/` | Shared workspace: `/app/ctms.db` (SQLite) | Clinical Trial Management System tracking trial sites, CRA monitoring, and visit scheduling. |
 | **`quality`** | `8005:8005` | `apps/quality/` | Shared workspace: `/app/quality.db` (SQLite) | Clinical quality, deviations, root-cause analyses, and CAPA logging. |
 | **`interop`** | `8004:8004` | `apps/interop/` | Shared workspace: `/app/interop.db` (SQLite) | Interoperability gateway for integrations like external patient registries and mobile ePRO ingestion. |
 | **`tickets`** | `8009:8009` | `apps/tickets/` | Shared workspace: `/app/tickets.db` (SQLite) | Communication and query tickets workflow between sites, monitors, and data managers. |
 | **`notifications`** | `8006:8006` | `apps/notifications/` | Shared workspace: `/app/notifications.db` (SQLite) | Dispatches emails/alerts, maps notification templates, and provides webhook relays. |
 | **`safety`** | `8008:8008` | `apps/safety/` | Shared workspace: `/app/safety.db` (SQLite) | Serious Adverse Event (SAE) processing, E2B intake, and clinical safety reconciliation. |
-| **`org`** | `8012:8010` | `apps/org/` | Connected to `postgres` | Organization Directory service managing personnel assignments, site registration, and study relationships. |
+| **`org`** | `8012:8012` | `apps/org/` | Connected to `postgres` | Organization Directory service managing personnel assignments, site registration, and study relationships. |
 | **`eisf`** | `8010:8010` | `apps/eisf/` | Shared workspace: `/app/eisf.db` (SQLite) | Electronic Investigator Site File (eISF) system for site-level document and investigator binder compliance. |
+| **`econsent`** | `8011:8011` | `apps/econsent/` | Shared workspace: `/app/econsent.db` (SQLite) | Electronic Consent (eConsent) service managing patient information sheets, translated consent forms, and signature compliance. |
 | **`gateway`** | `8000:8000` | `apps/gateway/` | N/A | Central routing reverse-proxy exposing unified endpoint routing to individual backend APIs. |
 | **`subject-portal`** | `5174:5174` | `apps/subject-portal/` | N/A | Patient-facing SPA (Vue and Node.js) for completing diaries, surveys, and reviewing profile metrics. |
 

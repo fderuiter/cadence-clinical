@@ -110,6 +110,7 @@ async def test_get_openapi_json(monkeypatch: pytest.MonkeyPatch) -> None:
         assert "/safety/test" in data["paths"]
         assert "/eisf/test" in data["paths"]
         assert "/tickets/test" in data["paths"]
+        assert "/econsent/test" in data["paths"]
         assert "Designer_TestModel" in data["components"]["schemas"]
         assert "Execution_TestModel" in data["components"]["schemas"]
         assert "Ctms_TestModel" in data["components"]["schemas"]
@@ -118,6 +119,7 @@ async def test_get_openapi_json(monkeypatch: pytest.MonkeyPatch) -> None:
         assert "Safety_TestModel" in data["components"]["schemas"]
         assert "Eisf_TestModel" in data["components"]["schemas"]
         assert "Tickets_TestModel" in data["components"]["schemas"]
+        assert "Econsent_TestModel" in data["components"]["schemas"]
 
 
 def test_get_openapi_json_error(monkeypatch: pytest.MonkeyPatch) -> None:
