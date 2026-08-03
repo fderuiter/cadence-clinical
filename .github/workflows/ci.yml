@@ -632,7 +632,6 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
-      administration: write
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -668,4 +667,3 @@ jobs:
     needs: [release-and-archive]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/deploy-demo.yml
-
