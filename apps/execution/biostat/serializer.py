@@ -329,6 +329,7 @@ def _build_item_group(
         item_data.append(row_values)
 
     return DatasetJSONItemGroup(
+        itemGroupOID=f"IG.{name_upper}",
         records=len(records),
         name=name_upper,
         label=label,
@@ -372,7 +373,7 @@ def serialize_to_dataset_json(
     )
 
     return DatasetJSON(
-        creationDateTime=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        datasetJSONCreationDateTime=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         datasetJSONVersion="1.0.0",
         fileOID=file_oid,
         originator=originator,
