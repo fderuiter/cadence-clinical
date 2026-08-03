@@ -268,6 +268,48 @@
         }
       }
     },
+    "/api/v1/etmf/auto-file": {
+      "post": {
+        "tags": [
+          "Taxonomy"
+        ],
+        "summary": "Auto File Suggestion",
+        "description": "Provide automatic classification/auto-filing suggestions for a document with study scope.",
+        "operationId": "auto_file_suggestion_api_v1_etmf_auto_file_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoFileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoFileResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -1915,6 +1957,18 @@
             ],
             "title": "Free Text",
             "description": "Optional free-text hint"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Optional study ID for scope enforcement"
           }
         },
         "type": "object",
