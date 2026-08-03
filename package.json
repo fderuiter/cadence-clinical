@@ -9,7 +9,7 @@
   },
   "scripts": {
     "test": "pnpm -r test && uv run pytest",
-    "lint": "pnpm -r lint && uv run ruff check .",
+    "lint": "python3 scripts/validate_path_patterns.py --all && pnpm -r lint && uv run ruff check .",
     "format": "pnpm -r format && uv run ruff format .",
     "fix": "uv run ruff check . --fix && uv run ruff format .",
     "db:reset": "uv run python scripts/reset_db.py",

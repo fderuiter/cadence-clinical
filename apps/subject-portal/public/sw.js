@@ -7,6 +7,25 @@ const ASSETS = [
   "/subject-portal/manifest.json",
 ];
 
+// Helper to fetch with timeout
+function fetchWithTimeout(request, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error("Network timeout"));
+    }, timeoutMs);
+
+    fetch(request)
+      .then((response) => {
+        clearTimeout(timeoutId);
+        resolve(response);
+      })
+      .catch((error) => {
+        clearTimeout(timeoutId);
+        reject(error);
+      });
+  });
+}
+
 // Install event: Pre-cache core shell resources
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -54,35 +73,42 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Handle essential app routing / assets
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        // If response is valid, update the cache dynamically
-        if (response && response.status === 200 && response.type === "basic") {
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
+  const isStaticAsset = url.origin === self.location.origin && url.pathname.startsWith("/subject-portal/");
+
+  if (isStaticAsset) {
+    // Limit network requests for application shell assets to a maximum of 2 seconds before racing to the local cache fallback
+    event.respondWith(
+      fetchWithTimeout(event.request, 2000)
+        .then((response) => {
+          // If response is valid, update the cache dynamically
+          if (response && response.status === 200 && response.type === "basic") {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // Fallback to cache on network failure or timeout
+          console.log(
+            "[Service Worker] Network failed or timed out, serving from cache:",
+            event.request.url
+          );
+          return caches.match(event.request).then((cachedResponse) => {
+            if (cachedResponse) {
+              return cachedResponse;
+            }
+            // If even cache fails (e.g., first time visiting a non-cached asset while offline)
+            if (event.request.mode === "navigate") {
+              return caches.match("/subject-portal/index.html");
+            }
           });
-        }
-        return response;
-      })
-      .catch(() => {
-        // Fallback to cache on network failure
-        console.log(
-          "[Service Worker] Network failed, serving from cache:",
-          event.request.url
-        );
-        return caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          // If even cache fails (e.g., first time visiting a non-cached asset while offline)
-          // we can return a generic offline response for index.html or fallback
-          if (event.request.mode === "navigate") {
-            return caches.match("/subject-portal/index.html");
-          }
-        });
-      })
-  );
+        })
+    );
+  } else {
+    // Uncached dynamic API calls bypass this static asset timeout behavior to avoid returning stale data.
+    event.respondWith(fetch(event.request));
+  }
 });
+
