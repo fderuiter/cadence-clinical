@@ -8,7 +8,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request && github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   style:
@@ -656,3 +656,16 @@ jobs:
           FAIL_ON_RULESET_SYNC_ERROR: "true"
         run: |
           python3 scripts/sync_ruleset.py
+
+  release-and-archive:
+    name: Call Production Pipeline
+    needs: [style, security, compliance]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/production-pipeline.yml
+
+  deploy-demo:
+    name: Call Deploy Demo
+    needs: [release-and-archive]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/deploy-demo.yml
+

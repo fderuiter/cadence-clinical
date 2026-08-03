@@ -28,7 +28,9 @@ class ProtocolDocumentRenderer:
         try:
             import weasyprint
 
-            return weasyprint.HTML(string=html_content).write_pdf()
+            return weasyprint.HTML(string=html_content).write_pdf(
+                pdf_variant="pdf/ua-1"
+            )
         except (ImportError, OSError) as exc:
             logger.info(
                 "weasyprint C libraries unavailable (%s); using fallback PDF stream builder",
@@ -38,10 +40,12 @@ class ProtocolDocumentRenderer:
         # Fallback lightweight PDF generator
         pdf_buffer = io.BytesIO()
         pdf_buffer.write(b"%PDF-1.4\n")
-        pdf_buffer.write(b"1 0 obj <</Type /Catalog /Pages 2 0 R>> endobj\n")
+        pdf_buffer.write(
+            b"1 0 obj <</Type /Catalog /Pages 2 0 R /MarkInfo <</Marked true>> /StructTreeRoot 6 0 R>> endobj\n"
+        )
         pdf_buffer.write(b"2 0 obj <</Type /Pages /Count 1 /Kids [3 0 R]>> endobj\n")
         pdf_buffer.write(
-            b"3 0 obj <</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R>> endobj\n"
+            b"3 0 obj <</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources <</Font <</F1 5 0 R>>>> /StructParents 0>> endobj\n"
         )
         stream_content = (
             b"BT /F1 12 Tf 50 750 Td (Clinical Protocol Synopsis Export) Tj ET"
@@ -49,10 +53,19 @@ class ProtocolDocumentRenderer:
         pdf_buffer.write(f"4 0 obj <</Length {len(stream_content)}>> stream\n".encode())
         pdf_buffer.write(stream_content)
         pdf_buffer.write(b"\nendstream\nendobj\n")
+        pdf_buffer.write(
+            b"5 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica>> endobj\n"
+        )
+        pdf_buffer.write(
+            b"6 0 obj <</Type /StructTreeRoot /RoleMap <</Document /Div>> /K 7 0 R>> endobj\n"
+        )
+        pdf_buffer.write(
+            b"7 0 obj <</Type /StructElem /S /Document /P 6 0 R /Pg 3 0 R /K [0]>> endobj\n"
+        )
         # fmt: off
-        pdf_buffer.write(b"xref\n0 5\n0000000000 65535 f \n0000000009 00000 n \n")  # deid-ignore
+        pdf_buffer.write(b"xref\n0 8\n0000000000 65535 f \n")  # deid-ignore
         # fmt: on
-        pdf_buffer.write(b"trailer <</Size 5 /Root 1 0 R>>\nstartxref\n180\n%%EOF\n")
+        pdf_buffer.write(b"trailer <</Size 8 /Root 1 0 R>>\nstartxref\n180\n%%EOF\n")
 
         return pdf_buffer.getvalue()
 
