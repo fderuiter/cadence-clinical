@@ -316,6 +316,7 @@ def execute_pip_audit() -> tuple[str, str, int]:
             "requirements.txt",
             "--all-packages",
             "--no-dev",
+            "--no-emit-project",
             "-o",
             temp_file_path,
         ]
