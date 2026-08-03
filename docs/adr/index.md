@@ -98,6 +98,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 4. Clinical Operations & Business Modules
 - [2026-07-31: Expose CRA Monitoring SDV Transport Models and Shared Sign-Off Logic](2026-07-31-expose-cra-monitoring-sdv-transport-models-and-shared-sign-off-logic.md)
+- [2026-08-03: ADR-147: Task-Driven CRA Workspace Routing & Multi-Select Batch SDV](2026-08-03-task-driven-cra-workspace-and-batch-sdv-verification.md)
 - [2026-07-31: Informed Consent Multi-Language Translation Management](2026-07-31-informed-consent-multi-language-translation-management.md)
 - [2026-08-27: Add SQLModel Dependency for eISF Structured Section Taxonomy and Versioning](2026-08-27-add-sqlmodel-dependency-for-eisf-taxonomy-and-versioning.md)
 - [2026-08-26: ADR-111: eISF Gateway Integration, Docker-Compose Wiring, and eTMF Sync Topology](2026-08-26-eisf-gateway-compose-and-etmf-sync-topology.md)
