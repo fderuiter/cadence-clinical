@@ -1,7 +1,7 @@
 # Gateway-to-Execution Cryptographic Signature-Token Contract
 
 ## 1. Overview & Regulatory Rationale
-Pursuant to **FDA 21 CFR Part 11 (§ 11.50 & § 11.200)** and **EU Annex 11**, executing critical clinical mutations (such as subject randomization, form approvals, unblinding actions, query management, or trial state changes) requires explicit, double-keying identity confirmation immediately prior to applying electronic signatures.
+Pursuant to **FDA 21 CFR Part 11 (§ 11.50 & § 11.200)** and **EU Annex 11**, executing critical clinical mutations (such as electronic consent signatures, subject randomization, form approvals, unblinding actions, query management, or trial state changes) requires explicit, double-keying identity confirmation immediately prior to applying electronic signatures.
 
 To achieve this without compromising security, the API Gateway operates as the central authentication authority. It challenges and verifies the user's credentials against Keycloak, and issues a cryptographically signed, short-lived **Signature Authorization Token (`X-Sig-Token`)**. Downstream microservices verify this token using a shared symmetric key (`GATEWAY_SECRET`) to ensure that:
 1. The signer is active and fully re-authenticated.
@@ -47,7 +47,9 @@ The `X-Sig-Token` is a JSON Web Token (JWT) signed with the **HS256** algorithm.
 
 ## 3. Cryptographic & Verification Contract
 
-Downstream microservices (via `GatewayAuthMiddleware` or specific verification components) MUST enforce the following validation pipeline upon receiving a signature-gated mutation:
+Downstream microservices (via `GatewayAuthMiddleware` or specific verification components) MUST enforce the following validation pipeline upon receiving a signature-gated mutation. 
+
+This verification is centralized via the `verify_and_consume_sig_token` helper in the shared library (`packages/security/sig_token_verifier.py`) which orchestrates the decryption, temporal, identity, and single-use validation steps. Downstream microservices MUST call this helper, while applying any additional domain-specific rules (such as local action gating in eConsent):
 
 1. **Header Presence:** Extract `X-Sig-Token` from the HTTP request headers. If absent, reject with `401 Unauthorized` and payload:
    ```json

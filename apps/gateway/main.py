@@ -521,6 +521,7 @@ async def get_openapi_json() -> Response:
         tickets_spec,
         org_spec,
         eisf_spec,
+        econsent_spec,
     ) = await asyncio.gather(
         fetch_service_openapi(SERVICES["designer"]),
         fetch_service_openapi(SERVICES["execution"]),
@@ -533,6 +534,7 @@ async def get_openapi_json() -> Response:
         fetch_service_openapi(SERVICES["tickets"]),
         fetch_service_openapi(SERVICES["org"]),
         fetch_service_openapi(SERVICES["eisf"]),
+        fetch_service_openapi(SERVICES["econsent"]),
     )
 
     if eisf_spec and is_valid_openapi_spec(eisf_spec):
@@ -544,6 +546,18 @@ async def get_openapi_json() -> Response:
                 eisf_spec.get("components", {}).get("schemas", {}).items()
             ):
                 merged["components"]["schemas"][f"Eisf_{schema_name}"] = schema_val
+        except Exception:
+            pass
+
+    if econsent_spec and is_valid_openapi_spec(econsent_spec):
+        try:
+            econsent_spec = rewrite_references(econsent_spec, "Econsent_")
+            for path_str, path_item in econsent_spec.get("paths", {}).items():
+                merged["paths"][f"/econsent{path_str}"] = path_item
+            for schema_name, schema_val in (
+                econsent_spec.get("components", {}).get("schemas", {}).items()
+            ):
+                merged["components"]["schemas"][f"Econsent_{schema_name}"] = schema_val
         except Exception:
             pass
 
@@ -685,6 +699,7 @@ async def get_openapi_json() -> Response:
             tickets_spec,
             org_spec,
             eisf_spec,
+            econsent_spec,
         ]
     ):
         try:
