@@ -36,7 +36,7 @@ Capture (EDC) into an automated Digital Data Flow (DDF) platform.
 | Automation & helper scripts | `scripts/` |
 | Unit & integration tests | `tests/` |
 | Architecture Decision Records | `docs/adr/` |
-| GxP compliance docs | `docs/SDLC/` (never edit manually — always via `scripts/generate_rtm.py`) |
+| GxP compliance docs | `docs/SDLC/` (never edit manually — always via `scripts/sync_gxp.py`) |
 
 ---
 
@@ -212,7 +212,7 @@ Tests must reference requirement IDs in their docstrings:
 async def test_enrollment_state_transition():
     """Validate subject state machine advances on enrollment trigger.
 
-    Requirements: PRD-SYS-042
+    @req:PRD-SYS-042
     """
     ...
 ```
@@ -344,7 +344,7 @@ Agents may invoke these tools directly when needed:
 | `uv run ruff check . --fix` | Auto-fix all fixable lint errors (I001, F-strings, etc.) |
 | `uv run ruff format .` | Auto-format all Python files |
 | `uv run python scripts/sync_gxp.py` | Full GxP compliance sync (tests → RTM → stage) |
-| `uv run python scripts/generate_rtm.py --validate` | Validate RTM without modifying files |
+| `uv run python scripts/sync_gxp.py --dry-run` | Validate GxP docs without modifying files |
 | `python3 scripts/create_adr.py --title "..." --domain "..." --req "PRD-SYS-xxx"` | Scaffold ADR |
 | `python3 scripts/validate_adrs.py --fix-index` | Rebuild the ADR index |
 | `python3 scripts/validate_markdown.py` | Check all Markdown link integrity |

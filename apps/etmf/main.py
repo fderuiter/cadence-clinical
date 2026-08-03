@@ -2699,7 +2699,20 @@ async def sign_document_endpoint(
     manifest.key_identifier = ids["subject_key_identifier"]
 
     # Verify signature
-    assert manifest.verify() is True
+    if not manifest.verify():
+        await write_audit_log(
+            session=session,
+            user_id=user_id,
+            user_role=user_roles,
+            action="SIGNATURE_FAILED",
+            document_id=doc.id,
+            details=f"Signature verification failed for document '{doc.filename}' (ID: {doc.id}).",
+        )
+        await session.commit()
+        raise HTTPException(
+            status_code=400,
+            detail="Signature verification failed: Cryptographic signature is invalid.",
+        )
 
     # 5. Mutate the document record
     doc.status = "SIGNED"

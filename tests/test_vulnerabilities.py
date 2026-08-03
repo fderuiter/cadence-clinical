@@ -724,3 +724,115 @@ def test_cli_bypass_blocking(mock_exit):
 
     main()
     mock_exit.assert_called_once_with(1)
+
+
+def test_scan_for_inline_bypasses_multiline_consecutive(tmp_path):
+    """Verify that multi-line bypass on consecutive lines is detected."""
+    (tmp_path / "apps").mkdir()
+    file = tmp_path / "apps" / "workflow.yml"
+    file.write_text("run: |\n  pip-audit \\\n    -i CVE-12345\n", encoding="utf-8")
+    with patch("scripts.validate_vulnerabilities.REPO_ROOT", str(tmp_path)):
+        violations = scan_for_inline_bypasses()
+        assert len(violations) == 1
+        assert str(file) == violations[0][0]
+
+
+def test_scan_for_inline_bypasses_multiline_three_lines(tmp_path):
+    """Verify that multi-line bypass within 3 lines is detected."""
+    (tmp_path / "apps").mkdir()
+    file = tmp_path / "apps" / "script.sh"
+    file.write_text(
+        "pip-audit \\\n  --some-other-arg \\\n  --ignore-vuln CVE-9999\n",
+        encoding="utf-8",
+    )
+    with patch("scripts.validate_vulnerabilities.REPO_ROOT", str(tmp_path)):
+        violations = scan_for_inline_bypasses()
+        assert len(violations) == 1
+        assert str(file) == violations[0][0]
+
+
+def test_scan_for_inline_bypasses_multiline_out_of_scope(tmp_path):
+    """Verify that multi-line bypass over wider interval (4 lines) is not detected (out of scope)."""
+    (tmp_path / "apps").mkdir()
+    file = tmp_path / "apps" / "script.sh"
+    file.write_text(
+        "pip-audit \\\n  --arg1 \\\n  --arg2 \\\n  --ignore-vuln CVE-9999\n",
+        encoding="utf-8",
+    )
+    with patch("scripts.validate_vulnerabilities.REPO_ROOT", str(tmp_path)):
+        violations = scan_for_inline_bypasses()
+        assert len(violations) == 0
+
+
+def test_scan_for_inline_bypasses_logical_boundary_reset(tmp_path):
+    """Verify that a logical YAML boundary delimiter resets sliding buffer."""
+    (tmp_path / "apps").mkdir()
+    file = tmp_path / "apps" / "workflow.yml"
+    file.write_text(
+        "- name: Step 1\n"
+        "  run: pip-audit\n"
+        "- name: Step 2\n"
+        "  run: curl -i https://example.com\n",
+        encoding="utf-8",
+    )
+    with patch("scripts.validate_vulnerabilities.REPO_ROOT", str(tmp_path)):
+        violations = scan_for_inline_bypasses()
+        assert len(violations) == 0
+
+
+def test_scan_for_inline_bypasses_shell_boundary_reset(tmp_path):
+    """Verify that a standard shell execution boundary resets sliding buffer."""
+    (tmp_path / "apps").mkdir()
+    file = tmp_path / "apps" / "script.sh"
+    file.write_text("pip-audit\ncurl -i https://example.com\n", encoding="utf-8")
+    with patch("scripts.validate_vulnerabilities.REPO_ROOT", str(tmp_path)):
+        violations = scan_for_inline_bypasses()
+        assert len(violations) == 0
+
+
+def test_scan_for_inline_bypasses_same_line_boundary_reset(tmp_path):
+    """Verify that a shell boundary on the same line resets buffer and prevents false positive."""
+    (tmp_path / "apps").mkdir()
+    file = tmp_path / "apps" / "script.sh"
+    file.write_text("pip-audit && curl -i https://example.com\n", encoding="utf-8")
+    with patch("scripts.validate_vulnerabilities.REPO_ROOT", str(tmp_path)):
+        violations = scan_for_inline_bypasses()
+        assert len(violations) == 0
+
+
+def test_scan_for_inline_bypasses_yaml_folded_vs_literal(tmp_path):
+    """Verify that YAML folded block (>) triggers but literal (|) doesn't (since literal requires \\)."""
+    (tmp_path / "apps").mkdir()
+
+    # 1. Folded block (>) -> triggers even without trailing backslashes since it folds into a single line
+    folded_file = tmp_path / "apps" / "folded.yml"
+    folded_file.write_text(
+        "- name: Step\n  run: >\n    pip-audit\n    --ignore-vuln CVE-12345\n",
+        encoding="utf-8",
+    )
+
+    # 2. Literal block (|) -> does not trigger because they are on separate lines with no backslashes
+    literal_file = tmp_path / "apps" / "literal.yml"
+    literal_file.write_text(
+        '- name: Step\n  run: |\n    pip-audit\n    grep -i "pattern"\n',
+        encoding="utf-8",
+    )
+
+    with patch("scripts.validate_vulnerabilities.REPO_ROOT", str(tmp_path)):
+        violations = scan_for_inline_bypasses()
+        assert len(violations) == 1
+        assert str(folded_file) == violations[0][0]
+
+
+def test_scan_for_inline_bypasses_comments_and_empty_lines(tmp_path):
+    """Verify that shell comments and empty lines are ignored and do not interfere with detection."""
+    (tmp_path / "apps").mkdir()
+    file = tmp_path / "apps" / "script.sh"
+    file.write_text(
+        "pip-audit \\\n  # some comment in the middle\n\n  -i CVE-12345\n",
+        encoding="utf-8",
+    )
+    with patch("scripts.validate_vulnerabilities.REPO_ROOT", str(tmp_path)):
+        violations = scan_for_inline_bypasses()
+        assert len(violations) == 1
+        assert str(file) == violations[0][0]

@@ -88,12 +88,100 @@ def scan_for_inline_bypasses() -> list[tuple[str, int, str]]:
                     continue
 
                 try:
+                    is_yaml = file_path.endswith((".yml", ".yaml"))
                     with open(file_path, encoding="utf-8", errors="ignore") as f:
+                        buffer: list[tuple[int, str]] = []
+                        in_folded_block = False
+                        block_indent = 0
+
                         for line_num, line in enumerate(f, 1):
-                            if audit_tool_pattern.search(line) and flag_pattern.search(
-                                line
+                            # Strip trailing whitespace and comments
+                            line_no_comment = re.sub(r"(?:\s+|^)#.*$", "", line)
+                            stripped = line_no_comment.strip()
+
+                            if stripped:
+                                indent = len(line_no_comment) - len(
+                                    line_no_comment.lstrip(" ")
+                                )
+                                if (
+                                    is_yaml
+                                    and in_folded_block
+                                    and indent <= block_indent
+                                ):
+                                    in_folded_block = False
+
+                            # 1. Check for logical boundary delimiters (only relevant or reset on boundaries)
+                            is_boundary = False
+                            if (
+                                stripped.startswith("---")
+                                or stripped.startswith("...")
+                                or re.match(
+                                    r"^-\s*(name|run|uses|task|step|job)\b",
+                                    stripped,
+                                    re.IGNORECASE,
+                                )
+                                or re.match(
+                                    r"^(jobs|steps|tasks|stages):\s*$",
+                                    stripped,
+                                    re.IGNORECASE,
+                                )
                             ):
-                                violations.append((file_path, line_num, line.strip()))
+                                is_boundary = True
+
+                            if is_boundary:
+                                buffer.clear()
+                                in_folded_block = False
+                                continue
+
+                            # Check if starting a YAML folded block (e.g. run: >)
+                            if is_yaml and re.search(r">\s*[+-]?\s*$", stripped):
+                                in_folded_block = True
+                                block_indent = len(line_no_comment) - len(
+                                    line_no_comment.lstrip(" ")
+                                )
+
+                            # 2. Check for shell execution boundaries within the line.
+                            # We split the line by standard shell boundaries: &&, ;, ||, |
+                            segments = re.split(r"&&|;|\|\||\|", line_no_comment)
+
+                            for idx, seg in enumerate(segments):
+                                seg_stripped = seg.strip()
+                                if not seg_stripped:
+                                    continue
+
+                                # Add the segment to the sliding buffer
+                                buffer.append((line_num, seg_stripped))
+                                if len(buffer) > 3:
+                                    buffer.pop(0)
+
+                                # Check if BOTH audit tool and ignore flag are in the active buffer
+                                has_audit = any(
+                                    audit_tool_pattern.search(item[1])
+                                    for item in buffer
+                                )
+                                has_flag = any(
+                                    flag_pattern.search(item[1]) for item in buffer
+                                )
+
+                                if has_audit and has_flag:
+                                    violations.append(
+                                        (file_path, line_num, line.strip())
+                                    )
+                                    buffer.clear()
+                                    break
+
+                                # Check if this segment is a shell execution boundary.
+                                # It's a boundary if:
+                                # - It's not the last segment on the line.
+                                # - It's the last segment on the line, but we are NOT in a YAML folded block,
+                                #   AND the segment does NOT end with \.
+                                is_last_seg = idx == len(segments) - 1
+                                if not is_last_seg or (
+                                    not in_folded_block
+                                    and not seg_stripped.endswith("\\")
+                                ):
+                                    buffer.clear()
+
                 except Exception:
                     # Catch and ignore file-read failures silently to prevent build crashes
                     pass
