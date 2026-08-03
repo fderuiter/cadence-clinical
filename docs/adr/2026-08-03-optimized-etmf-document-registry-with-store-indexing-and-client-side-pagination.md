@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-In the Cadence Clinical platform, loading large-scale electronic Trial Master File (eTMF) registries with thousands of files and deeply nested folder hierarchies caused browser freezes and heavy CPU usage. This degraded user experience during critical GxP activities such as regulatory inspections and site monitoring. 
+In the Cadence Clinical platform, loading large-scale electronic Trial Master File (eTMF) registries with thousands of files and deeply nested folder hierarchies caused browser freezes and heavy CPU usage. This degraded user experience during critical GxP activities such as regulatory inspections and site monitoring.
 
 The two main bottlenecks identified were:
 1. **Unbounded DOM Rendering and Re-renders:** Displaying thousands of documents in the document registry grid simultaneously.
@@ -36,7 +36,7 @@ To ensure strict GxP compliance and operational efficiency under `PRD-TMF-001`, 
   * ❌ Diverges from custom UI primitives used elsewhere in the frontend package workspace.
 
 ### Option 2: Custom Local Client-Side Pagination and Flat Pinia Store Indexing (Selected)
-* **Overview:** 
+* **Overview:**
   * Centralize folder tree indexing into a flat reactive computed lookup map (`folderLookup`) in the Pinia store to enable instant, constant-time $O(1)$ folder resolution instead of recursive traversal.
   * Implement an active computed date-formatting property mapping `documents` to localized formatted representation prior to rendering.
   * Implement standard local pagination in `DocumentGrid.vue` capped at **20 documents per page** using custom controls.
@@ -52,7 +52,7 @@ To ensure strict GxP compliance and operational efficiency under `PRD-TMF-001`, 
 
 **Chosen Option: Option 2**
 
-We chose Option 2 because it directly addresses the CPU and rendering bottlenecks while staying 100% compliant with our lightweight frontend design guidelines and keeping the bundle audit-clean. 
+We chose Option 2 because it directly addresses the CPU and rendering bottlenecks while staying 100% compliant with our lightweight frontend design guidelines and keeping the bundle audit-clean.
 
 ### Implementation Details:
 1. **Flat Store Lookup (`apps/web/src/stores/etmf.js`):**
