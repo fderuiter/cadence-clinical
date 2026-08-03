@@ -18,8 +18,6 @@ jobs:
       RTM_DRAFT: "true"
     permissions:
       contents: read
-    env:
-      RTM_DRAFT: "true"
     outputs:
       linting_outcome: ${{ steps.run_linting.outcome }}
       frontend_outcome: ${{ steps.run_frontend.outcome }}
