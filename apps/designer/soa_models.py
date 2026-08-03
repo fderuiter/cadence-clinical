@@ -314,7 +314,7 @@ class TimingWindow(SoAAuditMixin):
         return self
 
     @model_validator(mode="after")
-    def validate_numeric_ranges(self) -> "TimingWindow":
+    def validate_numeric_ranges(self) -> TimingWindow:
         if self.min_offset is not None and self.max_offset is not None:
             if self.min_offset > self.max_offset:
                 raise ValueError(
@@ -457,7 +457,7 @@ class TimingWindowProperties(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_numeric_ranges(self) -> "TimingWindowProperties":
+    def validate_numeric_ranges(self) -> TimingWindowProperties:
         if self.min_offset is not None and self.max_offset is not None:
             if self.min_offset > self.max_offset:
                 raise ValueError(
