@@ -172,14 +172,14 @@ describe("eConsent Presentation and Gating Utilities", () => {
           {
             // missing optional title and text and version_index
             clause_id: "clause-opt",
-          }
+          },
         ],
         workflow_steps: [
           null, // skip null step safely
           {
             // missing step_id/type
-          }
-        ]
+          },
+        ],
       };
 
       const result = normalizeApprovedConsent(minimalContent);
@@ -223,8 +223,8 @@ describe("eConsent Presentation and Gating Utilities", () => {
         template_name: "Consent Form V3",
         workflow_steps: [
           { step_type: "comprehension_check", question: "All good?" },
-          { step_type: "signature_requirement", role: "investigator" }
-        ]
+          { step_type: "signature_requirement", role: "investigator" },
+        ],
       };
 
       const result = normalizeApprovedConsent(contentWithStepTypes);

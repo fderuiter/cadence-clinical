@@ -21,7 +21,8 @@ export function normalizeApprovedConsent(content) {
       template_id: content.template_id || "",
       study_id: content.study_id || "",
       protocol_version: content.protocol_version || "",
-      version_index: content.version_index !== undefined ? content.version_index : null,
+      version_index:
+        content.version_index !== undefined ? content.version_index : null,
       language_code: content.language_code || "",
       requires_reconsent: content.requires_reconsent === true,
     },
@@ -36,7 +37,8 @@ export function normalizeApprovedConsent(content) {
       type: "clause",
       title: clause.title || "Untitled Clause",
       content: clause.text || "",
-      version_index: clause.version_index !== undefined ? clause.version_index : null,
+      version_index:
+        clause.version_index !== undefined ? clause.version_index : null,
     });
   });
 

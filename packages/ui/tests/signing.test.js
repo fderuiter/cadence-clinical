@@ -310,7 +310,9 @@ describe("canonicalSerialize - RFC 8785 Hardening", () => {
     expect(canonicalSerialize(d)).toBe('"2026-08-03T12:00:00.000Z"');
 
     const obj = { timestamp: d };
-    expect(canonicalSerialize(obj)).toBe('{"timestamp":"2026-08-03T12:00:00.000Z"}');
+    expect(canonicalSerialize(obj)).toBe(
+      '{"timestamp":"2026-08-03T12:00:00.000Z"}'
+    );
   });
 
   it("omits undefined properties entirely inside objects", () => {
@@ -347,40 +349,64 @@ describe("validateField - Falsy Constraint Checking", () => {
     };
 
     // Strict false
-    expect(validateField(fieldMeta, "some_val", { check_rule: false }, evaluateAST)).toEqual({
+    expect(
+      validateField(fieldMeta, "some_val", { check_rule: false }, evaluateAST)
+    ).toEqual({
       valid: false,
       message: "Falsy value not allowed!",
     });
 
     // null
-    expect(validateField(fieldMeta, "some_val", { check_rule: null }, evaluateAST)).toEqual({
+    expect(
+      validateField(fieldMeta, "some_val", { check_rule: null }, evaluateAST)
+    ).toEqual({
       valid: false,
       message: "Falsy value not allowed!",
     });
 
     // undefined
-    expect(validateField(fieldMeta, "some_val", { check_rule: undefined }, evaluateAST)).toEqual({
+    expect(
+      validateField(
+        fieldMeta,
+        "some_val",
+        { check_rule: undefined },
+        evaluateAST
+      )
+    ).toEqual({
       valid: false,
       message: "Falsy value not allowed!",
     });
 
     // 0
-    expect(validateField(fieldMeta, "some_val", { check_rule: 0 }, evaluateAST)).toEqual({
+    expect(
+      validateField(fieldMeta, "some_val", { check_rule: 0 }, evaluateAST)
+    ).toEqual({
       valid: false,
       message: "Falsy value not allowed!",
     });
 
     // empty string
-    expect(validateField(fieldMeta, "some_val", { check_rule: "" }, evaluateAST)).toEqual({
+    expect(
+      validateField(fieldMeta, "some_val", { check_rule: "" }, evaluateAST)
+    ).toEqual({
       valid: false,
       message: "Falsy value not allowed!",
     });
 
     // truthy value should pass
-    expect(validateField(fieldMeta, "some_val", { check_rule: true }, evaluateAST)).toEqual({
+    expect(
+      validateField(fieldMeta, "some_val", { check_rule: true }, evaluateAST)
+    ).toEqual({
       valid: true,
     });
-    expect(validateField(fieldMeta, "some_val", { check_rule: "is_valid" }, evaluateAST)).toEqual({
+    expect(
+      validateField(
+        fieldMeta,
+        "some_val",
+        { check_rule: "is_valid" },
+        evaluateAST
+      )
+    ).toEqual({
       valid: true,
     });
   });
@@ -391,8 +417,22 @@ describe("buildLedgerBlock - Hardened Signatures Parity", () => {
     const details1 = { b: 2, a: 1 };
     const details2 = { a: 1, b: 2 };
 
-    const block1 = await buildLedgerBlock(1, "2026-08-03T12:00:00Z", "SUBMIT", details1, "Reason", "prev-hash-123");
-    const block2 = await buildLedgerBlock(1, "2026-08-03T12:00:00Z", "SUBMIT", details2, "Reason", "prev-hash-123");
+    const block1 = await buildLedgerBlock(
+      1,
+      "2026-08-03T12:00:00Z",
+      "SUBMIT",
+      details1,
+      "Reason",
+      "prev-hash-123"
+    );
+    const block2 = await buildLedgerBlock(
+      1,
+      "2026-08-03T12:00:00Z",
+      "SUBMIT",
+      details2,
+      "Reason",
+      "prev-hash-123"
+    );
 
     expect(block1.hash).toBe(block2.hash);
     expect(block1.hash).toBeDefined();
