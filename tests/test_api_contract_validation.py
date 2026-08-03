@@ -287,6 +287,13 @@ _RAW_WHITELISTED_ROUTES = {
     ("put", "/api/v1/studies/{study_id}/versions/{version_id}/blocks/{block_id}"),
     ("delete", "/api/v1/studies/{study_id}/versions/{version_id}/blocks/{block_id}"),
     ("post", "/api/v1/studies/{study_id}/versions/{version_id}/blocks/reorder"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/arms/reorder"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/epochs/reorder"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/visits/reorder"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/procedures/reorder"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/assignments/activities"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/assignments/arms"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/assignments/epochs"),
     ("delete", "/api/v1/execution/lab-ranges/{range_id}"),
     ("delete", "/api/v1/mdr/concepts/{id}"),
     ("delete", "/api/v1/studies/{study_id}/rules/{rule_id}"),
@@ -630,6 +637,7 @@ def is_whitelisted(method: str, path: str) -> bool:
         "/api/v1/designer/sentinel",
         "/api/v1/designer/cascade",
         "/api/v1/designer/export",
+        "/api/v1/execution/sdv",
     ]
     for w in wildcards:
         if p_norm.startswith(w):
@@ -647,6 +655,7 @@ def is_whitelisted(method: str, path: str) -> bool:
         "/synopsis/render",
         "/designer/sentinel/evaluate",
         "/designer/cascade/propagate",
+        "/execution/sdv",
     ]:
         if p_clean.startswith(prefix):
             return True
