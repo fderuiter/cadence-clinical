@@ -76,6 +76,14 @@ repos:
         files: ^(apps/|packages/|scripts/validate_imports\.py)
         pass_filenames: false
 
+      - id: audit-security
+        name: Security Audit & Hardcoded Secret Scanner
+        entry: uv run python scripts/audit_security.py
+        language: system
+        files: \.(py|js|ts|tsx|jsx|json|md|log|txt|yaml|yml|sh|toml|ini|env|conf|properties)$
+        pass_filenames: true
+        stages: [pre-commit]
+
       - id: deid-compliance-scan
         name: DEID Compliance Scan
         entry: uv run python -m packages.deid.cli
@@ -89,6 +97,13 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-commit]
+
+      - id: validate-path-patterns
+        name: Lightweight Path-Pattern Boundary Linter
+        entry: python3 scripts/validate_path_patterns.py
+        language: system
+        pass_filenames: true
+
 
       # -----------------------------------------------------------------------
       # GxP RTM Staleness Check (pre-push only)

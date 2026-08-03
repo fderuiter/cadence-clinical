@@ -1,22 +1,24 @@
+@import "../../../packages/ui/tokens.css";
+
 /* Cadence Clinical Platform - Modern Interactive Demo Stylesheet */
+@import "../../../packages/ui/tokens.css";
+
 :root {
-  --primary: #0f172a; /* Slate 900 */
-  --primary-light: #1e293b; /* Slate 800 */
-  --accent: #0f766e; /* Teal 700 (Upgraded from #0d9488) */
-  --accent-light: #14b8a6; /* Teal 500 */
-  --accent-bg: #f0fdfa; /* Teal 50 */
-  --neutral-dark: #334155; /* Slate 700 */
-  --neutral-light: #f8fafc; /* Slate 50 */
-  --border: #e2e8f0; /* Slate 200 */
-  --success: #15803d; /* Green 700 (Upgraded from #16a34a) */
-  --success-bg: #f0fdf4; /* Green 50 */
-  --warning: #b45309; /* Orange 700 (Upgraded from #ea580c) */
-  --warning-bg: #fff7ed; /* Orange 50 */
-  --error: #b91c1c; /* Red 700 (Upgraded from #dc2626) */
-  --error-bg: #fef2f2; /* Red 50 */
-  --font:
-    "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial,
-    sans-serif;
+  --primary: var(--color-text);
+  --primary-light: var(--color-text-muted);
+  --accent: var(--color-primary);
+  --accent-light: var(--color-primary-light);
+  --accent-bg: var(--color-primary-light);
+  --neutral-dark: var(--color-text-muted);
+  --neutral-light: var(--color-surface-muted);
+  --border: var(--color-border);
+  --success: var(--color-success);
+  --success-bg: var(--color-success-bg);
+  --warning: var(--color-warning);
+  --warning-bg: var(--color-warning-bg);
+  --error: var(--color-error);
+  --error-bg: var(--color-error-bg);
+  --font: var(--font-sans);
 }
 
 * {
@@ -390,14 +392,29 @@ main {
 }
 
 .clinical-input input[type="text"]:focus {
-  outline: 2px solid transparent;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+  outline: none;
+  box-shadow: none;
+  border-color: var(--color-border);
+}
+
+.clinical-input input[type="text"]:focus-visible {
+  outline: 2px solid var(--color-accent) !important;
+  outline-offset: 2px !important;
+  border-color: var(--color-accent) !important;
 }
 
 .clinical-input.has-error input[type="text"] {
-  border-color: var(--error);
-  background-color: var(--error-bg);
+  border-color: var(--color-error) !important;
+  background-color: var(--color-error-bg) !important;
+}
+
+.clinical-input.has-error input[type="text"]:focus,
+.clinical-input.has-error input[type="text"]:focus-visible {
+  border-color: var(--color-error) !important;
+  background-color: var(--color-error-bg) !important;
+  box-shadow: none !important;
+  outline: 2px solid var(--color-error) !important;
+  outline-offset: 2px !important;
 }
 
 .validation-error-msg {
@@ -872,4 +889,70 @@ main {
 
 .lookup-status-icon {
   font-size: 1rem;
+}
+
+/* Accessibility & Unified Token Enforcement (WCAG 2.1 AA) */
+
+/* 1. Touch Target Compliance (Requirement 4) */
+button,
+select,
+textarea,
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+.btn,
+.nav-item button,
+.query-flag,
+.btn-close-panel,
+.btn-submit-query,
+.btn-respond-query,
+.btn-close-query,
+.btn-reopen-query,
+.radio-option {
+  min-height: var(--touch-target-min, 44px) !important;
+  min-width: var(--touch-target-min, 44px) !important;
+}
+
+/* 2. Keyboard Navigation Focus Indicators (Requirement 2) */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--color-accent, #4338ca) !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
+}
+
+/* 3. Color Contrast Adjustments (Requirement 3) */
+.header-title-area p {
+  color: var(--color-primary-light, #e0f2fe) !important;
+}
+
+.query-meta,
+.ledger-block-timestamp,
+.empty-ledger,
+.btn-close-panel {
+  color: var(--color-text-muted, #475569) !important;
+}
+
+.badge {
+  background-color: var(--color-primary-light, #e0f2fe) !important;
+  color: var(--color-primary-dark, #014d76) !important;
+  border: 1px solid var(--color-border, #e2e8f0) !important;
+}
+
+.badge.gxp {
+  background-color: var(--color-success-bg, #dcfce7) !important;
+  color: var(--color-success, #15803d) !important;
+  border-color: var(--color-success, #15803d) !important;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary-dark, #014d76) !important;
+  border-color: var(--color-primary-dark, #014d76) !important;
+  color: #ffffff !important;
 }
