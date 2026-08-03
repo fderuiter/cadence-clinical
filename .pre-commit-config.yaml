@@ -90,6 +90,13 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
+      - id: validate-path-patterns
+        name: Lightweight Path-Pattern Boundary Linter
+        entry: python3 scripts/validate_path_patterns.py
+        language: system
+        pass_filenames: true
+
+
       # -----------------------------------------------------------------------
       # GxP RTM Staleness Check (pre-push only)
       # Validates that docs/SDLC/ is in sync with the committed test suite.
