@@ -313,7 +313,6 @@ def main() -> None:
                                 {
                                     "apps/designer/soa_models.py",
                                     "packages/core-models/protocol_authoring/__init__.py",
-                                    "packages/core-models/protocol_authoring/soa.py",
                                 },
                                 {
                                     "apps/designer/soa_models.py",
