@@ -39,7 +39,7 @@
           border-bottom: 1px solid #e2e8f0;
           font-weight: 600;
           font-size: 16px;
-          color: #1e293b;
+          color: white;
         "
       >
         Electronic Signature & Identity Verification
@@ -49,7 +49,7 @@
           style="
             margin-bottom: 16px;
             font-size: 13px;
-            color: #64748b;
+            color: #334155;
             line-height: 1.4;
           "
         >
@@ -222,7 +222,7 @@
             padding: 6px 12px;
             font-size: 13px;
             cursor: pointer;
-            background: #007bff;
+            background: var(--accent);
             color: white;
             border: none;
             border-radius: 4px;
