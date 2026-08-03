@@ -1,7 +1,7 @@
 @import "../../../packages/ui/tokens.css";
+@import "../../../packages/ui/responsive.css";
 
 /* Cadence Clinical Platform - Modern Interactive Demo Stylesheet */
-@import "../../../packages/ui/tokens.css";
 
 :root {
   --primary: var(--color-text);
@@ -897,23 +897,10 @@ main {
 
 /* Accessibility & Unified Token Enforcement (WCAG 2.1 AA) */
 
-/* 1. Touch Target Compliance (Requirement 4) */
-button,
-select,
-textarea,
-input[type="text"],
-input[type="number"],
-input[type="email"],
-input[type="password"],
-.btn,
-.nav-item button,
-.query-flag,
-.btn-close-panel,
-.btn-submit-query,
-.btn-respond-query,
-.btn-close-query,
-.btn-reopen-query,
-.radio-option {
+/* 1. Touch Target Compliance (Requirement 4) - Opt-in helpers only */
+.touch-target,
+.min-touch-target,
+.touch-target-interactive {
   min-height: var(--touch-target-min, 44px) !important;
   min-width: var(--touch-target-min, 44px) !important;
 }
