@@ -1,3 +1,5 @@
+@import "../../../packages/ui/tokens.css";
+
 /* Cadence Clinical Platform - Modern Interactive Demo Stylesheet */
 :root {
   --primary: #0f172a; /* Slate 900 */
@@ -390,14 +392,29 @@ main {
 }
 
 .clinical-input input[type="text"]:focus {
-  outline: 2px solid transparent;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+  outline: none;
+  box-shadow: none;
+  border-color: var(--color-border);
+}
+
+.clinical-input input[type="text"]:focus-visible {
+  outline: 2px solid var(--color-accent) !important;
+  outline-offset: 2px !important;
+  border-color: var(--color-accent) !important;
 }
 
 .clinical-input.has-error input[type="text"] {
-  border-color: var(--error);
-  background-color: var(--error-bg);
+  border-color: var(--color-error) !important;
+  background-color: var(--color-error-bg) !important;
+}
+
+.clinical-input.has-error input[type="text"]:focus,
+.clinical-input.has-error input[type="text"]:focus-visible {
+  border-color: var(--color-error) !important;
+  background-color: var(--color-error-bg) !important;
+  box-shadow: none !important;
+  outline: 2px solid var(--color-error) !important;
+  outline-offset: 2px !important;
 }
 
 .validation-error-msg {
