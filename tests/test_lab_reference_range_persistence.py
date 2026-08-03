@@ -505,10 +505,14 @@ async def test_gxp_audit_quartet_explicit_assertions():
             select(LabReferenceRange).where(LabReferenceRange.id == default_id)
         )
         saved = result.scalar_one()
-        assert saved.created_at is not None, "created_at must populate from server default on insert"
+        assert saved.created_at is not None, (
+            "created_at must populate from server default on insert"
+        )
         assert saved.version_index == 1, "version_index must default to 1 on insert"
         assert saved.created_by is None, "created_by should be None if not provided"
-        assert saved.reason_for_change is None, "reason_for_change should be None if not provided"
+        assert saved.reason_for_change is None, (
+            "reason_for_change should be None if not provided"
+        )
 
     # Create one with explicit audit values
     async with db_manager.get_session_maker()() as session, session.begin():
@@ -536,5 +540,9 @@ async def test_gxp_audit_quartet_explicit_assertions():
         saved = result.scalar_one()
         assert saved.created_at is not None
         assert saved.created_by == "auditor_jules", "created_by must persist correctly"
-        assert saved.reason_for_change == "Initial setup", "reason_for_change must persist correctly"
-        assert saved.version_index == 5, "version_index must persist correct custom value"
+        assert saved.reason_for_change == "Initial setup", (
+            "reason_for_change must persist correctly"
+        )
+        assert saved.version_index == 5, (
+            "version_index must persist correct custom value"
+        )
