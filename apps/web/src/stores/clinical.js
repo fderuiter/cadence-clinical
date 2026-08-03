@@ -419,6 +419,11 @@ export const useClinicalStore = defineStore("clinical", {
       ledgerBlocks: savedLedgerBlocks || [],
       syncInterval: null,
 
+      activeStudyId: "STUDY-USDM-001",
+      activeSiteId: "SITE-001",
+      activeSubjectId: "SUBJ-001",
+      activeVisitId: "Screening",
+
       // --- SoA State ---
       activeStudyVersionId: "v_draft_01",
       soaLoading: false,

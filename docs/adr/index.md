@@ -98,6 +98,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 4. Clinical Operations & Business Modules
 - [2026-07-31: Expose CRA Monitoring SDV Transport Models and Shared Sign-Off Logic](2026-07-31-expose-cra-monitoring-sdv-transport-models-and-shared-sign-off-logic.md)
+- [2026-08-03: ADR-147: Task-Driven CRA Workspace Routing & Multi-Select Batch SDV](2026-08-03-task-driven-cra-workspace-and-batch-sdv-verification.md)
 - [2026-07-31: Informed Consent Multi-Language Translation Management](2026-07-31-informed-consent-multi-language-translation-management.md)
 - [2026-08-27: Add SQLModel Dependency for eISF Structured Section Taxonomy and Versioning](2026-08-27-add-sqlmodel-dependency-for-eisf-taxonomy-and-versioning.md)
 - [2026-08-26: ADR-111: eISF Gateway Integration, Docker-Compose Wiring, and eTMF Sync Topology](2026-08-26-eisf-gateway-compose-and-etmf-sync-topology.md)
@@ -128,6 +129,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-31: Randomization and Trial Supply Management](2026-08-31-randomization-and-trial-supply-management.md)
 
 ### 5. Compliance, Audit & Governance
+- [2026-08-03: Fail-Safe GxP Document Generation and Draft Warning Banners](2026-08-03-fail-safe-gxp-document-generation-and-draft-warning-banners.md)
 - [2026-07-31: GxP 21 CFR Part 11 eConsent Audit Trails](2026-07-31-gxp-21-cfr-part-11-econsent-audit-trails.md)
 - [2026-09-06: GxP Compliance Reporting CI Alignment and Local Dependency Configuration](2026-09-06-gxp-compliance-reporting-ci-alignment.md)
 
@@ -145,7 +147,9 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-18: Document Redaction Architecture, Regulatory Data-Handling, and Compliance Profiles](2026-08-18-document-redaction-architecture.md)
 
 ### 6. Frontend & Design System
+- [2026-08-03: Centralized Clinical Form Layout Wrapper](2026-08-03-centralized-clinical-form-layout-wrapper.md)
 - [2026-08-03: Optimized eTMF Document Registry with Store Indexing and Client-Side Pagination](2026-08-03-optimized-etmf-document-registry-with-store-indexing-and-client-side-pagination.md)
+- [2026-08-03: Harden Serialization (RFC 8785) and Implement eConsent Schema Guards](2026-08-03-harden-serialization-rfc-8785-and-implement-econsent-schema-guards.md)
 - [2026-08-03: Implement class-based touch target optimization for dense layouts](2026-08-03-implement-class-based-touch-target-optimization-for-dense-layouts.md)
 - [2026-08-02: Centralized Accessibility Matcher and 80 Percent Coverage Gate](2026-08-02-centralized-accessibility-matcher-and-80-percent-coverage-gate.md)
 - [2026-08-20: Targeted E2E Contrast Enforcement and Style Token Upgrades](2026-08-20-targeted-e2e-contrast-enforcement-and-style-token-upgrades.md)

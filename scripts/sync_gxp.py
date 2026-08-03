@@ -245,11 +245,12 @@ def step_run_tests(dry_run: bool) -> None:
         sys.exit(1)
 
 
-def step_generate_rtm(dry_run: bool) -> None:
+def step_generate_rtm(dry_run: bool, draft: bool = False) -> None:
     """Regenerate Requirements Traceability Matrix and Qualification Report.
 
     Args:
         dry_run: If True, run in --validate mode only (read-only).
+        draft: If True, bypass fail-fast check and allow draft generation.
 
     Raises:
         SystemExit: If RTM generation fails.
@@ -262,6 +263,8 @@ def step_generate_rtm(dry_run: bool) -> None:
     if dry_run:
         cmd.append("--validate")
         print("⏭  [dry-run] Running generate_rtm.py --validate (read-only).")
+    if draft or dry_run:
+        cmd.append("--draft")
 
     try:
         _run(cmd)
@@ -338,6 +341,11 @@ def main() -> None:
         action="store_true",
         help="Automatically commit staged docs after generation (implies no --dry-run).",
     )
+    parser.add_argument(
+        "--draft",
+        action="store_true",
+        help="Generate draft compliance documents (bypasses fail-fast checks).",
+    )
     args = parser.parse_args()
 
     if args.commit and args.dry_run:
@@ -353,7 +361,7 @@ def main() -> None:
         print("Mode: FULL SYNC (will stage docs; commit manually)")
 
     step_run_tests(dry_run=args.dry_run)
-    step_generate_rtm(dry_run=args.dry_run)
+    step_generate_rtm(dry_run=args.dry_run, draft=args.draft)
     step_stage_and_report(dry_run=args.dry_run, auto_commit=args.commit)
 
     print("\n" + "=" * 60)

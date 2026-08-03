@@ -102,6 +102,8 @@ const routes = [
         "crc",
         "data_manager",
         "sponsor_admin",
+        "cra",
+        "monitor",
       ],
     },
   },

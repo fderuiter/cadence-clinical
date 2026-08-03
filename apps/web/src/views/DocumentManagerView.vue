@@ -23,12 +23,16 @@
 
 <script setup>
 import { ref, onMounted } from "vue";
+import { useRoute } from "vue-router";
 import { useEtmfStore } from "../stores/etmf";
+import { useClinicalStore } from "../stores/clinical";
 import TmfBinderTree from "../components/etmf/TmfBinderTree.vue";
 import DocumentGrid from "../components/etmf/DocumentGrid.vue";
 import PdfPreviewModal from "../components/etmf/PdfPreviewModal.vue";
 
 const etmfStore = useEtmfStore();
+const clinicalStore = useClinicalStore();
+const route = useRoute();
 const selectedDoc = ref(null);
 
 function handleArtifactSelect(artifactCode) {
@@ -40,6 +44,12 @@ function handlePreviewDocument(doc) {
 }
 
 onMounted(() => {
+  if (route && route.query) {
+    if (route.query.studyId) clinicalStore.activeStudyId = route.query.studyId;
+    if (route.query.siteId) clinicalStore.activeSiteId = route.query.siteId;
+    if (route.query.subjectId) clinicalStore.activeSubjectId = route.query.subjectId;
+    if (route.query.visitId) clinicalStore.activeVisitId = route.query.visitId;
+  }
   etmfStore.fetchBinderTree();
 });
 </script>
