@@ -106,9 +106,10 @@ def verify_version_signature(version_props: dict[str, Any]) -> bool:
 
     from packages.security.signing import verify_canonical_signature
 
-    secret = os.getenv("SIGNING_SECRET", "designer-amendment-secure-key-12345").encode(
-        "utf-8"
-    )
+    secret_env = os.getenv("SIGNING_SECRET")
+    if not secret_env:
+        raise RuntimeError("SIGNING_SECRET environment variable is missing")
+    secret = secret_env.encode("utf-8")
 
     # 1. New GxP payload verification
     # Payload keys: study_id, version_index, version_tag, created_by, created_at, change_reason
@@ -282,9 +283,10 @@ async def assert_graph_mutable(
                     "version_index": version_props.get("version_index", 1),
                     "created_by": version_props.get("created_by", "system"),
                 }
-                secret = os.getenv(
-                    "SIGNING_SECRET", "designer-amendment-secure-key-12345"
-                ).encode("utf-8")
+                secret_env = os.getenv("SIGNING_SECRET")
+                if not secret_env:
+                    raise RuntimeError("SIGNING_SECRET environment variable is missing")
+                secret = secret_env.encode("utf-8")
                 version_props["signature"] = generate_canonical_signature(
                     payload, secret
                 )
@@ -1258,9 +1260,10 @@ async def amend_protocol_version(
             }
 
             # Generate canonical signature using precise GxP payload keys
-            secret = os.getenv(
-                "SIGNING_SECRET", "designer-amendment-secure-key-12345"
-            ).encode("utf-8")
+            secret_env = os.getenv("SIGNING_SECRET")
+            if not secret_env:
+                raise RuntimeError("SIGNING_SECRET environment variable is missing")
+            secret = secret_env.encode("utf-8")
             signing_payload = {
                 "study_id": study_id,
                 "version_index": new_version_index,
@@ -1398,9 +1401,10 @@ async def amend_protocol_version(
                 "study_id": study_id,
                 "change_reason": change_reason,
             }
-            secret = os.getenv(
-                "SIGNING_SECRET", "designer-amendment-secure-key-12345"
-            ).encode("utf-8")
+            secret_env = os.getenv("SIGNING_SECRET")
+            if not secret_env:
+                raise RuntimeError("SIGNING_SECRET environment variable is missing")
+            secret = secret_env.encode("utf-8")
             signing_payload = {
                 "study_id": study_id,
                 "version_index": new_version_index,
@@ -3251,9 +3255,10 @@ async def approve_study_version_delta(
             if "base_version" in ver_record and ver_record["base_version"] is not None:
                 payload_to_sign["base_version"] = ver_record["base_version"]
 
-            secret = os.getenv(
-                "SIGNING_SECRET", "designer-amendment-secure-key-12345"
-            ).encode("utf-8")
+            secret_env = os.getenv("SIGNING_SECRET")
+            if not secret_env:
+                raise RuntimeError("SIGNING_SECRET environment variable is missing")
+            secret = secret_env.encode("utf-8")
             ver_record["signature"] = generate_canonical_signature(
                 payload_to_sign, secret
             )
@@ -3345,9 +3350,10 @@ async def approve_study_version_delta(
             ):
                 payload_to_sign["base_version"] = version_props["base_version"]
 
-            secret = os.getenv(
-                "SIGNING_SECRET", "designer-amendment-secure-key-12345"
-            ).encode("utf-8")
+            secret_env = os.getenv("SIGNING_SECRET")
+            if not secret_env:
+                raise RuntimeError("SIGNING_SECRET environment variable is missing")
+            secret = secret_env.encode("utf-8")
             new_signature = generate_canonical_signature(payload_to_sign, secret)
 
             # Update StudyVersion node with approved status and signature manifestation
