@@ -263,7 +263,7 @@ def step_generate_rtm(dry_run: bool, draft: bool = False) -> None:
     if dry_run:
         cmd.append("--validate")
         print("⏭  [dry-run] Running generate_rtm.py --validate (read-only).")
-    if draft or dry_run:
+    if draft or (dry_run and not os.path.exists("report.xml")):
         cmd.append("--draft")
 
     try:
