@@ -111,14 +111,15 @@ function scheduleBackgroundRetry() {
   }
 
   console.log(`[Sync] Scheduling background retry in ${retryDelay}ms...`);
+  const currentDelay = retryDelay;
+  // Progressively double the backoff, capped at 5 minutes (300,000 ms)
+  retryDelay = Math.min(retryDelay * 2, 300000);
+
   retryTimer = setTimeout(async () => {
     retryTimer = null;
-    // Progressively double the backoff, capped at 5 minutes (300,000 ms)
-    retryDelay = Math.min(retryDelay * 2, 300000);
-
     // Attempt to sync
     await syncOfflineQueue();
-  }, retryDelay);
+  }, currentDelay);
 }
 
 // Mock Data fallbacks for high-fidelity offline/sandbox usage
@@ -1698,7 +1699,7 @@ async function syncOfflineQueue() {
       statusTextEl.textContent = `Offline Mode. ${queued.length} submission(s) queued locally.`;
     }
     await renderSyncQueueList();
-    if (queued.length > 0 && !(typeof window !== "undefined" && window.__BYPASS_AUTO_RETRY__)) {
+    if (queued.length > 0) {
       scheduleBackgroundRetry();
     }
     return;
@@ -1760,9 +1761,7 @@ async function syncOfflineQueue() {
     if (statusTextEl) {
       statusTextEl.textContent = `Sync failed. ${queued.length} submission(s) still queued.`;
     }
-    if (!(typeof window !== "undefined" && window.__BYPASS_AUTO_RETRY__)) {
-      scheduleBackgroundRetry();
-    }
+    scheduleBackgroundRetry();
   }
 
   await renderSyncQueueList();
@@ -2280,7 +2279,10 @@ async function initializeApp() {
 }
 
 // Auto-run on load in DOM environments
-if (typeof document !== "undefined" && !(typeof window !== "undefined" && window.__MOCK_TEST_ENV__)) {
+if (
+  typeof document !== "undefined" &&
+  !(typeof window !== "undefined" && window.__MOCK_TEST_ENV__)
+) {
   document.addEventListener("DOMContentLoaded", initializeApp);
 }
 
