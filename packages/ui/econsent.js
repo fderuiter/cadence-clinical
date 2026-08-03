@@ -18,35 +18,38 @@ export function normalizeApprovedConsent(content) {
     type: "metadata",
     title: content.template_name || "Informed Consent Form",
     metadata: {
-      template_id: content.template_id,
-      study_id: content.study_id,
-      protocol_version: content.protocol_version,
-      version_index: content.version_index,
-      language_code: content.language_code,
-      requires_reconsent: content.requires_reconsent,
+      template_id: content.template_id || "",
+      study_id: content.study_id || "",
+      protocol_version: content.protocol_version || "",
+      version_index: content.version_index !== undefined ? content.version_index : null,
+      language_code: content.language_code || "",
+      requires_reconsent: content.requires_reconsent === true,
     },
   });
 
   // 2. Resolved ordered clauses
   const clauses = content.clauses || [];
-  clauses.forEach((clause) => {
+  clauses.forEach((clause, idx) => {
+    if (!clause) return;
     sections.push({
-      id: clause.clause_id,
+      id: clause.clause_id || `clause-${idx}`,
       type: "clause",
-      title: clause.title,
-      content: clause.text,
-      version_index: clause.version_index,
+      title: clause.title || "Untitled Clause",
+      content: clause.text || "",
+      version_index: clause.version_index !== undefined ? clause.version_index : null,
     });
   });
 
   // 3. Workflow Steps
   const steps = content.workflow_steps || [];
   steps.forEach((step, idx) => {
+    if (!step) return;
+    const stepType = step.type || step.step_type || "";
     sections.push({
-      id: `workflow-step-${idx}`,
+      id: step.step_id || `workflow-step-${idx}`,
       type: "workflow_step",
       title:
-        step.type === "comprehension_check"
+        stepType === "comprehension_check"
           ? "Comprehension Check"
           : "Signature Requirement",
       step: step,
