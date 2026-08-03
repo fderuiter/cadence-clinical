@@ -445,11 +445,11 @@ def test_gateway_rate_limiting(monkeypatch: pytest.MonkeyPatch) -> None:
 
     # Set tight limits for testing
     rate_limiter.max_requests = 2
-    rate_limiter.window_seconds = 5.0
+    rate_limiter.window_seconds = 100.0
     rate_limiter.requests.clear()
 
     try:
-        with TestClient(app) as client:
+        with TestClient(app, client=("127.0.0.99", 50000)) as client:
             # First request - should be allowed (returns 200 for openapi.json)
             # Use mock to prevent actual HTTP calls or use path that doesn't trigger remote fetches
             response1 = client.get("/docs")
@@ -1283,6 +1283,7 @@ def test_gateway_startup_production_with_test_secret() -> None:
     env = {
         "APP_ENV": "production",
         "JWT_TEST_SECRET": "some_test_secret",  # pragma: allowlist secret
+        "GATEWAY_SECRET": "internal-gateway-secret-12345",  # pragma: allowlist secret
     }
     result = subprocess.run(
         [sys.executable, "-c", "import apps.gateway.main"],
@@ -1306,6 +1307,7 @@ def test_gateway_startup_production_with_unverified_jwt() -> None:
     env = {
         "APP_ENV": "production",
         "ALLOW_UNVERIFIED_JWT_FOR_TEST": "true",
+        "GATEWAY_SECRET": "internal-gateway-secret-12345",  # pragma: allowlist secret
     }
     result = subprocess.run(
         [sys.executable, "-c", "import apps.gateway.main"],
@@ -1329,6 +1331,7 @@ def test_gateway_startup_production_with_skip_jwks() -> None:
     env = {
         "APP_ENV": "production",
         "SKIP_JWKS_FETCH": "true",
+        "GATEWAY_SECRET": "internal-gateway-secret-12345",  # pragma: allowlist secret
     }
     result = subprocess.run(
         [sys.executable, "-c", "import apps.gateway.main"],
@@ -1354,6 +1357,7 @@ def test_gateway_startup_development_with_bypass_configs() -> None:
         "JWT_TEST_SECRET": "some_secret",  # pragma: allowlist secret
         "ALLOW_UNVERIFIED_JWT_FOR_TEST": "true",
         "SKIP_JWKS_FETCH": "true",
+        "GATEWAY_SECRET": "internal-gateway-secret-12345",  # pragma: allowlist secret
     }
     result = subprocess.run(
         [sys.executable, "-c", "import apps.gateway.main"],
@@ -2104,6 +2108,7 @@ def test_gateway_startup_production_no_bypass_configs() -> None:
 
     env = {
         "APP_ENV": "production",
+        "GATEWAY_SECRET": "internal-gateway-secret-12345",  # pragma: allowlist secret
     }
     # Ensure bypass env vars are not in the environment
     env_keys = ["JWT_TEST_SECRET", "ALLOW_UNVERIFIED_JWT_FOR_TEST", "SKIP_JWKS_FETCH"]
