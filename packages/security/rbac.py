@@ -227,6 +227,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "delete",
             "alert",
         },  # Added alert action
+        "visit_windowing": {"create", "read", "update"},
         "ecoa_schedule": {"create", "read"},
         "ecoa_diary": {
             "create",
@@ -274,6 +275,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "ecoa_schedule": {"create", "read"},
         "ecoa_diary": {"create", "read"},
         "ecoa_submission": {"create", "read"},
+        "visit_windowing": {"create", "read", "update"},
     },
     ROLE_REVIEWER: {
         "study_design": {"read"},
@@ -352,6 +354,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "delete",
             "alert",
         },  # Added alert action
+        "visit_windowing": {"create", "read", "update"},
         "ecoa_schedule": {"create", "read"},
         "ecoa_diary": {
             "create",
@@ -393,6 +396,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "read",
             "alert",
         },  # Added read and alert permissions for clinical reader roles
+        "visit_windowing": {"read"},
         "system_audit_logs": {"read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},
@@ -431,6 +435,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "read",
             "alert",
         },  # Added read and alert permissions for clinical reader roles
+        "visit_windowing": {"read"},
         "system_audit_logs": {"read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},
@@ -498,6 +503,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "delete",
             "alert",
         },  # Added alert action
+        "visit_windowing": {"create", "read", "update"},
         "ecoa_schedule": {"create", "read"},
         "ecoa_diary": {
             "create",
@@ -542,6 +548,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "delete",
             "alert",
         },  # Added alert action
+        "visit_windowing": {"create", "read", "update"},
         "ecoa_schedule": {"create", "read"},
         "ecoa_diary": {
             "create",
@@ -703,6 +710,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "delete",
             "alert",
         },  # Added alert action
+        "visit_windowing": {"create", "read", "update"},
         "ecoa_schedule": {"create", "read"},
         "ecoa_diary": {
             "create",

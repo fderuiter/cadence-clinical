@@ -1442,6 +1442,66 @@ def test_lab_range_alert_permissions() -> None:
         assert has_permission(p, "lab_range:alert") is True
 
 
+def test_visit_windowing_rbac_permissions() -> None:
+    """Verify that visit_windowing permissions are mapped correctly for all required roles."""
+    from packages.security.rbac import (
+        ROLE_AUTHORIZED_ER_PHYSICIAN,
+        ROLE_CRA_CANONICAL,
+        ROLE_CRC,
+        ROLE_INVESTIGATOR,
+        ROLE_LEAD_INVESTIGATOR,
+        ROLE_PRINCIPAL_INVESTIGATOR,
+        ROLE_SPONSOR_DESIGNER,
+        ROLE_SPONSOR_DM,
+        ROLE_SYSADMIN,
+        Principal,
+        has_permission,
+    )
+
+    sysadmin = Principal(user_id="sys1", roles=[ROLE_SYSADMIN])
+    designer = Principal(user_id="des1", roles=[ROLE_SPONSOR_DESIGNER])
+    dm = Principal(user_id="dm1", roles=[ROLE_SPONSOR_DM])
+    cra = Principal(user_id="cra1", roles=[ROLE_CRA_CANONICAL])
+    monitor = Principal(user_id="mon1", roles=["monitor"])
+    admin = Principal(user_id="admin1", roles=["admin"])
+
+    investigator = Principal(user_id="inv1", roles=[ROLE_INVESTIGATOR])
+    crc = Principal(user_id="crc1", roles=[ROLE_CRC])
+
+    pi = Principal(user_id="pi1", roles=[ROLE_PRINCIPAL_INVESTIGATOR])
+    er_phys = Principal(user_id="er1", roles=[ROLE_AUTHORIZED_ER_PHYSICIAN])
+    lead_inv = Principal(user_id="lead1", roles=[ROLE_LEAD_INVESTIGATOR])
+
+    # Privileged and designer-time roles must have read, create, update on visit_windowing
+    for p in (sysadmin, designer, dm, cra, monitor, admin):
+        for action in ("create", "read", "update"):
+            assert has_permission(p, f"visit_windowing:{action}") is True
+        assert has_permission(p, "visit_windowing:delete") is False
+
+    # Clinical reader roles (investigator, crc) must have read but not create/update/delete
+    for p in (investigator, crc, pi, er_phys, lead_inv):
+        assert has_permission(p, "visit_windowing:read") is True
+        for action in ("create", "update", "delete"):
+            assert has_permission(p, f"visit_windowing:{action}") is False
+
+
+def test_visit_windowing_permissions_map() -> None:
+    """Verify that PermissionEnum.VISIT_WINDOWING_* are added correctly to RoleEnum mapping."""
+    from packages.security.permissions import PermissionEnum, RoleEnum, has_permission as has_perm
+
+    # SPONSOR_ADMIN, SPONSOR_DESIGNER, DATA_MANAGER, CRA should have read, create, update
+    for role in (RoleEnum.SPONSOR_ADMIN, RoleEnum.SPONSOR_DESIGNER, RoleEnum.DATA_MANAGER, RoleEnum.CRA):
+        assert has_perm(role, PermissionEnum.VISIT_WINDOWING_READ) is True
+        assert has_perm(role, PermissionEnum.VISIT_WINDOWING_CREATE) is True
+        assert has_perm(role, PermissionEnum.VISIT_WINDOWING_UPDATE) is True
+
+    # PRINCIPAL_INVESTIGATOR and CRC should only have read
+    for role in (RoleEnum.PRINCIPAL_INVESTIGATOR, RoleEnum.CRC):
+        assert has_perm(role, PermissionEnum.VISIT_WINDOWING_READ) is True
+        assert has_perm(role, PermissionEnum.VISIT_WINDOWING_CREATE) is False
+        assert has_perm(role, PermissionEnum.VISIT_WINDOWING_UPDATE) is False
+
+
 @pytest.mark.asyncio
 async def test_require_study_scope_extraction() -> None:
     """Verify that require_study_scope correctly extracts study_id from different parts of a request."""
