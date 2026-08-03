@@ -73,7 +73,9 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  const isStaticAsset = url.origin === self.location.origin && url.pathname.startsWith("/subject-portal/");
+  const isStaticAsset =
+    url.origin === self.location.origin &&
+    url.pathname.startsWith("/subject-portal/");
 
   if (isStaticAsset) {
     // Limit network requests for application shell assets to a maximum of 2 seconds before racing to the local cache fallback
@@ -81,7 +83,11 @@ self.addEventListener("fetch", (event) => {
       fetchWithTimeout(event.request, 2000)
         .then((response) => {
           // If response is valid, update the cache dynamically
-          if (response && response.status === 200 && response.type === "basic") {
+          if (
+            response &&
+            response.status === 200 &&
+            response.type === "basic"
+          ) {
             const responseToCache = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(event.request, responseToCache);
@@ -111,4 +117,3 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(fetch(event.request));
   }
 });
-
