@@ -40,12 +40,12 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-if="documents.length === 0">
+          <tr v-if="paginatedDocuments.length === 0">
             <td colspan="7" class="empty-table-cell">
               No documents have been uploaded for this artifact yet.
             </td>
           </tr>
-          <tr v-for="doc in documents" :key="doc.id" class="document-row">
+          <tr v-for="doc in paginatedDocuments" :key="doc.id" class="document-row">
             <td class="doc-name-cell">
               <span class="file-icon">📄</span>
               <span class="filename" :title="doc.filename">{{
@@ -71,7 +71,7 @@
               </div>
             </td>
             <td class="date-cell">
-              {{ formatDate(doc.created_at) }}
+              {{ doc.formattedCreatedAt }}
             </td>
             <td class="actions-cell">
               <button
@@ -88,6 +88,52 @@
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div v-if="totalItems > 0" class="pagination-controls">
+      <div class="pagination-info">
+        Showing 
+        <span class="font-semibold">{{ Math.min((currentPage - 1) * itemsPerPage + 1, totalItems) }}</span>
+        to 
+        <span class="font-semibold">{{ Math.min(currentPage * itemsPerPage, totalItems) }}</span>
+        of 
+        <span class="font-semibold">{{ totalItems }}</span> documents
+      </div>
+      
+      <div class="pagination-buttons">
+        <button
+          class="btn btn-sm btn-outline-secondary prev-btn"
+          :disabled="currentPage === 1"
+          aria-label="Previous page"
+          @click="prevPage"
+        >
+          ◀ Previous
+        </button>
+        
+        <div class="page-numbers">
+          <button
+            v-for="page in totalPages"
+            :key="page"
+            class="btn btn-sm page-num-btn"
+            :class="{ active: currentPage === page }"
+            :aria-label="'Go to page ' + page"
+            :aria-current="currentPage === page ? 'page' : undefined"
+            @click="goToPage(page)"
+          >
+            {{ page }}
+          </button>
+        </div>
+        
+        <button
+          class="btn btn-sm btn-outline-secondary next-btn"
+          :disabled="currentPage === totalPages"
+          aria-label="Next page"
+          @click="nextPage"
+        >
+          Next ▶
+        </button>
+      </div>
     </div>
 
     <!-- GxP Electronic Record Drag & Drop Upload Modal -->
@@ -247,10 +293,10 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, onUnmounted } from "vue";
+import { ref, computed, watch, nextTick, onUnmounted } from "vue";
 import { useEtmfStore } from "../../stores/etmf";
 
-defineProps({
+const props = defineProps({
   documents: {
     type: Array,
     required: true,
@@ -358,6 +404,54 @@ onUnmounted(() => {
   document.removeEventListener("keydown", handleUploadModalKeyDown);
 });
 
+// Local pagination state
+const currentPage = ref(1);
+const itemsPerPage = 20;
+
+// Pre-computed formatted documents (date formatted beforehand)
+const formattedDocuments = computed(() => {
+  return props.documents.map((doc) => ({
+    ...doc,
+    formattedCreatedAt: formatDate(doc.created_at),
+  }));
+});
+
+// Reset currentPage.value = 1 when the underlying documents list changes
+watch(
+  () => props.documents,
+  () => {
+    currentPage.value = 1;
+  },
+  { deep: true }
+);
+
+const totalItems = computed(() => formattedDocuments.value.length);
+const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage) || 1);
+
+const paginatedDocuments = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
+  return formattedDocuments.value.slice(start, end);
+});
+
+function prevPage() {
+  if (currentPage.value > 1) {
+    currentPage.value--;
+  }
+}
+
+function nextPage() {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++;
+  }
+}
+
+function goToPage(page) {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page;
+  }
+}
+
 // Listen for artifact selections on the store to update current context
 watch(
   () => etmfStore.selectedArtifactId,
@@ -366,18 +460,9 @@ watch(
     if (newCode) {
       artifactCode.value = newCode;
 
-      // Look up artifact label from local tree structure
-      let foundName = "Clinical Trial Document";
-      etmfStore.binderTree.forEach((zone) => {
-        zone.children?.forEach((sec) => {
-          sec.children?.forEach((art) => {
-            if (art.code === newCode) {
-              foundName = art.name;
-            }
-          });
-        });
-      });
-      artifactType.value = foundName;
+      // Use instant O(1) folderLookup map instead of slow recursive search
+      const node = etmfStore.folderLookup[newCode];
+      artifactType.value = node ? node.name : "Clinical Trial Document";
     }
   },
   { immediate: true }
@@ -917,5 +1002,61 @@ async function submitUpload() {
 .btn-sm {
   padding: 4px 10px;
   font-size: 0.8rem;
+}
+
+/* Pagination Styling */
+.pagination-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.pagination-info {
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.font-semibold {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.pagination-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-numbers {
+  display: flex;
+  gap: 4px;
+}
+
+.page-num-btn {
+  min-width: 32px;
+  padding: 4px 8px;
+  background-color: transparent;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+}
+
+.page-num-btn:hover {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.page-num-btn.active {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+
+.prev-btn:disabled,
+.next-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>
