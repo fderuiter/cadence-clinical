@@ -60,7 +60,7 @@ def _render_pdf_certificate(
     """Render PDF certificate for signature capture."""
     if HAS_REPORTLAB:
         pdf_buffer = BytesIO()
-        p = canvas.Canvas(pdf_buffer, pagesize=letter)
+        p = canvas.Canvas(pdf_buffer, pagesize=letter, enforcePDF_UA=1)
         p.drawString(100, 750, "GxP Consent Signature Certificate")
         p.drawString(100, 720, f"Subject ID: {payload.subject_id}")
         p.drawString(100, 700, f"Printed Name: {payload.printed_name}")
@@ -96,13 +96,15 @@ def _render_pdf_certificate(
     content_stream = f"BT /F1 12 Tf 50 700 Td ({body}) Tj ET"
     stream_len = len(content_stream)
     objects = (
-        "1 0 obj <</Type /Catalog /Pages 2 0 R>> endobj\n"
+        "1 0 obj <</Type /Catalog /Pages 2 0 R /MarkInfo <</Marked true>> /StructTreeRoot 6 0 R>> endobj\n"
         "2 0 obj <</Type /Pages /Kids [3 0 R] /Count 1>> endobj\n"
-        "3 0 obj <</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources <</Font <</F1 5 0 R>>>> >> endobj\n"
+        "3 0 obj <</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources <</Font <</F1 5 0 R>>>> /StructParents 0>> endobj\n"
         f"4 0 obj <</Length {stream_len}>> stream\n{content_stream}\nendstream\nendobj\n"
         "5 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica>> endobj\n"
+        "6 0 obj <</Type /StructTreeRoot /RoleMap <</Document /Div>> /K 7 0 R>> endobj\n"
+        "7 0 obj <</Type /StructElem /S /Document /P 6 0 R /Pg 3 0 R /K [0]>> endobj\n"
     )
-    xref = "xref\n0 6\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \n0000000246 00000 n \n0000000350 00000 n \ntrailer <</Size 6 /Root 1 0 R>>\nstartxref\n430\n%%EOF"  # deid-ignore
+    xref = "xref\n0 8\n0000000000 65535 f \n0000000009 00000 n \n0000000098 00000 n \n0000000155 00000 n \n0000000302 00000 n \n0000000406 00000 n \n0000000486 00000 n \n0000000556 00000 n \ntrailer <</Size 8 /Root 1 0 R>>\nstartxref\n636\n%%EOF"  # deid-ignore
     return f"{header}{objects}{xref}".encode("latin1", errors="replace")
 
 
