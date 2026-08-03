@@ -1,3 +1,2877 @@
 {
-  "duplicates": []
+  "duplicates": [
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 77,
+        "end": 95
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 450,
+        "end": 468
+      },
+      "preview": "class SoAEntityCreatedResponse(BaseModel):\n    \"\"\"\n    Standard successful creation response.\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 78,
+        "end": 96
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 451,
+        "end": 469
+      },
+      "preview": "    \"\"\"\n    Standard successful creation response.\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 79,
+        "end": 98
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 452,
+        "end": 471
+      },
+      "preview": "    Standard successful creation response.\n    \"\"\"\n    status: str = \"success\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 107,
+        "end": 122
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 28,
+        "end": 43
+      },
+      "preview": "    \"\"\"\n    id: str = Field(..., description=\"Unique identifier for the study arm.\")\n    study_id: str | None = Field(None, description=\"Study identifier scoping this arm.\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 138,
+        "end": 153
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 61,
+        "end": 76
+      },
+      "preview": "    \"\"\"\n    id: str = Field(..., description=\"Unique identifier for the epoch.\")\n    study_id: str | None = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 140,
+        "end": 154
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 63,
+        "end": 77
+      },
+      "preview": "    id: str = Field(..., description=\"Unique identifier for the epoch.\")\n    study_id: str | None = Field(\n        None, description=\"Study identifier scoping this epoch.\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 156,
+        "end": 175
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 81,
+        "end": 97
+      },
+      "preview": "    @model_validator(mode=\"before\")\n    @classmethod\n    def populate_epoch_fields(cls, data: dict) -> dict:\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 177,
+        "end": 192
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 99,
+        "end": 114
+      },
+      "preview": "    \"\"\"\n    id: str = Field(..., description=\"Unique identifier for the visit.\")\n    study_id: str | None = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 179,
+        "end": 193
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 101,
+        "end": 115
+      },
+      "preview": "    id: str = Field(..., description=\"Unique identifier for the visit.\")\n    study_id: str | None = Field(\n        None, description=\"Study identifier scoping this visit.\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 180,
+        "end": 194
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 102,
+        "end": 116
+      },
+      "preview": "    study_id: str | None = Field(\n        None, description=\"Study identifier scoping this visit.\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 181,
+        "end": 195
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 103,
+        "end": 117
+      },
+      "preview": "        None, description=\"Study identifier scoping this visit.\"\n    )\n    study_version_id: str = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 182,
+        "end": 196
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 104,
+        "end": 118
+      },
+      "preview": "    )\n    study_version_id: str = Field(\n        ..., description=\"Study version identifier scoping this visit.\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 183,
+        "end": 197
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 105,
+        "end": 119
+      },
+      "preview": "    study_version_id: str = Field(\n        ..., description=\"Study version identifier scoping this visit.\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 213,
+        "end": 228
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 137,
+        "end": 152
+      },
+      "preview": "    \"\"\"\n    id: str = Field(..., description=\"Unique identifier for the procedure.\")\n    study_id: str | None = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 215,
+        "end": 229
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 139,
+        "end": 153
+      },
+      "preview": "    id: str = Field(..., description=\"Unique identifier for the procedure.\")\n    study_id: str | None = Field(\n        None, description=\"Study identifier scoping this procedure.\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 216,
+        "end": 230
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 140,
+        "end": 154
+      },
+      "preview": "    study_id: str | None = Field(\n        None, description=\"Study identifier scoping this procedure.\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 217,
+        "end": 231
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 141,
+        "end": 155
+      },
+      "preview": "        None, description=\"Study identifier scoping this procedure.\"\n    )\n    study_version_id: str = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 218,
+        "end": 232
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 142,
+        "end": 156
+      },
+      "preview": "    )\n    study_version_id: str = Field(\n        ..., description=\"Study version identifier scoping this procedure.\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 219,
+        "end": 233
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 143,
+        "end": 157
+      },
+      "preview": "    study_version_id: str = Field(\n        ..., description=\"Study version identifier scoping this procedure.\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 220,
+        "end": 234
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 144,
+        "end": 158
+      },
+      "preview": "        ..., description=\"Study version identifier scoping this procedure.\"\n    )\n    name: str = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 253,
+        "end": 268
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 176,
+        "end": 191
+      },
+      "preview": "    \"\"\"\n    id: str = Field(..., description=\"Unique identifier for the timing window.\")\n    study_id: str | None = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 255,
+        "end": 269
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 178,
+        "end": 192
+      },
+      "preview": "    id: str = Field(..., description=\"Unique identifier for the timing window.\")\n    study_id: str | None = Field(\n        None, description=\"Study identifier scoping this timing window.\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 256,
+        "end": 270
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 179,
+        "end": 193
+      },
+      "preview": "    study_id: str | None = Field(\n        None, description=\"Study identifier scoping this timing window.\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 257,
+        "end": 271
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 180,
+        "end": 194
+      },
+      "preview": "        None, description=\"Study identifier scoping this timing window.\"\n    )\n    study_version_id: str = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 258,
+        "end": 272
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 181,
+        "end": 195
+      },
+      "preview": "    )\n    study_version_id: str = Field(\n        ..., description=\"Study version identifier scoping this timing window.\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 259,
+        "end": 273
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 182,
+        "end": 196
+      },
+      "preview": "    study_version_id: str = Field(\n        ..., description=\"Study version identifier scoping this timing window.\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 260,
+        "end": 274
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 183,
+        "end": 197
+      },
+      "preview": "        ..., description=\"Study version identifier scoping this timing window.\"\n    )\n    name: str = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 261,
+        "end": 275
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 184,
+        "end": 198
+      },
+      "preview": "    )\n    name: str = Field(\n        ...,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 262,
+        "end": 276
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 185,
+        "end": 199
+      },
+      "preview": "    name: str = Field(\n        ...,\n        min_length=1,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 263,
+        "end": 277
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 186,
+        "end": 200
+      },
+      "preview": "        ...,\n        min_length=1,\n        description=\"Label or duration specification of the timing window.\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 264,
+        "end": 278
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 187,
+        "end": 201
+      },
+      "preview": "        min_length=1,\n        description=\"Label or duration specification of the timing window.\",\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 265,
+        "end": 279
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 188,
+        "end": 202
+      },
+      "preview": "        description=\"Label or duration specification of the timing window.\",\n    )\n    anchor_reference: str | None = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 300,
+        "end": 322
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 210,
+        "end": 232
+      },
+      "preview": "        return self\nclass StudyArmProperties(BaseModel):\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 306,
+        "end": 323
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 216,
+        "end": 233
+      },
+      "preview": "class StudyArmProperties(BaseModel):\n    \"\"\"\n    Properties specific to a clinical trial Study Arm.\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 307,
+        "end": 324
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 217,
+        "end": 234
+      },
+      "preview": "    \"\"\"\n    Properties specific to a clinical trial Study Arm.\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 308,
+        "end": 325
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 218,
+        "end": 235
+      },
+      "preview": "    Properties specific to a clinical trial Study Arm.\n    \"\"\"\n    name: str = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 309,
+        "end": 327
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 219,
+        "end": 237
+      },
+      "preview": "    \"\"\"\n    name: str = Field(\n        ...,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 311,
+        "end": 328
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 221,
+        "end": 238
+      },
+      "preview": "    name: str = Field(\n        ...,\n        min_length=1,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 312,
+        "end": 329
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 222,
+        "end": 239
+      },
+      "preview": "        ...,\n        min_length=1,\n        description=\"The name of the study arm, e.g., 'Active' or 'Placebo'.\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 313,
+        "end": 330
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 223,
+        "end": 240
+      },
+      "preview": "        min_length=1,\n        description=\"The name of the study arm, e.g., 'Active' or 'Placebo'.\",\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 314,
+        "end": 331
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 224,
+        "end": 241
+      },
+      "preview": "        description=\"The name of the study arm, e.g., 'Active' or 'Placebo'.\",\n    )\n    type: str = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 315,
+        "end": 332
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 225,
+        "end": 242
+      },
+      "preview": "    )\n    type: str = Field(\n        ..., min_length=1, description=\"The classification type of the arm.\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 316,
+        "end": 333
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 226,
+        "end": 243
+      },
+      "preview": "    type: str = Field(\n        ..., min_length=1, description=\"The classification type of the arm.\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 317,
+        "end": 334
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 227,
+        "end": 244
+      },
+      "preview": "        ..., min_length=1, description=\"The classification type of the arm.\"\n    )\n    sequence: int | None = Field(None, ge=1, description=\"Sequential ordering rank.\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 318,
+        "end": 335
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 228,
+        "end": 245
+      },
+      "preview": "    )\n    sequence: int | None = Field(None, ge=1, description=\"Sequential ordering rank.\")\nclass EpochProperties(BaseModel):\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 319,
+        "end": 336
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 229,
+        "end": 246
+      },
+      "preview": "    sequence: int | None = Field(None, ge=1, description=\"Sequential ordering rank.\")\nclass EpochProperties(BaseModel):\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 322,
+        "end": 337
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 232,
+        "end": 247
+      },
+      "preview": "class EpochProperties(BaseModel):\n    \"\"\"\n    Properties specific to a Study Epoch.\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 323,
+        "end": 339
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 233,
+        "end": 249
+      },
+      "preview": "    \"\"\"\n    Properties specific to a Study Epoch.\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 324,
+        "end": 340
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 234,
+        "end": 250
+      },
+      "preview": "    Properties specific to a Study Epoch.\n    \"\"\"\n    name: str | None = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 325,
+        "end": 341
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 235,
+        "end": 251
+      },
+      "preview": "    \"\"\"\n    name: str | None = Field(\n        None,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 327,
+        "end": 342
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 237,
+        "end": 252
+      },
+      "preview": "    name: str | None = Field(\n        None,\n        min_length=1,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 328,
+        "end": 343
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 238,
+        "end": 253
+      },
+      "preview": "        None,\n        min_length=1,\n        description=\"The name of the study epoch, e.g., 'Screening'.\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 329,
+        "end": 344
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 239,
+        "end": 254
+      },
+      "preview": "        min_length=1,\n        description=\"The name of the study epoch, e.g., 'Screening'.\",\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 330,
+        "end": 345
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 240,
+        "end": 255
+      },
+      "preview": "        description=\"The name of the study epoch, e.g., 'Screening'.\",\n    )\n    epoch_name: str | None = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 331,
+        "end": 348
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 241,
+        "end": 258
+      },
+      "preview": "    )\n    epoch_name: str | None = Field(\n        None, min_length=1, description=\"Alternate/legacy field name for epoch name.\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 332,
+        "end": 349
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 242,
+        "end": 259
+      },
+      "preview": "    epoch_name: str | None = Field(\n        None, min_length=1, description=\"Alternate/legacy field name for epoch name.\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 333,
+        "end": 350
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 243,
+        "end": 260
+      },
+      "preview": "        None, min_length=1, description=\"Alternate/legacy field name for epoch name.\"\n    )\n    sequence: int = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 334,
+        "end": 351
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 244,
+        "end": 261
+      },
+      "preview": "    )\n    sequence: int = Field(\n        ..., ge=1, description=\"Sequential ordering rank of the epoch.\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 335,
+        "end": 353
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 245,
+        "end": 263
+      },
+      "preview": "    sequence: int = Field(\n        ..., ge=1, description=\"Sequential ordering rank of the epoch.\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 336,
+        "end": 354
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 246,
+        "end": 264
+      },
+      "preview": "        ..., ge=1, description=\"Sequential ordering rank of the epoch.\"\n    )\n    @model_validator(mode=\"after\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 337,
+        "end": 355
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 247,
+        "end": 265
+      },
+      "preview": "    )\n    @model_validator(mode=\"after\")\n    def validate_epoch_name_fields(self) -> EpochProperties:\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 339,
+        "end": 356
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 249,
+        "end": 266
+      },
+      "preview": "    @model_validator(mode=\"after\")\n    def validate_epoch_name_fields(self) -> EpochProperties:\n        if not self.name and not self.epoch_name:\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 340,
+        "end": 357
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 250,
+        "end": 267
+      },
+      "preview": "    def validate_epoch_name_fields(self) -> EpochProperties:\n        if not self.name and not self.epoch_name:\n            raise ValueError(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 341,
+        "end": 358
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 251,
+        "end": 268
+      },
+      "preview": "        if not self.name and not self.epoch_name:\n            raise ValueError(\n                \"Either 'name' or 'epoch_name' must be provided and non-empty.\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 342,
+        "end": 359
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 252,
+        "end": 269
+      },
+      "preview": "            raise ValueError(\n                \"Either 'name' or 'epoch_name' must be provided and non-empty.\"\n            )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 343,
+        "end": 360
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 253,
+        "end": 270
+      },
+      "preview": "                \"Either 'name' or 'epoch_name' must be provided and non-empty.\"\n            )\n        return self\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 344,
+        "end": 361
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 254,
+        "end": 271
+      },
+      "preview": "            )\n        return self\nclass VisitProperties(BaseModel):\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 345,
+        "end": 362
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 255,
+        "end": 272
+      },
+      "preview": "        return self\nclass VisitProperties(BaseModel):\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 348,
+        "end": 363
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 258,
+        "end": 273
+      },
+      "preview": "class VisitProperties(BaseModel):\n    \"\"\"\n    Properties specific to a Visit / Encounter.\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 349,
+        "end": 365
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 259,
+        "end": 275
+      },
+      "preview": "    \"\"\"\n    Properties specific to a Visit / Encounter.\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 350,
+        "end": 366
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 260,
+        "end": 276
+      },
+      "preview": "    Properties specific to a Visit / Encounter.\n    \"\"\"\n    name: str | None = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 351,
+        "end": 367
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 261,
+        "end": 277
+      },
+      "preview": "    \"\"\"\n    name: str | None = Field(\n        None, min_length=1, description=\"The display name of the visit.\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 353,
+        "end": 368
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 263,
+        "end": 278
+      },
+      "preview": "    name: str | None = Field(\n        None, min_length=1, description=\"The display name of the visit.\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 354,
+        "end": 369
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 264,
+        "end": 279
+      },
+      "preview": "        None, min_length=1, description=\"The display name of the visit.\"\n    )\n    encounter_name: str | None = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 355,
+        "end": 370
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 265,
+        "end": 280
+      },
+      "preview": "    )\n    encounter_name: str | None = Field(\n        None,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 356,
+        "end": 371
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 266,
+        "end": 281
+      },
+      "preview": "    encounter_name: str | None = Field(\n        None,\n        min_length=1,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 357,
+        "end": 374
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 267,
+        "end": 284
+      },
+      "preview": "        None,\n        min_length=1,\n        description=\"Alternate/legacy field name for encounter/visit.\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 358,
+        "end": 375
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 268,
+        "end": 285
+      },
+      "preview": "        min_length=1,\n        description=\"Alternate/legacy field name for encounter/visit.\",\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 359,
+        "end": 376
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 269,
+        "end": 286
+      },
+      "preview": "        description=\"Alternate/legacy field name for encounter/visit.\",\n    )\n    sequence: int = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 360,
+        "end": 377
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 270,
+        "end": 287
+      },
+      "preview": "    )\n    sequence: int = Field(\n        ..., ge=1, description=\"Sequential ordering rank of the visit.\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 361,
+        "end": 379
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 271,
+        "end": 289
+      },
+      "preview": "    sequence: int = Field(\n        ..., ge=1, description=\"Sequential ordering rank of the visit.\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 362,
+        "end": 380
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 272,
+        "end": 290
+      },
+      "preview": "        ..., ge=1, description=\"Sequential ordering rank of the visit.\"\n    )\n    @model_validator(mode=\"after\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 363,
+        "end": 381
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 273,
+        "end": 291
+      },
+      "preview": "    )\n    @model_validator(mode=\"after\")\n    def validate_visit_name_fields(self) -> VisitProperties:\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 365,
+        "end": 382
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 275,
+        "end": 292
+      },
+      "preview": "    @model_validator(mode=\"after\")\n    def validate_visit_name_fields(self) -> VisitProperties:\n        if not self.name and not self.encounter_name:\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 366,
+        "end": 383
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 276,
+        "end": 293
+      },
+      "preview": "    def validate_visit_name_fields(self) -> VisitProperties:\n        if not self.name and not self.encounter_name:\n            raise ValueError(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 367,
+        "end": 384
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 277,
+        "end": 294
+      },
+      "preview": "        if not self.name and not self.encounter_name:\n            raise ValueError(\n                \"Either 'name' or 'encounter_name' must be provided and non-empty.\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 368,
+        "end": 386
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 278,
+        "end": 296
+      },
+      "preview": "            raise ValueError(\n                \"Either 'name' or 'encounter_name' must be provided and non-empty.\"\n            )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 369,
+        "end": 387
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 279,
+        "end": 297
+      },
+      "preview": "                \"Either 'name' or 'encounter_name' must be provided and non-empty.\"\n            )\n        return self\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 370,
+        "end": 388
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 280,
+        "end": 298
+      },
+      "preview": "            )\n        return self\nclass ProcedureProperties(BaseModel):\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 371,
+        "end": 389
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 281,
+        "end": 299
+      },
+      "preview": "        return self\nclass ProcedureProperties(BaseModel):\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 374,
+        "end": 390
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 284,
+        "end": 300
+      },
+      "preview": "class ProcedureProperties(BaseModel):\n    \"\"\"\n    Properties specific to a clinical Procedure / Activity.\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 375,
+        "end": 391
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 285,
+        "end": 301
+      },
+      "preview": "    \"\"\"\n    Properties specific to a clinical Procedure / Activity.\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 376,
+        "end": 392
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 286,
+        "end": 302
+      },
+      "preview": "    Properties specific to a clinical Procedure / Activity.\n    \"\"\"\n    name: str | None = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 377,
+        "end": 395
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 287,
+        "end": 305
+      },
+      "preview": "    \"\"\"\n    name: str | None = Field(\n        None, min_length=1, description=\"The display name of the procedure.\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 379,
+        "end": 396
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 289,
+        "end": 306
+      },
+      "preview": "    name: str | None = Field(\n        None, min_length=1, description=\"The display name of the procedure.\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 380,
+        "end": 397
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 290,
+        "end": 307
+      },
+      "preview": "        None, min_length=1, description=\"The display name of the procedure.\"\n    )\n    activity_name: str | None = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 381,
+        "end": 398
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 291,
+        "end": 308
+      },
+      "preview": "    )\n    activity_name: str | None = Field(\n        None, min_length=1, description=\"Alternate/legacy field name for the procedure.\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 382,
+        "end": 400
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 292,
+        "end": 310
+      },
+      "preview": "    activity_name: str | None = Field(\n        None, min_length=1, description=\"Alternate/legacy field name for the procedure.\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 383,
+        "end": 401
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 293,
+        "end": 311
+      },
+      "preview": "        None, min_length=1, description=\"Alternate/legacy field name for the procedure.\"\n    )\n    @model_validator(mode=\"after\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 384,
+        "end": 402
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 294,
+        "end": 312
+      },
+      "preview": "    )\n    @model_validator(mode=\"after\")\n    def validate_proc_name_fields(self) -> ProcedureProperties:\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 386,
+        "end": 403
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 296,
+        "end": 313
+      },
+      "preview": "    @model_validator(mode=\"after\")\n    def validate_proc_name_fields(self) -> ProcedureProperties:\n        if not self.name and not self.activity_name:\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 387,
+        "end": 404
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 297,
+        "end": 314
+      },
+      "preview": "    def validate_proc_name_fields(self) -> ProcedureProperties:\n        if not self.name and not self.activity_name:\n            raise ValueError(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 440,
+        "end": 463
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 329,
+        "end": 352
+      },
+      "preview": "        return self\nclass CreateStudyArmRequest(BaseModel):\n    id: str = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 446,
+        "end": 464
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 335,
+        "end": 353
+      },
+      "preview": "class CreateStudyArmRequest(BaseModel):\n    id: str = Field(\n        ..., min_length=1, description=\"Unique identifier for the study arm.\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 447,
+        "end": 465
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 336,
+        "end": 354
+      },
+      "preview": "    id: str = Field(\n        ..., min_length=1, description=\"Unique identifier for the study arm.\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 448,
+        "end": 466
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 337,
+        "end": 355
+      },
+      "preview": "        ..., min_length=1, description=\"Unique identifier for the study arm.\"\n    )\n    properties: StudyArmProperties\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 449,
+        "end": 467
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 338,
+        "end": 356
+      },
+      "preview": "    )\n    properties: StudyArmProperties\n    change_reason: str = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 450,
+        "end": 468
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 339,
+        "end": 357
+      },
+      "preview": "    properties: StudyArmProperties\n    change_reason: str = Field(\n        default=\"Created study arm\", description=\"Change reason for audit trail\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 451,
+        "end": 471
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 340,
+        "end": 360
+      },
+      "preview": "    change_reason: str = Field(\n        default=\"Created study arm\", description=\"Change reason for audit trail\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 452,
+        "end": 472
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 341,
+        "end": 361
+      },
+      "preview": "        default=\"Created study arm\", description=\"Change reason for audit trail\"\n    )\nclass UpdateStudyArmRequest(BaseModel):\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 453,
+        "end": 473
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 342,
+        "end": 362
+      },
+      "preview": "    )\nclass UpdateStudyArmRequest(BaseModel):\n    properties: StudyArmProperties\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 456,
+        "end": 474
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 345,
+        "end": 363
+      },
+      "preview": "class UpdateStudyArmRequest(BaseModel):\n    properties: StudyArmProperties\n    reason_for_change: str = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 457,
+        "end": 475
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 346,
+        "end": 364
+      },
+      "preview": "    properties: StudyArmProperties\n    reason_for_change: str = Field(\n        default=\"Updated study arm\", description=\"Reason for change for audit trail\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 458,
+        "end": 478
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 347,
+        "end": 367
+      },
+      "preview": "    reason_for_change: str = Field(\n        default=\"Updated study arm\", description=\"Reason for change for audit trail\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 459,
+        "end": 479
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 348,
+        "end": 368
+      },
+      "preview": "        default=\"Updated study arm\", description=\"Reason for change for audit trail\"\n    )\nclass CreateEpochRequest(BaseModel):\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 460,
+        "end": 480
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 349,
+        "end": 369
+      },
+      "preview": "    )\nclass CreateEpochRequest(BaseModel):\n    id: str = Field(..., min_length=1, description=\"Unique identifier for the epoch.\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 463,
+        "end": 481
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 352,
+        "end": 370
+      },
+      "preview": "class CreateEpochRequest(BaseModel):\n    id: str = Field(..., min_length=1, description=\"Unique identifier for the epoch.\")\n    properties: EpochProperties\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 464,
+        "end": 482
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 353,
+        "end": 371
+      },
+      "preview": "    id: str = Field(..., min_length=1, description=\"Unique identifier for the epoch.\")\n    properties: EpochProperties\n    change_reason: str = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 465,
+        "end": 483
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 354,
+        "end": 372
+      },
+      "preview": "    properties: EpochProperties\n    change_reason: str = Field(\n        default=\"Created epoch\", description=\"Change reason for audit trail\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 466,
+        "end": 486
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 355,
+        "end": 375
+      },
+      "preview": "    change_reason: str = Field(\n        default=\"Created epoch\", description=\"Change reason for audit trail\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 467,
+        "end": 487
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 356,
+        "end": 376
+      },
+      "preview": "        default=\"Created epoch\", description=\"Change reason for audit trail\"\n    )\nclass UpdateEpochRequest(BaseModel):\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 468,
+        "end": 488
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 357,
+        "end": 377
+      },
+      "preview": "    )\nclass UpdateEpochRequest(BaseModel):\n    properties: EpochProperties\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 471,
+        "end": 489
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 360,
+        "end": 378
+      },
+      "preview": "class UpdateEpochRequest(BaseModel):\n    properties: EpochProperties\n    reason_for_change: str = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 472,
+        "end": 490
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 361,
+        "end": 379
+      },
+      "preview": "    properties: EpochProperties\n    reason_for_change: str = Field(\n        default=\"Updated epoch\", description=\"Reason for change for audit trail\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 473,
+        "end": 493
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 362,
+        "end": 382
+      },
+      "preview": "    reason_for_change: str = Field(\n        default=\"Updated epoch\", description=\"Reason for change for audit trail\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 474,
+        "end": 494
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 363,
+        "end": 383
+      },
+      "preview": "        default=\"Updated epoch\", description=\"Reason for change for audit trail\"\n    )\nclass CreateVisitRequest(BaseModel):\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 475,
+        "end": 495
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 364,
+        "end": 384
+      },
+      "preview": "    )\nclass CreateVisitRequest(BaseModel):\n    id: str = Field(..., min_length=1, description=\"Unique identifier for the visit.\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 478,
+        "end": 496
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 367,
+        "end": 385
+      },
+      "preview": "class CreateVisitRequest(BaseModel):\n    id: str = Field(..., min_length=1, description=\"Unique identifier for the visit.\")\n    properties: VisitProperties\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 479,
+        "end": 497
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 368,
+        "end": 386
+      },
+      "preview": "    id: str = Field(..., min_length=1, description=\"Unique identifier for the visit.\")\n    properties: VisitProperties\n    change_reason: str = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 480,
+        "end": 498
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 369,
+        "end": 387
+      },
+      "preview": "    properties: VisitProperties\n    change_reason: str = Field(\n        default=\"Created visit\", description=\"Change reason for audit trail\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 481,
+        "end": 499
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 370,
+        "end": 388
+      },
+      "preview": "    change_reason: str = Field(\n        default=\"Created visit\", description=\"Change reason for audit trail\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 482,
+        "end": 500
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 371,
+        "end": 389
+      },
+      "preview": "        default=\"Created visit\", description=\"Change reason for audit trail\"\n    )\nclass UpdateVisitRequest(BaseModel):\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 483,
+        "end": 503
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 372,
+        "end": 392
+      },
+      "preview": "    )\nclass UpdateVisitRequest(BaseModel):\n    properties: VisitProperties\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 486,
+        "end": 504
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 375,
+        "end": 393
+      },
+      "preview": "class UpdateVisitRequest(BaseModel):\n    properties: VisitProperties\n    reason_for_change: str = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 487,
+        "end": 505
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 376,
+        "end": 394
+      },
+      "preview": "    properties: VisitProperties\n    reason_for_change: str = Field(\n        default=\"Updated visit\", description=\"Reason for change for audit trail\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 488,
+        "end": 506
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 377,
+        "end": 395
+      },
+      "preview": "    reason_for_change: str = Field(\n        default=\"Updated visit\", description=\"Reason for change for audit trail\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 489,
+        "end": 507
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 378,
+        "end": 396
+      },
+      "preview": "        default=\"Updated visit\", description=\"Reason for change for audit trail\"\n    )\nclass CreateProcedureRequest(BaseModel):\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 490,
+        "end": 510
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 379,
+        "end": 399
+      },
+      "preview": "    )\nclass CreateProcedureRequest(BaseModel):\n    id: str = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 493,
+        "end": 511
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 382,
+        "end": 400
+      },
+      "preview": "class CreateProcedureRequest(BaseModel):\n    id: str = Field(\n        ..., min_length=1, description=\"Unique identifier for the procedure.\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 494,
+        "end": 512
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 383,
+        "end": 401
+      },
+      "preview": "    id: str = Field(\n        ..., min_length=1, description=\"Unique identifier for the procedure.\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 495,
+        "end": 513
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 384,
+        "end": 402
+      },
+      "preview": "        ..., min_length=1, description=\"Unique identifier for the procedure.\"\n    )\n    properties: ProcedureProperties\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 496,
+        "end": 514
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 385,
+        "end": 403
+      },
+      "preview": "    )\n    properties: ProcedureProperties\n    change_reason: str = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 497,
+        "end": 515
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 386,
+        "end": 404
+      },
+      "preview": "    properties: ProcedureProperties\n    change_reason: str = Field(\n        default=\"Created procedure\", description=\"Change reason for audit trail\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 498,
+        "end": 516
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 387,
+        "end": 405
+      },
+      "preview": "    change_reason: str = Field(\n        default=\"Created procedure\", description=\"Change reason for audit trail\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 499,
+        "end": 517
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 388,
+        "end": 406
+      },
+      "preview": "        default=\"Created procedure\", description=\"Change reason for audit trail\"\n    )\nclass UpdateProcedureRequest(BaseModel):\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 500,
+        "end": 520
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 389,
+        "end": 409
+      },
+      "preview": "    )\nclass UpdateProcedureRequest(BaseModel):\n    properties: ProcedureProperties\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 503,
+        "end": 521
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 392,
+        "end": 410
+      },
+      "preview": "class UpdateProcedureRequest(BaseModel):\n    properties: ProcedureProperties\n    reason_for_change: str = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 504,
+        "end": 522
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 393,
+        "end": 411
+      },
+      "preview": "    properties: ProcedureProperties\n    reason_for_change: str = Field(\n        default=\"Updated procedure\", description=\"Reason for change for audit trail\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 505,
+        "end": 523
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 394,
+        "end": 412
+      },
+      "preview": "    reason_for_change: str = Field(\n        default=\"Updated procedure\", description=\"Reason for change for audit trail\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 506,
+        "end": 524
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 395,
+        "end": 413
+      },
+      "preview": "        default=\"Updated procedure\", description=\"Reason for change for audit trail\"\n    )\nclass CreateTimingWindowRequest(BaseModel):\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 507,
+        "end": 525
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 396,
+        "end": 414
+      },
+      "preview": "    )\nclass CreateTimingWindowRequest(BaseModel):\n    id: str = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 510,
+        "end": 531
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 399,
+        "end": 420
+      },
+      "preview": "class CreateTimingWindowRequest(BaseModel):\n    id: str = Field(\n        ..., min_length=1, description=\"Unique identifier for the timing window.\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 511,
+        "end": 532
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 400,
+        "end": 421
+      },
+      "preview": "    id: str = Field(\n        ..., min_length=1, description=\"Unique identifier for the timing window.\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 512,
+        "end": 533
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 401,
+        "end": 422
+      },
+      "preview": "        ..., min_length=1, description=\"Unique identifier for the timing window.\"\n    )\n    properties: TimingWindowProperties\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 513,
+        "end": 536
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 402,
+        "end": 425
+      },
+      "preview": "    )\n    properties: TimingWindowProperties\n    change_reason: str = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 514,
+        "end": 537
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 403,
+        "end": 426
+      },
+      "preview": "    properties: TimingWindowProperties\n    change_reason: str = Field(\n        default=\"Created timing window\", description=\"Change reason for audit trail\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 515,
+        "end": 538
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 404,
+        "end": 427
+      },
+      "preview": "    change_reason: str = Field(\n        default=\"Created timing window\", description=\"Change reason for audit trail\"\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 516,
+        "end": 541
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 405,
+        "end": 430
+      },
+      "preview": "        default=\"Created timing window\", description=\"Change reason for audit trail\"\n    )\nclass UpdateTimingWindowRequest(BaseModel):\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 517,
+        "end": 542
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 406,
+        "end": 431
+      },
+      "preview": "    )\nclass UpdateTimingWindowRequest(BaseModel):\n    properties: TimingWindowProperties\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 520,
+        "end": 543
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 409,
+        "end": 432
+      },
+      "preview": "class UpdateTimingWindowRequest(BaseModel):\n    properties: TimingWindowProperties\n    reason_for_change: str = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 521,
+        "end": 544
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 410,
+        "end": 433
+      },
+      "preview": "    properties: TimingWindowProperties\n    reason_for_change: str = Field(\n        default=\"Updated timing window\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 522,
+        "end": 547
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 411,
+        "end": 436
+      },
+      "preview": "    reason_for_change: str = Field(\n        default=\"Updated timing window\",\n        description=\"Reason for change for audit trail\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 523,
+        "end": 548
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 412,
+        "end": 437
+      },
+      "preview": "        default=\"Updated timing window\",\n        description=\"Reason for change for audit trail\",\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 524,
+        "end": 549
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 413,
+        "end": 438
+      },
+      "preview": "        description=\"Reason for change for audit trail\",\n    )\nclass LinkEpochVisitRequest(BaseModel):\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 525,
+        "end": 550
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 414,
+        "end": 439
+      },
+      "preview": "    )\nclass LinkEpochVisitRequest(BaseModel):\n    epoch_id: str = Field(..., min_length=1)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 531,
+        "end": 553
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 420,
+        "end": 442
+      },
+      "preview": "class LinkEpochVisitRequest(BaseModel):\n    epoch_id: str = Field(..., min_length=1)\n    visit_id: str = Field(..., min_length=1)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 532,
+        "end": 554
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 421,
+        "end": 443
+      },
+      "preview": "    epoch_id: str = Field(..., min_length=1)\n    visit_id: str = Field(..., min_length=1)\nclass LinkVisitProcedureRequest(BaseModel):\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 533,
+        "end": 555
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 422,
+        "end": 444
+      },
+      "preview": "    visit_id: str = Field(..., min_length=1)\nclass LinkVisitProcedureRequest(BaseModel):\n    visit_id: str = Field(..., min_length=1)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 561,
+        "end": 575
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 494,
+        "end": 508
+      },
+      "preview": "class ProjectionCell(BaseModel):\n    activity_id: str = Field(..., description=\"Target activity/procedure identifier.\")\n    encounter_id: str = Field(..., description=\"Target encounter/visit identifier.\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 562,
+        "end": 578
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 495,
+        "end": 511
+      },
+      "preview": "    activity_id: str = Field(..., description=\"Target activity/procedure identifier.\")\n    encounter_id: str = Field(..., description=\"Target encounter/visit identifier.\")\n    epoch_id: str = Field(..., description=\"Associated study epoch identifier.\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 563,
+        "end": 579
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 496,
+        "end": 512
+      },
+      "preview": "    encounter_id: str = Field(..., description=\"Target encounter/visit identifier.\")\n    epoch_id: str = Field(..., description=\"Associated study epoch identifier.\")\n    is_applicable: bool = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 564,
+        "end": 580
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 497,
+        "end": 513
+      },
+      "preview": "    epoch_id: str = Field(..., description=\"Associated study epoch identifier.\")\n    is_applicable: bool = Field(\n        ...,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 565,
+        "end": 581
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 498,
+        "end": 514
+      },
+      "preview": "    is_applicable: bool = Field(\n        ...,\n        description=\"Whether the activity is planned to occur during this encounter.\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/soa_models.py",
+        "start": 583,
+        "end": 598
+      },
+      "loc2": {
+        "file": "packages/core-models/protocol_authoring/soa.py",
+        "start": 515,
+        "end": 530
+      },
+      "preview": "    \"\"\"\n    epochs: list[SoAHeaderEpoch] = Field(\n        default_factory=list, description=\"Ordered list of Study Epoch columns.\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 3,
+        "end": 25
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 3,
+        "end": 25
+      },
+      "preview": "const FOCUSABLE_SELECTOR =\n  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex=\"-1\"])';\nconst isVisible = (el) => {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 4,
+        "end": 27
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 4,
+        "end": 27
+      },
+      "preview": "  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex=\"-1\"])';\nconst isVisible = (el) => {\n  if (typeof window === \"undefined\") return true;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 6,
+        "end": 28
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 6,
+        "end": 28
+      },
+      "preview": "const isVisible = (el) => {\n  if (typeof window === \"undefined\") return true;\n  const style = window.getComputedStyle(el);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 7,
+        "end": 29
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 7,
+        "end": 29
+      },
+      "preview": "  if (typeof window === \"undefined\") return true;\n  const style = window.getComputedStyle(el);\n  if (style.display === \"none\" || style.visibility === \"hidden\") {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 8,
+        "end": 31
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 8,
+        "end": 31
+      },
+      "preview": "  const style = window.getComputedStyle(el);\n  if (style.display === \"none\" || style.visibility === \"hidden\") {\n    return false;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 9,
+        "end": 32
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 9,
+        "end": 32
+      },
+      "preview": "  if (style.display === \"none\" || style.visibility === \"hidden\") {\n    return false;\n  const isJsdDom =\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 10,
+        "end": 33
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 10,
+        "end": 33
+      },
+      "preview": "    return false;\n  const isJsdDom =\n    navigator.userAgent.includes(\"jsdom\") ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 14,
+        "end": 34
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 14,
+        "end": 34
+      },
+      "preview": "  const isJsdDom =\n    navigator.userAgent.includes(\"jsdom\") ||\n    navigator.userAgent.includes(\"Node.js\") ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 15,
+        "end": 36
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 15,
+        "end": 36
+      },
+      "preview": "    navigator.userAgent.includes(\"jsdom\") ||\n    navigator.userAgent.includes(\"Node.js\") ||\n    typeof window.happyDOM !== \"undefined\";\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 16,
+        "end": 37
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 16,
+        "end": 37
+      },
+      "preview": "    navigator.userAgent.includes(\"Node.js\") ||\n    typeof window.happyDOM !== \"undefined\";\n  if (isJsdDom) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 17,
+        "end": 38
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 17,
+        "end": 38
+      },
+      "preview": "    typeof window.happyDOM !== \"undefined\";\n  if (isJsdDom) {\n    return true;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 18,
+        "end": 41
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 18,
+        "end": 41
+      },
+      "preview": "  if (isJsdDom) {\n    return true;\n  return el.offsetWidth > 0 || el.offsetHeight > 0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 19,
+        "end": 42
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 19,
+        "end": 42
+      },
+      "preview": "    return true;\n  return el.offsetWidth > 0 || el.offsetHeight > 0;\n  let previousActiveElement = null;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 21,
+        "end": 44
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 21,
+        "end": 44
+      },
+      "preview": "  return el.offsetWidth > 0 || el.offsetHeight > 0;\n  let previousActiveElement = null;\n  const handleKeyDown = (e) => {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 25,
+        "end": 45
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 25,
+        "end": 45
+      },
+      "preview": "  let previousActiveElement = null;\n  const handleKeyDown = (e) => {\n    if (e.key !== \"Tab\") return;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 27,
+        "end": 46
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 27,
+        "end": 46
+      },
+      "preview": "  const handleKeyDown = (e) => {\n    if (e.key !== \"Tab\") return;\n    if (!targetRef.value) return;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 28,
+        "end": 47
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 28,
+        "end": 47
+      },
+      "preview": "    if (e.key !== \"Tab\") return;\n    if (!targetRef.value) return;\n    const container = targetRef.value;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 29,
+        "end": 48
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 29,
+        "end": 48
+      },
+      "preview": "    if (!targetRef.value) return;\n    const container = targetRef.value;\n    const focusableElements = Array.from(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 31,
+        "end": 49
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 31,
+        "end": 49
+      },
+      "preview": "    const container = targetRef.value;\n    const focusableElements = Array.from(\n      container.querySelectorAll(FOCUSABLE_SELECTOR)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 32,
+        "end": 50
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 32,
+        "end": 50
+      },
+      "preview": "    const focusableElements = Array.from(\n      container.querySelectorAll(FOCUSABLE_SELECTOR)\n    ).filter(isVisible);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 33,
+        "end": 52
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 33,
+        "end": 52
+      },
+      "preview": "      container.querySelectorAll(FOCUSABLE_SELECTOR)\n    ).filter(isVisible);\n    if (focusableElements.length === 0) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 34,
+        "end": 53
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 34,
+        "end": 53
+      },
+      "preview": "    ).filter(isVisible);\n    if (focusableElements.length === 0) {\n      e.preventDefault();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 36,
+        "end": 54
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 36,
+        "end": 54
+      },
+      "preview": "    if (focusableElements.length === 0) {\n      e.preventDefault();\n      return;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 37,
+        "end": 55
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 37,
+        "end": 55
+      },
+      "preview": "      e.preventDefault();\n      return;\n    const firstEl = focusableElements[0];\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 38,
+        "end": 56
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 38,
+        "end": 56
+      },
+      "preview": "      return;\n    const firstEl = focusableElements[0];\n    const lastEl = focusableElements[focusableElements.length - 1];\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 41,
+        "end": 57
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 41,
+        "end": 57
+      },
+      "preview": "    const firstEl = focusableElements[0];\n    const lastEl = focusableElements[focusableElements.length - 1];\n    if (e.shiftKey) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 42,
+        "end": 58
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 42,
+        "end": 58
+      },
+      "preview": "    const lastEl = focusableElements[focusableElements.length - 1];\n    if (e.shiftKey) {\n      if (\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 44,
+        "end": 63
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 44,
+        "end": 63
+      },
+      "preview": "    if (e.shiftKey) {\n      if (\n        document.activeElement === firstEl ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 45,
+        "end": 64
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 45,
+        "end": 64
+      },
+      "preview": "      if (\n        document.activeElement === firstEl ||\n        !container.contains(document.activeElement)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 46,
+        "end": 66
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 46,
+        "end": 66
+      },
+      "preview": "        document.activeElement === firstEl ||\n        !container.contains(document.activeElement)\n      ) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 47,
+        "end": 68
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 47,
+        "end": 68
+      },
+      "preview": "        !container.contains(document.activeElement)\n      ) {\n        e.preventDefault();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 48,
+        "end": 69
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 48,
+        "end": 69
+      },
+      "preview": "      ) {\n        e.preventDefault();\n        lastEl.focus();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 49,
+        "end": 71
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 49,
+        "end": 71
+      },
+      "preview": "        e.preventDefault();\n        lastEl.focus();\n    } else {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 50,
+        "end": 72
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 50,
+        "end": 72
+      },
+      "preview": "        lastEl.focus();\n    } else {\n      if (\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 52,
+        "end": 73
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 52,
+        "end": 73
+      },
+      "preview": "    } else {\n      if (\n        document.activeElement === lastEl ||\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 53,
+        "end": 75
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 53,
+        "end": 75
+      },
+      "preview": "      if (\n        document.activeElement === lastEl ||\n        !container.contains(document.activeElement)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 54,
+        "end": 76
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 54,
+        "end": 76
+      },
+      "preview": "        document.activeElement === lastEl ||\n        !container.contains(document.activeElement)\n      ) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 55,
+        "end": 79
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 55,
+        "end": 79
+      },
+      "preview": "        !container.contains(document.activeElement)\n      ) {\n        e.preventDefault();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 56,
+        "end": 81
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 56,
+        "end": 81
+      },
+      "preview": "      ) {\n        e.preventDefault();\n        firstEl.focus();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 57,
+        "end": 82
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 57,
+        "end": 82
+      },
+      "preview": "        e.preventDefault();\n        firstEl.focus();\n  onMounted(async () => {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 58,
+        "end": 83
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 58,
+        "end": 83
+      },
+      "preview": "        firstEl.focus();\n  onMounted(async () => {\n    previousActiveElement = document.activeElement;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 63,
+        "end": 84
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 63,
+        "end": 84
+      },
+      "preview": "  onMounted(async () => {\n    previousActiveElement = document.activeElement;\n    await nextTick();\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 64,
+        "end": 85
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 64,
+        "end": 85
+      },
+      "preview": "    previousActiveElement = document.activeElement;\n    await nextTick();\n    if (targetRef.value) {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 66,
+        "end": 86
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 66,
+        "end": 86
+      },
+      "preview": "    await nextTick();\n    if (targetRef.value) {\n      document.addEventListener(\"keydown\", handleKeyDown);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 68,
+        "end": 87
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 68,
+        "end": 87
+      },
+      "preview": "    if (targetRef.value) {\n      document.addEventListener(\"keydown\", handleKeyDown);\n      const focusableElements = Array.from(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 69,
+        "end": 88
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 69,
+        "end": 88
+      },
+      "preview": "      document.addEventListener(\"keydown\", handleKeyDown);\n      const focusableElements = Array.from(\n        targetRef.value.querySelectorAll(FOCUSABLE_SELECTOR)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/composables/useFocusTrap.js",
+        "start": 71,
+        "end": 90
+      },
+      "loc2": {
+        "file": "packages/ui/src/composables/useFocusTrap.js",
+        "start": 71,
+        "end": 90
+      },
+      "preview": "      const focusableElements = Array.from(\n        targetRef.value.querySelectorAll(FOCUSABLE_SELECTOR)\n      ).filter(isVisible);\n..."
+    }
+  ]
 }

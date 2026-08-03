@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-Prior to this architectural change, our individual clinical input components (`ClinicalInput.vue`, `ClinicalRadioGroup.vue`, and `ClinicalLookupInput.vue`) were heavily coupled with duplicated logic. Each component independently managed query state, validation error representation, query flags, event bubbling logic, and interactive panel toggle states (`ClinicalQueryPanel.vue`). 
+Prior to this architectural change, our individual clinical input components (`ClinicalInput.vue`, `ClinicalRadioGroup.vue`, and `ClinicalLookupInput.vue`) were heavily coupled with duplicated logic. Each component independently managed query state, validation error representation, query flags, event bubbling logic, and interactive panel toggle states (`ClinicalQueryPanel.vue`).
 
 This structural coupling resulted in significant code duplication across input elements, increased maintenance overhead, and blocked planned styling migrations to modern primitives (such as Radix Vue and Tailwind CSS). To unblock these advancements and guarantee consistent visual and behavioral patterns across the platform, we needed to separate regulatory/query/layout logic from basic input rendering.
 
@@ -53,7 +53,7 @@ This decision addresses the following requirements:
 
 ## 5. Consequences & Trade-offs
 
-* **Positive Impact:** 
+* **Positive Impact:**
   * Over 150 lines of duplicate logic were successfully removed from clinical input components.
   * Unified accessibility behavior (Escape key dismissals and focus management) across all input components.
   * Creation of new inputs (e.g. multi-select checkbox grids, datepickers) is now straightforward since the layout wrapper handles all query lifecycle events natively.
@@ -72,4 +72,3 @@ This decision addresses the following requirements:
   - Verify through unit and integration tests: `pnpm --filter web test:unit`
   - Confirm all clinical workflows function using end-to-end tests: `pnpm --filter web test:e2e`
   - Confirm markdown and ADR compliance via `python3 scripts/validate_adrs.py` and `python3 scripts/validate_markdown.py`.
-

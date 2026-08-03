@@ -52,4 +52,3 @@ To satisfy the system requirement **PRD-SYS-001** and ensure strict adherence to
 
 * **Affected Repositories / Services:** `packages/security/rbac.py`, `apps/designer/main.py`, `apps/designer/soa_models.py`, `tests/test_rbac.py`, `tests/test_sdv_item_level_rbac.py`.
 * **Verification Plan:** Validated via `uv run ruff check .` and unit tests in `tests/test_rbac.py`.
-

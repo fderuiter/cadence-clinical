@@ -39,7 +39,7 @@ This decision directly implements requirements under **PRD-SYS-001** and **PRD-S
   - A prominent, warning markdown banner (`DRAFT_BANNER`) is prepended to the top of all generated documents.
   - All test outcomes missing from the report are mapped to `UNVERIFIED` (marked as `⚪ (UNVERIFIED)` or `⚪ UNVERIFIED`) and overall requirement status to `⚠️ **Unverified**`.
   - Durations are strictly set to `N/A`.
-* **Pros:** 
+* **Pros:**
   - Prevents accidental generation of final verified files.
   - Highly visible draft/unverified badges.
   - Seamless PR integration (the synchronization orchestrator automatically appends `--draft` for dry-run validation checks, verifying layout and links without full execution).
@@ -52,11 +52,11 @@ This decision directly implements requirements under **PRD-SYS-001** and **PRD-S
 
 ## 5. Consequences & Trade-offs
 
-* **Positive Impact:** 
+* **Positive Impact:**
   - Direct alignment with GxP and Part 11 data integrity standards.
   - Prompt alert feedback in standard CLI runs when a test execution has been skipped or missed.
   - Easy visual recognition of draft artifacts for reviewers and compliance auditors.
-* **Negative Impact / Technical Debt:** 
+* **Negative Impact / Technical Debt:**
   - Developers must use `--draft` to preview documents if they have not run tests, or run the full orchestration helper.
   - Ensure orchestration and dry-run flows reject the staging of documents containing the draft warnings.
 

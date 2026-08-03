@@ -47,7 +47,7 @@ The `X-Sig-Token` is a JSON Web Token (JWT) signed with the **HS256** algorithm.
 
 ## 3. Cryptographic & Verification Contract
 
-Downstream microservices (via `GatewayAuthMiddleware` or specific verification components) MUST enforce the following validation pipeline upon receiving a signature-gated mutation. 
+Downstream microservices (via `GatewayAuthMiddleware` or specific verification components) MUST enforce the following validation pipeline upon receiving a signature-gated mutation.
 
 This verification is centralized via the `verify_and_consume_sig_token` helper in the shared library (`packages/security/sig_token_verifier.py`) which orchestrates the decryption, temporal, identity, and single-use validation steps. Downstream microservices MUST call this helper, while applying any additional domain-specific rules (such as local action gating in eConsent):
 
