@@ -1,12 +1,12 @@
 <template>
-  <fieldset
-    :id="`field-container-${id}`"
-    class="clinical-radio-grid"
-    :class="`grid-span-${gridSpan}`"
-    :style="`grid-column: span ${gridSpan};`"
+  <ClinicalFieldLayout
+    :id="id"
+    :label="label"
+    :query="query"
+    :grid-span="gridSpan"
+    tag="fieldset"
   >
-    <legend>{{ label }}</legend>
-    <div class="radio-options-wrapper">
+    <template #default="{ id: slotId }">
       <div class="radio-options">
         <div
           v-for="(opt, idx) in normalizedOptions"
@@ -14,9 +14,9 @@
           class="radio-option"
         >
           <input
-            :id="`${id}_option_${idx}`"
+            :id="`${slotId}_option_${idx}`"
             type="radio"
-            :name="id"
+            :name="slotId"
             :value="opt.value"
             :checked="modelValue === opt.value"
             @change="
@@ -24,37 +24,16 @@
               $emit('change', opt.value, $event.target);
             "
           />
-          <label :for="`${id}_option_${idx}`">{{ opt.label }}</label>
+          <label :for="`${slotId}_option_${idx}`">{{ opt.label }}</label>
         </div>
       </div>
-
-      <!-- Query Flag -->
-      <ClinicalQueryFlag
-        :id="id"
-        :query="query"
-        :is-open="isQueryOpen"
-        @click="isQueryOpen = !isQueryOpen"
-      />
-    </div>
-
-    <!-- Query Panel -->
-    <ClinicalQueryPanel
-      v-if="isQueryOpen"
-      :id="id"
-      :query="query"
-      @close-panel="isQueryOpen = false"
-      @create-query="$emit('create-query', $event)"
-      @respond-query="$emit('respond-query', $event)"
-      @close-query="$emit('close-query')"
-      @reopen-query="$emit('reopen-query')"
-    />
-  </fieldset>
+    </template>
+  </ClinicalFieldLayout>
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
-import ClinicalQueryFlag from "./ClinicalQueryFlag.vue";
-import ClinicalQueryPanel from "./ClinicalQueryPanel.vue";
+import { computed } from "vue";
+import ClinicalFieldLayout from "./ClinicalFieldLayout.vue";
 
 const props = defineProps({
   id: {
@@ -86,13 +65,7 @@ const props = defineProps({
 defineEmits([
   "update:modelValue",
   "change",
-  "create-query",
-  "respond-query",
-  "close-query",
-  "reopen-query",
 ]);
-
-const isQueryOpen = ref(false);
 
 const normalizedOptions = computed(() => {
   return props.options.map((opt) => {

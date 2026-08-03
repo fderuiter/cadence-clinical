@@ -115,6 +115,34 @@
           </div>
         </div>
 
+        <!-- Batch Verification Action Bar -->
+        <div
+          v-if="selectedBatchFields.length > 0"
+          id="batch-sdv-bar"
+          style="
+            background-color: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          "
+        >
+          <div style="font-size: 0.9rem; font-weight: 600; color: #1e40af">
+            Selected {{ selectedBatchFields.length }} fields for Batch Source Data Verification
+          </div>
+          <button
+            id="btn-batch-verify"
+            class="btn btn-primary"
+            style="background-color: #2563eb; color: white; font-weight: bold; padding: 6px 12px; font-size: 0.85rem;"
+            @click="initiateBatchVerify"
+          >
+            Batch Verify Selected ({{ selectedBatchFields.length }})
+          </button>
+        </div>
+
         <form
           id="form-VS_DEMO"
           class="clinical-form clinical-form-grid"
@@ -179,6 +207,43 @@
                   "
                 >
                   Source Document Verified (SDV)
+                </label>
+              </div>
+
+              <!-- Batch SDV Selection Checkbox -->
+              <div
+                v-if="isAuthorizedForBulkSdv"
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  background-color: #eff6ff;
+                  border: 1px dashed #bfdbfe;
+                  padding: 8px;
+                  border-radius: 4px;
+                  margin-top: 4px;
+                "
+                class="batch-sdv-box"
+              >
+                <input
+                  :id="`batch-sdv-${field.id}`"
+                  type="checkbox"
+                  :value="field.id"
+                  v-model="selectedBatchFields"
+                  style="cursor: pointer"
+                  class="batch-sdv-checkbox"
+                />
+                <label
+                  :for="`batch-sdv-${field.id}`"
+                  style="
+                    font-size: 0.8rem;
+                    color: #1e40af;
+                    font-weight: 600;
+                    margin: 0;
+                    cursor: pointer;
+                  "
+                >
+                  Select for Batch SDV
                 </label>
               </div>
             </div>
@@ -936,6 +1001,17 @@
               "
             />
           </div>
+          <div class="form-group" style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+            <input
+              id="reauth-simulate-delay"
+              type="checkbox"
+              v-model="simulateDelay"
+              style="cursor: pointer;"
+            />
+            <label for="reauth-simulate-delay" style="font-size: 0.8rem; color: #64748b; font-weight: 500; cursor: pointer; margin: 0;">
+              Simulate 65s delay (FDA 21 CFR Part 11 Timeout Test)
+            </label>
+          </div>
           <div
             v-if="reauthError"
             class="validation-error-msg"
@@ -963,6 +1039,7 @@
 
 <script setup>
 import { ref, reactive, watch, onMounted, computed } from "vue";
+import { useRoute } from "vue-router";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
@@ -973,6 +1050,7 @@ import ClinicalFormField from "../components/clinical/ClinicalFormField.vue";
 import ReasonModal from "../components/ReasonModal.vue";
 import ConflictResolutionModal from "../components/ConflictResolutionModal.vue";
 import { useSyncStore } from "../stores/sync";
+import { useNotificationsStore } from "../stores/notifications";
 import { ClientSyncEngine } from "../utils/syncEngine";
 
 const ecrfReasonOptions = [
@@ -985,6 +1063,7 @@ const ecrfReasonOptions = [
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
+const route = useRoute();
 
 const syncStore = useSyncStore();
 const syncEngine = new ClientSyncEngine();
@@ -1123,6 +1202,14 @@ const isCraUser = computed(() => {
   return activeUserRole.value === "cra";
 });
 
+const selectedBatchFields = ref([]);
+const simulateDelay = ref(false);
+
+const isAuthorizedForBulkSdv = computed(() => {
+  const role = activeUserRole.value;
+  return role === "cra" || role === "monitor" || role === "data_manager";
+});
+
 function getSessionKey() {
   return `${selectedSubjectId.value}:${selectedVisitId.value}`;
 }
@@ -1135,6 +1222,19 @@ function getSdvKey(fieldId) {
 function handleSdvToggle(fieldId, checked) {
   pendingSdvToggle.value = { fieldId, checked };
   showReasonModal.value = true;
+}
+
+function initiateBatchVerify() {
+  if (selectedBatchFields.value.length === 0) {
+    alert("No fields selected for batch verification!");
+    return;
+  }
+  reauthAction.value = "BULK_SDV";
+  reauthUsername.value = store.user.username || authStore.identity?.username || "fderuiter";
+  reauthPassword.value = "";
+  reauthTotp.value = "";
+  reauthError.value = "";
+  showReauthModal.value = true;
 }
 
 const pendingSdvToggle = ref(null);
@@ -1199,6 +1299,24 @@ watch(
 );
 
 onMounted(() => {
+  if (route && route.query) {
+    if (route.query.studyId) store.activeStudyId = route.query.studyId;
+    if (route.query.siteId) store.activeSiteId = route.query.siteId;
+    if (route.query.subjectId) {
+      store.activeSubjectId = route.query.subjectId;
+      const sId = String(route.query.subjectId);
+      if (sId.includes("002")) selectedSubjectId.value = "SUBJ-002";
+      else if (sId.includes("003")) selectedSubjectId.value = "SUBJ-003";
+      else selectedSubjectId.value = "SUBJ-001";
+    }
+    if (route.query.visitId) {
+      store.activeVisitId = route.query.visitId;
+      const vId = String(route.query.visitId);
+      if (vId.toLowerCase().includes("week2") || vId.toLowerCase().includes("week 2")) selectedVisitId.value = "Week2";
+      else if (vId.toLowerCase().includes("week4") || vId.toLowerCase().includes("week 4")) selectedVisitId.value = "Week4";
+      else selectedVisitId.value = "Screening";
+    }
+  }
   loadEcrfSession();
 });
 
@@ -1312,6 +1430,50 @@ function saveChange(finalReason) {
 
 function commitChange(field, oldValue, newValue, reason) {
   store.formValues[field.id] = newValue;
+
+  // Check if field has an active SDV verification status
+  const sKey = getSdvKey(field.id);
+  if (sdvStates[sKey] === true) {
+    sdvStates[sKey] = false;
+
+    // Add ledger block for SDV_CLEAR
+    store.addLedgerBlock(
+      "SDV_CLEAR",
+      {
+        fieldId: field.id,
+        label: field.label,
+        subjectId: selectedSubjectId.value,
+        visitId: selectedVisitId.value,
+        oldValue,
+        newValue,
+      },
+      "Verification cleared automatically due to field value modification"
+    );
+
+    // Dispatch alert to notifications store
+    try {
+      const notifStore = useNotificationsStore();
+      const newNotif = {
+        id: "notif-sdv-clear-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4),
+        recipient_user_id: store.user.username || "fderuiter",
+        recipient_role: "monitor",
+        category: "ALERTS",
+        priority: "HIGH",
+        channels: "IN_APP",
+        message_content: `Verification cleared automatically: Field "${field.label}" was modified from "${oldValue}" to "${newValue}" for Subject ${selectedSubjectId.value}.`,
+        related_entity_id: field.id,
+        related_entity_type: "FIELD",
+        status: "OPEN",
+        delivery_state: "DELIVERED",
+        created_at: new Date().toISOString(),
+        created_by: "system",
+      };
+      notifStore.notifications.unshift(newNotif);
+    } catch (e) {
+      console.error("Failed to append notification alert", e);
+    }
+  }
+
   store.addLedgerBlock(
     "FIELD_CHANGE",
     {
@@ -1558,6 +1720,105 @@ async function confirmReauth() {
         showReauthModal.value = true;
       } else {
         reauthError.value = err.message || "Failed to complete batch sign-off.";
+      }
+    }
+  } else if (action === "BULK_SDV") {
+    try {
+      reauthError.value = "";
+
+      const studyId = store.currentUsdm.studyId || "STUDY-USDM-001";
+      const fieldsToVerify = [...selectedBatchFields.value];
+      const signingReason = "Batch Source Data Verification (SDV)";
+
+      // Calculate SHA-256 batchId of our selected fields
+      const normStudy = studyId.trim();
+      const normFields = fieldsToVerify.sort().join(",");
+      const bindingStr = `${normStudy}:SDV:${normFields}:${signingReason}`;
+
+      const msgBuffer = new TextEncoder().encode(bindingStr);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const batchId = hashArray
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+
+      // Start dual-factor credentials verification
+      let tokenRequestedAt = Date.now();
+      if (simulateDelay.value) {
+        tokenRequestedAt -= 65000; // shift back to simulate 65s expired token
+      }
+      
+      // 1. Obtain signature token
+      const reauthRes = await soaClient.verifySignature(
+        {
+          username,
+          password,
+          totp,
+          action: "/api/v1/execution/batch-sign-off",
+          batchId,
+        },
+        authStore.accessToken
+      );
+
+      const sigToken = reauthRes.sig_token;
+
+      // Check for compliance lockout: 60-second authentication window limit
+      const elapsed = (Date.now() - tokenRequestedAt) / 1000;
+      if (elapsed > 60) {
+        throw new Error("Compliance Lockout: The electronic signature verification token is older than 60 seconds.");
+      }
+
+      // 2. Call batch sign-off API
+      const signoffRes = await soaClient.batchSignOff(
+        {
+          studyId,
+          targetType: "FORM",
+          targetIds: fieldsToVerify,
+          signingReason,
+        },
+        {
+          userId: username,
+          roles: store.user.roles ? store.user.roles.join(",") : "monitor",
+          changeReason: signingReason,
+          sigToken,
+        },
+        authStore.accessToken
+      );
+
+      // 3. Update local SDV states for each verified field and write to ledger
+      for (const fieldId of fieldsToVerify) {
+        const sKey = getSdvKey(fieldId);
+        sdvStates[sKey] = true;
+
+        store.addLedgerBlock(
+          "SDV_TOGGLE",
+          {
+            subjectId: selectedSubjectId.value,
+            visitId: selectedVisitId.value,
+            fieldId,
+            is_sdv_verified: true,
+          },
+          "Batch Source Data Verification (SDV) confirmed"
+        );
+      }
+
+      // Clean up variables & UI state
+      selectedBatchFields.value = [];
+      showReauthModal.value = false;
+      reauthTotp.value = "";
+      alert(
+        `Identity verified. Batch Source Data Verification (SDV) completed successfully for selected fields!`
+      );
+    } catch (err) {
+      reauthPassword.value = "";
+      reauthTotp.value = "";
+
+      if (err.message === "REAUTHENTICATION_REQUIRED" || err.status === 401) {
+        reauthError.value =
+          "Identity verification expired or invalid. Please try again.";
+        showReauthModal.value = true;
+      } else {
+        reauthError.value = err.message || "Failed to complete batch SDV.";
       }
     }
   }
