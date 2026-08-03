@@ -69,7 +69,7 @@ charset-normalizer       3.4.9
 click                    8.4.2
 colorama                 0.4.6
 coverage                 7.15.2
-cryptography             49.0.0
+cryptography             50.0.0
 cssselect2               0.9.0
 cyclonedx-python-lib     11.11.0
 defusedxml               0.7.1
