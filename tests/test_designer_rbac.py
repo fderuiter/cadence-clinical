@@ -160,3 +160,26 @@ def test_restricted_roles_denied_designer_mutations(principals):
 
         # study_design:approve denied
         assert has_permission(principal, "study_design:approve") is False
+
+
+def test_soa_rbac_permissions(principals):
+    """Verify that 'soa' resource permissions are correctly assigned according to the RBAC matrix."""
+    # Write roles: sysadmin, designer, admin_role
+    for role_name in ("sysadmin", "designer", "admin_role"):
+        principal = principals[role_name]
+        assert has_permission(principal, "soa:create") is True
+        assert has_permission(principal, "soa:read") is True
+        assert has_permission(principal, "soa:update") is True
+        assert has_permission(principal, "soa:delete") is True
+
+    # Read-only roles: dm, cra, crc, investigator, auditor
+    for role_name in ("dm", "cra", "crc", "investigator", "auditor"):
+        principal = principals[role_name]
+        assert has_permission(principal, "soa:read") is True
+        assert has_permission(principal, "soa:create") is False
+        assert has_permission(principal, "soa:update") is False
+        assert has_permission(principal, "soa:delete") is False
+
+    # Subject role should be denied read/write on soa
+    assert has_permission(principals["subject"], "soa:read") is False
+    assert has_permission(principals["subject"], "soa:create") is False

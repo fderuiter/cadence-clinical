@@ -136,3 +136,27 @@ def test_unknown_role_returns_empty_permissions():
     """
     assert get_permissions_for_role("NonExistentRole") == set()
     assert has_permission("NonExistentRole", PermissionEnum.STUDY_READ) is False
+
+
+def test_soa_granular_permissions():
+    """Verify that 'soa' PermissionEnum values are correctly defined and mapped in the role permissions map."""
+    assert PermissionEnum.SOA_READ == "soa:read"
+    assert PermissionEnum.SOA_MANAGE == "soa:manage"
+
+    # SponsorAdmin and SponsorDesigner roles should have SOA_MANAGE
+    assert has_permission("SponsorAdmin", PermissionEnum.SOA_MANAGE) is True
+    assert has_permission("SponsorDesigner", PermissionEnum.SOA_MANAGE) is True
+
+    # Read-oriented roles should have SOA_READ
+    assert has_permission("PrincipalInvestigator", PermissionEnum.SOA_READ) is True
+    assert has_permission("ClinicalResearchCoordinator", PermissionEnum.SOA_READ) is True
+    assert has_permission("ClinicalResearchAssociate", PermissionEnum.SOA_READ) is True
+    assert has_permission("DataManager", PermissionEnum.SOA_READ) is True
+    assert has_permission("Auditor", PermissionEnum.SOA_READ) is True
+
+    # SponsorDesigner should NOT have SOA_READ unless explicitly mapped
+    assert has_permission("SponsorDesigner", PermissionEnum.SOA_READ) is False
+
+    # Subject role should have neither
+    assert has_permission("Subject", PermissionEnum.SOA_READ) is False
+    assert has_permission("Subject", PermissionEnum.SOA_MANAGE) is False
