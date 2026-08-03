@@ -187,7 +187,9 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
 
       authStore.isDemoMode = true;
 
-      await expect(authStore.login()).rejects.toThrow("Offline login fallback is disabled in production environments.");
+      await expect(authStore.login()).rejects.toThrow(
+        "Offline login fallback is disabled in production environments."
+      );
 
       // Clean up
       import.meta.env.PROD = originalProd;
@@ -205,7 +207,9 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
 
       authStore.isDemoMode = true;
 
-      await expect(authStore.logout()).rejects.toThrow("Offline logout fallback is disabled in production environments.");
+      await expect(authStore.logout()).rejects.toThrow(
+        "Offline logout fallback is disabled in production environments."
+      );
 
       // Clean up
       import.meta.env.PROD = originalProd;
