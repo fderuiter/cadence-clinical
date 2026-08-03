@@ -256,9 +256,6 @@ def build_comment_body(
     pr_title, changed_files = get_pr_metadata(repo, pr_number)
     component_summary = summarize_components(changed_files)
 
-    checked_traceability = (
-        "[x]" if outcomes.get("traceability") in ("success", "passed") else "[ ]"
-    )
     checked_lint = (
         "[x]"
         if outcomes.get("lint") in ("success", "passed")
@@ -271,24 +268,18 @@ def build_comment_body(
         and outcomes.get("adr") in ("success", "passed")
         else "[ ]"
     )
-    checked_test = "[x]" if outcomes.get("test") in ("success", "passed") else "[ ]"
-    checked_adr = "[x]" if outcomes.get("adr") in ("success", "passed") else "[ ]"
-    checked_suite = (
+    checked_test = (
         "[x]"
-        if all(
-            outcomes.get(k) in ("success", "passed")
-            for k in [
-                "lint",
-                "test",
-                "frontend",
-                "adr",
-                "audit",
-                "deid",
-                "traceability",
-            ]
-        )
+        if outcomes.get("test") in ("success", "passed")
+        and outcomes.get("frontend") in ("success", "passed")
         else "[ ]"
     )
+    checked_traceability = (
+        "[x]" if outcomes.get("traceability") in ("success", "passed") else "[ ]"
+    )
+    checked_adr = "[x]" if outcomes.get("adr") in ("success", "passed") else "[ ]"
+    checked_suite = "[x]" if not has_failures else "[ ]"
+
     conflict_outcome = outcomes.get("conflict", "success")
     checked_conflict = (
         "[x]"
