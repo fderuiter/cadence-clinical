@@ -93,7 +93,7 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     // Total = 3
     expect(items.length).toBe(3);
 
-    const names = items.map((el) => el.find(".command-name").text());
+    const names = items.map(el => el.find(".command-name").text());
     expect(names).toContain("MDR Protocol Designer");
     expect(names).toContain("eConsent Authoring");
     expect(names).toContain("Notifications");
@@ -139,9 +139,7 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     await input.setValue("xyz123nonexistent");
     items = wrapper.findAll(".command-item");
     expect(items.length).toBe(0);
-    expect(wrapper.find(".command-palette-no-results").text()).toContain(
-      "No matching modules found."
-    );
+    expect(wrapper.find(".command-palette-no-results").text()).toContain("No matching modules found.");
   });
 
   it("navigates list highlighting using ArrowUp/ArrowDown and resets selectedIndex on search query change", async () => {

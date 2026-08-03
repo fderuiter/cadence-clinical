@@ -119,6 +119,7 @@ async def test_gateway_auth_middleware_tenant_fallback():
 
     from fastapi import FastAPI
     from fastapi.responses import PlainTextResponse
+
     from packages.security.signing import generate_gateway_signature
 
     app = FastAPI()

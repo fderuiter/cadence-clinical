@@ -1,3 +1,56 @@
 {
-  "duplicates": []
+  "duplicates": [
+    {
+      "loc1": {
+        "file": "apps/subject-portal/style.css",
+        "start": 773,
+        "end": 790
+      },
+      "loc2": {
+        "file": "apps/web/src/style.css",
+        "start": 901,
+        "end": 918
+      },
+      "preview": ".touch-target,\n.min-touch-target,\n.touch-target-interactive {\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 39,
+        "end": 53
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
+        "start": 67,
+        "end": 81
+      },
+      "preview": "  },\n  query: {\n    type: Object,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 40,
+        "end": 54
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
+        "start": 68,
+        "end": 82
+      },
+      "preview": "  query: {\n    type: Object,\n    default: null,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/ui/src/components/clinical/ClinicalInput.vue",
+        "start": 41,
+        "end": 55
+      },
+      "loc2": {
+        "file": "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
+        "start": 69,
+        "end": 83
+      },
+      "preview": "    type: Object,\n    default: null,\n  },\n..."
+    }
+  ]
 }
