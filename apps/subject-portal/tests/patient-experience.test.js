@@ -4,6 +4,8 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 describe("Patient Experience & Adaptive Sync Retry Integration", () => {
   beforeEach(async () => {
     window.__MOCK_TEST_ENV__ = true;
+    window.__MOCK_GET_QUEUED__ = false;
+    window.__MOCK_GET_QUEUED_VAL__ = null;
     document.body.innerHTML = `
       <div id="app">
         <div id="tasks-list-container"></div>
@@ -86,6 +88,22 @@ describe("Patient Experience & Adaptive Sync Retry Integration", () => {
       change_reason: "first entry",
       username: "test_user",
     });
+
+    // Mock the retrieval globally to decouple fake timers from IndexedDB async scheduler
+    window.__MOCK_GET_QUEUED__ = true;
+    window.__MOCK_GET_QUEUED_VAL__ = [
+      {
+        sequence_number: 1,
+        subject_id: "subject_test_001",
+        diary_id: "inst_daily_diary",
+        assignment_id: "assign_01",
+        answers: { question1: "answer1" },
+        change_reason: "first entry",
+        username: "test_user",
+        status: "QUEUED",
+        device_timestamp: new Date().toISOString(),
+      },
+    ];
 
     // Use vitest fake timers
     vi.useFakeTimers();

@@ -146,6 +146,7 @@ def main() -> None:
                     ".git",
                     "dist",
                     "build",
+                    "coverage",
                 ]
             ):
                 continue
@@ -309,6 +310,10 @@ def main() -> None:
                                 {
                                     "apps/designer/rules.py",
                                     "packages/core-models/usdm_ingestion.py",
+                                },
+                                {
+                                    "apps/web/src/style.css",
+                                    "apps/subject-portal/style.css",
                                 },
                             ]
                         ):

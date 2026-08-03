@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-Maintaining strict Web Content Accessibility Guidelines (WCAG) 2.1 Compliance is a fundamental business requirement for patient-facing (eCOA/ePRO) clinical software platforms. Previously, our custom `toBeAccessible` testing matcher (which wraps `axe-core`) was coupled tightly to the main clinical dashboard web application (`apps/web`). This structure led to duplicate testing configurations, fragmented implementations in the patient portal (`apps/subject-portal`), and lack of automated enforcement gates. 
+Maintaining strict Web Content Accessibility Guidelines (WCAG) 2.1 Compliance is a fundamental business requirement for patient-facing (eCOA/ePRO) clinical software platforms. Previously, our custom `toBeAccessible` testing matcher (which wraps `axe-core`) was coupled tightly to the main clinical dashboard web application (`apps/web`). This structure led to duplicate testing configurations, fragmented implementations in the patient portal (`apps/subject-portal`), and lack of automated enforcement gates.
 
 Additionally, our frontend continuous integration (CI) pipelines lacked enforced code coverage thresholds, introducing risks of regression and code quality fragmentation. We need a clean, unified engineering pattern to centralize testing utilities and enforce an 80% code coverage threshold in CI to guarantee quality assurance and accessibility compliance under system requirement PRD-SYS-001.
 

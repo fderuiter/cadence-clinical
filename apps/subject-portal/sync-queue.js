@@ -251,6 +251,9 @@ async function decryptRecord(record) {
 /* v8 ignore stop */
 
 export async function getQueuedSubmissions() {
+  if (typeof window !== "undefined" && window.__MOCK_GET_QUEUED__) {
+    return window.__MOCK_GET_QUEUED_VAL__ || [];
+  }
   const db = await openDatabase();
   return new Promise((resolve, reject) => {
     const tx = db.transaction("submissions", "readonly");
@@ -272,6 +275,9 @@ export async function getQueuedSubmissions() {
 }
 
 export async function getAllSubmissions() {
+  if (typeof window !== "undefined" && window.__MOCK_GET_QUEUED__) {
+    return window.__MOCK_GET_QUEUED_VAL__ || [];
+  }
   const db = await openDatabase();
   return new Promise((resolve, reject) => {
     const tx = db.transaction("submissions", "readonly");

@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-Previously, rigid global stylesheets enforced a minimum height of `44px` on all native buttons, select dropdowns, textareas, and input elements using high-precedence overrides. While this ensured tablet and mobile touch-target compliance (satisfying WCAG 2.1 AA and in-memory accessibility requirements under **PRD-CRF-015**), it severely impacted administrative workflows on desktop screens. Desktop users navigating dense tabular document grids and multi-column clinical forms faced excessive vertical scrolling and layout distortion due to the inflated elements. 
+Previously, rigid global stylesheets enforced a minimum height of `44px` on all native buttons, select dropdowns, textareas, and input elements using high-precedence overrides. While this ensured tablet and mobile touch-target compliance (satisfying WCAG 2.1 AA and in-memory accessibility requirements under **PRD-CRF-015**), it severely impacted administrative workflows on desktop screens. Desktop users navigating dense tabular document grids and multi-column clinical forms faced excessive vertical scrolling and layout distortion due to the inflated elements.
 
 To resolve this, we have moved from global, element-level overrides to an opt-in helper class model. This allows desktop layouts to default to compact, highly dense structures, while dynamically scaling to touch-friendly sizes (44px) on mobile and tablet viewport simulations.
 
