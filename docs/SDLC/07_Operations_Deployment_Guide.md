@@ -207,11 +207,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Set up Python 3.12
+      - name: Set up Python 3.14
         uses: actions/setup-python@v4
         with:
           python-with-architecture: 'x64'
-          python-version: '3.12'
+          python-version: '3.14'
 
       - name: Install UV Package Manager
         run: |
@@ -245,10 +245,10 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Set up Python 3.12
+      - name: Set up Python 3.14
         uses: actions/setup-python@v4
         with:
-          python-version: '3.12'
+          python-version: '3.14'
 
       - name: Install UV and Sync
         run: |

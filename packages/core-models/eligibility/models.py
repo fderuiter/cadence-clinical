@@ -75,7 +75,7 @@ class FieldReference(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def validate_internal_consistency(self) -> "FieldReference":
+    def validate_internal_consistency(self) -> FieldReference:
         """
         Ensure that the domain and variable match the components extracted from raw_reference.
         """
@@ -103,7 +103,7 @@ class ExpressionNode(BaseModel):
         None,
         description="Operator for logical (and, or, not) or comparison (==, !=, <, <=, >, >=) nodes.",
     )
-    operands: list["ExpressionNode"] | None = Field(
+    operands: list[ExpressionNode] | None = Field(
         None,
         description="Child operands of logical or comparison nodes.",
     )
@@ -117,7 +117,7 @@ class ExpressionNode(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_node(self) -> "ExpressionNode":
+    def validate_node(self) -> ExpressionNode:
         """
         Validate node contents based on its type.
         """
@@ -252,7 +252,7 @@ class EligibilityCriterion(Part11AuditMixin):
         return data
 
     @model_validator(mode="after")
-    def sync_backwards_compatibility_after(self) -> "EligibilityCriterion":
+    def sync_backwards_compatibility_after(self) -> EligibilityCriterion:
         # Ensure all fields are fully synchronized on the instance
         cid = self.id or self.criterion_id or self.identifier
         if cid:
@@ -320,7 +320,7 @@ class NodeEvaluation(BaseModel):
         ...,
         description="Trace explanation detailing how this node evaluated to its outcome.",
     )
-    children: list["NodeEvaluation"] = Field(
+    children: list[NodeEvaluation] = Field(
         default_factory=list,
         description="Child node evaluation details.",
     )

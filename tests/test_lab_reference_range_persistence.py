@@ -475,3 +475,66 @@ async def test_schema_evolution_migration_upgrade():
         assert row[2] is not None
 
     await temp_engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_gxp_audit_quartet_explicit_assertions():
+    """
+    Task 1: Confirm the audit quartet persists and defaults correctly on the reference range model.
+    Verify created_at, created_by, reason_for_change, and version_index persist on a saved LabReferenceRange row.
+    Assert created_at populates from server default, and version_index defaults to 1 on insert.
+    """
+    # Create one with default values
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        ref_default = LabReferenceRange(
+            study_id="STUDY-GX-1",
+            test_code="ALT",
+            test_name="Alanine Aminotransferase",
+            lab_source="CENTRAL",
+            unit="U/L",
+        )
+        session.add(ref_default)
+        await session.flush()
+        default_id = ref_default.id
+
+    async with db_manager.get_session_maker()() as session:
+        result = await session.execute(
+            select(LabReferenceRange).where(LabReferenceRange.id == default_id)
+        )
+        saved = result.scalar_one()
+        assert saved.created_at is not None, "created_at must populate from server default on insert"
+        assert saved.version_index == 1, "version_index must default to 1 on insert"
+        assert saved.created_by is None, "created_by should be None if not provided"
+        assert saved.reason_for_change is None, "reason_for_change should be None if not provided"
+
+    # Create one with explicit audit values
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        ref_explicit = LabReferenceRange(
+            study_id="STUDY-GX-2",
+            test_code="AST",
+            test_name="Aspartate Aminotransferase",
+            lab_source="LOCAL",
+            unit="U/L",
+            created_by="auditor_jules",
+            reason_for_change="Initial setup",
+            version_index=5,
+        )
+        session.add(ref_explicit)
+        await session.flush()
+        explicit_id = ref_explicit.id
+
+    async with db_manager.get_session_maker()() as session:
+        result = await session.execute(
+            select(LabReferenceRange).where(LabReferenceRange.id == explicit_id)
+        )
+        saved = result.scalar_one()
+        assert saved.created_at is not None
+        assert saved.created_by == "auditor_jules", "created_by must persist correctly"
+        assert saved.reason_for_change == "Initial setup", "reason_for_change must persist correctly"
+        assert saved.version_index == 5, "version_index must persist correct custom value"

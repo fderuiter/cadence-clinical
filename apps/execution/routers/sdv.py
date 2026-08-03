@@ -65,7 +65,7 @@ class TSDVConfigCreate(BaseModel):
     trial_random_seed: int | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
-    def validate_seed(self) -> "TSDVConfigCreate":
+    def validate_seed(self) -> TSDVConfigCreate:
         if self.random_sample_percentage > 0.0 and self.trial_random_seed is None:
             raise ValueError(
                 "trial_random_seed is required when random_sample_percentage is greater than 0"

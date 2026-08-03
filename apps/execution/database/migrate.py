@@ -443,6 +443,28 @@ async def upgrade_existing_tables(conn) -> None:
                 text(f"ALTER TABLE {table_name} ADD COLUMN site_id VARCHAR(255);")
             )
 
+    # Update clinical_visits table with new window/compliance columns
+    visit_cols = await conn.run_sync(
+        lambda sc: get_table_columns(sc, "clinical_visits")
+    )
+    if visit_cols:
+        new_visit_cols = [
+            ("planned_date", "TIMESTAMP"),
+            ("window_start", "TIMESTAMP"),
+            ("window_end", "TIMESTAMP"),
+            ("window_status", "VARCHAR(50)"),
+        ]
+        for col_name, col_type in new_visit_cols:
+            if col_name not in visit_cols:
+                print(
+                    f"Adding missing column {col_name} to clinical_visits table..."
+                )
+                await conn.execute(
+                    text(
+                        f"ALTER TABLE clinical_visits ADD COLUMN {col_name} {col_type};"
+                    )
+                )
+
     # Upgrade lab_reference_ranges with new GxP columns
     ref_cols = await conn.run_sync(
         lambda sc: get_table_columns(sc, "lab_reference_ranges")

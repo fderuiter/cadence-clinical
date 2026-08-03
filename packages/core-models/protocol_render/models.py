@@ -37,7 +37,7 @@ class ExportMetadata(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_version_metadata(self) -> "ExportMetadata":
+    def validate_version_metadata(self) -> ExportMetadata:
         """
         Ensures that change_reason is non-empty/non-blank for version index > 1
         to satisfy strict 21 CFR Part 11 compliance.
@@ -80,7 +80,7 @@ class NarrativeSectionView(BaseModel):
         default_factory=list,
         description="List of narrative content items belonging directly to this section.",
     )
-    subsections: list["NarrativeSectionView"] = Field(
+    subsections: list[NarrativeSectionView] = Field(
         default_factory=list,
         description="Subsections nested inside this section.",
     )

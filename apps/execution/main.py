@@ -139,7 +139,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """Handle the lifespan events for the FastAPI application.
 
     Initializes the database session manager on startup and securely
@@ -620,6 +620,10 @@ class VisitCreate(BaseModel):
     visit_name: str
     study_id: str
     visit_date: datetime | None = None
+    planned_date: datetime | None = None
+    window_start: datetime | None = None
+    window_end: datetime | None = None
+    window_status: str | None = None
 
 
 class VisitResponse(BaseModel):
@@ -632,6 +636,10 @@ class VisitResponse(BaseModel):
     study_id: str
     protocol_version_tag: str | None = None
     protocol_version_index: int | None = None
+    planned_date: datetime | None = None
+    window_start: datetime | None = None
+    window_end: datetime | None = None
+    window_status: str | None = None
 
 
 class ObservationCreate(BaseModel):
@@ -681,7 +689,7 @@ class ObservationResponse(BaseModel):
     protocol_version_index: int | None = None
 
     @model_validator(mode="after")
-    def populate_range_fields(self) -> "ObservationResponse":
+    def populate_range_fields(self) -> ObservationResponse:
         if self.range_indicator is None and self.lab_indicator is not None:
             self.range_indicator = self.lab_indicator
         if self.is_out_of_range is None and self.lab_out_of_range is not None:
@@ -1519,6 +1527,10 @@ async def create_visit(
             visit_name=payload.visit_name,
             visit_date=vdate,
             study_id=payload.study_id,
+            planned_date=payload.planned_date,
+            window_start=payload.window_start,
+            window_end=payload.window_end,
+            window_status=payload.window_status,
         )
         # Stamping capture-time protocol-version identity
         stmt_consent = (
@@ -1549,6 +1561,10 @@ async def create_visit(
             study_id=visit_db.study_id,
             protocol_version_tag=visit_db.protocol_version_tag,
             protocol_version_index=visit_db.protocol_version_index,
+            planned_date=visit_db.planned_date,
+            window_start=visit_db.window_start,
+            window_end=visit_db.window_end,
+            window_status=visit_db.window_status,
         )
 
 
@@ -1571,6 +1587,10 @@ class VisitDetailResponse(BaseModel):
     treatment_group: str | None = None
     randomization_seed: str | None = None
     investigational_product_id: str | None = None
+    planned_date: datetime | None = None
+    window_start: datetime | None = None
+    window_end: datetime | None = None
+    window_status: str | None = None
 
 
 @app.get(
@@ -1707,6 +1727,10 @@ async def get_visit_detail(
             "treatment_group": treatment_group,
             "randomization_seed": randomization_seed,
             "investigational_product_id": investigational_product_id,
+            "planned_date": visit.planned_date,
+            "window_start": visit.window_start,
+            "window_end": visit.window_end,
+            "window_status": visit.window_status,
         }
 
         # 5. Apply dynamic blinding filter
@@ -2281,7 +2305,7 @@ def validate_lab_range_payload(data: dict) -> None:
         try:
             age_low_val = float(age_low)
             data["age_low"] = age_low_val
-        except (ValueError, TypeError):
+        except (ValueError, TypeError):  # fmt: skip
             raise HTTPException(
                 status_code=400,
                 detail="Field 'age_low' must be a numeric value.",
@@ -2296,7 +2320,7 @@ def validate_lab_range_payload(data: dict) -> None:
         try:
             age_high_val = float(age_high)
             data["age_high"] = age_high_val
-        except (ValueError, TypeError):
+        except (ValueError, TypeError):  # fmt: skip
             raise HTTPException(
                 status_code=400,
                 detail="Field 'age_high' must be a numeric value.",
@@ -2320,7 +2344,7 @@ def validate_lab_range_payload(data: dict) -> None:
         try:
             low_bound_val = float(low_bound)
             data["low_bound"] = low_bound_val
-        except (ValueError, TypeError):
+        except (ValueError, TypeError):  # fmt: skip
             raise HTTPException(
                 status_code=400,
                 detail="Field 'low_bound' must be a numeric value.",
@@ -2329,7 +2353,7 @@ def validate_lab_range_payload(data: dict) -> None:
         try:
             high_bound_val = float(high_bound)
             data["high_bound"] = high_bound_val
-        except (ValueError, TypeError):
+        except (ValueError, TypeError):  # fmt: skip
             raise HTTPException(
                 status_code=400,
                 detail="Field 'high_bound' must be a numeric value.",
@@ -2348,7 +2372,7 @@ def validate_lab_range_payload(data: dict) -> None:
         try:
             critical_low_val = float(critical_low)
             data["critical_low"] = critical_low_val
-        except (ValueError, TypeError):
+        except (ValueError, TypeError):  # fmt: skip
             raise HTTPException(
                 status_code=400,
                 detail="Field 'critical_low' must be a numeric value.",
@@ -2357,7 +2381,7 @@ def validate_lab_range_payload(data: dict) -> None:
         try:
             critical_high_val = float(critical_high)
             data["critical_high"] = critical_high_val
-        except (ValueError, TypeError):
+        except (ValueError, TypeError):  # fmt: skip
             raise HTTPException(
                 status_code=400,
                 detail="Field 'critical_high' must be a numeric value.",
@@ -3665,7 +3689,7 @@ class BatchSignOffRequest(BaseModel):
     signing_reason: str
 
     @model_validator(mode="after")
-    def validate_request(self) -> "BatchSignOffRequest":
+    def validate_request(self) -> BatchSignOffRequest:
         tt = self.target_type.upper()
         if tt not in ("FORM", "VISIT", "SUBJECT"):
             raise ValueError("target_type must be one of: FORM, VISIT, SUBJECT")
