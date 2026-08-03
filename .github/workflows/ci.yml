@@ -182,6 +182,7 @@ jobs:
         run: |
           git add .secrets.baseline
           uv run pre-commit run detect-secrets --all-files
+          uv run python scripts/audit_security.py
 
       - name: Run DEID compliance scan
         id: run_deid_scan
