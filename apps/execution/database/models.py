@@ -405,6 +405,10 @@ class ClinicalVisit(AuditedModel):
         visit_name (str): The name or description of the visit.
         visit_date (datetime): The actual datetime of the visit encounter.
         study_id (str): The identifier of the clinical trial study.
+        planned_date (datetime): The target planned date for the visit.
+        window_start (datetime): The start of the allowed compliance window.
+        window_end (datetime): The end of the allowed compliance window.
+        window_status (str): The compliance status of the visit encounter timing.
     """
 
     __tablename__ = "clinical_visits"
@@ -421,6 +425,18 @@ class ClinicalVisit(AuditedModel):
     )
     protocol_version_index: Mapped[Optional[int]] = mapped_column(
         Integer, nullable=True
+    )
+    planned_date: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, nullable=True
+    )
+    window_start: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, nullable=True
+    )
+    window_end: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, nullable=True
+    )
+    window_status: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True
     )
 
 

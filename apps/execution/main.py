@@ -620,6 +620,10 @@ class VisitCreate(BaseModel):
     visit_name: str
     study_id: str
     visit_date: datetime | None = None
+    planned_date: datetime | None = None
+    window_start: datetime | None = None
+    window_end: datetime | None = None
+    window_status: str | None = None
 
 
 class VisitResponse(BaseModel):
@@ -632,6 +636,10 @@ class VisitResponse(BaseModel):
     study_id: str
     protocol_version_tag: str | None = None
     protocol_version_index: int | None = None
+    planned_date: datetime | None = None
+    window_start: datetime | None = None
+    window_end: datetime | None = None
+    window_status: str | None = None
 
 
 class ObservationCreate(BaseModel):
@@ -1519,6 +1527,10 @@ async def create_visit(
             visit_name=payload.visit_name,
             visit_date=vdate,
             study_id=payload.study_id,
+            planned_date=payload.planned_date,
+            window_start=payload.window_start,
+            window_end=payload.window_end,
+            window_status=payload.window_status,
         )
         # Stamping capture-time protocol-version identity
         stmt_consent = (
@@ -1549,6 +1561,10 @@ async def create_visit(
             study_id=visit_db.study_id,
             protocol_version_tag=visit_db.protocol_version_tag,
             protocol_version_index=visit_db.protocol_version_index,
+            planned_date=visit_db.planned_date,
+            window_start=visit_db.window_start,
+            window_end=visit_db.window_end,
+            window_status=visit_db.window_status,
         )
 
 
@@ -1571,6 +1587,10 @@ class VisitDetailResponse(BaseModel):
     treatment_group: str | None = None
     randomization_seed: str | None = None
     investigational_product_id: str | None = None
+    planned_date: datetime | None = None
+    window_start: datetime | None = None
+    window_end: datetime | None = None
+    window_status: str | None = None
 
 
 @app.get(
@@ -1707,6 +1727,10 @@ async def get_visit_detail(
             "treatment_group": treatment_group,
             "randomization_seed": randomization_seed,
             "investigational_product_id": investigational_product_id,
+            "planned_date": visit.planned_date,
+            "window_start": visit.window_start,
+            "window_end": visit.window_end,
+            "window_status": visit.window_status,
         }
 
         # 5. Apply dynamic blinding filter
