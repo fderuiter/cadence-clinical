@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
+import { useAuthStore } from "../src/stores/auth";
 import ClinicalInput from "../src/components/clinical/ClinicalInput.vue";
 import ClinicalRadioGroup from "../src/components/clinical/ClinicalRadioGroup.vue";
 import ClinicalLookupInput from "../src/components/clinical/ClinicalLookupInput.vue";
@@ -99,6 +101,73 @@ describe("ClinicalQueryPanel.vue", () => {
 
     await reopenBtn.trigger("click");
     expect(wrapper.emitted("reopen-query")).toBeTruthy();
+  });
+
+  it("displays role-aware labels and fallback statuses correctly", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const authStore = useAuthStore();
+
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Site Investigator"];
+
+    const queryOpen = {
+      status: "OPEN",
+      message: "Value out of bounds",
+    };
+    const wrapperOpenSite = mount(ClinicalQueryPanel, {
+      props: { id: "fieldX", query: queryOpen },
+      global: { plugins: [pinia] },
+    });
+    expect(wrapperOpenSite.text()).toContain("Status: Awaiting Site Action");
+
+    const queryAnswered = {
+      status: "ANSWERED",
+      message: "Value out of bounds",
+      response: "Resolved",
+    };
+    const wrapperAnsweredSite = mount(ClinicalQueryPanel, {
+      props: { id: "fieldX", query: queryAnswered },
+      global: { plugins: [pinia] },
+    });
+    expect(wrapperAnsweredSite.text()).toContain("Status: Submitted to CRA");
+
+    const queryClosed = {
+      status: "CLOSED",
+      message: "Value out of bounds",
+      response: "Resolved",
+    };
+    const wrapperClosedSite = mount(ClinicalQueryPanel, {
+      props: { id: "fieldX", query: queryClosed },
+      global: { plugins: [pinia] },
+    });
+    expect(wrapperClosedSite.text()).toContain("Status: CLOSED");
+
+    authStore.rawRoles = ["CRA"];
+
+    const wrapperOpenMonitor = mount(ClinicalQueryPanel, {
+      props: { id: "fieldX", query: queryOpen },
+      global: { plugins: [pinia] },
+    });
+    expect(wrapperOpenMonitor.text()).toContain(
+      "Status: Awaiting Site Response"
+    );
+
+    const wrapperAnsweredMonitor = mount(ClinicalQueryPanel, {
+      props: { id: "fieldX", query: queryAnswered },
+      global: { plugins: [pinia] },
+    });
+    expect(wrapperAnsweredMonitor.text()).toContain(
+      "Status: Awaiting CRA Review"
+    );
+
+    authStore.isAuthenticated = false;
+    authStore.rawRoles = [];
+    const wrapperOpenFallback = mount(ClinicalQueryPanel, {
+      props: { id: "fieldX", query: queryOpen },
+      global: { plugins: [pinia] },
+    });
+    expect(wrapperOpenFallback.text()).toContain("Status: OPEN");
   });
 });
 
