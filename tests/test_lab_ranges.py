@@ -514,6 +514,78 @@ async def test_convert_lab_unit_db_and_fallback():
         await db_manager.close()
 
 
+@pytest.mark.asyncio
+async def test_lab_reference_range_synonyms_update_and_audit():
+    """Verify that updating synonym columns works fine and does not interfere with audit fields."""
+    from sqlalchemy import select
+
+    from apps.execution.database.core import db_manager
+    from apps.execution.database.models import Base, LabReferenceRange
+
+    db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
+    try:
+        async with db_manager.engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+        session_maker = db_manager.get_session_maker()
+        async with session_maker() as session:
+            lab_range = LabReferenceRange(
+                study_id="STUDY-SYN-UP",
+                test_code="WBC",
+                test_name="White Blood Cells",
+                source="LOCAL",
+                sex_applicability="ALL",
+                low_bound=4.0,
+                high_bound=11.0,
+                created_by="synonym_user",
+                reason_for_change="Initial synonyms",
+                version_index=1,
+            )
+            session.add(lab_range)
+            await session.commit()
+
+        # Update synonym columns
+        async with session_maker() as session:
+            result = await session.execute(
+                select(LabReferenceRange).where(
+                    LabReferenceRange.study_id == "STUDY-SYN-UP"
+                )
+            )
+            saved = result.scalar_one()
+            saved.source = "CENTRAL"
+            saved.sex_applicability = "M"
+            saved.low_bound = 4.5
+            saved.high_bound = 11.5
+            saved.reason_for_change = "Updated via synonyms"
+            saved.version_index = 2
+            await session.commit()
+
+        # Assert physical columns mapped and audit fields updated
+        async with session_maker() as session:
+            result = await session.execute(
+                select(LabReferenceRange).where(
+                    LabReferenceRange.study_id == "STUDY-SYN-UP"
+                )
+            )
+            saved = result.scalar_one()
+            assert saved.lab_source == "CENTRAL"
+            assert saved.source == "CENTRAL"
+            assert saved.sex == "M"
+            assert saved.sex_applicability == "M"
+            assert saved.range_low == 4.5
+            assert saved.low_bound == 4.5
+            assert saved.range_high == 11.5
+            assert saved.high_bound == 11.5
+
+            assert saved.created_at is not None
+            assert saved.created_by == "synonym_user"
+            assert saved.reason_for_change == "Updated via synonyms"
+            assert saved.version_index == 2
+
+    finally:
+        await db_manager.close()
+
+
 def test_evaluate_lab_value_all_indicators():
     """Verify that evaluate_lab_value returns the expected lab_indicator values
     (NORMAL, LOW, HIGH, LOW LOW, HIGH HIGH, None) and lab_out_of_range boolean.
