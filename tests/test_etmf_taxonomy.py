@@ -39,6 +39,19 @@ def setup_db():
     asyncio.run(db_manager.close())
 
 
+def test_resolve_document_type_helper():
+    """
+    Verify the resolve_document_type helper works correctly.
+    """
+    from apps.etmf.classification_service import resolve_document_type
+
+    assert resolve_document_type("05.02.01") == "FORM_1572"
+    assert resolve_document_type("05.02.02") == "FINANCIAL_DISCLOSURE"
+    assert resolve_document_type("01.01.03") == "PROTOCOL_SIGNOFF"
+    assert resolve_document_type("01.01.01") is None
+    assert resolve_document_type("99.99.99") is None
+
+
 def test_classification_service_direct():
     """
     Verify classify_tmf_document directly with various inputs.

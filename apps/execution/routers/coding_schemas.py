@@ -68,7 +68,7 @@ class CoderActionRequest(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def validate_override_fields(self) -> "CoderActionRequest":
+    def validate_override_fields(self) -> CoderActionRequest:
         action_upper = (self.action or "").upper()
         if action_upper == "OVERRIDE":
             if not self.reason_for_change or not self.reason_for_change.strip():

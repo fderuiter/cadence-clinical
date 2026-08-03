@@ -16,7 +16,7 @@ from tests.test_clinical_queries import get_v2_auth_headers
 
 
 @pytest_asyncio.fixture(autouse=True)
-async def setup_test_db() -> AsyncGenerator[None, None]:
+async def setup_test_db() -> AsyncGenerator[None]:
     """Setup in-memory SQLite database before each test and clear down after."""
     db_manager.init_db("sqlite+aiosqlite:///:memory:")
     async with db_manager.engine.begin() as conn:
