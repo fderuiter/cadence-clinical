@@ -451,5 +451,35 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
       expect(wrapper.find(".compilation-error").exists()).toBe(false);
       expect(wrapper.find(".compilation-success").exists()).toBe(true);
     });
+
+    it("dynamically toggles touch-target utility classes based on viewport state", async () => {
+      const wrapper = mount(CrfAuthoringCanvas, {
+        props: {
+          formSchema: store.activeForm,
+          selectedFieldId: "field-narrow",
+        },
+      });
+
+      // Default desktop: touch simulation inactive, no touch classes
+      store.setViewport("desktop");
+      await wrapper.vm.$nextTick();
+
+      const widget = wrapper.findComponent(CanvasFieldWidget);
+      // Verify standard text input doesn't have touch target helper classes
+      let inputElement = widget.find("input[type='text']");
+      expect(inputElement.classes()).not.toContain("touch-target-interactive");
+
+      // Switch to tablet: touch simulation active, should append touch classes!
+      store.setViewport("tablet");
+      await wrapper.vm.$nextTick();
+
+      expect(inputElement.classes()).toContain("touch-target-interactive");
+
+      // Switch to mobile: touch simulation active, should append touch classes!
+      store.setViewport("mobile");
+      await wrapper.vm.$nextTick();
+
+      expect(inputElement.classes()).toContain("touch-target-interactive");
+    });
   });
 });
