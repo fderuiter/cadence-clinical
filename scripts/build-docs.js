@@ -4,6 +4,9 @@ const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..');
 
+// Automatically set RTM_DRAFT to true for docs compilation to ensure the process is fail-safe when report.xml is absent.
+process.env.RTM_DRAFT = 'true';
+
 let pnpmCmd = 'pnpm';
 
 /**
