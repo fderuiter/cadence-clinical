@@ -892,7 +892,9 @@ async def test_subject_assignment_missing_diary_alert_dedup_columns():
         db_assign = res.scalars().first()
         assert db_assign is not None
         assert db_assign.last_missed_alert_at == datetime(2026, 11, 20, 10, 0, 0)
-        assert db_assign.last_missed_alert_notified_at == datetime(2026, 11, 20, 10, 5, 0)
+        assert db_assign.last_missed_alert_notified_at == datetime(
+            2026, 11, 20, 10, 5, 0
+        )
 
 
 @pytest.mark.asyncio

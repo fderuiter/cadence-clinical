@@ -166,6 +166,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ### 7. DevOps, Tooling & CI/CD
 - [2026-08-03: Lightweight Path Pattern Boundary Linter](2026-08-03-lightweight-path-pattern-boundary-linter.md)
 - [2026-08-02: Dual-Mode Secret Scanner for Pre-Commit and CI Validation](2026-08-02-dual-mode-secret-scanner-for-pre-commit-and-ci-validation.md)
+- [2026-08-03: Upgrade Environments to Python 3.14](2026-08-03-upgrade-environments-to-python-314.md)
 - [2026-08-01: In-Process ASGI Routing with Live Databases](2026-08-01-in-process-asgi-routing-with-live-databases.md)
 - [2026-07-31: Upgrade Environments to Python 3.12](2026-07-31-upgrade-environments-to-python-312.md)
 
@@ -223,4 +224,5 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-06: GxP Compliance Reporting CI Alignment and Local Dependency Configuration](2026-09-06-gxp-compliance-reporting-ci-alignment.md)
 - [2026-08-02: ADR-[NUMBER]: Enforce Strict Fail-Closed Secrets Validation and Narrow Scanner Exclusions](2026-08-02-enforce-strict-fail-closed-secrets-validation-and-narrow-scanner-exclusions.md)
 - [2026-09-06: Enforce Strict Fail-Closed Environment Rules and Narrow Scanner Exclusions](2026-09-06-enforce-strict-fail-closed-environment-rules.md)
+- [2026-08-03: Upgrade Environments to Python 3.14](2026-08-03-upgrade-environments-to-python-3-14.md)
 - [2026-09-07: Extend Centralized Permission Matrix for eCOA Diary Alert Actions](2026-09-07-extend-ecoa-diary-alert-permissions.md)

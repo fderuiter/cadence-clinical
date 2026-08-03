@@ -937,8 +937,8 @@ def test_missing_diary_alert_rendering():
         "payload": {
             "subject_id": "SUBJ-001",
             "diary_name": "Daily Pain Diary",
-            "due_date": "2023-10-26"
-        }
+            "due_date": "2023-10-26",
+        },
     }
 
     # 1. Render using template file on disk

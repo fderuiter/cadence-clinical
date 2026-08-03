@@ -62,7 +62,10 @@ async def ingest_tmf_document(
     tax_version = taxonomy_version or get_active_catalog().version
 
     # 2 & 3. Classify and resolve artifact, section, and zone via the shared classification service
-    from apps.etmf.classification_service import classify_tmf_document, resolve_document_type
+    from apps.etmf.classification_service import (
+        classify_tmf_document,
+        resolve_document_type,
+    )
 
     hint = artifact_code or artifact_type
     classification = classify_tmf_document(

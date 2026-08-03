@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator, ConfigDict, AliasChoices
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 
 class VariableMetadata(BaseModel):
@@ -125,7 +125,9 @@ class DatasetJSON(BaseModel):
     datasetJSONCreationDateTime: str = Field(
         default_factory=lambda: datetime.utcnow().isoformat() + "Z",
         serialization_alias="datasetJSONCreationDateTime",
-        validation_alias=AliasChoices("datasetJSONCreationDateTime", "creationDateTime"),
+        validation_alias=AliasChoices(
+            "datasetJSONCreationDateTime", "creationDateTime"
+        ),
         description="ISO 8601 creation timestamp",
     )
     datasetJSONVersion: str = Field(

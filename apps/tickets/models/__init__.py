@@ -5,7 +5,6 @@ SQLAlchemy models for the Tickets service.
 import uuid
 from datetime import datetime
 from enum import StrEnum
-from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, event, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
@@ -156,10 +155,10 @@ class Ticket(Base):
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # Relationships
-    comments: Mapped[list["TicketComment"]] = relationship(
+    comments: Mapped[list[TicketComment]] = relationship(
         back_populates="ticket", cascade="all, delete-orphan"
     )
-    audit_logs: Mapped[list["TicketAuditLog"]] = relationship(back_populates="ticket")
+    audit_logs: Mapped[list[TicketAuditLog]] = relationship(back_populates="ticket")
 
 
 class TicketComment(Base):
@@ -189,7 +188,7 @@ class TicketComment(Base):
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # Relationships
-    ticket: Mapped["Ticket"] = relationship(back_populates="comments")
+    ticket: Mapped[Ticket] = relationship(back_populates="comments")
 
 
 class TicketAuditLog(Base):
@@ -220,7 +219,7 @@ class TicketAuditLog(Base):
     record_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Relationships
-    ticket: Mapped[Optional["Ticket"]] = relationship(back_populates="audit_logs")
+    ticket: Mapped[Ticket | None] = relationship(back_populates="audit_logs")
 
 
 @event.listens_for(Session, "before_flush")
