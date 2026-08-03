@@ -273,7 +273,7 @@ jobs:
         run: |
           if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
             echo "Playwright cache hit detected. Installing only system dependencies..."
-            uv run playwright install-deps chromium
+            sudo $(which uv) run playwright install-deps chromium
           else
             echo "Playwright cache miss. Performing full browser installation..."
             for i in {1..3}; do
@@ -369,7 +369,7 @@ jobs:
         run: |
           if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
             echo "Playwright cache hit detected. Installing only system dependencies..."
-            uv run playwright install-deps chromium
+            sudo $(which uv) run playwright install-deps chromium
           else
             echo "Playwright cache miss. Performing full browser installation..."
             for i in {1..3}; do
