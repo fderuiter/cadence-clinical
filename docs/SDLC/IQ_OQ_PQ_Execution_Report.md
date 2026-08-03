@@ -1,3 +1,6 @@
+> ⚠️ **DRAFT ONLY — UNVERIFIED GxP COMPLIANCE DOCUMENT** ⚠️
+> *This document was generated in draft mode with missing test results. It is NOT eligible for GxP production release.*
+
 # GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report
 
 *Execution Date:* 2026-07-23 22:38:25 UTC
@@ -13,9 +16,10 @@ Based on the executed automated verification suite, the platform meets all prede
 - **Passed:** 2031 🟢
 - **Total Automated Test Cases Run:** 2034
 - **Passed:** 2034 🟢
+- **Total Automated Test Cases Run:** 2031
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
-- **Overall Operational Pass Rate:** 100.00%
+- **Overall Operational Pass Rate:** 0.00%
 
 ## 2. Installation Qualification (IQ)
 
@@ -1409,6 +1413,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_eisf_completeness_participation` | `tests.test_org_integration_e2e` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_openapi_aggregation_with_org` | `tests.test_org_integration_e2e` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_org_proxy_routing` | `tests.test_org_integration_e2e` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_training_log_crud_and_validation` | `tests.test_org_integration_e2e` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_training_log_invalid_signature_fails` | `tests.test_org_integration_e2e` | PRD-SYS-003 | 🟢 PASSED | < 1s |
+| `test_training_log_signing_and_archival_handoff` | `tests.test_org_integration_e2e` | PRD-SYS-003 | 🟢 PASSED | < 1s |
+| `test_training_log_unauthorized_access` | `tests.test_org_integration_e2e` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_training_log_update_missing_justification_fails` | `tests.test_org_integration_e2e` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_cro_affiliation_validation` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_delegation_of_authority_flow` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gxp_audit_logging_and_actor_context` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |

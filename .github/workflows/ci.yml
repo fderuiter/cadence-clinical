@@ -666,5 +666,8 @@ jobs:
     name: Call Deploy Demo
     needs: [release-and-archive]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     uses: ./.github/workflows/deploy-demo.yml
-
