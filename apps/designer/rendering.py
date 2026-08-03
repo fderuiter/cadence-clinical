@@ -288,8 +288,8 @@ def render_protocol_to_pdf(
         from weasyprint import HTML
 
         html_content = render_protocol_to_html(doc, output)
-        # Generate PDF bytes via WeasyPrint
-        pdf_bytes = HTML(string=html_content).write_pdf()
+        # Generate PDF bytes via WeasyPrint with PDF/UA-1 variant compliance
+        pdf_bytes = HTML(string=html_content).write_pdf(pdf_variant="pdf/ua-1")
     except Exception as err:
         import logging
 
@@ -300,11 +300,15 @@ def render_protocol_to_pdf(
         )
         # Fallback minimal structural PDF for headless/lightweight environments
         pdf_bytes = (
-            b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj "
+            b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R/MarkInfo <</Marked true>>/StructTreeRoot 6 0 R>>endobj "
             b"2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj "
-            b"3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R/Resources<<>>>>endobj\n"
-            b"xref\n0 4\n0000000000 65535 f\n0000000009 00000 n\n0000000052 00000 n\n"  # deid: ignore
-            b"0000000101 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n178\n%%EOF\n"  # deid: ignore
+            b"3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R/Resources<</Font <</F1 5 0 R>>>>/StructParents 0>>endobj\n"
+            b"4 0 obj <</Length 62>> stream\nBT /F1 12 Tf 50 750 Td (Clinical Protocol Synopsis Fallback Export) Tj ET\nendstream\nendobj\n"
+            b"5 0 obj <</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\n"
+            b"6 0 obj<</Type/StructTreeRoot/RoleMap<</Document/Div>>/K 7 0 R>>endobj\n"
+            b"7 0 obj<</Type/StructElem/S/Document/P 6 0 R/Pg 3 0 R/K[0]>>endobj\n"
+            b"xref\n0 8\n0000000000 65535 f\n"  # deid: ignore
+            b"trailer<</Size 8/Root 1 0 R>>\nstartxref\n178\n%%EOF\n"  # deid: ignore
         )
 
     return RendererResult(

@@ -412,3 +412,64 @@ async def test_etmf_post_signature_locking():
         assert len(logs) > 0
         for log in logs:
             assert "IMMUTABILITY_VIOLATION" in log.details
+
+
+@pytest.mark.asyncio
+async def test_etmf_signing_failure_logging_and_blocking(monkeypatch):
+    """Verify failed document signatures block state progression and log failure.
+
+    This ensures that signature validation failures are logged correctly
+    and the status transitions are prevented on invalid signature manifestation.
+
+    Requirements: Trace-13
+    """
+    client = TestClient(app)
+    admin_headers = get_auth_headers(
+        roles="admin", change_reason="Ingest form for failure testing"
+    )
+
+    # 1. Ingest an unsigned document
+    payload = {
+        "study_id": "study_101",
+        "artifact_type": "FORM_1572",
+        "filename": "form1572_to_fail.pdf",
+        "content": "Document content to be signed with invalid signature.",
+        "mime_type": "application/pdf",
+        "metadata_json": {"requires_signature": False},
+    }
+    resp = client.post("/api/v1/etmf/ingest", json=payload, headers=admin_headers)
+    assert resp.status_code == 201
+    doc_id = resp.json()["document_id"]
+
+    # 2. Mock SignatureManifestation.verify to return False
+    monkeypatch.setattr(SignatureManifestation, "verify", lambda self: False)
+
+    # 3. Try signing the document
+    action_path = f"/api/v1/etmf/documents/{doc_id}/sign-off"
+    sig_headers = get_auth_headers(
+        roles="admin",
+        change_reason="Sign-off with failure",
+        action_path=action_path,
+    )
+
+    resp_sign = client.post(
+        action_path, json={"signing_reason": "APPROVAL"}, headers=sig_headers
+    )
+    assert resp_sign.status_code == 400
+    assert "signature verification failed" in resp_sign.json()["detail"].lower()
+
+    # 4. Check that document status hasn't changed to SIGNED in DB
+    async with db_manager.get_session_maker()() as session:
+        stmt_doc = select(TMFDocument).where(TMFDocument.id == doc_id)
+        db_doc = (await session.execute(stmt_doc)).scalar_one()
+        assert db_doc.status != "SIGNED"
+        assert db_doc.approval_status != "APPROVED"
+
+        # 5. Check that SIGNATURE_FAILED was recorded in audit logs
+        stmt_audit = select(TMFAuditLog).where(TMFAuditLog.document_id == doc_id)
+        logs = (await session.execute(stmt_audit)).scalars().all()
+        actions = [log.action for log in logs]
+        assert "SIGNATURE_FAILED" in actions
+
+        fail_log = next(log for log in logs if log.action == "SIGNATURE_FAILED")
+        assert "Signature verification failed" in fail_log.details

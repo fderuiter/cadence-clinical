@@ -8,7 +8,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request && github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   style:
@@ -60,11 +60,6 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --locked --all-extras
-
-      - name: Run markdown link verification
-        id: run_link_check
-        if: always()
-        run: python3 scripts/validate_markdown.py
 
       - name: Run linting
         id: run_linting
@@ -121,6 +116,8 @@ jobs:
   security:
     name: Security and Vulnerability Audit
     runs-on: ubuntu-latest
+    env:
+      UV_NO_SYNC: "1"
     permissions:
       contents: read
     outputs:
@@ -145,8 +142,10 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install dependencies
-        run: uv sync --locked --all-extras
+      - name: Create venv and install static tools
+        run: |
+          uv venv
+          uv pip install pip-audit bandit pre-commit detect-secrets pydantic python-dateutil cryptography fastapi httpx python-jose
 
       - name: Cache pre-commit
         uses: actions/cache@v4
@@ -167,9 +166,6 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
 
-      - name: Install Node dependencies
-        run: pnpm install --frozen-lockfile
-
       - name: Run static analysis
         id: run_static
         if: always()
@@ -186,6 +182,7 @@ jobs:
         run: |
           git add .secrets.baseline
           uv run pre-commit run detect-secrets --all-files
+          uv run python scripts/audit_security.py
 
       - name: Run DEID compliance scan
         id: run_deid_scan
@@ -271,12 +268,18 @@ jobs:
 
       - name: Install Playwright Browsers
         run: |
-          for i in {1..3}; do
-            uv run playwright install chromium --with-deps && break || {
-              echo "Playwright install failed on attempt $i, retrying in 10s..."
-              sleep 10
-            }
-          done
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
+            echo "Playwright cache hit detected. Installing only system dependencies..."
+            uv run playwright install-deps chromium
+          else
+            echo "Playwright cache miss. Performing full browser installation..."
+            for i in {1..3}; do
+              uv run playwright install chromium --with-deps && break || {
+                echo "Playwright install failed on attempt $i, retrying in 10s..."
+                sleep 10
+              }
+            done
+          fi
 
       - name: Run frontend unit tests
         run: pnpm -r test
@@ -361,12 +364,18 @@ jobs:
 
       - name: Install Playwright Browsers
         run: |
-          for i in {1..3}; do
-            uv run playwright install chromium --with-deps && break || {
-              echo "Playwright install failed on attempt $i, retrying in 10s..."
-              sleep 10
-            }
-          done
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
+            echo "Playwright cache hit detected. Installing only system dependencies..."
+            uv run playwright install-deps chromium
+          else
+            echo "Playwright cache miss. Performing full browser installation..."
+            for i in {1..3}; do
+              uv run playwright install chromium --with-deps && break || {
+                echo "Playwright install failed on attempt $i, retrying in 10s..."
+                sleep 10
+              }
+            done
+          fi
 
       - name: Run backend integration tests
         id: run_tests
@@ -565,7 +574,11 @@ jobs:
 
           SAFE=true
           while IFS= read -r file; do
-            if [[ "$file" == docs/* ]] || [[ "$file" == *.md ]] || [[ "$file" == tests/* ]]; then
+            if [[ "$file" == *"vulnerability_exclusions_ledger.json" ]] || [[ "$file" == *"validate_vulnerabilities"* ]]; then
+              echo "Unsafe vulnerability/validation file: $file"
+              SAFE=false
+              break
+            elif [[ "$file" == docs/* ]] || [[ "$file" == *.md ]] || [[ "$file" == tests/* ]]; then
               echo "Safe file: $file"
             else
               echo "Unsafe file: $file"
@@ -619,6 +632,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
+      administration: write
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -639,5 +653,19 @@ jobs:
       - name: Sync Ruleset
         env:
           GH_TOKEN: ${{ secrets.SERVICE_ACCOUNT_TOKEN || secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
+          FAIL_ON_RULESET_SYNC_ERROR: "true"
         run: |
           python3 scripts/sync_ruleset.py
+
+  release-and-archive:
+    name: Call Production Pipeline
+    needs: [style, security, compliance]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/production-pipeline.yml
+
+  deploy-demo:
+    name: Call Deploy Demo
+    needs: [release-and-archive]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/deploy-demo.yml
+

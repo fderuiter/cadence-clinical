@@ -257,4 +257,45 @@ describe("Accessibility Composables & Query Panel Integration", () => {
       await expect(wrapped).toBeAccessible();
     });
   });
+
+  describe("Token-Driven Accessibility validation behavior", () => {
+    it("keeps error border visible when value is cleared/empty", async () => {
+      const wrapper = mount(ClinicalInput, {
+        props: {
+          id: "test-input-clear",
+          label: "Required Field",
+          modelValue: "",
+          error: "Field is required",
+        },
+      });
+      expect(wrapper.find(".validation-error-msg").exists()).toBe(true);
+      expect(wrapper.classes()).toContain("has-error");
+    });
+
+    it("displays error when value is present", async () => {
+      const wrapper = mount(ClinicalInput, {
+        props: {
+          id: "test-input-present",
+          label: "Numeric Field",
+          modelValue: "invalid-text",
+          error: "Must be a number",
+        },
+      });
+      expect(wrapper.find(".validation-error-msg").exists()).toBe(true);
+      expect(wrapper.classes()).toContain("has-error");
+    });
+
+    it("does not show error state if error prop is empty", async () => {
+      const wrapper = mount(ClinicalInput, {
+        props: {
+          id: "test-input-no-err",
+          label: "Optional Field",
+          modelValue: "",
+          error: null,
+        },
+      });
+      expect(wrapper.find(".validation-error-msg").exists()).toBe(false);
+      expect(wrapper.classes()).not.toContain("has-error");
+    });
+  });
 });
