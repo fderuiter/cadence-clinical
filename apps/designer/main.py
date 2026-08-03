@@ -477,7 +477,7 @@ async def startup() -> None:
     """Initialize resources on designer startup."""
     uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
     user = os.getenv("NEO4J_USER", "neo4j")
-    password = os.getenv("NEO4J_PASSWORD", "password")
+    password = os.getenv("NEO4J_PASSWORD", "password")  # pragma: allowlist secret
     app.state.driver = AsyncGraphDatabase.driver(uri, auth=(user, password))
 
 
@@ -1985,7 +1985,9 @@ async def forward_to_etmf(
     }
 
     timestamp = str(time.time())
-    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode(
+    secret = os.getenv(
+        "GATEWAY_SECRET", "internal-gateway-secret-12345"
+    ).encode(  # pragma: allowlist secret
         "utf-8"
     )
     sig = generate_gateway_signature(
@@ -2483,7 +2485,11 @@ async def approve_study_version_endpoint(
     manifest.key_identifier = ids["subject_key_identifier"]
 
     # Verify signature
-    assert manifest.verify() is True
+    if not manifest.verify():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Signature verification failed: Cryptographic signature is invalid.",
+        )
 
     signature_manifestation_payload = manifest.model_dump(mode="json")
 

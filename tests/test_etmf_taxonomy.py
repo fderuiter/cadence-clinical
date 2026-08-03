@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -6,6 +8,7 @@ from apps.etmf.database import db_manager
 from apps.etmf.main import app
 from apps.etmf.models import Base
 from apps.execution.trial_lock import TrialLockManager
+from packages.security.rbac import Principal, get_principal
 from tests.test_etmf import get_auth_headers
 
 
@@ -158,6 +161,90 @@ def test_classify_endpoints():
     payload_unresolved = {"filename": "completely_arbitrary_random_file.zip"}
     resp_unresolved = client.post(
         "/api/v1/etmf/classify", json=payload_unresolved, headers=headers
+    )
+    assert resp_unresolved.status_code == 422
+    assert "unable to auto-classify" in resp_unresolved.json()["detail"].lower()
+
+
+@contextmanager
+def override_principal_ctx(app_inst, principal: Principal):
+    """
+    Temporarily override get_principal dependency.
+    """
+
+    async def mock_get_principal():
+        return principal
+
+    app_inst.dependency_overrides[get_principal] = mock_get_principal
+    try:
+        yield
+    finally:
+        app_inst.dependency_overrides.pop(get_principal, None)
+
+
+def test_auto_file_endpoint():
+    """Verify the POST /api/v1/etmf/auto-file endpoint and study scope enforcement.
+
+    Requirements: PRD-SYS-001
+    """
+    client = TestClient(app)
+    headers_admin = get_auth_headers(roles="admin", change_reason="auto-file check")
+
+    # 1. Successful auto-file with matching artifact type
+    payload = {
+        "filename": "protocol_amendment_2026.pdf",
+        "artifact_type": "Clinical Trial Protocol Amendment",
+        "study_id": "study_001",
+    }
+    resp = client.post("/api/v1/etmf/auto-file", json=payload, headers=headers_admin)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["resolved_zone"] == 1
+    assert data["resolved_section"] == "01.01"
+    assert data["artifact_code"] == "01.01.02"
+    assert data["artifact_type"] == "Clinical Trial Protocol Amendment"
+    assert data["match_basis"] == "artifact_type_hint"
+
+    # 2. Permission check: subject lacks etmf_document:read and is forbidden
+    headers_subject = get_auth_headers(roles="subject", change_reason="unauthorized")
+    resp_sub = client.post(
+        "/api/v1/etmf/auto-file", json=payload, headers=headers_subject
+    )
+    assert resp_sub.status_code == 403
+
+    # 3. Study scope check: study-scoped user is forbidden from other studies
+    principal_scoped = Principal(
+        user_id="user_scoped",
+        roles=["sponsor_dm"],  # Has etmf_document:read
+        assigned_studies=["study_001"],
+    )
+
+    with override_principal_ctx(app, principal_scoped):
+        # 3.1. Requesting study_001 (assigned) should succeed
+        resp_scoped_ok = client.post(
+            "/api/v1/etmf/auto-file", json=payload, headers=headers_admin
+        )
+        assert resp_scoped_ok.status_code == 200
+
+        # 3.2. Requesting study_002 (not assigned) should return 403 Forbidden
+        payload_other = {
+            "filename": "protocol_amendment_2026.pdf",
+            "artifact_type": "Clinical Trial Protocol Amendment",
+            "study_id": "study_002",
+        }
+        resp_scoped_deny = client.post(
+            "/api/v1/etmf/auto-file", json=payload_other, headers=headers_admin
+        )
+        assert resp_scoped_deny.status_code == 403
+        assert "Forbidden" in resp_scoped_deny.json()["detail"]
+
+    # 4. Unresolved classification returns 422
+    payload_unresolved = {
+        "filename": "completely_arbitrary_random_file.zip",
+        "study_id": "study_001",
+    }
+    resp_unresolved = client.post(
+        "/api/v1/etmf/auto-file", json=payload_unresolved, headers=headers_admin
     )
     assert resp_unresolved.status_code == 422
     assert "unable to auto-classify" in resp_unresolved.json()["detail"].lower()
