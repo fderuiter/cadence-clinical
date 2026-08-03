@@ -9,6 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
+- **Total Automated Test Cases Run:** 1977
+- **Passed:** 1977 🟢
 - **Total Automated Test Cases Run:** 2034
 - **Passed:** 2034 🟢
 - **Failed/Errors:** 0 🔴
@@ -1363,6 +1365,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_eisf_completeness_participation` | `tests.test_org_integration_e2e` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_openapi_aggregation_with_org` | `tests.test_org_integration_e2e` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_org_proxy_routing` | `tests.test_org_integration_e2e` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_training_log_crud_and_validation` | `tests.test_org_integration_e2e` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_training_log_invalid_signature_fails` | `tests.test_org_integration_e2e` | PRD-SYS-003 | 🟢 PASSED | < 1s |
+| `test_training_log_signing_and_archival_handoff` | `tests.test_org_integration_e2e` | PRD-SYS-003 | 🟢 PASSED | < 1s |
+| `test_training_log_unauthorized_access` | `tests.test_org_integration_e2e` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_training_log_update_missing_justification_fails` | `tests.test_org_integration_e2e` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_cro_affiliation_validation` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_delegation_of_authority_flow` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gxp_audit_logging_and_actor_context` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
