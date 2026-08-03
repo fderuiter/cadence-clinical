@@ -24,6 +24,7 @@ class PermissionEnum(enum.StrEnum):
 
     # Monitoring & Verification Permissions
     SDV_VERIFY = "sdv:verify"
+    SDV_FLAG = "sdv:flag"
     QUERY_MANAGE = "query:manage"
 
     # Protocol Authoring & Global Library Permissions
@@ -117,6 +118,7 @@ ROLE_PERMISSIONS_MAP: dict[str, set[PermissionEnum]] = {
     RoleEnum.CRA.value: {
         PermissionEnum.STUDY_READ,
         PermissionEnum.SDV_VERIFY,
+        PermissionEnum.SDV_FLAG,
         PermissionEnum.QUERY_MANAGE,
         PermissionEnum.AUDIT_VIEW,
         PermissionEnum.DOCUMENTS_READ,
