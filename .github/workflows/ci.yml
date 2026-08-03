@@ -281,6 +281,9 @@ jobs:
             done
           fi
 
+      - name: Build UI package
+        run: pnpm --filter ui build
+
       - name: Run frontend unit tests
         run: pnpm -r test
 
