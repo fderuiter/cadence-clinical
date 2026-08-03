@@ -306,15 +306,12 @@ class TimingWindow(SoAAuditMixin):
             raise ValueError(
                 "A non-empty 'reason' must be provided when timing/applicability is conditional."
             )
-        if self.max_offset is not None and self.max_offset < 0:
-            raise ValueError("max_offset must not be negative.")
-        if self.min_offset is not None and self.max_offset is not None:
-            if self.min_offset > self.max_offset:
-                raise ValueError("min_offset must not be greater than max_offset.")
         return self
 
     @model_validator(mode="after")
     def validate_numeric_ranges(self) -> TimingWindow:
+        if self.max_offset is not None and self.max_offset < 0:
+            raise ValueError("max_offset must not be negative.")
         if self.min_offset is not None and self.max_offset is not None:
             if self.min_offset > self.max_offset:
                 raise ValueError(
@@ -449,15 +446,12 @@ class TimingWindowProperties(BaseModel):
             raise ValueError(
                 "A non-empty 'reason' must be provided when timing/applicability is conditional."
             )
-        if self.max_offset is not None and self.max_offset < 0:
-            raise ValueError("max_offset must not be negative.")
-        if self.min_offset is not None and self.max_offset is not None:
-            if self.min_offset > self.max_offset:
-                raise ValueError("min_offset must not be greater than max_offset.")
         return self
 
     @model_validator(mode="after")
     def validate_numeric_ranges(self) -> TimingWindowProperties:
+        if self.max_offset is not None and self.max_offset < 0:
+            raise ValueError("max_offset must not be negative.")
         if self.min_offset is not None and self.max_offset is not None:
             if self.min_offset > self.max_offset:
                 raise ValueError(
