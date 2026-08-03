@@ -236,3 +236,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-03: Upgrade Environments to Python 3.14](2026-08-03-upgrade-environments-to-python-3-14.md)
 - [2026-09-07: Extend Centralized Permission Matrix for eCOA Diary Alert Actions](2026-09-07-extend-ecoa-diary-alert-permissions.md)
 - [2026-09-08: Item-Level Source Data Verification (SDV) GxP Compliance and RBAC Isolation](2026-09-08-item-level-sdv-gxp-compliance.md)
+- [2026-09-08: Centralized RBAC and Cascading Signature Invalidation for Item-Level SDV](2026-09-08-item-level-sdv-and-cascading-signatures.md)

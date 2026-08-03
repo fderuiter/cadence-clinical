@@ -291,9 +291,18 @@ _RAW_WHITELISTED_ROUTES = {
     ("post", "/api/v1/studies/{study_id}/versions/{version_id}/epochs/reorder"),
     ("post", "/api/v1/studies/{study_id}/versions/{version_id}/visits/reorder"),
     ("post", "/api/v1/studies/{study_id}/versions/{version_id}/procedures/reorder"),
-    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/assignments/activities"),
-    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/assignments/arms"),
-    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/assignments/epochs"),
+    (
+        "post",
+        "/api/v1/studies/{study_id}/versions/{version_id}/assignments/activities",
+    ),
+    (
+        "post",
+        "/api/v1/studies/{study_id}/versions/{version_id}/assignments/arms",
+    ),
+    (
+        "post",
+        "/api/v1/studies/{study_id}/versions/{version_id}/assignments/epochs",
+    ),
     ("delete", "/api/v1/execution/lab-ranges/{range_id}"),
     ("delete", "/api/v1/mdr/concepts/{id}"),
     ("delete", "/api/v1/studies/{study_id}/rules/{rule_id}"),
