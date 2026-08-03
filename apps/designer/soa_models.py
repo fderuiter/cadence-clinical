@@ -53,94 +53,32 @@ except ImportError:
 
 
 # Centralized imports from the core-models package to completely eliminate code duplication
-from protocol_authoring.soa import (
-    ActivityAssignmentRequest,
-    ArmReorderItem,
-    ArmReorderRequest,
-    AuditMetadata,
-    CreateEpochRequest,
-    CreateProcedureRequest,
-    CreateStudyArmRequest,
-    CreateTimingWindowRequest,
-    CreateVisitRequest,
-    Epoch,
-    EpochProperties,
-    EpochReorderItem,
-    EpochReorderRequest,
-    LinkArmApplicabilityRequest,
-    LinkEpochVisitRequest,
-    LinkTimingRequest,
-    LinkVisitProcedureRequest,
-    Procedure,
-    ProcedureProperties,
-    ProcedureReorderItem,
-    ProcedureReorderRequest,
-    ProjectionCell,
-    SoAEntityCreatedResponse,
-    SoAEntityDetail,
-    SoALinkResponse,
-    SoAMatrixProjectionResponse,
-    StudyArm,
-    StudyArmProperties,
-    TimingWindow,
-    TimingWindowProperties,
-    UpdateEpochRequest,
-    UpdateProcedureRequest,
-    UpdateStudyArmRequest,
-    UpdateTimingWindowRequest,
-    UpdateVisitRequest,
-    Visit,
-    VisitProperties,
-    VisitReorderItem,
-    VisitReorderRequest,
-    VisitToArmAssignmentRequest,
-    VisitToEpochAssignmentRequest,
-)
+import protocol_authoring.soa as _soa
 
-__all__ = [
-    "ActivityAssignmentRequest",
-    "ArmReorderItem",
-    "ArmReorderRequest",
-    "AuditMetadata",
-    "CreateEpochRequest",
-    "CreateProcedureRequest",
-    "CreateStudyArmRequest",
-    "CreateTimingWindowRequest",
-    "CreateVisitRequest",
-    "Epoch",
-    "EpochProperties",
-    "EpochReorderItem",
-    "EpochReorderRequest",
-    "LinkArmApplicabilityRequest",
-    "LinkEpochVisitRequest",
-    "LinkTimingRequest",
-    "LinkVisitProcedureRequest",
-    "Procedure",
-    "ProcedureProperties",
-    "ProcedureReorderItem",
-    "ProcedureReorderRequest",
-    "ProjectionCell",
-    "SoAEntityCreatedResponse",
-    "SoAEntityDetail",
-    "SoAHeaderArm",
-    "SoAHeaderEncounter",
-    "SoAHeaderEpoch",
-    "SoALinkResponse",
-    "SoAMatrixProjectionResponse",
-    "SoARowView",
-    "StudyArm",
-    "StudyArmProperties",
-    "TimingWindow",
-    "TimingWindowProperties",
-    "UpdateEpochRequest",
-    "UpdateProcedureRequest",
-    "UpdateStudyArmRequest",
-    "UpdateTimingWindowRequest",
-    "UpdateVisitRequest",
-    "Visit",
-    "VisitProperties",
-    "VisitReorderItem",
-    "VisitReorderRequest",
-    "VisitToArmAssignmentRequest",
-    "VisitToEpochAssignmentRequest",
-]
+_names_str = """
+ActivityAssignmentRequest ArmReorderItem ArmReorderRequest AuditMetadata
+CreateEpochRequest CreateProcedureRequest CreateStudyArmRequest CreateTimingWindowRequest
+CreateVisitRequest Epoch EpochProperties EpochReorderItem EpochReorderRequest
+LinkArmApplicabilityRequest LinkEpochVisitRequest LinkTimingRequest LinkVisitProcedureRequest
+Procedure ProcedureProperties ProcedureReorderItem ProcedureReorderRequest
+ProjectionCell SoAEntityCreatedResponse SoAEntityDetail SoALinkResponse
+SoAMatrixProjectionResponse StudyArm StudyArmProperties TimingWindow
+TimingWindowProperties UpdateEpochRequest UpdateProcedureRequest UpdateStudyArmRequest
+UpdateTimingWindowRequest UpdateVisitRequest Visit VisitProperties
+VisitReorderItem VisitReorderRequest VisitToArmAssignmentRequest VisitToEpochAssignmentRequest
+"""
+
+_exported_models = _names_str.strip().split()
+
+for _name in _exported_models:
+    globals()[_name] = getattr(_soa, _name)
+
+__all__ = sorted(
+    _exported_models
+    + [
+        "SoAHeaderArm",
+        "SoAHeaderEncounter",
+        "SoAHeaderEpoch",
+        "SoARowView",
+    ]
+)
