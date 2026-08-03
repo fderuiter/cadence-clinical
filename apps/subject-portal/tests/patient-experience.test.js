@@ -59,7 +59,9 @@ describe("Patient Experience & Adaptive Sync Retry Integration", () => {
     const container = document.getElementById("toast-container");
     if (container) container.remove();
 
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network connection dropped"));
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new Error("Network connection dropped"));
   });
 
   afterEach(() => {
