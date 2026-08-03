@@ -161,7 +161,15 @@ def _extract_dataset_records(
             item_groups = ref_data.get("itemGroupData") or {}
 
     for key, val in item_groups.items():
-        name = key.split(".")[-1] if "." in key else key
+        item_group_oid = None
+        if hasattr(val, "itemGroupOID"):
+            item_group_oid = val.itemGroupOID
+        elif isinstance(val, dict):
+            item_group_oid = val.get("itemGroupOID")
+
+        oid_to_use = item_group_oid or key
+        name = oid_to_use.split(".")[-1] if "." in oid_to_use else oid_to_use
+
         if name.upper() == dataset_name.upper():
             if hasattr(val, "items") and hasattr(val, "itemData"):
                 return _to_dict_list(val)
@@ -190,6 +198,23 @@ def validate_dataset_json(
     """
     errors: list[str] = []
 
+    # Check datasetJSONVersion equals "1.0.0" and required header fields are present and non-empty
+    ds_version = None
+    creation_dt = None
+
+    if isinstance(dataset_json, DatasetJSON):
+        ds_version = dataset_json.datasetJSONVersion
+        creation_dt = dataset_json.creationDateTime
+    elif isinstance(dataset_json, dict):
+        ds_version = dataset_json.get("datasetJSONVersion")
+        creation_dt = dataset_json.get("datasetJSONCreationDateTime") or dataset_json.get("creationDateTime")
+
+    if not ds_version or ds_version != "1.0.0":
+        errors.append("datasetJSONVersion must be present and equal '1.0.0'")
+
+    if not creation_dt or str(creation_dt).strip() == "":
+        errors.append("datasetJSONCreationDateTime must be present and non-empty")
+
     # 1. Parse/normalize dataset_json
     item_groups = {}
     if isinstance(dataset_json, DatasetJSON):
@@ -210,7 +235,14 @@ def validate_dataset_json(
     local_datasets: dict[str, list[dict[str, Any]]] = {}
 
     for key, group in item_groups.items():
-        ds_name = key.split(".")[-1] if "." in key else key
+        item_group_oid = None
+        if hasattr(group, "itemGroupOID"):
+            item_group_oid = group.itemGroupOID
+        elif isinstance(group, dict):
+            item_group_oid = group.get("itemGroupOID")
+
+        oid_to_use = item_group_oid or key
+        ds_name = oid_to_use.split(".")[-1] if "." in oid_to_use else oid_to_use
         ds_name_upper = ds_name.upper()
 
         items = []

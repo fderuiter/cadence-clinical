@@ -684,3 +684,110 @@ def test_validator_supp_dataset_linkage_and_structure():
     }
     dj = serialize_to_dataset_json(data=bundle_valid, study_id="STUDY-01")
     validate_dataset_json(dj)  # Should pass with no exception
+
+
+def test_new_metadata_headers_serialization_and_validation():
+    """Verify that the new metadata headers are serialized and validated correctly."""
+    data_bundle = {
+        "DM": [
+            {
+                "STUDYID": "STUDY-01",
+                "DOMAIN": "DM",
+                "USUBJID": "STUDY-01-001",
+                "SUBJID": "001",
+                "SEX": "M",
+                "RACE": "WHITE",
+                "ARM": "Active",
+            }
+        ],
+    }
+
+    # Case A: Serialize with explicit custom headers
+    dj = serialize_to_dataset_json(
+        data=data_bundle,
+        study_id="STUDY-01",
+        metadata_ref="https://example.com/define.xml",
+        db_last_modified_datetime="2026-09-01T15:30:00Z",
+        dataset_json_creation_date_time="2026-09-01T12:00:00Z",
+    )
+
+    # Verify attributes on DatasetJSON object
+    assert dj.creationDateTime == "2026-09-01T12:00:00Z"
+    assert dj.dbLastModifiedDateTime == "2026-09-01T15:30:00Z"
+    assert dj.clinicalData.metaDataRef == "https://example.com/define.xml"
+    assert dj.clinicalData.itemGroupData["IG.DM"].itemGroupOID == "IG.DM"
+
+    # Verify serialized dictionary output (by_alias is automatic via ConfigDict)
+    serialized = dj.model_dump()
+    assert serialized["datasetJSONCreationDateTime"] == "2026-09-01T12:00:00Z"
+    assert serialized["dbLastModifiedDateTime"] == "2026-09-01T15:30:00Z"
+    assert serialized["clinicalData"]["metaDataRef"] == "https://example.com/define.xml"
+    assert serialized["clinicalData"]["itemGroupData"]["IG.DM"]["itemGroupOID"] == "IG.DM"
+
+    # GxP fields (created_by, created_at, reason_for_change, version_index) must NOT be present
+    dm_group_items = serialized["clinicalData"]["itemGroupData"]["IG.DM"]
+    for item in dm_group_items["items"]:
+        assert item["name"] not in {"created_at", "created_by", "reason_for_change", "version_index"}
+
+    # Validate using DatasetJSON object - should succeed
+    validate_dataset_json(dj)
+
+    # Validate using serialized dictionary - should succeed
+    validate_dataset_json(serialized)
+
+
+def test_new_metadata_headers_defaults():
+    """Verify that the new metadata headers default correctly when caller passes no values."""
+    data_bundle = {
+        "DM": [
+            {
+                "STUDYID": "STUDY-01",
+                "DOMAIN": "DM",
+                "USUBJID": "STUDY-01-001",
+                "SUBJID": "001",
+                "SEX": "M",
+                "RACE": "WHITE",
+                "ARM": "Active",
+            }
+        ],
+    }
+
+    dj = serialize_to_dataset_json(data=data_bundle, study_id="STUDY-01")
+
+    # They should both default to non-empty, valid ISO 8601 strings
+    assert dj.creationDateTime is not None
+    assert dj.dbLastModifiedDateTime is not None
+    assert dj.creationDateTime == dj.dbLastModifiedDateTime  # Should be the same deterministic current UTC timestamp
+    assert dj.clinicalData.metaDataRef is None
+
+
+def test_validator_dataset_json_version_conformance():
+    """Verify that validator raises validation errors when datasetJSONVersion is invalid or headers are missing."""
+    data_bundle = {
+        "DM": [
+            {
+                "STUDYID": "STUDY-01",
+                "DOMAIN": "DM",
+                "USUBJID": "STUDY-01-001",
+                "SUBJID": "001",
+                "SEX": "M",
+                "RACE": "WHITE",
+                "ARM": "Active",
+            }
+        ],
+    }
+
+    dj = serialize_to_dataset_json(data=data_bundle, study_id="STUDY-01")
+
+    # Change version to invalid value
+    dj.datasetJSONVersion = "2.0.0"
+    with pytest.raises(DatasetJSONValidationError) as exc:
+        validate_dataset_json(dj)
+    assert "datasetJSONVersion must be present and equal '1.0.0'" in str(exc.value)
+
+    # Change version back, but empty creationDateTime
+    dj.datasetJSONVersion = "1.0.0"
+    dj.creationDateTime = ""
+    with pytest.raises(DatasetJSONValidationError) as exc:
+        validate_dataset_json(dj)
+    assert "datasetJSONCreationDateTime must be present and non-empty" in str(exc.value)

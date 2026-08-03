@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 
 class VariableMetadata(BaseModel):
@@ -69,6 +69,9 @@ class SUPPRecord(BaseModel):
 class DatasetJSONItemGroup(BaseModel):
     """Represents an itemGroupData object inside CDISC Dataset-JSON clinicalData/referenceData."""
 
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
+
+    itemGroupOID: str = Field(..., description="Unique identifier for the item group")
     records: int = Field(..., description="Number of rows/records in the dataset")
     name: str = Field(..., description="Dataset name (e.g., 'DM')")
     label: str = Field(..., description="Dataset label (e.g., 'Demographics')")
@@ -92,11 +95,16 @@ class DatasetJSONItemGroup(BaseModel):
 class ClinicalData(BaseModel):
     """ClinicalData container for CDISC Dataset-JSON."""
 
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
+
     studyOID: str = Field(
         ..., description="Unique identifier for the study (e.g., 'STUDY.001')"
     )
     metaDataVersionOID: str = Field(
         ..., description="Metadata version identifier (e.g., 'MDV.001')"
+    )
+    metaDataRef: str | None = Field(
+        None, description="Reference to the external Define-XML metadata"
     )
     itemGroupData: dict[str, DatasetJSONItemGroup] = Field(
         ..., description="Mapping of group names (e.g., 'IG.DM') to their datasets"
@@ -106,8 +114,13 @@ class ClinicalData(BaseModel):
 class ReferenceData(BaseModel):
     """ReferenceData container for CDISC Dataset-JSON (when reference data is utilized instead of clinical data)."""
 
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
+
     studyOID: str = Field(..., description="Unique identifier for the study")
     metaDataVersionOID: str = Field(..., description="Metadata version identifier")
+    metaDataRef: str | None = Field(
+        None, description="Reference to the external Define-XML metadata"
+    )
     itemGroupData: dict[str, DatasetJSONItemGroup] = Field(
         ..., description="Mapping of group names to their datasets"
     )
@@ -116,9 +129,17 @@ class ReferenceData(BaseModel):
 class DatasetJSON(BaseModel):
     """Root model representing a CDISC Dataset-JSON document compliant with Pydantic v2."""
 
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
+
     creationDateTime: str = Field(
         default_factory=lambda: datetime.utcnow().isoformat() + "Z",
         description="ISO 8601 creation timestamp",
+        validation_alias=AliasChoices("datasetJSONCreationDateTime", "creationDateTime"),
+        serialization_alias="datasetJSONCreationDateTime",
+    )
+    dbLastModifiedDateTime: str | None = Field(
+        None,
+        description="ISO 8601 last-modified timestamp of the source database",
     )
     datasetJSONVersion: str = Field(
         "1.0.0", description="The Dataset-JSON specification version"
@@ -135,9 +156,11 @@ class DatasetJSON(BaseModel):
         None, description="Reference data block"
     )
 
-    @field_validator("creationDateTime")
+    @field_validator("creationDateTime", "dbLastModifiedDateTime")
     @classmethod
-    def validate_timestamp(cls, v: str) -> str:
+    def validate_timestamp(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
         # Just simple validation to ensure it looks like a datetime
         try:
             # support both Z and offset
@@ -145,6 +168,6 @@ class DatasetJSON(BaseModel):
             datetime.fromisoformat(clean_v)
         except ValueError:
             raise ValueError(
-                "creationDateTime must be a valid ISO 8601 datetime string"
+                "Must be a valid ISO 8601 datetime string"
             )
         return v

@@ -329,6 +329,7 @@ def _build_item_group(
         item_data.append(row_values)
 
     return DatasetJSONItemGroup(
+        itemGroupOID=f"IG.{name_upper}",
         records=len(records),
         name=name_upper,
         label=label,
@@ -345,6 +346,9 @@ def serialize_to_dataset_json(
     originator: str | None = None,
     source_system: str | None = None,
     source_system_version: str | None = None,
+    db_last_modified_datetime: str | None = None,
+    metadata_ref: str | None = None,
+    dataset_json_creation_date_time: str | None = None,
 ) -> DatasetJSON:
     """Serializes dataset lists or mapped bundles into CDISC Dataset-JSON structure."""
     item_group_data = {}
@@ -368,11 +372,17 @@ def serialize_to_dataset_json(
     clinical_data = ClinicalData(
         studyOID=study_id,
         metaDataVersionOID=metadata_version_id,
+        metaDataRef=metadata_ref,
         itemGroupData=item_group_data,
     )
 
+    now_str = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    creation_dt = dataset_json_creation_date_time or now_str
+    db_lm_dt = db_last_modified_datetime or now_str
+
     return DatasetJSON(
-        creationDateTime=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        creationDateTime=creation_dt,
+        dbLastModifiedDateTime=db_lm_dt,
         datasetJSONVersion="1.0.0",
         fileOID=file_oid,
         originator=originator,

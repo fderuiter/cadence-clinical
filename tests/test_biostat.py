@@ -87,6 +87,7 @@ def test_dataset_json_integration_structure():
     ]
 
     item_group = DatasetJSONItemGroup(
+        itemGroupOID="IG.DM",
         records=2,
         name="DM",
         label="Demographics",
