@@ -12,12 +12,7 @@ Based on the executed automated verification suite, the platform meets all prede
 - **Total Automated Test Cases Run:** 2050
 - **Passed:** 2050 🟢
 - **Failed/Errors:** 0 🔴
-- **Total Automated Test Cases Run:** 2060
-- **Passed:** 2022 🟢
-- **Unverified (Draft):** 34 ⚪
-- **Failed/Errors:** 4 🔴
 - **Skipped:** 0 ⚪
-- **Overall Operational Pass Rate:** 98.16%
 - **Overall Operational Pass Rate:** 100.00%
 
 ## 2. Installation Qualification (IQ)
@@ -246,8 +241,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_publish_amendment_post_endpoint` | `tests.test_amendment_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_redact_pdf_post_endpoint` | `tests.test_anonymization_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scan_phi_post_endpoint` | `tests.test_anonymization_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_api_parameters_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🔴 FAILED | < 1s |
-| `test_api_paths_and_methods_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_api_parameters_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_paths_and_methods_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_request_bodies_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -445,7 +438,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_fhir_esource_readiness_prefill` | `tests.test_crf_builder_compliance` | PRD-CRF-007, PRD-CRF-008, Trace-25, Trace-26 | 🟢 PASSED | < 1s |
 | `test_gxp_change_reason_justification` | `tests.test_crf_builder_compliance` | PRD-CRF-010, PRD-CRF-011, Trace-28, Trace-29 | 🟢 PASSED | < 1s |
 | `test_immutable_audit_attribution` | `tests.test_crf_builder_compliance` | PRD-CRF-011, PRD-CRF-012, Trace-29, Trace-30 | 🟢 PASSED | < 1s |
-| `test_in_memory_accessibility_auditing` | `tests.test_crf_builder_compliance` | PRD-CRF-015, Trace-33 | 🔴 FAILED | < 1s |
 | `test_in_memory_accessibility_auditing` | `tests.test_crf_builder_compliance` | PRD-CRF-015, Trace-33 | 🟢 PASSED | < 1s |
 | `test_real_time_contextual_preview` | `tests.test_crf_builder_compliance` | PRD-CRF-002, PRD-CRF-003, Trace-20, Trace-21 | 🟢 PASSED | < 1s |
 | `test_regulatory_protocol_document_export` | `tests.test_crf_builder_compliance` | PRD-CRF-008, PRD-CRF-009, Trace-26, Trace-27 | 🟢 PASSED | < 1s |
@@ -468,7 +460,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_fhir_esource_readiness_cdash_pre_fill` | `tests.test_crf_requirements_mapping` | PRD-CRF-007, Trace-23 | 🟢 PASSED | < 1s |
 | `test_gxp_change_reason_justification` | `tests.test_crf_requirements_mapping` | PRD-CRF-010, Trace-26 | 🟢 PASSED | < 1s |
 | `test_immutable_audit_attribution` | `tests.test_crf_requirements_mapping` | PRD-CRF-011, Trace-27 | 🟢 PASSED | < 1s |
-| `test_in_memory_accessibility_auditing` | `tests.test_crf_requirements_mapping` | PRD-CRF-015, Trace-31 | 🔴 FAILED | < 1s |
 | `test_in_memory_accessibility_auditing` | `tests.test_crf_requirements_mapping` | PRD-CRF-015, Trace-31 | 🟢 PASSED | < 1s |
 | `test_real_time_contextual_preview` | `tests.test_crf_requirements_mapping` | PRD-CRF-002, Trace-18 | 🟢 PASSED | < 1s |
 | `test_regulatory_and_protocol_document_export` | `tests.test_crf_requirements_mapping` | PRD-CRF-008, Trace-24 | 🟢 PASSED | < 1s |
@@ -610,7 +601,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_reorder_visits_mock` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reorder_visits_real` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_update_study_properties` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_age_derivation_boundary_dates` | `tests.test_demographics` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_age_derivation_boundary_dates[2000-05-14-2020-05-15-20]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_age_derivation_boundary_dates[2000-05-15-2020-05-15-20]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_age_derivation_boundary_dates[2000-05-15-None-None]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -628,7 +618,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_age_derivation_boundary_dates[birthdate9-observation_date9-20]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_age_derivation_boundary_dates[invalid-date-string-2020-05-15-None]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_demographics_encryption_decryption_roundtrip` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_gender_normalization` | `tests.test_demographics` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_gender_normalization[  female  -F]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gender_normalization[  male  -M]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gender_normalization[-U]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1280,11 +1269,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_unit_conversion_create_valid` | `tests.test_lab_schemas` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_unit_conversion_record_valid` | `tests.test_lab_schemas` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_unit_conversion_response_valid` | `tests.test_lab_schemas` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1321,7 +1305,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_multiple_colons` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_valid_csv` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clean_token` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_func` | `tests.test_markdown_validator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_html_comment_filtering` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_is_potential_path_ref` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_json_block_validation` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1386,13 +1369,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_cache_ttl_configuration` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cache_unavailability_graceful_degradation` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_meddra_matching_integration` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_normalize_term` | `tests.test_medical_coding_matcher` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_normalize_term[Clinical history of hepatitises-clinic hepatitis]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_term[Mild headache-headache]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_term[Onset of acute gastritis-gastritis]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_term[Severe recurring pain, chronic-pain]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_similarity_computations` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_stem_word` | `tests.test_medical_coding_matcher` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_stem_word[allergies-allergy]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_stem_word[clinical-clinic]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_stem_word[headaches-headache]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1414,25 +1395,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_run_migrations_success` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_detect_phi_patterns` | `tests.test_ner_scrubber` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scrub_phi_redaction` | `tests.test_ner_scrubber` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_start_stop_notification_worker_integration` | `tests.test_notification_worker` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_worker_gxp_exponential_retry_and_dlq` | `tests.test_notification_worker` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_worker_resolves_cra_for_document_expiry` | `tests.test_notification_worker` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_worker_resolves_crc_for_edc_query` | `tests.test_notification_worker` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_worker_resolves_safety_officer_for_sae_flag` | `tests.test_notification_worker` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_direct_transition_open_to_resolved` | `tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_email_delivery_channel_failure_and_exhaustion` | `tests.test_notifications` | PRD-SYS-003 | ⚪ UNVERIFIED | N/A |
-| `test_email_delivery_channel_success` | `tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_lifecycle_transitions_and_justifications` | `tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_missing_diary_alert_rendering` | `tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_multi_channel_edge_case_in_app_succeeds_email_exhausts` | `tests.test_notifications` | PRD-SYS-003 | ⚪ UNVERIFIED | N/A |
-| `test_notification_creation_and_auditing` | `tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_notification_detail_visibility` | `tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_notification_list_visibility_and_filtering` | `tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_notifications_database_schema_creation` | `tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_notifications_health_check` | `tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_notifications_negative_security_paths` | `tests.test_notifications` | PRD-SYS-004 | ⚪ UNVERIFIED | N/A |
-| `test_webhook_delivery_channel_failure_and_retry_backoff` | `tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_webhook_delivery_channel_success` | `tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_start_stop_notification_worker_integration` | `tests.test_notification_worker` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_worker_gxp_exponential_retry_and_dlq` | `tests.test_notification_worker` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_worker_resolves_cra_for_document_expiry` | `tests.test_notification_worker` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1481,7 +1443,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_personnel_crud_api` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_resolve_assignments_endpoint` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_site_crud_api` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_audit_fields_change_reason_validation` | `tests.test_organization_domain` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_audit_fields_change_reason_validation[   ]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_change_reason_validation[\n]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_change_reason_validation[\t]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1493,10 +1454,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_trial_duty_values` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_certificate_revocation_verification` | `tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_esignature_tamper_detection_e2e` | `tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_private_key` | `tests.test_part11_esignatures` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_tampered_pdf_fails_verification` | `tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_valid_part11_signature_verification` | `tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_x509_cert` | `tests.test_part11_esignatures` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_tampered_pdf_fails_verification` | `tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_valid_part11_signature_verification` | `tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_pdf_redaction_engine_bounding_box` | `tests.test_pdf_redactor` | PRD-SYS-001 | 🟢 PASSED | < 1s |
@@ -1581,303 +1538,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_rendered_protocol_document_with_usdm_study` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_soa_matrix_view` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_synopsis_view_parsing` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_protocol_version_ref_accepted_statuses` | `tests.test_protocol_version_ref` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_protocol_version_ref_serialization` | `tests.test_protocol_version_ref` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_protocol_version_ref_valid_payload` | `tests.test_protocol_version_ref` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_protocol_version_ref_validation_blank_fields` | `tests.test_protocol_version_ref` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_protocol_version_ref_validation_index` | `tests.test_protocol_version_ref` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_protocol_version_ref_validation_status` | `tests.test_protocol_version_ref` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_capa_creation_validations_and_closed_deviation` | `tests.test_quality` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_capa_transition_edge_cases_and_optimistic_locking` | `tests.test_quality` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_capa_update_edge_cases_and_optional_fields` | `tests.test_quality` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_database_manager_uninitialized_raises_exception` | `tests.test_quality` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_deviation_lifecycle_and_traceability_fields` | `tests.test_quality` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_deviation_not_found_404` | `tests.test_quality` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_deviation_rca_capa_relationships_and_cascading` | `tests.test_quality` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_endpoint_change_reason_check_via_mock` | `tests.test_quality` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_lifespan_coverage` | `tests.test_quality` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_list_deviations_filters` | `tests.test_quality` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_missing_change_reasons_unauthorized` | `tests.test_quality` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_quality_audit_log_append_only` | `tests.test_quality` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_quality_database_schema_creation` | `tests.test_quality` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_quality_health_check` | `tests.test_quality` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_sqlite_foreign_key_constraints` | `tests.test_quality` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_sqlite_pragma_exception_handling` | `tests.test_quality` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_amendment_impact_and_cost_estimation` | `tests.test_quality_sentinel` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_block_eligibility_soa_inconsistencies` | `tests.test_quality_sentinel` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_burden_tracing_with_invasiveness_modifiers` | `tests.test_quality_sentinel` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_pluggable_fixture_patient_attrition` | `tests.test_quality_sentinel` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_quality_sentinel_complete_protocol` | `tests.test_quality_sentinel` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_quality_sentinel_incomplete_protocol_detects_errors` | `tests.test_quality_sentinel` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_quality_sentinel_router_endpoint` | `tests.test_quality_sentinel` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_quality_sentinel_router_endpoint_dependency_override` | `tests.test_quality_sentinel` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_readability_metrics_and_scoring` | `tests.test_quality_sentinel` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_syllable_counter_deterministic` | `tests.test_quality_sentinel` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_audit_log_endpoint_properties` | `tests.test_quality_workflow` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_capa_approval_closure_requires_quality_oversight` | `tests.test_quality_workflow` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_capa_creation_validations` | `tests.test_quality_workflow` | PRD-SUB-001 | ⚪ UNVERIFIED | N/A |
-| `test_capa_lifecycle_transitions` | `tests.test_quality_workflow` | PRD-SUB-001 | ⚪ UNVERIFIED | N/A |
-| `test_capa_updates_and_concurrency` | `tests.test_quality_workflow` | PRD-SUB-001 | ⚪ UNVERIFIED | N/A |
-| `test_create_and_list_deviations` | `tests.test_quality_workflow` | PRD-SYS-001, Trace-7 | ⚪ UNVERIFIED | N/A |
-| `test_create_and_update_rca` | `tests.test_quality_workflow` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
-| `test_mutation_without_change_reason_rejected` | `tests.test_quality_workflow` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_permission_failure_leaves_no_misleading_audit_entry` | `tests.test_quality_workflow` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_read_only_roles_forbidden` | `tests.test_quality_workflow` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_successful_mutation_creates_audit_log_and_is_atomic` | `tests.test_quality_workflow` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_transition_capa_sig_token_matrix` | `tests.test_quality_workflow` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_digest_window_configurations` | `tests.test_queries_escalation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_escalation_idempotency` | `tests.test_queries_escalation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_escalation_missing_ids_fallback` | `tests.test_queries_escalation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_no_aging_queries` | `tests.test_queries_escalation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_startup_shutdown_and_resilience` | `tests.test_queries_escalation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_threshold_boundaries_and_escalation` | `tests.test_queries_escalation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_concurrent_randomization_unique_and_monotonic` | `tests.test_randomization_concurrency` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_forced_failure_rolls_back_atomically` | `tests.test_randomization_concurrency` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_subject_demographics_mutation_and_deletion_endpoints` | `tests.test_randomization_endpoints` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_subject_state_transition_endpoint` | `tests.test_randomization_endpoints` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_randomization_entities_audit_trail_and_soft_delete` | `tests.test_randomization_persistence` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_randomization_entities_hard_delete_prevented` | `tests.test_randomization_persistence` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_randomization_entities_trial_lock_conformity` | `tests.test_randomization_persistence` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_can_access_site` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_cross_site_query_read_isolation` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_cross_site_unblind_denied_with_alert` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_ecoa_diary_alert_permissions` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_etmf_audit_logs_gated_to_auditors` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_etmf_document_transition_auditor_forbidden` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_etmf_edl_creation_auditor_forbidden` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_etmf_edl_update_auditor_forbidden` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_etmf_ingest_auditor_forbidden` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_etmf_taxonomy_and_tag_permissions` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_execution_observation_creation_auditor_forbidden` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_execution_subject_creation_auditor_forbidden` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_execution_visit_creation_auditor_forbidden` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_external_monitor_aliases` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_external_monitor_eisf_denies_writes_allows_reads` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_external_monitor_permissions_matrix` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_external_monitor_principal_resolution` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_get_principal_from_request` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_has_permission` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_lab_range_alert_permissions` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_lab_range_rbac_permissions` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_mask_payload_recursive` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_medical_coding_rbac_permissions` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_principal_agreement_with_middleware_coercion` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_require_permission_dependency` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_require_study_scope_extraction` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_role_aliases_normalization` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_role_normalization_list` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_role_normalization_string` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_rtsm_role_aliases_normalization` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_rtsm_role_aware_masking` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_rtsm_role_permissions` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_soa_granular_permissions` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_soa_rbac_permissions` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_verify_is_auditor_allows_auditors` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_verify_is_auditor_denies_non_auditors` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_verify_not_auditor_allows_others` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_verify_not_auditor_denies_auditors` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_visit_windowing_granular_permissions` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_visit_windowing_rbac_permissions` | `tests.test_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_rbac_designer_study_scoping` | `tests.test_rbac_e2e` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_rbac_etmf_site_scoping` | `tests.test_rbac_e2e` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_rbac_execution_access` | `tests.test_rbac_e2e` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_rbac_execution_unauthorized` | `tests.test_rbac_e2e` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_field_level_masking_blinded_user` | `tests.test_rbac_enforcement` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_field_level_masking_pii_fields` | `tests.test_rbac_enforcement` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_field_level_masking_unblinded_user` | `tests.test_rbac_enforcement` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_mask_clinical_records_list` | `tests.test_rbac_enforcement` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_rbac_cra_monitoring_authorization` | `tests.test_rbac_enforcement` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_rbac_data_manager_lock_authorization` | `tests.test_rbac_enforcement` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_rbac_sponsor_admin_authorization` | `tests.test_rbac_enforcement` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_get_permissions_for_role_cra` | `tests.test_rbac_permissions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_get_permissions_for_role_data_manager` | `tests.test_rbac_permissions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_get_permissions_for_role_sponsor_admin` | `tests.test_rbac_permissions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_get_permissions_for_roles_aggregated` | `tests.test_rbac_permissions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_has_permission_checks` | `tests.test_rbac_permissions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_normalize_role_name` | `tests.test_rbac_permissions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_permission_matrix_enum_values` | `tests.test_rbac_permissions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_role_enum_canonical_names` | `tests.test_rbac_permissions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_soa_permissions_definitions` | `tests.test_rbac_permissions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_soa_permissions_matrix_mapping` | `tests.test_rbac_permissions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_unknown_role_returns_empty_permissions` | `tests.test_rbac_permissions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_subject_consent_blocking_and_reconsent_lifecycle` | `tests.test_reconsent_blocking` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_subject_consent_endpoint_lifecycle` | `tests.test_reconsent_blocking` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_fetch_all_issues` | `tests.test_remove_jules_labels` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_is_jules_label` | `tests.test_remove_jules_labels` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_remove_label_dry_run` | `tests.test_remove_jules_labels` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_remove_label_success` | `tests.test_remove_jules_labels` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_reset_db_safety_guard_non_local` | `tests.test_reset_db` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_reset_db_safety_guard_production` | `tests.test_reset_db` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_reset_db_success_offline` | `tests.test_reset_db` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_get_subject_api_blinding_and_isolation` | `tests.test_role_redaction_and_access` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_get_visit_api_blinding_and_isolation` | `tests.test_role_redaction_and_access` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_site_isolation_guard_and_audit` | `tests.test_role_redaction_and_access` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_trial_role_enum_and_helper` | `tests.test_role_redaction_and_access` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_block_allocation_mechanics` | `tests.test_rtsm_algorithms` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_block_allocation_uneven_ratios` | `tests.test_rtsm_algorithms` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_canonical_stratum_key_generation` | `tests.test_rtsm_algorithms` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_minimization_imbalance_and_biased_coin` | `tests.test_rtsm_algorithms` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_minimization_uneven_ratios_and_weights` | `tests.test_rtsm_algorithms` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_randomization_config_validation` | `tests.test_rtsm_algorithms` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_reproducibility_and_seeding` | `tests.test_rtsm_algorithms` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_stratified_block_isolation` | `tests.test_rtsm_algorithms` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_evaluate_resupply_boundaries` | `tests.test_rtsm_supply` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_hard_delete_prevented_for_supply_entities` | `tests.test_rtsm_supply` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_insufficient_stock_rejection_and_rollback` | `tests.test_rtsm_supply` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_invalid_site_kit_relationship_rejection` | `tests.test_rtsm_supply` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_locked_site_rejection` | `tests.test_rtsm_supply` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_resupply_threshold_breach_and_deduplication` | `tests.test_rtsm_supply` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_site_inventory_unique_constraint` | `tests.test_rtsm_supply` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_successful_dispensation_endpoint` | `tests.test_rtsm_supply` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_supply_entities_audit_trail_and_soft_delete` | `tests.test_rtsm_supply` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_trial_locking_conformity` | `tests.test_rtsm_supply` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_icsr_version_metadata` | `tests.test_sae_icsr` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_invalid_icsr_drug_role` | `tests.test_sae_icsr` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_invalid_icsr_patient_age_negative` | `tests.test_sae_icsr` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_invalid_icsr_patient_age_unit` | `tests.test_sae_icsr` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_invalid_meddra_coding_primary_soc` | `tests.test_sae_icsr` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_invalid_sae_date_chronology` | `tests.test_sae_icsr` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_invalid_sae_date_format` | `tests.test_sae_icsr` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_invalid_sae_seq` | `tests.test_sae_icsr` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_invalid_sae_seriousness` | `tests.test_sae_icsr` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_invalid_sae_severity` | `tests.test_sae_icsr` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_sae_version_metadata` | `tests.test_sae_icsr` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_valid_icsr_full` | `tests.test_sae_icsr` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_valid_meddra_coding` | `tests.test_sae_icsr` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_valid_sae_full_normalization` | `tests.test_sae_icsr` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_valid_sae_minimum` | `tests.test_sae_icsr` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_sae_reconciler_concordant_and_discrepant` | `tests.test_sae_reconciler` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_deterministic_output_sorting` | `tests.test_sae_reconciliation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_execution_client_and_adapter_methods` | `tests.test_sae_reconciliation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_pure_comparison_differing_fields` | `tests.test_sae_reconciliation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_pure_comparison_missing_on_either_side` | `tests.test_sae_reconciliation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_pure_comparison_same_code_different_terms` | `tests.test_sae_reconciliation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_pure_function_generate_stable_event_key` | `tests.test_sae_reconciliation` | Trace-15 | ⚪ UNVERIFIED | N/A |
-| `test_pure_function_normalize_edc_ae_to_sae` | `tests.test_sae_reconciliation` | Trace-15 | ⚪ UNVERIFIED | N/A |
-| `test_pure_function_normalize_external_icsr_to_saes` | `tests.test_sae_reconciliation` | Trace-15 | ⚪ UNVERIFIED | N/A |
-| `test_reconciliation_jobs_read_endpoints_and_gating` | `tests.test_sae_reconciliation` | Trace-15 | ⚪ UNVERIFIED | N/A |
-| `test_reconciliation_persistence_and_audit` | `tests.test_sae_reconciliation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_reconciliation_runs_read_endpoints` | `tests.test_sae_reconciliation` | Trace-15 | ⚪ UNVERIFIED | N/A |
-| `test_reconciliation_version_index_increment` | `tests.test_sae_reconciliation` | Trace-15 | ⚪ UNVERIFIED | N/A |
-| `test_safety_mutations_negative_signatures` | `tests.test_sae_reconciliation` | Trace-15 | ⚪ UNVERIFIED | N/A |
-| `test_safety_reads_negative_signatures` | `tests.test_sae_reconciliation` | Trace-15 | ⚪ UNVERIFIED | N/A |
-| `test_terminology_cache_functionality` | `tests.test_sae_reconciliation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_alert_dispatch_failure_exception` | `tests.test_sae_reconciliation_jobs` | Trace-15 | ⚪ UNVERIFIED | N/A |
-| `test_alert_dispatch_failure_non_2xx` | `tests.test_sae_reconciliation_jobs` | Trace-15 | ⚪ UNVERIFIED | N/A |
-| `test_notifications_gxp_medical_monitor_alert` | `tests.test_sae_reconciliation_jobs` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_reconciliation_job_failure_path` | `tests.test_sae_reconciliation_jobs` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_trigger_and_poll_reconciliation_job_success` | `tests.test_sae_reconciliation_jobs` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_generate_e2b_xml_happy_path` | `tests.test_safety_e2b` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_generate_e2b_xml_invalid_raises_value_error` | `tests.test_safety_e2b` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_icsr_version_and_reason_for_change_rendering` | `tests.test_safety_e2b` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_invalid_namespace_fails` | `tests.test_safety_e2b` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_invalid_root_tag_fails` | `tests.test_safety_e2b` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_malformed_xml_validation_fails` | `tests.test_safety_e2b` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_missing_drugs_or_drug_fields_fails` | `tests.test_safety_e2b` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_missing_header_fails` | `tests.test_safety_e2b` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_missing_header_fields_fail` | `tests.test_safety_e2b` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_missing_patient_fails` | `tests.test_safety_e2b` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_missing_patient_fields_fail` | `tests.test_safety_e2b` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_missing_reactions_or_reaction_term_fails` | `tests.test_safety_e2b` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_missing_safety_report_fails` | `tests.test_safety_e2b` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_missing_worldwide_unique_case_id_fails` | `tests.test_safety_e2b` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_valid_icsr_rendering_and_validation` | `tests.test_safety_e2b` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_validate_e2b_xml_structure_direct` | `tests.test_safety_e2b` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_e2b_xml_generation_and_parser_roundtrip` | `tests.test_safety_gateway` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_safety_gateway_negative_signatures_async` | `tests.test_safety_gateway` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_safety_reconciliation_job_lifecycle_async` | `tests.test_safety_gateway` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_dispatch_safety_report_post_endpoint` | `tests.test_safety_router` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_reconcile_sae_cases_post_endpoint` | `tests.test_safety_router` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_database_manager_uninitialized_raises_exception` | `tests.test_safety_service` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_invalid_xml_validation_fails` | `tests.test_safety_service` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_list_audit_logs_endpoint` | `tests.test_safety_service` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_missing_change_reason_fails_mutations` | `tests.test_safety_service` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_missing_v2_headers_or_change_reason_fails` | `tests.test_safety_service` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_nonexistent_resources_return_404` | `tests.test_safety_service` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_safety_audit_log_immutable_ledger` | `tests.test_safety_service` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_safety_case_lifecycle` | `tests.test_safety_service` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_safety_database_schema_creation` | `tests.test_safety_service` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_safety_export_job_lifecycle` | `tests.test_safety_service` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_safety_health_check` | `tests.test_safety_service` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_successful_export_and_transmission` | `tests.test_safety_service` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_unauthenticated_requests_are_rejected` | `tests.test_safety_service` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_gateway_graceful_handling_invalid_downstream` | `tests.test_schema_validation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_rewrite_references_nested_references` | `tests.test_schema_validation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_rewrite_references_recursion_protection` | `tests.test_schema_validation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_static_schema_validation_script` | `tests.test_schema_validation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_ae_required_optional_and_date_order` | `tests.test_sdtm_foundation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_auditable_model_fields_and_validation` | `tests.test_sdtm_foundation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_cm_required_optional_and_date_order` | `tests.test_sdtm_foundation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_date_format_validation` | `tests.test_sdtm_foundation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_dm_required_and_optional_fields` | `tests.test_sdtm_foundation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_lb_required_and_optional_fields` | `tests.test_sdtm_foundation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_models_optional_nones` | `tests.test_sdtm_foundation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_null_flavor_enum_membership` | `tests.test_sdtm_foundation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_sdtm_domain_enum_membership` | `tests.test_sdtm_foundation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_suppqual_fields_and_validation` | `tests.test_sdtm_foundation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_terminology_normalization_and_enums` | `tests.test_sdtm_foundation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_vs_required_and_optional_fields` | `tests.test_sdtm_foundation` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_cdash_ae_mapping` | `tests.test_sdtm_mapper` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_cdash_generic_orchestrator` | `tests.test_sdtm_mapper` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_cdash_vs_unit_conversion_and_study_day` | `tests.test_sdtm_mapper` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_compute_age` | `tests.test_sdtm_mapper` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_get_demographics` | `tests.test_sdtm_mapper` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_map_ae_flat_structure` | `tests.test_sdtm_mapper` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_map_ae_grouped_structure` | `tests.test_sdtm_mapper` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_map_cm_flat_structure` | `tests.test_sdtm_mapper` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_map_cm_grouped_structure` | `tests.test_sdtm_mapper` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_map_dm_defaults_and_fallbacks` | `tests.test_sdtm_mapper` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_map_dm_happy_path` | `tests.test_sdtm_mapper` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_map_lb` | `tests.test_sdtm_mapper` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_map_to_sdtm_orchestrator` | `tests.test_sdtm_mapper` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_map_vs` | `tests.test_sdtm_mapper` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_persist_sdtm_records_pipeline` | `tests.test_sdtm_mapper` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_to_dtc` | `tests.test_sdtm_mapper` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_bulk_query_generation_deduplication` | `tests.test_sdv` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_bulk_query_generation_happy_path` | `tests.test_sdv` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_bulk_query_generation_input_validation` | `tests.test_sdv` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_bulk_query_generation_rbac_gating` | `tests.test_sdv` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_bulk_sdv_signoff_batch_binding_mismatch` | `tests.test_sdv` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
-| `test_bulk_sdv_signoff_happy_path` | `tests.test_sdv` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
-| `test_bulk_sdv_signoff_input_validation` | `tests.test_sdv` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
-| `test_bulk_sdv_signoff_rbac_and_idempotency` | `tests.test_sdv` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
-| `test_sdv_automatic_verification_drop_compliance` | `tests.test_sdv` | PRD-QRY-006 | ⚪ UNVERIFIED | N/A |
-| `test_sdv_signoff_endpoints_rbac_and_target_validation` | `tests.test_sdv` | PRD-QRY-005 | ⚪ UNVERIFIED | N/A |
-| `test_flag_target_descriptor_validation` | `tests.test_sdv_item_level_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_sdv_flag_granular_permissions` | `tests.test_sdv_item_level_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_sdv_flag_rbac_permissions` | `tests.test_sdv_item_level_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_sdv_flag_request_validation` | `tests.test_sdv_item_level_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_sdv_flag_severity_enum` | `tests.test_sdv_item_level_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_sdv_resolve_request_validation` | `tests.test_sdv_item_level_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_sdv_response_structures` | `tests.test_sdv_item_level_rbac` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_clinical_observation_sdv_defaults` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-007 | ⚪ UNVERIFIED | N/A |
-| `test_item_level_sdv_data_model_and_state_machine` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005 | ⚪ UNVERIFIED | N/A |
-| `test_sdv_automatic_verification_drop` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-006 | ⚪ UNVERIFIED | N/A |
-| `test_sdv_sign_off_persistence_and_audit` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005 | ⚪ UNVERIFIED | N/A |
-| `test_sdv_signoff_endpoint_and_idempotency` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-006 | ⚪ UNVERIFIED | N/A |
-| `test_sdv_signoff_page_visit_scopes` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-006 | ⚪ UNVERIFIED | N/A |
-| `test_tsdv_config_persistence` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-007 | ⚪ UNVERIFIED | N/A |
-| `test_audit_context_variables_and_decorator` | `tests.test_security_middleware` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_canonical_json_signing_and_verification` | `tests.test_security_middleware` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_downstream_signature_gated_endpoint_expired_token` | `tests.test_security_middleware` | Trace-17 | ⚪ UNVERIFIED | N/A |
-| `test_downstream_signature_gated_endpoint_mismatched_action` | `tests.test_security_middleware` | Trace-17 | ⚪ UNVERIFIED | N/A |
-| `test_downstream_signature_gated_endpoint_replay_blocked` | `tests.test_security_middleware` | Trace-17 | ⚪ UNVERIFIED | N/A |
-| `test_downstream_signature_gated_endpoint_requires_sig_token` | `tests.test_security_middleware` | Trace-17 | ⚪ UNVERIFIED | N/A |
-| `test_downstream_signature_gated_endpoint_valid_sig_token` | `tests.test_security_middleware` | Trace-17 | ⚪ UNVERIFIED | N/A |
-| `test_middleware_cross_request_scope_isolation` | `tests.test_security_middleware` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_middleware_expired_timestamp` | `tests.test_security_middleware` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_middleware_explicit_legacy_version_accepted` | `tests.test_security_middleware` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_middleware_explicit_legacy_version_invalid_rejected` | `tests.test_security_middleware` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_middleware_health_bypass` | `tests.test_security_middleware` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_middleware_invalid_timestamp_format` | `tests.test_security_middleware` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_middleware_missing_headers` | `tests.test_security_middleware` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_middleware_missing_signature_version_rejected` | `tests.test_security_middleware` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_middleware_permissions_parsed_in_state` | `tests.test_security_middleware` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_middleware_scope_header_mutation_and_injection_rejection` | `tests.test_security_middleware` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_middleware_tenant_context_and_state` | `tests.test_security_middleware` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_middleware_tenant_missing_fallback` | `tests.test_security_middleware` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_middleware_tenant_signature_tampering_rejected` | `tests.test_security_middleware` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_middleware_unblinded_access_edge_cases` | `tests.test_security_middleware` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_protocol_version_ref_accepted_statuses[ACTIVE]` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_protocol_version_ref_accepted_statuses[ARCHIVED]` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_protocol_version_ref_accepted_statuses[DRAFT]` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2180,7 +1840,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_middleware_tenant_missing_fallback` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_tenant_signature_tampering_rejected` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_unblinded_access_edge_cases` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_middleware_unblinded_access_parametrization` | `tests.test_security_middleware` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_middleware_unblinded_access_parametrization[-False]` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_unblinded_access_parametrization[0-False]` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_unblinded_access_parametrization[1-True]` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
