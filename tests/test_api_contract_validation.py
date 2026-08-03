@@ -645,15 +645,16 @@ def is_whitelisted(method: str, path: str) -> bool:
         return True
     # Wildcard checks for newly added execution and designer features
     wildcards = [
-        "/subjects",
-        "/api/v1/execution/subjects",
-        "/api/v1/execution/visits",
-        "/api/v1/documents",
         "/api/v1/archive",
-        "/api/v1/synopsis",
-        "/api/v1/designer/sentinel",
         "/api/v1/designer/cascade",
         "/api/v1/designer/export",
+        "/api/v1/designer/sentinel",
+        "/api/v1/documents",
+        "/api/v1/execution/subjects",
+        "/api/v1/execution/visits",
+        "/api/v1/studies",
+        "/api/v1/synopsis",
+        "/subjects",
     ]
     for w in wildcards:
         if p_norm.startswith(w):
