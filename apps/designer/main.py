@@ -73,6 +73,9 @@ from apps.designer.delta import (
     _init_mock_soa,
     amend_protocol_version,
     approve_study_version_delta,
+    assign_activities_to_visit,
+    assign_visits_to_arm,
+    assign_visits_to_epoch,
     compute_graph_diff,
     create_block,
     create_eligibility_criterion,
@@ -101,14 +104,11 @@ from apps.designer.delta import (
     link_visit_to_procedure,
     list_blocks,
     list_library_objects,
-    reorder_blocks,
     reorder_arms,
+    reorder_blocks,
     reorder_epochs,
-    reorder_visits,
     reorder_procedures,
-    assign_activities_to_visit,
-    assign_visits_to_arm,
-    assign_visits_to_epoch,
+    reorder_visits,
     retire_arm_applicability_link,
     retire_epoch_visit_link,
     retire_soa_entity,
@@ -218,15 +218,19 @@ class VersionDiffResponse(BaseModel):
 
 
 from apps.designer.soa_models import (
+    ActivityAssignmentRequest,
+    ArmReorderRequest,
     CreateEpochRequest,
     CreateProcedureRequest,
     CreateStudyArmRequest,
     CreateTimingWindowRequest,
     CreateVisitRequest,
+    EpochReorderRequest,
     LinkArmApplicabilityRequest,
     LinkEpochVisitRequest,
     LinkTimingRequest,
     LinkVisitProcedureRequest,
+    ProcedureReorderRequest,
     SoAEntityCreatedResponse,
     SoAEntityDetail,
     SoALinkResponse,
@@ -235,11 +239,7 @@ from apps.designer.soa_models import (
     UpdateStudyArmRequest,
     UpdateTimingWindowRequest,
     UpdateVisitRequest,
-    ArmReorderRequest,
-    EpochReorderRequest,
     VisitReorderRequest,
-    ProcedureReorderRequest,
-    ActivityAssignmentRequest,
     VisitToArmAssignmentRequest,
     VisitToEpochAssignmentRequest,
 )
@@ -5174,6 +5174,7 @@ async def get_soa_projection_endpoint(
 
 # --- Reordering and Assignment Endpoints ---
 
+
 @app.post(
     "/api/v1/studies/{study_id}/versions/{version_id}/arms/reorder",
     response_model=dict,
@@ -5194,7 +5195,9 @@ async def reorder_arms_endpoint(
     change_reason = getattr(request.state, "change_reason", "system_operation")
 
     # Order IDs by requested sequence
-    ordered_ids = [item.arm_id for item in sorted(payload.arms, key=lambda x: x.sequence)]
+    ordered_ids = [
+        item.arm_id for item in sorted(payload.arms, key=lambda x: x.sequence)
+    ]
     await reorder_arms(
         driver=driver,
         study_version_id=version_id,
@@ -5224,7 +5227,9 @@ async def reorder_epochs_endpoint(
     user_id = getattr(request.state, "user_id", "system")
     change_reason = getattr(request.state, "change_reason", "system_operation")
 
-    ordered_ids = [item.epoch_id for item in sorted(payload.epochs, key=lambda x: x.sequence)]
+    ordered_ids = [
+        item.epoch_id for item in sorted(payload.epochs, key=lambda x: x.sequence)
+    ]
     await reorder_epochs(
         driver=driver,
         study_version_id=version_id,
@@ -5254,7 +5259,9 @@ async def reorder_visits_endpoint(
     user_id = getattr(request.state, "user_id", "system")
     change_reason = getattr(request.state, "change_reason", "system_operation")
 
-    ordered_ids = [item.visit_id for item in sorted(payload.visits, key=lambda x: x.sequence)]
+    ordered_ids = [
+        item.visit_id for item in sorted(payload.visits, key=lambda x: x.sequence)
+    ]
     await reorder_visits(
         driver=driver,
         study_version_id=version_id,
@@ -5284,7 +5291,10 @@ async def reorder_procedures_endpoint(
     user_id = getattr(request.state, "user_id", "system")
     change_reason = getattr(request.state, "change_reason", "system_operation")
 
-    ordered_ids = [item.procedure_id for item in sorted(payload.procedures, key=lambda x: x.sequence)]
+    ordered_ids = [
+        item.procedure_id
+        for item in sorted(payload.procedures, key=lambda x: x.sequence)
+    ]
     await reorder_procedures(
         driver=driver,
         study_version_id=version_id,
@@ -5317,7 +5327,9 @@ async def assign_activities_to_visit_endpoint(
     # Use procedure_ids if populated, otherwise activity_ids
     proc_ids = payload.procedure_ids or payload.activity_ids
     if not proc_ids:
-        raise HTTPException(status_code=400, detail="Procedure IDs list cannot be empty")
+        raise HTTPException(
+            status_code=400, detail="Procedure IDs list cannot be empty"
+        )
 
     await assign_activities_to_visit(
         driver=driver,

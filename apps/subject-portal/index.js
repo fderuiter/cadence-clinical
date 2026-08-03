@@ -80,7 +80,7 @@ if (typeof window !== "undefined") {
     if (originalAlert && (originalAlert._isMockFunction || typeof originalAlert.mock !== "undefined")) {
       try {
         originalAlert(message);
-      } catch (e) {
+      } catch {
         // ignore
       }
     }

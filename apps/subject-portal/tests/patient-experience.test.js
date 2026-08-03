@@ -26,7 +26,7 @@ describe("Patient Experience & Adaptive Sync Retry Integration", () => {
   });
 
   it("triggers dynamic CSS toast messages instead of blocking browser alerts on validation error", async () => {
-    const portal = await import("../index.js");
+    await import("../index.js");
     
     // Call alert through overridden window.alert
     window.alert("Please fix all form errors before signing.");

@@ -241,9 +241,7 @@ class SdvFlagResponse(BaseModel):
         None, description="Unique item-level flag operation identifier"
     )
     content_digest: str = Field(..., description="SHA-256 digest of flagged data")
-    timestamp_utc: str = Field(
-        ..., description="UTC ISO timestamp of flag execution"
-    )
+    timestamp_utc: str = Field(..., description="UTC ISO timestamp of flag execution")
     audit_tx: str = Field(..., description="Immutable GxP audit ledger transaction ID")
     flagged_count: int = Field(
         ..., description="Total number of successfully flagged SDV items"

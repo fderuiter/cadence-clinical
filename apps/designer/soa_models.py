@@ -54,7 +54,7 @@ except ImportError:
 
 # --- Task 1: Audit Fields from packages.core-models ---
 
-from audit import AuditFields, Part11AuditMixin
+from audit import AuditFields
 
 
 class AuditMetadata(BaseModel):
@@ -600,33 +600,42 @@ class SoAMatrixProjectionResponse(BaseModel):
 
 # --- Reordering and Assignment Request Contracts ---
 
+
 class ArmReorderItem(BaseModel):
     arm_id: str = Field(..., min_length=1)
     sequence: int = Field(..., ge=1)
 
+
 class ArmReorderRequest(BaseModel):
     arms: list[ArmReorderItem] = Field(...)
+
 
 class EpochReorderItem(BaseModel):
     epoch_id: str = Field(..., min_length=1)
     sequence: int = Field(..., ge=1)
 
+
 class EpochReorderRequest(BaseModel):
     epochs: list[EpochReorderItem] = Field(...)
+
 
 class VisitReorderItem(BaseModel):
     visit_id: str = Field(..., min_length=1)
     sequence: int = Field(..., ge=1)
 
+
 class VisitReorderRequest(BaseModel):
     visits: list[VisitReorderItem] = Field(...)
+
 
 class ProcedureReorderItem(BaseModel):
     procedure_id: str = Field(..., min_length=1)
     sequence: int = Field(..., ge=1)
 
+
 class ProcedureReorderRequest(BaseModel):
     procedures: list[ProcedureReorderItem] = Field(...)
+
 
 class ActivityAssignmentRequest(BaseModel):
     visit_id: str = Field(..., min_length=1)
@@ -634,7 +643,7 @@ class ActivityAssignmentRequest(BaseModel):
     activity_ids: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def validate_ids(self) -> "ActivityAssignmentRequest":
+    def validate_ids(self) -> ActivityAssignmentRequest:
         if not self.procedure_ids and not self.activity_ids:
             raise ValueError(
                 "At least one of 'procedure_ids' or 'activity_ids' must be provided and non-empty."
@@ -645,9 +654,11 @@ class ActivityAssignmentRequest(BaseModel):
             self.procedure_ids = self.activity_ids
         return self
 
+
 class VisitToArmAssignmentRequest(BaseModel):
     arm_id: str = Field(..., min_length=1)
     visit_ids: list[str] = Field(..., min_length=1)
+
 
 class VisitToEpochAssignmentRequest(BaseModel):
     epoch_id: str = Field(..., min_length=1)
