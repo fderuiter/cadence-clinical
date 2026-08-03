@@ -133,7 +133,7 @@ async def test_gateway_auth_middleware_tenant_fallback():
 
     # GatewayAuthMiddleware expects gateway signature headers
     # Let's mock a valid signature token
-    gateway_secret = "internal-gateway-secret-12345"
+    gateway_secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
     user_id = "test_user"
     roles = "sponsor_dm"
     timestamp = str(time.time())
