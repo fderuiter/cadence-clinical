@@ -313,3 +313,67 @@ async def test_api_gateway_routing(monkeypatch: pytest.MonkeyPatch) -> None:
         )
         assert res_conv.status_code == 200
         assert res_conv.json()["converted_value"] == 37.777777
+
+
+async def test_visit_windowing_fields() -> None:
+    """Verify that clinical visit planning and compliance fields are correctly preserved and retrieved."""
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # 1. Create a subject
+        subject_payload = {
+            "subject_id": "SUBJ-WIN-001",
+            "study_id": "STUDY-WIN",
+            "demographics": {
+                "name": "Alex Taylor",
+                "birthdate": "1990-01-01",
+                "gender": "M",
+            },
+        }
+        res_subj = await client.post(
+            "/api/v1/execution/subjects",
+            json=subject_payload,
+            headers=get_auth_headers(),
+        )
+        assert res_subj.status_code == 200
+
+        # 2. Create clinical visit with planning and compliance fields
+        planned_dt = "2025-06-01T10:00:00"
+        start_dt = "2025-05-25T00:00:00"
+        end_dt = "2025-06-08T23:59:59"
+        status = "COMPLIANT"
+
+        visit_payload = {
+            "subject_id": "SUBJ-WIN-001",
+            "visit_name": "Week 4",
+            "study_id": "STUDY-WIN",
+            "planned_date": planned_dt,
+            "window_start": start_dt,
+            "window_end": end_dt,
+            "window_status": status,
+        }
+        res_visit = await client.post(
+            "/api/v1/execution/visits", json=visit_payload, headers=get_auth_headers()
+        )
+        assert res_visit.status_code == 200
+        visit_data = res_visit.json()
+        assert visit_data["visit_name"] == "Week 4"
+        assert visit_data["planned_date"] is not None
+        assert visit_data["window_start"] is not None
+        assert visit_data["window_end"] is not None
+        assert visit_data["window_status"] == status
+
+        visit_id = visit_data["id"]
+
+        # 3. Retrieve detailed visit information and verify fields are correctly retrieved
+        res_detail = await client.get(
+            f"/api/v1/execution/visits/{visit_id}",
+            headers=get_auth_headers(),
+        )
+        assert res_detail.status_code == 200
+        detail_data = res_detail.json()
+        assert detail_data["visit_name"] == "Week 4"
+        assert detail_data["planned_date"] is not None
+        assert detail_data["window_start"] is not None
+        assert detail_data["window_end"] is not None
+        assert detail_data["window_status"] == status
