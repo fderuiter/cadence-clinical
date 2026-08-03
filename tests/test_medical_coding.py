@@ -26,7 +26,7 @@ from apps.gateway.main import generate_signature
 
 
 @pytest_asyncio.fixture(autouse=True)
-async def setup_db() -> AsyncGenerator[None, None]:
+async def setup_db() -> AsyncGenerator[None]:
     from apps.execution.database.migrate import deploy_database_triggers
 
     TrialLockManager.reset()

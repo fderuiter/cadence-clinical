@@ -59,7 +59,7 @@ class DatabaseSessionDependency:
     def __init__(self, db_manager: RelationalDatabaseManager) -> None:
         self.db_manager = db_manager
 
-    async def __call__(self) -> AsyncGenerator[AsyncSession, None]:
+    async def __call__(self) -> AsyncGenerator[AsyncSession]:
         session_maker = self.db_manager.get_session_maker()
         async with session_maker() as session:
             try:
@@ -85,7 +85,7 @@ def get_relational_db_lifespan(
     """
 
     @asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         # Initialize database engine and session maker
         db_manager.init_db(database_url, **kwargs)
 

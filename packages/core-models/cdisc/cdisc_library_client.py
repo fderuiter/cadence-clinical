@@ -117,7 +117,7 @@ class CdiscLibraryClient:
             headers["api-key"] = self.config.api_key
         return headers
 
-    async def __aenter__(self) -> "CdiscLibraryClient":
+    async def __aenter__(self) -> CdiscLibraryClient:
         """Enter async context manager."""
         if self._external_client:
             self._client = self._external_client
