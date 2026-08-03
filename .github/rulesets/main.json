@@ -40,7 +40,7 @@
         "strict_required_status_checks_policy": false,
         "required_status_checks": [
           {
-            "context": "Test and Coverage"
+            "context": "Frontend & Backend Unit Tests"
           },
           {
             "context": "Style and Lint Verification"
