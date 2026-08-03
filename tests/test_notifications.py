@@ -915,3 +915,48 @@ def test_notifications_negative_security_paths():
     resp = client.get("/api/v1/notifications", headers=headers_spoof)
     assert resp.status_code == 401
     assert "Invalid gateway signature" in resp.json()["detail"]
+
+
+def test_missing_diary_alert_rendering():
+    """
+    Verify that the missing diary entry alert is correctly mapped and rendered.
+    """
+    from apps.notifications.services.email_renderer import (
+        get_template_name_for_event,
+        render_email_template,
+    )
+
+    event_type = "MISSING_DIARY_ENTRY"
+    template_name = get_template_name_for_event(event_type)
+    assert template_name == "missing_diary_alert.html.j2"
+
+    context = {
+        "study_id": "STUDY-101",
+        "event_id": "EVT-999",
+        "timestamp_utc": "2023-10-27T10:00:00Z",
+        "payload": {
+            "subject_id": "SUBJ-001",
+            "diary_name": "Daily Pain Diary",
+            "due_date": "2023-10-26",
+        },
+    }
+
+    # 1. Render using template file on disk
+    rendered_file = render_email_template(template_name, context)
+    assert "[CRITICAL] Missing Diary Entry Alert" in rendered_file
+    assert "STUDY-101" in rendered_file
+    assert "EVT-999" in rendered_file
+    assert "2023-10-27T10:00:00Z" in rendered_file
+    assert "SUBJ-001" in rendered_file
+    assert "Daily Pain Diary" in rendered_file
+    assert "2023-10-26" in rendered_file
+    assert "21 CFR Part 11 compliant audit logging" in rendered_file
+
+    # 2. Render using fallback in memory
+    with patch("os.path.exists", return_value=False):
+        rendered_fallback = render_email_template(template_name, context)
+        assert "Missing Diary Entry Alert" in rendered_fallback
+        assert "STUDY-101" in rendered_fallback
+        assert "SUBJ-001" in rendered_fallback
+        assert "Daily Pain Diary" in rendered_fallback
+        assert "2023-10-26" in rendered_fallback

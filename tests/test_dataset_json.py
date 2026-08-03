@@ -684,3 +684,103 @@ def test_validator_supp_dataset_linkage_and_structure():
     }
     dj = serialize_to_dataset_json(data=bundle_valid, study_id="STUDY-01")
     validate_dataset_json(dj)  # Should pass with no exception
+
+
+def test_cdisc_metadata_headers_and_aliases():
+    """Verify CDISC metadata headers, validation aliases, and optional fields added to Dataset-JSON models."""
+    from pydantic import ValidationError
+
+    from apps.execution.biostat.models import (
+        ClinicalData,
+        DatasetJSON,
+        DatasetJSONItemGroup,
+        VariableMetadata,
+    )
+
+    variables = [
+        VariableMetadata(name="STUDYID", label="Study OID", type="string"),
+        VariableMetadata(name="USUBJID", label="Subject ID", type="string"),
+    ]
+
+    item_group = DatasetJSONItemGroup(
+        itemGroupOID="IG.DM",
+        records=1,
+        name="DM",
+        label="Demographics",
+        items=variables,
+        itemData=[["STUDY-01", "STUDY-01-001"]],
+    )
+
+    clinical_data = ClinicalData(
+        studyOID="STUDY.01",
+        metaDataVersionOID="MDV.01",
+        metaDataRef="http://example.com/define.xml",
+        itemGroupData={"IG.DM": item_group},
+    )
+
+    # 1. Verify instantiation via creationDateTime (validation alias)
+    dj_alias = DatasetJSON(
+        creationDateTime="2026-07-29T12:00:00Z",
+        datasetJSONVersion="1.0.0",
+        clinicalData=clinical_data,
+        dbLastModifiedDateTime="2026-07-29T11:59:00Z",
+    )
+    assert dj_alias.datasetJSONCreationDateTime == "2026-07-29T12:00:00Z"
+    assert dj_alias.dbLastModifiedDateTime == "2026-07-29T11:59:00Z"
+
+    # 2. Verify serialization output uses datasetJSONCreationDateTime
+    dumped = dj_alias.model_dump(by_alias=True)
+    assert "datasetJSONCreationDateTime" in dumped
+    assert dumped["datasetJSONCreationDateTime"] == "2026-07-29T12:00:00Z"
+    assert dumped["dbLastModifiedDateTime"] == "2026-07-29T11:59:00Z"
+    assert dumped["clinicalData"]["metaDataRef"] == "http://example.com/define.xml"
+    assert dumped["clinicalData"]["itemGroupData"]["IG.DM"]["itemGroupOID"] == "IG.DM"
+
+    # 3. Verify instantiation via datasetJSONCreationDateTime (serialization alias / populate_by_name)
+    dj_direct = DatasetJSON(
+        datasetJSONCreationDateTime="2026-07-29T12:00:00Z",
+        datasetJSONVersion="1.0.0",
+        clinicalData=clinical_data,
+    )
+    assert dj_direct.datasetJSONCreationDateTime == "2026-07-29T12:00:00Z"
+
+    # 4. Verify rejection of invalid timestamps under datasetJSONCreationDateTime and creationDateTime
+    with pytest.raises(ValidationError) as exc:
+        DatasetJSON(
+            creationDateTime="not-a-timestamp",
+            clinicalData=clinical_data,
+        )
+    assert "creationDateTime must be a valid ISO 8601" in str(exc.value)
+
+    with pytest.raises(ValidationError) as exc:
+        DatasetJSON(
+            datasetJSONCreationDateTime="not-a-timestamp",
+            clinicalData=clinical_data,
+        )
+    assert "creationDateTime must be a valid ISO 8601" in str(exc.value)
+
+
+def test_serialize_to_dataset_json_includes_metadata():
+    """Verify that serialize_to_dataset_json populates the new metadata fields correctly."""
+    dm_records = [
+        {
+            "STUDYID": "STUDY-001",
+            "DOMAIN": "DM",
+            "USUBJID": "STUDY-001-SITE-A-SUBJ-001",
+            "SUBJID": "SUBJ-001",
+            "RFSTDTC": "2026-08-01",
+            "SEX": "M",
+            "RACE": "WHITE",
+            "ARM": "Active Arm",
+        }
+    ]
+
+    dj = serialize_to_dataset_json(
+        data=dm_records,
+        study_id="STUDY-001",
+    )
+
+    assert dj.datasetJSONCreationDateTime is not None
+    assert dj.clinicalData is not None
+    group = dj.clinicalData.itemGroupData["IG.DM"]
+    assert group.itemGroupOID == "IG.DM"

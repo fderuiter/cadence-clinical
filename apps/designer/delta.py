@@ -2343,6 +2343,7 @@ async def update_timing_window(
             raise ValueError(f"TimingWindow {timing_id} not found")
         old_node = store[timing_id]
         new_node = {
+            **old_node,
             "id": timing_id,
             "version_index": old_node["version_index"] + 1,
             "created_by": user_id,
@@ -2386,6 +2387,10 @@ async def update_timing_window(
                 created_at: datetime(),
                 created_by: $created_by
             })
+            SET new_t += properties(old_t)
+            SET new_t.version_index = old_t.version_index + 1
+            SET new_t.created_at = datetime()
+            SET new_t.created_by = $created_by
             SET new_t += $properties
             CREATE (sv)-[:HAS_TIMING_WINDOW]->(new_t)
             DELETE r

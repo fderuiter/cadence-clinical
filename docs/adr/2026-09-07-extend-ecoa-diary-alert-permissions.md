@@ -43,4 +43,4 @@ Requirements: PRD-SYS-001
 
 ## 6. Implementation & Verification
 * **Affected Repositories / Services:** `packages/security/rbac.py`
-* **Verification Plan:** Verified locally via `tests/test_rbac.py::test_ecoa_diary_alert_permissions` regression tests.
+* **Verification Plan:** Verified locally via `tests/test_rbac.py` regression tests.

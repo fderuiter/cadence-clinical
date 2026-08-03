@@ -833,6 +833,71 @@ async def test_instrument_and_assignment_orm_persistence():
 
 
 @pytest.mark.asyncio
+async def test_subject_assignment_missing_diary_alert_dedup_columns():
+    """
+    Test the presence, nullability, and persistence of missing-diary alert dedup state columns:
+    last_missed_alert_at and last_missed_alert_notified_at on SubjectAssignment.
+    """
+    async_session = db_manager.get_session_maker()
+    async with async_session() as session:
+        # Create Instrument
+        inst = Instrument(
+            name="Dedup Test Instrument",
+            items={},
+            response_types={},
+            scoring_metadata={},
+            created_by="admin",
+            reason_for_change="Dedup columns test setup",
+            version_index=1,
+        )
+        session.add(inst)
+        await session.flush()
+
+        # Create SubjectAssignment without specifying the dedup columns (should default to None)
+        now_utc = datetime.now(UTC)
+        assign = SubjectAssignment(
+            subject_id="subj_dedup",
+            instrument_id=inst.id,
+            start_date=now_utc,
+            end_date=now_utc + timedelta(days=7),
+            recurrence_pattern="DAILY",
+            created_by="admin",
+            reason_for_change="Test alert dedup columns",
+            version_index=1,
+        )
+        session.add(assign)
+        await session.commit()
+        assign_id = assign.id
+
+    # Re-fetch and verify they default to None
+    async with async_session() as session:
+        stmt = select(SubjectAssignment).where(SubjectAssignment.id == assign_id)
+        res = await session.execute(stmt)
+        db_assign = res.scalars().first()
+        assert db_assign is not None
+        assert db_assign.last_missed_alert_at is None
+        assert db_assign.last_missed_alert_notified_at is None
+
+        # Update the columns to specific timestamps
+        alert_time = datetime(2026, 11, 20, 10, 0, 0)
+        notified_time = datetime(2026, 11, 20, 10, 5, 0)
+        db_assign.last_missed_alert_at = alert_time
+        db_assign.last_missed_alert_notified_at = notified_time
+        await session.commit()
+
+    # Re-fetch and verify correct persistence of the values
+    async with async_session() as session:
+        stmt = select(SubjectAssignment).where(SubjectAssignment.id == assign_id)
+        res = await session.execute(stmt)
+        db_assign = res.scalars().first()
+        assert db_assign is not None
+        assert db_assign.last_missed_alert_at == datetime(2026, 11, 20, 10, 0, 0)
+        assert db_assign.last_missed_alert_notified_at == datetime(
+            2026, 11, 20, 10, 5, 0
+        )
+
+
+@pytest.mark.asyncio
 async def test_foreign_key_and_cascade_lifecycle_integrity():
     """
     Verify database schema integrity constraints:

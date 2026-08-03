@@ -171,7 +171,7 @@ class ICHSection(BaseModel):
         ...,
         description="Sequential ordering rank of the section within its hierarchy level.",
     )
-    children: list["ICHSection"] = Field(
+    children: list[ICHSection] = Field(
         default_factory=list,
         description="Nested child subsections belonging to this section.",
     )

@@ -39,7 +39,7 @@ def audit_context(
     sponsor_id: str | None = None,
     unblinded_access: bool = False,
     tenant_id: str | None = None,
-) -> Generator[None, None, None]:
+) -> Generator[None]:
     """Context manager to bind user identity, change reason, IP address, timestamp, signature context, and tenant ID.
 
     Ensures that background tasks maintain the initiating user's context for audit
@@ -163,7 +163,7 @@ def audit_context_decorator(
 def service_audit_context(
     service_name: str,
     change_reason: str,
-) -> Generator[None, None, None]:
+) -> Generator[None]:
     """Lightweight context manager wrapper around audit_context to bind a service identity and change reason."""
     with audit_context(user_id=service_name, change_reason=change_reason):
         yield
