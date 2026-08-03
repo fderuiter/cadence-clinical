@@ -574,7 +574,11 @@ jobs:
 
           SAFE=true
           while IFS= read -r file; do
-            if [[ "$file" == docs/* ]] || [[ "$file" == *.md ]] || [[ "$file" == tests/* ]]; then
+            if [[ "$file" == *"vulnerability_exclusions_ledger.json" ]] || [[ "$file" == *"validate_vulnerabilities"* ]]; then
+              echo "Unsafe vulnerability/validation file: $file"
+              SAFE=false
+              break
+            elif [[ "$file" == docs/* ]] || [[ "$file" == *.md ]] || [[ "$file" == tests/* ]]; then
               echo "Safe file: $file"
             else
               echo "Unsafe file: $file"
