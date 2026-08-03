@@ -1,6 +1,5 @@
 import datetime
 import hashlib
-import hmac
 import os
 import time
 from collections.abc import Awaitable, Callable
@@ -185,12 +184,12 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
             )
 
         version = request.headers.get("X-Signature-Version")
-        if not version or version not in ("1", "v1", "2", "v2"):
+        if not version or version not in ("2", "v2"):
             status_code = 403 if is_mutation else 401
             return JSONResponse(
                 status_code=status_code,
                 content={
-                    "detail": "Missing or obsolete signature format. Version 1 or Version 2 signature is required."
+                    "detail": "Missing or obsolete signature format. Version 2 signature is required."
                 },
             )
 
@@ -232,29 +231,21 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
 
         sig_token = request.headers.get("X-Sig-Token")
 
-        if version in ("2", "v2"):
-            from packages.security.signing import verify_gateway_signature
+        from packages.security.signing import verify_gateway_signature
 
-            is_valid_sig = verify_gateway_signature(
-                user_id=user_id,
-                roles=roles,
-                timestamp=timestamp,
-                signature=signature,
-                secret=self.gateway_secret,
-                change_reason=change_reason,
-                site_id=site_id,
-                sponsor_id=sponsor_id,
-                unblinded_access=unblinded_access,
-                tenant_id=tenant_id,
-                sig_token=sig_token,
-            )
-        else:
-            # Version 1/v1 (legacy colon concatenated format) - doesn't support scope
-            serialized = f"{user_id}:{roles}:{timestamp}"
-            expected_signature = hmac.new(
-                self.gateway_secret, serialized.encode(), hashlib.sha256
-            ).hexdigest()
-            is_valid_sig = hmac.compare_digest(expected_signature, signature)
+        is_valid_sig = verify_gateway_signature(
+            user_id=user_id,
+            roles=roles,
+            timestamp=timestamp,
+            signature=signature,
+            secret=self.gateway_secret,
+            change_reason=change_reason,
+            site_id=site_id,
+            sponsor_id=sponsor_id,
+            unblinded_access=unblinded_access,
+            tenant_id=tenant_id,
+            sig_token=sig_token,
+        )
 
         if not is_valid_sig:
             status_code = 403 if is_mutation else 401

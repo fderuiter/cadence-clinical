@@ -4,22 +4,30 @@ Requirements: PRD-SYS-001, GxP, 21 CFR Part 11
 """
 
 import pytest
-from pydantic import ValidationError
-
 from execution.sdv_transport_models import (
-    SdvFlagSeverity,
     FlagTargetDescriptor,
     SdvFlagRequest,
-    SdvResolveRequest,
     SdvFlagResponse,
+    SdvFlagSeverity,
+    SdvResolveRequest,
     SdvResolveResponse,
 )
-from packages.security.permissions import PermissionEnum, RoleEnum, has_permission as has_perm_granular
+from pydantic import ValidationError
+
+from packages.security.permissions import (
+    PermissionEnum,
+    RoleEnum,
+)
+from packages.security.permissions import (
+    has_permission as has_perm_granular,
+)
 from packages.security.rbac import (
+    ROLE_AUDITOR_CANONICAL,
     ROLE_CRA_CANONICAL,
     ROLE_INVESTIGATOR,
-    ROLE_AUDITOR_CANONICAL,
     Principal,
+)
+from packages.security.rbac import (
     has_permission as has_perm_rbac,
 )
 
@@ -160,5 +168,10 @@ def test_sdv_flag_granular_permissions():
     assert has_perm_granular(RoleEnum.CRA.value, PermissionEnum.SDV_VERIFY) is True
 
     # Check that Investigator/CRC do not have SDV_FLAG or SDV_VERIFY permissions
-    assert has_perm_granular(RoleEnum.PRINCIPAL_INVESTIGATOR.value, PermissionEnum.SDV_FLAG) is False
+    assert (
+        has_perm_granular(
+            RoleEnum.PRINCIPAL_INVESTIGATOR.value, PermissionEnum.SDV_FLAG
+        )
+        is False
+    )
     assert has_perm_granular(RoleEnum.CRC.value, PermissionEnum.SDV_FLAG) is False

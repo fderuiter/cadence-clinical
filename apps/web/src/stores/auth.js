@@ -128,9 +128,12 @@ export const useAuthStore = defineStore("auth", {
       if (window.keycloakInstance && !this.isDemoMode) {
         await window.keycloakInstance.login(options);
       } else {
-        const isProduction = import.meta.env.PROD || import.meta.env.MODE === "production";
+        const isProduction =
+          import.meta.env.PROD || import.meta.env.MODE === "production";
         if (isProduction) {
-          throw new Error("Offline login fallback is disabled in production environments.");
+          throw new Error(
+            "Offline login fallback is disabled in production environments."
+          );
         }
         console.warn(
           "Keycloak not initialized or running in demo mode. Logging in with offline mock."
@@ -153,9 +156,12 @@ export const useAuthStore = defineStore("auth", {
       if (window.keycloakInstance && !this.isDemoMode) {
         await window.keycloakInstance.logout(options);
       } else {
-        const isProduction = import.meta.env.PROD || import.meta.env.MODE === "production";
+        const isProduction =
+          import.meta.env.PROD || import.meta.env.MODE === "production";
         if (isProduction) {
-          throw new Error("Offline logout fallback is disabled in production environments.");
+          throw new Error(
+            "Offline logout fallback is disabled in production environments."
+          );
         }
         console.warn(
           "Keycloak not initialized or running in demo mode. Logging out from offline mock."

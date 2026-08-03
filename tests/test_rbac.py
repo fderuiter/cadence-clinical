@@ -1719,19 +1719,19 @@ def test_etmf_taxonomy_and_tag_permissions() -> None:
 def test_soa_rbac_permissions() -> None:
     """Verify that soa permissions are mapped correctly for rbac.py roles."""
     from packages.security.rbac import (
+        ROLE_AUDITOR_CANONICAL,
+        ROLE_AUTHORIZED_ER_PHYSICIAN,
         ROLE_CRA_CANONICAL,
         ROLE_CRC,
         ROLE_INVESTIGATOR,
+        ROLE_LEAD_INVESTIGATOR,
+        ROLE_PRINCIPAL_INVESTIGATOR,
         ROLE_REVIEWER,
         ROLE_SPONSOR_DESIGNER,
         ROLE_SPONSOR_DM,
         ROLE_SPONSOR_MM,
         ROLE_SPONSOR_STATISTICIAN,
         ROLE_SYSADMIN,
-        ROLE_AUDITOR_CANONICAL,
-        ROLE_PRINCIPAL_INVESTIGATOR,
-        ROLE_AUTHORIZED_ER_PHYSICIAN,
-        ROLE_LEAD_INVESTIGATOR,
         Principal,
         has_permission,
     )
@@ -1763,7 +1763,20 @@ def test_soa_rbac_permissions() -> None:
         assert has_permission(p, "soa:delete") is True
 
     # Read-only roles must have read only
-    for p in (dm, mm, stat, reviewer, investigator, crc, cra, monitor, auditor, pi, er_phys, lead_inv):
+    for p in (
+        dm,
+        mm,
+        stat,
+        reviewer,
+        investigator,
+        crc,
+        cra,
+        monitor,
+        auditor,
+        pi,
+        er_phys,
+        lead_inv,
+    ):
         assert has_permission(p, "soa:read") is True
         assert has_permission(p, "soa:create") is False
         assert has_permission(p, "soa:update") is False
@@ -1793,11 +1806,5 @@ def test_soa_granular_permissions() -> None:
         assert has_permission(role, PermissionEnum.SOA_READ) is True
 
     # Non-read/write roles should not have access (e.g. Subject)
-    assert (
-        has_permission(RoleEnum.SUBJECT.value, PermissionEnum.SOA_READ)
-        is False
-    )
-    assert (
-        has_permission(RoleEnum.SUBJECT.value, PermissionEnum.SOA_MANAGE)
-        is False
-    )
+    assert has_permission(RoleEnum.SUBJECT.value, PermissionEnum.SOA_READ) is False
+    assert has_permission(RoleEnum.SUBJECT.value, PermissionEnum.SOA_MANAGE) is False

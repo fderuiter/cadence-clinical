@@ -1,10 +1,6 @@
 <template>
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <div
-    v-if="isOpen"
-    class="command-palette-backdrop"
-    @click.self="close"
-  >
+  <div v-if="isOpen" class="command-palette-backdrop" @click.self="close">
     <div
       ref="modalRef"
       class="command-palette-container"
@@ -56,16 +52,14 @@
           </div>
         </div>
       </div>
-      <div
-        v-else
-        class="command-palette-no-results"
-      >
+      <div v-else class="command-palette-no-results">
         No matching modules found.
       </div>
 
       <div class="command-palette-footer">
         <div class="command-palette-hints">
-          <kbd>↑↓</kbd> to navigate &nbsp;|&nbsp; <kbd>↵</kbd> to select &nbsp;|&nbsp; <kbd>esc</kbd> to close
+          <kbd>↑↓</kbd> to navigate &nbsp;|&nbsp; <kbd>↵</kbd> to select
+          &nbsp;|&nbsp; <kbd>esc</kbd> to close
         </div>
       </div>
     </div>
@@ -134,14 +128,16 @@ const searchableDestinations = [
     name: "CTMS Dashboard",
     path: "/ctms",
     roles: ["cra", "monitor", "sponsor_admin"],
-    description: "Monitor trial milestones, site visits, and operational metrics",
+    description:
+      "Monitor trial milestones, site visits, and operational metrics",
     icon: "📊",
   },
   {
     name: "Cryptographic Ledger",
     path: "/audit",
     roles: ["auditor", "tmf_auditor", "sponsor_admin"],
-    description: "Inspect clinical execution audit trails and GxP block history",
+    description:
+      "Inspect clinical execution audit trails and GxP block history",
     icon: "🔒",
   },
   {
@@ -197,17 +193,20 @@ watch(query, () => {
   selectedIndex.value = 0;
 });
 
-watch(() => props.isOpen, (newVal) => {
-  if (newVal) {
-    query.value = "";
-    selectedIndex.value = 0;
-    nextTick(() => {
-      if (inputRef.value) {
-        inputRef.value.focus();
-      }
-    });
+watch(
+  () => props.isOpen,
+  (newVal) => {
+    if (newVal) {
+      query.value = "";
+      selectedIndex.value = 0;
+      nextTick(() => {
+        if (inputRef.value) {
+          inputRef.value.focus();
+        }
+      });
+    }
   }
-});
+);
 
 function close() {
   emit("close");

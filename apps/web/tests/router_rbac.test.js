@@ -179,16 +179,18 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
   describe("Active Keycloak Session Verification & Role Anti-Spoofing", () => {
     it("should block routing and redirect to login when local storage/session storage values are spoofed but active Keycloak session is missing or invalid", async () => {
       const authStore = useAuthStore();
-      
+
       // Simulate altered/spoofed local state
       authStore.isAuthenticated = true;
       authStore.isDemoMode = false;
       authStore.rawRoles = ["Sponsor Admin"]; // Spoofed admin role
-      
+
       // Mock an invalid/missing Keycloak session
       window.keycloakInstance = {
         authenticated: false,
-        updateToken: async () => { throw new Error("Invalid session"); },
+        updateToken: async () => {
+          throw new Error("Invalid session");
+        },
       };
 
       await router.push("/mdr");
@@ -196,7 +198,7 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       // Should be redirected to /login because session is invalid/missing
       expect(router.currentRoute.value.path).toBe("/login");
       expect(router.currentRoute.value.query.redirect).toBe("/mdr");
-      
+
       // Pinia store state should have been cleaned
       expect(authStore.isAuthenticated).toBe(false);
       expect(authStore.rawRoles).toEqual([]);
@@ -204,12 +206,12 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
 
     it("should successfully block navigation to restricted route if spoofed local storage roles don't match active Keycloak session roles", async () => {
       const authStore = useAuthStore();
-      
+
       // Simulate altered/spoofed local state
       authStore.isAuthenticated = true;
       authStore.isDemoMode = false;
       authStore.rawRoles = ["Sponsor Admin"]; // Spoofed admin role
-      
+
       // Mock active Keycloak session with a different, non-admin role (e.g., CRC)
       window.keycloakInstance = {
         authenticated: true,
