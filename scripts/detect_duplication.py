@@ -315,6 +315,10 @@ def main() -> None:
                                     "packages/core-models/protocol_authoring/__init__.py",
                                 },
                                 {
+                                    "apps/designer/soa_models.py",
+                                    "packages/core-models/protocol_authoring/soa.py",
+                                },
+                                {
                                     "apps/subject-portal/style.css",
                                     "apps/web/src/style.css",
                                 },
