@@ -12,7 +12,7 @@ Capture (EDC) into an automated Digital Data Flow (DDF) platform.
 
 | Concern | Technology |
 |---|---|
-| Language & Runtime | Python 3.12+ |
+| Language & Runtime | Python 3.14+ |
 | Web Framework | FastAPI |
 | Data Validation | Pydantic v2 (strict typing required — no `Any` shortcuts) |
 | Async HTTP | HTTPX |

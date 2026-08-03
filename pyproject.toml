@@ -1,6 +1,6 @@
 [tool.ruff]
 line-length = 88
-target-version = "py311"
+target-version = "py314"
 exclude = [
     ".git",
     ".venv",
@@ -82,7 +82,7 @@ authors = [
     { name = "Frederick de Ruiter", email = "fpderutier@gmail.com" },
 ]
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.139.2,<0.140.0",
     "uvicorn[standard]>=0.51.0,<0.52.0",

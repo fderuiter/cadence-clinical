@@ -141,7 +141,7 @@ During the current active development phase, several known discrepancies exist w
 
 Cadence Clinical is built using high-performance, compliance-ready frameworks:
 
-- **Backend Framework**: Python 3.12+ using FastAPI and Pydantic v2.
+- **Backend Framework**: Python 3.14+ using FastAPI and Pydantic v2.
 - **Relational Databases**: PostgreSQL (production EDC, auditing, security, and ledger systems) and SQLite (used for rapid test isolation across CTMS, eTMF, Quality, and Interop).
 - **Graph Metadata Engine**: Neo4j (tracks version-chained protocol arms, epochs, visits, and biomedical concepts).
 - **Frontend / Client Engines**: Vite, Vue 3, Pinia state stores, and vanilla JavaScript components.

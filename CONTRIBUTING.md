@@ -55,7 +55,7 @@ make setup
 ```
 
 This single command:
-1. Installs Python 3.12 dependencies via `uv sync`
+1. Installs Python 3.14 dependencies via `uv sync`
 2. Installs Playwright Chromium for integration tests
 3. Installs all pre-commit Git hooks (`pre-commit install --install-hooks`)
 4. Installs Node/pnpm workspace dependencies
