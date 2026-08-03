@@ -73,7 +73,7 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     const authStore = useAuthStore();
     authStore.isAuthenticated = true;
     // Sponsor Designer only has access to MDR, eConsent Authoring, Notifications
-    authStore.rawRoles = ["Sponsor Designer"]; 
+    authStore.rawRoles = ["Sponsor Designer"];
 
     const wrapper = mount(CommandPaletteOverlay, {
       props: {
@@ -85,19 +85,19 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     });
 
     const items = wrapper.findAll(".command-item");
-    
+
     // Total permitted items for Sponsor Designer:
     // 1. MDR Protocol Designer
     // 2. eConsent Authoring
     // 3. Notifications
     // Total = 3
     expect(items.length).toBe(3);
-    
-    const names = items.map(el => el.find(".command-name").text());
+
+    const names = items.map((el) => el.find(".command-name").text());
     expect(names).toContain("MDR Protocol Designer");
     expect(names).toContain("eConsent Authoring");
     expect(names).toContain("Notifications");
-    
+
     // Restricted routes like CTMS, Cryptographic Ledger, Rules, eTMF, eCRF should be omitted
     expect(names).not.toContain("CTMS Dashboard");
     expect(names).not.toContain("Cryptographic Ledger");
@@ -121,10 +121,10 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     });
 
     const input = wrapper.find(".command-palette-input");
-    
+
     // Type "CTMS"
     await input.setValue("CTMS");
-    
+
     let items = wrapper.findAll(".command-item");
     expect(items.length).toBe(1);
     expect(items[0].find(".command-name").text()).toBe("CTMS Dashboard");
@@ -139,7 +139,9 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     await input.setValue("xyz123nonexistent");
     items = wrapper.findAll(".command-item");
     expect(items.length).toBe(0);
-    expect(wrapper.find(".command-palette-no-results").text()).toContain("No matching modules found.");
+    expect(wrapper.find(".command-palette-no-results").text()).toContain(
+      "No matching modules found."
+    );
   });
 
   it("navigates list highlighting using ArrowUp/ArrowDown and resets selectedIndex on search query change", async () => {
@@ -201,7 +203,7 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     });
 
     const input = wrapper.find(".command-palette-input");
-    
+
     // Press Enter on the first highlighted item (MDR Protocol Designer)
     await input.trigger("keydown", { key: "Enter" });
     expect(pushSpy).toHaveBeenCalledWith("/mdr");

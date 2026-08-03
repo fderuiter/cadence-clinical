@@ -54,7 +54,10 @@
               :tabindex="0"
               @click="selectCell(rIndex, 0)"
               @keydown="handleCellKeyDown($event, rIndex, 0, doc)"
-              :class="{ 'cell-active': activeRowIndex === rIndex && activeColIndex === 0 }"
+              :class="{
+                'cell-active':
+                  activeRowIndex === rIndex && activeColIndex === 0,
+              }"
               :data-row="rIndex"
               :data-col="0"
               class="doc-name-cell"
@@ -65,15 +68,27 @@
               }}</span>
             </td>
             <td
-              :tabindex="isEditing && activeRowIndex === rIndex && activeColIndex === 1 ? -1 : 0"
+              :tabindex="
+                isEditing && activeRowIndex === rIndex && activeColIndex === 1
+                  ? -1
+                  : 0
+              "
               @click="selectCell(rIndex, 1)"
               @dblclick="startEditing(rIndex, doc)"
               @keydown="handleCellKeyDown($event, rIndex, 1, doc)"
-              :class="{ 'cell-active': activeRowIndex === rIndex && activeColIndex === 1 }"
+              :class="{
+                'cell-active':
+                  activeRowIndex === rIndex && activeColIndex === 1,
+              }"
               :data-row="rIndex"
               :data-col="1"
             >
-              <div v-if="isEditing && activeRowIndex === rIndex && activeColIndex === 1" class="inline-edit-container">
+              <div
+                v-if="
+                  isEditing && activeRowIndex === rIndex && activeColIndex === 1
+                "
+                class="inline-edit-container"
+              >
                 <select
                   v-model="tempTaxonomyCode"
                   class="form-control inline-select"
@@ -87,7 +102,10 @@
                     :key="opt.code"
                     :value="opt.code"
                   >
-                    Z{{ getZoneAndSectionFromCode(opt.code).zone }} - S{{ getZoneAndSectionFromCode(opt.code).section }} [{{ opt.code }}] ({{ opt.name }})
+                    Z{{ getZoneAndSectionFromCode(opt.code).zone }} - S{{
+                      getZoneAndSectionFromCode(opt.code).section
+                    }}
+                    [{{ opt.code }}] ({{ opt.name }})
                   </option>
                 </select>
               </div>
@@ -99,7 +117,10 @@
               :tabindex="0"
               @click="selectCell(rIndex, 2)"
               @keydown="handleCellKeyDown($event, rIndex, 2, doc)"
-              :class="{ 'cell-active': activeRowIndex === rIndex && activeColIndex === 2 }"
+              :class="{
+                'cell-active':
+                  activeRowIndex === rIndex && activeColIndex === 2,
+              }"
               :data-row="rIndex"
               :data-col="2"
             >
@@ -109,7 +130,10 @@
               :tabindex="0"
               @click="selectCell(rIndex, 3)"
               @keydown="handleCellKeyDown($event, rIndex, 3, doc)"
-              :class="{ 'cell-active': activeRowIndex === rIndex && activeColIndex === 3 }"
+              :class="{
+                'cell-active':
+                  activeRowIndex === rIndex && activeColIndex === 3,
+              }"
               :data-row="rIndex"
               :data-col="3"
             >
@@ -121,7 +145,10 @@
               :tabindex="0"
               @click="selectCell(rIndex, 4)"
               @keydown="handleCellKeyDown($event, rIndex, 4, doc)"
-              :class="{ 'cell-active': activeRowIndex === rIndex && activeColIndex === 4 }"
+              :class="{
+                'cell-active':
+                  activeRowIndex === rIndex && activeColIndex === 4,
+              }"
               :data-row="rIndex"
               :data-col="4"
             >
@@ -133,7 +160,10 @@
               :tabindex="0"
               @click="selectCell(rIndex, 5)"
               @keydown="handleCellKeyDown($event, rIndex, 5, doc)"
-              :class="{ 'cell-active': activeRowIndex === rIndex && activeColIndex === 5 }"
+              :class="{
+                'cell-active':
+                  activeRowIndex === rIndex && activeColIndex === 5,
+              }"
               :data-row="rIndex"
               :data-col="5"
               class="date-cell"
@@ -144,7 +174,10 @@
               :tabindex="0"
               @click="selectCell(rIndex, 6)"
               @keydown="handleCellKeyDown($event, rIndex, 6, doc)"
-              :class="{ 'cell-active': activeRowIndex === rIndex && activeColIndex === 6 }"
+              :class="{
+                'cell-active':
+                  activeRowIndex === rIndex && activeColIndex === 6,
+              }"
               :data-row="rIndex"
               :data-col="6"
               class="actions-cell"
@@ -423,7 +456,9 @@ function selectCell(rIndex, cIndex) {
 
 async function focusActiveCell() {
   await nextTick();
-  const activeEl = document.querySelector(`.documents-table td[data-row="${activeRowIndex.value}"][data-col="${activeColIndex.value}"]`);
+  const activeEl = document.querySelector(
+    `.documents-table td[data-row="${activeRowIndex.value}"][data-col="${activeColIndex.value}"]`
+  );
   if (activeEl && typeof activeEl.focus === "function") {
     activeEl.focus();
   }
@@ -436,7 +471,9 @@ async function startEditing(rIndex, doc) {
   isEditing.value = true;
   await nextTick();
   if (inlineSelectRef.value) {
-    const el = Array.isArray(inlineSelectRef.value) ? inlineSelectRef.value[0] : inlineSelectRef.value;
+    const el = Array.isArray(inlineSelectRef.value)
+      ? inlineSelectRef.value[0]
+      : inlineSelectRef.value;
     if (el && typeof el.focus === "function") {
       el.focus();
     }
@@ -473,7 +510,8 @@ async function commitTaxonomy(doc) {
         artifact_code: targetCode,
       },
       {
-        changeReason: "Corrected taxonomy classification via interactive grid navigation",
+        changeReason:
+          "Corrected taxonomy classification via interactive grid navigation",
       }
     );
 
@@ -514,11 +552,13 @@ function copyActiveCellValue(doc) {
       return;
   }
 
-  if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-    navigator.clipboard.writeText(val)
-      .catch((err) => {
-        console.error("Clipboard copy failed:", err);
-      });
+  if (
+    navigator.clipboard &&
+    typeof navigator.clipboard.writeText === "function"
+  ) {
+    navigator.clipboard.writeText(val).catch((err) => {
+      console.error("Clipboard copy failed:", err);
+    });
   } else {
     const textarea = document.createElement("textarea");
     textarea.value = val;
@@ -536,7 +576,11 @@ function copyActiveCellValue(doc) {
 }
 
 function handleCellKeyDown(event, rIndex, cIndex, doc) {
-  if (isEditing.value && activeRowIndex.value === rIndex && activeColIndex.value === 1) {
+  if (
+    isEditing.value &&
+    activeRowIndex.value === rIndex &&
+    activeColIndex.value === 1
+  ) {
     return;
   }
 
@@ -545,7 +589,10 @@ function handleCellKeyDown(event, rIndex, cIndex, doc) {
 
   let handled = false;
 
-  if ((event.ctrlKey || event.metaKey) && (event.key === "c" || event.key === "C")) {
+  if (
+    (event.ctrlKey || event.metaKey) &&
+    (event.key === "c" || event.key === "C")
+  ) {
     handled = true;
     copyActiveCellValue(doc);
   } else if (event.key === "ArrowUp") {
