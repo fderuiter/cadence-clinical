@@ -40,6 +40,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 2. API Gateway, Security & Identity
 - [2026-08-03: Decommission legacy V1 signatures and standalone rendering engine](2026-08-03-decommission-legacy-v1-signatures-and-standalone-rendering-engine.md)
+- [2026-09-08: Decommission Legacy V1 Signatures and Standalone Rendering Engine](2026-09-08-decommission-legacy-v1-signatures-and-rendering-engine.md)
 - [2026-08-03: eConsent Gateway Integration and Orchestration Port Alignment](2026-08-03-econsent-gateway-integration-and-orchestration-port-alignment.md)
 - [2026-08-02: Enforce Ruff Style and Formatting on API Gateway Routers](2026-08-02-enforce-ruff-style-and-formatting-on-api-gateway-routers.md)
 - [2026-08-01: Cryptographic Signature Verification Engine and Multi-Format Support](2026-08-01-cryptographic-signature-verification-engine-and-multi-format-support.md)
