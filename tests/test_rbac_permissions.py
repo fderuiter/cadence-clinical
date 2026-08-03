@@ -163,7 +163,13 @@ def test_soa_permissions_matrix_mapping():
     assert PermissionEnum.SOA_MANAGE in designer_perms
 
     # PrincipalInvestigator, CRC, CRA, DataManager, and Auditor hold only SOA_READ
-    read_only_roles = ["PrincipalInvestigator", "ClinicalResearchCoordinator", "ClinicalResearchAssociate", "DataManager", "Auditor"]
+    read_only_roles = [
+        "PrincipalInvestigator",
+        "ClinicalResearchCoordinator",
+        "ClinicalResearchAssociate",
+        "DataManager",
+        "Auditor",
+    ]
     for role in read_only_roles:
         perms = get_permissions_for_role(role)
         assert PermissionEnum.SOA_READ in perms

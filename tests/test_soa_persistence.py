@@ -409,12 +409,14 @@ def test_soa_domain_models_schema_alignment():
 
     # Assert model derivations and field-level GxP validations
     from audit import AuditFields, Part11AuditMixin
+
     assert issubclass(StudyArm, AuditFields)
     assert issubclass(StudyArm, Part11AuditMixin)
     assert isinstance(arm.version_index, int)
 
     # Assert reason_for_change requirement
     import pytest
+
     with pytest.raises(Exception):
         StudyArm(
             id="arm_no_rfc",
