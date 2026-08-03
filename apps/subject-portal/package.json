@@ -4,6 +4,8 @@
   "description": "Patient/Subject-facing eCOA Portal",
   "type": "module",
   "scripts": {
+    "prebuild": "pnpm --filter ui build",
+    "pretest": "pnpm --filter ui build",
     "dev": "vite",
     "build": "vite build --base=/subject-portal/",
     "test": "vitest run --coverage",
