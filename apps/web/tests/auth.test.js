@@ -9,6 +9,7 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
     if (typeof window !== "undefined") {
       delete window.keycloakInstance;
       window.localStorage.clear();
+      window.sessionStorage.clear();
     }
   });
 
@@ -171,6 +172,44 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
       expect(authStore.token).toBeNull();
       expect(authStore.identity).toBeNull();
       expect(authStore.normalizedRoles).toEqual([]);
+    });
+  });
+
+  describe("Production Lockdown Constraints", () => {
+    it("should refuse to login with offline mock in production environments", async () => {
+      const authStore = useAuthStore();
+      
+      // Stub production environment
+      const originalProd = import.meta.env.PROD;
+      const originalMode = import.meta.env.MODE;
+      import.meta.env.PROD = true;
+      import.meta.env.MODE = "production";
+      
+      authStore.isDemoMode = true;
+      
+      await expect(authStore.login()).rejects.toThrow("Offline login fallback is disabled in production environments.");
+      
+      // Clean up
+      import.meta.env.PROD = originalProd;
+      import.meta.env.MODE = originalMode;
+    });
+
+    it("should refuse to logout with offline mock in production environments", async () => {
+      const authStore = useAuthStore();
+      
+      // Stub production environment
+      const originalProd = import.meta.env.PROD;
+      const originalMode = import.meta.env.MODE;
+      import.meta.env.PROD = true;
+      import.meta.env.MODE = "production";
+      
+      authStore.isDemoMode = true;
+      
+      await expect(authStore.logout()).rejects.toThrow("Offline logout fallback is disabled in production environments.");
+      
+      // Clean up
+      import.meta.env.PROD = originalProd;
+      import.meta.env.MODE = originalMode;
     });
   });
 });
