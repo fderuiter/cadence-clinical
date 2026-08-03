@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build --base=/cadence-clinical/ && node ../../scripts/build-docs.js",
-    "test": "vitest run",
+    "test": "vitest run --coverage",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
@@ -33,6 +33,7 @@
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.1.1",
     "typescript": "^7.0.2",
-    "vite": "^8.1.5"
+    "vite": "^8.1.5",
+    "@vitest/coverage-v8": "^4.1.10"
   }
 }
