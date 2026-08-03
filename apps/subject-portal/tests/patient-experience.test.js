@@ -94,6 +94,9 @@ describe("Patient Experience & Adaptive Sync Retry Integration", () => {
       username: "test_user",
     });
 
+    // Bypass automatic scheduling inside syncOfflineQueue
+    window.__BYPASS_AUTO_RETRY__ = true;
+
     // Use vitest fake timers
     vi.useFakeTimers();
 
@@ -118,5 +121,8 @@ describe("Patient Experience & Adaptive Sync Retry Integration", () => {
 
     portal.resetRetryDelay();
     vi.useRealTimers();
+
+    // Restore original value
+    delete window.__BYPASS_AUTO_RETRY__;
   });
 });

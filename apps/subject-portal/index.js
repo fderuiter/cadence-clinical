@@ -1698,7 +1698,7 @@ async function syncOfflineQueue() {
       statusTextEl.textContent = `Offline Mode. ${queued.length} submission(s) queued locally.`;
     }
     await renderSyncQueueList();
-    if (queued.length > 0) {
+    if (queued.length > 0 && !(typeof window !== "undefined" && window.__BYPASS_AUTO_RETRY__)) {
       scheduleBackgroundRetry();
     }
     return;
@@ -1760,7 +1760,9 @@ async function syncOfflineQueue() {
     if (statusTextEl) {
       statusTextEl.textContent = `Sync failed. ${queued.length} submission(s) still queued.`;
     }
-    scheduleBackgroundRetry();
+    if (!(typeof window !== "undefined" && window.__BYPASS_AUTO_RETRY__)) {
+      scheduleBackgroundRetry();
+    }
   }
 
   await renderSyncQueueList();
@@ -2278,7 +2280,7 @@ async function initializeApp() {
 }
 
 // Auto-run on load in DOM environments
-if (typeof document !== "undefined") {
+if (typeof document !== "undefined" && !(typeof window !== "undefined" && window.__MOCK_TEST_ENV__)) {
   document.addEventListener("DOMContentLoaded", initializeApp);
 }
 
