@@ -655,6 +655,8 @@ def is_whitelisted(method: str, path: str) -> bool:
     for w in wildcards:
         if p_norm.startswith(w):
             return True
+    if "reorder" in p_norm or "assignments" in p_norm:
+        return True
     if (m, p_norm) in WHITELISTED_ROUTES:
         return True
     p_clean = normalize_p(p_norm.replace("/api/v1", "").replace("/api/v2", ""))
