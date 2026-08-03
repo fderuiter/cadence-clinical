@@ -228,7 +228,11 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "alert",
         },  # Added alert action
         "ecoa_schedule": {"create", "read"},
-        "ecoa_diary": {"create", "read", "alert"},  # Added alert action
+        "ecoa_diary": {
+            "create",
+            "read",
+            "alert",
+        },  # Added alert action
         "ecoa_submission": {"create", "read"},
     },
     ROLE_SPONSOR_DESIGNER: {
@@ -349,7 +353,11 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "alert",
         },  # Added alert action
         "ecoa_schedule": {"create", "read"},
-        "ecoa_diary": {"create", "read", "alert"},  # Added alert action
+        "ecoa_diary": {
+            "create",
+            "read",
+            "alert",
+        },  # Added alert action
         "ecoa_submission": {"create", "read"},
     },
     ROLE_SPONSOR_MM: {
@@ -403,7 +411,11 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
         "ecoa_schedule": {"create", "read"},
-        "ecoa_diary": {"create", "read", "alert"},  # Added alert action
+        "ecoa_diary": {
+            "create",
+            "read",
+            "alert",
+        },  # Added alert action
         "ecoa_submission": {"create", "read"},
     },
     ROLE_CRC: {
@@ -437,7 +449,11 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
         "ecoa_schedule": {"create", "read"},
-        "ecoa_diary": {"create", "read", "alert"},  # Added alert action
+        "ecoa_diary": {
+            "create",
+            "read",
+            "alert",
+        },  # Added alert action
         "ecoa_submission": {"create", "read"},
     },
     ROLE_CRA_CANONICAL: {
@@ -483,7 +499,11 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "alert",
         },  # Added alert action
         "ecoa_schedule": {"create", "read"},
-        "ecoa_diary": {"create", "read", "alert"},  # Added alert action
+        "ecoa_diary": {
+            "create",
+            "read",
+            "alert",
+        },  # Added alert action
         "ecoa_submission": {"create", "read"},
     },
     "monitor": {
@@ -523,7 +543,11 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "alert",
         },  # Added alert action
         "ecoa_schedule": {"create", "read"},
-        "ecoa_diary": {"create", "read", "alert"},  # Added alert action
+        "ecoa_diary": {
+            "create",
+            "read",
+            "alert",
+        },  # Added alert action
         "ecoa_submission": {"create", "read"},
     },
     ROLE_SUBJECT: {
@@ -680,7 +704,11 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "alert",
         },  # Added alert action
         "ecoa_schedule": {"create", "read"},
-        "ecoa_diary": {"create", "read", "alert"},  # Added alert action
+        "ecoa_diary": {
+            "create",
+            "read",
+            "alert",
+        },  # Added alert action
         "ecoa_submission": {"create", "read"},
     },
     "quality_manager": {
@@ -737,7 +765,11 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
             "release",
         },
         "ecoa_schedule": {"create", "read"},
-        "ecoa_diary": {"create", "read", "alert"},  # Added alert action
+        "ecoa_diary": {
+            "create",
+            "read",
+            "alert",
+        },  # Added alert action
         "ecoa_submission": {"create", "read"},
     },
     "anonymous": {
