@@ -52,31 +52,9 @@ except ImportError:
         arm_name: str
 
 
-# --- Task 1: Audit Metadata and Shared Convention ---
+# --- Task 1: Audit Fields from packages.core-models ---
 
-
-class SoAAuditMixin(BaseModel):
-    """
-    Shared 21 CFR Part 11 audit fields mixin/base model.
-    Exposes created_at, created_by, updated_at, updated_by, reason_for_change, and version,
-    mirroring ConceptDetail in main.py.
-    """
-
-    version: str = Field("1.0.0", description="Version identifier of the entity.")
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
-        description="Timestamp of creation.",
-    )
-    created_by: str = Field(..., description="User ID of the creator.")
-    updated_at: datetime | None = Field(
-        None, description="Timestamp of the last update."
-    )
-    updated_by: str | None = Field(None, description="User ID of the last updater.")
-    reason_for_change: str | None = Field(
-        None, description="Justification/reason for the change."
-    )
-
-    model_config = {"extra": "allow"}
+from audit import AuditFields, Part11AuditMixin
 
 
 class AuditMetadata(BaseModel):
@@ -123,7 +101,7 @@ class SoAEntityDetail(BaseModel):
 # --- Task 2: Define StudyArm and Epoch domain models ---
 
 
-class StudyArm(SoAAuditMixin):
+class StudyArm(AuditFields):
     """
     Pydantic v2 model for a clinical trial Study Arm.
     """
@@ -154,7 +132,7 @@ class StudyArm(SoAAuditMixin):
         return data
 
 
-class Epoch(SoAAuditMixin):
+class Epoch(AuditFields):
     """
     Pydantic v2 model for a Study Epoch.
     """
@@ -193,7 +171,7 @@ class Epoch(SoAAuditMixin):
 # --- Task 3: Define Visit and Procedure domain models ---
 
 
-class Visit(SoAAuditMixin):
+class Visit(AuditFields):
     """
     Pydantic v2 model for a Visit / Encounter.
     """
@@ -229,7 +207,7 @@ class Visit(SoAAuditMixin):
         return data
 
 
-class Procedure(SoAAuditMixin):
+class Procedure(AuditFields):
     """
     Pydantic v2 model for a clinical Procedure / Activity.
     """
@@ -269,7 +247,7 @@ class Procedure(SoAAuditMixin):
 # --- Task 4: Define the TimingWindow and conditional-timing model ---
 
 
-class TimingWindow(SoAAuditMixin):
+class TimingWindow(AuditFields):
     """
     Pydantic v2 model for a Timing Window.
     """
@@ -618,3 +596,59 @@ class SoAMatrixProjectionResponse(BaseModel):
     arms: list[SoAHeaderArm] = Field(
         default_factory=list, description="Ordered list of Study Arm columns."
     )
+
+
+# --- Reordering and Assignment Request Contracts ---
+
+class ArmReorderItem(BaseModel):
+    arm_id: str = Field(..., min_length=1)
+    sequence: int = Field(..., ge=1)
+
+class ArmReorderRequest(BaseModel):
+    arms: list[ArmReorderItem] = Field(...)
+
+class EpochReorderItem(BaseModel):
+    epoch_id: str = Field(..., min_length=1)
+    sequence: int = Field(..., ge=1)
+
+class EpochReorderRequest(BaseModel):
+    epochs: list[EpochReorderItem] = Field(...)
+
+class VisitReorderItem(BaseModel):
+    visit_id: str = Field(..., min_length=1)
+    sequence: int = Field(..., ge=1)
+
+class VisitReorderRequest(BaseModel):
+    visits: list[VisitReorderItem] = Field(...)
+
+class ProcedureReorderItem(BaseModel):
+    procedure_id: str = Field(..., min_length=1)
+    sequence: int = Field(..., ge=1)
+
+class ProcedureReorderRequest(BaseModel):
+    procedures: list[ProcedureReorderItem] = Field(...)
+
+class ActivityAssignmentRequest(BaseModel):
+    visit_id: str = Field(..., min_length=1)
+    procedure_ids: list[str] = Field(default_factory=list)
+    activity_ids: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_ids(self) -> "ActivityAssignmentRequest":
+        if not self.procedure_ids and not self.activity_ids:
+            raise ValueError(
+                "At least one of 'procedure_ids' or 'activity_ids' must be provided and non-empty."
+            )
+        if self.procedure_ids and not self.activity_ids:
+            self.activity_ids = self.procedure_ids
+        elif self.activity_ids and not self.procedure_ids:
+            self.procedure_ids = self.activity_ids
+        return self
+
+class VisitToArmAssignmentRequest(BaseModel):
+    arm_id: str = Field(..., min_length=1)
+    visit_ids: list[str] = Field(..., min_length=1)
+
+class VisitToEpochAssignmentRequest(BaseModel):
+    epoch_id: str = Field(..., min_length=1)
+    visit_ids: list[str] = Field(..., min_length=1)
