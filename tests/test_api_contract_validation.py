@@ -654,6 +654,7 @@ def is_whitelisted(method: str, path: str) -> bool:
         "/synopsis/render",
         "/designer/sentinel/evaluate",
         "/designer/cascade/propagate",
+        "/studies",
     ]:
         if p_clean.startswith(prefix):
             return True
