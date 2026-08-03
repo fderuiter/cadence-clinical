@@ -55,8 +55,5 @@ defineProps({
   },
 });
 
-defineEmits([
-  "update:modelValue",
-  "change",
-]);
+defineEmits(["update:modelValue", "change"]);
 </script>

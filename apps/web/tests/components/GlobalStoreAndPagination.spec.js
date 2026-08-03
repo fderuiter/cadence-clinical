@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { useEtmfStore } from "../../src/stores/etmf";
@@ -81,19 +81,25 @@ describe("Global Store Reactive Indexing & Paginated Grid Tests", () => {
 
       const secondPageRows = wrapper.findAll(".document-row");
       expect(secondPageRows.length).toBe(20);
-      expect(wrapper.find(".pagination-info").text()).toContain("Showing 21 to 40 of 45 documents");
+      expect(wrapper.find(".pagination-info").text()).toContain(
+        "Showing 21 to 40 of 45 documents"
+      );
 
       // Click next again for final page
       await wrapper.find(".next-btn").trigger("click");
       const lastPageRows = wrapper.findAll(".document-row");
       expect(lastPageRows.length).toBe(5);
-      expect(wrapper.find(".pagination-info").text()).toContain("Showing 41 to 45 of 45 documents");
+      expect(wrapper.find(".pagination-info").text()).toContain(
+        "Showing 41 to 45 of 45 documents"
+      );
 
       // Verify page jump buttons (Go to Page 1)
       const pageBtn = wrapper.findAll(".page-num-btn");
       expect(pageBtn.length).toBe(3); // 45 items / 20 = 3 pages
       await pageBtn[0].trigger("click"); // jump back to page 1
-      expect(wrapper.find(".pagination-info").text()).toContain("Showing 1 to 20 of 45 documents");
+      expect(wrapper.find(".pagination-info").text()).toContain(
+        "Showing 1 to 20 of 45 documents"
+      );
     });
 
     it("resets current page to 1 when active collection (documents list prop) changes", async () => {
@@ -111,14 +117,18 @@ describe("Global Store Reactive Indexing & Paginated Grid Tests", () => {
 
       // Go to page 2
       await wrapper.find(".next-btn").trigger("click");
-      expect(wrapper.find(".pagination-info").text()).toContain("Showing 21 to 40 of 45 documents");
+      expect(wrapper.find(".pagination-info").text()).toContain(
+        "Showing 21 to 40 of 45 documents"
+      );
 
       // Change prop (e.g., active collection switches)
       const newDocs = mockDocuments.slice(0, 10);
       await wrapper.setProps({ documents: newDocs });
 
       // currentPage should reset to 1
-      expect(wrapper.find(".pagination-info").text()).toContain("Showing 1 to 10 of 10 documents");
+      expect(wrapper.find(".pagination-info").text()).toContain(
+        "Showing 1 to 10 of 10 documents"
+      );
     });
   });
 });

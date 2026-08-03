@@ -70,7 +70,9 @@
       >
         <div
           class="authoring-canvas-stage p-6 bg-white rounded-xl border border-slate-200 min-h-[400px] transition-all duration-300"
-          :class="{ 'touch-simulation-active': designerStore.viewport !== 'desktop' }"
+          :class="{
+            'touch-simulation-active': designerStore.viewport !== 'desktop',
+          }"
           :style="{ maxWidth: canvasMaxWidthStyle, margin: '0 auto' }"
         >
           <draggable

@@ -45,7 +45,11 @@
               No documents have been uploaded for this artifact yet.
             </td>
           </tr>
-          <tr v-for="doc in paginatedDocuments" :key="doc.id" class="document-row">
+          <tr
+            v-for="doc in paginatedDocuments"
+            :key="doc.id"
+            class="document-row"
+          >
             <td class="doc-name-cell">
               <span class="file-icon">📄</span>
               <span class="filename" :title="doc.filename">{{
@@ -93,14 +97,18 @@
     <!-- Pagination Controls -->
     <div v-if="totalItems > 0" class="pagination-controls">
       <div class="pagination-info">
-        Showing 
-        <span class="font-semibold">{{ Math.min((currentPage - 1) * itemsPerPage + 1, totalItems) }}</span>
-        to 
-        <span class="font-semibold">{{ Math.min(currentPage * itemsPerPage, totalItems) }}</span>
-        of 
+        Showing
+        <span class="font-semibold">{{
+          Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)
+        }}</span>
+        to
+        <span class="font-semibold">{{
+          Math.min(currentPage * itemsPerPage, totalItems)
+        }}</span>
+        of
         <span class="font-semibold">{{ totalItems }}</span> documents
       </div>
-      
+
       <div class="pagination-buttons">
         <button
           class="btn btn-sm btn-outline-secondary prev-btn"
@@ -110,7 +118,7 @@
         >
           ◀ Previous
         </button>
-        
+
         <div class="page-numbers">
           <button
             v-for="page in totalPages"
@@ -124,7 +132,7 @@
             {{ page }}
           </button>
         </div>
-        
+
         <button
           class="btn btn-sm btn-outline-secondary next-btn"
           :disabled="currentPage === totalPages"
@@ -426,7 +434,9 @@ watch(
 );
 
 const totalItems = computed(() => formattedDocuments.value.length);
-const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage) || 1);
+const totalPages = computed(
+  () => Math.ceil(totalItems.value / itemsPerPage) || 1
+);
 
 const paginatedDocuments = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;

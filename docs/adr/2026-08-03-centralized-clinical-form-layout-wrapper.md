@@ -63,11 +63,11 @@ This decision addresses the following requirements:
 ## 6. Implementation & Verification
 
 * **Target Files Modified:**
-  - `apps/web/src/components/clinical/ClinicalFieldLayout.vue`
-  - `apps/web/src/components/clinical/ClinicalInput.vue`
-  - `apps/web/src/components/clinical/ClinicalLookupInput.vue`
-  - `apps/web/src/components/clinical/ClinicalRadioGroup.vue`
-  - `apps/web/src/components/clinical/ClinicalFormField.vue`
+  - `packages/ui/src/components/clinical/ClinicalFieldLayout.vue`
+  - `packages/ui/src/components/clinical/ClinicalInput.vue`
+  - `packages/ui/src/components/clinical/ClinicalLookupInput.vue`
+  - `packages/ui/src/components/clinical/ClinicalRadioGroup.vue`
+  - `packages/ui/src/components/clinical/ClinicalFormField.vue`
 * **Verification Plan:**
   - Verify through unit and integration tests: `pnpm --filter web test:unit`
   - Confirm all clinical workflows function using end-to-end tests: `pnpm --filter web test:e2e`

@@ -111,6 +111,7 @@
           style="margin-top: 12px; display: flex; gap: 8px"
         >
           <button
+            v-if="canManageQueries"
             type="button"
             class="btn-close-query"
             :data-field-id="id"
@@ -120,6 +121,7 @@
             Close Query (Resolve)
           </button>
           <button
+            v-if="canManageQueries"
             type="button"
             class="btn-reopen-query"
             :data-field-id="id"
@@ -168,9 +170,8 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { useFocusTrap } from "@/composables/useFocusTrap";
-import { useEscapeClose } from "@/composables/useEscapeClose";
-import { useAuthStore } from "../../stores/auth";
+import { useFocusTrap } from "../../composables/useFocusTrap";
+import { useEscapeClose } from "../../composables/useEscapeClose";
 import { getActivePinia } from "pinia";
 
 const props = defineProps({
@@ -202,11 +203,12 @@ const responseInput = ref("");
 
 // CRA / Monitor, Data Manager, or admin roles can manage queries (Close/Reopen/Create)
 const canManageQueries = computed(() => {
-  if (!getActivePinia()) {
+  const pinia = getActivePinia();
+  if (!pinia) {
     return true; // default fallback for direct mount unit tests where Pinia is not installed
   }
-  const authStore = useAuthStore();
-  const roles = authStore.normalizedRoles || [];
+  const authStore = pinia._s.get("auth");
+  const roles = authStore ? authStore.normalizedRoles || [] : [];
   // Ensure we also support mock data manager role in RulesView
   return roles.some((role) =>
     [
@@ -227,11 +229,12 @@ const status = computed(() => {
 });
 
 const queryLabel = computed(() => {
-  if (!getActivePinia()) {
+  const pinia = getActivePinia();
+  if (!pinia) {
     return status.value;
   }
-  const authStore = useAuthStore();
-  if (!authStore.isAuthenticated) {
+  const authStore = pinia._s.get("auth");
+  if (!authStore || !authStore.isAuthenticated) {
     return status.value;
   }
   const roles = authStore.normalizedRoles || [];

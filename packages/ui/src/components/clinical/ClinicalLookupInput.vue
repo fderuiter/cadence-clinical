@@ -103,11 +103,7 @@ const props = defineProps({
   },
 });
 
-defineEmits([
-  "update:modelValue",
-  "input",
-  "change",
-]);
+defineEmits(["update:modelValue", "input", "change"]);
 
 const stateClass = computed(() => {
   if (props.status === "loading") return "lookup-loading";
