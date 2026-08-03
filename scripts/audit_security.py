@@ -20,6 +20,10 @@ SECRET_PATTERNS: list[tuple[str, str]] = [
         r"bearer\s+eyJ[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*",
     ),
     ("Hardcoded Password Assignment", r"(?i)password\s*=\s*['\"][^'\"]{8,}['\"]"),
+    (
+        "Hardcoded Environment Fallback",
+        r"(?i)(os\.getenv|os\.environ\.get)\s*\(\s*['\"][^'\"]+['\"]\s*,\s*['\"][^'\"]+['\"]",
+    ),
 ]
 
 EXCLUDED_PATHS = {
@@ -56,11 +60,9 @@ def scan_file_for_secrets(filepath: str) -> list[str]:
             lines = f.readlines()
 
         for idx, line in enumerate(lines, start=1):
-            # Skip test mock tokens or environment variable fallbacks
+            # Skip explicit inline developer bypass annotations
             if (
-                "os.getenv" in line
-                or "os.environ" in line
-                or "# nosec" in line
+                "# nosec" in line
                 or "mock" in line.lower()
                 or "pragma: allowlist" in line.lower()
             ):

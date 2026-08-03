@@ -146,6 +146,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 6. Frontend & Design System
 - [2026-08-20: Targeted E2E Contrast Enforcement and Style Token Upgrades](2026-08-20-targeted-e2e-contrast-enforcement-and-style-token-upgrades.md)
+- [2026-08-02: Implement WCAG compliance in shared clinical UI primitives](2026-08-02-implement-wcag-compliance-in-shared-clinical-ui-primitives.md)
 - [2026-07-31: Viewport-Aware Grid Inspector for eCRF designer](2026-07-31-viewport-aware-grid-inspector.md)
 - [2026-07-31: Clinical Code Lookup Input Helper in Shared UI Package](2026-07-31-clinical-code-lookup-input-helper-in-shared-ui-package.md)
 - [2026-07-31: Vue SPA Component Smoke Test and Vitest Pipeline Integration](2026-07-31-vue-spa-component-smoke-test-and-vitest-pipeline-integration.md)
@@ -215,3 +216,5 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-04: Dynamic Port Diagnostics and Fallback Realignment](2026-09-04-dynamic-port-diagnostics-and-fallback-realignment.md)
 - [2026-09-05: Extend Centralized Permission Matrix for eCOA and ePRO](2026-09-05-extend-centralized-permission-matrix-for-ecoa.md)
 - [2026-09-06: GxP Compliance Reporting CI Alignment and Local Dependency Configuration](2026-09-06-gxp-compliance-reporting-ci-alignment.md)
+- [2026-08-02: ADR-[NUMBER]: Enforce Strict Fail-Closed Secrets Validation and Narrow Scanner Exclusions](2026-08-02-enforce-strict-fail-closed-secrets-validation-and-narrow-scanner-exclusions.md)
+- [2026-09-06: Enforce Strict Fail-Closed Environment Rules and Narrow Scanner Exclusions](2026-09-06-enforce-strict-fail-closed-environment-rules.md)
