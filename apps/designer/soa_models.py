@@ -308,6 +308,17 @@ class TimingWindow(SoAAuditMixin):
             )
         return self
 
+    @model_validator(mode="after")
+    def validate_numeric_ranges(self) -> "TimingWindow":
+        if self.min_offset is not None and self.max_offset is not None:
+            if self.min_offset > self.max_offset:
+                raise ValueError(
+                    "Field 'min_offset' must be less than or equal to 'max_offset'."
+                )
+        if self.target_day is not None and self.target_day < 0:
+            raise ValueError("Field 'target_day' cannot be negative.")
+        return self
+
 
 # --- Entity-Specific Properties Contracts ---
 
@@ -411,6 +422,12 @@ class TimingWindowProperties(BaseModel):
         min_length=1,
         description="Label or duration specification of the timing window.",
     )
+    anchor_reference: str | None = Field(
+        None, description="Anchor reference, e.g. a visit name."
+    )
+    target_day: int | None = Field(None, description="Target scheduled day.")
+    min_offset: int | None = Field(None, description="Minimum day offset.")
+    max_offset: int | None = Field(None, description="Maximum day offset.")
     conditional: bool | None = Field(
         None,
         description="Flag indicating if the timing or applicability is conditional.",
@@ -427,6 +444,17 @@ class TimingWindowProperties(BaseModel):
             raise ValueError(
                 "A non-empty 'reason' must be provided when timing/applicability is conditional."
             )
+        return self
+
+    @model_validator(mode="after")
+    def validate_numeric_ranges(self) -> "TimingWindowProperties":
+        if self.min_offset is not None and self.max_offset is not None:
+            if self.min_offset > self.max_offset:
+                raise ValueError(
+                    "Field 'min_offset' must be less than or equal to 'max_offset'."
+                )
+        if self.target_day is not None and self.target_day < 0:
+            raise ValueError("Field 'target_day' cannot be negative.")
         return self
 
 
