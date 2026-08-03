@@ -627,6 +627,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
+      administration: write
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -647,5 +648,6 @@ jobs:
       - name: Sync Ruleset
         env:
           GH_TOKEN: ${{ secrets.SERVICE_ACCOUNT_TOKEN || secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
+          FAIL_ON_RULESET_SYNC_ERROR: "true"
         run: |
           python3 scripts/sync_ruleset.py
