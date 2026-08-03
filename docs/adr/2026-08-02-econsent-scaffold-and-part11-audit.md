@@ -45,5 +45,8 @@ Define a reusable `AuditFields` model/mixin in `packages/core-models/audit.py` t
 * **Mitigation Strategy:** Keep `packages/core-models/` minimal and focused on standard structural definitions with high test coverage.
 
 ## 6. Implementation & Verification
-* **Affected Repositories / Services:** `apps/econsent/`, `packages/core-models/`
-* **Verification Plan:** Verify complete database initialization, secure `GatewayAuthMiddleware` context variable propagation, health endpoints, and strict validation checks on whitespace change reasons.
+* **Affected Repositories / Services:** `apps/econsent/`, `packages/core-models/`, `packages/security/`
+* **Verification Plan:**
+  * Verify complete database initialization, secure `GatewayAuthMiddleware` context variable propagation, health endpoints, and strict validation checks on whitespace change reasons.
+  * Validate direct re-authentication integration by routing signature token validation through the centralized `verify_and_consume_sig_token` helper.
+  * Verify replay prevention and token consumption behaviors via `tests/test_econsent_capture.py` (preventing token reuse/replay attacks and checking missing/invalid token rejections).

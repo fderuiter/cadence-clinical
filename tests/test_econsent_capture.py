@@ -326,6 +326,7 @@ async def test_capture_rejections() -> None:
         headers_replay = get_gateway_headers(sig_token=sig_token_replay)
 
         from packages.security.sig_token_verifier import token_consumption_cache
+
         token_consumption_cache.reset()
 
         # First capture with the token succeeds

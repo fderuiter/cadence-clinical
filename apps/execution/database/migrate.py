@@ -456,9 +456,7 @@ async def upgrade_existing_tables(conn) -> None:
         ]
         for col_name, col_type in new_visit_cols:
             if col_name not in visit_cols:
-                print(
-                    f"Adding missing column {col_name} to clinical_visits table..."
-                )
+                print(f"Adding missing column {col_name} to clinical_visits table...")
                 await conn.execute(
                     text(
                         f"ALTER TABLE clinical_visits ADD COLUMN {col_name} {col_type};"

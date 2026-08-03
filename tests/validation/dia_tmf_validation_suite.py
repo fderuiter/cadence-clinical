@@ -1,12 +1,7 @@
 import ast
-import os
-import sys
 from pathlib import Path
 
 import pytest
-
-import packages  # Ensure path injections run before first-party imports
-from apps.etmf.models import is_site_level_artifact
 from tmf_reference_model import (
     MILESTONE_MANDATORY_ARTIFACTS,
     get_active_catalog,
@@ -15,6 +10,8 @@ from tmf_reference_model import (
     resolve_artifact,
     validate_hierarchy,
 )
+
+from apps.etmf.models import is_site_level_artifact
 
 # Documented legacy allow-list constant for site-level artifacts
 # "site signature page" is a legacy/unassigned artifact name that is not
@@ -36,7 +33,9 @@ def test_catalog_cross_version_integrity():
 
     for version in versions:
         catalog = get_catalog(version)
-        assert catalog is not None, f"Catalog version '{version}' could not be retrieved."
+        assert catalog is not None, (
+            f"Catalog version '{version}' could not be retrieved."
+        )
 
         # Walk every zone, section, and artifact, and collect artifact codes
         artifact_codes = []
@@ -71,12 +70,18 @@ def test_catalog_cross_version_integrity():
     for ext_code in extension_codes:
         # Assert the artifact exists in v3.2.0-extended with is_extension=True
         ext_art = extended_catalog.get_artifact(ext_code)
-        assert ext_art is not None, f"Extension artifact '{ext_code}' not found in v3.2.0-extended."
-        assert ext_art.is_extension is True, f"Artifact '{ext_code}' in extended catalog is not marked as extension."
+        assert ext_art is not None, (
+            f"Extension artifact '{ext_code}' not found in v3.2.0-extended."
+        )
+        assert ext_art.is_extension is True, (
+            f"Artifact '{ext_code}' in extended catalog is not marked as extension."
+        )
 
         # Assert v3.2.0-complete returns None from get_artifact() for the same code
         comp_art = complete_catalog.get_artifact(ext_code)
-        assert comp_art is None, f"Extension artifact '{ext_code}' should not exist in v3.2.0-complete."
+        assert comp_art is None, (
+            f"Extension artifact '{ext_code}' should not exist in v3.2.0-complete."
+        )
 
 
 def test_site_level_classification_drift():
@@ -91,7 +96,9 @@ def test_site_level_classification_drift():
     assert active_catalog is not None
 
     # Dynamically extract helper's local variables (site_codes_prefix and site_artifacts) using AST parser
-    models_file_path = Path(__file__).resolve().parent.parent.parent / "apps" / "etmf" / "models.py"
+    models_file_path = (
+        Path(__file__).resolve().parent.parent.parent / "apps" / "etmf" / "models.py"
+    )
     assert models_file_path.is_file(), f"Models file not found at {models_file_path}"
 
     tree = ast.parse(models_file_path.read_text())
@@ -104,18 +111,30 @@ def test_site_level_classification_drift():
                 if isinstance(stmt, ast.Assign):
                     for target in stmt.targets:
                         if isinstance(target, ast.Name):
-                            if target.id == "site_artifacts" and isinstance(stmt.value, ast.Set):
+                            if target.id == "site_artifacts" and isinstance(
+                                stmt.value, ast.Set
+                            ):
                                 site_artifacts = {elt.value for elt in stmt.value.elts}
-                            elif target.id == "site_codes_prefix" and isinstance(stmt.value, ast.Set):
-                                site_codes_prefix = {elt.value for elt in stmt.value.elts}
+                            elif target.id == "site_codes_prefix" and isinstance(
+                                stmt.value, ast.Set
+                            ):
+                                site_codes_prefix = {
+                                    elt.value for elt in stmt.value.elts
+                                }
 
-    assert site_artifacts is not None, "Failed to dynamically parse 'site_artifacts' from apps/etmf/models.py"
-    assert site_codes_prefix is not None, "Failed to dynamically parse 'site_codes_prefix' from apps/etmf/models.py"
+    assert site_artifacts is not None, (
+        "Failed to dynamically parse 'site_artifacts' from apps/etmf/models.py"
+    )
+    assert site_codes_prefix is not None, (
+        "Failed to dynamically parse 'site_codes_prefix' from apps/etmf/models.py"
+    )
 
     # For every prefix in site_codes_prefix, assert the prefix resolves to a real section in the active catalog
     for prefix in site_codes_prefix:
         section = active_catalog.get_section(prefix)
-        assert section is not None, f"Prefix '{prefix}' does not resolve to a real section in active catalog."
+        assert section is not None, (
+            f"Prefix '{prefix}' does not resolve to a real section in active catalog."
+        )
 
     # For every name in site_artifacts that is not in the legacy allow-list, assert it resolves to a catalog artifact by name
     for name in site_artifacts:
@@ -149,13 +168,17 @@ def test_milestone_mandatory_artifacts():
         # Assert the CLOSEOUT result includes the artifact with code 11.01.02
         if ms == "CLOSEOUT":
             codes = {art.code for art in artifacts}
-            assert "11.01.02" in codes, "CLOSEOUT mandatory artifacts do not include code 11.01.02."
+            assert "11.01.02" in codes, (
+                "CLOSEOUT mandatory artifacts do not include code 11.01.02."
+            )
 
     # Iterate every code in every list of MILESTONE_MANDATORY_ARTIFACTS and assert each resolves against the active catalog
     for ms_name, code_list in MILESTONE_MANDATORY_ARTIFACTS.items():
         for code in code_list:
             art = active_catalog.get_artifact(code)
-            assert art is not None, f"Mandatory code '{code}' under milestone '{ms_name}' does not exist in active catalog."
+            assert art is not None, (
+                f"Mandatory code '{code}' under milestone '{ms_name}' does not exist in active catalog."
+            )
 
     # Assert get_mandatory_artifacts raises ValueError for an unknown milestone name
     with pytest.raises(ValueError, match="Unknown milestone"):
