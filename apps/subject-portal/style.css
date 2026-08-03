@@ -1,20 +1,22 @@
 /* eCOA Subject Portal failure styles */
+@import "../../packages/ui/tokens.css";
+
 :root {
-  --primary: #026597;
-  --primary-dark: #014d76;
-  --primary-light: #e0f2fe;
-  --text-main: #0f172a;
-  --text-muted: #475569;
-  --bg-main: #f8fafc;
-  --bg-card: #ffffff;
-  --border: #e2e8f0;
-  --success: #15803d;
-  --success-bg: #dcfce7;
-  --warning: #854d0e;
-  --warning-bg: #fef9c3;
-  --danger: #b91c1c;
-  --danger-bg: #fee2e2;
-  --accent: #4338ca;
+  --primary: var(--color-primary);
+  --primary-dark: var(--color-primary-dark);
+  --primary-light: var(--color-primary-light);
+  --text-main: var(--color-text);
+  --text-muted: var(--color-text-muted);
+  --bg-main: var(--color-surface-muted);
+  --bg-card: var(--color-surface);
+  --border: var(--color-border);
+  --success: var(--color-success);
+  --success-bg: var(--color-success-bg);
+  --warning: var(--color-warning);
+  --warning-bg: var(--color-warning-bg);
+  --danger: var(--color-error);
+  --danger-bg: var(--color-error-bg);
+  --accent: var(--color-accent);
 }
 
 * {
@@ -726,4 +728,55 @@ body {
   padding: 40px;
   color: var(--text-muted);
   font-style: italic;
+}
+
+/* Accessibility & Unified Token Enforcement (WCAG 2.1 AA) */
+
+/* 1. Touch Target Compliance (Requirement 4) */
+button,
+select,
+textarea,
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+.btn,
+.nav-item button,
+.radio-option {
+  min-height: var(--touch-target-min, 44px) !important;
+  min-width: var(--touch-target-min, 44px) !important;
+}
+
+/* 2. Keyboard Navigation Focus Indicators (Requirement 2) */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--color-accent, #4338ca) !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
+}
+
+/* 3. Color Contrast Adjustments (Requirement 3) */
+.portal-footer {
+  color: var(--color-primary-light, #e0f2fe) !important;
+}
+
+.ledger-item-details {
+  color: #f1f5f9 !important;
+}
+
+.badge-gxp {
+  background-color: var(--color-surface-muted, #f8fafc) !important;
+  color: var(--color-text, #0f172a) !important;
+  border-color: var(--color-border, #e2e8f0) !important;
+}
+
+.badge-gamp {
+  background-color: var(--color-primary-light, #e0f2fe) !important;
+  color: var(--color-accent, #4338ca) !important;
+  border-color: var(--color-border, #e2e8f0) !important;
 }
