@@ -58,7 +58,7 @@
           class="query-status-badge"
           :class="`badge-${status.toLowerCase()}`"
         >
-          Status: {{ status }}
+          Status: {{ queryLabel }}
         </div>
         <p class="query-current-msg">
           <strong>Discrepancy:</strong> {{ query.message }}
@@ -91,7 +91,9 @@
 
       <!-- ANSWERED state (Only CRAs/DMs can close/reopen) -->
       <div v-else-if="status === 'ANSWERED'" class="query-details">
-        <div class="query-status-badge badge-answered">Status: ANSWERED</div>
+        <div class="query-status-badge badge-answered">
+          Status: {{ queryLabel }}
+        </div>
         <p class="query-current-msg">
           <strong>Discrepancy:</strong> {{ query.message }}
         </p>
@@ -143,7 +145,9 @@
 
       <!-- CLOSED state -->
       <div v-else-if="status === 'CLOSED'" class="query-details">
-        <div class="query-status-badge badge-closed">Status: CLOSED</div>
+        <div class="query-status-badge badge-closed">
+          Status: {{ queryLabel }}
+        </div>
         <p class="query-current-msg">
           <strong>Discrepancy:</strong> {{ query.message }}
         </p>
@@ -220,6 +224,32 @@ const status = computed(() => {
   return props.query && props.query.status
     ? props.query.status.toUpperCase()
     : "NONE";
+});
+
+const queryLabel = computed(() => {
+  if (!getActivePinia()) {
+    return status.value;
+  }
+  const authStore = useAuthStore();
+  if (!authStore.isAuthenticated) {
+    return status.value;
+  }
+  const roles = authStore.normalizedRoles || [];
+  if (roles.length === 0) {
+    return status.value;
+  }
+  const isSite = roles.includes("site_investigator") || roles.includes("crc");
+  const isMonitor = roles.includes("cra") || roles.includes("monitor");
+
+  const stat = status.value;
+  if (stat === "OPEN" || stat === "REOPENED") {
+    if (isSite) return "Awaiting Site Action";
+    if (isMonitor) return "Awaiting Site Response";
+  } else if (stat === "ANSWERED") {
+    if (isSite) return "Submitted to CRA";
+    if (isMonitor) return "Awaiting CRA Review";
+  }
+  return stat;
 });
 
 // Clear inputs when status changes

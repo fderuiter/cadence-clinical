@@ -141,6 +141,7 @@ ROLE_ALIASES = {
 ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     ROLE_SYSADMIN: {
         "visit_windowing": {"create", "read", "update"},
+        "soa": {"create", "read", "update", "delete"},
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
         "global_library": {
             "create",  # Phase 1: create global library object
@@ -238,6 +239,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     },
     ROLE_SPONSOR_DESIGNER: {
         "visit_windowing": {"create", "read", "update"},
+        "soa": {"create", "read", "update", "delete"},
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
         "global_library": {
             "create",  # Phase 1: create global library object
@@ -279,12 +281,14 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     },
     ROLE_REVIEWER: {
         "visit_windowing": {"read"},
+        "soa": {"read"},
         "study_design": {"read"},
         "protocol_ingestion": {"upload", "read", "review", "promote"},
         "protocol_section": {"review", "read"},
     },
     ROLE_SPONSOR_DM: {
         "visit_windowing": {"read"},
+        "soa": {"read"},
         "study_design": {"read", "approve"},
         "global_library": {
             "transition",  # Phase 1: transition global library object status
@@ -366,6 +370,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     },
     ROLE_SPONSOR_MM: {
         "visit_windowing": {"read"},
+        "soa": {"read"},
         "study_design": {"read"},
         "subject_enrollment": {"read"},
         "ecrf_data_entry": {"read"},
@@ -378,6 +383,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     },
     ROLE_SPONSOR_STATISTICIAN: {
         "visit_windowing": {"read"},
+        "soa": {"read"},
         "study_design": {"read"},
         "system_audit_logs": {"read"},
         "export_masked": {"create", "read", "update"},
@@ -387,6 +393,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     },
     ROLE_INVESTIGATOR: {
         "visit_windowing": {"read"},
+        "soa": {"read"},
         "study_design": {"read"},
         "subject_enrollment": {"create", "read", "update"},
         "rtsm_unblind": {"write"},
@@ -427,6 +434,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     },
     ROLE_CRC: {
         "visit_windowing": {"read"},
+        "soa": {"read"},
         "study_design": {"read"},
         "subject_enrollment": {"create", "read", "update"},
         "ecrf_data_entry": {
@@ -466,6 +474,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     },
     ROLE_CRA_CANONICAL: {
         "visit_windowing": {"read"},
+        "soa": {"read"},
         "study_design": {"read"},
         "subject_enrollment": {"read"},
         "ecrf_data_entry": {"read"},
@@ -517,6 +526,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     },
     "monitor": {
         "visit_windowing": {"read"},
+        "soa": {"read"},
         "study_design": {"read"},
         "sdv": {"create", "read", "update", "delete", "flag"},  # Added flag action for item-level SDV flags
         "system_audit_logs": {"read"},
@@ -640,6 +650,7 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     },
     "admin": {
         "visit_windowing": {"create", "read", "update"},
+        "soa": {"create", "read", "update", "delete"},
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
         "global_library": {
             "transition",  # Phase 1: transition global library object status

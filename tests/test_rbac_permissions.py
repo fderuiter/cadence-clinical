@@ -136,3 +136,40 @@ def test_unknown_role_returns_empty_permissions():
     """
     assert get_permissions_for_role("NonExistentRole") == set()
     assert has_permission("NonExistentRole", PermissionEnum.STUDY_READ) is False
+
+
+def test_soa_permissions_definitions():
+    """Validate that the new SoA permissions are correctly defined.
+
+    Requirements: PRD-SYS-001, 21 CFR Part 11
+    """
+    assert PermissionEnum.SOA_READ == "soa:read"
+    assert PermissionEnum.SOA_MANAGE == "soa:manage"
+
+
+def test_soa_permissions_matrix_mapping():
+    """Verify the mapping of SOA_READ and SOA_MANAGE across canonical roles.
+
+    Requirements: PRD-SYS-001, 21 CFR Part 11
+    """
+    # SponsorAdmin holds both SOA_READ and SOA_MANAGE
+    admin_perms = get_permissions_for_role("SponsorAdmin")
+    assert PermissionEnum.SOA_READ in admin_perms
+    assert PermissionEnum.SOA_MANAGE in admin_perms
+
+    # SponsorDesigner holds both SOA_READ and SOA_MANAGE
+    designer_perms = get_permissions_for_role("SponsorDesigner")
+    assert PermissionEnum.SOA_READ in designer_perms
+    assert PermissionEnum.SOA_MANAGE in designer_perms
+
+    # PrincipalInvestigator, CRC, CRA, DataManager, and Auditor hold only SOA_READ
+    read_only_roles = ["PrincipalInvestigator", "ClinicalResearchCoordinator", "ClinicalResearchAssociate", "DataManager", "Auditor"]
+    for role in read_only_roles:
+        perms = get_permissions_for_role(role)
+        assert PermissionEnum.SOA_READ in perms
+        assert PermissionEnum.SOA_MANAGE not in perms
+
+    # Subject role does NOT have SOA_READ or SOA_MANAGE
+    subject_perms = get_permissions_for_role("Subject")
+    assert PermissionEnum.SOA_READ not in subject_perms
+    assert PermissionEnum.SOA_MANAGE not in subject_perms

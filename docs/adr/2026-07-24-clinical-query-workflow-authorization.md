@@ -44,6 +44,21 @@ This decision implements requirements under Trace-8.
 * **Chosen Option:** Option 2
 * **Justification:** Option 2 provides a standard, secure-by-default framework for eClinical action-level RBAC. Implementing centralized role normalization prevents environment-specific discrepancies from bypassing or breaking authentication gates.
 
+### 4.1 Client-Side Role-Aware Visualization Layer
+To ensure optimal usability and guide user actions contextually without violating strict database schema and audit trail requirements, a dynamic client-side role-aware visualization layer has been implemented in the web portal (`ClinicalQueryPanel.vue`):
+
+* **Contextual Label Mapping:**
+  * **`OPEN` / `REOPENED` Status:**
+    * Site Coordinators and Investigators (`site_investigator`, `crc`) resolve this to `"Awaiting Site Action"`.
+    * CRAs and Monitors (`cra`, `monitor`) resolve this to `"Awaiting Site Response"`.
+  * **`ANSWERED` Status:**
+    * Site Coordinators and Investigators (`site_investigator`, `crc`) resolve this to `"Submitted to CRA"`.
+    * CRAs and Monitors (`cra`, `monitor`) resolve this to `"Awaiting CRA Review"`.
+  * **`CLOSED` Status:**
+    * Universally mapped to `"CLOSED"` for all roles to preserve audit trail visibility and avoid post-closure ambiguity.
+* **Robust Fallback Mechanism:**
+  * When Pinia or OIDC state is inactive/uninitialized, or if the user is unauthenticated, or has no explicitly assigned roles, the layer cleanly falls back to the database-persisted statuses (`OPEN`, `REOPENED`, `ANSWERED`, `CLOSED`). This guarantees graceful degradation and continuous operability of the interface under all client-side OIDC states.
+
 ## 5. Consequences & Trade-offs
 * **Positive Impact:** Highly robust security verification, completely deterministic query workflows, and clean GxP audit trails.
 * **Negative Impact / Technical Debt:** Requires keeping role synonym mappings up-to-date if external OIDC claims change drastically.
