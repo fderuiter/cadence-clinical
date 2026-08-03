@@ -2,17 +2,17 @@
 :root {
   --primary: #0f172a; /* Slate 900 */
   --primary-light: #1e293b; /* Slate 800 */
-  --accent: #0d9488; /* Teal 600 */
+  --accent: #0f766e; /* Teal 700 (Upgraded from #0d9488) */
   --accent-light: #14b8a6; /* Teal 500 */
   --accent-bg: #f0fdfa; /* Teal 50 */
   --neutral-dark: #334155; /* Slate 700 */
   --neutral-light: #f8fafc; /* Slate 50 */
   --border: #e2e8f0; /* Slate 200 */
-  --success: #16a34a; /* Green 600 */
+  --success: #15803d; /* Green 700 (Upgraded from #16a34a) */
   --success-bg: #f0fdf4; /* Green 50 */
-  --warning: #ea580c; /* Orange 600 */
+  --warning: #b45309; /* Orange 700 (Upgraded from #ea580c) */
   --warning-bg: #fff7ed; /* Orange 50 */
-  --error: #dc2626; /* Red 600 */
+  --error: #b91c1c; /* Red 700 (Upgraded from #dc2626) */
   --error-bg: #fef2f2; /* Red 50 */
   --font:
     "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial,
@@ -179,7 +179,7 @@ main {
 }
 
 .section-header p {
-  color: #64748b;
+  color: #475569;
   font-size: 0.9rem;
 }
 

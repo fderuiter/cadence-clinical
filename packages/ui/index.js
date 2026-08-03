@@ -35,6 +35,8 @@ export function createClinicalLookupInput(
   statusMessage = ""
 ) {
   let statusHtml;
+  let inputAttrs = "";
+
   if (status !== "none") {
     let stateClass = "";
     let statusIcon = "";
@@ -66,6 +68,11 @@ export function createClinicalLookupInput(
       <span class="lookup-status-icon" aria-hidden="true">${statusIcon}</span>
       <span class="lookup-status-text">${ariaLiveMessage}</span>
     </div>`;
+
+    inputAttrs += ` aria-describedby="lookup-status-${id}"`;
+    if (status === "invalid") {
+      inputAttrs += ` aria-invalid="true"`;
+    }
   } else {
     statusHtml = `<div id="lookup-status-${id}" class="lookup-status-indicator" role="status" aria-live="polite" style="display: none"></div>`;
   }
@@ -74,7 +81,7 @@ export function createClinicalLookupInput(
   <div id="field-container-${id}" class="clinical-input clinical-lookup-container grid-span-12" style="grid-column: span 12;">
     <label for="${id}">${label}</label>
     <div class="input-wrapper">
-      <input id="${id}" type="text" name="${id}" value="${value}" autocomplete="off" />
+      <input id="${id}" type="text" name="${id}" value="${value}" autocomplete="off"${inputAttrs} />
     </div>
     ${statusHtml}
   </div>`;
@@ -222,7 +229,7 @@ export function createConditionRowHTML(
 
         ${rightOperandHTML}
 
-        <button type="button" class="btn btn-danger remove-condition-btn" data-action="remove-condition" data-index="${index}" style="background-color: var(--error); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; height: fit-content; align-self: flex-end;">Remove</button>
+        <button type="button" class="btn btn-danger remove-condition-btn" data-action="remove-condition" data-index="${index}" aria-label="Remove Condition Element #${index + 1}" style="background-color: var(--error); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; height: fit-content; align-self: flex-end;">Remove</button>
       </div>
     </fieldset>
   `.trim();
@@ -639,15 +646,21 @@ export function createSoaBuilderMatrix(soaData) {
       };
       let cellClass = "status-n-a";
       let cellContent = "-";
+      let statusText = "Not Applicable";
 
       if (cell.is_applicable) {
         cellClass = "status-applicable";
+        statusText = "Applicable";
         if (cell.details) {
           const detailsLower = cell.details.toLowerCase();
           if (detailsLower.includes("conditional")) {
             cellClass = "status-conditional";
+            statusText = "Conditional";
           } else if (detailsLower.includes("optional")) {
             cellClass = "status-optional";
+            statusText = "Optional";
+          } else {
+            statusText = cell.details;
           }
         }
         cellContent = `✓${
@@ -656,7 +669,23 @@ export function createSoaBuilderMatrix(soaData) {
             : ""
         }`;
       }
-      tableHtml += `<td class="${cellClass}">${cellContent}</td>`;
+
+      const parts = [];
+      if (col.arm && col.arm.arm_name) {
+        parts.push(col.arm.arm_name);
+      }
+      if (col.epoch && col.epoch.epoch_name) {
+        parts.push(col.epoch.epoch_name);
+      }
+      if (col.encounter && col.encounter.encounter_name) {
+        parts.push(col.encounter.encounter_name);
+      }
+      const colDetailsStr = parts.join(" - ") || col.encounter.encounter_name;
+
+      const srLabel = `Form: ${row.activity_name}, Visit: ${colDetailsStr}, Status: ${statusText}`;
+      const srSpan = `<span class="sr-only" style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; white-space: nowrap;">${srLabel}</span>`;
+
+      tableHtml += `<td class="${cellClass}">${cellContent}${srSpan}</td>`;
     });
     tableHtml += `</tr>`;
   });
@@ -701,7 +730,9 @@ export function createClinicalVisitMatrix(visitsOrSoa, forms = []) {
       } else if (status === "Pending") {
         cellClass = "status-pending";
       }
-      tableHtml += `<td class="${cellClass}">${status}</td>`;
+      const srLabel = `Form: ${form.name}, Visit: ${v}, Status: ${status}`;
+      const srSpan = `<span class="sr-only" style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; white-space: nowrap;">${srLabel}</span>`;
+      tableHtml += `<td class="${cellClass}">${status}${srSpan}</td>`;
     });
     tableHtml += `</tr>`;
   });
