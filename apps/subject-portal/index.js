@@ -68,16 +68,34 @@ if (typeof window !== "undefined") {
     // Detect typical validation warnings / success to style appropriately
     let type = "info";
     const lower = (message || "").toLowerCase();
-    if (lower.includes("error") || lower.includes("fail") || lower.includes("could not") || lower.includes("please fix")) {
+    if (
+      lower.includes("error") ||
+      lower.includes("fail") ||
+      lower.includes("could not") ||
+      lower.includes("please fix")
+    ) {
       type = "error";
-    } else if (lower.includes("success") || lower.includes("confirm") || lower.includes("complete") || lower.includes("submitted")) {
+    } else if (
+      lower.includes("success") ||
+      lower.includes("confirm") ||
+      lower.includes("complete") ||
+      lower.includes("submitted")
+    ) {
       type = "success";
-    } else if (lower.includes("warning") || lower.includes("please answer") || lower.includes("invalid")) {
+    } else if (
+      lower.includes("warning") ||
+      lower.includes("please answer") ||
+      lower.includes("invalid")
+    ) {
       type = "warning";
     }
     showToast(message, type);
 
-    if (originalAlert && (originalAlert._isMockFunction || typeof originalAlert.mock !== "undefined")) {
+    if (
+      originalAlert &&
+      (originalAlert._isMockFunction ||
+        typeof originalAlert.mock !== "undefined")
+    ) {
       try {
         originalAlert(message);
       } catch {
@@ -97,12 +115,11 @@ function scheduleBackgroundRetry() {
     retryTimer = null;
     // Progressively double the backoff, capped at 5 minutes (300,000 ms)
     retryDelay = Math.min(retryDelay * 2, 300000);
-    
+
     // Attempt to sync
     await syncOfflineQueue();
   }, retryDelay);
 }
-
 
 // Mock Data fallbacks for high-fidelity offline/sandbox usage
 const MOCK_ASSIGNMENTS = [

@@ -83,7 +83,10 @@
           class="network-status-bar offline"
         >
           <span class="status-icon">⚠️</span>
-          <span class="status-message">Connection intermittent. The portal is attempting automated background retries. You can continue navigating freely.</span>
+          <span class="status-message"
+            >Connection intermittent. The portal is attempting automated
+            background retries. You can continue navigating freely.</span
+          >
         </div>
 
         <!-- View 1: My Tasks (Assigned Questionnaires) -->

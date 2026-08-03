@@ -46,7 +46,8 @@ const checkKeycloakReachable = async () => {
 };
 
 checkKeycloakReachable().then((reachable) => {
-  const isProduction = import.meta.env.PROD || import.meta.env.MODE === "production";
+  const isProduction =
+    import.meta.env.PROD || import.meta.env.MODE === "production";
   if (reachable) {
     keycloak
       .init({
@@ -61,13 +62,12 @@ checkKeycloakReachable().then((reachable) => {
         app.mount("#app");
       })
       .catch((err) => {
-        console.error(
-          "Keycloak initialization failed:",
-          err
-        );
+        console.error("Keycloak initialization failed:", err);
         if (isProduction) {
           authStore.isDemoMode = false;
-          throw new Error("Production lockdown: Keycloak OIDC initialization failed. Refusing to run in offline demo mode.");
+          throw new Error(
+            "Production lockdown: Keycloak OIDC initialization failed. Refusing to run in offline demo mode."
+          );
         } else {
           authStore.isDemoMode = true;
           app.mount("#app");
