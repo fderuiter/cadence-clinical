@@ -443,6 +443,44 @@ async def upgrade_existing_tables(conn) -> None:
                 text(f"ALTER TABLE {table_name} ADD COLUMN site_id VARCHAR(255);")
             )
 
+    # Upgrade sdv_sign_offs with new columns (status, flagged_by, flagged_at, flag_reason, resolved_by, resolved_at)
+    sign_off_cols = await conn.run_sync(
+        lambda sc: get_table_columns(sc, "sdv_sign_offs")
+    )
+    if sign_off_cols:
+        new_sign_off_cols = [
+            ("status", "VARCHAR(50) DEFAULT 'PENDING' NOT NULL"),
+            ("flagged_by", "VARCHAR(255)"),
+            ("flagged_at", "TIMESTAMP"),
+            ("flag_reason", "VARCHAR(1000)"),
+            ("resolved_by", "VARCHAR(255)"),
+            ("resolved_at", "TIMESTAMP"),
+        ]
+        for col_name, col_type in new_sign_off_cols:
+            if col_name not in sign_off_cols:
+                print(f"Adding missing column {col_name} to sdv_sign_offs table...")
+                await conn.execute(
+                    text(f"ALTER TABLE sdv_sign_offs ADD COLUMN {col_name} {col_type};")
+                )
+
+        # Backfill status values
+        print("Backfilling status column on sdv_sign_offs...")
+        # 1. Set existing verified rows to status = VERIFIED
+        await conn.execute(
+            text(
+                "UPDATE sdv_sign_offs SET status = 'VERIFIED' "
+                "WHERE is_verified = 1 OR is_verified = TRUE;"
+            )
+        )
+        # 2. Set existing dropped rows (is_verified = False with dropped_reason set) to status = DROPPED
+        await conn.execute(
+            text(
+                "UPDATE sdv_sign_offs SET status = 'DROPPED' "
+                "WHERE (is_verified = 0 OR is_verified = FALSE) "
+                "AND dropped_reason IS NOT NULL AND dropped_reason <> '';"
+            )
+        )
+
     # Upgrade lab_reference_ranges with new GxP columns
     ref_cols = await conn.run_sync(
         lambda sc: get_table_columns(sc, "lab_reference_ranges")
@@ -577,6 +615,9 @@ async def run_migrations(database_url: str) -> None:
     Args:
         database_url (str): The connection string for the database to migrate.
     """
+    import uuid
+    from sqlalchemy import event
+
     print(f"Starting pre-boot schema migration for {database_url}...")
     engine_options = {}
     if database_url.startswith("sqlite"):
@@ -585,6 +626,60 @@ async def run_migrations(database_url: str) -> None:
         }
 
     engine = create_async_engine(database_url, echo=False, **engine_options)
+
+    if database_url.startswith("sqlite"):
+        try:
+            _sqlite_settings = {}
+
+            @event.listens_for(engine.sync_engine, "connect")
+            def set_sqlite_pragma(dbapi_connection, connection_record):
+                conn = dbapi_connection
+                for _ in range(5):
+                    if hasattr(conn, "create_function"):
+                        break
+                    if hasattr(conn, "connection"):
+                        conn = conn.connection
+                    elif hasattr(conn, "_connection"):
+                        conn = conn._connection
+                    elif hasattr(conn, "dbapi_connection"):
+                        conn = conn.dbapi_connection
+                    else:
+                        break
+
+                if hasattr(conn, "create_function"):
+                    conn_id = id(conn)
+                    if conn_id not in _sqlite_settings:
+                        _sqlite_settings[conn_id] = {
+                            "cadence.current_user_id": "system",
+                            "cadence.current_change_reason": "system_operation",
+                            "cadence.app_writing": "false",
+                        }
+
+                    def sqlite_set_config(name, value, is_local=True):
+                        if conn_id not in _sqlite_settings:
+                            _sqlite_settings[conn_id] = {}
+                        _sqlite_settings[conn_id][name] = (
+                            str(value) if value is not None else None
+                        )
+                        return value
+
+                    def sqlite_current_setting(name, missing_ok=True):
+                        if conn_id not in _sqlite_settings:
+                            return ""
+                        val = _sqlite_settings[conn_id].get(name)
+                        if val is None:
+                            if missing_ok:
+                                return ""
+                            raise Exception(f"Setting {name} not found")
+                        return val
+
+                    conn.create_function("set_config", 3, sqlite_set_config)
+                    conn.create_function("current_setting", 2, sqlite_current_setting)
+                    conn.create_function("gen_random_uuid", 0, lambda: str(uuid.uuid4()))
+        except Exception:
+            # Fallback for mock engines in unit tests
+            pass
+
     try:
         async with engine.begin() as conn:
             if engine.dialect.name == "postgresql":

@@ -78,6 +78,14 @@ class FormSubmissionStatus(str, enum.Enum):
     APPROVED = "APPROVED"
 
 
+class SDVStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    VERIFIED = "VERIFIED"
+    FLAGGED = "FLAGGED"
+    RESOLVED = "RESOLVED"
+    DROPPED = "DROPPED"
+
+
 class Base(DeclarativeBase):
     pass
 
@@ -607,6 +615,16 @@ class SDVSignOff(AuditedModel):
     verified_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     dropped_reason: Mapped[str] = mapped_column(String(1000), nullable=True)
     dropped_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    status: Mapped[SDVStatus] = mapped_column(
+        Enum(SDVStatus, name="sdv_status_enum"),
+        nullable=False,
+        default=SDVStatus.PENDING,
+    )
+    flagged_by: Mapped[str] = mapped_column(String(255), nullable=True)
+    flagged_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    flag_reason: Mapped[str] = mapped_column(String(1000), nullable=True)
+    resolved_by: Mapped[str] = mapped_column(String(255), nullable=True)
+    resolved_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
 
 # Phase 11: TSDV configuration model for RBQM rules

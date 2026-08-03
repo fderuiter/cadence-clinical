@@ -1353,8 +1353,8 @@ def test_ecoa_diary_alert_permissions() -> None:
         ROLE_LEAD_INVESTIGATOR,
         ROLE_PRINCIPAL_INVESTIGATOR,
         ROLE_SPONSOR_DM,
-        ROLE_SYSADMIN,
         ROLE_SUBJECT,
+        ROLE_SYSADMIN,
         Principal,
         has_permission,
     )
