@@ -138,7 +138,12 @@ try {
 
   // 2. Run compliance compiler
   console.log('--- Step 2: Running Compliance Tracer ---');
-  runCommand('python3 scripts/generate_rtm.py');
+  if (!fs.existsSync(path.join(repoRoot, 'report.xml'))) {
+    console.log('Test report "report.xml" not found. Running generate_rtm.py in draft mode...');
+    runCommand('python3 scripts/generate_rtm.py --draft');
+  } else {
+    runCommand('python3 scripts/generate_rtm.py');
+  }
 
   // 3. Prepare files for VitePress
   console.log('--- Step 3: Preparing Documentation Files ---');
