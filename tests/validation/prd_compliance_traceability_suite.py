@@ -11,7 +11,6 @@ from execution.econsent_models import EConsentSignRequest
 from apps.designer.renderers.document_renderer import ProtocolDocumentRenderer
 from apps.execution.services.econsent_capture_service import _render_pdf_certificate
 
-
 def test_spreadsheet_ingestion_sheet_structure():
     """Verify spreadsheet ingestion sheet structure rules.
     # @req:PRD-EDC-001
@@ -133,7 +132,6 @@ def test_submission_archival_integration():
 
 def test_fda_compliant_pdf_generation():
     """Verify FDA-compliant PDF generation for regulatory submission.
-
     Asserts that both eConsent signature certificates and clinical study
     protocol PDFs comply with PDF/UA-1 structural accessibility requirements.
 

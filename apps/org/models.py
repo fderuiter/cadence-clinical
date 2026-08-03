@@ -8,7 +8,7 @@ Part 11 and GxP standards.
 
 import uuid
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy import JSON, Boolean, DateTime, Integer, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -47,13 +47,13 @@ class Organization(Base):
     )
 
     # Relationships
-    sites: Mapped[list["Site"]] = relationship(
+    sites: Mapped[list[Site]] = relationship(
         "Site",
         primaryjoin="Organization.id == foreign(Site.organization_id)",
         back_populates="organization",
         cascade="all, delete-orphan",
     )
-    personnel: Mapped[list["Personnel"]] = relationship(
+    personnel: Mapped[list[Personnel]] = relationship(
         "Personnel",
         primaryjoin="Organization.id == foreign(Personnel.organization_id)",
         back_populates="organization",
@@ -88,18 +88,18 @@ class Site(Base):
     )
 
     # Relationships
-    organization: Mapped["Organization"] = relationship(
+    organization: Mapped[Organization] = relationship(
         "Organization",
         primaryjoin="foreign(Site.organization_id) == remote(Organization.id)",
         back_populates="sites",
     )
-    personnel: Mapped[list["Personnel"]] = relationship(
+    personnel: Mapped[list[Personnel]] = relationship(
         "Personnel",
         primaryjoin="foreign(Personnel.site_id) == Site.site_id",
         back_populates="site",
         cascade="all, delete-orphan",
     )
-    delegations: Mapped[list["DelegationOfAuthority"]] = relationship(
+    delegations: Mapped[list[DelegationOfAuthority]] = relationship(
         "DelegationOfAuthority",
         primaryjoin="foreign(DelegationOfAuthority.site_id) == Site.site_id",
         back_populates="site",
@@ -141,17 +141,17 @@ class Personnel(Base):
     )
 
     # Relationships
-    organization: Mapped[Optional["Organization"]] = relationship(
+    organization: Mapped[Organization | None] = relationship(
         "Organization",
         primaryjoin="foreign(Personnel.organization_id) == remote(Organization.id)",
         back_populates="personnel",
     )
-    site: Mapped[Optional["Site"]] = relationship(
+    site: Mapped[Site | None] = relationship(
         "Site",
         primaryjoin="foreign(Personnel.site_id) == Site.site_id",
         back_populates="personnel",
     )
-    assignments: Mapped[list["PersonnelAssignment"]] = relationship(
+    assignments: Mapped[list[PersonnelAssignment]] = relationship(
         "PersonnelAssignment",
         primaryjoin="Personnel.id == foreign(PersonnelAssignment.personnel_id)",
         back_populates="personnel",
@@ -190,7 +190,7 @@ class PersonnelAssignment(Base):
     )
 
     # Relationships
-    personnel: Mapped["Personnel"] = relationship(
+    personnel: Mapped[Personnel] = relationship(
         "Personnel",
         primaryjoin="foreign(PersonnelAssignment.personnel_id) == remote(Personnel.id)",
         back_populates="assignments",
@@ -240,15 +240,15 @@ class DelegationOfAuthority(Base):
     )
 
     # Relationships
-    delegator: Mapped["Personnel"] = relationship(
+    delegator: Mapped[Personnel] = relationship(
         "Personnel",
         primaryjoin="foreign(DelegationOfAuthority.delegator_id) == Personnel.id",
     )
-    delegatee: Mapped["Personnel"] = relationship(
+    delegatee: Mapped[Personnel] = relationship(
         "Personnel",
         primaryjoin="foreign(DelegationOfAuthority.delegatee_id) == Personnel.id",
     )
-    site: Mapped[Optional["Site"]] = relationship(
+    site: Mapped[Site | None] = relationship(
         "Site",
         primaryjoin="foreign(DelegationOfAuthority.site_id) == Site.site_id",
         back_populates="delegations",
