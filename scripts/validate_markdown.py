@@ -216,7 +216,7 @@ def resolve_path(path_str, md_file_path, repo_root, root_dirs, root_files):
     ):
         return None
 
-    # Strip query parameters, anchors, or pytest double-colon targets (e.g., # or ? or ::)
+    # Strip query parameters, anchors, or pytest-style class/function selectors (e.g., #, ?, or ::)
     path_str = path_str.split("#")[0].split("?")[0].split("::")[0].strip()
     if not path_str:
         return None

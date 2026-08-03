@@ -46,6 +46,11 @@ class PermissionEnum(enum.StrEnum):
     DOCUMENTS_WRITE = "documents:write"
     ARCHIVE_EXPORT = "archive:export"
 
+    # Visit Windowing Permissions
+    VISIT_WINDOWING_READ = "visit_windowing:read"
+    VISIT_WINDOWING_CREATE = "visit_windowing:create"
+    VISIT_WINDOWING_UPDATE = "visit_windowing:update"
+
 
 class RoleEnum(enum.StrEnum):
     """Canonical system roles within Cadence Clinical eClinical platform."""
@@ -73,11 +78,17 @@ ROLE_PERMISSIONS_MAP: dict[str, set[PermissionEnum]] = {
         PermissionEnum.DOCUMENTS_READ,
         PermissionEnum.DOCUMENTS_WRITE,
         PermissionEnum.ARCHIVE_EXPORT,
+        PermissionEnum.VISIT_WINDOWING_READ,
+        PermissionEnum.VISIT_WINDOWING_CREATE,
+        PermissionEnum.VISIT_WINDOWING_UPDATE,
     },
     RoleEnum.SPONSOR_DESIGNER.value: {
         PermissionEnum.STUDY_READ,
         PermissionEnum.PROTOCOL_AUTHOR,
         PermissionEnum.GLOBAL_LIBRARY_MANAGE,
+        PermissionEnum.VISIT_WINDOWING_READ,
+        PermissionEnum.VISIT_WINDOWING_CREATE,
+        PermissionEnum.VISIT_WINDOWING_UPDATE,
     },
     RoleEnum.PRINCIPAL_INVESTIGATOR.value: {
         PermissionEnum.STUDY_READ,
@@ -90,6 +101,7 @@ ROLE_PERMISSIONS_MAP: dict[str, set[PermissionEnum]] = {
         PermissionEnum.QUERY_MANAGE,
         PermissionEnum.DOCUMENTS_READ,
         PermissionEnum.DOCUMENTS_WRITE,
+        PermissionEnum.VISIT_WINDOWING_READ,
     },
     RoleEnum.CRC.value: {
         PermissionEnum.STUDY_READ,
@@ -100,6 +112,7 @@ ROLE_PERMISSIONS_MAP: dict[str, set[PermissionEnum]] = {
         PermissionEnum.QUERY_MANAGE,
         PermissionEnum.DOCUMENTS_READ,
         PermissionEnum.DOCUMENTS_WRITE,
+        PermissionEnum.VISIT_WINDOWING_READ,
     },
     RoleEnum.CRA.value: {
         PermissionEnum.STUDY_READ,
@@ -108,6 +121,7 @@ ROLE_PERMISSIONS_MAP: dict[str, set[PermissionEnum]] = {
         PermissionEnum.AUDIT_VIEW,
         PermissionEnum.DOCUMENTS_READ,
         PermissionEnum.DOCUMENTS_WRITE,
+        PermissionEnum.VISIT_WINDOWING_READ,
     },
     RoleEnum.DATA_MANAGER.value: {
         PermissionEnum.STUDY_READ,
@@ -120,12 +134,14 @@ ROLE_PERMISSIONS_MAP: dict[str, set[PermissionEnum]] = {
         PermissionEnum.DOCUMENTS_READ,
         PermissionEnum.DOCUMENTS_WRITE,
         PermissionEnum.ARCHIVE_EXPORT,
+        PermissionEnum.VISIT_WINDOWING_READ,
     },
     RoleEnum.AUDITOR.value: {
         PermissionEnum.STUDY_READ,
         PermissionEnum.AUDIT_VIEW,
         PermissionEnum.DOCUMENTS_READ,
         PermissionEnum.ARCHIVE_EXPORT,
+        PermissionEnum.VISIT_WINDOWING_READ,
     },
     RoleEnum.SUBJECT.value: {
         PermissionEnum.FORM_WRITE,

@@ -20,6 +20,33 @@ ALIAS_MAP: dict[str, tuple[str, str]] = {
     "protocol signoff": ("01.01.03", "Protocol Sign-off"),
 }
 
+_LEGACY_MAPPING = {
+    "FORM_1572": "FORM_1572",
+    "FDA Form 1572": "FORM_1572",
+    "form 1572": "FORM_1572",
+    "FINANCIAL_DISCLOSURE": "FINANCIAL_DISCLOSURE",
+    "Financial Disclosure": "FINANCIAL_DISCLOSURE",
+    "financial disclosure": "FINANCIAL_DISCLOSURE",
+    "PROTOCOL_SIGNOFF": "PROTOCOL_SIGNOFF",
+    "Protocol Sign-off": "PROTOCOL_SIGNOFF",
+    "protocol sign-off": "PROTOCOL_SIGNOFF",
+    "protocol signoff": "PROTOCOL_SIGNOFF",
+}
+
+REVERSE_DOCUMENT_TYPE_MAP: dict[str, str] = {
+    code: _LEGACY_MAPPING[tag]
+    for tag, (code, _) in ALIAS_MAP.items()
+    if tag in _LEGACY_MAPPING
+}
+
+
+def resolve_document_type(artifact_code: str) -> str | None:
+    """
+    Returns the legacy tag ("FORM_1572", "FINANCIAL_DISCLOSURE", "PROTOCOL_SIGNOFF")
+    for a resolved artifact code, and None when no legacy tag applies.
+    """
+    return REVERSE_DOCUMENT_TYPE_MAP.get(artifact_code)
+
 
 class ClassificationResult(BaseModel):
     """

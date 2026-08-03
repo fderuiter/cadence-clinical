@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1996
-- **Passed:** 1996 🟢
+- **Total Automated Test Cases Run:** 2010
+- **Passed:** 2010 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -485,8 +485,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_etmf_database_manager_uninitialized_and_close` | `tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_interop_database_manager_uninitialized_and_close` | `tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_notifications_database_manager_uninitialized_and_close` | `tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cdisc_metadata_headers_and_aliases` | `tests.test_dataset_json` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_serialize_bundle` | `tests.test_dataset_json` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_serialize_single_dataset_dm` | `tests.test_dataset_json` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_serialize_to_dataset_json_includes_metadata` | `tests.test_dataset_json` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validation_success_on_valid_bundle` | `tests.test_dataset_json` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validator_adam_referential_consistency_demographic_mismatch` | `tests.test_dataset_json` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validator_adam_referential_consistency_missing_source_event` | `tests.test_dataset_json` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -965,6 +967,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_classification_service_direct` | `tests.test_etmf_taxonomy` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_classify_endpoints` | `tests.test_etmf_taxonomy` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_taxonomy_endpoint` | `tests.test_etmf_taxonomy` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_resolve_document_type_helper` | `tests.test_etmf_taxonomy` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_arithmetic_null_safety_and_bmi` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cascading_dependent_nullification_parity` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_comparison_null_semantics` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1134,6 +1137,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_instrument_and_assignment_orm_persistence` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_notifications_and_reminders_lifecycle` | `tests.test_interop` | Trace-10 | 🟢 PASSED | < 1s |
 | `test_pseudonymization_and_pii_stripping` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_subject_assignment_missing_diary_alert_dedup_columns` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_subject_content_submission_and_compliance_apis` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_subject_role_authorization_and_identity_binding` | `tests.test_interop` | Trace-8 | 🟢 PASSED | < 1s |
 | `test_bulk_sync_with_valid_signatures_and_tallies` | `tests.test_interop_defeated` | PRD-EDC-007 | 🟢 PASSED | < 1s |
@@ -1369,6 +1373,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_email_delivery_channel_failure_and_exhaustion` | `tests.test_notifications` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_email_delivery_channel_success` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lifecycle_transitions_and_justifications` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_diary_alert_rendering` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_multi_channel_edge_case_in_app_succeeds_email_exhausts` | `tests.test_notifications` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_notification_creation_and_auditing` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_notification_detail_visibility` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1595,6 +1600,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_verify_is_auditor_denies_non_auditors` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_not_auditor_allows_others` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_not_auditor_denies_auditors` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_visit_windowing_granular_permissions` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_visit_windowing_rbac_permissions` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rbac_designer_study_scoping` | `tests.test_rbac_e2e` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rbac_etmf_site_scoping` | `tests.test_rbac_e2e` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rbac_execution_access` | `tests.test_rbac_e2e` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1852,6 +1859,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_procedure_neo4j` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_soa_domain_models_schema_alignment` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_timing_window_neo4j` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_timing_window_persistence_and_carry_forward_mock` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_timing_window_update_carry_forward_neo4j` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_timing_window_validation_rules` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_update_study_arm_neo4j` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_visit_neo4j` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_with_transaction_retry_failure_exceeded` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2112,9 +2122,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_execution_validation_error_rfc7807` | `tests.test_validation_problem_details` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_alignment_report` | `tests.test_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_alignment_report_with_mappings` | `tests.test_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cli_bypass_blocking` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_execute_pip_audit_success` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_execute_pnpm_audit_success` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_extract_active_frontend_vulnerabilities_invalid` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_extract_active_frontend_vulnerabilities_modern_v9` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_extract_active_frontend_vulnerabilities_valid` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_extract_active_vulnerabilities_invalid` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_extract_active_vulnerabilities_valid` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2132,6 +2144,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_load_and_validate_ledger_rpn_threshold` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_load_and_validate_ledger_valid` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scan_exits_successfully_on_unreadable_files` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scan_for_config_bypasses_no_violations` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scan_for_config_bypasses_with_violations` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scan_for_inline_bypasses_comments_and_empty_lines` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scan_for_inline_bypasses_logical_boundary_reset` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scan_for_inline_bypasses_multiline_consecutive` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |

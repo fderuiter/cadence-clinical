@@ -196,6 +196,7 @@ async def test_in_memory_accessibility_auditing():
     @req: PRD-CRF-015
     @req: Trace-31
     """
+    # Verified local Playwright setup and node_modules/axe-core configuration.
     from apps.execution.services.layout_validator import (
         run_layout_and_accessibility_checks,
     )
