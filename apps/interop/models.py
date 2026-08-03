@@ -132,6 +132,9 @@ class SubjectAssignment(Base):
     )  # e.g. "DAILY", "WEEKLY"
     due_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
+    last_missed_alert_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_missed_alert_notified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False

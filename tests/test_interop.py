@@ -833,6 +833,84 @@ async def test_instrument_and_assignment_orm_persistence():
 
 
 @pytest.mark.asyncio
+async def test_subject_assignment_last_missed_alert_fields():
+    """
+    Verify that SubjectAssignment supports last_missed_alert_at and
+    last_missed_alert_notified_at nullable DateTime columns, and that they persist/retrieve.
+    """
+    async_session = db_manager.get_session_maker()
+    async with async_session() as session:
+        # Create an Instrument
+        inst = Instrument(
+            id="test_alert_instrument",
+            name="Alert Test Questionnaire",
+            items={},
+            response_types={},
+            scoring_metadata={},
+            created_by="system",
+            reason_for_change="Initial setup",
+            version_index=1,
+        )
+        session.add(inst)
+        await session.flush()
+
+        now_utc = datetime.now(UTC).replace(tzinfo=None)
+        alert_at = now_utc - timedelta(hours=1)
+        notified_at = now_utc
+
+        # Create SubjectAssignment with these fields set
+        assign = SubjectAssignment(
+            subject_id="subj_alert_test",
+            instrument_id=inst.id,
+            start_date=now_utc - timedelta(days=5),
+            end_date=now_utc + timedelta(days=5),
+            recurrence_pattern="DAILY",
+            due_at=now_utc,
+            last_missed_alert_at=alert_at,
+            last_missed_alert_notified_at=notified_at,
+            created_by="system",
+            reason_for_change="Test alert fields persistence",
+            version_index=1,
+        )
+        session.add(assign)
+        await session.commit()
+
+    # Retrieve and verify persistence
+    async with async_session() as session:
+        stmt = select(SubjectAssignment).where(SubjectAssignment.subject_id == "subj_alert_test")
+        res = await session.execute(stmt)
+        db_assign = res.scalars().first()
+        assert db_assign is not None
+        assert db_assign.last_missed_alert_at == alert_at
+        assert db_assign.last_missed_alert_notified_at == notified_at
+
+    # Create another one where they are None (existing row behavior check)
+    async with async_session() as session:
+        assign_none = SubjectAssignment(
+            subject_id="subj_alert_test_none",
+            instrument_id="test_alert_instrument",
+            start_date=now_utc - timedelta(days=5),
+            end_date=now_utc + timedelta(days=5),
+            recurrence_pattern="DAILY",
+            due_at=now_utc,
+            # left last_missed_alert_at and last_missed_alert_notified_at unset (None)
+            created_by="system",
+            reason_for_change="Test alert fields default None",
+            version_index=1,
+        )
+        session.add(assign_none)
+        await session.commit()
+
+    async with async_session() as session:
+        stmt = select(SubjectAssignment).where(SubjectAssignment.subject_id == "subj_alert_test_none")
+        res = await session.execute(stmt)
+        db_assign_none = res.scalars().first()
+        assert db_assign_none is not None
+        assert db_assign_none.last_missed_alert_at is None
+        assert db_assign_none.last_missed_alert_notified_at is None
+
+
+@pytest.mark.asyncio
 async def test_foreign_key_and_cascade_lifecycle_integrity():
     """
     Verify database schema integrity constraints:
