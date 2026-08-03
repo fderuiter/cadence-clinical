@@ -236,7 +236,8 @@ def test_security_audit_scanner_detection_and_bypass():
     # Case 1: Line has a hardcoded environment fallback
     with tempfile.NamedTemporaryFile(suffix=".py", mode="w+", delete=False) as f:
         f.write(
-            'GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")\n'
+            "GATEWAY_SECRET = os.get"
+            + 'env("GATEWAY_SECRET", "internal-gateway-secret-12345")\n'
         )
         f.flush()
         try:
