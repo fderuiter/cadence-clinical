@@ -792,12 +792,15 @@ def test_scan_for_config_bypasses_with_violations(tmp_path):
     "scripts.validate_vulnerabilities.sys.argv",
     ["validate_vulnerabilities.py", "--skip-audit"],
 )
-@patch("scripts.validate_vulnerabilities.sys.exit")
+@patch("scripts.validate_vulnerabilities.sys.exit", side_effect=SystemExit(1))
 def test_cli_bypass_blocking(mock_exit):
     """Verify that command-line bypass attempts trigger immediate execution failure."""
     from scripts.validate_vulnerabilities import main
 
-    main()
+    try:
+        main()
+    except SystemExit:
+        pass
     mock_exit.assert_called_once_with(1)
 
 
