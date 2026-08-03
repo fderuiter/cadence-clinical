@@ -1186,37 +1186,12 @@ async def capture_subject_consent(
 
     # 3. Enforce step-up re-authentication
     sig_token = request.headers.get("X-Sig-Token")
-    if not sig_token:
-        raise HTTPException(
-            status_code=401,
-            detail="REAUTHENTICATION_REQUIRED",
-        )
+    from packages.security.sig_token_verifier import verify_and_consume_sig_token
 
-    import time
-
-    from jose import JWTError, jwt
-
+    sig_payload = verify_and_consume_sig_token(sig_token, user_id)
     secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
-    try:
-        sig_payload = jwt.decode(sig_token, secret, algorithms=["HS256"])
-    except JWTError:
-        raise HTTPException(
-            status_code=401,
-            detail="REAUTHENTICATION_REQUIRED",
-        )
 
-    if sig_payload.get("exp", 0) < time.time():
-        raise HTTPException(
-            status_code=401,
-            detail="REAUTHENTICATION_REQUIRED",
-        )
-
-    if sig_payload.get("sub") != user_id:
-        raise HTTPException(
-            status_code=401,
-            detail="REAUTHENTICATION_REQUIRED",
-        )
-
+    # 4. Custom action-binding rule inside the consent application
     bound_action = sig_payload.get("action", "")
     request_path = request.url.path
     if (
