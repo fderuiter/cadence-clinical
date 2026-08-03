@@ -25,11 +25,14 @@ describe("Patient Experience & Adaptive Sync Retry Integration", () => {
     // Clear toasts
     const container = document.getElementById("toast-container");
     if (container) container.remove();
+
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network connection dropped"));
   });
 
   afterEach(() => {
     vi.clearAllTimers();
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("triggers dynamic CSS toast messages instead of blocking browser alerts on validation error", async () => {
