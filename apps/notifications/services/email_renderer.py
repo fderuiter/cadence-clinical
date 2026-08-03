@@ -31,6 +31,13 @@ FALLBACK_TEMPLATES = {
         <p>Study ID: {{ study_id }}</p>
         <p>Amendment Tag: {{ payload.amendment_tag }}</p>
     """,
+    "missing_diary_alert.html.j2": """
+        <h2>Missing Diary Entry Alert</h2>
+        <p>Study ID: {{ study_id }}</p>
+        <p>Subject ID: {{ payload.subject_id }}</p>
+        <p>Diary Name: {{ payload.diary_name }}</p>
+        <p>Due Date: {{ payload.due_date }}</p>
+    """,
 }
 
 
@@ -70,5 +77,6 @@ def get_template_name_for_event(event_type: str) -> str:
         "EDC_QUERY_RAISED": "edc_query_raised.html.j2",
         "SAE_RECONCILIATION_FLAG": "sae_reconciliation.html.j2",
         "PROTOCOL_AMENDMENT_SUBMITTED": "protocol_amendment.html.j2",
+        "MISSING_DIARY_ENTRY": "missing_diary_alert.html.j2",
     }
     return mapping.get(event_type, "default_alert.html.j2")

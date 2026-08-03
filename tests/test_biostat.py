@@ -87,6 +87,7 @@ def test_dataset_json_integration_structure():
     ]
 
     item_group = DatasetJSONItemGroup(
+        itemGroupOID="IG.DM",
         records=2,
         name="DM",
         label="Demographics",
@@ -104,7 +105,7 @@ def test_dataset_json_integration_structure():
     )
 
     dj = DatasetJSON(
-        creationDateTime="2026-07-29T12:00:00Z",
+        datasetJSONCreationDateTime="2026-07-29T12:00:00Z",
         datasetJSONVersion="1.0.0",
         clinicalData=clinical_data,
     )
@@ -117,7 +118,7 @@ def test_dataset_json_integration_structure():
     # Check validation on incorrect timestamp format
     with pytest.raises(ValidationError):
         DatasetJSON(
-            creationDateTime="not-a-timestamp",
+            datasetJSONCreationDateTime="not-a-timestamp",
             clinicalData=clinical_data,
         )
 

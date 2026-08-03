@@ -306,6 +306,11 @@ class TimingWindow(SoAAuditMixin):
             raise ValueError(
                 "A non-empty 'reason' must be provided when timing/applicability is conditional."
             )
+        if self.max_offset is not None and self.max_offset < 0:
+            raise ValueError("max_offset must not be negative.")
+        if self.min_offset is not None and self.max_offset is not None:
+            if self.min_offset > self.max_offset:
+                raise ValueError("min_offset must not be greater than max_offset.")
         return self
 
 
@@ -411,6 +416,12 @@ class TimingWindowProperties(BaseModel):
         min_length=1,
         description="Label or duration specification of the timing window.",
     )
+    anchor_reference: str | None = Field(
+        None, description="Anchor reference, e.g. a visit name."
+    )
+    target_day: int | None = Field(None, description="Target scheduled day.")
+    min_offset: int | None = Field(None, description="Minimum day offset.")
+    max_offset: int | None = Field(None, description="Maximum day offset.")
     conditional: bool | None = Field(
         None,
         description="Flag indicating if the timing or applicability is conditional.",
@@ -427,6 +438,11 @@ class TimingWindowProperties(BaseModel):
             raise ValueError(
                 "A non-empty 'reason' must be provided when timing/applicability is conditional."
             )
+        if self.max_offset is not None and self.max_offset < 0:
+            raise ValueError("max_offset must not be negative.")
+        if self.min_offset is not None and self.max_offset is not None:
+            if self.min_offset > self.max_offset:
+                raise ValueError("min_offset must not be greater than max_offset.")
         return self
 
 
