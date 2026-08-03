@@ -128,8 +128,39 @@ async def test_mock_soa_entity_lifecycle():
         user_id="user_1",
         change_reason="Add timing",
         timing_id="timing_w1",
-        properties={"name": "Standard collection window"},
+        properties={
+            "name": "Standard collection window",
+            "anchor_reference": "Visit 1",
+            "target_day": 7,
+            "min_offset": -2,
+            "max_offset": 2,
+        },
     )
+
+    tw = MOCK_SOA_DATA[study_version_id]["timing_windows"]["timing_w1"]
+    assert tw["anchor_reference"] == "Visit 1"
+    assert tw["target_day"] == 7
+    assert tw["min_offset"] == -2
+    assert tw["max_offset"] == 2
+
+    await update_timing_window(
+        driver=None,
+        study_version_id=study_version_id,
+        user_id="user_1",
+        change_reason="Update timing window",
+        timing_id="timing_w1",
+        properties={
+            "name": "Standard collection window",
+            "anchor_reference": "Visit 1",
+            "target_day": 7,
+            "min_offset": -3,
+            "max_offset": 3,
+        },
+    )
+
+    tw_updated = MOCK_SOA_DATA[study_version_id]["timing_windows"]["timing_w1"]
+    assert tw_updated["min_offset"] == -3
+    assert tw_updated["max_offset"] == 3
 
     # 6. Link entities
     await link_epoch_to_visit(
@@ -182,6 +213,160 @@ async def test_mock_soa_entity_lifecycle():
     assert row["cells"][0]["details"] == "timing_w1"
 
 
+@pytest.mark.asyncio
+async def test_timing_window_validation_rules():
+    from apps.designer.soa_models import TimingWindow, TimingWindowProperties
+
+    # 1. Test target_day, min_offset, max_offset can be set properly on TimingWindowProperties
+    props = TimingWindowProperties(
+        name="Valid Window",
+        anchor_reference="Screening Visit",
+        target_day=0,
+        min_offset=-1,
+        max_offset=1,
+    )
+    assert props.min_offset == -1
+    assert props.max_offset == 1
+
+    # 2. Test max_offset must not be negative on TimingWindowProperties
+    with pytest.raises(ValueError, match="max_offset must not be negative."):
+        TimingWindowProperties(
+            name="Invalid Max Offset",
+            max_offset=-1,
+        )
+
+    # 3. Test min_offset must not be greater than max_offset on TimingWindowProperties
+    with pytest.raises(
+        ValueError, match="min_offset must not be greater than max_offset."
+    ):
+        TimingWindowProperties(
+            name="Invalid Range",
+            min_offset=3,
+            max_offset=2,
+        )
+
+    # 4. Mirror same tests on TimingWindow domain model
+    tw = TimingWindow(
+        id="tw_1",
+        study_version_id="sv_123",
+        name="Valid Domain Window",
+        anchor_reference="Screening Visit",
+        target_day=0,
+        min_offset=-2,
+        max_offset=3,
+        created_by="user1",
+    )
+    assert tw.min_offset == -2
+    assert tw.max_offset == 3
+
+    with pytest.raises(ValueError, match="max_offset must not be negative."):
+        TimingWindow(
+            id="tw_2",
+            study_version_id="sv_123",
+            name="Invalid Max",
+            max_offset=-5,
+            created_by="user1",
+        )
+
+    with pytest.raises(
+        ValueError, match="min_offset must not be greater than max_offset."
+    ):
+        TimingWindow(
+            id="tw_3",
+            study_version_id="sv_123",
+            name="Invalid Offsets",
+            min_offset=5,
+            max_offset=4,
+            created_by="user1",
+        )
+
+
+@pytest.mark.asyncio
+async def test_timing_window_persistence_and_carry_forward_mock():
+    study_version_id = "v_draft"
+    MOCK_STUDY_VERSIONS["study_1"] = [
+        {
+            "id": study_version_id,
+            "version_tag": "1.0",
+            "status": "DRAFT",
+            "version_index": 1,
+            "created_by": "designer",
+        }
+    ]
+
+    # Create timing window with custom properties
+    await create_timing_window(
+        driver=None,
+        study_version_id=study_version_id,
+        user_id="user_1",
+        change_reason="Create timing window with offsets",
+        timing_id="tw_off",
+        properties={
+            "name": "Standard +/- 2 days",
+            "anchor_reference": "Visit 2",
+            "target_day": 14,
+            "min_offset": -2,
+            "max_offset": 2,
+        },
+    )
+
+    persisted = MOCK_SOA_DATA[study_version_id]["timing_windows"]["tw_off"]
+    assert persisted["name"] == "Standard +/- 2 days"
+    assert persisted["anchor_reference"] == "Visit 2"
+    assert persisted["target_day"] == 14
+    assert persisted["min_offset"] == -2
+    assert persisted["max_offset"] == 2
+
+    # Perform partial update to just the name and confirm carry-forward of other fields
+    await update_timing_window(
+        driver=None,
+        study_version_id=study_version_id,
+        user_id="user_1",
+        change_reason="Rename window only",
+        timing_id="tw_off",
+        properties={
+            "name": "Renamed +/- 2 days",
+        },
+    )
+
+    updated = MOCK_SOA_DATA[study_version_id]["timing_windows"]["tw_off"]
+    assert updated["name"] == "Renamed +/- 2 days"
+    assert updated["anchor_reference"] == "Visit 2"
+    assert updated["target_day"] == 14
+    assert updated["min_offset"] == -2
+    assert updated["max_offset"] == 2
+    assert updated["version_index"] == 2
+
+
+@pytest.mark.asyncio
+async def test_timing_window_update_carry_forward_neo4j():
+    driver_mock, tx_mock = setup_driver_mock()
+    tx_mock.run.side_effect = [
+        AsyncMock(),  # lock sv
+        AsyncMock(
+            single=AsyncMock(return_value={"id": "tw_1"})
+        ),  # check old timing window exists
+        AsyncMock(single=AsyncMock(return_value={"id": "tw_1"})),  # update query
+    ]
+
+    updated_id = await update_timing_window(
+        driver=driver_mock,
+        study_version_id="sv_123",
+        user_id="user_cra",
+        change_reason="Partial update to name",
+        timing_id="tw_1",
+        properties={"name": "New Window Name"},
+    )
+    assert updated_id == "tw_1"
+
+    update_query = tx_mock.run.call_args_list[2][0][0]
+    assert "SET new_t += properties(old_t)" in update_query
+    assert "SET new_t.version_index = old_t.version_index + 1" in update_query
+    assert "SET new_t.created_at = datetime()" in update_query
+    assert "SET new_t.created_by = $created_by" in update_query
+    assert "SET new_t += $properties" in update_query
+
+
 def test_soa_domain_models_schema_alignment():
     """
     Verifies that the new, aligned Pydantic v2 domain models for SoA structures
@@ -196,6 +381,7 @@ def test_soa_domain_models_schema_alignment():
         SoAMatrixProjectionResponse,
         StudyArm,
         TimingWindow,
+        TimingWindowProperties,
         Visit,
     )
 
@@ -292,6 +478,21 @@ def test_soa_domain_models_schema_alignment():
     assert tw_valid.conditional is True
     assert tw_valid.reason == "Required only for sub-cohort A"
 
+    # Test TimingWindowProperties with the new fields
+    tw_prop_valid = TimingWindowProperties(
+        name="Standard Visit Window",
+        anchor_reference="Visit 1",
+        target_day=7,
+        min_offset=-2,
+        max_offset=2,
+        conditional=True,
+        reason="Required only for sub-cohort A",
+    )
+    assert tw_prop_valid.anchor_reference == "Visit 1"
+    assert tw_prop_valid.target_day == 7
+    assert tw_prop_valid.min_offset == -2
+    assert tw_prop_valid.max_offset == 2
+
     # Test failure when conditional is True but reason is empty/missing
     import pytest
 
@@ -301,6 +502,40 @@ def test_soa_domain_models_schema_alignment():
             study_version_id="sv_123",
             name="Invalid conditional timing",
             conditional=True,
+            created_by="designer_user",
+        )
+
+    # Test invalid offset ordering on TimingWindow Properties and Domain Model
+    with pytest.raises(ValueError, match="Field 'min_offset' must be less than or equal to 'max_offset'."):
+        TimingWindowProperties(
+            name="Invalid window",
+            min_offset=5,
+            max_offset=2,
+        )
+
+    with pytest.raises(ValueError, match="Field 'min_offset' must be less than or equal to 'max_offset'."):
+        TimingWindow(
+            id="tw_invalid_offset",
+            study_version_id="sv_123",
+            name="Invalid window",
+            min_offset=5,
+            max_offset=2,
+            created_by="designer_user",
+        )
+
+    # Test negative target day on TimingWindow Properties and Domain Model
+    with pytest.raises(ValueError, match="Field 'target_day' cannot be negative."):
+        TimingWindowProperties(
+            name="Invalid target day",
+            target_day=-1,
+        )
+
+    with pytest.raises(ValueError, match="Field 'target_day' cannot be negative."):
+        TimingWindow(
+            id="tw_invalid_day",
+            study_version_id="sv_123",
+            name="Invalid target day",
+            target_day=-1,
             created_by="designer_user",
         )
 

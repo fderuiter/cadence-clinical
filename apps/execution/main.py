@@ -139,7 +139,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """Handle the lifespan events for the FastAPI application.
 
     Initializes the database session manager on startup and securely
@@ -689,7 +689,7 @@ class ObservationResponse(BaseModel):
     protocol_version_index: int | None = None
 
     @model_validator(mode="after")
-    def populate_range_fields(self) -> "ObservationResponse":
+    def populate_range_fields(self) -> ObservationResponse:
         if self.range_indicator is None and self.lab_indicator is not None:
             self.range_indicator = self.lab_indicator
         if self.is_out_of_range is None and self.lab_out_of_range is not None:
@@ -2305,7 +2305,7 @@ def validate_lab_range_payload(data: dict) -> None:
         try:
             age_low_val = float(age_low)
             data["age_low"] = age_low_val
-        except (ValueError, TypeError):
+        except (ValueError, TypeError):  # fmt: skip
             raise HTTPException(
                 status_code=400,
                 detail="Field 'age_low' must be a numeric value.",
@@ -2320,7 +2320,7 @@ def validate_lab_range_payload(data: dict) -> None:
         try:
             age_high_val = float(age_high)
             data["age_high"] = age_high_val
-        except (ValueError, TypeError):
+        except (ValueError, TypeError):  # fmt: skip
             raise HTTPException(
                 status_code=400,
                 detail="Field 'age_high' must be a numeric value.",
@@ -2344,7 +2344,7 @@ def validate_lab_range_payload(data: dict) -> None:
         try:
             low_bound_val = float(low_bound)
             data["low_bound"] = low_bound_val
-        except (ValueError, TypeError):
+        except (ValueError, TypeError):  # fmt: skip
             raise HTTPException(
                 status_code=400,
                 detail="Field 'low_bound' must be a numeric value.",
@@ -2353,7 +2353,7 @@ def validate_lab_range_payload(data: dict) -> None:
         try:
             high_bound_val = float(high_bound)
             data["high_bound"] = high_bound_val
-        except (ValueError, TypeError):
+        except (ValueError, TypeError):  # fmt: skip
             raise HTTPException(
                 status_code=400,
                 detail="Field 'high_bound' must be a numeric value.",
@@ -2372,7 +2372,7 @@ def validate_lab_range_payload(data: dict) -> None:
         try:
             critical_low_val = float(critical_low)
             data["critical_low"] = critical_low_val
-        except (ValueError, TypeError):
+        except (ValueError, TypeError):  # fmt: skip
             raise HTTPException(
                 status_code=400,
                 detail="Field 'critical_low' must be a numeric value.",
@@ -2381,7 +2381,7 @@ def validate_lab_range_payload(data: dict) -> None:
         try:
             critical_high_val = float(critical_high)
             data["critical_high"] = critical_high_val
-        except (ValueError, TypeError):
+        except (ValueError, TypeError):  # fmt: skip
             raise HTTPException(
                 status_code=400,
                 detail="Field 'critical_high' must be a numeric value.",
@@ -3689,7 +3689,7 @@ class BatchSignOffRequest(BaseModel):
     signing_reason: str
 
     @model_validator(mode="after")
-    def validate_request(self) -> "BatchSignOffRequest":
+    def validate_request(self) -> BatchSignOffRequest:
         tt = self.target_type.upper()
         if tt not in ("FORM", "VISIT", "SUBJECT"):
             raise ValueError("target_type must be one of: FORM, VISIT, SUBJECT")

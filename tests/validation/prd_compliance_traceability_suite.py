@@ -133,7 +133,6 @@ def test_submission_archival_integration():
 
 def test_fda_compliant_pdf_generation():
     """Verify FDA-compliant PDF generation for regulatory submission.
-
     Asserts that both eConsent signature certificates and clinical study
     protocol PDFs comply with PDF/UA-1 structural accessibility requirements.
 

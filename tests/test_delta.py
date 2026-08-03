@@ -250,3 +250,179 @@ async def test_concurrent_library_version_increments(concurrency_runner):
     # Check version numbers increment step-by-step (e.g., 1, 2, 3)
     version_numbers = [v["version"] for v in versions]
     assert version_numbers == [1, 2, 3]
+
+
+@pytest.mark.asyncio
+async def test_reorder_visits_mock():
+    from apps.designer.delta import MOCK_SOA_DATA, reorder_visits, create_visit
+    from apps.designer.db import MOCK_STUDY_VERSIONS
+    MOCK_SOA_DATA.clear()
+    MOCK_STUDY_VERSIONS.clear()
+
+    study_version_id = "sv_reorder_visits"
+    MOCK_STUDY_VERSIONS["study_x"] = [
+        {
+            "id": study_version_id,
+            "version_tag": "1.0",
+            "status": "DRAFT",
+            "version_index": 1,
+            "created_by": "designer",
+        }
+    ]
+
+    # Create visits
+    await create_visit(
+        None, study_version_id, "user1", "create v1", "visit_1", {"name": "Visit 1", "sequence": 1}
+    )
+    await create_visit(
+        None, study_version_id, "user1", "create v2", "visit_2", {"name": "Visit 2", "sequence": 2}
+    )
+
+    # Reorder
+    res = await reorder_visits(
+        None, study_version_id, "user1", "reorder visits change reason", ["visit_2", "visit_1"]
+    )
+    assert res is True
+
+    # Assert new sequence/version_index/change metadata
+    store = MOCK_SOA_DATA[study_version_id]["visits"]
+    assert store["visit_2"]["sequence"] == 1
+    assert store["visit_2"]["version_index"] == 2
+    assert store["visit_2"]["created_by"] == "user1"
+    assert store["visit_2"]["reason_for_change"] == "reorder visits change reason"
+
+    assert store["visit_1"]["sequence"] == 2
+    assert store["visit_1"]["version_index"] == 2
+
+    # Assert action log
+    actions = MOCK_SOA_DATA[study_version_id]["actions"]
+    reorder_action = next(a for a in actions if a.get("type") == "REORDER")
+    assert reorder_action["before_order"] == {"visit_2": 2, "visit_1": 1}
+    assert reorder_action["after_order"] == {"visit_2": 1, "visit_1": 2}
+
+    # Expect ValueError for unknown/deleted visit id
+    with pytest.raises(ValueError):
+        await reorder_visits(
+            None, study_version_id, "user1", "fail", ["visit_2", "visit_unknown"]
+        )
+
+
+@pytest.mark.asyncio
+async def test_reorder_visits_real():
+    from apps.designer.delta import reorder_visits
+    driver_mock = MagicMock()
+    session_mock = AsyncMock()
+    session_ctx = AsyncMock()
+    session_ctx.__aenter__.return_value = session_mock
+    driver_mock.session.return_value = session_ctx
+
+    tx_mock = AsyncMock()
+    tx_mock.__aenter__.return_value = tx_mock
+    session_mock.begin_transaction.return_value = tx_mock
+
+    # Mock existing visits
+    existing_res_mock = AsyncMock()
+    existing_res_mock.all.return_value = [{"id": "visit_1"}, {"id": "visit_2"}]
+
+    tx_mock.run.side_effect = [
+        AsyncMock(),  # lock StudyVersion
+        existing_res_mock,  # check visits
+        AsyncMock(),  # create Action
+        AsyncMock(),  # resequence first visit
+        AsyncMock(),  # resequence second visit
+    ]
+
+    res = await reorder_visits(
+        driver_mock, "sv_123", "user_1", "change sequence", ["visit_2", "visit_1"]
+    )
+    assert res is True
+    assert tx_mock.run.call_count == 5
+
+    # Check queries
+    calls = tx_mock.run.call_args_list
+    assert "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true" in calls[0][0][0]
+    assert "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_VISIT]->(v:Visit)" in calls[1][0][0]
+    assert "CREATE (a:Action" in calls[2][0][0]
+    assert "CREATE (new_v:Visit" in calls[3][0][0]
+    assert "CREATE (new_v:Visit" in calls[4][0][0]
+
+
+@pytest.mark.asyncio
+async def test_assign_activities_to_visit_mock():
+    from apps.designer.delta import (
+        MOCK_SOA_DATA,
+        assign_activities_to_visit,
+        create_visit,
+        create_procedure,
+    )
+    from apps.designer.db import MOCK_STUDY_VERSIONS
+    MOCK_SOA_DATA.clear()
+    MOCK_STUDY_VERSIONS.clear()
+
+    study_version_id = "sv_assign_mock"
+    MOCK_STUDY_VERSIONS["study_abc"] = [
+        {
+            "id": study_version_id,
+            "version_tag": "1.0",
+            "status": "DRAFT",
+            "version_index": 1,
+            "created_by": "designer",
+        }
+    ]
+
+    await create_visit(
+        None, study_version_id, "user1", "create visit", "visit_1", {"name": "Visit 1"}
+    )
+    await create_procedure(
+        None, study_version_id, "user1", "create p1", "proc_1", {"name": "Proc 1"}
+    )
+    await create_procedure(
+        None, study_version_id, "user1", "create p2", "proc_2", {"name": "Proc 2"}
+    )
+
+    res = await assign_activities_to_visit(
+        None, study_version_id, "user1", "assign proceds", "visit_1", ["proc_1", "proc_2"]
+    )
+    assert res is True
+
+    # Assert they are linked in MOCK_SOA_DATA
+    links = MOCK_SOA_DATA[study_version_id]["links"]
+    assert {"type": "visit_procedure", "from_id": "visit_1", "to_id": "proc_1"} in links
+    assert {"type": "visit_procedure", "from_id": "visit_1", "to_id": "proc_2"} in links
+
+
+@pytest.mark.asyncio
+async def test_assign_activities_to_visit_real():
+    from apps.designer.delta import assign_activities_to_visit
+    driver_mock = MagicMock()
+    session_mock = AsyncMock()
+    session_ctx = AsyncMock()
+    session_ctx.__aenter__.return_value = session_mock
+    driver_mock.session.return_value = session_ctx
+
+    tx_mock = AsyncMock()
+    tx_mock.__aenter__.return_value = tx_mock
+    session_mock.begin_transaction.return_value = tx_mock
+
+    # Each link_visit_to_procedure does lock, merge/action
+    result_mock1 = AsyncMock()
+    result_mock1.single.return_value = {"success": True}
+    result_mock2 = AsyncMock()
+    result_mock2.single.return_value = {"success": True}
+
+    tx_mock.run.side_effect = [
+        AsyncMock(),  # lock (proc 1)
+        result_mock1,  # merge & action (proc 1)
+        AsyncMock(),  # lock (proc 2)
+        result_mock2,  # merge & action (proc 2)
+    ]
+
+    res = await assign_activities_to_visit(
+        driver_mock, "sv_real_assign", "user1", "assign proceds", "visit_1", ["proc_1", "proc_2"]
+    )
+    assert res is True
+    assert tx_mock.run.call_count == 4
+
+    calls = tx_mock.run.call_args_list
+    assert "MERGE (v)-[r:HAS_PROCEDURE]->(p)" in calls[1][0][0]
+    assert "MERGE (v)-[r:HAS_PROCEDURE]->(p)" in calls[3][0][0]

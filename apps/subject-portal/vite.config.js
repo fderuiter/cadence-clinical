@@ -25,5 +25,17 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     exclude: ["**/e2e/**", "node_modules/**", "dist/**"],
+    setupFiles: [path.resolve(__dirname, "./tests/setup.js")],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json", "html"],
+      include: ["sync-queue.js"],
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 80,
+        statements: 80,
+      },
+    },
   },
 });

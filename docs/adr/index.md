@@ -145,6 +145,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-18: Document Redaction Architecture, Regulatory Data-Handling, and Compliance Profiles](2026-08-18-document-redaction-architecture.md)
 
 ### 6. Frontend & Design System
+- [2026-08-02: Centralized Accessibility Matcher and 80 Percent Coverage Gate](2026-08-02-centralized-accessibility-matcher-and-80-percent-coverage-gate.md)
 - [2026-08-20: Targeted E2E Contrast Enforcement and Style Token Upgrades](2026-08-20-targeted-e2e-contrast-enforcement-and-style-token-upgrades.md)
 - [2026-08-02: Implement WCAG compliance in shared clinical UI primitives](2026-08-02-implement-wcag-compliance-in-shared-clinical-ui-primitives.md)
 - [2026-07-31: Viewport-Aware Grid Inspector for eCRF designer](2026-07-31-viewport-aware-grid-inspector.md)
@@ -165,6 +166,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ### 7. DevOps, Tooling & CI/CD
 - [2026-08-03: Lightweight Path Pattern Boundary Linter](2026-08-03-lightweight-path-pattern-boundary-linter.md)
 - [2026-08-02: Dual-Mode Secret Scanner for Pre-Commit and CI Validation](2026-08-02-dual-mode-secret-scanner-for-pre-commit-and-ci-validation.md)
+- [2026-08-03: Upgrade Environments to Python 3.14](2026-08-03-upgrade-environments-to-python-314.md)
 - [2026-08-01: In-Process ASGI Routing with Live Databases](2026-08-01-in-process-asgi-routing-with-live-databases.md)
 - [2026-07-31: Upgrade Environments to Python 3.12](2026-07-31-upgrade-environments-to-python-312.md)
 
@@ -222,4 +224,5 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-06: GxP Compliance Reporting CI Alignment and Local Dependency Configuration](2026-09-06-gxp-compliance-reporting-ci-alignment.md)
 - [2026-08-02: ADR-[NUMBER]: Enforce Strict Fail-Closed Secrets Validation and Narrow Scanner Exclusions](2026-08-02-enforce-strict-fail-closed-secrets-validation-and-narrow-scanner-exclusions.md)
 - [2026-09-06: Enforce Strict Fail-Closed Environment Rules and Narrow Scanner Exclusions](2026-09-06-enforce-strict-fail-closed-environment-rules.md)
+- [2026-08-03: Upgrade Environments to Python 3.14](2026-08-03-upgrade-environments-to-python-3-14.md)
 - [2026-09-07: Extend Centralized Permission Matrix for eCOA Diary Alert Actions](2026-09-07-extend-ecoa-diary-alert-permissions.md)

@@ -44,7 +44,7 @@ class RandomizationConfigSchema(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_config(self) -> "RandomizationConfigSchema":
+    def validate_config(self) -> RandomizationConfigSchema:
         """Validates configuration parameters."""
         allowed_types = {"PERMUTED_BLOCK", "STRATIFIED_BLOCK", "MINIMIZATION"}
         if self.algorithm_type not in allowed_types:

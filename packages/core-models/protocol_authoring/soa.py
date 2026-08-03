@@ -1,131 +1,30 @@
 """
-Typed Schedule of Activities (SoA) contracts and models for Designer module.
+Schedule of Activities (SoA) core domain and transport models.
 
-Defines Pydantic v2 entity-specific contracts for StudyArm, Epoch, Visit, Procedure, TimingWindow,
-relationships, audit metadata, and projection cells.
+Provides shared Pydantic v2 entities, properties payloads, Create/Update/Link requests,
+reordering/assignment contracts, and complete projection models.
 """
 
 from datetime import UTC, datetime
 from typing import Literal
 
+from audit import AuditFields
 from pydantic import BaseModel, Field, model_validator
 
-# Try to import from protocol_render if available, otherwise define placeholders to ensure robust parsing
-try:
-    from protocol_render import (
-        SoAHeaderArm,
-        SoAHeaderEncounter,
-        SoAHeaderEpoch,
-        SoARowView,
-    )
-except ImportError:
-    # Minimal fallback Pydantic definitions if not in PYTHONPATH during static analysis
-    class SoAHeaderEpoch(BaseModel):
-        epoch_id: str
-        epoch_name: str
-        sequence: int
-        arm_id: str | None = None
+# Import the view DTOs from protocol_render to maintain a one-directional dependency.
+from protocol_render import (
+    SoAHeaderArm,
+    SoAHeaderEncounter,
+    SoAHeaderEpoch,
+    SoARowView,
+)
 
-    class SoAHeaderEncounter(BaseModel):
-        encounter_id: str
-        encounter_name: str
-        epoch_id: str
-        sequence: int
-        arm_id: str | None = None
-
-    class SoACellView(BaseModel):
-        activity_id: str
-        encounter_id: str
-        epoch_id: str
-        is_applicable: bool
-        details: str | None = None
-        arm_id: str | None = None
-        derived_from_soa: bool = False
-
-    class SoARowView(BaseModel):
-        activity_id: str
-        activity_name: str
-        cells: list[SoACellView] = []
-
-    class SoAHeaderArm(BaseModel):
-        arm_id: str
-        arm_name: str
+# --- Task 1: Audited SoA Entity Models ---
 
 
-# --- Task 1: Audit Metadata and Shared Convention ---
-
-
-class SoAAuditMixin(BaseModel):
+class StudyArm(AuditFields):
     """
-    Shared 21 CFR Part 11 audit fields mixin/base model.
-    Exposes created_at, created_by, updated_at, updated_by, reason_for_change, and version,
-    mirroring ConceptDetail in main.py.
-    """
-
-    version: str = Field("1.0.0", description="Version identifier of the entity.")
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
-        description="Timestamp of creation.",
-    )
-    created_by: str = Field(..., description="User ID of the creator.")
-    updated_at: datetime | None = Field(
-        None, description="Timestamp of the last update."
-    )
-    updated_by: str | None = Field(None, description="User ID of the last updater.")
-    reason_for_change: str | None = Field(
-        None, description="Justification/reason for the change."
-    )
-
-    model_config = {"extra": "allow"}
-
-
-class AuditMetadata(BaseModel):
-    """
-    Part 11/GxP audit metadata for any mutation operation.
-    """
-
-    user_id: str = Field(
-        ..., min_length=1, description="Unique user identifier initiating the mutation."
-    )
-    change_reason: str = Field(
-        ...,
-        min_length=1,
-        max_length=255,
-        description="Auditable justification reason for this change.",
-    )
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
-
-
-class SoAEntityCreatedResponse(BaseModel):
-    """
-    Standard successful creation response.
-    """
-
-    status: str = "success"
-    id: str
-
-
-class SoAEntityDetail(BaseModel):
-    """
-    Standard details of a versioned SoA entity.
-    """
-
-    id: str
-    version_index: int
-    created_by: str
-    created_at: str
-    is_retired: bool = False
-    is_deleted: bool = False
-
-    model_config = {"extra": "allow"}
-
-
-# --- Task 2: Define StudyArm and Epoch domain models ---
-
-
-class StudyArm(SoAAuditMixin):
-    """
-    Pydantic v2 model for a clinical trial Study Arm.
+    Pydantic v2 domain model for a clinical trial Study Arm.
     """
 
     id: str = Field(..., description="Unique identifier for the study arm.")
@@ -143,6 +42,8 @@ class StudyArm(SoAAuditMixin):
     )
     sequence: int | None = Field(None, ge=1, description="Sequential ordering rank.")
 
+    model_config = {"extra": "allow"}
+
     @model_validator(mode="before")
     @classmethod
     def populate_type_and_arm_type(cls, data: dict) -> dict:
@@ -154,9 +55,9 @@ class StudyArm(SoAAuditMixin):
         return data
 
 
-class Epoch(SoAAuditMixin):
+class Epoch(AuditFields):
     """
-    Pydantic v2 model for a Study Epoch.
+    Pydantic v2 domain model for a Study Epoch.
     """
 
     id: str = Field(..., description="Unique identifier for the epoch.")
@@ -175,6 +76,8 @@ class Epoch(SoAAuditMixin):
         ..., ge=1, description="Sequential ordering rank of the epoch."
     )
 
+    model_config = {"extra": "allow"}
+
     @model_validator(mode="before")
     @classmethod
     def populate_epoch_fields(cls, data: dict) -> dict:
@@ -190,12 +93,9 @@ class Epoch(SoAAuditMixin):
         return data
 
 
-# --- Task 3: Define Visit and Procedure domain models ---
-
-
-class Visit(SoAAuditMixin):
+class Visit(AuditFields):
     """
-    Pydantic v2 model for a Visit / Encounter.
+    Pydantic v2 domain model for a Visit / Encounter.
     """
 
     id: str = Field(..., description="Unique identifier for the visit.")
@@ -218,6 +118,8 @@ class Visit(SoAAuditMixin):
         description="IDs of study arms applicable to this visit.",
     )
 
+    model_config = {"extra": "allow"}
+
     @model_validator(mode="before")
     @classmethod
     def populate_visit_fields(cls, data: dict) -> dict:
@@ -229,9 +131,9 @@ class Visit(SoAAuditMixin):
         return data
 
 
-class Procedure(SoAAuditMixin):
+class Procedure(AuditFields):
     """
-    Pydantic v2 model for a clinical Procedure / Activity.
+    Pydantic v2 domain model for a clinical Procedure / Activity.
     """
 
     id: str = Field(..., description="Unique identifier for the procedure.")
@@ -255,6 +157,8 @@ class Procedure(SoAAuditMixin):
         description="IDs of study arms applicable to this procedure.",
     )
 
+    model_config = {"extra": "allow"}
+
     @model_validator(mode="before")
     @classmethod
     def populate_proc_fields(cls, data: dict) -> dict:
@@ -266,12 +170,9 @@ class Procedure(SoAAuditMixin):
         return data
 
 
-# --- Task 4: Define the TimingWindow and conditional-timing model ---
-
-
-class TimingWindow(SoAAuditMixin):
+class TimingWindow(AuditFields):
     """
-    Pydantic v2 model for a Timing Window.
+    Pydantic v2 domain model for a Timing Window.
     """
 
     id: str = Field(..., description="Unique identifier for the timing window.")
@@ -300,32 +201,16 @@ class TimingWindow(SoAAuditMixin):
         description="Mandatory justification reason required if conditional is True.",
     )
 
+    model_config = {"extra": "allow"}
+
     @model_validator(mode="after")
-    def validate_conditional_timing_reason(self) -> TimingWindow:
+    def validate_conditional_timing_reason(self) -> "TimingWindow":
         if self.conditional and (not self.reason or not self.reason.strip()):
-            raise ValueError(
-                "A non-empty 'reason' must be provided when timing/applicability is conditional."
-            )
-        if self.max_offset is not None and self.max_offset < 0:
-            raise ValueError("max_offset must not be negative.")
-        if self.min_offset is not None and self.max_offset is not None:
-            if self.min_offset > self.max_offset:
-                raise ValueError("min_offset must not be greater than max_offset.")
-        return self
-
-    @model_validator(mode="after")
-    def validate_numeric_ranges(self) -> "TimingWindow":
-        if self.min_offset is not None and self.max_offset is not None:
-            if self.min_offset > self.max_offset:
-                raise ValueError(
-                    "Field 'min_offset' must be less than or equal to 'max_offset'."
-                )
-        if self.target_day is not None and self.target_day < 0:
-            raise ValueError("Field 'target_day' cannot be negative.")
+            raise ValueError("A non-empty 'reason' must be provided")
         return self
 
 
-# --- Entity-Specific Properties Contracts ---
+# --- Task 2: Properties Payload Contracts ---
 
 
 class StudyArmProperties(BaseModel):
@@ -362,7 +247,7 @@ class EpochProperties(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_epoch_name_fields(self) -> EpochProperties:
+    def validate_epoch_name_fields(self) -> "EpochProperties":
         if not self.name and not self.epoch_name:
             raise ValueError(
                 "Either 'name' or 'epoch_name' must be provided and non-empty."
@@ -388,7 +273,7 @@ class VisitProperties(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_visit_name_fields(self) -> VisitProperties:
+    def validate_visit_name_fields(self) -> "VisitProperties":
         if not self.name and not self.encounter_name:
             raise ValueError(
                 "Either 'name' or 'encounter_name' must be provided and non-empty."
@@ -409,7 +294,7 @@ class ProcedureProperties(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_proc_name_fields(self) -> ProcedureProperties:
+    def validate_proc_name_fields(self) -> "ProcedureProperties":
         if not self.name and not self.activity_name:
             raise ValueError(
                 "Either 'name' or 'activity_name' must be provided and non-empty."
@@ -427,12 +312,6 @@ class TimingWindowProperties(BaseModel):
         min_length=1,
         description="Label or duration specification of the timing window.",
     )
-    anchor_reference: str | None = Field(
-        None, description="Anchor reference, e.g. a visit name."
-    )
-    target_day: int | None = Field(None, description="Target scheduled day.")
-    min_offset: int | None = Field(None, description="Minimum day offset.")
-    max_offset: int | None = Field(None, description="Maximum day offset.")
     conditional: bool | None = Field(
         None,
         description="Flag indicating if the timing or applicability is conditional.",
@@ -444,31 +323,13 @@ class TimingWindowProperties(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_conditional_timing_reason(self) -> TimingWindowProperties:
+    def validate_conditional_timing_reason(self) -> "TimingWindowProperties":
         if self.conditional and (not self.reason or not self.reason.strip()):
-            raise ValueError(
-                "A non-empty 'reason' must be provided when timing/applicability is conditional."
-            )
-        if self.max_offset is not None and self.max_offset < 0:
-            raise ValueError("max_offset must not be negative.")
-        if self.min_offset is not None and self.max_offset is not None:
-            if self.min_offset > self.max_offset:
-                raise ValueError("min_offset must not be greater than max_offset.")
-        return self
-
-    @model_validator(mode="after")
-    def validate_numeric_ranges(self) -> "TimingWindowProperties":
-        if self.min_offset is not None and self.max_offset is not None:
-            if self.min_offset > self.max_offset:
-                raise ValueError(
-                    "Field 'min_offset' must be less than or equal to 'max_offset'."
-                )
-        if self.target_day is not None and self.target_day < 0:
-            raise ValueError("Field 'target_day' cannot be negative.")
+            raise ValueError("A non-empty 'reason' must be provided")
         return self
 
 
-# --- Task 5: Endpoint Request / Response Contracts ---
+# --- Create / Update Request Contracts ---
 
 
 class CreateStudyArmRequest(BaseModel):
@@ -553,7 +414,7 @@ class UpdateTimingWindowRequest(BaseModel):
     )
 
 
-# --- Association / Link Request Contracts ---
+# --- Link Request Contracts ---
 
 
 class LinkEpochVisitRequest(BaseModel):
@@ -583,7 +444,51 @@ class SoALinkResponse(BaseModel):
     message: str = "Link established successfully"
 
 
-# --- Projection Cells and Matrices ---
+# --- Response Contracts ---
+
+
+class SoAEntityCreatedResponse(BaseModel):
+    """
+    Standard successful creation response.
+    """
+
+    status: str = "success"
+    id: str
+
+
+class SoAEntityDetail(BaseModel):
+    """
+    Standard details of a versioned SoA entity.
+    """
+
+    id: str
+    version_index: int
+    created_by: str
+    created_at: str
+    is_retired: bool = False
+    is_deleted: bool = False
+
+    model_config = {"extra": "allow"}
+
+
+class AuditMetadata(BaseModel):
+    """
+    Part 11/GxP audit metadata for any mutation operation.
+    """
+
+    user_id: str = Field(
+        ..., min_length=1, description="Unique user identifier initiating the mutation."
+    )
+    change_reason: str = Field(
+        ...,
+        min_length=1,
+        max_length=255,
+        description="Auditable justification reason for this change.",
+    )
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+# --- Projections and Matrices ---
 
 
 class ProjectionCell(BaseModel):
@@ -607,7 +512,6 @@ class SoAMatrixProjectionResponse(BaseModel):
     """
     Response contract representing the complete Schedule of Activities (SoA) presentation matrix.
     Assembles the arm x epoch x visit x procedure structure with timing/conditional metadata.
-    Follows existing designer response conventions.
     """
 
     epochs: list[SoAHeaderEpoch] = Field(
@@ -624,3 +528,57 @@ class SoAMatrixProjectionResponse(BaseModel):
     arms: list[SoAHeaderArm] = Field(
         default_factory=list, description="Ordered list of Study Arm columns."
     )
+
+
+# --- Task 3: Visit Reorder and Activity Assignment Request Contracts ---
+
+
+class VisitReorderItem(BaseModel):
+    """
+    Represents a visit id and its new sequence value.
+    """
+
+    visit_id: str = Field(
+        ..., min_length=1, description="Unique identifier for the visit."
+    )
+    sequence: int = Field(
+        ..., ge=1, description="New sequential order rank of the visit."
+    )
+
+
+class VisitReorderRequest(BaseModel):
+    """
+    Request contract carrying an ordered list of visit ID and sequence value pairs.
+    """
+
+    visits: list[VisitReorderItem] = Field(
+        ..., description="Ordered list of visit sequence updates."
+    )
+
+
+class ActivityAssignmentRequest(BaseModel):
+    """
+    Request contract carrying a visit id and one or more procedure/activity ids.
+    """
+
+    visit_id: str = Field(..., min_length=1, description="The visit identifier.")
+    procedure_ids: list[str] = Field(
+        default_factory=list,
+        description="One or more procedure identifiers (non-empty).",
+    )
+    activity_ids: list[str] = Field(
+        default_factory=list,
+        description="One or more activity/procedure identifiers (non-empty).",
+    )
+
+    @model_validator(mode="after")
+    def validate_ids(self) -> "ActivityAssignmentRequest":
+        if not self.procedure_ids and not self.activity_ids:
+            raise ValueError(
+                "At least one of 'procedure_ids' or 'activity_ids' must be provided and non-empty."
+            )
+        if self.procedure_ids and not self.activity_ids:
+            self.activity_ids = self.procedure_ids
+        elif self.activity_ids and not self.procedure_ids:
+            self.procedure_ids = self.activity_ids
+        return self
