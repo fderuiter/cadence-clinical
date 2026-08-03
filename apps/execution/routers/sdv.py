@@ -12,6 +12,11 @@ from execution.sdv_transport_models import (
     BulkQueryGenerationResponse,
     BulkSdvSignOffRequest,
     BulkSdvSignOffResponse,
+    SdvFlagRequest,
+    SdvResolveRequest,
+    SdvFlagResponse,
+    SdvResolveResponse,
+    SdvFlagSeverity,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, model_validator
@@ -674,4 +679,310 @@ async def bulk_generate_queries(
         generated_count=len(generated_query_ids),
         generated_query_ids=generated_query_ids,
         skipped_targets=skipped_targets,
+    )
+
+
+@router.post(
+    "/sdv/flag",
+    response_model=SdvFlagResponse,
+)
+async def sdv_flag(
+    payload: SdvFlagRequest,
+    principal: Principal = Depends(require_permission("sdv:flag")),
+    _study_scope: Principal = Depends(require_study_scope()),
+) -> SdvFlagResponse:
+    """Flag clinical observations with a mandatory reason."""
+    if not payload.reason_for_change or not payload.reason_for_change.strip():
+        raise HTTPException(
+            status_code=400, detail="GxP Part 11: reason_for_change cannot be blank."
+        )
+    if not payload.targets:
+        raise HTTPException(status_code=400, detail="targets list cannot be empty.")
+
+    # Check study access
+    if not can_access_study(principal, payload.study_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: access restricted to your assigned study.",
+        )
+
+    user_id = principal.user_id or "system"
+    change_reason = payload.reason_for_change
+
+    flagged_target_ids = []
+    skipped_target_ids = []
+
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            # Set GxP write permission config
+            await session.execute(
+                text("SELECT set_config('cadence.app_writing', 'true', true);")
+            )
+
+            with audit_context(user_id=user_id, change_reason=change_reason):
+                # Retrieve subject to find site_id
+                stmt_subj = select(ClinicalSubject).where(
+                    ClinicalSubject.subject_id == payload.subject_id,
+                    ClinicalSubject.study_id == payload.study_id,
+                )
+                res_subj = await session.execute(stmt_subj)
+                subj_db = res_subj.scalars().first()
+
+                if not subj_db:
+                    raise HTTPException(
+                        status_code=404,
+                        detail="Subject not found or inconsistent study reference.",
+                    )
+
+                # Site access check
+                target_site_id = payload.site_id or subj_db.site_id
+                verify_site_access(
+                    principal,
+                    target_site_id,
+                    study_id=payload.study_id,
+                    subject_id=payload.subject_id,
+                )
+
+                # Process targets
+                for target in payload.targets:
+                    if not target.flag_reason or not target.flag_reason.strip():
+                        raise HTTPException(
+                            status_code=400, detail="Flag reason is mandatory."
+                        )
+
+                    # Retrieve observation
+                    stmt_obs = select(ClinicalObservation).where(
+                        ClinicalObservation.id == target.target_id,
+                        ClinicalObservation.subject_id == payload.subject_id,
+                        ClinicalObservation.study_id == payload.study_id,
+                    )
+                    res_obs = await session.execute(stmt_obs)
+                    obs_db = res_obs.scalars().first()
+
+                    if not obs_db:
+                        raise HTTPException(
+                            status_code=404,
+                            detail=f"Clinical observation {target.target_id} not found.",
+                        )
+
+                    # Update observation flagging state
+                    obs_db.is_sdv_flagged = True
+                    obs_db.sdv_flag_reason = target.flag_reason
+
+                    # Retrieve or create SDVSignOff
+                    stmt_signoff = select(SDVSignOff).where(
+                        SDVSignOff.scope == "FIELD",
+                        SDVSignOff.target_id == target.target_id,
+                        SDVSignOff.subject_id == payload.subject_id,
+                        SDVSignOff.study_id == payload.study_id,
+                    )
+                    res_signoff = await session.execute(stmt_signoff)
+                    signoff_db = res_signoff.scalars().first()
+
+                    flagged_at = datetime.utcnow()
+
+                    if signoff_db:
+                        signoff_db.status = "FLAGGED"
+                        signoff_db.flagged_by = user_id
+                        signoff_db.flagged_at = flagged_at
+                        signoff_db.flag_reason = target.flag_reason
+                        signoff_db.flag_severity = target.flag_severity.value
+                        signoff_db.is_verified = False
+                    else:
+                        signoff_db = SDVSignOff(
+                            scope="FIELD",
+                            target_id=target.target_id,
+                            subject_id=payload.subject_id,
+                            study_id=payload.study_id,
+                            site_id=target_site_id,
+                            is_verified=False,
+                            status="FLAGGED",
+                            flagged_by=user_id,
+                            flagged_at=flagged_at,
+                            flag_reason=target.flag_reason,
+                            flag_severity=target.flag_severity.value,
+                            created_by=user_id,
+                        )
+                        session.add(signoff_db)
+
+                    flagged_target_ids.append(target.target_id)
+
+    # Compute SHA256 digest of signed payload data
+    import hashlib
+    import json
+
+    digest_payload = {
+        "study_id": payload.study_id,
+        "subject_id": payload.subject_id,
+        "scope": payload.scope,
+        "target_ids": sorted(flagged_target_ids),
+        "reason_for_change": payload.reason_for_change,
+    }
+    serialized_digest = json.dumps(digest_payload, sort_keys=True)
+    content_digest = hashlib.sha256(serialized_digest.encode("utf-8")).hexdigest()
+
+    timestamp_str = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    flag_id = f"flag_{uuid.uuid4().hex[:8]}"
+    audit_tx = f"tx_{uuid.uuid4().hex[:12]}"
+
+    return SdvFlagResponse(
+        flag_id=flag_id,
+        content_digest=content_digest,
+        timestamp_utc=timestamp_str,
+        audit_tx=audit_tx,
+        flagged_count=len(flagged_target_ids),
+        flagged_target_ids=flagged_target_ids,
+        skipped_target_ids=skipped_target_ids,
+    )
+
+
+@router.post(
+    "/sdv/resolve",
+    response_model=SdvResolveResponse,
+)
+async def sdv_resolve(
+    payload: SdvResolveRequest,
+    principal: Principal = Depends(require_permission("sdv:flag")),
+    _study_scope: Principal = Depends(require_study_scope()),
+) -> SdvResolveResponse:
+    """Resolve flags on clinical observations."""
+    if not payload.reason_for_change or not payload.reason_for_change.strip():
+        raise HTTPException(
+            status_code=400, detail="GxP Part 11: reason_for_change cannot be blank."
+        )
+
+    # Resolve target IDs to clear
+    resolve_ids = []
+    if payload.target_ids:
+        resolve_ids.extend(payload.target_ids)
+    if payload.targets:
+        resolve_ids.extend([t.target_id for t in payload.targets])
+
+    if not resolve_ids:
+        raise HTTPException(status_code=400, detail="No target IDs specified to resolve.")
+
+    # Check study access
+    if not can_access_study(principal, payload.study_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: access restricted to your assigned study.",
+        )
+
+    user_id = principal.user_id or "system"
+    change_reason = payload.reason_for_change
+
+    resolved_target_ids = []
+    skipped_target_ids = []
+
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            # Set GxP write permission config
+            await session.execute(
+                text("SELECT set_config('cadence.app_writing', 'true', true);")
+            )
+
+            with audit_context(user_id=user_id, change_reason=change_reason):
+                # Retrieve subject to find site_id
+                stmt_subj = select(ClinicalSubject).where(
+                    ClinicalSubject.subject_id == payload.subject_id,
+                    ClinicalSubject.study_id == payload.study_id,
+                )
+                res_subj = await session.execute(stmt_subj)
+                subj_db = res_subj.scalars().first()
+
+                if not subj_db:
+                    raise HTTPException(
+                        status_code=404,
+                        detail="Subject not found or inconsistent study reference.",
+                    )
+
+                # Site access check
+                target_site_id = payload.site_id or subj_db.site_id
+                verify_site_access(
+                    principal,
+                    target_site_id,
+                    study_id=payload.study_id,
+                    subject_id=payload.subject_id,
+                )
+
+                # Process target IDs
+                for tid in resolve_ids:
+                    # Retrieve observation
+                    stmt_obs = select(ClinicalObservation).where(
+                        ClinicalObservation.id == tid,
+                        ClinicalObservation.subject_id == payload.subject_id,
+                        ClinicalObservation.study_id == payload.study_id,
+                    )
+                    res_obs = await session.execute(stmt_obs)
+                    obs_db = res_obs.scalars().first()
+
+                    if not obs_db:
+                        raise HTTPException(
+                            status_code=404,
+                            detail=f"Clinical observation {tid} not found.",
+                        )
+
+                    # Update observation flagging state
+                    obs_db.is_sdv_flagged = False
+                    obs_db.sdv_flag_reason = None
+
+                    # Retrieve or create SDVSignOff
+                    stmt_signoff = select(SDVSignOff).where(
+                        SDVSignOff.scope == "FIELD",
+                        SDVSignOff.target_id == tid,
+                        SDVSignOff.subject_id == payload.subject_id,
+                        SDVSignOff.study_id == payload.study_id,
+                    )
+                    res_signoff = await session.execute(stmt_signoff)
+                    signoff_db = res_signoff.scalars().first()
+
+                    resolved_at = datetime.utcnow()
+
+                    if signoff_db:
+                        signoff_db.status = "RESOLVED"
+                        signoff_db.resolved_by = user_id
+                        signoff_db.resolved_at = resolved_at
+                    else:
+                        signoff_db = SDVSignOff(
+                            scope="FIELD",
+                            target_id=tid,
+                            subject_id=payload.subject_id,
+                            study_id=payload.study_id,
+                            site_id=target_site_id,
+                            is_verified=False,
+                            status="RESOLVED",
+                            resolved_by=user_id,
+                            resolved_at=resolved_at,
+                            created_by=user_id,
+                        )
+                        session.add(signoff_db)
+
+                    resolved_target_ids.append(tid)
+
+    # Compute SHA256 digest of resolved payload data
+    import hashlib
+    import json
+
+    digest_payload = {
+        "study_id": payload.study_id,
+        "subject_id": payload.subject_id,
+        "scope": payload.scope,
+        "target_ids": sorted(resolved_target_ids),
+        "reason_for_change": payload.reason_for_change,
+    }
+    serialized_digest = json.dumps(digest_payload, sort_keys=True)
+    content_digest = hashlib.sha256(serialized_digest.encode("utf-8")).hexdigest()
+
+    timestamp_str = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    resolution_id = f"res_{uuid.uuid4().hex[:8]}"
+    audit_tx = f"tx_{uuid.uuid4().hex[:12]}"
+
+    return SdvResolveResponse(
+        resolution_id=resolution_id,
+        content_digest=content_digest,
+        timestamp_utc=timestamp_str,
+        audit_tx=audit_tx,
+        resolved_count=len(resolved_target_ids),
+        resolved_target_ids=resolved_target_ids,
+        skipped_target_ids=skipped_target_ids,
     )
