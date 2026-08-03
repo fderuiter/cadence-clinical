@@ -34,7 +34,7 @@ class BatchSignatureRequest(BaseModel):
     )
 
     @model_validator(mode="after")
-    def sync_target_ids(self) -> "BatchSignatureRequest":
+    def sync_target_ids(self) -> BatchSignatureRequest:
         """Synchronize target_ids and target_form_ids fields."""
         if not self.target_ids and self.target_form_ids:
             self.target_ids = list(self.target_form_ids)

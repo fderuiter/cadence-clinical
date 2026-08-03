@@ -331,3 +331,142 @@ async def test_lab_unit_conversion_crud_and_audit():
                     id=conversion_id
                 )
             )
+
+
+@pytest.mark.asyncio
+async def test_lab_catalog_explicit_audit_persistence():
+    """
+    Task 2: Confirm both LabTestMaster and LabUnitConversion persist their audit fields
+    and write audit-log entries on update. Verify hard deletes are blocked.
+    """
+    master_id = None
+    conv_id = None
+
+    # 1. Insert both models under audit_context
+    with audit_context(user_id="cat_auditor", change_reason="Initial catalog setup"):
+        async with db_manager.get_session_maker()() as session, session.begin():
+            await session.execute(
+                text("SELECT set_config('cadence.app_writing', 'true', 1);")
+            )
+            master = LabTestMaster(
+                study_id="STUDY-CAT-1",
+                test_code="GLUCOSE",
+                test_name="Blood Glucose",
+                default_unit="mg/dL",
+                normalized_unit="mmol/L",
+                created_by="cat_auditor",
+                reason_for_change="Initial catalog setup",
+                version_index=1,
+            )
+            conv = LabUnitConversion(
+                study_id="STUDY-CAT-1",
+                test_code="GLUCOSE",
+                from_unit="mg/dL",
+                to_unit="mmol/L",
+                factor=0.0555,
+                created_by="cat_auditor",
+                reason_for_change="Initial catalog setup",
+                version_index=1,
+            )
+            session.add_all([master, conv])
+            await session.flush()
+            master_id = master.id
+            conv_id = conv.id
+
+    # 2. Verify persistence on insert
+    async with db_manager.get_session_maker()() as session:
+        m_saved = (await session.execute(
+            select(LabTestMaster).where(LabTestMaster.id == master_id)
+        )).scalar_one()
+        assert m_saved.created_at is not None
+        assert m_saved.created_by == "cat_auditor"
+        assert m_saved.reason_for_change == "Initial catalog setup"
+        assert m_saved.version_index == 1
+
+        c_saved = (await session.execute(
+            select(LabUnitConversion).where(LabUnitConversion.id == conv_id)
+        )).scalar_one()
+        assert c_saved.created_at is not None
+        assert c_saved.created_by == "cat_auditor"
+        assert c_saved.reason_for_change == "Initial catalog setup"
+        assert c_saved.version_index == 1
+
+    # 3. Update operations
+    with audit_context(user_id="cat_auditor", change_reason="Refined glucose details"):
+        async with db_manager.get_session_maker()() as session, session.begin():
+            await session.execute(
+                text("SELECT set_config('cadence.app_writing', 'true', 1);")
+            )
+            m_row = (await session.execute(
+                select(LabTestMaster).where(LabTestMaster.id == master_id)
+            )).scalar_one()
+            c_row = (await session.execute(
+                select(LabUnitConversion).where(LabUnitConversion.id == conv_id)
+            )).scalar_one()
+
+            m_row.test_name = "Blood Glucose level"
+            m_row.reason_for_change = "Refined glucose details"
+            m_row.version_index = 2
+
+            c_row.factor = 0.05551
+            c_row.reason_for_change = "Refined glucose details"
+            c_row.version_index = 2
+
+    # 4. Verify audit fields updated on both models
+    async with db_manager.get_session_maker()() as session:
+        m_up = (await session.execute(
+            select(LabTestMaster).where(LabTestMaster.id == master_id)
+        )).scalar_one()
+        assert m_up.created_by == "cat_auditor"
+        assert m_up.reason_for_change == "Refined glucose details"
+        assert m_up.version_index == 2
+
+        c_up = (await session.execute(
+            select(LabUnitConversion).where(LabUnitConversion.id == conv_id)
+        )).scalar_one()
+        assert c_up.created_by == "cat_auditor"
+        assert c_up.reason_for_change == "Refined glucose details"
+        assert c_up.version_index == 2
+
+    # 5. Verify update operations produce AuditLog rows with correct fields
+    async with db_manager.get_session_maker()() as session:
+        # Check LabTestMaster audit log
+        result_m_logs = await session.execute(
+            select(AuditLog)
+            .where(AuditLog.table_name == "lab_test_masters")
+            .order_by(AuditLog.timestamp)
+        )
+        m_logs = result_m_logs.scalars().all()
+        assert len(m_logs) >= 2
+        m_up_log = m_logs[-1]
+        assert m_up_log.action == "UPDATE"
+        assert m_up_log.change_reason == "Refined glucose details"
+        assert m_up_log.version_index == 2
+
+        # Check LabUnitConversion audit log
+        result_c_logs = await session.execute(
+            select(AuditLog)
+            .where(AuditLog.table_name == "lab_unit_conversions")
+            .order_by(AuditLog.timestamp)
+        )
+        c_logs = result_c_logs.scalars().all()
+        assert len(c_logs) >= 2
+        c_up_log = c_logs[-1]
+        assert c_up_log.action == "UPDATE"
+        assert c_up_log.change_reason == "Refined glucose details"
+        assert c_up_log.version_index == 2
+
+    # 6. Verify hard deletes are blocked
+    async with db_manager.get_session_maker()() as session, session.begin():
+        with pytest.raises(Exception, match="Hard deletions are strictly forbidden"):
+            await session.execute(
+                text("DELETE FROM lab_test_masters WHERE id = :id;").bindparams(
+                    id=master_id
+                )
+            )
+        with pytest.raises(Exception, match="Hard deletions are strictly forbidden"):
+            await session.execute(
+                text("DELETE FROM lab_unit_conversions WHERE id = :id;").bindparams(
+                    id=conv_id
+                )
+            )

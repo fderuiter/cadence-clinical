@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 
 class VariableMetadata(BaseModel):
@@ -69,6 +69,7 @@ class SUPPRecord(BaseModel):
 class DatasetJSONItemGroup(BaseModel):
     """Represents an itemGroupData object inside CDISC Dataset-JSON clinicalData/referenceData."""
 
+    itemGroupOID: str = Field(..., description="ItemGroup OID identifier")
     records: int = Field(..., description="Number of rows/records in the dataset")
     name: str = Field(..., description="Dataset name (e.g., 'DM')")
     label: str = Field(..., description="Dataset label (e.g., 'Demographics')")
@@ -98,6 +99,9 @@ class ClinicalData(BaseModel):
     metaDataVersionOID: str = Field(
         ..., description="Metadata version identifier (e.g., 'MDV.001')"
     )
+    metaDataRef: str | None = Field(
+        None, description="External Define-XML metadata reference"
+    )
     itemGroupData: dict[str, DatasetJSONItemGroup] = Field(
         ..., description="Mapping of group names (e.g., 'IG.DM') to their datasets"
     )
@@ -116,8 +120,14 @@ class ReferenceData(BaseModel):
 class DatasetJSON(BaseModel):
     """Root model representing a CDISC Dataset-JSON document compliant with Pydantic v2."""
 
-    creationDateTime: str = Field(
+    model_config = ConfigDict(populate_by_name=True)
+
+    datasetJSONCreationDateTime: str = Field(
         default_factory=lambda: datetime.utcnow().isoformat() + "Z",
+        serialization_alias="datasetJSONCreationDateTime",
+        validation_alias=AliasChoices(
+            "datasetJSONCreationDateTime", "creationDateTime"
+        ),
         description="ISO 8601 creation timestamp",
     )
     datasetJSONVersion: str = Field(
@@ -125,6 +135,9 @@ class DatasetJSON(BaseModel):
     )
     fileOID: str | None = Field(None, description="Unique identifier for this file")
     asOfDateTime: str | None = Field(None, description="As of timestamp")
+    dbLastModifiedDateTime: str | None = Field(
+        None, description="Optional source-data last-modified timestamp header"
+    )
     originator: str | None = Field(None, description="Originator of the data")
     sourceSystem: str | None = Field(None, description="Generating system")
     sourceSystemVersion: str | None = Field(
@@ -135,7 +148,7 @@ class DatasetJSON(BaseModel):
         None, description="Reference data block"
     )
 
-    @field_validator("creationDateTime")
+    @field_validator("datasetJSONCreationDateTime")
     @classmethod
     def validate_timestamp(cls, v: str) -> str:
         # Just simple validation to ensure it looks like a datetime
