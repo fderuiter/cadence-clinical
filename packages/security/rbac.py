@@ -143,7 +143,6 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "visit_windowing": {"create", "read", "update"},
         "soa": {"create", "read", "update", "delete"},
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
-        "soa": {"create", "read", "update", "delete"},
         "global_library": {
             "create",  # Phase 1: create global library object
             "update",  # Phase 1: update global library object
@@ -242,7 +241,6 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "visit_windowing": {"create", "read", "update"},
         "soa": {"create", "read", "update", "delete"},
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
-        "soa": {"create", "read", "update", "delete"},
         "global_library": {
             "create",  # Phase 1: create global library object
             "update",  # Phase 1: update global library object
@@ -285,7 +283,6 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "visit_windowing": {"read"},
         "soa": {"read"},
         "study_design": {"read"},
-        "soa": {"read"},
         "protocol_ingestion": {"upload", "read", "review", "promote"},
         "protocol_section": {"review", "read"},
     },
@@ -293,7 +290,6 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "visit_windowing": {"read"},
         "soa": {"read"},
         "study_design": {"read", "approve"},
-        "soa": {"read"},
         "global_library": {
             "transition",  # Phase 1: transition global library object status
             "read",  # Phase 1: read global library object
@@ -376,7 +372,6 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "visit_windowing": {"read"},
         "soa": {"read"},
         "study_design": {"read"},
-        "soa": {"read"},
         "subject_enrollment": {"read"},
         "ecrf_data_entry": {"read"},
         "query_lifecycle": {"create", "read", "update"},
@@ -390,7 +385,6 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "visit_windowing": {"read"},
         "soa": {"read"},
         "study_design": {"read"},
-        "soa": {"read"},
         "system_audit_logs": {"read"},
         "export_masked": {"create", "read", "update"},
         "eisf_document": {"read"},
@@ -401,7 +395,6 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "visit_windowing": {"read"},
         "soa": {"read"},
         "study_design": {"read"},
-        "soa": {"read"},
         "subject_enrollment": {"create", "read", "update"},
         "rtsm_unblind": {"write"},
         "ecrf_data_entry": {"create", "read", "update"},
@@ -443,7 +436,6 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "visit_windowing": {"read"},
         "soa": {"read"},
         "study_design": {"read"},
-        "soa": {"read"},
         "subject_enrollment": {"create", "read", "update"},
         "ecrf_data_entry": {
             "create",
@@ -484,11 +476,16 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "visit_windowing": {"read"},
         "soa": {"read"},
         "study_design": {"read"},
-        "soa": {"read"},
         "subject_enrollment": {"read"},
         "ecrf_data_entry": {"read"},
         "query_lifecycle": {"create", "read", "update", "delete"},
-        "sdv": {"create", "read", "update", "delete", "flag"},  # Added flag action for item-level SDV flags
+        "sdv": {
+            "create",
+            "read",
+            "update",
+            "delete",
+            "flag",
+        },  # Added flag action for item-level SDV flags
         "system_audit_logs": {"read"},
         "export_masked": {"read"},
         "regulatory_form": {"create", "read", "sign"},
@@ -537,8 +534,13 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "visit_windowing": {"read"},
         "soa": {"read"},
         "study_design": {"read"},
-        "soa": {"read"},
-        "sdv": {"create", "read", "update", "delete", "flag"},  # Added flag action for item-level SDV flags
+        "sdv": {
+            "create",
+            "read",
+            "update",
+            "delete",
+            "flag",
+        },  # Added flag action for item-level SDV flags
         "system_audit_logs": {"read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},
@@ -663,7 +665,6 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "visit_windowing": {"create", "read", "update"},
         "soa": {"create", "read", "update", "delete"},
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
-        "soa": {"create", "read", "update", "delete"},
         "global_library": {
             "transition",  # Phase 1: transition global library object status
             "read",  # Phase 1: read global library object
