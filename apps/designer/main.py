@@ -2485,7 +2485,11 @@ async def approve_study_version_endpoint(
     manifest.key_identifier = ids["subject_key_identifier"]
 
     # Verify signature
-    assert manifest.verify() is True
+    if not manifest.verify():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Signature verification failed: Cryptographic signature is invalid.",
+        )
 
     signature_manifestation_payload = manifest.model_dump(mode="json")
 

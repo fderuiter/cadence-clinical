@@ -91,4 +91,4 @@ When working on a new GitHub issue or modifying system functionality, follow thi
      ```
 3. **Traceability Level (`RTM`)**:
    - Write automated pytest or vitest unit/integration tests referencing the requirement ID or feature.
-   - Run `python3 scripts/generate_rtm.py` or build docs via `node scripts/build-docs.js` to refresh the Requirements Traceability Matrix.
+   - Run the unified synchronization script `uv run python scripts/sync_gxp.py` to refresh the Requirements Traceability Matrix.
