@@ -145,6 +145,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-18: Document Redaction Architecture, Regulatory Data-Handling, and Compliance Profiles](2026-08-18-document-redaction-architecture.md)
 
 ### 6. Frontend & Design System
+- [2026-08-02: Centralized Accessibility Matcher and 80 Percent Coverage Gate](2026-08-02-centralized-accessibility-matcher-and-80-percent-coverage-gate.md)
 - [2026-08-20: Targeted E2E Contrast Enforcement and Style Token Upgrades](2026-08-20-targeted-e2e-contrast-enforcement-and-style-token-upgrades.md)
 - [2026-08-02: Implement WCAG compliance in shared clinical UI primitives](2026-08-02-implement-wcag-compliance-in-shared-clinical-ui-primitives.md)
 - [2026-07-31: Viewport-Aware Grid Inspector for eCRF designer](2026-07-31-viewport-aware-grid-inspector.md)

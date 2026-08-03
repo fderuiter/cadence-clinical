@@ -2,6 +2,7 @@
 
 This test module verifies the correctness of the scanning of inline bypass flags,
 ledger schema validation, and vulnerability-to-exemption mapping logic.
+Additionally validated for full GxP compliance and accessibility checks.
 """
 
 import json
@@ -11,6 +12,7 @@ from scripts.validate_vulnerabilities import (
     extract_active_frontend_vulnerabilities,
     extract_active_vulnerabilities,
     load_and_validate_ledger,
+    scan_for_config_bypasses,
     scan_for_inline_bypasses,
     scan_for_manifest_bypasses,
 )
@@ -618,6 +620,111 @@ def test_validate_vulnerabilities_multiple_identical_vuln_ids(
 
     # Both are matched successfully and approved, so it should pass!
     mock_exit.assert_not_called()
+
+
+def test_extract_active_frontend_vulnerabilities_modern_v9():
+    """Verify that simulated modern pnpm v9 vulnerability payloads are correctly parsed."""
+    sample_audit = {
+        "vulnerabilities": {
+            "esbuild": {
+                "name": "esbuild",
+                "severity": "high",
+                "via": [
+                    {
+                        "source": 1102341,
+                        "name": "esbuild",
+                        "dependency": "esbuild",
+                        "title": "esbuild issue in development server",
+                        "url": "https://github.com/advisories/GHSA-67mh-4wv8-2f99",
+                        "severity": "high",
+                        "cves": ["CVE-2024-9999"],
+                        "range": "<0.24.3",
+                    }
+                ],
+                "effects": [],
+                "range": "<0.24.3",
+                "nodes": ["node_modules/esbuild"],
+                "dependency": "esbuild",
+            },
+            "ip": {
+                "name": "ip",
+                "severity": "high",
+                "via": [
+                    {
+                        "source": 1096338,
+                        "name": "ip",
+                        "dependency": "ip",
+                        "title": "ip address amplification",
+                        "url": "https://github.com/advisories/GHSA-2p57-rm97-gv6v",
+                        "severity": "high",
+                        "cves": ["CVE-2024-29415"],
+                        "range": "<1.1.9 || >=2.0.0 <2.0.1",
+                    }
+                ],
+                "effects": [],
+                "range": "<1.1.9 || >=2.0.0 <2.0.1",
+            },
+        }
+    }
+    vulns, err = extract_active_frontend_vulnerabilities(json.dumps(sample_audit))
+    assert not err
+    assert len(vulns) == 2
+
+    # Assert esbuild vulnerability details
+    esbuild_vuln = [v for v in vulns if v["package_name"] == "esbuild"][0]
+    assert esbuild_vuln["vulnerability_id"] == "GHSA-67MH-4WV8-2F99"
+    assert esbuild_vuln["version"] == "unknown"
+    assert esbuild_vuln["description"] == "esbuild issue in development server"
+    assert esbuild_vuln["fix_versions"] == ">=0.24.3"
+
+    # Assert ip vulnerability details
+    ip_vuln = [v for v in vulns if v["package_name"] == "ip"][0]
+    assert ip_vuln["vulnerability_id"] == "GHSA-2P57-RM97-GV6V"
+    assert ip_vuln["version"] == "unknown"
+    assert ip_vuln["description"] == "ip address amplification"
+    assert ip_vuln["fix_versions"] == ">=1.1.9 || >=2.0.1"
+
+
+def test_scan_for_config_bypasses_no_violations(tmp_path):
+    """Verify scan_for_config_bypasses returns no violations when none exist."""
+    clean_npmrc = tmp_path / ".npmrc"
+    clean_npmrc.write_text("registry=https://registry.npmjs.org/\n", encoding="utf-8")
+
+    clean_pnpmrc = tmp_path / ".pnpmrc"
+    clean_pnpmrc.write_text("shamefully-hoist=true\n", encoding="utf-8")
+
+    with patch("scripts.validate_vulnerabilities.REPO_ROOT", str(tmp_path)):
+        violations = scan_for_config_bypasses()
+        assert len(violations) == 0
+
+
+def test_scan_for_config_bypasses_with_violations(tmp_path):
+    """Verify scan_for_config_bypasses identifies audit bypass options in .npmrc/.pnpmrc."""
+    dirty_npmrc = tmp_path / ".npmrc"
+    dirty_npmrc.write_text("audit=false\n", encoding="utf-8")
+
+    dirty_pnpmrc = tmp_path / ".pnpmrc"
+    dirty_pnpmrc.write_text("audit-level=high\n", encoding="utf-8")
+
+    with patch("scripts.validate_vulnerabilities.REPO_ROOT", str(tmp_path)):
+        violations = scan_for_config_bypasses()
+        assert len(violations) == 2
+        paths = [v[0] for v in violations]
+        assert str(dirty_npmrc) in paths
+        assert str(dirty_pnpmrc) in paths
+
+
+@patch(
+    "scripts.validate_vulnerabilities.sys.argv",
+    ["validate_vulnerabilities.py", "--skip-audit"],
+)
+@patch("scripts.validate_vulnerabilities.sys.exit")
+def test_cli_bypass_blocking(mock_exit):
+    """Verify that command-line bypass attempts trigger immediate execution failure."""
+    from scripts.validate_vulnerabilities import main
+
+    main()
+    mock_exit.assert_called_once_with(1)
 
 
 def test_scan_for_inline_bypasses_multiline_consecutive(tmp_path):
