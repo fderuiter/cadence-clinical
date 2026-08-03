@@ -1,8 +1,10 @@
 import "fake-indexeddb/auto";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 describe("Patient Experience & Adaptive Sync Retry Integration", () => {
   beforeEach(async () => {
+    vi.resetModules();
+    vi.clearAllTimers();
     window.__MOCK_TEST_ENV__ = true;
     document.body.innerHTML = `
       <div id="app">
@@ -23,6 +25,11 @@ describe("Patient Experience & Adaptive Sync Retry Integration", () => {
     // Clear toasts
     const container = document.getElementById("toast-container");
     if (container) container.remove();
+  });
+
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
   });
 
   it("triggers dynamic CSS toast messages instead of blocking browser alerts on validation error", async () => {
