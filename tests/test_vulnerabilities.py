@@ -622,6 +622,80 @@ def test_validate_vulnerabilities_multiple_identical_vuln_ids(
     mock_exit.assert_not_called()
 
 
+@patch("scripts.validate_vulnerabilities.subprocess.run")
+@patch("scripts.validate_vulnerabilities.os.unlink")
+def test_execute_pip_audit_success(mock_unlink, mock_run):
+    """Verify that execute_pip_audit correctly exports dependencies and audits them, then cleans up."""
+    from unittest.mock import MagicMock
+
+    from scripts.validate_vulnerabilities import execute_pip_audit
+
+    mock_run_res_export = MagicMock()
+    mock_run_res_export.returncode = 0
+    mock_run_res_export.stdout = "exported"
+    mock_run_res_export.stderr = ""
+
+    mock_run_res_audit = MagicMock()
+    mock_run_res_audit.returncode = 0
+    mock_run_res_audit.stdout = '{"dependencies": []}'
+    mock_run_res_audit.stderr = ""
+
+    mock_run.side_effect = [mock_run_res_export, mock_run_res_audit]
+
+    stdout, stderr, code = execute_pip_audit()
+
+    assert stdout == '{"dependencies": []}'
+    assert stderr == ""
+    assert code == 0
+
+    # Ensure two subprocess runs were executed
+    assert mock_run.call_count == 2
+
+    # Check export command arguments
+    export_args = mock_run.call_args_list[0][0][0]
+    assert "uv" in export_args
+    assert "export" in export_args
+    assert "--no-dev" in export_args
+    assert "-o" in export_args
+
+    # Check audit command arguments
+    audit_args = mock_run.call_args_list[1][0][0]
+    assert "pip-audit" in audit_args
+    assert "-r" in audit_args
+
+    # Ensure the temp file was unlinked
+    mock_unlink.assert_called_once()
+
+
+@patch("scripts.validate_vulnerabilities.subprocess.run")
+@patch("scripts.validate_vulnerabilities.shutil.which")
+def test_execute_pnpm_audit_success(mock_which, mock_run):
+    """Verify that execute_pnpm_audit executes with the --prod flag to isolate production packages."""
+    from unittest.mock import MagicMock
+
+    from scripts.validate_vulnerabilities import execute_pnpm_audit
+
+    mock_which.return_value = "/usr/bin/pnpm"
+    mock_run_res = MagicMock()
+    mock_run_res.returncode = 0
+    mock_run_res.stdout = '{"vulnerabilities": []}'
+    mock_run_res.stderr = ""
+    mock_run.return_value = mock_run_res
+
+    stdout, stderr, code = execute_pnpm_audit()
+
+    assert stdout == '{"vulnerabilities": []}'
+    assert stderr == ""
+    assert code == 0
+
+    # Check pnpm audit command has --prod flag
+    cmd_args = mock_run.call_args[0][0]
+    assert "pnpm" in cmd_args
+    assert "audit" in cmd_args
+    assert "--json" in cmd_args
+    assert "--prod" in cmd_args
+
+
 def test_extract_active_frontend_vulnerabilities_modern_v9():
     """Verify that simulated modern pnpm v9 vulnerability payloads are correctly parsed."""
     sample_audit = {

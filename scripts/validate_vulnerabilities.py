@@ -13,6 +13,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from typing import Any
 
 # Resolve the repository root directory dynamically to support both local container and CI runner environments.
@@ -439,9 +440,52 @@ def execute_pip_audit() -> tuple[str, str, int]:
     Returns:
         A tuple of (stdout, stderr, return_code).
     """
+    # Create a temporary file to store the production-only requirements manifest.
+    # Set delete=False so that uv export can write to the file and we can safely read it,
+    # then manually delete it in the finally block.
+    with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as temp_requirements:
+        temp_file_path = temp_requirements.name
+
     try:
+        # 1. Export production-only dependencies to the temporary manifest
+        export_cmd = [
+            "uv",
+            "export",
+            "--format",
+            "requirements.txt",
+            "--all-packages",
+            "--no-dev",
+            "--no-emit-project",
+            "-o",
+            temp_file_path,
+        ]
+        export_res = subprocess.run(
+            export_cmd,
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if export_res.returncode != 0:
+            return (
+                "",
+                f"Failed to export production requirements: {export_res.stderr.strip()}",
+                export_res.returncode,
+            )
+
+        # 2. Audit the exported requirements using pip-audit
+        audit_cmd = [
+            "uv",
+            "run",
+            "pip-audit",
+            "-r",
+            temp_file_path,
+            "--format",
+            "json",
+        ]
         res = subprocess.run(
-            ["uv", "run", "pip-audit", "--format", "json"],
+            audit_cmd,
+            cwd=REPO_ROOT,
             capture_output=True,
             text=True,
             check=False,
@@ -449,6 +493,13 @@ def execute_pip_audit() -> tuple[str, str, int]:
         return res.stdout.strip(), res.stderr.strip(), res.returncode
     except Exception as e:
         return "", str(e), -1
+    finally:
+        # Securely delete the temporary requirements manifest file immediately after audit completion
+        try:
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
+        except Exception:
+            pass
 
 
 def extract_active_vulnerabilities(audit_json: str) -> tuple[list[dict[str, Any]], str]:
@@ -495,9 +546,9 @@ def execute_pnpm_audit() -> tuple[str, str, int]:
     Returns:
         A tuple of (stdout, stderr, return_code).
     """
-    cmd = ["pnpm", "audit", "--json"]
+    cmd = ["pnpm", "audit", "--json", "--prod"]
     if not shutil.which("pnpm"):
-        cmd = ["npx", "-y", "pnpm", "audit", "--json"]
+        cmd = ["npx", "-y", "pnpm", "audit", "--json", "--prod"]
     try:
         res = subprocess.run(
             cmd,

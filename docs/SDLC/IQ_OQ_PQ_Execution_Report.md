@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2008
-- **Passed:** 2008 🟢
+- **Total Automated Test Cases Run:** 2010
+- **Passed:** 2010 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -2123,6 +2123,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_generate_alignment_report` | `tests.test_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_alignment_report_with_mappings` | `tests.test_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_bypass_blocking` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_execute_pip_audit_success` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_execute_pnpm_audit_success` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_extract_active_frontend_vulnerabilities_invalid` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_extract_active_frontend_vulnerabilities_modern_v9` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_extract_active_frontend_vulnerabilities_valid` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
