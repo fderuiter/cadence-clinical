@@ -509,7 +509,9 @@ def extract_active_frontend_vulnerabilities(
                             v_id = cves[0]
 
                     if not v_id:
-                        v_id = via.get("github_advisory_id") or vuln.get("github_advisory_id")
+                        v_id = via.get("github_advisory_id") or vuln.get(
+                            "github_advisory_id"
+                        )
 
                     if not v_id:
                         source = via.get("source") or vuln.get("source")
@@ -534,7 +536,11 @@ def extract_active_frontend_vulnerabilities(
 
                     # Extract/calculate patched versions
                     vuln_range = via.get("range") or vuln.get("range") or "unknown"
-                    fix_versions = via.get("patched_versions") or via.get("fix") or vuln.get("patched_versions")
+                    fix_versions = (
+                        via.get("patched_versions")
+                        or via.get("fix")
+                        or vuln.get("patched_versions")
+                    )
                     if not fix_versions and vuln_range and vuln_range != "unknown":
                         # Helper logic to extract patched version from range
                         parts = [p.strip() for p in vuln_range.split("||")]
@@ -777,7 +783,9 @@ def main() -> None:
     summary_data = {
         "all_passed": all_passed,
         "vulnerabilities": processed_vulns,
-        "inline_violations": inline_violations + manifest_violations + config_violations,
+        "inline_violations": inline_violations
+        + manifest_violations
+        + config_violations,
         "ledger_errors": ledger_errors,
     }
 

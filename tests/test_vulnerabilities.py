@@ -11,9 +11,9 @@ from scripts.validate_vulnerabilities import (
     extract_active_frontend_vulnerabilities,
     extract_active_vulnerabilities,
     load_and_validate_ledger,
+    scan_for_config_bypasses,
     scan_for_inline_bypasses,
     scan_for_manifest_bypasses,
-    scan_for_config_bypasses,
 )
 
 
@@ -724,4 +724,3 @@ def test_cli_bypass_blocking(mock_exit):
 
     main()
     mock_exit.assert_called_once_with(1)
-
