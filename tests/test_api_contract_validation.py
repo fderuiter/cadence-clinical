@@ -630,12 +630,15 @@ def find_spec_route(code_path: str, spec_paths: dict) -> str:
 
 
 def is_whitelisted(method: str, path: str) -> bool:
+    """Check if the given HTTP method and path are whitelisted from contract checks."""
+
     def normalize_p(p: str) -> str:
         return "/" + p.strip("/")
 
     m = method.lower()
     p_norm = normalize_p(path)
     # Wildcard checks for newly added execution and designer features
+    # (specifically item-level SDV and reorder endpoints)
     wildcards = [
         "/subjects",
         "/api/v1/execution/subjects",
