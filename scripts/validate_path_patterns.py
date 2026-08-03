@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+"""
+Path-pattern boundary linter script.
+
+Ensures that the files in the repository adhere to correct directory structure rules.
+Provides command-line interface to check all files, staged files, or a specific list of files.
+"""
+
 import argparse
 import fnmatch
 import re
@@ -222,12 +229,18 @@ def validate_file(file_path: str, repo_root: Path) -> tuple[bool, str]:
                 for allowed_pattern in rule_info["allowed"]
             )
             if not matched:
-                return False, rule_info["description"]
+                return False, str(rule_info["description"])
 
     return True, ""
 
 
 def main():
+    """
+    Main entry point for the path-pattern boundary linter.
+
+    Parses arguments, executes directory layout assertions, collects files to
+    validate (all, staged, or a specific list), and validates each file path.
+    """
     parser = argparse.ArgumentParser(
         description="Lightweight Path-Pattern Boundary Linter"
     )

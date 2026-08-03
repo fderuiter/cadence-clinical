@@ -1,11 +1,18 @@
+"""
+Unit and integration tests for the path-pattern boundary linter.
+"""
+
 from pathlib import Path
 
-import pytest
+import pytest  # type: ignore[import-not-found]
 
 from scripts.validate_path_patterns import run_layout_assertions, validate_file
 
 
 def test_linter_positive_cases():
+    """
+    Test that compliant file paths are successfully validated.
+    """
     # Correct python files
     is_valid, err = validate_file("apps/gateway/main.py", Path("/app"))
     assert is_valid is True, f"Expected apps/gateway/main.py to be valid but got: {err}"
@@ -36,6 +43,9 @@ def test_linter_positive_cases():
 
 
 def test_linter_negative_cases():
+    """
+    Test that invalid or misplaced file paths correctly trigger validation failures.
+    """
     # Misplaced python file in root
     is_valid, err = validate_file("malicious.py", Path("/app"))
     assert is_valid is False
@@ -61,6 +71,9 @@ def test_linter_negative_cases():
 
 
 def test_environment_integrity_assertions(tmp_path):
+    """
+    Test that the layout integrity checks verify the required GxP structure correctly.
+    """
     # Setup temporary layout that satisfies conditions
     (tmp_path / "apps").mkdir()
     (tmp_path / "packages").mkdir()
