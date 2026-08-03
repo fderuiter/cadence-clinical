@@ -8,7 +8,7 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "pnpm -r test && uv run pytest",
+    "test": "pnpm --filter ui build && pnpm -r test && uv run pytest",
     "lint": "python3 scripts/validate_path_patterns.py --all && pnpm -r lint && uv run ruff check .",
     "format": "pnpm -r format && uv run ruff format .",
     "fix": "uv run ruff check . --fix && uv run ruff format .",

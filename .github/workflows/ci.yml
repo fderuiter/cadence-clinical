@@ -282,7 +282,9 @@ jobs:
           fi
 
       - name: Run frontend unit tests
-        run: pnpm -r test
+        run: |
+          pnpm --filter ui build
+          pnpm -r test
 
       - name: Run backend unit tests and coverage
         id: run_tests
