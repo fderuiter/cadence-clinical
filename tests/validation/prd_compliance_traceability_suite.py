@@ -11,6 +11,7 @@ from execution.econsent_models import EConsentSignRequest
 from apps.designer.renderers.document_renderer import ProtocolDocumentRenderer
 from apps.execution.services.econsent_capture_service import _render_pdf_certificate
 
+
 def test_spreadsheet_ingestion_sheet_structure():
     """Verify spreadsheet ingestion sheet structure rules.
     # @req:PRD-EDC-001
