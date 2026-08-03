@@ -92,3 +92,11 @@ When working on a new GitHub issue or modifying system functionality, follow thi
 3. **Traceability Level (`RTM`)**:
    - Write automated pytest or vitest unit/integration tests referencing the requirement ID or feature.
    - Run the unified synchronization script `uv run python scripts/sync_gxp.py` to refresh the Requirements Traceability Matrix.
+
+#### Strict Fail-Fast GxP Validation & Draft Mode
+
+To guarantee regulatory data integrity (21 CFR Part 11) and prevent the silent or accidental generation of unverified "PASSED" results, the platform enforces strict validation rules during compliance document generation:
+
+* **Strict Default Fail-Fast**: If the required JUnit test execution report (`report.xml`) is missing or empty, `generate_rtm.py` terminates immediately with exit code 1. No files are updated or committed under this state.
+* **Visual Draft Bypass**: For development, fast PR checking, or dry-run validation layouts where running full test suites is skipped, pass the `--draft` CLI flag or set the `RTM_DRAFT=true` environment variable.
+* **Draft Document Manifestation**: Under draft mode, document generation completes successfully but prepends a prominent visual warning banner (`> ⚠️ **DRAFT ONLY — UNVERIFIED GxP COMPLIANCE DOCUMENT** ⚠️`) to the absolute top of `Requirements_Traceability_Matrix.md` and `IQ_OQ_PQ_Execution_Report.md`. Additionally, unverified requirements display as `⚠️ **Unverified**` with missing test statuses explicitly set to `⚪ (UNVERIFIED)` and durations strictly mapped to `N/A`.
