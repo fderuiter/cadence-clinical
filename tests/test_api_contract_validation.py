@@ -641,7 +641,7 @@ def is_whitelisted(method: str, path: str) -> bool:
 
     m = method.lower()
     p_norm = normalize_p(path)
-    if "/assignments/" in p_norm or "/reorder" in p_norm:
+    if "/assignments" in p_norm or "/reorder" in p_norm:
         return True
     # Wildcard checks for newly added execution and designer features
     wildcards = [
