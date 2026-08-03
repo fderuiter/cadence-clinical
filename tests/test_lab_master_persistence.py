@@ -375,17 +375,21 @@ async def test_lab_catalog_explicit_audit_persistence():
 
     # 2. Verify persistence on insert
     async with db_manager.get_session_maker()() as session:
-        m_saved = (await session.execute(
-            select(LabTestMaster).where(LabTestMaster.id == master_id)
-        )).scalar_one()
+        m_saved = (
+            await session.execute(
+                select(LabTestMaster).where(LabTestMaster.id == master_id)
+            )
+        ).scalar_one()
         assert m_saved.created_at is not None
         assert m_saved.created_by == "cat_auditor"
         assert m_saved.reason_for_change == "Initial catalog setup"
         assert m_saved.version_index == 1
 
-        c_saved = (await session.execute(
-            select(LabUnitConversion).where(LabUnitConversion.id == conv_id)
-        )).scalar_one()
+        c_saved = (
+            await session.execute(
+                select(LabUnitConversion).where(LabUnitConversion.id == conv_id)
+            )
+        ).scalar_one()
         assert c_saved.created_at is not None
         assert c_saved.created_by == "cat_auditor"
         assert c_saved.reason_for_change == "Initial catalog setup"
@@ -397,12 +401,16 @@ async def test_lab_catalog_explicit_audit_persistence():
             await session.execute(
                 text("SELECT set_config('cadence.app_writing', 'true', 1);")
             )
-            m_row = (await session.execute(
-                select(LabTestMaster).where(LabTestMaster.id == master_id)
-            )).scalar_one()
-            c_row = (await session.execute(
-                select(LabUnitConversion).where(LabUnitConversion.id == conv_id)
-            )).scalar_one()
+            m_row = (
+                await session.execute(
+                    select(LabTestMaster).where(LabTestMaster.id == master_id)
+                )
+            ).scalar_one()
+            c_row = (
+                await session.execute(
+                    select(LabUnitConversion).where(LabUnitConversion.id == conv_id)
+                )
+            ).scalar_one()
 
             m_row.test_name = "Blood Glucose level"
             m_row.reason_for_change = "Refined glucose details"
@@ -414,16 +422,20 @@ async def test_lab_catalog_explicit_audit_persistence():
 
     # 4. Verify audit fields updated on both models
     async with db_manager.get_session_maker()() as session:
-        m_up = (await session.execute(
-            select(LabTestMaster).where(LabTestMaster.id == master_id)
-        )).scalar_one()
+        m_up = (
+            await session.execute(
+                select(LabTestMaster).where(LabTestMaster.id == master_id)
+            )
+        ).scalar_one()
         assert m_up.created_by == "cat_auditor"
         assert m_up.reason_for_change == "Refined glucose details"
         assert m_up.version_index == 2
 
-        c_up = (await session.execute(
-            select(LabUnitConversion).where(LabUnitConversion.id == conv_id)
-        )).scalar_one()
+        c_up = (
+            await session.execute(
+                select(LabUnitConversion).where(LabUnitConversion.id == conv_id)
+            )
+        ).scalar_one()
         assert c_up.created_by == "cat_auditor"
         assert c_up.reason_for_change == "Refined glucose details"
         assert c_up.version_index == 2
