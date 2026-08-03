@@ -1,8 +1,9 @@
-import sys
 from pathlib import Path
+
 import pytest
 
-from scripts.validate_path_patterns import validate_file, run_layout_assertions
+from scripts.validate_path_patterns import run_layout_assertions, validate_file
+
 
 def test_linter_positive_cases():
     # Correct python files
@@ -10,7 +11,9 @@ def test_linter_positive_cases():
     assert is_valid is True, f"Expected apps/gateway/main.py to be valid but got: {err}"
 
     is_valid, err = validate_file("packages/core-models/audit.py", Path("/app"))
-    assert is_valid is True, f"Expected packages/core-models/audit.py to be valid but got: {err}"
+    assert is_valid is True, (
+        f"Expected packages/core-models/audit.py to be valid but got: {err}"
+    )
 
     is_valid, err = validate_file("tests/test_foo.py", Path("/app"))
     assert is_valid is True, f"Expected tests/test_foo.py to be valid but got: {err}"
@@ -20,7 +23,9 @@ def test_linter_positive_cases():
     assert is_valid is True, f"Expected apps/web/src/App.vue to be valid but got: {err}"
 
     is_valid, err = validate_file("packages/ui/components/Button.vue", Path("/app"))
-    assert is_valid is True, f"Expected packages/ui/components/Button.vue to be valid but got: {err}"
+    assert is_valid is True, (
+        f"Expected packages/ui/components/Button.vue to be valid but got: {err}"
+    )
 
     # Correct root files
     is_valid, err = validate_file("pyproject.toml", Path("/app"))
@@ -34,7 +39,10 @@ def test_linter_negative_cases():
     # Misplaced python file in root
     is_valid, err = validate_file("malicious.py", Path("/app"))
     assert is_valid is False
-    assert "File resides outside permitted root-level directories" in err or "must reside inside" in err
+    assert (
+        "File resides outside permitted root-level directories" in err
+        or "must reside inside" in err
+    )
 
     # Misplaced vue file
     is_valid, err = validate_file("scripts/confused.vue", Path("/app"))
@@ -67,5 +75,7 @@ def test_environment_integrity_assertions(tmp_path):
 
     # Missing a core folder should fail
     (tmp_path / "apps").rmdir()
-    with pytest.raises(AssertionError, match="Core GxP directory boundary 'apps' is missing"):
+    with pytest.raises(
+        AssertionError, match="Core GxP directory boundary 'apps' is missing"
+    ):
         run_layout_assertions(tmp_path)

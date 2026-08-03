@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import argparse
 import fnmatch
-import os
 import re
 import subprocess
 import sys
@@ -138,26 +137,28 @@ APPROVED_SUBDIRECTORIES = {
     ".github/",
 }
 
+
 def match_pattern(path: str, pattern: str) -> bool:
     """
     Robust pattern matching that supports standard glob patterns including '**' and '*'.
     """
     p = pattern
     # Use placeholders to avoid escaping issues
-    p = p.replace('**/', '__DOUBLE_STAR_SLASH__')
-    p = p.replace('**', '__DOUBLE_STAR__')
-    p = p.replace('*', '__SINGLE_STAR__')
-    p = p.replace('?', '__QUESTION__')
-    
+    p = p.replace("**/", "__DOUBLE_STAR_SLASH__")
+    p = p.replace("**", "__DOUBLE_STAR__")
+    p = p.replace("*", "__SINGLE_STAR__")
+    p = p.replace("?", "__QUESTION__")
+
     p = re.escape(p)
-    
-    p = p.replace('__DOUBLE_STAR_SLASH__', '(?:.*/)?')
-    p = p.replace('__DOUBLE_STAR__', '.*')
-    p = p.replace('__SINGLE_STAR__', '[^/]*')
-    p = p.replace('__QUESTION__', '[^/]')
-    
-    regex = '^' + p + '$'
+
+    p = p.replace("__DOUBLE_STAR_SLASH__", "(?:.*/)?")
+    p = p.replace("__DOUBLE_STAR__", ".*")
+    p = p.replace("__SINGLE_STAR__", "[^/]*")
+    p = p.replace("__QUESTION__", "[^/]")
+
+    regex = "^" + p + "$"
     return bool(re.match(regex, path))
+
 
 def run_layout_assertions(repo_root: Path):
     """
@@ -173,13 +174,16 @@ def run_layout_assertions(repo_root: Path):
     for d in expected_dirs:
         dir_path = repo_root / d
         if not dir_path.is_dir():
-            raise AssertionError(f"Core GxP directory boundary '{d}' is missing at {dir_path}!")
+            raise AssertionError(
+                f"Core GxP directory boundary '{d}' is missing at {dir_path}!"
+            )
 
     # 3. Verify Presence of Critical Dependency Manifests
     if not (repo_root / "pyproject.toml").is_file():
         raise AssertionError("pyproject.toml manifest is missing!")
     if not (repo_root / "uv.lock").is_file():
         raise AssertionError("uv.lock dependency lockfile is missing!")
+
 
 def validate_file(file_path: str, repo_root: Path) -> tuple[bool, str]:
     """
@@ -199,24 +203,41 @@ def validate_file(file_path: str, repo_root: Path) -> tuple[bool, str]:
         return True, ""
 
     # Check approved subdirectories
-    is_in_approved_sub = any(posix_path.startswith(sub) for sub in APPROVED_SUBDIRECTORIES)
+    is_in_approved_sub = any(
+        posix_path.startswith(sub) for sub in APPROVED_SUBDIRECTORIES
+    )
     if not is_in_approved_sub:
-        return False, f"File resides outside permitted root-level directories. Must reside in: {', '.join(APPROVED_SUBDIRECTORIES)}"
+        return (
+            False,
+            f"File resides outside permitted root-level directories. Must reside in: {', '.join(APPROVED_SUBDIRECTORIES)}",
+        )
 
     # Match against RULES
     for pattern, rule_info in RULES.items():
-        if fnmatch.fnmatchcase(posix_path, pattern) or fnmatch.fnmatchcase(path_obj.name, pattern):
-            matched = any(match_pattern(posix_path, allowed_pattern) for allowed_pattern in rule_info["allowed"])
+        if fnmatch.fnmatchcase(posix_path, pattern) or fnmatch.fnmatchcase(
+            path_obj.name, pattern
+        ):
+            matched = any(
+                match_pattern(posix_path, allowed_pattern)
+                for allowed_pattern in rule_info["allowed"]
+            )
             if not matched:
                 return False, rule_info["description"]
 
     return True, ""
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Lightweight Path-Pattern Boundary Linter")
+    parser = argparse.ArgumentParser(
+        description="Lightweight Path-Pattern Boundary Linter"
+    )
     parser.add_argument("files", nargs="*", help="File paths to validate")
-    parser.add_argument("--staged", action="store_true", help="Validate only staged files")
-    parser.add_argument("--all", action="store_true", help="Validate all tracked files in git")
+    parser.add_argument(
+        "--staged", action="store_true", help="Validate only staged files"
+    )
+    parser.add_argument(
+        "--all", action="store_true", help="Validate all tracked files in git"
+    )
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parent.parent
@@ -236,7 +257,7 @@ def main():
                 capture_output=True,
                 text=True,
                 check=True,
-                cwd=repo_root
+                cwd=repo_root,
             )
             files_to_check = [f for f in result.stdout.splitlines() if f.strip()]
         except subprocess.CalledProcessError as e:
@@ -249,7 +270,7 @@ def main():
                 capture_output=True,
                 text=True,
                 check=True,
-                cwd=repo_root
+                cwd=repo_root,
             )
             files_to_check = [f for f in result.stdout.splitlines() if f.strip()]
         except subprocess.CalledProcessError as e:
@@ -273,15 +294,24 @@ def main():
             violations.append((file_path, err_msg))
 
     if violations:
-        print(f"\n❌ Path Pattern Boundary Violations Found ({len(violations)}):", file=sys.stderr)
+        print(
+            f"\n❌ Path Pattern Boundary Violations Found ({len(violations)}):",
+            file=sys.stderr,
+        )
         for path, err in violations:
             print(f"  - {path}", file=sys.stderr)
             print(f"    Expected: {err}", file=sys.stderr)
-        print("\nError: Structural boundaries violated. Please move the misplaced files to their designated folders.\n", file=sys.stderr)
+        print(
+            "\nError: Structural boundaries violated. Please move the misplaced files to their designated folders.\n",
+            file=sys.stderr,
+        )
         sys.exit(1)
     else:
-        print(f"✔ Successfully validated {len(files_to_check)} file(s). No boundary violations found.")
+        print(
+            f"✔ Successfully validated {len(files_to_check)} file(s). No boundary violations found."
+        )
         sys.exit(0)
+
 
 if __name__ == "__main__":
     main()
