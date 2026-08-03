@@ -639,6 +639,11 @@ def is_whitelisted(method: str, path: str) -> bool:
         "/api/v1/designer/sentinel",
         "/api/v1/designer/cascade",
         "/api/v1/designer/export",
+        "/api/v1/studies/{study_id}/versions/{version_id}/arms/reorder",
+        "/api/v1/studies/{study_id}/versions/{version_id}/epochs/reorder",
+        "/api/v1/studies/{study_id}/versions/{version_id}/visits/reorder",
+        "/api/v1/studies/{study_id}/versions/{version_id}/procedures/reorder",
+        "/api/v1/studies/{study_id}/versions/{version_id}/assignments",
     ]
     for w in wildcards:
         if p_norm.startswith(w):
