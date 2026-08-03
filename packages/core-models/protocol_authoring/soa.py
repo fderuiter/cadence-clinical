@@ -655,4 +655,3 @@ class VisitToArmAssignmentRequest(BaseModel):
 class VisitToEpochAssignmentRequest(BaseModel):
     epoch_id: str = Field(..., min_length=1)
     visit_ids: list[str] = Field(..., min_length=1)
-

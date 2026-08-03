@@ -6,8 +6,9 @@ all core SoA domain and request contracts are defined centrally in the
 `packages/core-models` package and imported here.
 """
 
-import packages  # noqa: F401 - Injects packages/core-models into sys.path
 from pydantic import BaseModel
+
+import packages  # noqa: F401 - Injects packages/core-models into sys.path
 
 # Try to import from protocol_render if available, otherwise define placeholders to ensure robust parsing
 try:
@@ -49,6 +50,7 @@ except ImportError:
     class SoAHeaderArm(BaseModel):
         arm_id: str
         arm_name: str
+
 
 # Centralized imports from the core-models package to completely eliminate code duplication
 from protocol_authoring.soa import (
