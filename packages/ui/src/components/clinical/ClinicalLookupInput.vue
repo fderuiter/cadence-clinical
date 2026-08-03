@@ -1,17 +1,19 @@
 <template>
-  <div
-    :id="`field-container-${id}`"
-    class="clinical-input clinical-lookup-container"
-    :class="{ 'has-error': showError, [`grid-span-${gridSpan}`]: true }"
-    :style="`grid-column: span ${gridSpan};`"
-    v-bind="attributes"
+  <ClinicalFieldLayout
+    :id="id"
+    :label="label"
+    :query="query"
+    :grid-span="gridSpan"
+    :error="error"
+    :attributes="attributes"
+    tag="div"
+    extra-class="clinical-lookup-container"
   >
-    <label :for="id">{{ label }}</label>
-    <div class="input-wrapper">
+    <template #default="{ id: slotId }">
       <input
-        :id="id"
+        :id="slotId"
         type="text"
-        :name="id"
+        :name="slotId"
         :value="modelValue"
         autocomplete="off"
         @input="
@@ -20,62 +22,38 @@
         "
         @change="$emit('change', $event.target.value, $event.target)"
       />
+    </template>
 
-      <!-- Query Flag -->
-      <ClinicalQueryFlag
-        :id="id"
-        :query="query"
-        :is-open="isQueryOpen"
-        @click="isQueryOpen = !isQueryOpen"
+    <template #after-input>
+      <!-- Lookup Status Indicator -->
+      <div
+        v-if="status !== 'none'"
+        :id="`lookup-status-${id}`"
+        class="lookup-status-indicator"
+        :class="stateClass"
+        role="status"
+        aria-live="polite"
+      >
+        <span class="lookup-status-icon" aria-hidden="true">{{
+          statusIcon
+        }}</span>
+        <span class="lookup-status-text">{{ ariaLiveMessage }}</span>
+      </div>
+      <div
+        v-else
+        :id="`lookup-status-${id}`"
+        class="lookup-status-indicator"
+        role="status"
+        aria-live="polite"
+        style="display: none"
       />
-    </div>
-
-    <!-- Lookup Status Indicator -->
-    <div
-      v-if="status !== 'none'"
-      :id="`lookup-status-${id}`"
-      class="lookup-status-indicator"
-      :class="stateClass"
-      role="status"
-      aria-live="polite"
-    >
-      <span class="lookup-status-icon" aria-hidden="true">{{
-        statusIcon
-      }}</span>
-      <span class="lookup-status-text">{{ ariaLiveMessage }}</span>
-    </div>
-    <div
-      v-else
-      :id="`lookup-status-${id}`"
-      class="lookup-status-indicator"
-      role="status"
-      aria-live="polite"
-      style="display: none"
-    />
-
-    <!-- Active Clinical Lookup Field Validation Error -->
-    <div v-if="showError" class="validation-error-msg">
-      {{ props.error }}
-    </div>
-
-    <!-- Terminology Specific Query Panel -->
-    <ClinicalQueryPanel
-      v-if="isQueryOpen"
-      :id="props.id"
-      :query="props.query"
-      @close-query="$emit('close-query')"
-      @reopen-query="$emit('reopen-query')"
-      @create-query="$emit('create-query', $event)"
-      @respond-query="$emit('respond-query', $event)"
-      @close-panel="isQueryOpen = false"
-    />
-  </div>
+    </template>
+  </ClinicalFieldLayout>
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
-import ClinicalQueryFlag from "./ClinicalQueryFlag.vue";
-import ClinicalQueryPanel from "./ClinicalQueryPanel.vue";
+import { computed } from "vue";
+import ClinicalFieldLayout from "./ClinicalFieldLayout.vue";
 
 const props = defineProps({
   // Status message explanation helper
@@ -125,21 +103,7 @@ const props = defineProps({
   },
 });
 
-defineEmits([
-  "update:modelValue",
-  "input",
-  "change",
-  "create-query",
-  "respond-query",
-  "close-query",
-  "reopen-query",
-]);
-
-const isQueryOpen = ref(false);
-
-const showError = computed(() => {
-  return !!props.error;
-});
+defineEmits(["update:modelValue", "input", "change"]);
 
 const stateClass = computed(() => {
   if (props.status === "loading") return "lookup-loading";

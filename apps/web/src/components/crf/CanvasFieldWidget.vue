@@ -42,6 +42,9 @@
           type="text"
           disabled
           class="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
+          :class="{
+            'touch-target-interactive': designerStore.viewport !== 'desktop',
+          }"
           placeholder="Text input preview"
         />
       </template>
@@ -51,6 +54,9 @@
           type="number"
           disabled
           class="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
+          :class="{
+            'touch-target-interactive': designerStore.viewport !== 'desktop',
+          }"
           placeholder="0.00"
         />
       </template>
@@ -60,6 +66,9 @@
           type="date"
           disabled
           class="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
+          :class="{
+            'touch-target-interactive': designerStore.viewport !== 'desktop',
+          }"
         />
       </template>
 
@@ -67,6 +76,9 @@
         <select
           disabled
           class="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
+          :class="{
+            'touch-target-interactive': designerStore.viewport !== 'desktop',
+          }"
         >
           <option value="" disabled selected>-- Select Option --</option>
           <option
@@ -88,11 +100,16 @@
             ]"
             :key="opt.value"
             class="flex items-center gap-1.5 text-sm text-gray-500 cursor-not-allowed"
+            :class="{ 'touch-target': designerStore.viewport !== 'desktop' }"
           >
             <input
               type="radio"
               disabled
               class="text-indigo-600 focus:ring-indigo-500 h-4 w-4 border-gray-300"
+              :class="{
+                'touch-target-interactive':
+                  designerStore.viewport !== 'desktop',
+              }"
             />
             <span>{{ opt.label }}</span>
           </label>
@@ -189,6 +206,9 @@
  * Handles selection, duplication, deletion, property inspection, and live responsive width alerts.
  */
 import { computed } from "vue";
+import { useDesignerStore } from "../../stores/designer.js";
+
+const designerStore = useDesignerStore();
 
 const props = defineProps({
   field: {
