@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1977
-- **Passed:** 1977 🟢
+- **Total Automated Test Cases Run:** 1978
+- **Passed:** 1978 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -318,6 +318,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_cdisc_cache_purge_expired` | `tests.test_cdisc_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cdisc_cache_save_and_get` | `tests.test_cdisc_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cdisc_cache_ttl_expiration` | `tests.test_cdisc_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_can_access_study_fail_open` | `tests.test_cdisc_export_authorization_primitives` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gateway_auth_middleware_tenant_fallback` | `tests.test_cdisc_export_authorization_primitives` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_permission_enum_export_sdtm` | `tests.test_cdisc_export_authorization_primitives` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_require_study_scope_resolution_order` | `tests.test_cdisc_export_authorization_primitives` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cdisc_library_client_get_cdash_domain_fallback` | `tests.test_cdisc_library_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cdisc_library_client_get_codelist_fallback` | `tests.test_cdisc_library_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cdisc_library_client_get_sdtm_domain_fallback` | `tests.test_cdisc_library_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
