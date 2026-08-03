@@ -1,3 +1,6 @@
+> ⚠️ **DRAFT ONLY — UNVERIFIED GxP COMPLIANCE DOCUMENT** ⚠️
+> *This document was generated in draft mode with missing test results. It is NOT eligible for GxP production release.*
+
 # Requirements Traceability Matrix (RTM)
 
 *Generated on:* 2026-07-23 22:38:25 UTC

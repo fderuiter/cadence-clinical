@@ -55,6 +55,8 @@ This decision implements requirements under **Trace-15**, **Trace-13**, and **PR
 * **Files Modified:**
   * `apps/gateway/main.py`
   * `packages/security/middleware.py`
+  * `packages/security/sig_token_verifier.py`
+  * `apps/econsent/main.py`
   * `apps/etmf/main.py`
   * `apps/designer/main.py`
   * `apps/web/src/components/SignatureCaptureModal.vue`
@@ -64,3 +66,4 @@ This decision implements requirements under **Trace-15**, **Trace-13**, and **PR
     - `tests/test_security_middleware.py` (Validates `verify_sig_token` logic, downstream signature-gated endpoint verification, expiration checks, and replay blockage under `test_downstream_signature_gated_endpoint_requires_sig_token`, `test_downstream_signature_gated_endpoint_valid_sig_token`, `test_downstream_signature_gated_endpoint_expired_token`, `test_downstream_signature_gated_endpoint_mismatched_action`, `test_downstream_signature_gated_endpoint_replay_blocked`, `test_verify_sig_token_helper_scenarios`).
     - `tests/test_etmf_signing_lifecycle.py` (Integration of `X-Sig-Token` step-up verification, post-signature locking, `IMMUTABILITY_VIOLATION` response, and `TMFAuditLog` ledger integration).
     - `tests/test_signature_manifestation.py` (Validation of cryptographic self-signed X.509 certificate generation, asymmetric private-key signing, and non-repudiation manifestation models).
+    - `tests/test_econsent_capture.py` (Validates centralized token verifier integration within eConsent workflows, verifying single-use token consumption and replay attack prevention).

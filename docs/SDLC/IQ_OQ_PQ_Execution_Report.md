@@ -1,3 +1,6 @@
+> ⚠️ **DRAFT ONLY — UNVERIFIED GxP COMPLIANCE DOCUMENT** ⚠️
+> *This document was generated in draft mode with missing test results. It is NOT eligible for GxP production release.*
+
 # GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report
 
 *Execution Date:* 2026-07-23 22:38:25 UTC
@@ -9,17 +12,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1972
-- **Passed:** 1972 🟢
-- **Total Automated Test Cases Run:** 1977
-- **Passed:** 1977 🟢
-- **Total Automated Test Cases Run:** 2034
 - **Passed:** 2034 🟢
 - **Total Automated Test Cases Run:** 2031
-- **Passed:** 2031 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
-- **Overall Operational Pass Rate:** 100.00%
+- **Overall Operational Pass Rate:** 0.00%
 
 ## 2. Installation Qualification (IQ)
 
