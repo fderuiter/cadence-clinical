@@ -27,6 +27,7 @@ members = [
     "packages-core-models",
     "packages-database",
     "packages-deid",
+    "packages-hexagonal",
     "packages-security",
     "packages-storage",
 ]
@@ -827,6 +828,7 @@ dev = [
     { name = "playwright" },
     { name = "pre-commit" },
     { name = "pytest" },
+    { name = "pytest-archon" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "pytest-playwright" },
@@ -859,6 +861,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.6.0" },
     { name = "pymupdf", specifier = ">=1.24.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.1.1" },
+    { name = "pytest-archon", marker = "extra == 'dev'", specifier = ">=0.0.5" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=1.4.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=7.1.0" },
     { name = "pytest-playwright", marker = "extra == 'dev'", specifier = ">=0.4.0" },
@@ -1819,6 +1822,17 @@ requires-dist = [
 ]
 
 [[package]]
+name = "packages-hexagonal"
+version = "0.1.0"
+source = { editable = "packages/hexagonal" }
+dependencies = [
+    { name = "sqlalchemy" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "sqlalchemy", specifier = ">=2.0.28" }]
+
+[[package]]
 name = "packages-security"
 version = "0.1.0"
 source = { editable = "packages/security" }
@@ -2271,6 +2285,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e4/47/b9efed96c114afcfa3c9d3fe98a76a1d14c74a9e266d397cf6eb64be5e01/pytest-9.1.1.tar.gz", hash = "sha256:1088fbde8f2b49d95a549a195707afa7a76a3ce9bcadc26b6d71f0ffda5fe313", size = 1636369, upload-time = "2026-06-19T10:58:32.857Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl", hash = "sha256:37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c", size = 386536, upload-time = "2026-06-19T10:58:31.347Z" },
+]
+
+[[package]]
+name = "pytest-archon"
+version = "0.0.7"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/42/da/8132aa99cee223c7c5b330ffb4bd8094343239774f917e71a21f74d52009/pytest_archon-0.0.7.tar.gz", hash = "sha256:6a1e814c84adbea4afc188369733ec898f2525cc401f3ca965498f8b3ee454d5", size = 48359, upload-time = "2025-09-19T20:56:24.784Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/98/81/a46c239c77d4ec4e3450d463517ff63f10c22962c037ca2b4125394cf400/pytest_archon-0.0.7-py3-none-any.whl", hash = "sha256:5aaad17cff853d058ca686dd1da425ce884daf33ae9668011323173631dc4e94", size = 44868, upload-time = "2025-09-19T20:56:23.16Z" },
 ]
 
 [[package]]

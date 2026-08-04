@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2100
-- **Passed:** 2095 🟢
+- **Total Automated Test Cases Run:** 2103
+- **Passed:** 2098 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
 - **Overall Operational Pass Rate:** 99.76%
@@ -126,6 +126,7 @@ openpyxl                 3.1.5
 packages-core-models     0.1.0
 packages-database        0.1.0
 packages-deid            0.1.0
+packages-hexagonal       0.1.0
 packages-security        0.1.0
 packages-storage         0.1.0
 packageurl-python        0.17.6
@@ -153,6 +154,7 @@ pymupdf                  1.28.0
 pyparsing                3.3.2
 pyphen                   0.17.2
 pytest                   9.1.1
+pytest-archon            0.0.7
 pytest-asyncio           1.4.0
 pytest-base-url          2.1.0
 pytest-cov               7.1.0
@@ -1174,6 +1176,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_fail_fast_without_report_and_draft_flag` | `tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_missing_report_gxp_sync_dry_run` | `tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_success_with_draft_flag` | `tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_api_routers_have_no_direct_db_imports` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ctms_application_isolation` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ctms_domain_isolation` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_execution_application_isolation` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_execution_domain_isolation` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_bulk_offline_sync` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compute_reminders_all_subjects_staff` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compute_reminders_by_subject_and_end_date_branch` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |

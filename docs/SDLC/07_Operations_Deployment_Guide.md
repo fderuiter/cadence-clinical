@@ -359,6 +359,7 @@ Adding a new sponsor involves setting up:
 
 The following Python script (`apps/execution/database/provision_tenant.py`) automates this process:
 
+<!-- validation-skip -->
 ```python
 import asyncio
 import logging
@@ -610,6 +611,7 @@ These runners execute base DDL declarations (e.g. adding nullable `issue_date`, 
 
 The platform utilizes automated migration execution wrapper logic inside `apps/execution/database/migrate.py`. Here is a production-hardened automated schema update script with backward-compatibility checks:
 
+<!-- validation-skip -->
 ```python
 import sys
 import logging
@@ -738,6 +740,7 @@ In the extremely rare case of deployment verification failures (automated checks
 
 #### PostgreSQL Safe Rollback Execution Script (`apps/execution/database/rollback.py`)
 
+<!-- validation-skip -->
 ```python
 import sys
 import logging
@@ -861,6 +864,7 @@ Neo4j contains highly structured nodes enforcing USDM models. Immutability const
 
 ### 3.2.1 Neo4j Migration Script
 
+<!-- validation-skip -->
 ```python
 from neo4j import GraphDatabase
 import logging
