@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2055
-- **Passed:** 2055 🟢
+- **Total Automated Test Cases Run:** 2056
+- **Passed:** 2056 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -47,6 +47,7 @@ aioitertools             0.13.0
 aiosignal                1.4.0
 aiosmtplib               5.1.2
 aiosqlite                0.22.1
+alembic                  1.18.5
 annotated-doc            0.0.4
 annotated-types          0.7.0
 anyio                    4.14.2
@@ -112,6 +113,7 @@ jsonschema               4.26.0
 jsonschema-specifications 2025.9.1
 license-expression       30.4.4
 lxml                     6.1.1
+mako                     1.3.12
 markdown-it-py           4.2.0
 markupsafe               3.0.3
 mdurl                    0.1.2

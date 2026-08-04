@@ -18,6 +18,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 # Import SQLite Bases for metadata extraction
+from apps.ctms.migrate import run_migrations as run_ctms_migrations
 from apps.ctms.models import Base as CTMSBase
 from apps.econsent.models import Base as EConsentBase
 from apps.eisf.database.migrate import run_migrations as run_eisf_migrations
@@ -30,6 +31,7 @@ from apps.execution.database.migrate import run_migrations
 from apps.interop.models import Base as InteropBase
 from apps.notifications.models import Base as NotificationsBase
 from apps.org.models import Base as OrgBase
+from apps.quality.migrate import run_migrations as run_quality_migrations
 from apps.quality.models import Base as QualityBase
 from apps.safety.models import Base as SafetyBase
 from apps.tickets.models import Base as TicketsBase
@@ -165,6 +167,8 @@ async def reset_postgres(url: str, allow_offline: bool) -> None:
         # Re-apply migrations, tables, and triggers
         await run_migrations(url)
         await run_etmf_migrations(url)
+        await run_ctms_migrations(url)
+        await run_quality_migrations(url)
         await run_eisf_migrations(url)
         print(
             "PostgreSQL database schemas, migrations, and triggers successfully re-applied."
@@ -284,13 +288,18 @@ async def reset_sqlite_db(
             # Re-enable foreign keys
             await conn.execute(text("PRAGMA foreign_keys = ON;"))
 
-            # Reapply schema using metadata
-            await conn.run_sync(metadata.create_all)
+            # Reapply schema using metadata (skip for services managed by Alembic migrations)
+            if name not in ("eTMF", "CTMS", "Quality"):
+                await conn.run_sync(metadata.create_all)
 
         await engine.dispose()
 
         if name == "eTMF":
             await run_etmf_migrations(url)
+        elif name == "CTMS":
+            await run_ctms_migrations(url)
+        elif name == "Quality":
+            await run_quality_migrations(url)
         elif name == "eISF":
             await run_eisf_migrations(url)
 
