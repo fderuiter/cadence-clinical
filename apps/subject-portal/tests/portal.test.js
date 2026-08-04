@@ -1239,14 +1239,14 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
           await portal.initializeApp();
 
           // Let's track when initSessionKey is called or just verify the key re-derivation by changing the userId
-          const originalUserId = portal.state.session.userId;
+          const _originalUserId = portal.state.session.userId;
           portal.state.session.userId = "subject_new_789";
 
           // Allow watch tick to process
           await new Promise((resolve) => setTimeout(resolve, 50));
 
           expect(portal.state.session.userId).toBe("subject_new_789");
-          expect(portal.state.session.userId).not.toBe(originalUserId);
+          expect(portal.state.session.userId).not.toBe(_originalUserId);
         });
 
         it("triggers immediate deletion of the cached OIDC identifier from local storage on user logout", async () => {

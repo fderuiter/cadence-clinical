@@ -160,3 +160,35 @@ def test_main_event_payload_parsing(mock_update_comment, mock_run_cmd, tmp_path)
                 main()
             mock_exit.assert_called_once_with(0)
             mock_update_comment.assert_not_called()
+
+
+def test_handle_github_api_error():
+    from scripts.self_heal import handle_github_api_error
+
+    with patch("sys.exit", side_effect=SystemExit) as mock_exit:
+        # 1. Matching error pattern
+        with pytest.raises(SystemExit):
+            handle_github_api_error("populate the GH_TOKEN environment variable")
+        mock_exit.assert_called_once_with(0)
+
+        # 2. Non-matching error pattern
+        mock_exit.reset_mock()
+        handle_github_api_error("some random other git/CLI failure")
+        mock_exit.assert_not_called()
+
+
+@patch("scripts.self_heal.run_command")
+@patch("scripts.self_heal.update_pr_comment")
+def test_main_graceful_exit_on_api_error(mock_update_comment, mock_run_cmd):
+    # Mock gh pr view to fail with authorization error
+    mock_run_cmd.side_effect = [
+        ("", "To get started with GitHub CLI, please run: gh auth login")
+    ]
+
+    with patch.dict(
+        os.environ, {"GITHUB_REPOSITORY": "owner/repo", "PR_NUMBER": "123"}
+    ):
+        with patch("sys.exit", side_effect=SystemExit) as mock_exit:
+            with pytest.raises(SystemExit):
+                main()
+            mock_exit.assert_called_once_with(0)
