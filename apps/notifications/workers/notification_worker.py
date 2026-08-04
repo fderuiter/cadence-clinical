@@ -322,7 +322,7 @@ async def start_notification_worker() -> None:
     Starts the background worker loop, subscribing to the Redis or mock pubsub channel.
     """
     global _worker_task, _should_run
-    if _worker_task:
+    if _worker_task and not _worker_task.done():
         return
 
     _should_run = True

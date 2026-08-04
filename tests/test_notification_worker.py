@@ -534,6 +534,26 @@ async def test_start_stop_notification_worker_integration():
                 break
         await asyncio.sleep(0.1)
 
+    # Gather diagnostics if the assert is about to fail
+    if len(notifs) == 0:
+        import apps.notifications.workers.notification_worker as nw
+        task_done = nw._worker_task.done() if nw._worker_task else None
+        task_cancelled = nw._worker_task.cancelled() if nw._worker_task else None
+        task_exc = None
+        if nw._worker_task and task_done and not task_cancelled:
+            try:
+                task_exc = nw._worker_task.exception()
+            except Exception as e:
+                task_exc = f"Could not get exception: {e}"
+        queue_size = nw._get_mock_queue().qsize()
+        print(f"DIAGNOSTICS - len(notifs) is 0!")
+        print(f"DIAGNOSTICS - _worker_task exists: {nw._worker_task is not None}")
+        print(f"DIAGNOSTICS - _worker_task done: {task_done}")
+        print(f"DIAGNOSTICS - _worker_task cancelled: {task_cancelled}")
+        print(f"DIAGNOSTICS - _worker_task exception: {task_exc}")
+        print(f"DIAGNOSTICS - _should_run: {nw._should_run}")
+        print(f"DIAGNOSTICS - queue size: {queue_size}")
+
     # Stop the worker cleanly
     await stop_notification_worker()
 

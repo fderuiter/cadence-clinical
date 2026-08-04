@@ -203,6 +203,7 @@ def main() -> None:
             except Exception as e:
                 print(f"Failed to parse PR JSON from API fallback: {e}")
         else:
+            handle_github_api_error(pr_err)
             print(f"GitHub API fallback view failed: {pr_err}")
             handle_github_api_error(pr_err)
 
