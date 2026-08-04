@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2061
-- **Passed:** 2061 🟢
+- **Total Automated Test Cases Run:** 2079
+- **Passed:** 2079 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -369,6 +369,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_load_categorized_ports_fallback` | `tests.test_check_ports` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_load_categorized_ports_with_compose` | `tests.test_check_ports` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_parse_port_entry` | `tests.test_check_ports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_classification_driven_multi_site_export` | `tests.test_classification_multi_site_export` | PRD-TMF-001 | 🟢 PASSED | < 1s |
+| `test_unresolved_site_level_omit_manually` | `tests.test_classification_multi_site_export` | PRD-TMF-001 | 🟢 PASSED | < 1s |
 | `test_rtm_generation_conftest_hook_detection` | `tests.test_cli_etmf_archival` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rtm_generation_with_cli_overrides` | `tests.test_cli_etmf_archival` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_gateway_routing` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1126,6 +1128,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_gateway_usdm_export_authenticated` | `tests.test_gateway_usdm` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_usdm_import_authenticated` | `tests.test_gateway_usdm` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_usdm_unauthenticated_returns_401` | `tests.test_gateway_usdm` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_is_logical_code` | `tests.test_git_merge_driver` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_merge_generic_json` | `tests.test_git_merge_driver` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_merge_markdown_text` | `tests.test_git_merge_driver` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_merge_secrets_baseline` | `tests.test_git_merge_driver` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_invalid_data_element_default_unit_fails` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
 | `test_invalid_mismatched_type_payload_fails` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
 | `test_mutation_creation_requires_non_empty_change_reason` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
@@ -1482,6 +1488,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_build_comment_body` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_combined_audit_logic` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_status_emoji` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gxp_validation_and_migration_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_markdown_and_architecture_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_merge_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_parse_existing_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1880,6 +1887,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_verify_gateway_signature_scope_fallback_restrictions` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_gateway_signature_tenant_and_multishape_restrictions` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_sig_token_helper_scenarios` | `tests.test_security_middleware` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_is_safe_file` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_blocked_on_non_safe_files` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_no_conflict_needed` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_skipped_if_no_safe_change_label` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cross_service_interception_and_replay` | `tests.test_shared_infrastructure` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_service_client_fixtures_isolation` | `tests.test_shared_infrastructure` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signed_headers_generation` | `tests.test_shared_infrastructure` | *Regression/Helper* | 🟢 PASSED | < 1s |
