@@ -415,31 +415,31 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
         ).toBe(false);
       });
     });
+  });
 
-    describe("Demo Mode Build Configurations", () => {
-      it("should permit login and logout fallbacks in demo build mode even if PROD is true", async () => {
-        const authStore = useAuthStore();
+  describe("Demo Mode Build Configurations", () => {
+    it("should permit login and logout fallbacks in demo build mode even if PROD is true", async () => {
+      const authStore = useAuthStore();
 
-        // Stub demo environment with PROD = true
-        const originalProd = import.meta.env.PROD;
-        const originalMode = import.meta.env.MODE;
-        import.meta.env.PROD = true;
-        import.meta.env.MODE = "demo";
+      // Stub demo environment with PROD = true
+      const originalProd = import.meta.env.PROD;
+      const originalMode = import.meta.env.MODE;
+      import.meta.env.PROD = true;
+      import.meta.env.MODE = "demo";
 
-        authStore.isDemoMode = true;
+      authStore.isDemoMode = true;
 
-        // This should succeed because of the check excluding MODE === "demo" from isProduction
-        await authStore.login();
-        expect(authStore.isAuthenticated).toBe(true);
-        expect(authStore.rawRoles).toContain("Sponsor Designer");
+      // This should succeed because of the check excluding MODE === "demo" from isProduction
+      await authStore.login();
+      expect(authStore.isAuthenticated).toBe(true);
+      expect(authStore.rawRoles).toContain("Sponsor Designer");
 
-        await authStore.logout();
-        expect(authStore.isAuthenticated).toBe(false);
+      await authStore.logout();
+      expect(authStore.isAuthenticated).toBe(false);
 
-        // Clean up
-        import.meta.env.PROD = originalProd;
-        import.meta.env.MODE = originalMode;
-      });
+      // Clean up
+      import.meta.env.PROD = originalProd;
+      import.meta.env.MODE = originalMode;
     });
   });
 });
