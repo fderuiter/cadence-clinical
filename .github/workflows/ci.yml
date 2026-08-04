@@ -78,8 +78,28 @@ jobs:
         if: always()
         run: python3 scripts/validate_adrs.py
 
+      - name: Run Cross-Service Import Validation
+        id: run_imports
+        if: always()
+        run: python3 scripts/validate_imports.py
+
+      - name: Run Architecture Drift Validation
+        id: run_arch_drift
+        if: always()
+        run: python3 scripts/validate_architecture_drift.py
+
+      - name: Run Path-Pattern Boundary Validation
+        id: run_path_patterns
+        if: always()
+        run: python3 scripts/validate_path_patterns.py --all
+
       - name: Compile UI library for markdown checks
         run: pnpm --filter ui build
+
+      - name: Run Markdown and Link Validation
+        id: run_markdown
+        if: always()
+        run: python3 scripts/validate_markdown.py
 
       - name: Run documentation compilation
         id: run_docs_build
