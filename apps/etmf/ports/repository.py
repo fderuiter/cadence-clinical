@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Sequence, Any
-from ..models import TMFDocument, ExpectedDocument, TMFAuditLog, DocumentQCTransition
+from collections.abc import Sequence
+from typing import Any
+
+from ..models import DocumentQCTransition, ExpectedDocument, TMFAuditLog, TMFDocument
 
 
 class ETMFRepositoryPort(ABC):
@@ -30,7 +32,9 @@ class ETMFRepositoryPort(ABC):
         pass
 
     @abstractmethod
-    async def get_expected_documents_by_study(self, study_id: str) -> Sequence[ExpectedDocument]:
+    async def get_expected_documents_by_study(
+        self, study_id: str
+    ) -> Sequence[ExpectedDocument]:
         pass
 
     @abstractmethod
@@ -144,7 +148,11 @@ class ETMFRepositoryPort(ABC):
 
     @abstractmethod
     async def get_document_history(
-        self, study_id: str, artifact_type: str, canonical_name: str, principal: Any = None
+        self,
+        study_id: str,
+        artifact_type: str,
+        canonical_name: str,
+        principal: Any = None,
     ) -> Sequence[TMFDocument]:
         pass
 

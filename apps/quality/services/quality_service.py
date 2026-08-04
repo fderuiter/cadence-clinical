@@ -1,17 +1,18 @@
-from typing import Sequence, Any
+from collections.abc import Sequence
+from typing import Any
+
 from fastapi import HTTPException
-import os
 
 from ..database import transactional
-from ..ports.repository import QualityRepositoryPort
 from ..models import (
-    Deviation,
-    DeviationStatus,
-    RootCauseAnalysis,
     CAPARecord,
     CAPAStatus,
+    Deviation,
+    DeviationStatus,
     QualityAuditLog,
+    RootCauseAnalysis,
 )
+from ..ports.repository import QualityRepositoryPort
 
 
 class QualityService:
@@ -103,7 +104,12 @@ class QualityService:
 
     @transactional
     async def create_or_update_rca(
-        self, dev_id: str, payload: Any, user_id: str, user_role: str, change_reason: str
+        self,
+        dev_id: str,
+        payload: Any,
+        user_id: str,
+        user_role: str,
+        change_reason: str,
     ) -> RootCauseAnalysis:
         if not change_reason:
             raise HTTPException(
@@ -118,7 +124,10 @@ class QualityService:
         action = "RCA_CREATE"
         if rca:
             action = "RCA_UPDATE"
-            if payload.version_index is not None and rca.version_index != payload.version_index:
+            if (
+                payload.version_index is not None
+                and rca.version_index != payload.version_index
+            ):
                 raise HTTPException(
                     status_code=409,
                     detail=f"Version conflict: The RCA has been modified by another process. Current version: {rca.version_index}.",
@@ -221,7 +230,9 @@ class QualityService:
         if dev.status != DeviationStatus.CAPA_INITIATED:
             dev.status = DeviationStatus.CAPA_INITIATED
             dev.version_index += 1
-            dev.reason_for_change = "Progressed status to CAPA_INITIATED via CAPA creation"
+            dev.reason_for_change = (
+                "Progressed status to CAPA_INITIATED via CAPA creation"
+            )
             log_dev = QualityAuditLog(
                 user_id=user_id,
                 user_role=user_role,
@@ -267,10 +278,7 @@ class QualityService:
         current_status = capa.status
 
         # 1. Validate version mismatch for optimistic concurrency
-        if (
-            version_index is not None
-            and capa.version_index != version_index
-        ):
+        if version_index is not None and capa.version_index != version_index:
             raise HTTPException(
                 status_code=409,
                 detail=f"Version conflict: The CAPA has been modified by another process. Current version: {capa.version_index}.",
@@ -285,6 +293,7 @@ class QualityService:
 
         # 3. Validate against explicit transitions map
         from ..main import CAPA_TRANSITIONS
+
         allowed_targets = CAPA_TRANSITIONS.get(current_status, set())
         if to_status not in allowed_targets:
             raise HTTPException(
@@ -305,11 +314,9 @@ class QualityService:
             if dev and dev.status != DeviationStatus.CLOSED:
                 dev.status = DeviationStatus.CLOSED
                 dev.version_index += 1
-                dev.reason_for_change = (
-                    "Settled and closed parent deviation because linked CAPA was closed."
-                )
+                dev.reason_for_change = "Settled and closed parent deviation because linked CAPA was closed."
                 await self.repo.save_deviation(dev)
-                
+
                 log_dev = QualityAuditLog(
                     user_id=user_id,
                     user_role=user_role,
@@ -333,7 +340,12 @@ class QualityService:
 
     @transactional
     async def update_capa(
-        self, capa_id: str, payload: Any, user_id: str, user_role: str, change_reason: str
+        self,
+        capa_id: str,
+        payload: Any,
+        user_id: str,
+        user_role: str,
+        change_reason: str,
     ) -> CAPARecord:
         if not change_reason:
             raise HTTPException(
@@ -346,7 +358,10 @@ class QualityService:
                 status_code=404, detail=f"CAPA record with ID '{capa_id}' not found."
             )
 
-        if payload.version_index is not None and capa.version_index != payload.version_index:
+        if (
+            payload.version_index is not None
+            and capa.version_index != payload.version_index
+        ):
             raise HTTPException(
                 status_code=409,
                 detail=f"Version conflict: The CAPA has been modified by another process. Current version: {capa.version_index}.",
@@ -381,7 +396,9 @@ class QualityService:
         return capa
 
     @transactional
-    async def list_audit_logs(self, user_id: str, user_role: str) -> Sequence[QualityAuditLog]:
+    async def list_audit_logs(
+        self, user_id: str, user_role: str
+    ) -> Sequence[QualityAuditLog]:
         logs = await self.repo.get_audit_logs()
         log = QualityAuditLog(
             user_id=user_id,

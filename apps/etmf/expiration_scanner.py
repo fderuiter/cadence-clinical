@@ -88,10 +88,12 @@ async def execute_expiration_scan_cycle(session_maker: Any) -> None:
             for doc in documents:
                 # expiration_date might be saved as date/datetime. Let's convert if needed.
                 doc_expiry = doc.expiration_date
-                if isinstance(doc_expiry, date) and not isinstance(doc_expiry, datetime):
-                    doc_expiry = datetime.combine(doc_expiry, datetime.min.time()).replace(
-                        tzinfo=UTC
-                    )
+                if isinstance(doc_expiry, date) and not isinstance(
+                    doc_expiry, datetime
+                ):
+                    doc_expiry = datetime.combine(
+                        doc_expiry, datetime.min.time()
+                    ).replace(tzinfo=UTC)
 
                 window = determine_warning_window(doc_expiry, now, warning_windows)
                 if window is None:
@@ -151,10 +153,10 @@ async def dispatch_undispatched_alerts(session_maker: Any) -> None:
     """
     Finds all undispatched document expiration alerts and attempts to dispatch them to the notification service.
     """
+    from apps.etmf.adapters.repository import SQLETMFRepository
+    from apps.etmf.database.context import current_session
     from apps.etmf.main import write_audit_log
     from apps.etmf.notifications_client import publish_expiration_notification
-    from apps.etmf.database.context import current_session
-    from apps.etmf.adapters.repository import SQLETMFRepository
 
     repo = SQLETMFRepository()
 
@@ -173,7 +175,9 @@ async def dispatch_undispatched_alerts(session_maker: Any) -> None:
 
             for alert in alerts:
                 # Fetch document details
-                stmt_doc = select(TMFDocument).where(TMFDocument.id == alert.document_id)
+                stmt_doc = select(TMFDocument).where(
+                    TMFDocument.id == alert.document_id
+                )
                 res_doc = await session.execute(stmt_doc)
                 doc = res_doc.scalars().first()
                 if not doc:

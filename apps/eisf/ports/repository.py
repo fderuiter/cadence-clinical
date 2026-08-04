@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Sequence
-from ..models import ISFDocument, ISFAuditLog
+from collections.abc import Sequence
+
+from ..models import ISFAuditLog, ISFDocument
 
 
 class EISFRepositoryPort(ABC):
@@ -61,4 +62,3 @@ class EISFRepositoryPort(ABC):
         binder_classification: str | None,
     ) -> Sequence[ISFDocument]:
         pass
-

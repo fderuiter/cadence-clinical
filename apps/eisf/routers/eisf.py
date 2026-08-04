@@ -13,7 +13,10 @@ from etmf.eisf_transport_models import (
 )
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
+from apps.eisf.adapters.repository import SQLEISFRepository
+from apps.eisf.database import transactional
 from apps.eisf.models import ISFAuditLog, ISFDocument
+from apps.eisf.ports.repository import EISFRepositoryPort
 from packages.security.audit_logger import AuditLogPayload
 from packages.security.audit_logger import audit_logger_engine as central_audit_logger
 from packages.security.rbac import (
@@ -22,10 +25,6 @@ from packages.security.rbac import (
     get_principal,
     require_permission,
 )
-
-from apps.eisf.database import transactional
-from apps.eisf.ports.repository import EISFRepositoryPort
-from apps.eisf.adapters.repository import SQLEISFRepository
 
 router = APIRouter(prefix="/api/v1/eisf")
 
@@ -389,7 +388,9 @@ async def upload_site_document(
     checksum = hashlib.sha256(payload.content.encode("utf-8")).hexdigest()
 
     # Calculate version index
-    latest_doc = await repo.get_latest_document(payload.study_id, site_id, payload.section_code)
+    latest_doc = await repo.get_latest_document(
+        payload.study_id, site_id, payload.section_code
+    )
     new_version_index = (latest_doc.version_index + 1) if latest_doc else 1
 
     doc = ISFDocument(

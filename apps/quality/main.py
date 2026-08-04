@@ -4,6 +4,7 @@ from datetime import datetime
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
+from apps.quality.adapters.repository import SQLQualityRepository
 from apps.quality.database import db_manager
 from apps.quality.models import (
     Base,
@@ -16,6 +17,7 @@ from apps.quality.models import (
     QualityAuditLog,
     RootCauseAnalysis,
 )
+from apps.quality.services.quality_service import QualityService
 from packages.database import get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import (
@@ -23,10 +25,6 @@ from packages.security.rbac import (
     get_principal,
     has_permission,
 )
-
-from apps.quality.ports.repository import QualityRepositoryPort
-from apps.quality.adapters.repository import SQLQualityRepository
-from apps.quality.services.quality_service import QualityService
 
 
 # Pydantic Schemas for Request/Response Validation
@@ -340,7 +338,9 @@ async def list_deviations(
     Retrieve clinical deviation records with optional filtering.
     """
     user_id, user_role, change_reason = get_user_context(principal)
-    deviations = await service.list_deviations(study_id, site_id, status, user_id, user_role)
+    deviations = await service.list_deviations(
+        study_id, site_id, status, user_id, user_role
+    )
     return [map_deviation_to_response(dev) for dev in deviations]
 
 
@@ -374,7 +374,9 @@ async def create_or_update_rca(
     """
     authorize_quality_write(principal)
     user_id, user_role, change_reason = get_user_context(principal)
-    rca = await service.create_or_update_rca(id, payload, user_id, user_role, change_reason)
+    rca = await service.create_or_update_rca(
+        id, payload, user_id, user_role, change_reason
+    )
     return map_rca_to_response(rca)
 
 

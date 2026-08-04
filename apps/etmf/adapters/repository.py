@@ -1,8 +1,11 @@
-from typing import Sequence, Any
-from sqlalchemy import select, func
-from ..ports.repository import ETMFRepositoryPort
-from ..models import TMFDocument, ExpectedDocument, TMFAuditLog, DocumentQCTransition
+from collections.abc import Sequence
+from typing import Any
+
+from sqlalchemy import func, select
+
 from ..database import get_session
+from ..models import DocumentQCTransition, ExpectedDocument, TMFAuditLog, TMFDocument
+from ..ports.repository import ETMFRepositoryPort
 
 
 class SQLETMFRepository(ETMFRepositoryPort):
@@ -39,7 +42,9 @@ class SQLETMFRepository(ETMFRepositoryPort):
         result = await session.execute(stmt)
         return result.scalars().first()
 
-    async def get_expected_documents_by_study(self, study_id: str) -> Sequence[ExpectedDocument]:
+    async def get_expected_documents_by_study(
+        self, study_id: str
+    ) -> Sequence[ExpectedDocument]:
         session = get_session()
         stmt = select(ExpectedDocument).where(ExpectedDocument.study_id == study_id)
         result = await session.execute(stmt)
@@ -51,7 +56,10 @@ class SQLETMFRepository(ETMFRepositoryPort):
         session = get_session()
         stmt = select(ExpectedDocument).where(ExpectedDocument.study_id == study_id)
         if site_id:
-            stmt = stmt.where((ExpectedDocument.site_id == site_id) | ExpectedDocument.site_id.is_(None))
+            stmt = stmt.where(
+                (ExpectedDocument.site_id == site_id)
+                | ExpectedDocument.site_id.is_(None)
+            )
         else:
             stmt = stmt.where(ExpectedDocument.site_id.is_(None))
         result = await session.execute(stmt)
@@ -65,7 +73,12 @@ class SQLETMFRepository(ETMFRepositoryPort):
 
     async def get_audit_logs(self, skip: int, limit: int) -> Sequence[TMFAuditLog]:
         session = get_session()
-        stmt = select(TMFAuditLog).order_by(TMFAuditLog.created_at.desc()).offset(skip).limit(limit)
+        stmt = (
+            select(TMFAuditLog)
+            .order_by(TMFAuditLog.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
         result = await session.execute(stmt)
         return result.scalars().all()
 
@@ -122,6 +135,7 @@ class SQLETMFRepository(ETMFRepositoryPort):
         principal: Any,
     ) -> Sequence[TMFDocument]:
         from apps.etmf.lifecycle import apply_document_query_filter
+
         session = get_session()
         stmt = select(TMFDocument)
         if study_id:
@@ -140,13 +154,10 @@ class SQLETMFRepository(ETMFRepositoryPort):
         self, study_id: str, site_id: str | None, artifact_code: str
     ) -> int:
         session = get_session()
-        stmt = (
-            select(func.max(TMFDocument.version_index))
-            .where(
-                TMFDocument.study_id == study_id,
-                TMFDocument.site_id == site_id,
-                TMFDocument.artifact_code == artifact_code,
-            )
+        stmt = select(func.max(TMFDocument.version_index)).where(
+            TMFDocument.study_id == study_id,
+            TMFDocument.site_id == site_id,
+            TMFDocument.artifact_code == artifact_code,
         )
         result = await session.execute(stmt)
         return result.scalar() or 0
@@ -257,25 +268,37 @@ class SQLETMFRepository(ETMFRepositoryPort):
         milestone: str | None,
     ) -> Sequence[ExpectedDocument]:
         from apps.etmf.main import normalize_milestone
+
         session = get_session()
         stmt = select(ExpectedDocument).where(ExpectedDocument.study_id == study_id)
         if site_id:
             stmt = stmt.where(ExpectedDocument.site_id == site_id)
         if milestone:
-            stmt = stmt.where(ExpectedDocument.milestone == normalize_milestone(milestone))
+            stmt = stmt.where(
+                ExpectedDocument.milestone == normalize_milestone(milestone)
+            )
         result = await session.execute(stmt)
         return result.scalars().all()
 
     async def get_document_history(
-        self, study_id: str, artifact_type: str, canonical_name: str, principal: Any = None
+        self,
+        study_id: str,
+        artifact_type: str,
+        canonical_name: str,
+        principal: Any = None,
     ) -> Sequence[TMFDocument]:
         from apps.etmf.lifecycle import apply_document_query_filter
+
         session = get_session()
-        stmt = select(TMFDocument).where(
-            TMFDocument.study_id == study_id,
-            (TMFDocument.artifact_type == canonical_name)
-            | (TMFDocument.artifact_type == artifact_type),
-        ).order_by(TMFDocument.version_index.asc())
+        stmt = (
+            select(TMFDocument)
+            .where(
+                TMFDocument.study_id == study_id,
+                (TMFDocument.artifact_type == canonical_name)
+                | (TMFDocument.artifact_type == artifact_type),
+            )
+            .order_by(TMFDocument.version_index.asc())
+        )
         if principal:
             stmt = apply_document_query_filter(stmt, principal)
         result = await session.execute(stmt)

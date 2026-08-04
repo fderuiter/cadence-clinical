@@ -1,9 +1,11 @@
-from typing import Sequence
+from collections.abc import Sequence
+
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from ..ports.repository import QualityRepositoryPort
-from ..models import Deviation, RootCauseAnalysis, CAPARecord, QualityAuditLog
+
 from ..database import get_session
+from ..models import CAPARecord, Deviation, QualityAuditLog, RootCauseAnalysis
+from ..ports.repository import QualityRepositoryPort
 
 
 class SQLQualityRepository(QualityRepositoryPort):
@@ -45,7 +47,11 @@ class SQLQualityRepository(QualityRepositoryPort):
 
     async def get_capa_by_id(self, capa_id: str) -> CAPARecord | None:
         session = get_session()
-        stmt = select(CAPARecord).where(CAPARecord.id == capa_id).options(selectinload(CAPARecord.deviation))
+        stmt = (
+            select(CAPARecord)
+            .where(CAPARecord.id == capa_id)
+            .options(selectinload(CAPARecord.deviation))
+        )
         result = await session.execute(stmt)
         return result.scalars().first()
 

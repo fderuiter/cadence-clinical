@@ -6,13 +6,11 @@ from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from apps.eisf.ports.repository import EISFRepositoryPort
-from apps.eisf.adapters.repository import SQLEISFRepository
-from apps.eisf.database import transactional
-from apps.eisf.routers.eisf import get_eisf_repository
 
-from apps.eisf.database import db_manager
+from apps.eisf.database import db_manager, transactional
 from apps.eisf.models import Base, ISFAuditLog, ISFDocument
+from apps.eisf.ports.repository import EISFRepositoryPort
+from apps.eisf.routers.eisf import get_eisf_repository
 from apps.eisf.routers.eisf import router as eisf_router
 from packages.database import get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
@@ -344,8 +342,7 @@ async def get_site_binder_endpoint(
     """
     await enforce_document_site_visibility(principal, site_id, repo)
 
-    docs = await repo.get_documents_by_site(site_id)
-    return docs
+    return await repo.get_documents_by_site(site_id)
 
 
 @app.get("/api/v1/eisf/documents", response_model=list[DocumentResponse])
@@ -391,7 +388,9 @@ async def list_documents(
             detail="site_id is required and must be provided either in the query or via authenticated claim.",
         )
 
-    docs = await repo.list_documents_filtered(site_id_filter, study_id, binder_section, binder_classification)
+    docs = await repo.list_documents_filtered(
+        site_id_filter, study_id, binder_section, binder_classification
+    )
 
     actor_id = principal.user_id or "system"
     actor_roles = (
@@ -471,7 +470,9 @@ async def create_document(
         )
 
     # Calculate version index
-    latest_doc = await repo.get_latest_document(payload.study_id, payload.site_id, payload.binder_classification)
+    latest_doc = await repo.get_latest_document(
+        payload.study_id, payload.site_id, payload.binder_classification
+    )
     new_version_index = (latest_doc.version_index + 1) if latest_doc else 1
 
     doc = ISFDocument(
@@ -590,7 +591,9 @@ async def ingest_document(
             payload.study_id, payload.site_id, binder_class, artifact_type
         )
 
-    latest_doc = await repo.get_latest_document(payload.study_id, payload.site_id, binder_class)
+    latest_doc = await repo.get_latest_document(
+        payload.study_id, payload.site_id, binder_class
+    )
     new_version_index = (latest_doc.version_index + 1) if latest_doc else 1
 
     doc = ISFDocument(

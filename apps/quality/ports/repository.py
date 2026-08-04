@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Sequence
-from ..models import Deviation, RootCauseAnalysis, CAPARecord, QualityAuditLog
+from collections.abc import Sequence
+
+from ..models import CAPARecord, Deviation, QualityAuditLog, RootCauseAnalysis
 
 
 class QualityRepositoryPort(ABC):

@@ -1,8 +1,10 @@
-from typing import Sequence
+from collections.abc import Sequence
+
 from sqlalchemy import select
+
+from ..database import db_manager, get_session
+from ..models import ISFAuditLog, ISFDocument
 from ..ports.repository import EISFRepositoryPort
-from ..models import ISFDocument, ISFAuditLog
-from ..database import get_session, db_manager
 
 
 class SQLEISFRepository(EISFRepositoryPort):
@@ -110,7 +112,8 @@ class SQLEISFRepository(EISFRepositoryPort):
         if binder_section:
             stmt = stmt.where(ISFDocument.binder_classification == binder_section)
         if binder_classification:
-            stmt = stmt.where(ISFDocument.binder_classification == binder_classification)
+            stmt = stmt.where(
+                ISFDocument.binder_classification == binder_classification
+            )
         result = await session.execute(stmt)
         return result.scalars().all()
-
