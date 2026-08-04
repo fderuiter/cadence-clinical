@@ -361,93 +361,158 @@ def validate_cli_command(args, line_no, md_file_path, repo_root, root_dirs, root
     if not args:
         return
 
-    # Ignore configuration lines or assignment lines like restore_command = ...
-    if len(args) >= 2 and args[1] == "=":
-        return
+    # 1. Token Partitioning (Sequential Command Chaining)
+    operators = {"&&", "||", ";", "|"}
+    segments = []
+    current_segment = []
+    for token in args:
+        if token in operators:
+            if current_segment:
+                segments.append(current_segment)
+                current_segment = []
+        else:
+            current_segment.append(token)
+    if current_segment:
+        segments.append(current_segment)
 
-    # Ignore shell variables, shell subshells/expansions
-    if any("$" in arg or "(" in arg or ")" in arg for arg in args):
-        return
+    # 2. File Redirection Filtering
+    filtered_segments = []
+    for segment in segments:
+        filtered_segment = []
+        i = 0
+        while i < len(segment):
+            token = segment[i]
+            if token in {">", ">>", "<", "2>", "1>", "&>"}:
+                # Skip operator and target file token
+                i += 2
+            elif token in {"2>&1", "1>&2"}:
+                # Skip operator only
+                i += 1
+            elif (
+                token.startswith(">")
+                or token.startswith("<")
+                or token.startswith("2>")
+                or token.startswith("1>")
+                or token.startswith("&>")
+            ) and not token.startswith("-"):
+                # Skip the merged token
+                i += 1
+            else:
+                filtered_segment.append(token)
+                i += 1
+        if filtered_segment:
+            filtered_segments.append(filtered_segment)
 
-    # Skip prepended env variables like PORT=3000 pnpm start
-    while args and "=" in args[0] and not args[0].startswith("-"):
-        args.pop(0)
+    # 3. Sequential Validation execution
+    for segment_args in filtered_segments:
+        # Ignore configuration lines or assignment lines like restore_command = ...
+        if len(segment_args) >= 2 and segment_args[1] == "=":
+            continue
 
-    if not args:
-        return
+        # Ignore shell variables, shell subshells/expansions
+        if any("$" in arg or "(" in arg or ")" in arg for arg in segment_args):
+            continue
 
-    executable = args[0]
+        # Skip prepended env variables like PORT=3000 pnpm start
+        seg_args_copy = list(segment_args)
+        while (
+            seg_args_copy
+            and "=" in seg_args_copy[0]
+            and not seg_args_copy[0].startswith("-")
+        ):
+            seg_args_copy.pop(0)
 
-    # If command starts with ./ or ../ or is a path
-    if executable.startswith(("./", "../")) or "/" in executable:
-        resolved_exec = resolve_path(
-            executable, md_file_path, repo_root, root_dirs, root_files
-        )
-        if resolved_exec and not resolved_exec.exists():
-            # Try workspace relative
-            alt_path = repo_root / executable.lstrip("./")
-            if alt_path.exists():
-                resolved_exec = alt_path
+        if not seg_args_copy:
+            continue
 
-        if not resolved_exec or not resolved_exec.exists():
-            add_error(
-                md_file_path, line_no, f"Executable file '{executable}' does not exist."
+        executable = seg_args_copy[0]
+
+        # If command starts with ./ or ../ or is a path
+        if executable.startswith(("./", "../")) or "/" in executable:
+            resolved_exec = resolve_path(
+                executable, md_file_path, repo_root, root_dirs, root_files
             )
-            return
-        # Skip standard execution validation for custom local script, as long as it exists
-        return
+            if resolved_exec and not resolved_exec.exists():
+                # Try workspace relative
+                alt_path = repo_root / executable.lstrip("./")
+                if alt_path.exists():
+                    resolved_exec = alt_path
 
-    # Check if executable exists or is in common tools whitelist
-    if shutil.which(executable) is None and executable not in ALLOWED_COMMON_TOOLS:
-        add_error(
-            md_file_path,
-            line_no,
-            f"Executable '{executable}' is not installed/found in PATH.",
-        )
-        return
+            if not resolved_exec or not resolved_exec.exists():
+                add_error(
+                    md_file_path,
+                    line_no,
+                    f"Executable file '{executable}' does not exist.",
+                )
+                continue
+            # Skip standard execution validation for custom local script, as long as it exists
+            continue
 
-    # Check flags for obvious typos (e.g. triple dash or trailing punctuation)
-    for arg in args[1:]:
-        if arg.startswith("-") and not FLAG_PATTERN.match(arg):
+        # Check if executable exists or is in common tools whitelist
+        if shutil.which(executable) is None and executable not in ALLOWED_COMMON_TOOLS:
             add_error(
                 md_file_path,
                 line_no,
-                f"Malformed or invalid CLI flag structure: '{arg}'",
+                f"Executable '{executable}' is not installed/found in PATH.",
             )
+            continue
 
-    # Handle specialized tools
-    if executable == "docker" and len(args) >= 2 and args[1] == "compose":
-        validate_docker_compose_args(
-            args[2:], line_no, md_file_path, repo_root, root_dirs, root_files
-        )
-    elif executable == "docker-compose":
-        validate_docker_compose_args(
-            args[1:], line_no, md_file_path, repo_root, root_dirs, root_files
-        )
-    elif executable in ("python", "python3", "pytest"):
-        # Verify python/pytest targets actually exist on disk
-        for arg in args[1:]:
-            if not arg.startswith("-") and ("." in arg or "/" in arg):
-                # Ignore placeholders
-                if any(
-                    char in arg for char in ("$", "*", "<", ">", "{", "}", "[", "]")
-                ):
-                    continue
-                if (
-                    "placeholder" in arg.lower()
-                    or "your-" in arg.lower()
-                    or "example" in arg.lower()
-                ):
-                    continue
-                resolved_arg = resolve_path(
-                    arg, md_file_path, repo_root, root_dirs, root_files
+        # Check flags for obvious typos (e.g. triple dash or trailing punctuation)
+        for arg in seg_args_copy[1:]:
+            if arg.startswith("-") and not FLAG_PATTERN.match(arg):
+                add_error(
+                    md_file_path,
+                    line_no,
+                    f"Malformed or invalid CLI flag structure: '{arg}'",
                 )
-                if resolved_arg and not resolved_arg.exists():
-                    add_error(
-                        md_file_path,
-                        line_no,
-                        f"Target path '{arg}' for executable '{executable}' does not exist.",
+
+        # Handle specialized tools
+        if (
+            executable == "docker"
+            and len(seg_args_copy) >= 2
+            and seg_args_copy[1] == "compose"
+        ):
+            validate_docker_compose_args(
+                seg_args_copy[2:],
+                line_no,
+                md_file_path,
+                repo_root,
+                root_dirs,
+                root_files,
+            )
+        elif executable == "docker-compose":
+            validate_docker_compose_args(
+                seg_args_copy[1:],
+                line_no,
+                md_file_path,
+                repo_root,
+                root_dirs,
+                root_files,
+            )
+        elif executable in ("python", "python3", "pytest"):
+            # Verify python/pytest targets actually exist on disk
+            for arg in seg_args_copy[1:]:
+                if not arg.startswith("-") and ("." in arg or "/" in arg):
+                    # Ignore placeholders
+                    if any(
+                        char in arg for char in ("$", "*", "<", ">", "{", "}", "[", "]")
+                    ):
+                        continue
+                    if (
+                        "placeholder" in arg.lower()
+                        or "your-" in arg.lower()
+                        or "example" in arg.lower()
+                    ):
+                        continue
+                    resolved_arg = resolve_path(
+                        arg, md_file_path, repo_root, root_dirs, root_files
                     )
+                    if resolved_arg and not resolved_arg.exists():
+                        add_error(
+                            md_file_path,
+                            line_no,
+                            f"Target path '{arg}' for executable '{executable}' does not exist.",
+                        )
 
 
 def build_codebase_map(repo_root):

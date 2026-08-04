@@ -520,3 +520,100 @@ See [my document][ref1] and also [broken doc][ref2].
         "Referenced reference-link './nonexistent-ref.md' does not exist."
         in vm.errors[0]["message"]
     )
+
+
+def test_validate_cli_command_chained_and_redirects(tmp_path):
+    """Verifies that chained commands and file redirections are handled correctly."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    docs_dir = repo_root / "docs"
+    docs_dir.mkdir()
+
+    tests_dir = repo_root / "tests"
+    tests_dir.mkdir()
+
+    # Create dummy files
+    (tests_dir / "test_main.py").touch()
+    (repo_root / "apps").mkdir()
+    (repo_root / "apps/designer").mkdir(parents=True)
+    (repo_root / "apps/designer/delta.py").touch()
+
+    md_file = docs_dir / "LOCAL_DEV_ENVIRONMENT.md"
+    md_file.touch()
+
+    root_dirs = {"docs", "tests", "apps"}
+    root_files = set()
+
+    # Scenario 1: command1 && command2 with invalid flag in command2
+    vm.errors.clear()
+    vm.validate_cli_command(
+        ["pytest", "tests/test_main.py", "&&", "pytest", "---cov=apps"],
+        10,
+        md_file,
+        repo_root,
+        root_dirs,
+        root_files,
+    )
+    assert len(vm.errors) == 1
+    assert (
+        "Malformed or invalid CLI flag structure: '---cov=apps'"
+        in vm.errors[0]["message"]
+    )
+
+    # Scenario 2: command1 | command2 where command2 is invalid
+    vm.errors.clear()
+    vm.validate_cli_command(
+        ["cat", "pyproject.toml", "|", "nonexistent_cli_cmd"],
+        20,
+        md_file,
+        repo_root,
+        root_dirs,
+        root_files,
+    )
+    assert len(vm.errors) == 1
+    assert (
+        "Executable 'nonexistent_cli_cmd' is not installed/found in PATH."
+        in vm.errors[0]["message"]
+    )
+
+    # Scenario 3: File redirection '>' and '>>' with target files
+    # Should skip the redirection target and operators, and validate correctly
+    vm.errors.clear()
+    vm.validate_cli_command(
+        ["pytest", "tests/test_main.py", ">", "output.txt", "2>&1"],
+        30,
+        md_file,
+        repo_root,
+        root_dirs,
+        root_files,
+    )
+    assert len(vm.errors) == 0
+
+    # Scenario 4: Chained with '||' and ';' and checking target validation
+    vm.errors.clear()
+    vm.validate_cli_command(
+        ["cd", "docs", "||", "echo", "failed", ";", "python3", "nonexistent_script.py"],
+        40,
+        md_file,
+        repo_root,
+        root_dirs,
+        root_files,
+    )
+    assert len(vm.errors) == 1
+    assert (
+        "Target path 'nonexistent_script.py' for executable 'python3' does not exist."
+        in vm.errors[0]["message"]
+    )
+
+    # Scenario 5: Merged redirect tokens (unspaced) should be skipped
+    vm.errors.clear()
+    vm.validate_cli_command(
+        ["python3", "apps/designer/delta.py", ">output.log", "2>errors.log"],
+        50,
+        md_file,
+        repo_root,
+        root_dirs,
+        root_files,
+    )
+    assert len(vm.errors) == 0
