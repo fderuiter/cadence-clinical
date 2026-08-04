@@ -4,6 +4,9 @@ from datetime import datetime
 from apps.execution.subject_lifecycle import (
     LockedFactorMutationError,
     guard_subject_transition,
+    randomize_subject_model,
+    unblind_subject_model,
+    withdraw_subject_model,
 )
 
 
@@ -103,30 +106,15 @@ class ClinicalSubjectDomain:
         self, randomization_id: str, kit_reference: str, strat_factors: dict
     ) -> None:
         """Assigns randomization details and transitions the subject to the RANDOMIZED state."""
-        from apps.execution.eligibility_service import (
-            verify_subject_eligible_for_randomization,
-        )
-
-        verify_subject_eligible_for_randomization(self)
-
-        self.strat_factors = strat_factors
-        self.status = "RANDOMIZED"
-        self.randomization_id = randomization_id
-        self.kit_reference = kit_reference
+        randomize_subject_model(self, randomization_id, kit_reference, strat_factors)
 
     def unblind(self, unblinded_by: str, reason: str) -> None:
         """Transitions the subject to the UNBLINDED state and records safety/audit details."""
-        self.status = "UNBLINDED"
-        self.is_unblinded = True
-        self.unblinded_at = datetime.now()
-        self.unblinded_by = unblinded_by
-        self.unblinded_reason = reason
+        unblind_subject_model(self, unblinded_by, reason)
 
     def withdraw(self, reason: str) -> None:
         """Transitions the subject to the WITHDRAWN state and locks further progression."""
-        self.status = "WITHDRAWN"
-        self.withdrawn_at = datetime.now()
-        self.withdrawal_reason = reason
+        withdraw_subject_model(self, reason)
 
 
 class ConsentSignatureDomain:

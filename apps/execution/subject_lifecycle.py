@@ -1,4 +1,5 @@
 import enum
+from datetime import datetime
 from typing import Any
 
 
@@ -153,3 +154,35 @@ def guard_subject_transition(current_state: Any, target_state: Any) -> None:
     allowed = ALLOWED_SUBJECT_TRANSITIONS.get(curr_enum, set())
     if tgt_enum not in allowed:
         raise InvalidStateTransitionError(str(current_state), str(target_state))
+
+
+def randomize_subject_model(
+    subject: Any, randomization_id: str, kit_reference: str, strat_factors: dict
+) -> None:
+    """Helper to transition subject state to RANDOMIZED with details."""
+    from apps.execution.eligibility_service import (
+        verify_subject_eligible_for_randomization,
+    )
+
+    verify_subject_eligible_for_randomization(subject)
+
+    subject.strat_factors = strat_factors
+    subject.status = "RANDOMIZED"
+    subject.randomization_id = randomization_id
+    subject.kit_reference = kit_reference
+
+
+def unblind_subject_model(subject: Any, unblinded_by: str, reason: str) -> None:
+    """Helper to transition subject state to UNBLINDED with details."""
+    subject.status = "UNBLINDED"
+    subject.is_unblinded = True
+    subject.unblinded_at = datetime.now()
+    subject.unblinded_by = unblinded_by
+    subject.unblinded_reason = reason
+
+
+def withdraw_subject_model(subject: Any, reason: str) -> None:
+    """Helper to transition subject state to WITHDRAWN with details."""
+    subject.status = "WITHDRAWN"
+    subject.withdrawn_at = datetime.now()
+    subject.withdrawal_reason = reason
