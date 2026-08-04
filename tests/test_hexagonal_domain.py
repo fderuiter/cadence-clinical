@@ -28,7 +28,7 @@ def test_subject_lifecycle_pure_domain_transitions():
 
     @req:PRD-SYS-001
     """
-    # 1. Start in SCREENING
+    # 1. Start in SCREENING (default state for new clinical subjects)
     subject = ClinicalSubjectDomain(
         subject_id="SUBJ-001", study_id="STUDY_A", strat_factors={"age": "GE_65"}
     )
