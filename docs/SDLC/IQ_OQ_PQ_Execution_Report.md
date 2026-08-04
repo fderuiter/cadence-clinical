@@ -9,11 +9,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2084
-- **Passed:** 2084 🟢
+- **Total Automated Test Cases Run:** 2092
+- **Passed:** 2087 🟢
 - **Failed/Errors:** 0 🔴
-- **Skipped:** 0 ⚪
-- **Overall Operational Pass Rate:** 100.00%
+- **Skipped:** 5 ⚪
+- **Overall Operational Pass Rate:** 99.76%
 
 ## 2. Installation Qualification (IQ)
 
@@ -168,6 +168,7 @@ python-slugify           8.0.4
 pytz                     2026.2
 pyyaml                   6.0.3
 rapidfuzz                3.14.5
+redis                    8.1.0
 referencing              0.37.0
 requests                 2.34.2
 rich                     15.0.0
@@ -559,6 +560,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_email_detector` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_fhir_narrative_and_notes_integration` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ip_mac_detector` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_is_excluded_path_alembic` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_medical_record_account_detector` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_overlap_resolution_deterministic` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_phone_fax_detector` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1286,11 +1288,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_unit_conversion_create_valid` | `tests.test_lab_schemas` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_unit_conversion_record_valid` | `tests.test_lab_schemas` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_unit_conversion_response_valid` | `tests.test_lab_schemas` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1892,6 +1894,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_main_blocked_on_non_safe_files` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_graceful_exit_on_api_error` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_no_conflict_needed` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_no_conflict_with_non_safe_files` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_skipped_if_no_safe_change_label` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cross_service_interception_and_replay` | `tests.test_shared_infrastructure` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_service_client_fixtures_isolation` | `tests.test_shared_infrastructure` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1908,10 +1911,16 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_timing_window_validation` | `tests.test_shared_soa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_visit_reorder_request` | `tests.test_shared_soa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_visit_validation` | `tests.test_shared_soa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_verify_and_consume_sig_token_expired` | `tests.test_sig_token_verifier` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_verify_and_consume_sig_token_mismatched_user` | `tests.test_sig_token_verifier` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_verify_and_consume_sig_token_replay_blocked` | `tests.test_sig_token_verifier` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_verify_and_consume_sig_token_success` | `tests.test_sig_token_verifier` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_downstream_replay_cache_redis_reset` | `tests.test_sig_token_verifier` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_downstream_replay_cache_redis_success` | `tests.test_sig_token_verifier` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_redis_consumption_fallback_on_exception` | `tests.test_sig_token_verifier` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_redis_consumption_replay_blocked` | `tests.test_sig_token_verifier` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_redis_consumption_success` | `tests.test_sig_token_verifier` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_redis_reset` | `tests.test_sig_token_verifier` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_verify_and_consume_sig_token_expired` | `tests.test_sig_token_verifier` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_verify_and_consume_sig_token_mismatched_user` | `tests.test_sig_token_verifier` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_verify_and_consume_sig_token_replay_blocked` | `tests.test_sig_token_verifier` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_verify_and_consume_sig_token_success` | `tests.test_sig_token_verifier` | Trace-17 | 🟢 PASSED | < 1s |
 | `test_compute_content_digest` | `tests.test_signature_builder` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rsa_signature_sign_and_verify` | `tests.test_signature_builder` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_asymmetric_sign_and_verify` | `tests.test_signature_manifestation` | *Regression/Helper* | 🟢 PASSED | < 1s |
