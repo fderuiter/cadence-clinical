@@ -127,10 +127,12 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
     expect(wrapper.find(".tab-btn-rules").exists()).toBe(true);
 
     // List of active rules should be fetched and rendered
-    expect(apiClient.get).toHaveBeenCalledWith(
-      "/api/v1/studies/study_1/rules",
-      expect.any(Object)
-    );
+    await vi.waitFor(() => {
+      expect(apiClient.get).toHaveBeenCalledWith(
+        "/api/v1/studies/study_1/rules",
+        expect.any(Object)
+      );
+    });
 
     expect(wrapper.text()).toContain("rule_1");
     expect(wrapper.text()).toContain("pulse_details");
