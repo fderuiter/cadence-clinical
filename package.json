@@ -18,7 +18,7 @@
     "verify": "pnpm check && pnpm test",
     "rtm": "python3 scripts/generate_rtm.py --validate",
     "sync-gxp": "uv run python scripts/sync_gxp.py",
-    "setup:dev": "uv sync --python 3.14 --all-extras && uv run playwright install chromium && uv run pre-commit install --install-hooks",
+    "setup:dev": "uv sync --python 3.14 --all-extras && uv run playwright install chromium chromium-headless-shell && uv run pre-commit install --install-hooks",
     "ports:check": "python3 scripts/check_ports.py",
     "openapi:export": "uv run python scripts/validate_schemas.py --export-dir docs/openapi",
     "adr:new": "python3 scripts/create_adr.py",

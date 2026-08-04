@@ -304,12 +304,12 @@ jobs:
         run: |
           if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
             echo "Playwright cache hit detected. Installing system dependencies and verifying browser binary..."
-            sudo $(which uv) run playwright install-deps chromium
-            uv run playwright install chromium
+            sudo $(which uv) run playwright install-deps chromium chromium-headless-shell
+            uv run playwright install chromium chromium-headless-shell
           else
             echo "Playwright cache miss. Performing full browser installation..."
             for i in {1..3}; do
-              uv run playwright install chromium --with-deps && break || {
+              uv run playwright install chromium chromium-headless-shell --with-deps && break || {
                 echo "Playwright install failed on attempt $i, retrying in 10s..."
                 sleep 10
               }
@@ -404,12 +404,12 @@ jobs:
         run: |
           if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
             echo "Playwright cache hit detected. Installing system dependencies and verifying browser binary..."
-            sudo $(which uv) run playwright install-deps chromium
-            uv run playwright install chromium
+            sudo $(which uv) run playwright install-deps chromium chromium-headless-shell
+            uv run playwright install chromium chromium-headless-shell
           else
             echo "Playwright cache miss. Performing full browser installation..."
             for i in {1..3}; do
-              uv run playwright install chromium --with-deps && break || {
+              uv run playwright install chromium chromium-headless-shell --with-deps && break || {
                 echo "Playwright install failed on attempt $i, retrying in 10s..."
                 sleep 10
               }
