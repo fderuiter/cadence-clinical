@@ -59,7 +59,8 @@ services:
       context: ..
       dockerfile: apps/designer/Dockerfile
     container_name: cadence-designer
-    command: ["uvicorn", "apps.designer.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
+    user: "${UID:-1000}:${GID:-1000}"
+    command: ["uvicorn", "apps.designer.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload", "--reload-dir", "/app/apps/designer"]
     volumes:
       - ..:/app
     environment:
@@ -75,7 +76,8 @@ services:
       context: ..
       dockerfile: apps/execution/Dockerfile
     container_name: cadence-execution
-    command: ["sh", "-c", "python -m apps.execution.database.migrate && uvicorn apps.execution.main:app --host 0.0.0.0 --port 8002 --reload"]
+    user: "${UID:-1000}:${GID:-1000}"
+    command: ["sh", "-c", "python -m apps.execution.database.migrate && uvicorn apps.execution.main:app --host 0.0.0.0 --port 8002 --reload --reload-dir /app/apps/execution"]
     volumes:
       - ..:/app
     environment:
@@ -94,7 +96,8 @@ services:
       context: ..
       dockerfile: apps/org/Dockerfile
     container_name: cadence-org
-    command: ["uvicorn", "apps.org.main:app", "--host", "0.0.0.0", "--port", "8012", "--reload"]
+    user: "${UID:-1000}:${GID:-1000}"
+    command: ["uvicorn", "apps.org.main:app", "--host", "0.0.0.0", "--port", "8012", "--reload", "--reload-dir", "/app/apps/org"]
     volumes:
       - ..:/app
     environment:
@@ -108,11 +111,13 @@ services:
       context: ..
       dockerfile: apps/eisf/Dockerfile
     container_name: cadence-eisf
-    command: ["sh", "-c", "python -m apps.eisf.database.migrate && uvicorn apps.eisf.main:app --host 0.0.0.0 --port 8010 --reload"]
+    user: "${UID:-1000}:${GID:-1000}"
+    command: ["sh", "-c", "python -m apps.eisf.database.migrate && uvicorn apps.eisf.main:app --host 0.0.0.0 --port 8010 --reload --reload-dir /app/apps/eisf"]
     volumes:
       - ..:/app
+      - eisf_data:/app/eisf_data
     environment:
-      - EISF_DATABASE_URL=sqlite+aiosqlite:////app/eisf.db
+      - EISF_DATABASE_URL=sqlite+aiosqlite:////app/eisf_data/eisf.db
     depends_on:
       postgres:
         condition: service_healthy
@@ -122,11 +127,13 @@ services:
       context: ..
       dockerfile: apps/etmf/Dockerfile
     container_name: cadence-etmf
-    command: ["sh", "-c", "python -m apps.etmf.database.migrate && uvicorn apps.etmf.main:app --host 0.0.0.0 --port 8003 --reload"]
+    user: "${UID:-1000}:${GID:-1000}"
+    command: ["sh", "-c", "python -m apps.etmf.database.migrate && uvicorn apps.etmf.main:app --host 0.0.0.0 --port 8003 --reload --reload-dir /app/apps/etmf"]
     volumes:
       - ..:/app
+      - etmf_data:/app/etmf_data
     environment:
-      - ETMF_DATABASE_URL=sqlite+aiosqlite:////app/tmf.db
+      - ETMF_DATABASE_URL=sqlite+aiosqlite:////app/etmf_data/tmf.db
       - INBOUND_EMAIL_HMAC_SECRET=dev-default-secret-inbound-email-hmac
       - INBOUND_EMAIL_MAX_SIZE_BYTES=10485760
       - NOTIFICATIONS_URL=http://notifications:8006
@@ -139,11 +146,13 @@ services:
       context: ..
       dockerfile: apps/ctms/Dockerfile
     container_name: cadence-ctms
-    command: ["uvicorn", "apps.ctms.main:app", "--host", "0.0.0.0", "--port", "8007", "--reload"]
+    user: "${UID:-1000}:${GID:-1000}"
+    command: ["uvicorn", "apps.ctms.main:app", "--host", "0.0.0.0", "--port", "8007", "--reload", "--reload-dir", "/app/apps/ctms"]
     volumes:
       - ..:/app
+      - ctms_data:/app/ctms_data
     environment:
-      - CTMS_DATABASE_URL=sqlite+aiosqlite:////app/ctms.db
+      - CTMS_DATABASE_URL=sqlite+aiosqlite:////app/ctms_data/ctms.db
     depends_on:
       postgres:
         condition: service_healthy
@@ -153,11 +162,13 @@ services:
       context: ..
       dockerfile: apps/quality/Dockerfile
     container_name: cadence-quality
-    command: ["uvicorn", "apps.quality.main:app", "--host", "0.0.0.0", "--port", "8005", "--reload"]
+    user: "${UID:-1000}:${GID:-1000}"
+    command: ["uvicorn", "apps.quality.main:app", "--host", "0.0.0.0", "--port", "8005", "--reload", "--reload-dir", "/app/apps/quality"]
     volumes:
       - ..:/app
+      - quality_data:/app/quality_data
     environment:
-      - QUALITY_DATABASE_URL=sqlite+aiosqlite:////app/quality.db
+      - QUALITY_DATABASE_URL=sqlite+aiosqlite:////app/quality_data/quality.db
     depends_on:
       postgres:
         condition: service_healthy
@@ -167,11 +178,13 @@ services:
       context: ..
       dockerfile: apps/interop/Dockerfile
     container_name: cadence-interop
-    command: ["uvicorn", "apps.interop.main:app", "--host", "0.0.0.0", "--port", "8004", "--reload"]
+    user: "${UID:-1000}:${GID:-1000}"
+    command: ["uvicorn", "apps.interop.main:app", "--host", "0.0.0.0", "--port", "8004", "--reload", "--reload-dir", "/app/apps/interop"]
     volumes:
       - ..:/app
+      - interop_data:/app/interop_data
     environment:
-      - INTEROP_DATABASE_URL=sqlite+aiosqlite:////app/interop.db
+      - INTEROP_DATABASE_URL=sqlite+aiosqlite:////app/interop_data/interop.db
     depends_on:
       postgres:
         condition: service_healthy
@@ -181,11 +194,13 @@ services:
       context: ..
       dockerfile: apps/tickets/Dockerfile
     container_name: cadence-tickets
-    command: ["uvicorn", "apps.tickets.main:app", "--host", "0.0.0.0", "--port", "8009", "--reload"]
+    user: "${UID:-1000}:${GID:-1000}"
+    command: ["uvicorn", "apps.tickets.main:app", "--host", "0.0.0.0", "--port", "8009", "--reload", "--reload-dir", "/app/apps/tickets"]
     volumes:
       - ..:/app
+      - tickets_data:/app/tickets_data
     environment:
-      - TICKETS_DATABASE_URL=sqlite+aiosqlite:////app/tickets.db
+      - TICKETS_DATABASE_URL=sqlite+aiosqlite:////app/tickets_data/tickets.db
     depends_on:
       postgres:
         condition: service_healthy
@@ -195,11 +210,13 @@ services:
       context: ..
       dockerfile: apps/safety/Dockerfile
     container_name: cadence-safety
-    command: ["uvicorn", "apps.safety.main:app", "--host", "0.0.0.0", "--port", "8008", "--reload"]
+    user: "${UID:-1000}:${GID:-1000}"
+    command: ["uvicorn", "apps.safety.main:app", "--host", "0.0.0.0", "--port", "8008", "--reload", "--reload-dir", "/app/apps/safety"]
     volumes:
       - ..:/app
+      - safety_data:/app/safety_data
     environment:
-      - SAFETY_DATABASE_URL=sqlite+aiosqlite:////app/safety.db
+      - SAFETY_DATABASE_URL=sqlite+aiosqlite:////app/safety_data/safety.db
       - SAFETY_SALT=internal-safety-salt-12345
     depends_on:
       postgres:
@@ -210,11 +227,13 @@ services:
       context: ..
       dockerfile: apps/notifications/Dockerfile
     container_name: cadence-notifications
-    command: ["uvicorn", "apps.notifications.main:app", "--host", "0.0.0.0", "--port", "8006", "--reload"]
+    user: "${UID:-1000}:${GID:-1000}"
+    command: ["uvicorn", "apps.notifications.main:app", "--host", "0.0.0.0", "--port", "8006", "--reload", "--reload-dir", "/app/apps/notifications"]
     volumes:
       - ..:/app
+      - notifications_data:/app/notifications_data
     environment:
-      - NOTIFICATIONS_DATABASE_URL=sqlite+aiosqlite:////app/notifications.db
+      - NOTIFICATIONS_DATABASE_URL=sqlite+aiosqlite:////app/notifications_data/notifications.db
       - SMTP_HOST=smtp.mailhog.local
       - SMTP_PORT=1025
       - SMTP_USERNAME=dev_user
@@ -234,11 +253,13 @@ services:
       context: ..
       dockerfile: apps/econsent/Dockerfile
     container_name: cadence-econsent
-    command: ["uvicorn", "apps.econsent.main:app", "--host", "0.0.0.0", "--port", "8011", "--reload"]
+    user: "${UID:-1000}:${GID:-1000}"
+    command: ["uvicorn", "apps.econsent.main:app", "--host", "0.0.0.0", "--port", "8011", "--reload", "--reload-dir", "/app/apps/econsent"]
     volumes:
       - ..:/app
+      - econsent_data:/app/econsent_data
     environment:
-      - ECONSENT_DATABASE_URL=sqlite+aiosqlite:////app/econsent.db
+      - ECONSENT_DATABASE_URL=sqlite+aiosqlite:////app/econsent_data/econsent.db
       - GATEWAY_URL=http://gateway:8000
       - GATEWAY_SECRET=internal-gateway-secret-12345
     depends_on:
@@ -249,11 +270,17 @@ services:
     image: node:20-alpine
     container_name: cadence-subject-portal
     working_dir: /app
-    command: ["sh", "-c", "npm install -g pnpm && pnpm install && pnpm --filter subject-portal dev --host 0.0.0.0 --port 5174"]
+    user: "${UID:-1000}:${GID:-1000}"
+    command: ["sh", "-c", "npx pnpm install && npx pnpm --filter subject-portal dev --host 0.0.0.0 --port 5174"]
     volumes:
       - ..:/app
+      - /app/node_modules
+      - /app/apps/subject-portal/node_modules
     ports:
       - "5174:5174"
+    environment:
+      - NPM_CONFIG_CACHE=/tmp/.npm
+      - PNPM_HOME=/tmp/.pnpm
     depends_on:
       gateway:
         condition: service_started
@@ -263,7 +290,8 @@ services:
       context: ..
       dockerfile: apps/gateway/Dockerfile
     container_name: cadence-gateway
-    command: ["uvicorn", "apps.gateway.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    user: "${UID:-1000}:${GID:-1000}"
+    command: ["uvicorn", "apps.gateway.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/apps/gateway"]
     volumes:
       - ..:/app
     environment:
@@ -312,3 +340,12 @@ services:
 volumes:
   postgres_data:
   neo4j_data:
+  eisf_data:
+  etmf_data:
+  ctms_data:
+  quality_data:
+  interop_data:
+  tickets_data:
+  safety_data:
+  notifications_data:
+  econsent_data:
