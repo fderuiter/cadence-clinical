@@ -183,14 +183,18 @@ def main() -> None:
         update_pr_comment(outcome)
         sys.exit(0)
 
-    print("PR is labeled 'safe-change'. Proceeding to check if merge conflict exists...")
+    print(
+        "PR is labeled 'safe-change'. Proceeding to check if merge conflict exists..."
+    )
 
     # 3. Check if there's actually a merge conflict
     if mergeable_status != "CONFLICTING":
         print(f"PR mergeable status is {mergeable_status}. No conflict to heal.")
         sys.exit(0)
 
-    print("Merge conflict detected on labeled safe-change PR! Proceeding with file guardrail checks...")
+    print(
+        "Merge conflict detected on labeled safe-change PR! Proceeding with file guardrail checks..."
+    )
 
     # 4. File Guardrails Check
     # Fetch list of changed files in this PR
