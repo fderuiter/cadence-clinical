@@ -39,7 +39,7 @@ class RelationalDatabaseManager:
             cursor = dbapi_connection.cursor()
             try:
                 cursor.execute("PRAGMA foreign_keys=ON")
-                cursor.execute("PRAGMA busy_timeout=30000")
+                cursor.execute(f"PRAGMA busy_timeout={30 * 1000}")
             except Exception:
                 pass
             finally:
