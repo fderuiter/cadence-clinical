@@ -92,6 +92,37 @@ def update_pr_comment(outcome: str) -> None:
         print(f"Failed to run post_pr_comment.py: {e}", file=sys.stderr)
 
 
+def handle_github_api_error(stderr_msg: str) -> None:
+    """Check for permission, authorization, or other non-blocking errors and exit gracefully.
+
+    Args:
+        stderr_msg: The standard error output message from the CLI command.
+    """
+    combined = stderr_msg.lower()
+    patterns = [
+        "resource not accessible by integration",
+        "403",
+        "http 403",
+        "must have admin rights",
+        "viewer can't make query",
+        "not logged in",
+        "gh auth login",
+        "populate the gh_token",
+        "unauthorized",
+        "forbidden",
+        "permission",
+        "api error",
+    ]
+    if any(p in combined for p in patterns):
+        print(
+            "WARNING: GitHub API permission or authentication error occurred.\n"
+            f"Error details: {stderr_msg.strip()}\n"
+            "Skipping autonomous self-healing.",
+            file=sys.stderr,
+        )
+        sys.exit(0)
+
+
 def main() -> None:
     repo = os.environ.get("GITHUB_REPOSITORY")
     pr_number = os.environ.get("PR_NUMBER")
@@ -123,6 +154,7 @@ def main() -> None:
 
     if not pr_json:
         print(f"Error fetching PR details: {pr_err}")
+        handle_github_api_error(pr_err)
         sys.exit(1)
 
     try:
