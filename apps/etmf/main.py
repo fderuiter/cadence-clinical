@@ -1204,9 +1204,7 @@ async def download_document(
             if isinstance(final_content, str):
                 try:
                     decoded = base64.b64decode(final_content)
-                    if decoded.startswith(b"%PDF") or decoded.startswith(
-                        b"PK\x03\x04"
-                    ):
+                    if decoded.startswith(b"%PDF") or decoded.startswith(b"PK\x03\x04"):
                         final_content = decoded
                 except Exception:
                     pass
@@ -1286,9 +1284,7 @@ async def download_watermarked_document(
             if isinstance(watermarked_content, str):
                 try:
                     decoded = base64.b64decode(watermarked_content)
-                    if decoded.startswith(b"%PDF") or decoded.startswith(
-                        b"PK\x03\x04"
-                    ):
+                    if decoded.startswith(b"%PDF") or decoded.startswith(b"PK\x03\x04"):
                         watermarked_content = decoded
                 except Exception:
                     pass
