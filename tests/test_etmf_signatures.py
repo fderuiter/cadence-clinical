@@ -9,6 +9,11 @@ from apps.etmf.models import Base, TMFDocument
 from tests.test_etmf import get_auth_headers
 
 
+@pytest.fixture(autouse=True)
+def allow_legacy_signatures_for_this_suite(monkeypatch):
+    monkeypatch.setenv("ALLOW_LEGACY_MOCK_SIGNATURES", "true")
+
+
 @pytest_asyncio.fixture(autouse=True)
 async def setup_db():
     """
