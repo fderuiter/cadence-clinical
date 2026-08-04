@@ -1,12 +1,9 @@
 import asyncio
 import contextlib
 import datetime as dt
-import functools
-import re
 import uuid
 from typing import Any
 
-from neo4j.exceptions import TransientError
 from protocol_authoring.models import (
     Comment,
     CommentThread,
@@ -25,152 +22,11 @@ from apps.designer.delta import (
     ImmutabilityViolationError,
     InvalidSignatureError,
     LibraryObjectInUseError,
+    assert_mock_study_version_mutable,
+    bump_version,
+    verify_version_signature,
+    with_transaction_retry,
 )
-
-
-def bump_version(version_tag: str, bump_type: str) -> str:
-    """
-    Parses the current version tag and returns the bumped semantic version.
-    Supports:
-    - minor clinical-amendment
-    - major design-restructuring
-    """
-    match = re.match(r"^([a-zA-Z]*)(\d+(?:\.\d+)*)$", version_tag.strip())
-    if not match:
-        return version_tag + "-draft"
-
-    prefix, numbers_str = match.groups()
-    parts = [int(p) for p in numbers_str.split(".")]
-
-    if len(parts) == 1:
-        parts.append(0)
-
-    bump_type_lower = bump_type.lower()
-    is_major = "major" in bump_type_lower or "restructuring" in bump_type_lower
-
-    if is_major:
-        parts[0] += 1
-        for i in range(1, len(parts)):
-            parts[i] = 0
-    else:  # minor
-        if len(parts) >= 2:
-            parts[1] += 1
-            for i in range(2, len(parts)):
-                parts[i] = 0
-        else:
-            parts[0] += 1
-
-    return prefix + ".".join(str(p) for p in parts)
-
-
-def verify_version_signature(version_props: dict[str, Any]) -> bool:
-    """
-    Verifies that the provided study version properties have a valid canonical signature.
-    Supports both the new GxP payload structure and the legacy payload schema for backward compatibility.
-    """
-    signature = version_props.get("signature")
-    if not signature:
-        return False
-
-    created_at = version_props.get("created_at")
-    if created_at is not None:
-        if hasattr(created_at, "isoformat"):
-            created_at_val = created_at.isoformat()
-        else:
-            created_at_val = str(created_at)
-    else:
-        created_at_val = None
-
-    import os
-
-    from packages.security.signing import verify_canonical_signature
-
-    secret_env = os.getenv("SIGNING_SECRET")
-    if not secret_env:
-        raise RuntimeError("SIGNING_SECRET environment variable is missing")
-    secret = secret_env.encode("utf-8")
-
-    # 1. New GxP payload verification
-    # Payload keys: study_id, version_index, version_tag, created_by, created_at, change_reason
-    study_id = version_props.get("study_id")
-    version_index = version_props.get("version_index")
-    version_tag = version_props.get("version_tag")
-    created_by = version_props.get("created_by")
-    change_reason = version_props.get("change_reason")
-
-    if all(
-        v is not None
-        for v in (study_id, version_index, version_tag, created_by, change_reason)
-    ):
-        payload_new = {
-            "study_id": study_id,
-            "version_index": int(version_index),
-            "version_tag": version_tag,
-            "created_by": created_by,
-            "created_at": created_at_val,
-            "change_reason": change_reason,
-        }
-        if verify_canonical_signature(payload_new, signature, secret):
-            return True
-
-    # 2. Legacy fallback payload verification to keep old tests green
-    payload_legacy = {
-        "id": version_props.get("id") or "legacy_ver",
-        "version_tag": version_props.get("version_tag") or "1.0",
-        "status": version_props.get("status") or "DRAFT",
-        "version_index": version_props.get("version_index") or 1,
-        "created_by": version_props.get("created_by") or "system",
-    }
-    if created_at_val is not None:
-        payload_legacy["created_at"] = created_at_val
-    if "parent_version" in version_props:
-        payload_legacy["parent_version"] = version_props["parent_version"]
-    if "branch_name" in version_props and version_props["branch_name"] is not None:
-        payload_legacy["branch_name"] = version_props["branch_name"]
-    if "base_version" in version_props and version_props["base_version"] is not None:
-        payload_legacy["base_version"] = version_props["base_version"]
-
-    return verify_canonical_signature(payload_legacy, signature, secret)
-
-
-def with_transaction_retry(
-    max_retries: int = 5, initial_delay: float = 0.05, backoff_factor: float = 2.0
-):
-    """
-    Decorator to transparently retry transactions that fail due to transient database locking conflicts.
-    """
-
-    def decorator(func):
-        @functools.wraps(func)
-        async def wrapper(*args, **kwargs):
-            retries = 0
-            delay = initial_delay
-            while True:
-                try:
-                    return await func(*args, **kwargs)
-                except TransientError as e:
-                    if retries >= max_retries:
-                        raise e
-                    retries += 1
-                    await asyncio.sleep(delay)
-                    delay *= backoff_factor
-
-        return wrapper
-
-    return decorator
-
-
-def assert_mock_study_version_mutable(study_version_id: str):
-    """Checks if the mock study version is mutable (not LOCKED, PUBLISHED, or ARCHIVED)."""
-    from apps.designer.db import MOCK_STUDY_VERSIONS
-
-    for study_id, versions in MOCK_STUDY_VERSIONS.items():
-        for ver in versions:
-            if ver.get("id") == study_version_id:
-                status = ver.get("status")
-                if status in ("APPROVED", "SIGNED", "LOCKED", "PUBLISHED", "ARCHIVED"):
-                    raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
-                return
 
 
 async def assert_study_version_mutable(tx, study_version_id: str):
@@ -386,11 +242,7 @@ async def create_study_version(
     created_by: str,
     created_at: Any = None,
 ):
-    """
-    Creates a new StudyVersion node, links to Study via HAS_VERSION, and links to
-    previous version via PREVIOUS_VERSION using pessimistic locks to serialize creation.
-    Raises ConcurrentLockingError if version tag or index already exists.
-    """
+    """Concrete repository implementation to create a new StudyVersion node."""
     if created_at is None:
         created_at_val = dt.datetime.now().isoformat()
     elif isinstance(created_at, (dt.datetime, dt.date)):
@@ -1152,14 +1004,7 @@ async def amend_protocol_version(
     change_reason: str,
     bump_type: str,
 ) -> dict[str, Any]:
-    """
-    Implements the formal Designer amendment fork operation without altering the source version.
-    Returns a dict with:
-        new_version: str
-        status: str
-        parent_version: str
-        id: str
-    """
+    """Concrete repository implementation of the formal Designer amendment fork operation."""
     import copy
     import os
 
