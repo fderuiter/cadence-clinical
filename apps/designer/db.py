@@ -375,6 +375,107 @@ class TerminologyCache:
 terminology_cache = TerminologyCache()
 
 
+class TerminologySearchCache:
+    """Thread-safe in-memory cache for terminology search queries."""
+
+    def __init__(self, max_size: int = 1000, ttl: float | None = None) -> None:
+        """Initializes the search cache.
+
+        Args:
+            max_size (int): The maximum number of distinct search queries to cache. Defaults to 1000.
+            ttl (float, optional): Time-to-live in seconds.
+        """
+        self.max_size: int = max_size
+        self._cache: dict[tuple[str, int | None, int | None], tuple[Any, float]] = {}
+        self._lock: threading.Lock = threading.Lock()
+
+        if ttl is not None:
+            self.ttl = float(ttl)
+        else:
+            import os
+
+            env_ttl = os.getenv("TERMINOLOGY_CACHE_TTL") or os.getenv("CACHE_TTL")
+            if env_ttl is not None:
+                try:
+                    self.ttl = float(env_ttl)
+                except ValueError:
+                    self.ttl = 3600.0
+            else:
+                self.ttl = 3600.0
+
+    def get(
+        self, term: str, from_record: int | None, page_size: int | None
+    ) -> Any | None:
+        """Retrieves cached search results if valid and not expired.
+
+        Args:
+            term (str): Search term query.
+            from_record (int, optional): Record offset.
+            page_size (int, optional): Page size.
+
+        Returns:
+            Optional[Any]: Cached results or None if not found or expired.
+        """
+        import time
+
+        # Thread-safe lookup with TTL expiration check
+        key = (term, from_record, page_size)
+        now = time.time()
+        with self._lock:
+            if key in self._cache:
+                data, timestamp = self._cache[key]
+                if now - timestamp < self.ttl:
+                    return data
+                self._cache.pop(key, None)
+        return None
+
+    def set(
+        self,
+        term: str,
+        from_record: int | None,
+        page_size: int | None,
+        data: Any,
+    ) -> None:
+        """Stores search results in the cache, enforcing max_size and FIFO eviction.
+
+        Args:
+            term (str): Search term query.
+            from_record (int, optional): Record offset.
+            page_size (int, optional): Page size.
+            data (Any): The search results payload.
+        """
+        import time
+
+        key = (term, from_record, page_size)
+        store_time = time.time()
+        with self._lock:
+            if key in self._cache:
+                self._cache[key] = (data, store_time)
+            else:
+                if len(self._cache) >= self.max_size:
+                    # FIFO eviction: pop the oldest item
+                    oldest_key = next(iter(self._cache))
+                    self._cache.pop(oldest_key, None)
+                self._cache[key] = (data, store_time)
+
+    def clear(self) -> None:
+        """Clears all items from the cache."""
+        with self._lock:
+            self._cache.clear()
+
+    def get_status(self) -> dict[str, int]:
+        """Retrieves the current status of the cache.
+
+        Returns:
+            Dict[str, int]: A dictionary containing 'size' and 'max_size'.
+        """
+        with self._lock:
+            return {"size": len(self._cache), "max_size": self.max_size}
+
+
+terminology_search_cache = TerminologySearchCache()
+
+
 def check_dict_for_value(d: Any, target: str) -> bool:
     """
     Recursively scan nested dictionaries, lists, or custom objects to find if

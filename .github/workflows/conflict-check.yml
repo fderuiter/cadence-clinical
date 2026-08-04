@@ -19,8 +19,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
-          # Use GITHUB_TOKEN to checkout securely with contents:write permission
+          # Use GITHUB_TOKEN directly for checkout to ensure it always succeeds
           token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
