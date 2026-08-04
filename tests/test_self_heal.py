@@ -109,3 +109,20 @@ def test_main_no_conflict_needed(mock_update_comment, mock_run_cmd):
                 main()
             mock_exit.assert_called_once_with(0)
             mock_update_comment.assert_not_called()
+
+
+def test_handle_github_api_error():
+    from scripts.self_heal import handle_github_api_error
+
+    # Should exit 0 for permission errors
+    with patch("sys.exit", side_effect=SystemExit) as mock_exit:
+        with pytest.raises(SystemExit):
+            handle_github_api_error(
+                "To get started with GitHub CLI, please run: gh auth login"
+            )
+        mock_exit.assert_called_once_with(0)
+
+    # Should not exit for other kinds of errors
+    with patch("sys.exit", side_effect=SystemExit) as mock_exit:
+        handle_github_api_error("Some other critical network timeout error")
+        mock_exit.assert_not_called()
