@@ -3,7 +3,9 @@ import json
 from datetime import UTC, datetime
 
 
-def apply_watermark(content: str | bytes, mime_type: str, user_id: str, user_role: str) -> str | bytes:
+def apply_watermark(
+    content: str | bytes, mime_type: str, user_id: str, user_role: str
+) -> str | bytes:
     """
     Applies a secure, attributable watermark to the given document content.
     This helper is format-agnostic and modifies the content structure based on the MIME type
@@ -43,7 +45,9 @@ def apply_watermark(content: str | bytes, mime_type: str, user_id: str, user_rol
         else:
             try:
                 decoded = base64.b64decode(content)
-                if (is_pdf and decoded.startswith(b"%PDF")) or (is_docx and decoded.startswith(b"PK\x03\x04")):
+                if (is_pdf and decoded.startswith(b"%PDF")) or (
+                    is_docx and decoded.startswith(b"PK\x03\x04")
+                ):
                     raw_bytes = decoded
                     is_b64 = True
             except Exception:
@@ -53,11 +57,14 @@ def apply_watermark(content: str | bytes, mime_type: str, user_id: str, user_rol
             if is_pdf:
                 try:
                     import fitz
+
                     doc = fitz.open(stream=raw_bytes, filetype="pdf")
                     for page in doc:
                         rect = page.rect
                         point = fitz.Point(36, rect.height - 36)
-                        page.insert_text(point, watermark_msg, fontsize=9, color=(0.7, 0.1, 0.1))
+                        page.insert_text(
+                            point, watermark_msg, fontsize=9, color=(0.7, 0.1, 0.1)
+                        )
                     watermarked_bytes = doc.write()
                     doc.close()
 
@@ -72,13 +79,19 @@ def apply_watermark(content: str | bytes, mime_type: str, user_id: str, user_rol
             elif is_docx:
                 try:
                     import io
+
                     import docx
+
                     doc = docx.Document(io.BytesIO(raw_bytes))
                     for section in doc.sections:
                         header = section.header
-                        p = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
+                        p = (
+                            header.paragraphs[0]
+                            if header.paragraphs
+                            else header.add_paragraph()
+                        )
                         p.text = f"{watermark_msg}\n{p.text}".strip()
-                    
+
                     out_io = io.BytesIO()
                     doc.save(out_io)
                     watermarked_bytes = out_io.getvalue()
@@ -138,4 +151,3 @@ def apply_watermark(content: str | bytes, mime_type: str, user_id: str, user_rol
     if input_is_bytes:
         return result_str.encode("utf-8")
     return result_str
-

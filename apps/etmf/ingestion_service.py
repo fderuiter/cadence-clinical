@@ -83,7 +83,7 @@ async def ingest_tmf_document(
                     sig_validation_content = decoded.decode("utf-8", errors="ignore")
             except Exception:
                 pass
-            
+
             if not is_already_b64:
                 raw_bytes = content.encode("utf-8", errors="surrogateescape")
                 base64_str = base64.b64encode(raw_bytes).decode("utf-8")

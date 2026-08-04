@@ -129,6 +129,7 @@ async def generate_binder_zip(
 
             if is_binary:
                 import base64
+
                 try:
                     raw_content_bytes = base64.b64decode(doc.content)
                 except Exception:

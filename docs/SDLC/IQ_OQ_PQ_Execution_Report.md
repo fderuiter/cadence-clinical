@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2061
-- **Passed:** 2061 🟢
+- **Total Automated Test Cases Run:** 2081
+- **Passed:** 2081 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1126,6 +1126,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_gateway_usdm_export_authenticated` | `tests.test_gateway_usdm` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_usdm_import_authenticated` | `tests.test_gateway_usdm` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_usdm_unauthenticated_returns_401` | `tests.test_gateway_usdm` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_is_logical_code` | `tests.test_git_merge_driver` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_merge_generic_json` | `tests.test_git_merge_driver` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_merge_markdown_text` | `tests.test_git_merge_driver` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_merge_secrets_baseline` | `tests.test_git_merge_driver` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_invalid_data_element_default_unit_fails` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
 | `test_invalid_mismatched_type_payload_fails` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
 | `test_mutation_creation_requires_non_empty_change_reason` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
@@ -1482,6 +1486,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_build_comment_body` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_combined_audit_logic` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_status_emoji` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gxp_validation_and_migration_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_markdown_and_architecture_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_merge_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_parse_existing_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1749,6 +1754,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_notifications_gxp_medical_monitor_alert` | `tests.test_sae_reconciliation_jobs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reconciliation_job_failure_path` | `tests.test_sae_reconciliation_jobs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_trigger_and_poll_reconciliation_job_success` | `tests.test_sae_reconciliation_jobs` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_automated_webhook_non_degraded_ingestion` | `tests.test_safe_binary_storage_watermark` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_native_docx_watermarking` | `tests.test_safe_binary_storage_watermark` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_native_pdf_watermarking` | `tests.test_safe_binary_storage_watermark` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_safe_binary_ingestion_and_export` | `tests.test_safe_binary_storage_watermark` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_e2b_xml_happy_path` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_e2b_xml_invalid_raises_value_error` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_icsr_version_and_reason_for_change_rendering` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1880,6 +1889,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_verify_gateway_signature_scope_fallback_restrictions` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_gateway_signature_tenant_and_multishape_restrictions` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_sig_token_helper_scenarios` | `tests.test_security_middleware` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_is_safe_file` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_blocked_on_non_safe_files` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_no_conflict_needed` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_skipped_if_no_safe_change_label` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cross_service_interception_and_replay` | `tests.test_shared_infrastructure` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_service_client_fixtures_isolation` | `tests.test_shared_infrastructure` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signed_headers_generation` | `tests.test_shared_infrastructure` | *Regression/Helper* | 🟢 PASSED | < 1s |

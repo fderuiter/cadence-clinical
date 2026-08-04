@@ -1,19 +1,19 @@
 import base64
 import io
 import zipfile
+
+import docx
+import fitz
 import pytest
 import pytest_asyncio
-import fitz
-import docx
-from datetime import UTC, datetime
+from fastapi.testclient import TestClient
 
 from apps.etmf.database import db_manager
-from apps.etmf.models import Base, TMFDocument
-from apps.etmf.ingestion_service import ingest_tmf_document
 from apps.etmf.export import generate_binder_zip
-from apps.etmf.watermark import apply_watermark
-from fastapi.testclient import TestClient
+from apps.etmf.ingestion_service import ingest_tmf_document
 from apps.etmf.main import app
+from apps.etmf.models import Base, TMFDocument
+from apps.etmf.watermark import apply_watermark
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -50,7 +50,6 @@ def create_minimal_docx() -> bytes:
 def test_native_pdf_watermarking():
     """Verify that a native PDF is watermarked visually and remains valid and uncorrupted."""
     pdf_bytes = create_minimal_pdf()
-    watermark_msg = "TEST-WATERMARK-PDF-12345"
 
     # Test raw bytes input and return
     watermarked = apply_watermark(
@@ -87,7 +86,6 @@ def test_native_pdf_watermarking():
 def test_native_docx_watermarking():
     """Verify that a native DOCX is watermarked visually via section headers and remains valid."""
     docx_bytes = create_minimal_docx()
-    watermark_msg = "TEST-WATERMARK-DOCX-67890"
 
     # Test raw bytes input
     watermarked = apply_watermark(
@@ -107,7 +105,9 @@ def test_native_docx_watermarking():
             header_texts.append(p.text)
 
     # Original text is preserved in body
-    assert any("This is a clean, native DOCX file" in t for p_text in p_texts for t in [p_text])
+    assert any(
+        "This is a clean, native DOCX file" in t for p_text in p_texts for t in [p_text]
+    )
     # Watermark text is present in the section headers
     assert any("CONFIDENTIAL" in h_text for h_text in header_texts)
 
@@ -133,7 +133,7 @@ async def test_safe_binary_ingestion_and_export():
         )
 
         # Ingest DOCX
-        docx_doc = await ingest_tmf_document(
+        await ingest_tmf_document(
             session=session,
             study_id="study_abc",
             artifact_type="Trial Monitoring Plan",
@@ -189,9 +189,9 @@ async def test_automated_webhook_non_degraded_ingestion(monkeypatch):
     monkeypatch.setenv("INBOUND_EMAIL_MAX_SIZE_BYTES", "5000000")
 
     client = TestClient(app)
-    import time
-    import hmac
     import hashlib
+    import hmac
+    import time
 
     timestamp = str(time.time())
     token = "unique-webhook-token"
@@ -225,6 +225,7 @@ async def test_automated_webhook_non_degraded_ingestion(monkeypatch):
     async with session_maker() as session:
         # Retrieve the document attachment (filename="agreement.pdf")
         from sqlalchemy import select
+
         stmt = select(TMFDocument).where(TMFDocument.filename == "agreement.pdf")
         res = await session.execute(stmt)
         doc = res.scalars().first()

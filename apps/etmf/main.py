@@ -1189,6 +1189,21 @@ async def download_document(
             f"Downloaded content for eTMF document '{doc.filename}' (ID: {doc.id})."
         )
 
+    mime_lower = doc.mime_type.lower().strip()
+    is_binary = (
+        "pdf" in mime_lower
+        or "wordprocessingml" in mime_lower
+        or "docx" in mime_lower
+        or mime_lower == "application/octet-stream"
+    )
+    if is_binary and isinstance(final_content, str):
+        try:
+            import base64
+
+            final_content = base64.b64decode(final_content)
+        except Exception:
+            pass
+
     # Log action to immutable audit trail
     await write_audit_log(
         session=session,
@@ -1246,6 +1261,21 @@ async def download_watermarked_document(
     watermarked_content = apply_watermark(
         doc.content, doc.mime_type, user_id, user_roles
     )
+
+    mime_lower = doc.mime_type.lower().strip()
+    is_binary = (
+        "pdf" in mime_lower
+        or "wordprocessingml" in mime_lower
+        or "docx" in mime_lower
+        or mime_lower == "application/octet-stream"
+    )
+    if is_binary and isinstance(watermarked_content, str):
+        try:
+            import base64
+
+            watermarked_content = base64.b64decode(watermarked_content)
+        except Exception:
+            pass
 
     # Log action to immutable audit trail
     await write_audit_log(
