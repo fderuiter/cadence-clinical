@@ -27,6 +27,8 @@ ROW_KEYS: dict[str, str] = {
     "Requirements Traceability": "traceability",
     "GxP Container Validation Suite": "gxp_validation",
     "Database Migration Integrity": "migration",
+    "Markdown Validation": "markdown",
+    "Architectural Drift Validation": "architecture",
 }
 
 FIX_COMMANDS: dict[str, str] = {
@@ -41,6 +43,8 @@ FIX_COMMANDS: dict[str, str] = {
     "traceability": "`python3 scripts/generate_rtm.py --validate`",
     "gxp_validation": "`uv run pytest tests/validation/`",
     "migration": "`uv run python3 apps/execution/database/rollback.py`",
+    "markdown": "`python3 scripts/validate_markdown.py`",
+    "architecture": "`python3 scripts/validate_architecture_drift.py`",
 }
 
 
@@ -166,6 +170,8 @@ def merge_outcomes(
         "traceability",
         "gxp_validation",
         "migration",
+        "markdown",
+        "architecture",
     ]:
         new_val = new_outcomes.get(key)
         existing_val = existing_outcomes.get(key)
@@ -285,6 +291,12 @@ def build_comment_body(
     )
     checked_adr = "[x]" if outcomes.get("adr") in ("success", "passed") else "[ ]"
     checked_suite = "[x]" if not has_failures else "[ ]"
+    checked_markdown = (
+        "[x]" if outcomes.get("markdown") in ("success", "passed") else "[ ]"
+    )
+    checked_architecture = (
+        "[x]" if outcomes.get("architecture") in ("success", "passed") else "[ ]"
+    )
 
     conflict_outcome = outcomes.get("conflict", "success")
     checked_conflict = (
@@ -336,6 +348,11 @@ def build_comment_body(
         ("Git Merge Conflicts", "conflict"),
         ("GxP Container Validation Suite", "gxp_validation"),
         ("Database Migration Integrity", "migration"),
+        ("Markdown Validation (validate_markdown.py)", "markdown"),
+        (
+            "Architectural Drift Validation (validate_architecture_drift.py)",
+            "architecture",
+        ),
     ]
 
     for label, key in checks:
@@ -509,6 +526,8 @@ Before approving a PR or signing off on a merged state, verify completion of thi
 *   {checked_test} **Test Coverage:** Unit and/or integration tests are added under the appropriate test directory, maintaining the 80% coverage threshold.
 *   {checked_traceability} **Requirements Traceability:** SRS and PRD requirements are fully mapped to automated verification tests.
 *   {checked_adr} **Architectural Intent:** An ADR is added to the architecture logs if major new design patterns or dependencies were introduced.
+*   {checked_markdown} **Markdown Formatting:** Markdown validation conforms to syntax and link specifications.
+*   {checked_architecture} **Architectural Drift:** Design diagrams in documentation match active system services.
 *   {checked_suite} **Clean Verification Suite:** All local checks (test runner, linter, type-checker) pass successfully without warnings or errors.
 *   {checked_conflict} **Conflict-Free:** All Git conflict markers and lockfile discrepancies are fully resolved.
 </details>
@@ -571,6 +590,8 @@ def main() -> None:
             "traceability": os.environ.get("TRACEABILITY_OUTCOME", ""),
             "gxp_validation": os.environ.get("GXP_VALIDATION_OUTCOME", ""),
             "migration": os.environ.get("MIGRATION_OUTCOME", ""),
+            "markdown": os.environ.get("MARKDOWN_OUTCOME", ""),
+            "architecture": os.environ.get("ARCHITECTURE_OUTCOME", ""),
         }
 
         # Fetch existing comments to see if we have an existing checklist comment

@@ -161,3 +161,39 @@ def test_gxp_validation_and_migration_outcomes():
     )
     assert "GxP Container Validation Suite" in body
     assert "Database Migration Integrity" in body
+
+
+def test_markdown_and_architecture_outcomes():
+    """Verify Markdown and Architectural Drift validations are parsed, merged, and rendered."""
+    sample_comment = """<!-- ID: CADENCE_PR_QUALITY_GATE_CHECKLIST -->
+### ⚠️ Action Required: Quality Gate Verification Issues
+
+| Quality Gate / Check | Status |
+| :--- | :--- |
+| **Markdown Validation (validate_markdown.py)** | ❌ Failed |
+| **Architectural Drift Validation (validate_architecture_drift.py)** | ✅ Passed |
+"""
+    outcomes = parse_existing_outcomes(sample_comment)
+    assert outcomes.get("markdown") == "failure"
+    assert outcomes.get("architecture") == "success"
+
+    existing = {"markdown": "failure", "architecture": "success"}
+    new_runs = {"markdown": "success", "architecture": "skipped"}
+    merged = merge_outcomes(new_runs, existing)
+    assert merged.get("markdown") == "success"
+    assert merged.get("architecture") == "success"
+
+    # Test rendering of checkboxes
+    body_pass = build_comment_body(
+        {"markdown": "success", "architecture": "success"}, has_failures=False
+    )
+    assert "Markdown Validation" in body_pass
+    assert "Architectural Drift Validation" in body_pass
+    assert "[x] **Markdown Formatting:**" in body_pass
+    assert "[x] **Architectural Drift:**" in body_pass
+
+    body_fail = build_comment_body(
+        {"markdown": "failure", "architecture": "failure"}, has_failures=True
+    )
+    assert "[ ] **Markdown Formatting:**" in body_fail
+    assert "[ ] **Architectural Drift:**" in body_fail

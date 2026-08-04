@@ -19,6 +19,8 @@ def test_is_architectural_file():
     assert is_architectural_file("apps/execution/database/audit.py") is True
     assert is_architectural_file("apps/execution/models.py") is True
     assert is_architectural_file("apps/execution/migrations/0001_init.py") is True
+    assert is_architectural_file("apps/designer/db.py") is True
+    assert is_architectural_file("apps/designer/soa_models.py") is True
 
     # Non-architectural files
     assert is_architectural_file("tests/test_validate_adrs.py") is False
@@ -26,6 +28,7 @@ def test_is_architectural_file():
     assert is_architectural_file("scripts/validate_adrs.py") is False
     assert is_architectural_file(".github/workflows/ci.yml") is False
     assert is_architectural_file("apps/designer/tests/test_designer.py") is False
+    assert is_architectural_file("apps/designer/orchestration.py") is False
     assert is_architectural_file("README.md") is False
 
 
