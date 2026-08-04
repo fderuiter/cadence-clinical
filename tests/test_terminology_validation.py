@@ -851,3 +851,4 @@ async def test_search_terminology_endpoint_bypass_and_refresh():
             data3 = res3.json()
             assert data3["results"][0]["code"] == "C123"
             assert mock_search.call_count == 3
+            # Standard bypass and refresh query parameters successfully verified.
