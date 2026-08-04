@@ -93,7 +93,7 @@ def compute_audit_digest(
         Hex-encoded SHA-256 HMAC digest string.
     """
     if secret_key is None:
-        secret_key = AUDIT_LOG_SECRET_KEY
+        secret_key = os.getenv("AUDIT_LOG_SECRET_KEY", "").strip() or AUDIT_LOG_SECRET_KEY
     canonical_payload = (
         f"{event_id}|{service_name}|{action_type}|{entity_name}|{entity_id}|"
         f"{user_id}|{tenant_id}|{reason_for_change}|{timestamp}|{previous_digest}"
@@ -109,7 +109,7 @@ class AuditLoggerEngine:
     """In-memory and durable audit logging engine maintaining SHA-256 chain integrity."""
 
     def __init__(self, secret_key: str | None = None) -> None:
-        self.secret_key = secret_key or AUDIT_LOG_SECRET_KEY
+        self.secret_key = secret_key or os.getenv("AUDIT_LOG_SECRET_KEY", "").strip() or AUDIT_LOG_SECRET_KEY
         self._chain: list[AuditLogRecord] = []
 
     @property

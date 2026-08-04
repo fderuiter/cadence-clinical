@@ -280,6 +280,7 @@ def verify_electronic_signature(
     """
     if secret_key is None:
         from packages.security.audit_logger import AUDIT_LOG_SECRET_KEY
+
         secret_key = AUDIT_LOG_SECRET_KEY
     if not request.signer_id:
         return SignatureVerificationResult(

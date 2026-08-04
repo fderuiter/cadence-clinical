@@ -10,8 +10,12 @@ from neo4j.exceptions import TransientError
 os.environ.setdefault("TERMINOLOGY_OFFLINE", "true")
 os.environ.setdefault("GATEWAY_SECRET", "internal-gateway-secret-12345")
 os.environ.setdefault("SIGNING_SECRET", "designer-amendment-secure-key-12345")
-os.environ.setdefault("AUDIT_LOG_SECRET_KEY", "test-gxp-audit-secret-key-placeholder-abc")
-os.environ.setdefault("INBOUND_EMAIL_HMAC_SECRET", "test-email-hmac-secret-placeholder-xyz")
+os.environ.setdefault(
+    "AUDIT_LOG_SECRET_KEY", "test-gxp-audit-secret-key-placeholder-abc"
+)
+os.environ.setdefault(
+    "INBOUND_EMAIL_HMAC_SECRET", "test-email-hmac-secret-placeholder-xyz"
+)
 
 
 # Identify and override Database URL for workers early, and ensure database isolation

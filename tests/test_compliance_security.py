@@ -264,6 +264,7 @@ def test_audit_logger_raises_runtime_error_if_secret_missing(monkeypatch):
     """Verify that the security module raises a RuntimeError if AUDIT_LOG_SECRET_KEY is missing or empty."""
     import importlib
     import sys
+
     import pytest
 
     # Store original modules
@@ -277,7 +278,9 @@ def test_audit_logger_raises_runtime_error_if_secret_missing(monkeypatch):
     try:
         with pytest.raises(RuntimeError) as exc_info:
             importlib.import_module("packages.security.audit_logger")
-        assert "AUDIT_LOG_SECRET_KEY environment variable is missing or empty" in str(exc_info.value)
+        assert "AUDIT_LOG_SECRET_KEY environment variable is missing or empty" in str(
+            exc_info.value
+        )
     finally:
         if orig_audit is not None:
             sys.modules["packages.security.audit_logger"] = orig_audit
@@ -291,6 +294,7 @@ def test_signing_raises_runtime_error_if_email_secret_missing(monkeypatch):
     """Verify that the signing module raises a RuntimeError if INBOUND_EMAIL_HMAC_SECRET is missing or empty."""
     import importlib
     import sys
+
     import pytest
 
     orig_signing = sys.modules.get("packages.security.signing")
@@ -303,7 +307,10 @@ def test_signing_raises_runtime_error_if_email_secret_missing(monkeypatch):
     try:
         with pytest.raises(RuntimeError) as exc_info:
             importlib.import_module("packages.security.signing")
-        assert "INBOUND_EMAIL_HMAC_SECRET environment variable is missing or empty" in str(exc_info.value)
+        assert (
+            "INBOUND_EMAIL_HMAC_SECRET environment variable is missing or empty"
+            in str(exc_info.value)
+        )
     finally:
         if orig_signing is not None:
             sys.modules["packages.security.signing"] = orig_signing
