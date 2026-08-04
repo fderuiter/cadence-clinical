@@ -178,10 +178,8 @@ jobs:
         with:
           python-version: '3.14'
 
-      - name: Create venv and install static tools
-        run: |
-          uv venv
-          uv pip install pip-audit bandit pre-commit detect-secrets pydantic python-dateutil cryptography fastapi httpx python-jose
+      - name: Sync dependencies from lockfile
+        run: uv sync --locked --no-install-project --no-install-workspace --all-extras
 
       - name: Cache pre-commit
         uses: actions/cache@v4
@@ -520,6 +518,7 @@ jobs:
         with:
           name: junit-report-unit
           path: .
+          merge-multiple: true
 
       - name: Download Integration Test Report
         uses: actions/download-artifact@v4
@@ -527,6 +526,7 @@ jobs:
         with:
           name: junit-report-integration
           path: .
+          merge-multiple: true
 
       - name: Download Qualification Test Report
         uses: actions/download-artifact@v4
@@ -534,6 +534,7 @@ jobs:
         with:
           name: junit-report-qualification
           path: .
+          merge-multiple: true
 
       - name: Merge JUnit XML Reports
         run: python3 scripts/merge_junit.py report.xml report-unit.xml report-integration.xml report-qualification.xml
@@ -573,6 +574,7 @@ jobs:
         with:
           name: duplication-summary
           path: .
+          merge-multiple: true
 
       - name: Post PR Comment
         env:

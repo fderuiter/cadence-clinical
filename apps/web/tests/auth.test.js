@@ -415,6 +415,14 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
         ).toBe(false);
       });
     });
+<<<<<<< HEAD
+  });
+
+  describe("Demo Mode Build Configurations", () => {
+    it("should permit login and logout fallbacks in demo build mode even if PROD is true", async () => {
+      const authStore = useAuthStore();
+=======
+>>>>>>> origin/main
 
 
     describe("Demo Mode Build Configurations", () => {
