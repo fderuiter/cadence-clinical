@@ -206,7 +206,9 @@ def get_pr_metadata(repo: str, pr_number: str) -> tuple[str, list[str]]:
                     pr_title = title.strip()
                     print(f"Loaded PR title from GITHUB_EVENT_PATH payload: {pr_title}")
         except Exception as e:
-            print(f"Failed to read/parse GITHUB_EVENT_PATH payload in post_pr_comment: {e}")
+            print(
+                f"Failed to read/parse GITHUB_EVENT_PATH payload in post_pr_comment: {e}"
+            )
 
     # Fetch PR title via gh api if not resolved or contains default format
     if pr_title == f"PR #{pr_number}":
@@ -236,19 +238,28 @@ def get_pr_metadata(repo: str, pr_number: str) -> tuple[str, list[str]]:
     else:
         # Fallback to local git diff to get changed files when API rate limited or offline
         base_branch = os.environ.get("GITHUB_BASE_REF") or "main"
-        print(f"Failed to fetch changed files from API. Falling back to local git diff against origin/{base_branch}...")
+        print(
+            f"Failed to fetch changed files from API. Falling back to local git diff against origin/{base_branch}..."
+        )
         try:
             stdout, _ = run_command(
-                ["git", "diff", "--name-only", f"origin/{base_branch}...HEAD"], check=False
+                ["git", "diff", "--name-only", f"origin/{base_branch}...HEAD"],
+                check=False,
             )
-            changed_files = [line.strip() for line in stdout.splitlines() if line.strip()]
+            changed_files = [
+                line.strip() for line in stdout.splitlines() if line.strip()
+            ]
             if not changed_files:
                 # Ultimate fallback
                 stdout, _ = run_command(
                     ["git", "diff", "--name-only", "HEAD~1...HEAD"], check=False
                 )
-                changed_files = [line.strip() for line in stdout.splitlines() if line.strip()]
-            print(f"Resolved {len(changed_files)} changed files via local git fallback.")
+                changed_files = [
+                    line.strip() for line in stdout.splitlines() if line.strip()
+                ]
+            print(
+                f"Resolved {len(changed_files)} changed files via local git fallback."
+            )
         except Exception as e:
             print(f"Local git fallback failed: {e}")
 
