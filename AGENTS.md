@@ -335,12 +335,63 @@ When executing `uv run` commands in sandboxed terminal environments, ensure Pyth
 
 ---
 
+## Environment State Recovery
+
+This section details instructions for autonomous agents to diagnose and recover from local environment blockages (e.g., port conflicts, database migration failures, or corrupted database states) independently, without requiring developer intervention.
+
+### 1. Pre-Flight Port Allocation & Diagnostics
+
+To verify system health and check for port collisions across the stack before running local services or tests, run:
+
+```bash
+make ports
+```
+
+- **Dynamic Orchestration Parsing:** Rather than using hardcoded system lists, the port diagnostic tool reads and parses actual port maps directly from `docker/docker-compose.yml` dynamically during normal execution.
+- **Service Coverage:** The tool scans and verifies connection availability for all 13 system microservices, infrastructure, databases, and frontend portals:
+  - **13 Microservices:** CTMS, Designer, Execution, Gateway, Interop, Notifications, Organization, Quality, Safety, Tickets, eConsent, eISF, and eTMF.
+  - **Databases & Identity:** Postgres, Neo4j, and Keycloak.
+  - **Frontends:** Subject Portal and Web Application.
+
+### 2. Multi-Database State Recovery (Database Resets)
+
+If you encounter corrupt local databases, stale schema migration states, or test data pollution, you can execute a full local state wipe and rebuild using:
+
+```bash
+make db-reset
+```
+
+- **Concurrently Re-applied Schema:** This command concurrently drops, re-creates, migrates, and seeds the PostgreSQL database, Neo4j graph database, and all 10 local microservice SQLite instances in parallel in under 15 seconds.
+- **Mock Data Seeding:** It automatically seeds standard developer mock study nodes into the Neo4j graph database and populates Expected Document Lists (EDLs) into the eTMF SQLite database.
+
+### 3. Strict Production & Remote Safety Guardrails
+
+To prevent accidental destruction of production or remote databases, strict safety filters are embedded directly into the database reset utility:
+
+- **Hostname Check:** The tool checks the host portion of all database connection URLs. Execution is blocked instantly if any host is detected that is not local (i.e. not `localhost`, `127.0.0.1`, `0.0.0.0`, `postgres`, `neo4j`, `db`, `host.docker.internal`, or `.local`).
+- **Production Keyword Protection:** Execution is instantly halted if any connection string contains production-related strings or keywords (e.g., `production`, `prod`, `live`, `secure`, `aws`, `rds`, `azure`, `gcp`, or `cloud`).
+
+### 4. Offline Recovery Mode (Bypassing Network Crashes)
+
+When working in environments with limited or blocked network access, or when certain docker containers are offline/unreachable, standard database resets can fail. Bypasses are provided to allow offline database resets:
+
+```bash
+make db-reset-offline
+```
+
+- **Warning Generation:** This targets databases via `--allow-offline`, which generates non-blocking warnings on unreachable/offline databases instead of raising connection errors and crashing. This allows partial/SQLite-only resets to complete successfully even when central database services are down.
+
+---
+
 ## Available Developer Tools
 
 Agents may invoke these tools directly when needed:
 
 | Command | Purpose |
 |---|---|
+| `make ports` | Check that all 13 microservice, database, and frontend ports are free and available |
+| `make db-reset` | Concurrently wipe, migrate, and seed all SQL/NoSQL/graph databases in under 15 seconds |
+| `make db-reset-offline` | Execute database resets offline, generating warnings instead of crashing if databases are unreachable |
 | `uv run ruff check . --fix` | Auto-fix all fixable lint errors (I001, F-strings, etc.) |
 | `uv run ruff format .` | Auto-format all Python files |
 | `uv run python scripts/sync_gxp.py` | Full GxP compliance sync (tests → RTM → stage) |
