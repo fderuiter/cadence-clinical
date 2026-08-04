@@ -173,6 +173,34 @@ app = FastAPI(
 app.add_middleware(GatewayAuthMiddleware)
 
 
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import DBAPIError, OperationalError
+
+@app.exception_handler(OperationalError)
+async def sqlite_operational_error_handler(request: Request, exc: OperationalError):
+    err_msg = str(exc).lower()
+    if "lock" in err_msg or "busy" in err_msg or "concurrency" in err_msg:
+        return JSONResponse(
+            status_code=409,
+            content={
+                "detail": f"Version conflict: The record is currently locked or modified by another process. Please retry. Error: {str(exc)}"
+            },
+        )
+    raise exc
+
+@app.exception_handler(DBAPIError)
+async def sqlite_dbapi_error_handler(request: Request, exc: DBAPIError):
+    err_msg = str(exc).lower()
+    if "lock" in err_msg or "busy" in err_msg or "concurrency" in err_msg:
+        return JSONResponse(
+            status_code=409,
+            content={
+                "detail": f"Version conflict: The record is currently locked or modified by another process. Please retry. Error: {str(exc)}"
+            },
+        )
+    raise exc
+
+
 # Dependable to obtain database session
 get_db_session = DatabaseSessionDependency(db_manager)
 

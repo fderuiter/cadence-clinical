@@ -32,6 +32,15 @@ class RelationalDatabaseManager:
             finally:
                 cursor.close()
 
+            # Set raw sqlite3 connection isolation level to IMMEDIATE
+            try:
+                if hasattr(dbapi_connection, "isolation_level"):
+                    dbapi_connection.isolation_level = "IMMEDIATE"
+                elif hasattr(getattr(dbapi_connection, "dbapi_connection", None), "isolation_level"):
+                    dbapi_connection.dbapi_connection.isolation_level = "IMMEDIATE"
+            except Exception:
+                pass
+
         self.session_maker = async_sessionmaker(
             bind=self.engine, class_=AsyncSession, expire_on_commit=False
         )
@@ -83,14 +92,19 @@ def get_relational_db_lifespan(
     setup and local migrations (on SQLite), and supports parameterized callback hooks for
     executing service-specific startup and shutdown tasks.
     """
+    import os
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+        # Dynamically check if there's an environment variable override for this service's DB
+        env_key = f"{db_manager.service_name.upper()}_DATABASE_URL"
+        url = os.getenv(env_key) or database_url
+
         # Initialize database engine and session maker
-        db_manager.init_db(database_url, **kwargs)
+        db_manager.init_db(url, **kwargs)
 
         # Run local migrations if using sqlite
-        if database_url.startswith("sqlite") and base_metadata is not None:
+        if url.startswith("sqlite") and base_metadata is not None:
             async with db_manager.engine.begin() as conn:
                 await conn.run_sync(base_metadata.create_all)
 
