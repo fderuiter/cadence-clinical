@@ -56,7 +56,7 @@ const defaultTemplates = [
     created_by: "system",
     version_index: 1,
     reason_for_change: "System generated",
-  }
+  },
 ];
 
 export const useNotificationsStore = defineStore("notifications", {
@@ -69,7 +69,10 @@ export const useNotificationsStore = defineStore("notifications", {
           savedNotifications = JSON.parse(stored);
         }
       } catch (e) {
-        console.error("Failed to parse demo_notifications from localStorage", e);
+        console.error(
+          "Failed to parse demo_notifications from localStorage",
+          e
+        );
       }
     }
     return {
@@ -94,10 +97,10 @@ export const useNotificationsStore = defineStore("notifications", {
       this.errorStatus = null;
       try {
         const authStore = useAuthStore();
-        const isMocked = notificationsService.getNotifications && (
-          notificationsService.getNotifications._isMockFunction ||
-          typeof notificationsService.getNotifications.mock === "object"
-        );
+        const isMocked =
+          notificationsService.getNotifications &&
+          (notificationsService.getNotifications._isMockFunction ||
+            typeof notificationsService.getNotifications.mock === "object");
         if (authStore.isDemoMode && !isMocked) {
           await new Promise((resolve) => setTimeout(resolve, 100));
           let list = [];
@@ -107,16 +110,22 @@ export const useNotificationsStore = defineStore("notifications", {
               list = JSON.parse(stored);
             } else {
               list = JSON.parse(JSON.stringify(defaultTemplates));
-              window.localStorage.setItem("demo_notifications", JSON.stringify(list));
+              window.localStorage.setItem(
+                "demo_notifications",
+                JSON.stringify(list)
+              );
             }
           } else {
             list = JSON.parse(JSON.stringify(defaultTemplates));
           }
 
           this.notifications = list.filter((n) => {
-            if (this.filters.category && n.category !== this.filters.category) return false;
-            if (this.filters.priority && n.priority !== this.filters.priority) return false;
-            if (this.filters.status && n.status !== this.filters.status) return false;
+            if (this.filters.category && n.category !== this.filters.category)
+              return false;
+            if (this.filters.priority && n.priority !== this.filters.priority)
+              return false;
+            if (this.filters.status && n.status !== this.filters.status)
+              return false;
             return true;
           });
           return this.notifications;
@@ -142,10 +151,11 @@ export const useNotificationsStore = defineStore("notifications", {
       this.errorStatus = null;
       try {
         const authStore = useAuthStore();
-        const isMocked = notificationsService.acknowledgeNotification && (
-          notificationsService.acknowledgeNotification._isMockFunction ||
-          typeof notificationsService.acknowledgeNotification.mock === "object"
-        );
+        const isMocked =
+          notificationsService.acknowledgeNotification &&
+          (notificationsService.acknowledgeNotification._isMockFunction ||
+            typeof notificationsService.acknowledgeNotification.mock ===
+              "object");
         if (authStore.isDemoMode && !isMocked) {
           await new Promise((resolve) => setTimeout(resolve, 100));
           let list = [];
@@ -173,7 +183,10 @@ export const useNotificationsStore = defineStore("notifications", {
           list[index] = updated;
 
           if (typeof window !== "undefined" && window.localStorage) {
-            window.localStorage.setItem("demo_notifications", JSON.stringify(list));
+            window.localStorage.setItem(
+              "demo_notifications",
+              JSON.stringify(list)
+            );
           }
 
           const activeIndex = this.notifications.findIndex((n) => n.id === id);
@@ -205,10 +218,10 @@ export const useNotificationsStore = defineStore("notifications", {
       this.errorStatus = null;
       try {
         const authStore = useAuthStore();
-        const isMocked = notificationsService.resolveNotification && (
-          notificationsService.resolveNotification._isMockFunction ||
-          typeof notificationsService.resolveNotification.mock === "object"
-        );
+        const isMocked =
+          notificationsService.resolveNotification &&
+          (notificationsService.resolveNotification._isMockFunction ||
+            typeof notificationsService.resolveNotification.mock === "object");
         if (authStore.isDemoMode && !isMocked) {
           await new Promise((resolve) => setTimeout(resolve, 100));
           let list = [];
@@ -236,7 +249,10 @@ export const useNotificationsStore = defineStore("notifications", {
           list[index] = updated;
 
           if (typeof window !== "undefined" && window.localStorage) {
-            window.localStorage.setItem("demo_notifications", JSON.stringify(list));
+            window.localStorage.setItem(
+              "demo_notifications",
+              JSON.stringify(list)
+            );
           }
 
           const activeIndex = this.notifications.findIndex((n) => n.id === id);

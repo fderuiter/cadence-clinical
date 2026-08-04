@@ -1,3 +1,4 @@
+<!-- eslint-disable vuejs-accessibility/interactive-supports-focus -->
 <template>
   <div
     :id="`field-${field.id}`"
@@ -296,7 +297,9 @@ function onKeydown(e) {
 
   if (e.key === "ArrowDown" || e.key === "ArrowUp") {
     e.preventDefault();
-    const items = Array.from(document.querySelectorAll(".focusable-canvas-item"));
+    const items = Array.from(
+      document.querySelectorAll(".focusable-canvas-item")
+    );
     const currentIndex = items.indexOf(document.activeElement);
     if (currentIndex === -1) return;
 

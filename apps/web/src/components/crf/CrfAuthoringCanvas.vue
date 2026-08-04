@@ -1,5 +1,9 @@
 <template>
-  <div id="primary-design-canvas" tabindex="-1" class="authoring-canvas-layout flex flex-col lg:flex-row gap-6 focus:outline-none">
+  <div
+    id="primary-design-canvas"
+    tabindex="-1"
+    class="authoring-canvas-layout flex flex-col lg:flex-row gap-6 focus:outline-none"
+  >
     <!-- Left/Center Side: Resizable Canvas Area -->
     <div class="flex-1 flex flex-col gap-4">
       <div
@@ -24,7 +28,9 @@
           >
             <button
               role="tab"
-              :aria-selected="designerStore.viewport === 'desktop' ? 'true' : 'false'"
+              :aria-selected="
+                designerStore.viewport === 'desktop' ? 'true' : 'false'
+              "
               :tabindex="designerStore.viewport === 'desktop' ? 0 : -1"
               class="btn-viewport-desktop px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1"
               :class="
@@ -33,13 +39,15 @@
                   : 'text-slate-600 hover:text-slate-800'
               "
               @click="designerStore.setViewport('desktop')"
-              @keydown="e => handleViewportTabKeydown(e, 'desktop')"
+              @keydown="(e) => handleViewportTabKeydown(e, 'desktop')"
             >
               🖥️ <span>Desktop</span>
             </button>
             <button
               role="tab"
-              :aria-selected="designerStore.viewport === 'tablet' ? 'true' : 'false'"
+              :aria-selected="
+                designerStore.viewport === 'tablet' ? 'true' : 'false'
+              "
               :tabindex="designerStore.viewport === 'tablet' ? 0 : -1"
               class="btn-viewport-tablet px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1"
               :class="
@@ -48,13 +56,15 @@
                   : 'text-slate-600 hover:text-slate-800'
               "
               @click="designerStore.setViewport('tablet')"
-              @keydown="e => handleViewportTabKeydown(e, 'tablet')"
+              @keydown="(e) => handleViewportTabKeydown(e, 'tablet')"
             >
               📟 <span>Tablet</span>
             </button>
             <button
               role="tab"
-              :aria-selected="designerStore.viewport === 'mobile' ? 'true' : 'false'"
+              :aria-selected="
+                designerStore.viewport === 'mobile' ? 'true' : 'false'
+              "
               :tabindex="designerStore.viewport === 'mobile' ? 0 : -1"
               class="btn-viewport-mobile px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1"
               :class="
@@ -63,7 +73,7 @@
                   : 'text-slate-600 hover:text-slate-800'
               "
               @click="designerStore.setViewport('mobile')"
-              @keydown="e => handleViewportTabKeydown(e, 'mobile')"
+              @keydown="(e) => handleViewportTabKeydown(e, 'mobile')"
             >
               📱 <span>Mobile</span>
             </button>
@@ -319,7 +329,19 @@
     </div>
 
     <!-- Polite Live Region for accessibility announcements (Requirement 4) -->
-    <div style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;" aria-live="polite">
+    <div
+      style="
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+      "
+      aria-live="polite"
+    >
       {{ designerStore.announcement }}
     </div>
   </div>
@@ -395,8 +417,12 @@ function handleInspectorKeydown(e) {
   if (e.key === "Tab") {
     const container = e.currentTarget;
     const focusables = Array.from(
-      container.querySelectorAll("input, select, button, textarea, [tabindex=\"0\"]")
-    ).filter((item) => !item.disabled && item.getAttribute("tabindex") !== "-1");
+      container.querySelectorAll(
+        'input, select, button, textarea, [tabindex="0"]'
+      )
+    ).filter(
+      (item) => !item.disabled && item.getAttribute("tabindex") !== "-1"
+    );
     if (focusables.length === 0) return;
     const first = focusables[0];
     const last = focusables[focusables.length - 1];
@@ -419,11 +445,17 @@ watch(
   (newId) => {
     if (newId) {
       nextTick(() => {
-        const container = document.querySelector(".properties-inspector-container");
+        const container = document.querySelector(
+          ".properties-inspector-container"
+        );
         if (container) {
           const focusables = Array.from(
-            container.querySelectorAll("input, select, button, textarea, [tabindex=\"0\"]")
-          ).filter((item) => !item.disabled && item.getAttribute("tabindex") !== "-1");
+            container.querySelectorAll(
+              'input, select, button, textarea, [tabindex="0"]'
+            )
+          ).filter(
+            (item) => !item.disabled && item.getAttribute("tabindex") !== "-1"
+          );
           if (focusables.length > 0) {
             focusables[0].focus();
           }

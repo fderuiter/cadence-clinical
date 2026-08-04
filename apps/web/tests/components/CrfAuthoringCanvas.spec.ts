@@ -490,11 +490,16 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
         name: "Demographics",
         isCollapsed: false,
         items: [
-          { id: "field-1", label: "Subject Initials", type: "text", gridSpan: 6 },
+          {
+            id: "field-1",
+            label: "Subject Initials",
+            type: "text",
+            gridSpan: 6,
+          },
           { id: "field-2", label: "Date of Birth", type: "date", gridSpan: 6 },
         ],
       };
-      
+
       const store = useDesignerStore();
       store.activeForm = { id: "form-1", name: "Draft", sections: [section] };
       store.setFocusedItemId(null); // start pristine
@@ -530,11 +535,16 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
         name: "Demographics",
         isCollapsed: false,
         items: [
-          { id: "field-1", label: "Subject Initials", type: "text", gridSpan: 6 },
+          {
+            id: "field-1",
+            label: "Subject Initials",
+            type: "text",
+            gridSpan: 6,
+          },
           { id: "field-2", label: "Date of Birth", type: "date", gridSpan: 6 },
         ],
       };
-      
+
       const store = useDesignerStore();
       store.activeForm = { id: "form-1", name: "Draft", sections: [section] };
 

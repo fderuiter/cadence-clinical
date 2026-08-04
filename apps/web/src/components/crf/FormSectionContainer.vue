@@ -7,12 +7,18 @@
     }"
   >
     <!-- Section Header Card -->
+    <!-- eslint-disable-next-line vuejs-accessibility/interactive-supports-focus -->
     <div
       :id="`section-${section.id}`"
       role="button"
       :aria-expanded="!section.isCollapsed ? 'true' : 'false'"
       class="section-header focusable-canvas-item px-4 py-3 bg-white border-b border-gray-200 flex items-center justify-between cursor-pointer select-none"
-      :tabindex="designerStore.focusedItemId === section.id || (!designerStore.focusedItemId && isFirstSection) ? 0 : -1"
+      :tabindex="
+        designerStore.focusedItemId === section.id ||
+        (!designerStore.focusedItemId && isFirstSection)
+          ? 0
+          : -1
+      "
       @click="toggleCollapse"
       @focus="onFocus"
       @keydown="onKeydown"
@@ -159,7 +165,9 @@ function onKeydown(e) {
 
   if (e.key === "ArrowDown" || e.key === "ArrowUp") {
     e.preventDefault();
-    const items = Array.from(document.querySelectorAll(".focusable-canvas-item"));
+    const items = Array.from(
+      document.querySelectorAll(".focusable-canvas-item")
+    );
     const currentIndex = items.indexOf(document.activeElement);
     if (currentIndex === -1) return;
 
