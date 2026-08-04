@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2108
-- **Passed:** 2103 🟢
+- **Total Automated Test Cases Run:** 2119
+- **Passed:** 2114 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
 - **Overall Operational Pass Rate:** 99.76%
@@ -1174,6 +1174,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_fail_fast_without_report_and_draft_flag` | `tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_missing_report_gxp_sync_dry_run` | `tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_success_with_draft_flag` | `tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_api_routers_have_no_direct_db_imports` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ctms_application_isolation` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ctms_domain_isolation` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_execution_application_isolation` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_execution_domain_isolation` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_consent_form_record_immutability_domain` | `tests.test_hexagonal_domain` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_consent_signature_immutability_domain` | `tests.test_hexagonal_domain` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_safety_audit_log_immutability_domain` | `tests.test_hexagonal_domain` | PRD-SYS-001 | 🟢 PASSED | < 1s |
@@ -1491,6 +1496,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_clinical_staff_role_values` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_organization_type_values` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_trial_duty_values` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_duplicate_certificate_injection_rejected` | `tests.test_part11_compliance_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_legacy_padding_pkcs1v15_fails` | `tests.test_part11_compliance_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_mandatory_documents_bypass_rejected` | `tests.test_part11_compliance_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_mock_signatures_blocked` | `tests.test_part11_compliance_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rsassa_pss_succeeds` | `tests.test_part11_compliance_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unapproved_self_signed_certificate_fails` | `tests.test_part11_compliance_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_certificate_revocation_verification` | `tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_esignature_tamper_detection_e2e` | `tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_tampered_pdf_fails_verification` | `tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |

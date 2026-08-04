@@ -46,7 +46,10 @@ def requires_signature(
     current_test = os.environ.get("PYTEST_CURRENT_TEST", "")
     strict_gxp = True
     if is_testing:
-        if "test_part11_compliance_engine" not in current_test:
+        if (
+            "test_part11_compliance_engine" not in current_test
+            and "test_etmf_compliance" not in current_test
+        ):
             strict_gxp = False
 
     norm = artifact_type.strip().lower()
@@ -225,7 +228,10 @@ def verify_x509_signature(
         current_test = os.environ.get("PYTEST_CURRENT_TEST", "")
         strict_gxp = True
         if is_testing:
-            if "test_part11_compliance_engine" not in current_test:
+            if (
+                "test_part11_compliance_engine" not in current_test
+                and "test_etmf_compliance" not in current_test
+            ):
                 strict_gxp = False
 
         is_self_signed = cert.issuer == cert.subject
@@ -291,7 +297,10 @@ def validate_document_signature(
     current_test = os.environ.get("PYTEST_CURRENT_TEST", "")
     strict_gxp = True
     if is_testing:
-        if "test_part11_compliance_engine" not in current_test:
+        if (
+            "test_part11_compliance_engine" not in current_test
+            and "test_etmf_compliance" not in current_test
+        ):
             strict_gxp = False
 
     # 0. Bypass prevention check for mandatory regulatory documents
