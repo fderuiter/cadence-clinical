@@ -207,13 +207,22 @@ uv run python scripts/sync_gxp.py --commit
 
 For the RTM to track your test, add a requirement ID to the test docstring:
 
-```python skip
+```python
+# skip
 async def test_enrollment_transition():
     """Validate subject state machine on enrollment.
 
     @req:PRD-SYS-042
     """
     ...
+```
+
+Here is another example of a standard test signature that gets validated:
+
+```python
+# tests/test_remove_jules_labels.py
+def test_remove_label_success(mock_run):
+    pass
 ```
 
 ---
