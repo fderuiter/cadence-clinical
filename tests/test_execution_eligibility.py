@@ -481,16 +481,15 @@ async def test_randomization_allocation_rejection_gate():
     subj_enrolled.status = "ENROLLED"
 
     # 1. SCREENING subject randomization must be blocked
-    with pytest.raises(HTTPException) as exc:
+    from apps.execution.exceptions import SubjectEligibilityError
+    with pytest.raises(SubjectEligibilityError) as exc:
         subj_screening.randomize("RAND-101", "KIT-01", {})
-    assert exc.value.status_code == 400
-    assert "Only ENROLLED subjects can proceed" in exc.value.detail
+    assert "Only ENROLLED subjects can proceed" in str(exc.value)
 
     # 2. SCREEN_FAILED subject randomization must be blocked
-    with pytest.raises(HTTPException) as exc:
+    with pytest.raises(SubjectEligibilityError) as exc:
         subj_screen_failed.randomize("RAND-102", "KIT-02", {})
-    assert exc.value.status_code == 400
-    assert "Only ENROLLED subjects can proceed" in exc.value.detail
+    assert "Only ENROLLED subjects can proceed" in str(exc.value)
 
     # 3. ENROLLED subject randomization proceeds successfully
     # Since randomization transitions state, let's verify it transitions correctly to RANDOMIZED

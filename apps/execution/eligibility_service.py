@@ -8,30 +8,29 @@ the randomization guard.
 """
 
 import logging
+from typing import Any
 
 from eligibility.evaluator import evaluate_eligibility
 from eligibility.models import AggregateEligibilityResult
-from fastapi import HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.execution.database.models import ClinicalSubject
 from apps.execution.designer_client import fetch_study_criteria
 from apps.execution.eligibility_context import build_eligibility_context
+from apps.execution.exceptions import SubjectEligibilityError
 
 logger = logging.getLogger("execution-eligibility-service")
 
 
 async def evaluate_subject_eligibility(
     study_id: str,
-    subject: str | ClinicalSubject,
-    session: AsyncSession,
+    subject: Any,
+    session: Any,
 ) -> AggregateEligibilityResult:
     """Fetch eligibility criteria, build subject context, and evaluate overall eligibility.
 
     Args:
         study_id (str): Clinical study identifier.
-        subject (Union[str, ClinicalSubject]): Subject ID, UUID, or ClinicalSubject model.
-        session (AsyncSession): Active SQLAlchemy session.
+        subject (Any): Subject ID, UUID, dict, or clinical subject representation.
+        session (Any): Active database session.
 
     Returns:
         AggregateEligibilityResult: Detailed individual and aggregated eligibility outcomes.
@@ -46,23 +45,28 @@ async def evaluate_subject_eligibility(
     return evaluate_eligibility(criteria, context)
 
 
-def verify_subject_eligible_for_randomization(subject: ClinicalSubject) -> None:
+def verify_subject_eligible_for_randomization(subject: Any) -> None:
     """Guard function ensuring only definitively eligible (ENROLLED) subjects proceed to randomization.
 
     Args:
-        subject (ClinicalSubject): The ClinicalSubject database model instance.
+        subject (Any): The clinical subject representation (dict or object).
 
     Raises:
-        HTTPException: HTTP 400 rejection if subject is not ENROLLED.
+        SubjectEligibilityError: rejection if subject is not ENROLLED.
     """
-    current_status = getattr(subject, "status", None)
+    if isinstance(subject, dict):
+        current_status = subject.get("status")
+        subject_id = subject.get("subject_id")
+    else:
+        current_status = getattr(subject, "status", None)
+        subject_id = getattr(subject, "subject_id", None)
+
     if current_status != "ENROLLED":
         logger.warning(
             "Allocation Rejected: Subject %s has state '%s'. Only ENROLLED subjects can proceed.",
-            subject.subject_id,
+            subject_id,
             current_status,
         )
-        raise HTTPException(
-            status_code=400,
-            detail=f"Allocation Rejected: Subject is in state '{current_status}'. Only ENROLLED subjects can proceed to randomization.",
+        raise SubjectEligibilityError(
+            f"Allocation Rejected: Subject is in state '{current_status}'. Only ENROLLED subjects can proceed to randomization."
         )
