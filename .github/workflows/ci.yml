@@ -78,6 +78,9 @@ jobs:
         if: always()
         run: python3 scripts/validate_adrs.py
 
+      - name: Compile UI library for markdown checks
+        run: pnpm --filter ui build
+
       - name: Run documentation compilation
         id: run_docs_build
         if: always()
@@ -275,7 +278,7 @@ jobs:
         run: |
           if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
             echo "Playwright cache hit detected. Installing system dependencies and verifying browser binary..."
-            uv run playwright install-deps chromium
+            sudo $(which uv) run playwright install-deps chromium
             uv run playwright install chromium
           else
             echo "Playwright cache miss. Performing full browser installation..."
@@ -375,7 +378,7 @@ jobs:
         run: |
           if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
             echo "Playwright cache hit detected. Installing system dependencies and verifying browser binary..."
-            uv run playwright install-deps chromium
+            sudo $(which uv) run playwright install-deps chromium
             uv run playwright install chromium
           else
             echo "Playwright cache miss. Performing full browser installation..."

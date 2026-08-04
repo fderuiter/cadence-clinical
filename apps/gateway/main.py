@@ -1,6 +1,4 @@
 import asyncio
-import hashlib
-import hmac
 import logging
 import os
 import sys
@@ -357,12 +355,6 @@ def generate_signature(
 
     Supports Version 1 (legacy colon-concatenated format) and Version 2 (canonical JSON format).
     """
-    if version in ("1", "v1"):
-        payload_v1 = f"{user_id}:{roles}:{timestamp}"
-        return hmac.new(
-            GATEWAY_SECRET.encode(), payload_v1.encode("utf-8"), hashlib.sha256
-        ).hexdigest()
-
     from packages.security.signing import generate_gateway_signature
 
     return generate_gateway_signature(

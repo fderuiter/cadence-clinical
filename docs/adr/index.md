@@ -39,6 +39,11 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
 
 ### 2. API Gateway, Security & Identity
+- [2026-08-03: Decommission legacy V1 signatures and standalone rendering engine](2026-08-03-decommission-legacy-v1-signatures-and-standalone-rendering-engine.md)
+- [2026-09-08: Decommission Legacy V1 Signatures and Standalone Rendering Engine](2026-09-08-decommission-legacy-v1-signatures-and-rendering-engine.md)
+- [2026-08-03: Decommission Legacy V1 Signatures and Standalone Rendering Engine](2026-08-03-cleanup-legacy-rendering-v1-signatures.md)
+- [2026-08-03: Decommission Legacy V1 Signatures and Standalone Rendering Engine](2026-08-03-decommission-legacy-v1-signatures-and-standalone-rendering-engine.md)
+- [2026-08-03: Resolve RBAC Duplicate Key Static Lint Failures](2026-08-03-resolve-rbac-duplicate-key-static-lint-failures.md)
 - [2026-08-03: Ruff Lint Alignment and Centralized RBAC Validation](2026-08-03-ruff-lint-alignment-and-centralized-rbac-validation.md)
 - [2026-08-03: Clean up duplicate security entries in rbac configuration](2026-08-03-clean-up-duplicate-security-entries-in-rbac-configuration.md)
 - [2026-08-03: eConsent Gateway Integration and Orchestration Port Alignment](2026-08-03-econsent-gateway-integration-and-orchestration-port-alignment.md)
@@ -237,3 +242,5 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-06: Enforce Strict Fail-Closed Environment Rules and Narrow Scanner Exclusions](2026-09-06-enforce-strict-fail-closed-environment-rules.md)
 - [2026-08-03: Upgrade Environments to Python 3.14](2026-08-03-upgrade-environments-to-python-3-14.md)
 - [2026-09-07: Extend Centralized Permission Matrix for eCOA Diary Alert Actions](2026-09-07-extend-ecoa-diary-alert-permissions.md)
+- [2026-08-03: Decommission Legacy Standalone Frontend Rendering Engine and Legacy V1 Signatures](2026-08-03-cleanup-legacy-rendering-v1-signatures.md)
+- [2026-09-08: Decommission legacy rendering and v1 signatures](2026-09-08-decommission-legacy-rendering-and-v1-signatures.md)

@@ -12,6 +12,7 @@ import {
 } from "../index.js";
 import { encryptAESGCM, decryptAESGCM, deriveSessionKey } from "../signing.js";
 
+// Verification tests for Version 2 cryptographic signature payload structures.
 describe("canonicalSerialize", () => {
   it("serializes primitives identically to Python", () => {
     expect(canonicalSerialize("test")).toBe('"test"');
@@ -88,42 +89,6 @@ describe("generateGatewaySignature and verifyGatewaySignature", () => {
   const roles = "admin";
   const timestamp = "123456";
 
-  it("generates correct Version 1 signature", async () => {
-    const sig = await generateGatewaySignature(
-      userId,
-      roles,
-      timestamp,
-      "1",
-      null,
-      secret
-    );
-    expect(sig).toBeDefined();
-
-    const isValid = await verifyGatewaySignature(
-      sig,
-      userId,
-      roles,
-      timestamp,
-      "1",
-      null,
-      secret
-    );
-    expect(isValid).toBe(true);
-  });
-
-  it("returns false for invalid Version 1 signature", async () => {
-    const isValid = await verifyGatewaySignature(
-      "invalid-signature",
-      userId,
-      roles,
-      timestamp,
-      "1",
-      null,
-      secret
-    );
-    expect(isValid).toBe(false);
-  });
-
   it("generates correct Version 2 signature matching Python", async () => {
     const expectedV2 =
       "0c66fa2bdfc9792e0c3bb45337d9c1e87be8a72f37f68e8f3998f88f45f5b1f3"; // pragma: allowlist secret
@@ -174,7 +139,7 @@ describe("generateGatewaySignature and verifyGatewaySignature", () => {
   it("rejects unsupported versions", async () => {
     await expect(
       generateGatewaySignature(userId, roles, timestamp, "3", null, secret)
-    ).rejects.toThrow("Version 1 or Version 2 signature is required.");
+    ).rejects.toThrow("Version 2 signature is required.");
 
     const isValid = await verifyGatewaySignature(
       "some-signature",

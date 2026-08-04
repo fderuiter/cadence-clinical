@@ -5,12 +5,10 @@ import {
   evaluateAST,
   compilerCache,
   getCompiledExpression,
-} from "../src/evaluator.js";
-import { useClinicalStore } from "../src/stores/clinical.js";
-import {
   renderFormFromJSON,
   validateField as indexValidateField,
-} from "../index.js";
+} from "../src/evaluator.js";
+import { useClinicalStore } from "../src/stores/clinical.js";
 
 describe("Client-side AST Evaluator & Cascading Nullification", () => {
   beforeEach(() => {

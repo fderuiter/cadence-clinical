@@ -115,12 +115,12 @@ async def test_require_study_scope_resolution_order():
 @pytest.mark.asyncio
 async def test_gateway_auth_middleware_tenant_fallback():
     """Confirm GatewayAuthMiddleware dispatch handles X-Tenant-Id fallback correctly."""
-    import hashlib
-    import hmac
     import time
 
     from fastapi import FastAPI
     from fastapi.responses import PlainTextResponse
+
+    from packages.security.signing import generate_gateway_signature
 
     app = FastAPI()
     app.add_middleware(GatewayAuthMiddleware)
@@ -131,36 +131,45 @@ async def test_gateway_auth_middleware_tenant_fallback():
 
     client = TestClient(app)
 
-    # GatewayAuthMiddleware expects gateway signature headers
-    # Let's mock a valid signature token
     gateway_secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
     user_id = "test_user"
     roles = "sponsor_dm"
     timestamp = str(time.time())
     change_reason = "justification"
 
-    serialized = f"{user_id}:{roles}:{timestamp}"
-    signature = hmac.new(
-        gateway_secret.encode(), serialized.encode(), hashlib.sha256
-    ).hexdigest()
-
+    # Case 1: X-Tenant-Id is missing -> fall back to tenant_default
+    signature_case1 = generate_gateway_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        secret=gateway_secret.encode(),
+        change_reason=change_reason,
+        tenant_id="tenant_default",
+    )
     headers = {
         "X-User-Id": user_id,
         "X-User-Roles": roles,
         "X-Gateway-Timestamp": timestamp,
-        "X-Gateway-Signature": signature,
-        "X-Signature-Version": "1",
+        "X-Gateway-Signature": signature_case1,
+        "X-Signature-Version": "2",
         "X-Change-Reason": change_reason,
     }
-
-    # Case 1: X-Tenant-Id is missing -> fall back to tenant_default
     response = client.get("/test-tenant", headers=headers)
     assert response.status_code == 200
     assert response.text == "tenant_default"
 
     # Case 2: X-Tenant-Id is present -> use it
+    signature_case2 = generate_gateway_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        secret=gateway_secret.encode(),
+        change_reason=change_reason,
+        tenant_id="my_custom_tenant",
+    )
     headers_with_tenant = headers.copy()
     headers_with_tenant["X-Tenant-Id"] = "my_custom_tenant"
+    headers_with_tenant["X-Gateway-Signature"] = signature_case2
     response2 = client.get("/test-tenant", headers=headers_with_tenant)
     assert response2.status_code == 200
     assert response2.text == "my_custom_tenant"
