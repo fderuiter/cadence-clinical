@@ -288,20 +288,26 @@ try:
     patch_init_db()
     databases_pre_created = True
 
-    if os.environ.get("USE_LIVE_DB") == "true":
-        print("[conftest] USE_LIVE_DB=true: Initializing all PostgreSQL schemas...")
+    if os.environ.get("USE_LIVE_DB") == "true" or os.environ.get(
+        "TEST_DATABASE_URL", ""
+    ).startswith(("postgres", "postgresql")):
+        print("[conftest] Initializing all PostgreSQL schemas...")
         run_sync(create_all_schemas_async(worker_suffix))
 except Exception as e:
     if os.environ.get("GITHUB_ACTIONS") == "true":
         print(f"[conftest] ERROR: Database initialization failed in CI: {e}")
-        if os.environ.get("USE_LIVE_DB") == "true":
+        if os.environ.get("USE_LIVE_DB") == "true" or os.environ.get(
+            "TEST_DATABASE_URL", ""
+        ).startswith(("postgres", "postgresql")):
             import pytest
 
             pytest.exit(
                 f"Database connection error: PostgreSQL instance is unreachable. {e}"
             )
         raise
-    elif os.environ.get("USE_LIVE_DB") == "true":
+    elif os.environ.get("USE_LIVE_DB") == "true" or os.environ.get(
+        "TEST_DATABASE_URL", ""
+    ).startswith(("postgres", "postgresql")):
         import pytest
 
         pytest.exit(
@@ -1045,16 +1051,23 @@ async def cleanup_databases_fixture():
     Autouse fixture that clears live Neo4j and PostgreSQL databases
     before and after every single test case when USE_LIVE_DB=true is active.
     """
-    if os.environ.get("USE_LIVE_DB") != "true":
+    is_postgres = os.environ.get("TEST_DATABASE_URL", "").startswith(
+        ("postgres", "postgresql")
+    )
+    is_live_db = os.environ.get("USE_LIVE_DB") == "true"
+
+    if not is_live_db and not is_postgres:
         yield
         return
 
-    print("[conftest] USE_LIVE_DB=true: Performing pre-test database cleanups...")
-    await clean_postgres_databases()
-    await clean_neo4j_graph()
+    if is_live_db or is_postgres:
+        await clean_postgres_databases()
+    if is_live_db:
+        await clean_neo4j_graph()
 
     yield
 
-    print("[conftest] USE_LIVE_DB=true: Performing post-test database cleanups...")
-    await clean_postgres_databases()
-    await clean_neo4j_graph()
+    if is_live_db or is_postgres:
+        await clean_postgres_databases()
+    if is_live_db:
+        await clean_neo4j_graph()

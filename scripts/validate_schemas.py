@@ -17,6 +17,16 @@ import os
 import sys
 from typing import Any
 
+# Prevent import errors due to missing secret keys in offline environment
+os.environ.setdefault(
+    "AUDIT_LOG_SECRET_KEY",
+    "test-gxp-audit-secret-key-placeholder-abc",  # pragma: allowlist secret
+)
+os.environ.setdefault(
+    "INBOUND_EMAIL_HMAC_SECRET",
+    "test-email-hmac-secret-placeholder-xyz",  # pragma: allowlist secret
+)
+
 # Set up python path for local imports and package paths to ensure absolute isolation
 app_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if app_root not in sys.path:
@@ -27,6 +37,10 @@ for name in ["core-models", "database", "deid", "security", "ui"]:
     pkg_path = os.path.join(packages_dir, name)
     if pkg_path not in sys.path:
         sys.path.insert(0, pkg_path)
+
+
+# Track dynamic import errors for diagnostic reporting
+IMPORT_ERRORS: list[tuple[str, Exception]] = []
 
 
 def discover_services() -> dict[str, dict[str, Any]]:
@@ -58,6 +72,7 @@ def discover_services() -> dict[str, dict[str, Any]]:
                 config[name] = {"app": app, "prefix": prefix}
         except Exception as e:
             print(f"Error dynamically importing service '{name}': {e}", file=sys.stderr)
+            IMPORT_ERRORS.append((name, e))
 
     return config
 
@@ -79,6 +94,21 @@ def validate_schemas() -> bool:
               safe from collisions; False otherwise.
     """
     print("--- Starting Static Schema Compilation & Namespacing Checks ---")
+
+    if IMPORT_ERRORS:
+        print(
+            "\n[VALIDATION FAILED] Static compilation of downstream services failed:",
+            file=sys.stderr,
+        )
+        for name, err in IMPORT_ERRORS:
+            print(f"  - Service '{name}' import failed: {err}", file=sys.stderr)
+        print(
+            "\nTroubleshooting Reference: Please refer to CONTRIBUTING.md#schema-validation-failures "
+            "for instructions on how to resolve service import failures.",
+            file=sys.stderr,
+        )
+        return False
+
     raw_schemas: dict[str, Any] = {}
 
     # 1. Statically generate the OpenAPI schema from each application instance
@@ -88,6 +118,11 @@ def validate_schemas() -> bool:
             print(f"Successfully compiled schema for '{service_name}' offline.")
         except Exception as e:
             print(f"Error compiling OpenAPI for {service_name}: {e}", file=sys.stderr)
+            print(
+                "\nTroubleshooting Reference: Please refer to CONTRIBUTING.md#schema-validation-failures "
+                "for instructions on how to resolve schema compilation failures.",
+                file=sys.stderr,
+            )
             return False
 
     # 2. Track schema definition occurrences across services to find shared models
@@ -148,6 +183,11 @@ def validate_schemas() -> bool:
         )
         for err in errors:
             print(f"  - {err}", file=sys.stderr)
+        print(
+            "\nTroubleshooting Reference: Please refer to CONTRIBUTING.md#schema-validation-failures "
+            "for instructions on how to resolve namespace collisions or prefix issues.",
+            file=sys.stderr,
+        )
         return False
 
     print(

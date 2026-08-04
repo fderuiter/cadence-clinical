@@ -9,11 +9,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2127
-- **Passed:** 2122 🟢
+- **Total Automated Test Cases Run:** 2131
+- **Passed:** 2126 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
-- **Overall Operational Pass Rate:** 99.76%
+- **Overall Operational Pass Rate:** 99.77%
 
 ## 2. Installation Qualification (IQ)
 
@@ -550,6 +550,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_reject_timezone_naive_datetime_objects` | `tests.test_datetime_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reject_timezone_naive_strings` | `tests.test_datetime_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_serialized_clinical_outputs_trailing_z` | `tests.test_datetime_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_in_memory_eligibility_rejection` | `tests.test_decoupled_services_in_memory` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_in_memory_eligibility_success` | `tests.test_decoupled_services_in_memory` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_process_coding_action_accept_in_memory` | `tests.test_decoupled_services_in_memory` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_process_coding_action_invalid_code_in_memory` | `tests.test_decoupled_services_in_memory` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_basic_detection_results` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_get_line_and_col` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_load_gitignore_patterns` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
