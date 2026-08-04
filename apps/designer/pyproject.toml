@@ -8,11 +8,11 @@ version = "0.1.0"
 description = "Designer microservice"
 requires-python = ">=3.14"
 dependencies = [
-    "fastapi>=0.139.2,<0.140.0",
+    "fastapi>=0.139.2",
     "pydantic>=2.6.0",
     "neo4j>=5.18.0",
     "weasyprint>=61.0",
-    "jinja2>=3.1.6,<4.0.0",
+    "jinja2>=3.1.6",
     "python-docx>=1.1.0",
     "docxtpl>=0.20.2",
     "docxcompose>=2.2.0",

@@ -8,12 +8,12 @@ version = "0.1.0"
 description = "Execution microservice"
 requires-python = ">=3.14"
 dependencies = [
-    "fastapi>=0.139.2,<0.140.0",
+    "fastapi>=0.139.2",
     "pydantic>=2.6.0",
     "sqlalchemy>=2.0.28",
     "sqlmodel>=0.0.39",
     "asyncpg>=0.29.0",
-    "jinja2>=3.1.6,<4.0.0",
+    "jinja2>=3.1.6",
     "PyMuPDF>=1.24.0",
     "weasyprint>=61.0",
     "python-docx>=1.1.0",
