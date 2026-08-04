@@ -9,7 +9,7 @@
 ---
 
 ## 1. Context & Problem Statement
-In multi-device clinical environments, users access the electronic Informed Consent Form (eConsent) and Patient Portal on desktops, tablets, and smartphones. 
+In multi-device clinical environments, users access the electronic Informed Consent Form (eConsent) and Patient Portal on desktops, tablets, and smartphones.
 
 Historically, interactive visual clues like hover states (`:hover`) were designed assuming a standard desktop/pointer environment. On touch screens (e.g., tablets and smartphones), hover effects cause "sticky" or frozen visual states because touch taps simulate a hover event that is never cleared until another element is tapped.
 
@@ -43,7 +43,7 @@ Furthermore, the eConsent Glossary component (`IcfSectionEditor.vue`) showed def
 * **Justification:** Option 2 provides a comprehensive, modern solution to touch-screen stickiness without degrading desktop mouse-based experiences or compromising key accessibility expectations (such as focus indicators).
 
 ## 5. Consequences & Trade-offs
-* **Positive Impact:** 
+* **Positive Impact:**
   * Interactive elements behave exactly as expected across all form factors.
   * Clear code organization where hover capability is bootstrapped from the shared UI library.
 * **Negative Impact / Technical Debt:**
