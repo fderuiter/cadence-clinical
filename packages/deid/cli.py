@@ -304,6 +304,8 @@ def is_excluded_path(path: str, root_dir: str) -> bool:
             "docker",
             "verification",
             "stores",
+            "alembic",
+            "coverage",
         }:
             return True
 
