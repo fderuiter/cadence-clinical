@@ -62,9 +62,6 @@ import os
 import sys
 
 from sqlalchemy import inspect, text
-from sqlalchemy.ext.asyncio import create_async_engine
-
-from apps.etmf.models import Base
 
 
 async def deploy_database_triggers(conn, dialect_name: str) -> None:
@@ -809,24 +806,81 @@ async def run_migrations(database_url: str) -> None:
     Executes pre-boot eTMF schema migrations and safe GxP backfills.
     """
     print(f"Starting pre-boot schema migration for eTMF: {database_url}")
+    from sqlalchemy.ext.asyncio import create_async_engine
+
     engine = create_async_engine(database_url, echo=False)
     dialect_name = engine.dialect.name
 
     try:
+        from sqlalchemy import inspect
+
         async with engine.begin() as conn:
-            # First, check and run base create_all for clean installs (creates tables that do not exist yet)
-            await conn.run_sync(Base.metadata.create_all)
 
-            # Apply migrations and backfills for existing schema instances
-            await upgrade_existing_tables(conn, dialect_name)
+            def check_tables(sync_conn):
+                insp = inspect(sync_conn)
+                return insp.has_table("tmf_documents"), insp.has_table(
+                    "alembic_version"
+                )
 
-            # Deploy native database mutation immutability triggers
-            await deploy_database_triggers(conn, dialect_name)
+            has_tmf, has_alembic = await conn.run_sync(check_tables)
 
-        print("eTMF Schema migration completed successfully.")
-    except Exception as e:
-        print(f"eTMF Schema migration failed: {e}")
-        sys.exit(1)
+        if has_tmf and not has_alembic:
+            print(
+                "Legacy eTMF tables detected without Alembic tracking. Running legacy upgrades, backfills, and trigger deployments..."
+            )
+            async with engine.begin() as conn:
+                await upgrade_existing_tables(conn, dialect_name)
+                await deploy_database_triggers(conn, dialect_name)
+
+            # Programmatically stamp the alembic version as head
+            env = os.environ.copy()
+            env["ETMF_DATABASE_URL"] = database_url
+            cmd = [
+                sys.executable,
+                "-m",
+                "alembic",
+                "-c",
+                "apps/etmf/alembic.ini",
+                "stamp",
+                "head",
+            ]
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                env=env,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await process.communicate()
+            print(
+                "eTMF Schema migration completed successfully (Legacy upgrades + Alembic stamped to head)."
+            )
+        else:
+            print("Clean eTMF install. Running declarative Alembic migrations...")
+            env = os.environ.copy()
+            env["ETMF_DATABASE_URL"] = database_url
+
+            cmd = [
+                sys.executable,
+                "-m",
+                "alembic",
+                "-c",
+                "apps/etmf/alembic.ini",
+                "upgrade",
+                "head",
+            ]
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                env=env,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await process.communicate()
+            if process.returncode != 0:
+                print(f"Alembic migration failed: {stderr.decode()}", file=sys.stderr)
+                raise RuntimeError(
+                    f"Alembic migration failed for eTMF: {stderr.decode()}"
+                )
+            print("eTMF Schema migration completed successfully via Alembic.")
     finally:
         await engine.dispose()
 
