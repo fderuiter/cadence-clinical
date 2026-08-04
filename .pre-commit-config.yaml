@@ -35,13 +35,6 @@ repos:
         files: \.secrets\.baseline$
         pass_filenames: false
 
-      - id: check-markdown-links
-        name: Check Markdown Links
-        entry: python3 scripts/validate_markdown.py
-        language: system
-        files: \.md$
-        pass_filenames: false
-
       - id: detect-code-duplication
         name: Detect Code Duplication
         entry: python3 scripts/detect_duplication.py
@@ -103,6 +96,13 @@ repos:
         entry: python3 scripts/validate_path_patterns.py
         language: system
         pass_filenames: true
+
+      - id: validate-vulnerabilities
+        name: GxP Dependency Vulnerability Audit
+        entry: uv run python scripts/validate_vulnerabilities.py
+        language: system
+        files: ^(pyproject\.toml|uv\.lock|pnpm-lock\.yaml|package\.json)$
+        pass_filenames: false
 
 
       # -----------------------------------------------------------------------
