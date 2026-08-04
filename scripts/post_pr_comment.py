@@ -68,10 +68,13 @@ def handle_github_api_error(stderr_msg: str) -> None:
         "forbidden",
         "permission",
         "api error",
+        "rate limit",
+        "rate-limit",
+        "graphql",
     ]
     if any(p in combined for p in patterns):
         print(
-            "WARNING: GitHub API permission or authentication error occurred.\n"
+            "WARNING: GitHub API permission, authentication, or rate limit error occurred.\n"
             f"Error details: {stderr_msg.strip()}\n"
             "Skipping PR quality checklist comment.",
             file=sys.stderr,
