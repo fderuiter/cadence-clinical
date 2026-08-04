@@ -51,7 +51,12 @@ async def validate_layout_html(html_content: str):
                     args=["--no-sandbox", "--disable-setuid-sandbox"],
                 )
             except Exception as e:
-                if "executable" in str(e).lower() or "playwright install" in str(e).lower() or "browser" in str(e).lower() or "launch" in str(e).lower():
+                if (
+                    "executable" in str(e).lower()
+                    or "playwright install" in str(e).lower()
+                    or "browser" in str(e).lower()
+                    or "launch" in str(e).lower()
+                ):
                     pytest.skip(f"Playwright browser not available: {e}")
                 raise
             page = await browser.new_page()

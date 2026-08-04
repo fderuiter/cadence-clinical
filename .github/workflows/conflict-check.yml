@@ -48,12 +48,12 @@ jobs:
       - name: Check mergeable status
         id: check_status
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           STATUS="UNKNOWN"
           for i in {1..6}; do
-            STATUS=$(gh pr view "$PR_NUMBER" --json mergeable --jq .mergeable)
+            STATUS=$(gh pr view "$PR_NUMBER" --json mergeable --jq .mergeable 2>/dev/null || echo "UNKNOWN")
             if [ "$STATUS" != "UNKNOWN" ]; then
               break
             fi
