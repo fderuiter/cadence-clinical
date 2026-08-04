@@ -371,7 +371,7 @@ const handleCanvasMouseOver = (e) => {
   }
 };
 
-const handleCanvasMouseOut = (e) => {
+const handleCanvasMouseOut = (_e) => {
   if (isHoverSupported.value) {
     hidePopover();
   }
@@ -383,7 +383,7 @@ const handleCanvasFocusIn = (e) => {
   }
 };
 
-const handleCanvasFocusOut = (e) => {
+const handleCanvasFocusOut = (_e) => {
   if (isHoverSupported.value) {
     hidePopover();
   }
