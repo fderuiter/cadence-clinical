@@ -1,4 +1,5 @@
 import copy
+
 from fastapi import Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,27 +7,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.execution.application.ports import IExecutionDOARepository
 from apps.execution.database import db_manager
 from apps.execution.database.models import (
-    DOAAuditLog,
-    DOADelegationRecord,
-    SiteStaffMember,
     AuditLog,
     ClinicalSubject,
     ConsentFormRecord,
     ConsentSignature,
+    DOAAuditLog,
+    DOADelegationRecord,
+    SiteStaffMember,
 )
 from apps.execution.domain.models import (
-    ExecutionAuditLogEntity,
-    ExecutionDelegationEntity,
-    ExecutionStaffEntity,
     AuditLogDomain,
     ClinicalSubjectDomain,
     ConsentFormRecordDomain,
     ConsentSignatureDomain,
-)
-from apps.execution.domain.repositories import (
-    SubjectRepository,
-    ConsentRepository,
-    AuditRepository,
+    ExecutionAuditLogEntity,
+    ExecutionDelegationEntity,
+    ExecutionStaffEntity,
 )
 from packages.hexagonal import map_database_exceptions
 

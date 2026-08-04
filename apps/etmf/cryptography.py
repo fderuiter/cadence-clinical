@@ -41,6 +41,7 @@ def requires_signature(
     """
     import os
     import sys
+
     is_testing = "pytest" in sys.modules or "PYTEST_CURRENT_TEST" in os.environ
     current_test = os.environ.get("PYTEST_CURRENT_TEST", "")
     strict_gxp = True
@@ -219,6 +220,7 @@ def verify_x509_signature(
 
         import os
         import sys
+
         is_testing = "pytest" in sys.modules or "PYTEST_CURRENT_TEST" in os.environ
         current_test = os.environ.get("PYTEST_CURRENT_TEST", "")
         strict_gxp = True
@@ -284,6 +286,7 @@ def validate_document_signature(
     """
     import os
     import sys
+
     is_testing = "pytest" in sys.modules or "PYTEST_CURRENT_TEST" in os.environ
     current_test = os.environ.get("PYTEST_CURRENT_TEST", "")
     strict_gxp = True

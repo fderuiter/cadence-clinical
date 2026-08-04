@@ -3,12 +3,6 @@ from datetime import datetime
 import pytest
 import pytest_asyncio
 
-from apps.execution.domain.models import (
-    AuditLogDomain,
-    ClinicalSubjectDomain,
-    ConsentFormRecordDomain,
-    ConsentSignatureDomain,
-)
 from apps.execution.adapter.repositories import (
     InMemoryAuditRepository,
     InMemoryConsentRepository,
@@ -16,6 +10,12 @@ from apps.execution.adapter.repositories import (
     SQLAlchemyAuditRepository,
     SQLAlchemyConsentRepository,
     SQLAlchemySubjectRepository,
+)
+from apps.execution.domain.models import (
+    AuditLogDomain,
+    ClinicalSubjectDomain,
+    ConsentFormRecordDomain,
+    ConsentSignatureDomain,
 )
 from apps.execution.subject_lifecycle import (
     InvalidStateTransitionError,
