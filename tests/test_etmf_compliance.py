@@ -221,7 +221,10 @@ async def test_missing_and_invalid_signature_ingestion():
     resp = client.post("/api/v1/etmf/ingest", json=payload_invalid, headers=headers)
     assert resp.status_code == 422
     detail_lower = resp.json()["detail"].lower()
-    assert "mock signature detected and blocked" in detail_lower or "invalid mock digital signature" in detail_lower
+    assert (
+        "mock signature detected and blocked" in detail_lower
+        or "invalid mock digital signature" in detail_lower
+    )
 
 
 @pytest.mark.asyncio
