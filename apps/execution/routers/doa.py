@@ -3,8 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-import hashlib
-from datetime import UTC, datetime
+from datetime import datetime
 
 from execution.doa_models import (
     DOAAssignmentRecord,
@@ -12,15 +11,19 @@ from execution.doa_models import (
     DOATaskRoleEnum,
 )
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.params import Depends as DependsClass
 from pydantic import BaseModel, Field
-from sqlalchemy import select
 
-import packages  # noqa: F401
+from apps.execution.adapter.repositories import (
+    SQLAlchemExecutionDOARepository,
+    get_execution_doa_repository,
+)
+from apps.execution.application.services import ExecutionDOAUseCase
 from apps.execution.database import db_manager
-from apps.execution.database.models import (
-    DOAAuditLog,
-    DOADelegationRecord,
-    SiteStaffMember,
+from apps.execution.domain.exceptions import (
+    ExecutionDelegationNotFoundError,
+    ExecutionStaffNotFoundError,
+    ExecutionValidationError,
 )
 from apps.execution.services.doa_service import DOAService
 from packages.security.middleware import get_current_user
@@ -96,6 +99,15 @@ class DOADelegationRecordResponse(BaseModel):
 router = APIRouter(prefix="/api/v1/execution/doa", tags=["DOA"])
 
 _DOA_SERVICE = DOAService()
+
+
+async def _run_with_repo(repo, func):
+    if repo is None or isinstance(repo, DependsClass):
+        session_maker = db_manager.get_session_maker()
+        async with session_maker() as session:
+            r = SQLAlchemExecutionDOARepository(session)
+            return await func(r)
+    return await func(repo)
 
 
 class AddDOAAssignmentRequest(BaseModel):
@@ -187,56 +199,30 @@ async def get_site_doa_log_endpoint(
 @router.post("/delegate", response_model=DOADelegationRecordResponse)
 async def delegate_task_endpoint(
     payload: DelegateTaskRequest,
+    repo: SQLAlchemExecutionDOARepository = Depends(get_execution_doa_repository),
 ):
-    async with db_manager.get_session_maker()() as session:
-        # 1. Verify staff member has completed required GCP training certificates
-        stmt = select(SiteStaffMember).where(
-            SiteStaffMember.site_id == payload.site_id,
-            SiteStaffMember.staff_user_id == payload.staff_user_id,
-        )
-        res = await session.execute(stmt)
-        staff = res.scalar_one_or_none()
-        if not staff:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Site staff member {payload.staff_user_id} not found at site {payload.site_id}.",
+    async def _action(r):
+        use_case = ExecutionDOAUseCase(r)
+        try:
+            return await use_case.delegate_task(
+                site_id=payload.site_id,
+                staff_user_id=payload.staff_user_id,
+                task_code=payload.task_code,
+                pi_user_id=payload.pi_user_id,
+                reason_for_change=payload.reason_for_change,
             )
+        except ExecutionStaffNotFoundError as e:
+            raise HTTPException(status_code=404, detail=str(e))
+        except ExecutionValidationError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
-        if not staff.has_gcp_training:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Staff member {payload.staff_user_id} has not completed required GCP training.",
-            )
-
-        # 2. Create DOADelegationRecord in PENDING_PI_APPROVAL status
-        record = DOADelegationRecord(
-            site_id=payload.site_id,
-            staff_user_id=payload.staff_user_id,
-            task_code=payload.task_code,
-            pi_user_id=payload.pi_user_id,
-            status="PENDING_PI_APPROVAL",
-            reason_for_change=payload.reason_for_change,
-            is_active=True,
-        )
-        session.add(record)
-        await session.flush()
-
-        # Log audit entry
-        audit_log = DOAAuditLog(
-            user_id=payload.pi_user_id,
-            action="DELEGATE_TASK",
-            details=f"Delegated task {payload.task_code} to staff {payload.staff_user_id} at site {payload.site_id}. Reason: {payload.reason_for_change}",
-        )
-        session.add(audit_log)
-
-        await session.commit()
-        await session.refresh(record)
-        return record
+    return await _run_with_repo(repo, _action)
 
 
 @router.post("/endorse", response_model=DOADelegationRecordResponse)
 async def approve_delegation_endpoint(
     payload: ApproveDelegationRequest,
+    repo: SQLAlchemExecutionDOARepository = Depends(get_execution_doa_repository),
 ):
     is_wrong_pwd = (
         payload.password == "wrong_password"  # pragma: allowlist secret
@@ -249,154 +235,93 @@ async def approve_delegation_endpoint(
     ):
         raise HTTPException(status_code=400, detail="Invalid credentials")
 
-    async with db_manager.get_session_maker()() as session:
-        stmt = select(DOADelegationRecord).where(
-            DOADelegationRecord.id == payload.delegation_id,
-            DOADelegationRecord.is_active.is_(True),
-        )
-        res = await session.execute(stmt)
-        record = res.scalar_one_or_none()
-        if not record:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Delegation record {payload.delegation_id} not found.",
+    async def _action(r):
+        use_case = ExecutionDOAUseCase(r)
+        try:
+            return await use_case.approve_delegation(
+                delegation_id=payload.delegation_id,
+                pi_user_id=payload.pi_user_id,
             )
+        except ExecutionDelegationNotFoundError as e:
+            raise HTTPException(status_code=404, detail=str(e))
 
-        now = datetime.now(UTC)
-        verification_payload = (
-            f"{payload.delegation_id}:{payload.pi_user_id}:{now.isoformat()}"
-        )
-        verification_hash = hashlib.sha256(
-            verification_payload.encode("utf-8")
-        ).hexdigest()
-
-        record.status = "ACTIVE"
-        record.pi_approved_at = now
-        record.pi_signature_hash = verification_hash
-        record.reason_for_change = "PI Delegation Approval"
-
-        audit_log = DOAAuditLog(
-            user_id=payload.pi_user_id,
-            action="APPROVE_DELEGATION",
-            details=f"Approved delegation {payload.delegation_id} for staff {record.staff_user_id}. Approved by PI {payload.pi_user_id}.",
-        )
-        session.add(audit_log)
-
-        await session.commit()
-        await session.refresh(record)
-        return record
+    return await _run_with_repo(repo, _action)
 
 
 @router.post("/endorse_task", response_model=DOADelegationRecordResponse)
 async def approve_task_endpoint(
     payload: ApproveTaskDelegationRequest,
+    repo: SQLAlchemExecutionDOARepository = Depends(get_execution_doa_repository),
 ):
-    async with db_manager.get_session_maker()() as session:
-        stmt = select(DOADelegationRecord).where(
-            DOADelegationRecord.id == payload.delegation_id,
-            DOADelegationRecord.is_active.is_(True),
-        )
-        res = await session.execute(stmt)
-        record = res.scalar_one_or_none()
-        if not record:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Delegation record {payload.delegation_id} not found.",
+    async def _action(r):
+        use_case = ExecutionDOAUseCase(r)
+        try:
+            return await use_case.approve_task_via_hash(
+                delegation_id=payload.delegation_id,
+                pi_user_id=payload.pi_user_id,
+                signature_hash=payload.signature_hash,
+                reason_for_change=payload.reason_for_change,
             )
+        except ExecutionDelegationNotFoundError as e:
+            raise HTTPException(status_code=404, detail=str(e))
 
-        now = datetime.now(UTC)
-        record.status = "ACTIVE"
-        record.pi_approved_at = now
-        record.pi_signature_hash = payload.signature_hash
-        record.reason_for_change = payload.reason_for_change
-
-        audit_log = DOAAuditLog(
-            user_id=payload.pi_user_id,
-            action="APPROVE_DELEGATION",
-            details=f"Approved delegation {payload.delegation_id} via hash. Reason: {payload.reason_for_change}",
-        )
-        session.add(audit_log)
-
-        await session.commit()
-        await session.refresh(record)
-        return record
+    return await _run_with_repo(repo, _action)
 
 
 @router.post("/revoke", response_model=DOADelegationRecordResponse)
 async def revoke_delegation_endpoint(
     payload: RevokeDelegationRequest,
+    repo: SQLAlchemExecutionDOARepository = Depends(get_execution_doa_repository),
 ):
-    async with db_manager.get_session_maker()() as session:
-        stmt = select(DOADelegationRecord).where(
-            DOADelegationRecord.id == payload.delegation_id,
-            DOADelegationRecord.is_active.is_(True),
-        )
-        res = await session.execute(stmt)
-        record = res.scalar_one_or_none()
-        if not record:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Delegation record {payload.delegation_id} not found.",
+    async def _action(r):
+        use_case = ExecutionDOAUseCase(r)
+        try:
+            return await use_case.revoke_delegation(
+                delegation_id=payload.delegation_id,
+                end_date=payload.end_date,
+                reason_for_change=payload.reason_for_change,
             )
+        except ExecutionDelegationNotFoundError as e:
+            raise HTTPException(status_code=404, detail=str(e))
 
-        record.status = "REVOKED"
-        record.end_date = payload.end_date
-        record.is_active = False
-        record.reason_for_change = payload.reason_for_change
-
-        audit_log = DOAAuditLog(
-            user_id=record.pi_user_id,
-            action="REVOKE_DELEGATION",
-            details=f"Revoked delegation {payload.delegation_id} with end date {payload.end_date.isoformat()}. Reason: {payload.reason_for_change}",
-        )
-        session.add(audit_log)
-
-        await session.commit()
-        await session.refresh(record)
-        return record
+    return await _run_with_repo(repo, _action)
 
 
 @router.post("/staff", response_model=SiteStaffMemberResponse, status_code=201)
-async def create_staff_endpoint(payload: SiteStaffMemberRequest):
-    async with db_manager.get_session_maker()() as session:
-        stmt = select(SiteStaffMember).where(
-            SiteStaffMember.staff_user_id == payload.staff_user_id
-        )
-        res = await session.execute(stmt)
-        existing = res.scalar_one_or_none()
-        if existing:
-            existing.site_id = payload.site_id
-            existing.name = payload.name
-            existing.email = payload.email
-            existing.has_gcp_training = payload.has_gcp_training
-            await session.commit()
-            await session.refresh(existing)
-            return existing
-
-        staff = SiteStaffMember(
+async def create_staff_endpoint(
+    payload: SiteStaffMemberRequest,
+    repo: SQLAlchemExecutionDOARepository = Depends(get_execution_doa_repository),
+):
+    async def _action(r):
+        use_case = ExecutionDOAUseCase(r)
+        return await use_case.create_or_update_staff(
             site_id=payload.site_id,
             staff_user_id=payload.staff_user_id,
             name=payload.name,
             email=payload.email,
             has_gcp_training=payload.has_gcp_training,
         )
-        session.add(staff)
-        await session.commit()
-        await session.refresh(staff)
-        return staff
+
+    return await _run_with_repo(repo, _action)
 
 
 @router.get("/audit-logs", response_model=list[DOAAuditLogResponse])
-async def get_audit_logs_endpoint():
-    async with db_manager.get_session_maker()() as session:
-        stmt = select(DOAAuditLog).order_by(DOAAuditLog.timestamp.desc())
-        res = await session.execute(stmt)
-        return list(res.scalars().all())
+async def get_audit_logs_endpoint(
+    repo: SQLAlchemExecutionDOARepository = Depends(get_execution_doa_repository),
+):
+    async def _action(r):
+        use_case = ExecutionDOAUseCase(r)
+        return await use_case.get_audit_logs()
+
+    return await _run_with_repo(repo, _action)
 
 
 @router.get("/delegations", response_model=list[DOADelegationRecordResponse])
-async def get_delegations_endpoint():
-    async with db_manager.get_session_maker()() as session:
-        stmt = select(DOADelegationRecord)
-        res = await session.execute(stmt)
-        return list(res.scalars().all())
+async def get_delegations_endpoint(
+    repo: SQLAlchemExecutionDOARepository = Depends(get_execution_doa_repository),
+):
+    async def _action(r):
+        use_case = ExecutionDOAUseCase(r)
+        return await use_case.get_delegations()
+
+    return await _run_with_repo(repo, _action)
