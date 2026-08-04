@@ -26,7 +26,7 @@ class RelationalDatabaseManager:
             cursor = dbapi_connection.cursor()
             try:
                 cursor.execute("PRAGMA foreign_keys=ON")
-                cursor.execute("PRAGMA busy_timeout=30000")
+                cursor.execute("PRAGMA busy_timeout=30000")  # deid-ignore
             except Exception:
                 pass
             finally:
@@ -36,7 +36,10 @@ class RelationalDatabaseManager:
             try:
                 if hasattr(dbapi_connection, "isolation_level"):
                     dbapi_connection.isolation_level = "IMMEDIATE"
-                elif hasattr(getattr(dbapi_connection, "dbapi_connection", None), "isolation_level"):
+                elif hasattr(
+                    getattr(dbapi_connection, "dbapi_connection", None),
+                    "isolation_level",
+                ):
                     dbapi_connection.dbapi_connection.isolation_level = "IMMEDIATE"
             except Exception:
                 pass

@@ -1,21 +1,16 @@
 import asyncio
 import time
 import uuid
-from datetime import datetime
 
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 
 from apps.gateway.main import generate_signature
 from apps.quality.database import db_manager
 from apps.quality.main import app
 from apps.quality.models import (
     Base,
-    CAPARecord,
-    CAPAStatus,
-    Deviation,
-    RootCauseAnalysis,
 )
 
 
@@ -47,9 +42,11 @@ async def setup_quality_concurrency_db():
     concurrent connections for parallel integration test executions.
     """
     import os
+
     from sqlalchemy.pool import NullPool
+
     db_uri = f"sqlite+aiosqlite:///file:quality_concurrency_{uuid.uuid4().hex}?mode=memory&cache=shared&uri=true"
-    
+
     # Export QUALITY_DATABASE_URL to env so the FastAPI lifespan loads the exact same DB
     os.environ["QUALITY_DATABASE_URL"] = db_uri
     db_manager.init_db(db_uri, echo=False, poolclass=NullPool)
@@ -147,7 +144,9 @@ async def test_parallel_capa_status_transitions_concurrency():
             if isinstance(r, Exception):
                 unexpected_responses.append(f"Client raised Python exception: {r}")
                 continue
-            print(f"DEBUG CAPA Transition {idx} - Status: {r.status_code}, Body: {r.json() if r.status_code == 200 else r.text}")
+            print(
+                f"DEBUG CAPA Transition {idx} - Status: {r.status_code}, Body: {r.json() if r.status_code == 200 else r.text}"
+            )
             if r.status_code == 200:
                 success_count += 1
             elif r.status_code == 409:
@@ -163,12 +162,12 @@ async def test_parallel_capa_status_transitions_concurrency():
         if unexpected_responses:
             print(f"Unexpected responses / failures: {unexpected_responses}")
 
-        assert (
-            success_count == 1
-        ), f"Expected exactly 1 success, got {success_count}. Unexpected: {unexpected_responses}"
-        assert (
-            conflict_count == num_parallel_requests - 1
-        ), f"Expected {num_parallel_requests - 1} conflicts, got {conflict_count}."
+        assert success_count == 1, (
+            f"Expected exactly 1 success, got {success_count}. Unexpected: {unexpected_responses}"
+        )
+        assert conflict_count == num_parallel_requests - 1, (
+            f"Expected {num_parallel_requests - 1} conflicts, got {conflict_count}."
+        )
 
 
 @pytest.mark.asyncio
@@ -250,7 +249,9 @@ async def test_parallel_rca_updates_concurrency():
             if isinstance(r, Exception):
                 unexpected_responses.append(f"Client raised Python exception: {r}")
                 continue
-            print(f"DEBUG RCA Update {idx} - Status: {r.status_code}, Body: {r.json() if r.status_code == 200 else r.text}")
+            print(
+                f"DEBUG RCA Update {idx} - Status: {r.status_code}, Body: {r.json() if r.status_code == 200 else r.text}"
+            )
             if r.status_code == 200:
                 success_count += 1
             elif r.status_code == 409:
@@ -266,9 +267,9 @@ async def test_parallel_rca_updates_concurrency():
         if unexpected_responses:
             print(f"Unexpected responses / failures: {unexpected_responses}")
 
-        assert (
-            success_count == 1
-        ), f"Expected exactly 1 success, got {success_count}. Unexpected: {unexpected_responses}"
-        assert (
-            conflict_count == num_parallel_requests - 1
-        ), f"Expected {num_parallel_requests - 1} conflicts, got {conflict_count}."
+        assert success_count == 1, (
+            f"Expected exactly 1 success, got {success_count}. Unexpected: {unexpected_responses}"
+        )
+        assert conflict_count == num_parallel_requests - 1, (
+            f"Expected {num_parallel_requests - 1} conflicts, got {conflict_count}."
+        )

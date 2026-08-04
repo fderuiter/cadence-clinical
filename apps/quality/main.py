@@ -2,8 +2,10 @@ import os
 from datetime import datetime
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
+from sqlalchemy.exc import DBAPIError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -173,9 +175,6 @@ app = FastAPI(
 app.add_middleware(GatewayAuthMiddleware)
 
 
-from fastapi.responses import JSONResponse
-from sqlalchemy.exc import DBAPIError, OperationalError
-
 @app.exception_handler(OperationalError)
 async def sqlite_operational_error_handler(request: Request, exc: OperationalError):
     err_msg = str(exc).lower()
@@ -187,6 +186,7 @@ async def sqlite_operational_error_handler(request: Request, exc: OperationalErr
             },
         )
     raise exc
+
 
 @app.exception_handler(DBAPIError)
 async def sqlite_dbapi_error_handler(request: Request, exc: DBAPIError):
