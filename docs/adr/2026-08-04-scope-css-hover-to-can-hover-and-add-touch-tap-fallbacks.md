@@ -50,4 +50,3 @@ Chosen Option 2. Centralizing dynamic hover pointer capability detection inside 
 
 * **Affected Repositories / Services:** `packages/ui`, `apps/web`, `apps/subject-portal`.
 * **Verification Plan:** Verify ADR validation by running validation scripts and check for successful execution of frontend and backend tests.
-

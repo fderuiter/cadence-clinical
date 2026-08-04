@@ -67,4 +67,3 @@ Chosen option: Option 1. It delivers high-performance virtualization using stand
     * Dynamic height preservation and cached style assignments.
     * WCAG minimum 44px height enforcement.
     * User input persistence across recycler unmounts/remounts.
-

@@ -131,8 +131,35 @@ class TMFDocument(Base):
     section: Mapped[str] = mapped_column(String(255), nullable=False)
     artifact_type: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
-    content: Mapped[str] = mapped_column(String, nullable=False)
+    _content: Mapped[str] = mapped_column("content", String, nullable=False)
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+
+    @property
+    def content(self) -> str:
+        if not self._content:
+            return self._content
+
+        mime_lower = self.mime_type.lower().strip() if self.mime_type else ""
+        is_binary = (
+            "pdf" in mime_lower
+            or "wordprocessingml" in mime_lower
+            or "docx" in mime_lower
+            or mime_lower == "application/octet-stream"
+        )
+        if is_binary:
+            import base64
+
+            try:
+                decoded_bytes = base64.b64decode(self._content)
+                return decoded_bytes.decode("utf-8")
+            except Exception:
+                return self._content
+        return self._content
+
+    @content.setter
+    def content(self, value: str) -> None:
+        self._content = value
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )
