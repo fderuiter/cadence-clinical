@@ -141,6 +141,13 @@ export const useAuthStore = defineStore("auth", {
         );
         this.isAuthenticated = true;
         this.isDemoMode = true;
+        this.user = {
+          username: "fderuiter",
+          email: "fderuiter@example.com",
+          firstName: "Frans",
+          lastName: "de Ruiter",
+          id: "fderuiter-id-12345",
+        };
         // Seed default roles so the offline UI is functional
         this.rawRoles = [
           "Sponsor Admin",
@@ -170,6 +177,7 @@ export const useAuthStore = defineStore("auth", {
         );
         this.isAuthenticated = false;
         this.isDemoMode = true;
+        this.user = null;
         this.rawRoles = [];
       }
       this.persist();

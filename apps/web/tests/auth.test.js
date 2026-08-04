@@ -40,13 +40,61 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
     it("allows mockup login and logout when keycloak is not initialized", async () => {
       const authStore = useAuthStore();
 
+      // Prior to login, the user profile state (user) must remain empty and null
+      expect(authStore.user).toBeNull();
+
       await authStore.login();
       expect(authStore.isAuthenticated).toBe(true);
       expect(authStore.isDemoMode).toBe(true);
+      expect(authStore.user).toEqual({
+        username: "fderuiter",
+        email: "fderuiter@example.com",
+        firstName: "Frans",
+        lastName: "de Ruiter",
+        id: "fderuiter-id-12345",
+      });
+      expect(authStore.identity).toEqual({
+        username: "fderuiter",
+        email: "fderuiter@example.com",
+        firstName: "Frans",
+        lastName: "de Ruiter",
+        id: "fderuiter-id-12345",
+      });
 
       await authStore.logout();
       expect(authStore.isAuthenticated).toBe(false);
       expect(authStore.isDemoMode).toBe(true);
+      expect(authStore.user).toBeNull();
+    });
+
+    it("persists demo user state securely across simulated browser refreshes via sessionStorage", async () => {
+      const authStore = useAuthStore();
+      await authStore.login();
+
+      // Check that it's in sessionStorage
+      const stored = window.sessionStorage.getItem("cadence_auth");
+      expect(stored).not.toBeNull();
+      const parsed = JSON.parse(stored);
+      expect(parsed.user).toEqual({
+        username: "fderuiter",
+        email: "fderuiter@example.com",
+        firstName: "Frans",
+        lastName: "de Ruiter",
+        id: "fderuiter-id-12345",
+      });
+
+      // Simulating browser reload: create a new Pinia instance and store
+      const newPinia = createPinia();
+      setActivePinia(newPinia);
+      const rehydratedStore = useAuthStore();
+      expect(rehydratedStore.isAuthenticated).toBe(true);
+      expect(rehydratedStore.user).toEqual({
+        username: "fderuiter",
+        email: "fderuiter@example.com",
+        firstName: "Frans",
+        lastName: "de Ruiter",
+        id: "fderuiter-id-12345",
+      });
     });
   });
 
@@ -385,6 +433,9 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
         expect(notificationsStore.notifications[0].status).toBe("OPEN"); // originally "OPEN", ack changed it to "ACKNOWLEDGED"
         expect(etmfStore.documentsList.some((doc) => doc.filename === "uploaded_doc.pdf")).toBe(false);
       });
+    });
+  });
+
   describe("Demo Mode Build Configurations", () => {
     it("should permit login and logout fallbacks in demo build mode even if PROD is true", async () => {
       const authStore = useAuthStore();
