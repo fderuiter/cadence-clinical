@@ -418,9 +418,7 @@
             <legend style="font-weight: bold; padding: 0 6px">
               Applicability, Custom Timing, and Arm Filtering
             </legend>
-            <div
-              style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px"
-            >
+            <div class="grid-2-responsive">
               <div class="form-group">
                 <label for="link-procedure">Select Procedure</label>
                 <select
@@ -496,7 +494,7 @@
       </div>
 
       <!-- Visual protocol editor layout -->
-      <div class="grid-2">
+      <div class="grid-2-responsive">
         <!-- USDM study JSON -->
         <div class="card json-editor-container">
           <div class="card-title">
@@ -608,10 +606,7 @@
         concepts, or author new study concepts directly.
       </p>
 
-      <div
-        class="grid-2"
-        style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 24px"
-      >
+      <div class="grid-asymmetric-responsive">
         <!-- Concept Search / Browse -->
         <div style="border-right: 1px solid var(--border); padding-right: 24px">
           <h3

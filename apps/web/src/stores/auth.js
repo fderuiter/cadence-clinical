@@ -129,7 +129,8 @@ export const useAuthStore = defineStore("auth", {
         await window.keycloakInstance.login(options);
       } else {
         const isProduction =
-          import.meta.env.PROD || import.meta.env.MODE === "production";
+          (import.meta.env.PROD || import.meta.env.MODE === "production") &&
+          import.meta.env.MODE !== "demo";
         if (isProduction) {
           throw new Error(
             "Offline login fallback is disabled in production environments."
@@ -157,7 +158,8 @@ export const useAuthStore = defineStore("auth", {
         await window.keycloakInstance.logout(options);
       } else {
         const isProduction =
-          import.meta.env.PROD || import.meta.env.MODE === "production";
+          (import.meta.env.PROD || import.meta.env.MODE === "production") &&
+          import.meta.env.MODE !== "demo";
         if (isProduction) {
           throw new Error(
             "Offline logout fallback is disabled in production environments."

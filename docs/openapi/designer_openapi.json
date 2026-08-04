@@ -2110,7 +2110,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/apps__designer__soa_models__UpdateVisitRequest"
+                "$ref": "#/components/schemas/protocol_authoring__soa__UpdateVisitRequest"
               }
             }
           }
@@ -5329,7 +5329,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/apps__designer__soa_models__CreateVisitRequest"
+                "$ref": "#/components/schemas/protocol_authoring__soa__CreateVisitRequest"
               }
             }
           }
@@ -6324,28 +6324,32 @@
           "visit_id": {
             "type": "string",
             "minLength": 1,
-            "title": "Visit Id"
+            "title": "Visit Id",
+            "description": "The visit identifier."
           },
           "procedure_ids": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Procedure Ids"
+            "title": "Procedure Ids",
+            "description": "One or more procedure identifiers (non-empty)."
           },
           "activity_ids": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Activity Ids"
+            "title": "Activity Ids",
+            "description": "One or more activity/procedure identifiers (non-empty)."
           }
         },
         "type": "object",
         "required": [
           "visit_id"
         ],
-        "title": "ActivityAssignmentRequest"
+        "title": "ActivityAssignmentRequest",
+        "description": "Request contract carrying a visit id and one or more procedure/activity ids."
       },
       "ActivityReport": {
         "properties": {
@@ -11249,12 +11253,14 @@
           "visit_id": {
             "type": "string",
             "minLength": 1,
-            "title": "Visit Id"
+            "title": "Visit Id",
+            "description": "Unique identifier for the visit."
           },
           "sequence": {
             "type": "integer",
             "minimum": 1.0,
-            "title": "Sequence"
+            "title": "Sequence",
+            "description": "New sequential order rank of the visit."
           }
         },
         "type": "object",
@@ -11262,7 +11268,8 @@
           "visit_id",
           "sequence"
         ],
-        "title": "VisitReorderItem"
+        "title": "VisitReorderItem",
+        "description": "Represents a visit id and its new sequence value."
       },
       "VisitReorderRequest": {
         "properties": {
@@ -11271,14 +11278,16 @@
               "$ref": "#/components/schemas/VisitReorderItem"
             },
             "type": "array",
-            "title": "Visits"
+            "title": "Visits",
+            "description": "Ordered list of visit sequence updates."
           }
         },
         "type": "object",
         "required": [
           "visits"
         ],
-        "title": "VisitReorderRequest"
+        "title": "VisitReorderRequest",
+        "description": "Request contract carrying an ordered list of visit ID and sequence value pairs."
       },
       "VisitToArmAssignmentRequest": {
         "properties": {
@@ -11399,7 +11408,7 @@
         "title": "UpdateVisitRequest",
         "description": "Request model for updating a Visit library object."
       },
-      "apps__designer__soa_models__CreateVisitRequest": {
+      "protocol_authoring__soa__CreateVisitRequest": {
         "properties": {
           "id": {
             "type": "string",
@@ -11424,7 +11433,7 @@
         ],
         "title": "CreateVisitRequest"
       },
-      "apps__designer__soa_models__UpdateVisitRequest": {
+      "protocol_authoring__soa__UpdateVisitRequest": {
         "properties": {
           "properties": {
             "$ref": "#/components/schemas/VisitProperties"

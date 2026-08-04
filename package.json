@@ -25,6 +25,7 @@
     "adr:create": "python3 scripts/create_adr.py",
     "adrs:fix": "python3 scripts/validate_adrs.py --fix-index",
     "build": "pnpm --filter web build",
+    "build:demo": "pnpm --filter web build:demo",
     "docs:dev": "vitepress dev docs",
     "docs:build": "node scripts/build-docs.js",
     "build:docs": "node scripts/build-docs.js",

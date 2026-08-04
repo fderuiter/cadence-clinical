@@ -402,7 +402,7 @@ button:focus-visible {
   input,
   select,
   .btn {
-    min-height: 44px;
+    min-height: 48px;
     padding: 10px 14px;
     font-size: 16px;
   }

@@ -2,10 +2,22 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createRouter, createWebHistory } from "vue-router";
-import RulesView from "../../src/views/RulesView.vue";
-import { useAuthStore } from "../../src/stores/auth";
-import { useClinicalStore } from "../../src/stores/clinical";
+import RulesView from "@/views/RulesView.vue";
+import { useAuthStore } from "@/stores/auth";
+import { useClinicalStore } from "@/stores/clinical";
 import { apiClient } from "@/api/apiClient";
+
+vi.mock("@/api/apiClient", () => {
+  return {
+    apiClient: {
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+    },
+  };
+});
+
 
 // Setup mock router
 const router = createRouter({
@@ -30,8 +42,8 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
     authStore.isDemoMode = false;
     authStore.rawRoles = ["Data Manager"];
 
-    // Spy on the real apiClient's methods directly to avoid caching/import path mismatches in Vitest
-    vi.spyOn(apiClient, "get").mockImplementation((url) => {
+    // Setup mock implementations for apiClient
+    vi.mocked(apiClient.get).mockImplementation((url) => {
       if (url.includes("/rules")) {
         return Promise.resolve([
           {
@@ -58,7 +70,7 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
       return Promise.resolve([]);
     });
 
-    vi.spyOn(apiClient, "post").mockImplementation((url, payload) => {
+    vi.mocked(apiClient.post).mockImplementation((url, payload) => {
       if (url.includes("/rules/preview") || url.includes("/rules/validate")) {
         return Promise.resolve({
           xpath: "/clinical_data/form_vs/pulse > 100",
@@ -76,8 +88,8 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
       return Promise.resolve({});
     });
 
-    vi.spyOn(apiClient, "put").mockResolvedValue({});
-    vi.spyOn(apiClient, "delete").mockResolvedValue({});
+    vi.mocked(apiClient.put).mockResolvedValue({});
+    vi.mocked(apiClient.delete).mockResolvedValue({});
 
     vi.clearAllMocks();
   });
@@ -118,6 +130,14 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
     });
 
     await flushPromises();
+
+    // Wait for the mock API call to have occurred (handles async crypto signature delay under CPU load)
+    let retries = 20;
+    while (vi.mocked(apiClient.get).mock.calls.length === 0 && retries > 0) {
+      await flushPromises();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      retries--;
+    }
 
     // Authorized role should NOT see the gating banner
     expect(wrapper.find(".rules-gating-banner").exists()).toBe(false);
