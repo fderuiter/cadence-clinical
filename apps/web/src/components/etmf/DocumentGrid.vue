@@ -52,7 +52,6 @@
           >
             <td
               :tabindex="0"
-
               :class="{
                 'cell-active':
                   activeRowIndex === rIndex && activeColIndex === 0,
@@ -83,7 +82,6 @@
               @click="selectCell(rIndex, 1)"
               @dblclick="startEditing(rIndex, doc)"
               @keydown="handleCellKeyDown($event, rIndex, 1, doc)"
-
             >
               <div
                 v-if="
@@ -117,7 +115,6 @@
             </td>
             <td
               :tabindex="0"
-
               :class="{
                 'cell-active':
                   activeRowIndex === rIndex && activeColIndex === 2,
@@ -131,7 +128,6 @@
             </td>
             <td
               :tabindex="0"
-
               :class="{
                 'cell-active':
                   activeRowIndex === rIndex && activeColIndex === 3,
@@ -147,7 +143,6 @@
             </td>
             <td
               :tabindex="0"
-
               :class="{
                 'cell-active':
                   activeRowIndex === rIndex && activeColIndex === 4,
@@ -163,7 +158,6 @@
             </td>
             <td
               :tabindex="0"
-
               :class="{
                 'cell-active':
                   activeRowIndex === rIndex && activeColIndex === 5,
@@ -178,7 +172,6 @@
             </td>
             <td
               :tabindex="0"
-
               :class="{
                 'cell-active':
                   activeRowIndex === rIndex && activeColIndex === 6,
