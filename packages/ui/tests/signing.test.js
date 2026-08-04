@@ -185,10 +185,16 @@ describe("cross-language parity", () => {
     const env = {
       ...process.env,
       PYTHONPATH: repoRoot,
-      AUDIT_LOG_SECRET_KEY: process.env.AUDIT_LOG_SECRET_KEY || "test-gxp-audit-secret-key-placeholder-abc",
-      INBOUND_EMAIL_HMAC_SECRET: process.env.INBOUND_EMAIL_HMAC_SECRET || "test-email-hmac-secret-placeholder-xyz",
-      GATEWAY_SECRET: process.env.GATEWAY_SECRET || "internal-gateway-secret-12345",
-      SIGNING_SECRET: process.env.SIGNING_SECRET || "designer-amendment-secure-key-12345",
+      AUDIT_LOG_SECRET_KEY:
+        process.env.AUDIT_LOG_SECRET_KEY ||
+        "test-gxp-audit-secret-key-placeholder-abc",
+      INBOUND_EMAIL_HMAC_SECRET:
+        process.env.INBOUND_EMAIL_HMAC_SECRET ||
+        "test-email-hmac-secret-placeholder-xyz",
+      GATEWAY_SECRET:
+        process.env.GATEWAY_SECRET || "internal-gateway-secret-12345",
+      SIGNING_SECRET:
+        process.env.SIGNING_SECRET || "designer-amendment-secure-key-12345",
     };
     const pyScript = script
       .trim()
