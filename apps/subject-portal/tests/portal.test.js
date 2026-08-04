@@ -1237,7 +1237,6 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
           await portal.initializeApp();
 
           // Let's track when initSessionKey is called or just verify the key re-derivation by changing the userId
-          const originalUserId = portal.state.session.userId;
           portal.state.session.userId = "subject_new_789";
 
           // Allow watch tick to process
