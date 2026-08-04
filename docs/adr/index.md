@@ -250,3 +250,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-03: Decommission Legacy Standalone Frontend Rendering Engine and Legacy V1 Signatures](2026-08-03-cleanup-legacy-rendering-v1-signatures.md)
 - [2026-09-08: Decommission legacy rendering and v1 signatures](2026-09-08-decommission-legacy-rendering-and-v1-signatures.md)
 
+- [2026-08-04: Compile-Time Vite Build Mode for Interactive Public Demo](2026-08-04-compile-time-vite-build-mode-for-interactive-public-demo.md)

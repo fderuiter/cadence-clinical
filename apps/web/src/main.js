@@ -54,7 +54,7 @@ if (import.meta.env.MODE === "demo") {
   authStore.isAuthenticated = true;
   authStore.user = {
     username: "fderuiter",
-    email: "fderuiter@example.com",
+    email: "fderuiter@example.com", // deid-ignore
     firstName: "Frans",
     lastName: "de Ruiter",
     id: "fderuiter-id-12345",
