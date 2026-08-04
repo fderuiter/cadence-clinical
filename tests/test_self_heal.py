@@ -1,11 +1,13 @@
 import os
 import sys
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from scripts.self_heal import is_safe_file, main, run_command
+from scripts.self_heal import is_safe_file, main
+
 
 def test_is_safe_file():
     # 1. Regulated compliance files (forbidden)
@@ -43,10 +45,15 @@ def test_is_safe_file():
 def test_main_skipped_if_no_safe_change_label(mock_update_comment, mock_run_cmd):
     # Mock gh pr view return to not have "safe-change" label
     mock_run_cmd.side_effect = [
-        ('{"labels": [{"name": "documentation"}], "headRefName": "feat-docs", "baseRefName": "main", "mergeable": "CONFLICTING"}', '')
+        (
+            '{"labels": [{"name": "documentation"}], "headRefName": "feat-docs", "baseRefName": "main", "mergeable": "CONFLICTING"}',
+            "",
+        )
     ]
 
-    with patch.dict(os.environ, {"GITHUB_REPOSITORY": "owner/repo", "PR_NUMBER": "123"}):
+    with patch.dict(
+        os.environ, {"GITHUB_REPOSITORY": "owner/repo", "PR_NUMBER": "123"}
+    ):
         with patch("sys.exit", side_effect=SystemExit) as mock_exit:
             with pytest.raises(SystemExit):
                 main()
@@ -60,12 +67,17 @@ def test_main_blocked_on_non_safe_files(mock_update_comment, mock_run_cmd):
     # Mock PR with safe-change label, but contains a non-safe file
     mock_run_cmd.side_effect = [
         # gh pr view
-        ('{"labels": [{"name": "safe-change"}], "headRefName": "feat-docs", "baseRefName": "main", "mergeable": "CONFLICTING"}', ''),
+        (
+            '{"labels": [{"name": "safe-change"}], "headRefName": "feat-docs", "baseRefName": "main", "mergeable": "CONFLICTING"}',
+            "",
+        ),
         # gh api repos/owner/repo/pulls/123/files
-        ('apps/execution/main.py\ndocs/architecture.md', '')
+        ("apps/execution/main.py\ndocs/architecture.md", ""),
     ]
 
-    with patch.dict(os.environ, {"GITHUB_REPOSITORY": "owner/repo", "PR_NUMBER": "123"}):
+    with patch.dict(
+        os.environ, {"GITHUB_REPOSITORY": "owner/repo", "PR_NUMBER": "123"}
+    ):
         with patch("sys.exit", side_effect=SystemExit) as mock_exit:
             with pytest.raises(SystemExit):
                 main()
@@ -79,12 +91,17 @@ def test_main_no_conflict_needed(mock_update_comment, mock_run_cmd):
     # Mock PR with safe-change label, safe files, but already mergeable
     mock_run_cmd.side_effect = [
         # gh pr view
-        ('{"labels": [{"name": "safe-change"}], "headRefName": "feat-docs", "baseRefName": "main", "mergeable": "MERGEABLE"}', ''),
+        (
+            '{"labels": [{"name": "safe-change"}], "headRefName": "feat-docs", "baseRefName": "main", "mergeable": "MERGEABLE"}',
+            "",
+        ),
         # gh api repos/owner/repo/pulls/123/files
-        ('docs/architecture.md', '')
+        ("docs/architecture.md", ""),
     ]
 
-    with patch.dict(os.environ, {"GITHUB_REPOSITORY": "owner/repo", "PR_NUMBER": "123"}):
+    with patch.dict(
+        os.environ, {"GITHUB_REPOSITORY": "owner/repo", "PR_NUMBER": "123"}
+    ):
         with patch("sys.exit", side_effect=SystemExit) as mock_exit:
             with pytest.raises(SystemExit):
                 main()
