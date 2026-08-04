@@ -385,6 +385,9 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
         expect(notificationsStore.notifications[0].status).toBe("OPEN"); // originally "OPEN", ack changed it to "ACKNOWLEDGED"
         expect(etmfStore.documentsList.some((doc) => doc.filename === "uploaded_doc.pdf")).toBe(false);
       });
+    });
+  });
+
   describe("Demo Mode Build Configurations", () => {
     it("should permit login and logout fallbacks in demo build mode even if PROD is true", async () => {
       const authStore = useAuthStore();
