@@ -33,5 +33,31 @@ export default [
       "vuejs-accessibility/form-control-has-label": "warn",
     },
     files: ["apps/**/*.js", "packages/**/*.js", "apps/**/*.vue", "packages/**/*.vue"],
+  },
+  {
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+    },
+    rules: {
+      "vuejs-accessibility/label-has-for": ["error", {
+        "required": {
+          "some": ["nesting", "id"]
+        }
+      }],
+      "vuejs-accessibility/click-events-have-key-events": "error",
+      "vuejs-accessibility/no-static-element-interactions": "error",
+      "vuejs-accessibility/form-control-has-label": "error",
+      "vue/html-self-closing": ["error", {
+        "html": {
+          "void": "always",
+          "normal": "never",
+          "component": "always"
+        },
+        "svg": "always",
+        "math": "always"
+      }],
+    },
+    files: ["packages/ui/**/*.js", "packages/ui/**/*.vue"],
   }
 ];

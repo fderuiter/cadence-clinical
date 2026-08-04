@@ -236,6 +236,7 @@ When CI fails, use this table to identify the root cause and exact fix:
 | `ADR validation failed` | Architectural change without a matching ADR | `python3 scripts/create_adr.py ...` — fill in rationale |
 | `Bandit: high severity issue` | Security-sensitive pattern in code | Fix the flagged pattern; if intentional add `# nosec B<code>: <justification>` |
 | `Secret detected` | Credential or token in source | Remove the secret; update `.secrets.baseline` with `detect-secrets scan` |
+| `DEID compliance scan failure` | Sensitive PII/PHI (SSN, Email, Date) flagged in files | Apply inline bypass (e.g., `# deid-ignore`) in mock/test files; remove actual sensitive data |
 | `Code Duplication Detected Above Threshold` | A consecutive block of 15 or more normalized lines of code is duplicated across different files. | Run `python3 scripts/detect_duplication.py` to identify, refactor to share logic, or add to the inline list of ignored sets inside `scripts/detect_duplication.py` if exempt. |
 
 ---
@@ -385,6 +386,128 @@ ignored_pair = {
 
 ---
 
+## GxP & HIPAA Compliance Scan Protocol
+
+To accelerate release velocity, prevent accidental PII/PHI leakage, and resolve false positives in mock clinical data without manual intervention, follow the compliance scan protocol below. These guidelines ensure 100% alignment between local pre-commit verification and central CI security jobs.
+
+### 1. Compliance Scanning & Security Tools
+Local security sweeps and compliance checks run using the workspace runner (`uv run`).
+
+#### De-identification (DEID) Scan Tool
+Scans files for PII/PHI leakage (emails, SSNs, IP addresses, dates, and geographic information).
+- **Package Path:** `packages/deid/`
+- **CLI Entry Point:** `packages.deid.cli`
+- **Local Run Command:**
+  ```bash
+  uv run python -m packages.deid.cli [paths...] [--profile PROFILE]
+  ```
+
+#### Security Audit Tool
+Scans code and configurations for hardcoded secrets, unencrypted tokens, private keys, and insecure configurations to comply with GxP 21 CFR Part 11 security guidelines.
+- **Script Path:** `scripts/audit_security.py`
+- **Local Run Command:**
+  ```bash
+  uv run python scripts/audit_security.py
+  ```
+
+---
+
+### 2. Scanning Profiles
+The DEID compliance scan supports specific regional scanning standards using the `--profile` flag:
+
+- **`HIPAA` (Default):** Enables all standard clinical detectors (including emails, dates, SSNs, geographic details, IP addresses, URLs, MRN/accounts, and age-related fields).
+- **`GDPR`:** Enables all standard regional identifiers and compliance rules matching GDPR specifications.
+- **`EU_CTR`:** Enables a subset focused specifically on clinical trials: `DATES`, `MEDICAL_RECORD_ACCOUNT`, and `AGE`.
+
+Example running a GDPR scan on specific directories:
+```bash
+uv run python -m packages.deid.cli apps/designer/ --profile GDPR
+```
+
+---
+
+### 3. Verification Patterns & Branch Filters (CI Alignment)
+Local execution patterns must match the exact verification patterns and branch filters configured in central CI jobs (`.github/workflows/ci.yml`). In CI, the de-identification checks target specific file extensions: `.py`, `.js`, `.ts`, `.tsx`, `.jsx`, `.json`, `.md`, `.log`, and `.txt`.
+
+To simulate CI checks locally before pushing, use the appropriate branch filtering command below:
+
+#### Simulating Pull Request Verification (Local Branch vs. Main)
+Runs the scanner only on changed files in your branch compared to the common ancestor branch (`origin/main`):
+```bash
+# Fetch origin/main to find the correct ancestor ref
+git fetch origin main --depth=1 || true
+
+# Run the DEID scanner against files changed on your PR branch
+uv run python -m packages.deid.cli $(git diff --name-only origin/main...HEAD 2>/dev/null | grep -E '\.(py|js|ts|tsx|jsx|json|md|log|txt)$' || true)
+```
+
+#### Simulating Push/Commit-by-Commit Verification (Incremental Commit checks)
+Runs the scanner on changes introduced in the last commit:
+```bash
+uv run python -m packages.deid.cli $(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '\.(py|js|ts|tsx|jsx|json|md|log|txt)$' || true)
+```
+
+---
+
+### 4. Multi-Language Comment Bypass Pragmas
+To resolve false positives in testing and mock clinical data, use inline developer comment bypass pragmas. 
+* **Strict Security Guardrail:** Inline bypass pragmas are strictly restricted to non-production code, mock data structures, and tests. They must **never** be applied to production codebase paths or production configuration files to ensure core security scans are never bypassed.
+
+There are three case-sensitive inline comment pragmas supported globally by the scanners:
+1. `deid-ignore`
+2. `pragma: allowlist`
+3. `deid: ignore`
+*Note: For the security audit script (`scripts/audit_security.py`), the `nosec` comment is used to bypass credential warnings (e.g., `# nosec B<code>: <justification>`).*
+
+#### Language-Specific Syntax Examples
+
+##### Python (`#` comment syntax)
+```python
+mock_ssn = "000-12-3456"  # deid-ignore
+mock_email = "test-patient@example.com"  # pragma: allowlist
+mock_birth_date = "1960-01-01"  # deid: ignore
+```
+
+##### Frontend / Scripting (`//` or `/* */` comments in JS, TS, JSX, TSX, CSS)
+```typescript
+const mockSsn = "000-12-3456"; // deid-ignore
+const mockEmail = "test-patient@example.com"; // pragma: allowlist
+const mockBirthDate = "1960-01-01"; // deid: ignore
+```
+
+##### Configuration & Markup (YAML & Markdown / HTML)
+- **YAML:**
+  ```yaml
+  mock_ssn: "000-12-3456" # deid-ignore
+  mock_email: "test-patient@example.com" # pragma: allowlist
+  ```
+- **Markdown / HTML Comments:**
+  ```html
+  <!-- deid-ignore -->
+  ```
+- **JSON files:** JSON files do not natively support inline comments. To handle JSON mock data false-positives, rely on the scanner's automated file-level exclusion hierarchy (such as placing the file in a `tests/` directory) or utilize built-in automated value-level heuristics.
+
+---
+
+### 5. Nested Exclusion Rules Hierarchy & Automated Heuristics
+The compliance parser resolves scanning constraints through a multi-tiered filtering hierarchy to prevent blocking developers with harmless mock/test records.
+
+#### Tier 1: Directory & File-Level Exclusions (Configured in Scanner)
+The scanner automatically skips directories and files typically containing non-production data, tests, dependencies, or configuration:
+- **Test Directories:** `tests/`, `test/`, and files starting/ending with test names (e.g., `test_*.py`, `*.test.js`).
+- **Dependencies & Build Assets:** `node_modules/`, `.git/`, `.venv/`, `env/`, `build/`, `dist/`.
+- **Caches & GitHub Configurations:** `.github/`, `.ruff_cache/`, `.pytest_cache/`.
+- **Gitignored Files:** Automatically ignored using standard `.gitignore` rules (validated via `git check-ignore`).
+
+#### Tier 2: Built-in Automated Value-Level Heuristics
+Certain values are globally excluded or bypassed by the parser heuristics automatically:
+- **IP Addresses & URLs:** Bypasses localhost/loopback addresses (`127.0.0.1`, `0.0.0.0`, `::1`) and test-infrastructure or registry domains (e.g., `github.com`, `pypi.org`, `npmjs.com`, `nih.gov`, `cadence-clinical.com`, `transmit-mock`).
+- **Emails:** Any email address containing the substring `"cadence"` or `"clinical"`.
+- **Dates:** Common testing default dates (e.g., `"2024-09-27"`, `"1960-01-01"`, `"2026-07-30"`, `"02-aug-2026"`, `"2026-08-04"`) or any lines containing standard config/version fields such as `"version"`, `"package"`, `"release"`, `"epoch"`, or `"default"`.
+- **Geographic/ZIPs:** Standard test/dummy identifiers (e.g., `12345`, `65537`, `65536`, `86400`, `30000`).
+
+---
+
 ## Environment State Recovery
 
 This section details instructions for autonomous agents to diagnose and recover from local environment blockages (e.g., port conflicts, database migration failures, or corrupted database states) independently, without requiring developer intervention.
@@ -451,6 +574,8 @@ Agents may invoke these tools directly when needed:
 | `python3 scripts/validate_markdown.py` | Check all Markdown link integrity |
 | `uv run pytest -n auto --cov=apps --cov=packages` | Run full test suite with coverage |
 | `uv run bandit -c pyproject.toml -ll -ii -r apps packages` | Static security analysis |
+| `uv run python -m packages.deid.cli [paths...]` | Local de-identification (DEID) scanner to check specific files/directories for PII/PHI leakage |
+| `uv run python scripts/audit_security.py` | Execute standard repository-wide security and credentials sweep |
 | `python3 scripts/detect_duplication.py` | Run workspace-wide code duplication scanner |
 | `python3 scripts/detect_duplication.py <files>` | Run duplication scanner in target changed-files mode |
 
@@ -469,5 +594,6 @@ Before submitting a PR, verify all items:
 * [ ] All local checks pass: `uv run ruff check .` and `uv run ruff format --check .`
 * [ ] GxP compliance docs are up to date: `uv run python scripts/sync_gxp.py` run and committed.
 * [ ] `docs/SDLC/` Markdown docs updated if a service boundary or data flow changed.
+* [ ] Local compliance and security sweeps run and pass, with any false positives bypassed using standard comment pragmas (restricted to mock/test files).
 * [ ] No code duplication failures (run `python3 scripts/detect_duplication.py` locally to verify, or whitelist if exempt).
 * [ ] No binary `.docx` files, `report.xml`, or secrets are staged.
