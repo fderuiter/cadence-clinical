@@ -244,3 +244,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-07: Extend Centralized Permission Matrix for eCOA Diary Alert Actions](2026-09-07-extend-ecoa-diary-alert-permissions.md)
 - [2026-08-03: Decommission Legacy Standalone Frontend Rendering Engine and Legacy V1 Signatures](2026-08-03-cleanup-legacy-rendering-v1-signatures.md)
 - [2026-09-08: Decommission legacy rendering and v1 signatures](2026-09-08-decommission-legacy-rendering-and-v1-signatures.md)
+- [2026-09-08: Align Workspace Dependencies and Eliminate Duplicate Declarations](2026-09-08-align-workspace-dependencies-and-eliminate-duplicate-declarations.md)
