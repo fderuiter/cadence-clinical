@@ -1275,6 +1275,7 @@ import { ref, reactive, computed, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth";
 import { auditorService } from "../api/auditor";
 import { etmfService } from "../api/etmf";
+import { apiClient } from "../api/apiClient";
 import SignatureCaptureModal from "../components/SignatureCaptureModal.vue";
 
 const authStore = useAuthStore();
@@ -1488,18 +1489,9 @@ async function previewDocument(doc) {
     previewDoc.value = doc;
     previewContent.value = "Loading secure watermarked content...";
 
-    // Fetch watermarked preview content using auth helper
+    // Fetch watermarked preview content using centralized apiClient
     const url = auditorService.getWatermarkedDownloadUrl(doc.id);
-    const token = authStore.token || authStore.accessToken;
-    const headers = {};
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-    const response = await fetch(url, { headers });
-    if (!response.ok) {
-      throw new Error(`Failed to load preview: ${response.statusText}`);
-    }
-    const text = await response.text();
+    const text = await apiClient.get(url, { responseType: "text" });
     previewContent.value = text;
 
     // Trigger log refresh to show read VIEW audit log entry
@@ -1655,25 +1647,9 @@ function formatTimestamp(isoString) {
   }
 }
 
-// GxP secure file download with Keycloak auth header propagation
+// GxP secure file download with Keycloak auth header propagation using centralized apiClient
 async function downloadFileWithAuth(url, filename) {
-  const token = authStore.token || authStore.accessToken;
-  const headers = {};
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-  const response = await fetch(url, { headers });
-  if (!response.ok) {
-    let errMessage = "Download failed";
-    try {
-      const errJson = await response.json();
-      errMessage = errJson?.detail || errJson?.message || errMessage;
-    } catch {
-      // not json
-    }
-    throw new Error(`${response.status} ${response.statusText}: ${errMessage}`);
-  }
-  const blob = await response.blob();
+  const blob = await apiClient.get(url, { responseType: "blob" });
   const blobUrl = window.URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = blobUrl;

@@ -1,4 +1,5 @@
 import { useSyncStore } from "../stores/sync";
+import { apiClient } from "../api/apiClient";
 
 export interface PendingDelta {
   deltaId: string;
@@ -179,18 +180,18 @@ export class ClientSyncEngine {
       const deltasToSync = allDeltas.slice(0, batchSize);
 
       const clientBatchId = `batch_${Date.now()}`;
-      const response = await fetch("/api/v1/offline/sync-batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const response = (await apiClient.post(
+        "/api/v1/offline/sync-batch",
+        {
           client_batch_id: clientBatchId,
           device_id:
             typeof navigator !== "undefined"
               ? navigator.userAgent
               : "NodeJS/Test",
           deltas: deltasToSync,
-        }),
-      });
+        },
+        { responseType: "raw", relative: true }
+      )) as unknown as Response;
 
       if (response.status === 409) {
         // Conflict detected!
@@ -258,15 +259,15 @@ export class ClientSyncEngine {
     syncStore.setStatus("SYNCING");
 
     try {
-      const response = await fetch("/api/v1/offline/resolve-conflict", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const response = (await apiClient.post(
+        "/api/v1/offline/resolve-conflict",
+        {
           delta_id: conflictId,
           strategy,
           reason_for_change: reason,
-        }),
-      });
+        },
+        { responseType: "raw", relative: true }
+      )) as unknown as Response;
 
       if (!response.ok) {
         throw new Error(`Conflict resolution failed: ${response.status}`);

@@ -1,5 +1,22 @@
-import { apiClient, getBaseUrl } from "./apiClient";
+import { apiClient } from "./apiClient";
+import { HttpClient } from "ui";
 import { useAuthStore } from "../stores/auth";
+
+const getBaseUrl = () => {
+  return import.meta.env?.VITE_API_BASE_URL || "http://localhost:8000";
+};
+
+const webIngestionClient = new HttpClient({
+  baseUrl: getBaseUrl,
+  authResolver: () => {
+    try {
+      const authStore = useAuthStore();
+      return authStore?.token || authStore?.accessToken || null;
+    } catch {
+      return null;
+    }
+  },
+});
 
 /**
  * API Client for Protocol Ingestion / CRF Builder (Phase 2 Ingestion).
@@ -10,33 +27,12 @@ export const ingestionClient = {
    */
   async uploadProtocol(file, options = {}) {
     const { changeReason = "Upload protocol document" } = options;
-    const baseUrl = getBaseUrl();
-    const url = `${baseUrl}/api/v1/designer/ingestion/upload`;
-
     const formData = new FormData();
     formData.append("file", file);
 
-    const headers = {};
-    const authStore = useAuthStore();
-    const token = authStore?.token || authStore?.accessToken;
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-    if (changeReason) {
-      headers["X-Change-Reason"] = changeReason;
-    }
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: formData,
+    return webIngestionClient.post("/api/v1/designer/ingestion/upload", formData, {
+      changeReason,
     });
-
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data?.detail || "Upload failed");
-    }
-    return response.json();
   },
 
   /**

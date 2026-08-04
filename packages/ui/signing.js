@@ -382,6 +382,10 @@ export async function encryptAESGCM(payload, rawKey, version = 1, aad = null) {
   const serialized = canonicalSerialize(payload);
   const plaintextBytes = new TextEncoder().encode(serialized);
 
+  if (!globalThis.crypto || !globalThis.crypto.getRandomValues) {
+    throw new Error("Secure CSPRNG (globalThis.crypto.getRandomValues) is required. Insecure PRNGs are rejected.");
+  }
+
   // 12-byte random nonce
   const nonce = globalThis.crypto.getRandomValues(new Uint8Array(12));
 

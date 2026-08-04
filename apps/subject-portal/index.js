@@ -7,6 +7,7 @@ import {
   normalizeApprovedConsent,
   shapeComprehensionAnswers,
   interpretComprehensionResult,
+  HttpClient,
 } from "ui";
 import {
   queueSubmission,
@@ -345,6 +346,13 @@ function renderLedger() {
     .join("");
 }
 
+const portalHttpClient = new HttpClient({
+  baseUrl: "http://localhost:8000",
+  authResolver: () => {
+    return state.session.token || null;
+  },
+});
+
 // API Call helper
 async function dispatchApi(endpoint, options = {}) {
   let cleanEndpoint = endpoint;
@@ -354,46 +362,16 @@ async function dispatchApi(endpoint, options = {}) {
 
   let url;
   if (cleanEndpoint.startsWith("api/v1/")) {
-    url = `http://localhost:8000/${cleanEndpoint}`;
+    url = `/${cleanEndpoint}`;
   } else {
-    url = `http://localhost:8000/api/v1/interop/${cleanEndpoint}`;
-  }
-
-  const defaultHeaders = {
-    "Content-Type": "application/json",
-  };
-
-  if (options.change_reason) {
-    defaultHeaders["X-Change-Reason"] = options.change_reason;
-  } else if (
-    options.headers &&
-    (options.headers["X-Change-Reason"] || options.headers["x-change-reason"])
-  ) {
-    defaultHeaders["X-Change-Reason"] =
-      options.headers["X-Change-Reason"] || options.headers["x-change-reason"];
-  }
-
-  if (state.session.token) {
-    defaultHeaders["Authorization"] = `Bearer ${state.session.token}`;
+    url = `/api/v1/interop/${cleanEndpoint}`;
   }
 
   try {
-    const res = await fetch(url, {
+    return await portalHttpClient.request(url, {
       ...options,
-      headers: { ...defaultHeaders, ...options.headers },
+      headers: { ...options.headers },
     });
-
-    if (!res.ok) {
-      let errBody = "";
-      try {
-        const parsed = await res.json();
-        errBody = parsed.detail || parsed.message || "";
-      } catch {
-        // ignored
-      }
-      throw new Error(errBody || `HTTP Error ${res.status}`);
-    }
-    return await res.json();
   } catch (err) {
     console.warn(
       `Gateway API call '${endpoint}' failed (running in sandbox/offline mode):`,

@@ -102,6 +102,8 @@ export {
   deriveSessionKey,
 } from "./signing.js";
 
+export { HttpClient, HttpClientError } from "./httpClient.js";
+
 /**
  * Generates vanilla HTML string for a single condition row in the rule builder.
  * Includes selectors for form, field, operator, right-hand operand type/value/field reference.

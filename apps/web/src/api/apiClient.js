@@ -18,87 +18,36 @@ export class ApiError extends Error {
   }
 }
 
+let webHttpClient = null;
+
+async function getClient() {
+  if (!webHttpClient) {
+    const { HttpClient } = await import("ui");
+    webHttpClient = new HttpClient({
+      baseUrl: getBaseUrl,
+      authResolver: () => {
+        try {
+          const authStore = useAuthStore();
+          return authStore?.token || authStore?.accessToken || null;
+        } catch {
+          return null;
+        }
+      },
+    });
+  }
+  return webHttpClient;
+}
+
 /**
- * Generic request helper.
- * Automatically resolves the bearer token from the Pinia auth store if present.
+ * Generic request helper wrapping the centralized HttpClient.
  */
 async function request(path, options = {}) {
-  let token = null;
   try {
-    const authStore = useAuthStore();
-    token = authStore?.token || authStore?.accessToken;
-  } catch {
-    // Pinia not active or initialized, ignore or log
-  }
-
-  const {
-    method = "GET",
-    headers = {},
-    body,
-    changeReason,
-    ...customOptions
-  } = options;
-
-  const requestHeaders = {
-    "Content-Type": "application/json",
-    ...headers,
-  };
-
-  if (token) {
-    requestHeaders["Authorization"] = `Bearer ${token}`;
-  }
-
-  // Caller can supply a change reason for mutations, passed as X-Change-Reason
-  const upperMethod = method.toUpperCase();
-  const isMutation = ["POST", "PUT", "DELETE", "PATCH"].includes(upperMethod);
-  const resolvedChangeReason =
-    changeReason || headers["X-Change-Reason"] || headers["x-change-reason"];
-
-  if (isMutation && resolvedChangeReason) {
-    requestHeaders["X-Change-Reason"] = resolvedChangeReason;
-  }
-
-  // Construct URL cleanly reading base URL dynamically
-  const baseUrl = getBaseUrl();
-  const cleanPath = path.startsWith("/") ? path : `/${path}`;
-  const url = `${baseUrl}${cleanPath}`;
-
-  const fetchOptions = {
-    method: upperMethod,
-    headers: requestHeaders,
-    ...customOptions,
-  };
-
-  if (body) {
-    fetchOptions.body = typeof body === "string" ? body : JSON.stringify(body);
-  }
-
-  try {
-    const response = await fetch(url, fetchOptions);
-    if (!response.ok) {
-      let data = null;
-      try {
-        data = await response.json();
-      } catch {
-        // Not JSON
-      }
-      throw new ApiError(
-        data?.detail ||
-          data?.message ||
-          `Request failed with status ${response.status}`,
-        response.status,
-        response.statusText,
-        data
-      );
-    }
-
-    if (response.status === 204) {
-      return null;
-    }
-    return await response.json();
+    const client = await getClient();
+    return await client.request(path, options);
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
+    if (error.name === "HttpClientError" || error.status !== undefined) {
+      throw new ApiError(error.message, error.status, error.statusText, error.data);
     }
     throw new ApiError(error.message || "Network or unknown error occurred");
   }
