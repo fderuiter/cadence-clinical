@@ -6,7 +6,7 @@ import pytest
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from scripts.self_heal import is_safe_file, main
+from scripts.self_heal import handle_github_api_error, is_safe_file, main
 
 
 def test_is_safe_file():
@@ -109,3 +109,16 @@ def test_main_no_conflict_needed(mock_update_comment, mock_run_cmd):
                 main()
             mock_exit.assert_called_once_with(0)
             mock_update_comment.assert_not_called()
+
+
+def test_handle_github_api_error():
+    # Test that handle_github_api_error exits 0 on permission/auth errors
+    for err in [
+        "403 Forbidden",
+        "Resource not accessible by integration",
+        "Viewer can't make query",
+        "gh auth login",
+    ]:
+        with pytest.raises(SystemExit) as exc_info:
+            handle_github_api_error(err)
+        assert exc_info.value.code == 0

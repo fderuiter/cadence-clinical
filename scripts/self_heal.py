@@ -15,6 +15,37 @@ import subprocess
 import sys
 
 
+def handle_github_api_error(stderr_msg: str) -> None:
+    """Check for permission, authorization, or other non-blocking errors and exit gracefully.
+
+    Args:
+        stderr_msg: The standard error output message from the CLI command.
+    """
+    combined = stderr_msg.lower()
+    patterns = [
+        "resource not accessible by integration",
+        "403",
+        "http 403",
+        "must have admin rights",
+        "viewer can't make query",
+        "not logged in",
+        "gh auth login",
+        "populate the gh_token",
+        "unauthorized",
+        "forbidden",
+        "permission",
+        "api error",
+    ]
+    if any(p in combined for p in patterns):
+        print(
+            "WARNING: GitHub API permission or authentication error occurred.\n"
+            f"Error details: {stderr_msg.strip()}\n"
+            "Skipping automated self-healing.",
+            file=sys.stderr,
+        )
+        sys.exit(0)
+
+
 def run_command(args: list[str], check: bool = True) -> tuple[str, str]:
     """Run a system command and return (stdout, stderr)."""
     try:
@@ -30,6 +61,7 @@ def run_command(args: list[str], check: bool = True) -> tuple[str, str]:
         print(f"Command failed: {' '.join(args)}")
         print(f"Stdout: {e.stdout}")
         print(f"Stderr: {e.stderr}")
+        handle_github_api_error(e.stderr)
         if check:
             raise e
         return e.stdout.strip(), e.stderr.strip()
@@ -123,6 +155,7 @@ def main() -> None:
 
     if not pr_json:
         print(f"Error fetching PR details: {pr_err}")
+        handle_github_api_error(pr_err)
         sys.exit(1)
 
     try:
