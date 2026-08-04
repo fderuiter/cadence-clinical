@@ -606,7 +606,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
-import { apiClient } from "../api/apiClient";
+import { apiClient } from "@/api/apiClient";
 import ReasonModal from "../components/ReasonModal.vue";
 import {
   createRuleEditorHTML,
