@@ -577,6 +577,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_manifest_tamper_evident_asymmetric` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_manifest_tamper_evident_symmetric` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_no_raw_matched_values_persisted` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_normalize_and_cap_age_direct` | `tests.test_deidentification` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_overlap_resolution_comprehensive` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_source_documents_remain_unchanged` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_transforms_all_strategies` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |

@@ -319,14 +319,39 @@ def test_age_capping_thresholds():
         {"USUBJID": "S2", "AGE": "92"},
         {"USUBJID": "S3", "AGE": 89},
         {"USUBJID": "S4", "AGE": 45},
+        {"USUBJID": "S5", "AGE": "92.5"},
+        {"USUBJID": "S6", "AGE": "95 years"},
+        {"USUBJID": "S7", "AGE": "34 yrs"},
+        {"USUBJID": "S8", "AGE": 92.5},
+        {"USUBJID": "S9", "AGE": None},
+        {"USUBJID": "S10", "AGE": True},
     ]
 
     transformed = deidentify_export_data(records, salt)
 
     assert transformed[0]["AGE"] == 89
-    assert transformed[1]["AGE"] == 89
+    assert isinstance(transformed[0]["AGE"], int)
+
+    assert transformed[1]["AGE"] == "89"
+    assert isinstance(transformed[1]["AGE"], str)
+
     assert transformed[2]["AGE"] == 89
     assert transformed[3]["AGE"] == 45
+
+    assert transformed[4]["AGE"] == "89"
+    assert isinstance(transformed[4]["AGE"], str)
+
+    assert transformed[5]["AGE"] == "89"
+    assert isinstance(transformed[5]["AGE"], str)
+
+    assert transformed[6]["AGE"] == "34 yrs"
+    assert isinstance(transformed[6]["AGE"], str)
+
+    assert transformed[7]["AGE"] == 89.0
+    assert isinstance(transformed[7]["AGE"], float)
+
+    assert transformed[8]["AGE"] is None
+    assert transformed[9]["AGE"] is True
 
 
 def test_scrub_error_message_direct():
