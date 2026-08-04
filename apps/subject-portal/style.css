@@ -396,10 +396,11 @@ body {
 
 .form-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
-  padding-top: 16px;
+  gap: var(--spacing-sm, 12px);
+  margin-top: var(--spacing-xl, 24px);
+  padding-top: var(--spacing-md, 16px);
   border-top: 1px solid var(--border);
 }
 
@@ -773,8 +774,8 @@ textarea[aria-invalid="true"]:focus-visible {
 .touch-target,
 .min-touch-target,
 .touch-target-interactive {
-  min-height: var(--touch-target-min, 44px) !important;
-  min-width: var(--touch-target-min, 44px) !important;
+  min-height: var(--touch-target-min, 48px) !important;
+  min-width: var(--touch-target-min, 48px) !important;
 }
 
 /* 2. Keyboard Navigation Focus Indicators (Requirement 2) */
