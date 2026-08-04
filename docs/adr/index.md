@@ -43,6 +43,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
 
 ### 2. API Gateway, Security & Identity
+- [2026-08-04: Transition to PSS Padding for RSA Signatures and Verifications](2026-08-04-transition-to-pss-padding-for-rsa-signatures-and-verifications.md)
 - [2026-08-04: Multi-Node Signature Replay Prevention with Redis Fallback](2026-08-04-multi-node-signature-replay-prevention-with-redis-fallback.md)
 - [2026-08-04: Refactor security context decorator for Python 3.14 compatibility](2026-08-04-refactor-security-context-decorator-for-python-314-compatibility.md)
 - [2026-08-04: Implement Native Interval Filtering and Custom Name Matching in Scrubber](2026-08-04-implement-native-interval-filtering-and-custom-name-matching-in-scrubber.md)
@@ -259,3 +260,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 - [2026-08-04: Compile-Time Vite Build Mode for Interactive Public Demo](2026-08-04-compile-time-vite-build-mode-for-interactive-public-demo.md)
 - [2026-08-04: Centralized Redis eSignature Token Replay Prevention](2026-08-04-centralized-redis-esignature-token-replay-prevention.md)
+- [2026-08-04: RSA-PSS Cryptographic Padding for Electronic Signatures](2026-08-04-rsa-pss-cryptographic-padding-for-electronic-signatures.md)
