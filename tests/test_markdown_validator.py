@@ -106,6 +106,24 @@ def test_resolve_path(tmp_path):
         is None
     )
 
+    # 6. Compiled build artifacts (dist, build, node_modules) return None
+    assert (
+        vm.resolve_path(
+            "packages/ui/dist/index.js", md_file, repo_root, root_dirs, root_files
+        )
+        is None
+    )
+    assert (
+        vm.resolve_path("build/bundle.js", md_file, repo_root, root_dirs, root_files)
+        is None
+    )
+    assert (
+        vm.resolve_path(
+            "node_modules/vue/package.json", md_file, repo_root, root_dirs, root_files
+        )
+        is None
+    )
+
 
 def test_validate_path(tmp_path):
     """Verifies validate_path detects existing/nonexistent files and boundaries."""
@@ -423,6 +441,53 @@ class TestModel(BaseModel):
     assert len(vm.errors) == 0
 
 
+def test_contributing_guide_skip_and_validation(tmp_path):
+    """Verifies that an inline skip comment inside a Python block prevents validation,
+    while non-annotated blocks in the same file are still validated and fail on mismatch.
+    """
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    # Create a codebase file with a function
+    apps_dir = repo_root / "apps" / "designer"
+    apps_dir.mkdir(parents=True)
+    cb_file = apps_dir / "delta.py"
+    cb_file.write_text("def test_func(tx, study_id):\n    pass\n")
+
+    # Create a markdown file (guideline)
+    md_file = repo_root / "CONTRIBUTING.md"
+
+    md_content = """# Guide
+
+This block is skipped because of the inline skip comment:
+```python
+# skip
+def test_func(tx, study_version_id):
+    pass
+```
+
+This block is standard, so it should be validated and fail on mismatch:
+```python
+# apps/designer/delta.py
+def test_func(tx, study_version_id):
+    pass
+```
+"""
+    md_file.write_text(md_content)
+
+    codebase_map = vm.build_codebase_map(repo_root)
+    # Clear errors before run
+    vm.errors.clear()
+    vm.process_markdown_file(md_file, repo_root, set(), set(), codebase_map)
+
+    # We expect exactly 1 error (from the second block)
+    assert len(vm.errors) == 1
+    assert (
+        "Mismatched Python signature for function 'test_func'"
+        in vm.errors[0]["message"]
+    )
+
+
 def test_main_with_arguments(monkeypatch):
     """Verifies that main() processes only the markdown files specified in sys.argv."""
     import sys
@@ -520,3 +585,140 @@ See [my document][ref1] and also [broken doc][ref2].
         "Referenced reference-link './nonexistent-ref.md' does not exist."
         in vm.errors[0]["message"]
     )
+
+
+def test_sys_path_append():
+    """Verifies that packages and apps subdirectories are appended to sys.path, not prepended."""
+    import sys
+    from pathlib import Path
+
+    for p in Path("/app/packages").glob("*"):
+        if p.is_dir():
+            path_str = str(p)
+            assert path_str in sys.path
+            # Since they were appended, they should not be at index 0
+            assert sys.path.index(path_str) > 0
+
+
+def test_mock_environment_variables():
+    """Verifies that default/mock environment configurations are injected into os.environ."""
+    import os
+
+    assert os.environ.get("DATABASE_URL") is not None
+    assert os.environ.get("ENV") is not None
+    assert os.environ.get("ENVIRONMENT") is not None
+    assert os.environ.get("DEBUG") == "True"
+
+
+def test_exclude_tests_from_codebase_map(tmp_path):
+    """Verifies that 'tests' and 'test' directories are excluded during codebase map generation."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    apps_dir = repo_root / "apps" / "designer"
+    apps_dir.mkdir(parents=True)
+    (apps_dir / "models.py").write_text("class RealModel:\n    pass\n")
+
+    tests_dir = repo_root / "tests"
+    tests_dir.mkdir()
+    (tests_dir / "test_models.py").write_text("class TestModel:\n    pass\n")
+
+    test_dir = repo_root / "test"
+    test_dir.mkdir()
+    (test_dir / "test_something.py").write_text("class AnotherTestModel:\n    pass\n")
+
+    codebase_map = vm.build_codebase_map(repo_root)
+
+    assert "RealModel" in codebase_map
+    assert "TestModel" not in codebase_map
+    assert "AnotherTestModel" not in codebase_map
+
+
+def test_degraded_linter_warnings_and_fallback(tmp_path, capsys):
+    """Verifies that a dynamic import failure emits a degraded coverage warning to stderr, then falls back."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    packages_dir = repo_root / "packages" / "core-models"
+    packages_dir.mkdir(parents=True)
+    cb_file = packages_dir / "failing_model.py"
+    cb_file.write_text("""from pydantic import BaseModel, Field
+raise ValueError("Simulated top-level import failure")
+class BrokenModel(BaseModel):
+    id: str = Field(...)
+""")
+
+    docs_dir = repo_root / "docs"
+    docs_dir.mkdir()
+    md_file = docs_dir / "test_doc.md"
+
+    md_content = """# Doc
+#### BrokenModel
+```json
+{
+  "id": "123"
+}
+```
+"""
+    md_file.write_text(md_content)
+
+    codebase_map = vm.build_codebase_map(repo_root)
+
+    assert "BrokenModel" in codebase_map
+
+    vm.process_markdown_file(md_file, repo_root, set(), set(), codebase_map)
+
+    captured = capsys.readouterr()
+
+    assert "[WARNING] Degraded linter coverage" in captured.err
+    assert "Failed to dynamically load Pydantic model 'BrokenModel'" in captured.err
+    assert "ValueError: Simulated top-level import failure" in captured.err
+    assert "Falling back to basic shallow AST structure verification" in captured.err
+
+    assert len(vm.errors) == 0
+
+
+def test_degraded_linter_warnings_and_fallback_failure(tmp_path, capsys):
+    """Verifies that if fallback also fails (missing required field), errors are reported."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    packages_dir = repo_root / "packages" / "core-models"
+    packages_dir.mkdir(parents=True)
+    cb_file = packages_dir / "failing_model2.py"
+    cb_file.write_text("""from pydantic import BaseModel, Field
+raise ValueError("Another simulated top-level failure")
+class BrokenModel2(BaseModel):
+    id: str = Field(...)
+    name: str = Field(...)
+""")
+
+    docs_dir = repo_root / "docs"
+    docs_dir.mkdir()
+    md_file = docs_dir / "test_doc.md"
+
+    md_content = """# Doc
+#### BrokenModel2
+```json
+{
+  "id": "123"
+}
+```
+"""
+    md_file.write_text(md_content)
+
+    codebase_map = vm.build_codebase_map(repo_root)
+
+    vm.process_markdown_file(md_file, repo_root, set(), set(), codebase_map)
+
+    captured = capsys.readouterr()
+
+    assert "[WARNING] Degraded linter coverage" in captured.err
+    assert "ValueError: Another simulated top-level failure" in captured.err
+
+    assert len(vm.errors) == 1
+    assert (
+        "JSON example mismatch with Pydantic model 'BrokenModel2'"
+        in vm.errors[0]["message"]
+    )
+    assert "Missing required fields: ['name']" in vm.errors[0]["message"]
