@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-04: Implement Hexagonal Domain Repository Separation](2026-08-04-implement-hexagonal-domain-repository-separation.md)
 - [2026-08-04: System-Wide Hexagonal Architecture and Pytest-Archon Enforcement](2026-08-04-system-wide-hexagonal-architecture-and-pytest-archon-enforcement.md)
 - [2026-08-04: In Memory Terminology Search Cache](2026-08-04-in-memory-terminology-search-cache.md)
 - [2026-08-04: Centralized layout utilities and 48px touch targets](2026-08-04-centralized-layout-utilities-and-48px-touch-targets.md)
@@ -42,6 +43,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
 
 ### 2. API Gateway, Security & Identity
+- [2026-08-04: Fail-Fast Environment Validation for Cryptographic Secrets](2026-08-04-fail-fast-environment-validation-for-cryptographic-secrets.md)
 - [2026-08-04: Transition to PSS Padding for RSA Signatures and Verifications](2026-08-04-transition-to-pss-padding-for-rsa-signatures-and-verifications.md)
 - [2026-08-04: Multi-Node Signature Replay Prevention with Redis Fallback](2026-08-04-multi-node-signature-replay-prevention-with-redis-fallback.md)
 - [2026-08-04: Refactor security context decorator for Python 3.14 compatibility](2026-08-04-refactor-security-context-decorator-for-python-314-compatibility.md)
@@ -145,6 +147,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-31: Randomization and Trial Supply Management](2026-08-31-randomization-and-trial-supply-management.md)
 
 ### 5. Compliance, Audit & Governance
+- [2026-08-04: Enforce Fail-Fast Environment Validation for GxP Compliance](2026-08-04-enforce-fail-fast-environment-validation-for-gxp-compliance.md)
 - [2026-08-03: Fail-Safe GxP Document Generation and Draft Warning Banners](2026-08-03-fail-safe-gxp-document-generation-and-draft-warning-banners.md)
 - [2026-07-31: GxP 21 CFR Part 11 eConsent Audit Trails](2026-07-31-gxp-21-cfr-part-11-econsent-audit-trails.md)
 - [2026-09-06: GxP Compliance Reporting CI Alignment and Local Dependency Configuration](2026-09-06-gxp-compliance-reporting-ci-alignment.md)

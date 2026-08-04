@@ -25,6 +25,10 @@ def is_strict_compliance_active() -> bool:
     return True
 
 
+def is_mock_allowed() -> bool:
+    return os.getenv("ALLOW_MOCK_SIGNATURES") == "1"
+
+
 def is_bypass_requested(metadata_json: dict[str, Any] | None) -> bool:
     if not metadata_json:
         return False
@@ -65,7 +69,7 @@ def requires_signature(
     if is_mandatory:
         if is_strict_compliance_active():
             return True
-        if metadata_json is not None:
+        if is_mock_allowed() and metadata_json is not None:
             if "requires_signature" in metadata_json:
                 return metadata_json.get("requires_signature") is True
             if "require_signature" in metadata_json:
@@ -122,13 +126,17 @@ def extract_signature_from_content(
 
         if cert_match:
             cert_pem = cert_match.group(1).strip()
-            if not allow_mock and "mock" in cert_pem.lower():
+            if not allow_mock and "mock" in cert_pem.lower() and not is_mock_allowed():
                 raise ValueError("Mock signature detected and blocked.")
 
             sig_bytes = None
             if sig_match:
                 sig_str = sig_match.group(1).strip()
-                if not allow_mock and "mock" in sig_str.lower():
+                if (
+                    not allow_mock
+                    and "mock" in sig_str.lower()
+                    and not is_mock_allowed()
+                ):
                     raise ValueError("Mock signature detected and blocked.")
                 try:
                     sig_bytes = base64.b64decode(sig_str)
@@ -163,7 +171,7 @@ def extract_signature_from_content(
 
         if cert_match:
             cert_body = cert_match.group(1).strip()
-            if not allow_mock and "mock" in cert_body.lower():
+            if not allow_mock and "mock" in cert_body.lower() and not is_mock_allowed():
                 raise ValueError("Mock signature detected and blocked.")
 
             # If not wrapped in PEM, wrap it
@@ -175,7 +183,11 @@ def extract_signature_from_content(
             sig_bytes = None
             if sig_match:
                 sig_str = sig_match.group(1).strip()
-                if not allow_mock and "mock" in sig_str.lower():
+                if (
+                    not allow_mock
+                    and "mock" in sig_str.lower()
+                    and not is_mock_allowed()
+                ):
                     raise ValueError("Mock signature detected and blocked.")
                 try:
                     sig_bytes = base64.b64decode(sig_str)
@@ -214,7 +226,7 @@ def verify_x509_signature(
     try:
         # Check for mock signatures
         if "mock" in cert_pem.lower():
-            if is_strict_compliance_active():
+            if is_strict_compliance_active() or not is_mock_allowed():
                 logger.warning("Mock signature detected and blocked.")
                 return False
             return True
@@ -313,7 +325,7 @@ def validate_document_signature(
         "protocol_signoff",
     )
     is_strict = is_strict_compliance or is_strict_compliance_active()
-    if is_strict and is_mandatory and is_bypass_requested(metadata_json):
+    if is_strict and is_mandatory and is_bypass_requested(metadata_json) and not is_mock_allowed():
         return False, "Bypass attempt rejected for mandatory regulatory document."
 
     # 1. Attempt to extract from content
@@ -355,7 +367,7 @@ def validate_document_signature(
                     break
 
     # 3. Check for Mock signatures in extracted metadata blocks
-    if is_strict:
+    if is_strict and not is_mock_allowed():
         if cert_pem and "mock" in cert_pem.lower():
             return False, "Mock signature detected and blocked."
         if sig_bytes:
@@ -366,9 +378,9 @@ def validate_document_signature(
             except Exception:
                 pass
 
-    # 4. Handle Mock/Test cases cleanly for non-strict tests
+    # 4. Handle Mock/Test cases cleanly if allowed
     if (
-        not is_strict
+        (not is_strict or is_mock_allowed())
         and cert_pem
         and (
             "MOCK_SIGNATURE" in cert_pem

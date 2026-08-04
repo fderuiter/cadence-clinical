@@ -676,14 +676,64 @@ async def test_etmf_edge_cases_for_coverage():
     assert health_resp.json()["status"] == "ok"
 
     # 9. Ingest document with nested signature metadata dict to hit metadata parsing
+    import base64
+    import datetime
+
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import padding as asym_padding
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    from packages.security.cert_store import get_active_cert_store
+
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+    )
+    subject = issuer = x509.Name(
+        [
+            x509.NameAttribute(x509.NameOID.COMMON_NAME, "test-ca.org"),
+        ]
+    )
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(private_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(
+            datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=1)
+        )
+        .not_valid_after(
+            datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365)
+        )
+        .sign(private_key, hashes.SHA256())
+    )
+    cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+
+    # Register in trust store
+    store = get_active_cert_store()
+    store.register_certificate(user_id="admin", cert_pem=cert_pem)
+
+    content_str = "Signed content."
+    sig_bytes = private_key.sign(
+        content_str.strip().encode("utf-8"),
+        asym_padding.PSS(
+            mgf=asym_padding.MGF1(hashes.SHA256()),
+            salt_length=asym_padding.PSS.MAX_LENGTH,
+        ),
+        hashes.SHA256(),
+    )
+    sig_b64 = base64.b64encode(sig_bytes).decode("utf-8")
+
     payload_nested_sig = {
         "study_id": "study_xyz",
         "artifact_type": "Clinical Trial Protocol",
         "filename": "signed_doc.txt",
-        "content": "Signed content.",
+        "content": content_str,
         "mime_type": "text/plain",
         "metadata_json": {
-            "signature": {"certificate": "MOCK_SIGNATURE", "signature_value": "MOCK"}
+            "signature": {"certificate": cert_pem, "signature_value": sig_b64}
         },
     }
     nested_sig_resp = client.post(

@@ -9,10 +9,15 @@ Requirements: PRD-SYS-001, 21 CFR Part 11
 import datetime
 import hashlib
 import hmac
+import os
 import uuid
 from typing import Any
 
 from pydantic import BaseModel, Field
+
+AUDIT_LOG_SECRET_KEY = os.getenv("AUDIT_LOG_SECRET_KEY", "").strip()
+if not AUDIT_LOG_SECRET_KEY:
+    raise RuntimeError("AUDIT_LOG_SECRET_KEY environment variable is missing or empty")
 
 
 class AuditLogPayload(BaseModel):
@@ -67,7 +72,7 @@ def compute_audit_digest(
     reason_for_change: str,
     timestamp: str,
     previous_digest: str,
-    secret_key: str = "gxp-audit-secret-key-cadence-2026",
+    secret_key: str | None = None,
 ) -> str:
     """Compute deterministic SHA-256 HMAC digest binding audit log payload fields.
 
@@ -87,6 +92,10 @@ def compute_audit_digest(
     Returns:
         Hex-encoded SHA-256 HMAC digest string.
     """
+    if secret_key is None:
+        secret_key = (
+            os.getenv("AUDIT_LOG_SECRET_KEY", "").strip() or AUDIT_LOG_SECRET_KEY
+        )
     canonical_payload = (
         f"{event_id}|{service_name}|{action_type}|{entity_name}|{entity_id}|"
         f"{user_id}|{tenant_id}|{reason_for_change}|{timestamp}|{previous_digest}"
@@ -101,8 +110,12 @@ def compute_audit_digest(
 class AuditLoggerEngine:
     """In-memory and durable audit logging engine maintaining SHA-256 chain integrity."""
 
-    def __init__(self, secret_key: str = "gxp-audit-secret-key-cadence-2026") -> None:
-        self.secret_key = secret_key
+    def __init__(self, secret_key: str | None = None) -> None:
+        self.secret_key = (
+            secret_key
+            or os.getenv("AUDIT_LOG_SECRET_KEY", "").strip()
+            or AUDIT_LOG_SECRET_KEY
+        )
         self._chain: list[AuditLogRecord] = []
 
     @property

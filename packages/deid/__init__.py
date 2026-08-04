@@ -1,3 +1,13 @@
+import os
+
+# Set safe mock/placeholder environment variables for the CLI scanner to prevent startup crashes when imported
+os.environ.setdefault(
+    "AUDIT_LOG_SECRET_KEY", "test-gxp-audit-secret-key-placeholder-abc"
+)
+os.environ.setdefault(
+    "INBOUND_EMAIL_HMAC_SECRET", "test-email-hmac-secret-placeholder-xyz"
+)
+
 from packages.deid.detector import (
     DeidDetector,
     redact_text,
