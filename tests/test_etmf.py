@@ -676,28 +676,37 @@ async def test_etmf_edge_cases_for_coverage():
     assert health_resp.json()["status"] == "ok"
 
     # 9. Ingest document with nested signature metadata dict to hit metadata parsing
+    import base64
+    import datetime
+
     from cryptography import x509
     from cryptography.hazmat.primitives import hashes, serialization
-    from cryptography.hazmat.primitives.asymmetric import padding as asym_padding, rsa
-    import datetime
-    import base64
+    from cryptography.hazmat.primitives.asymmetric import padding as asym_padding
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
     from packages.security.cert_store import get_active_cert_store
 
     private_key = rsa.generate_private_key(
         public_exponent=65537,
         key_size=2048,
     )
-    subject = issuer = x509.Name([
-        x509.NameAttribute(x509.NameOID.COMMON_NAME, "test-ca.org"),
-    ])
+    subject = issuer = x509.Name(
+        [
+            x509.NameAttribute(x509.NameOID.COMMON_NAME, "test-ca.org"),
+        ]
+    )
     cert = (
         x509.CertificateBuilder()
         .subject_name(subject)
         .issuer_name(issuer)
         .public_key(private_key.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=1))
-        .not_valid_after(datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365))
+        .not_valid_before(
+            datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=1)
+        )
+        .not_valid_after(
+            datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365)
+        )
         .sign(private_key, hashes.SHA256())
     )
     cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
