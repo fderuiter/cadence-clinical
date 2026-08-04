@@ -433,7 +433,9 @@ def build_comment_body(
                 ast_report = json.load(f)
             resolved_files = ast_report.get("resolved_files", [])
             if resolved_files:
-                ast_merge_table = "\n\n#### 🧬 AST-Aware Merge Driver Resolution Report\n"
+                ast_merge_table = (
+                    "\n\n#### 🧬 AST-Aware Merge Driver Resolution Report\n"
+                )
                 ast_merge_table += "The following files containing structural updates (e.g., shifted helper functions, sorted imports) were successfully merged and resolved automatically using the AST-Aware Custom Merge Driver:\n"
                 for rf in resolved_files:
                     ast_merge_table += f"- `{rf}`\n"
