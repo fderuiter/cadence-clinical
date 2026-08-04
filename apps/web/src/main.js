@@ -5,6 +5,7 @@ import App from "./App.vue";
 import { router } from "./router";
 import Keycloak from "keycloak-js";
 import { useAuthStore } from "./stores/auth";
+import { initHoverDetection } from "ui";
 
 const app = createApp(App);
 const pinia = createPinia();
@@ -89,3 +90,6 @@ checkKeycloakReachable().then((reachable) => {
     }
   }
 });
+
+// Dynamic Hover Pointer Capability Detection
+initHoverDetection();

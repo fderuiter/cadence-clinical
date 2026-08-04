@@ -92,9 +92,9 @@
       @blur="handleInput"
       @click="handleCanvasClick"
       @mouseover="handleCanvasMouseOver"
-      @mouseout="hidePopover"
-      @focusin="handleCanvasMouseOver"
-      @focusout="hidePopover"
+      @mouseout="handleCanvasMouseOut"
+      @focusin="handleCanvasFocusIn"
+      @focusout="handleCanvasFocusOut"
       v-html="localHtml"
     />
 
@@ -150,7 +150,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from "vue";
+import { ref, watch, onMounted, onUnmounted } from "vue";
 
 const props = defineProps({
   section: {
@@ -173,6 +173,23 @@ const hoveredGlossaryTerm = ref(null);
 const hoveredGlossaryDefinition = ref(null);
 const popoverX = ref(null);
 const popoverY = ref(null);
+const isHoverSupported = ref(true);
+
+const handleDocumentClick = (e) => {
+  if (!hoveredGlossaryTerm.value) return;
+
+  const target = e.target;
+  if (target && target.classList.contains("glossary-term")) {
+    return;
+  }
+
+  const popoverEl = document.querySelector(".glossary-popover");
+  if (popoverEl && popoverEl.contains(target)) {
+    return;
+  }
+
+  hidePopover();
+};
 
 // Synchronize with prop changes
 watch(
@@ -188,6 +205,12 @@ watch(
 
 onMounted(() => {
   localHtml.value = props.section.html;
+  isHoverSupported.value = window.matchMedia("(hover: hover)").matches;
+  document.addEventListener("click", handleDocumentClick);
+});
+
+onUnmounted(() => {
+  document.removeEventListener("click", handleDocumentClick);
 });
 
 // Format actions via standard execCommand (or manual DOM fallback)
@@ -306,18 +329,36 @@ const handleCanvasClick = (e) => {
   const target = e.target;
   if (target && target.classList.contains("glossary-term")) {
     const definition = target.getAttribute("data-definition");
-    const term = target.innerText;
+    const term = target.innerText || target.textContent;
     if (definition) {
-      alert(`Glossary Definition:\n\n${term}: ${definition}`);
+      if (!isHoverSupported.value) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (hoveredGlossaryTerm.value === term) {
+          hidePopover();
+        } else {
+          hoveredGlossaryTerm.value = term;
+          hoveredGlossaryDefinition.value = definition;
+
+          const rect = target.getBoundingClientRect();
+          popoverX.value = rect.left + window.scrollX;
+          popoverY.value = rect.bottom + window.scrollY + 8;
+        }
+      } else {
+        alert(`Glossary Definition:\n\n${term}: ${definition}`);
+      }
     }
   }
 };
 
 const handleCanvasMouseOver = (e) => {
+  if (!isHoverSupported.value) return;
+
   const target = e.target;
   if (target && target.classList.contains("glossary-term")) {
     const definition = target.getAttribute("data-definition");
-    const term = target.innerText;
+    const term = target.innerText || target.textContent;
     if (definition) {
       hoveredGlossaryTerm.value = term;
       hoveredGlossaryDefinition.value = definition;
@@ -327,6 +368,24 @@ const handleCanvasMouseOver = (e) => {
       popoverX.value = rect.left + window.scrollX;
       popoverY.value = rect.bottom + window.scrollY + 8;
     }
+  }
+};
+
+const handleCanvasMouseOut = (_e) => {
+  if (isHoverSupported.value) {
+    hidePopover();
+  }
+};
+
+const handleCanvasFocusIn = (e) => {
+  if (isHoverSupported.value) {
+    handleCanvasMouseOver(e);
+  }
+};
+
+const handleCanvasFocusOut = (_e) => {
+  if (isHoverSupported.value) {
+    hidePopover();
   }
 };
 

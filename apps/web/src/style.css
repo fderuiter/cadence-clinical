@@ -139,7 +139,7 @@ aside {
   transition: all 0.2s;
 }
 
-.nav-item button:hover {
+.can-hover .nav-item button:hover {
   background-color: var(--neutral-light);
   color: var(--primary);
 }
@@ -481,7 +481,7 @@ main {
   transition: background-color 0.2s;
 }
 
-.query-flag:hover {
+.can-hover .query-flag:hover {
   background-color: var(--border);
 }
 
@@ -643,7 +643,7 @@ main {
   border-color: var(--accent);
 }
 
-.btn-primary:hover {
+.can-hover .btn-primary:hover {
   background-color: var(--accent-light);
   border-color: var(--accent-light);
 }
@@ -942,7 +942,7 @@ a:focus-visible,
   border-color: var(--color-success, #15803d) !important;
 }
 
-.btn-primary:hover {
+.can-hover .btn-primary:hover {
   background-color: var(--color-primary-dark, #014d76) !important;
   border-color: var(--color-primary-dark, #014d76) !important;
   color: #ffffff !important;
