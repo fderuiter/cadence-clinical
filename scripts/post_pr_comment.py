@@ -25,6 +25,8 @@ ROW_KEYS: dict[str, str] = {
     "Git Merge Conflicts": "conflict",
     "Code Duplication Scan": "duplication",
     "Requirements Traceability": "traceability",
+    "GxP Container Validation Suite": "gxp_validation",
+    "Database Migration Integrity": "migration",
 }
 
 FIX_COMMANDS: dict[str, str] = {
@@ -37,6 +39,8 @@ FIX_COMMANDS: dict[str, str] = {
     "deid": "`uv run python -m packages.deid.cli`",
     "duplication": "`python3 scripts/detect_duplication.py`",
     "traceability": "`python3 scripts/generate_rtm.py --validate`",
+    "gxp_validation": "`uv run pytest tests/validation/`",
+    "migration": "`uv run python3 apps/execution/database/rollback.py`",
 }
 
 
@@ -160,6 +164,8 @@ def merge_outcomes(
         "deid",
         "duplication",
         "traceability",
+        "gxp_validation",
+        "migration",
     ]:
         new_val = new_outcomes.get(key)
         existing_val = existing_outcomes.get(key)
@@ -328,6 +334,8 @@ def build_comment_body(
         ("DEID Compliance Scan", "deid"),
         ("Code Duplication Scan", "detect_duplication.py"),
         ("Git Merge Conflicts", "conflict"),
+        ("GxP Container Validation Suite", "gxp_validation"),
+        ("Database Migration Integrity", "migration"),
     ]
 
     for label, key in checks:
@@ -561,6 +569,8 @@ def main() -> None:
             "deid": os.environ.get("DEID_OUTCOME", ""),
             "duplication": os.environ.get("DUPLICATION_OUTCOME", ""),
             "traceability": os.environ.get("TRACEABILITY_OUTCOME", ""),
+            "gxp_validation": os.environ.get("GXP_VALIDATION_OUTCOME", ""),
+            "migration": os.environ.get("MIGRATION_OUTCOME", ""),
         }
 
         # Fetch existing comments to see if we have an existing checklist comment

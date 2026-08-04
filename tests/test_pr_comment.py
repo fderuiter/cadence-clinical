@@ -134,3 +134,30 @@ def test_traceability_outcome_handling():
 
     body_fail = build_comment_body({"traceability": "failure"}, has_failures=True)
     assert "[ ] **Requirements Traceability:**" in body_fail
+
+
+def test_gxp_validation_and_migration_outcomes():
+    """Verify GxP validation and database migration outcomes are correctly parsed, merged, and rendered."""
+    sample_comment = """<!-- ID: CADENCE_PR_QUALITY_GATE_CHECKLIST -->
+### ⚠️ Action Required: Quality Gate Verification Issues
+
+| Quality Gate / Check | Status |
+| :--- | :--- |
+| **GxP Container Validation Suite** | ❌ Failed |
+| **Database Migration Integrity** | ✅ Passed |
+"""
+    outcomes = parse_existing_outcomes(sample_comment)
+    assert outcomes.get("gxp_validation") == "failure"
+    assert outcomes.get("migration") == "success"
+
+    existing = {"gxp_validation": "failure", "migration": "success"}
+    new_runs = {"gxp_validation": "success", "migration": "failure"}
+    merged = merge_outcomes(new_runs, existing)
+    assert merged.get("gxp_validation") == "success"
+    assert merged.get("migration") == "failure"
+
+    body = build_comment_body(
+        {"gxp_validation": "success", "migration": "success"}, has_failures=False
+    )
+    assert "GxP Container Validation Suite" in body
+    assert "Database Migration Integrity" in body
