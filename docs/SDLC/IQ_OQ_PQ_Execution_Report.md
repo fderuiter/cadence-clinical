@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2121
-- **Passed:** 2116 🟢
+- **Total Automated Test Cases Run:** 2127
+- **Passed:** 2122 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
 - **Overall Operational Pass Rate:** 99.76%
@@ -1191,6 +1191,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_subject_stratification_factors_locking_domain` | `tests.test_hexagonal_domain` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_unblinding_and_withdrawal_domain` | `tests.test_hexagonal_domain` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_workflows_with_in_memory_repositories` | `tests.test_hexagonal_domain` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_api_routers_contain_no_direct_db_calls` | `tests.test_hexagonal_ports_adapters` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_designer_graph_modifications_with_mock_repositories` | `tests.test_hexagonal_ports_adapters` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_domain_models_contain_zero_database_imports` | `tests.test_hexagonal_ports_adapters` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_relational_services_execute_database_disabled` | `tests.test_hexagonal_ports_adapters` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_signed_consent_immutability_pure_python_validation` | `tests.test_hexagonal_ports_adapters` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_subject_status_transitions_pure_python_validation` | `tests.test_hexagonal_ports_adapters` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_bulk_offline_sync` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compute_reminders_all_subjects_staff` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compute_reminders_by_subject_and_end_date_branch` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
