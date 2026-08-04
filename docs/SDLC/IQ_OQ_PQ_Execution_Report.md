@@ -9,7 +9,6 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-
 - **Total Automated Test Cases Run:** 2109
 - **Passed:** 2104 🟢
 - **Failed/Errors:** 0 🔴
@@ -1487,6 +1486,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_clinical_staff_role_values` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_organization_type_values` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_trial_duty_values` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_duplicate_certificate_injection_rejected` | `tests.test_part11_compliance_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_legacy_padding_pkcs1v15_fails` | `tests.test_part11_compliance_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_mandatory_documents_bypass_rejected` | `tests.test_part11_compliance_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_mock_signatures_blocked` | `tests.test_part11_compliance_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rsassa_pss_succeeds` | `tests.test_part11_compliance_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unapproved_self_signed_certificate_fails` | `tests.test_part11_compliance_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_certificate_revocation_verification` | `tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_esignature_tamper_detection_e2e` | `tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_tampered_pdf_fails_verification` | `tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |

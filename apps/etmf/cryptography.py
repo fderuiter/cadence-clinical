@@ -250,7 +250,6 @@ def validate_document_signature(
         Tuple[bool, str]: (is_valid, status_message)
     """
     import inspect
-    import os
 
     is_strict_compliance = False
     for frame_info in inspect.stack():
