@@ -75,67 +75,75 @@ async def execute_expiration_scan_cycle(session_maker: Any) -> None:
     service_name = "expiration_scanner"
     change_reason = "System-initiated expiration alert generation"
 
+    from apps.etmf.database.context import current_session
+
     async with session_maker() as session:
-        # Query candidate TMFDocument rows (non-null expiration_date)
-        stmt = select(TMFDocument).where(TMFDocument.expiration_date.isnot(None))
-        res = await session.execute(stmt)
-        documents = res.scalars().all()
+        token = current_session.set(session)
+        try:
+            # Query candidate TMFDocument rows (non-null expiration_date)
+            stmt = select(TMFDocument).where(TMFDocument.expiration_date.isnot(None))
+            res = await session.execute(stmt)
+            documents = res.scalars().all()
 
-        for doc in documents:
-            # expiration_date might be saved as date/datetime. Let's convert if needed.
-            doc_expiry = doc.expiration_date
-            if isinstance(doc_expiry, date) and not isinstance(doc_expiry, datetime):
-                doc_expiry = datetime.combine(doc_expiry, datetime.min.time()).replace(
-                    tzinfo=UTC
+            for doc in documents:
+                # expiration_date might be saved as date/datetime. Let's convert if needed.
+                doc_expiry = doc.expiration_date
+                if isinstance(doc_expiry, date) and not isinstance(
+                    doc_expiry, datetime
+                ):
+                    doc_expiry = datetime.combine(
+                        doc_expiry, datetime.min.time()
+                    ).replace(tzinfo=UTC)
+
+                window = determine_warning_window(doc_expiry, now, warning_windows)
+                if window is None:
+                    continue
+
+                # Check if alert state already exists for this (document_id, window)
+                stmt_alert = select(DocumentExpirationAlertState).where(
+                    DocumentExpirationAlertState.document_id == doc.id,
+                    DocumentExpirationAlertState.warning_window == window,
                 )
+                res_alert = await session.execute(stmt_alert)
+                alert_state = res_alert.scalars().first()
 
-            window = determine_warning_window(doc_expiry, now, warning_windows)
-            if window is None:
-                continue
+                if alert_state is not None:
+                    # Deduplicated: already alerted for this window
+                    continue
 
-            # Check if alert state already exists for this (document_id, window)
-            stmt_alert = select(DocumentExpirationAlertState).where(
-                DocumentExpirationAlertState.document_id == doc.id,
-                DocumentExpirationAlertState.warning_window == window,
-            )
-            res_alert = await session.execute(stmt_alert)
-            alert_state = res_alert.scalars().first()
+                # Wrap in audit context for write attribution
+                with service_audit_context(service_name, change_reason):
+                    created_by = current_user_id.get() or service_name
+                    reason_for_change = current_change_reason.get() or change_reason
 
-            if alert_state is not None:
-                # Deduplicated: already alerted for this window
-                continue
-
-            # Wrap in audit context for write attribution
-            with service_audit_context(service_name, change_reason):
-                created_by = current_user_id.get() or service_name
-                reason_for_change = current_change_reason.get() or change_reason
-
-                new_alert = DocumentExpirationAlertState(
-                    document_id=doc.id,
-                    warning_window=window,
-                    alerted_at=now.replace(tzinfo=None),  # Naive datetime for DB
-                    created_by=created_by,
-                    reason_for_change=reason_for_change,
-                    version_index=1,
-                )
-
-                try:
-                    async with session.begin_nested():
-                        session.add(new_alert)
-                        await session.flush()
-                        logger.info(
-                            "Generated alert state '%s' for document ID %s",
-                            window,
-                            doc.id,
-                        )
-                except Exception as e:
-                    # Rely on unique constraint as safety net
-                    logger.warning(
-                        "Failed to insert alert state due to database safety net: %s",
-                        e,
+                    new_alert = DocumentExpirationAlertState(
+                        document_id=doc.id,
+                        warning_window=window,
+                        alerted_at=now.replace(tzinfo=None),  # Naive datetime for DB
+                        created_by=created_by,
+                        reason_for_change=reason_for_change,
+                        version_index=1,
                     )
 
-        await session.commit()
+                    try:
+                        async with session.begin_nested():
+                            session.add(new_alert)
+                            await session.flush()
+                            logger.info(
+                                "Generated alert state '%s' for document ID %s",
+                                window,
+                                doc.id,
+                            )
+                    except Exception as e:
+                        # Rely on unique constraint as safety net
+                        logger.warning(
+                            "Failed to insert alert state due to database safety net: %s",
+                            e,
+                        )
+
+            await session.commit()
+        finally:
+            current_session.reset(token)
 
     # 2. Dispatch all pending/failed alerts
     await dispatch_undispatched_alerts(session_maker)
@@ -145,109 +153,119 @@ async def dispatch_undispatched_alerts(session_maker: Any) -> None:
     """
     Finds all undispatched document expiration alerts and attempts to dispatch them to the notification service.
     """
+    from apps.etmf.adapters.repository import SQLETMFRepository
+    from apps.etmf.database.context import current_session
     from apps.etmf.main import write_audit_log
     from apps.etmf.notifications_client import publish_expiration_notification
 
+    repo = SQLETMFRepository()
+
     async with session_maker() as session:
-        # Query undispatched alerts (dispatched is False)
-        stmt = select(DocumentExpirationAlertState).where(
-            DocumentExpirationAlertState.dispatched.is_(False)
-        )
-        res = await session.execute(stmt)
-        alerts = res.scalars().all()
-
-        if not alerts:
-            return
-
-        for alert in alerts:
-            # Fetch document details
-            stmt_doc = select(TMFDocument).where(TMFDocument.id == alert.document_id)
-            res_doc = await session.execute(stmt_doc)
-            doc = res_doc.scalars().first()
-            if not doc:
-                logger.warning(
-                    "Document with ID %s not found for alert %s. Skipping.",
-                    alert.document_id,
-                    alert.id,
-                )
-                continue
-
-            # Determine recipient: owner first, fallback role next
-            recipient_user_id = doc.document_owner_id
-            recipient_role = None if recipient_user_id else "CRA"
-
-            payload = {
-                "recipient_user_id": recipient_user_id,
-                "recipient_role": recipient_role,
-                "category": "ALERTS",
-                "priority": "HIGH",
-                "channels": "IN_APP,EMAIL",
-                "message_content": (
-                    f"Document '{doc.filename}' (ID: {doc.id}, Type: {doc.artifact_type}) "
-                    f"in study '{doc.study_id}' is approaching its warning threshold or has expired "
-                    f"(Window: {alert.warning_window} days)."
-                    if alert.warning_window != "EXPIRED"
-                    else f"Document '{doc.filename}' (ID: {doc.id}, Type: {doc.artifact_type}) in study '{doc.study_id}' has expired."
-                ),
-                "related_entity_id": f"{alert.document_id}:{alert.warning_window}:{alert.version_index}",
-                "related_entity_type": "tmf_document_expiration",
-            }
-
-            success, notif_id, error_msg = await publish_expiration_notification(
-                payload
+        token = current_session.set(session)
+        try:
+            # Query undispatched alerts (dispatched is False)
+            stmt = select(DocumentExpirationAlertState).where(
+                DocumentExpirationAlertState.dispatched.is_(False)
             )
+            res = await session.execute(stmt)
+            alerts = res.scalars().all()
 
-            # Re-fetch alert inside a nested transaction to update its status
-            try:
-                async with session.begin_nested():
-                    # Ensure alert is merged/attached to session
-                    alert = await session.merge(alert)
-                    alert.attempts += 1
-                    if success:
-                        alert.dispatched = True
-                        alert.notification_id = notif_id
-                        alert.last_error = None
+            if not alerts:
+                return
 
-                        # Record GxP audit event
-                        await write_audit_log(
-                            session=session,
-                            user_id="expiration_scanner",
-                            user_role="system",
-                            action="EXPIRATION_ALERT_DISPATCH",
-                            document_id=doc.id,
-                            details=(
-                                f"Successfully dispatched expiration alert for document ID '{doc.id}' "
-                                f"(Window: {alert.warning_window}) with notification ID '{notif_id}'."
-                            ),
-                            reason_for_change="System-initiated expiration alert generation",
-                        )
-                    else:
-                        alert.dispatched = False
-                        alert.last_error = (
-                            error_msg[:1000] if error_msg else "Unknown failure"
-                        )
-
-                        # Record GxP audit event
-                        await write_audit_log(
-                            session=session,
-                            user_id="expiration_scanner",
-                            user_role="system",
-                            action="EXPIRATION_ALERT_DISPATCH_FAILED",
-                            document_id=doc.id,
-                            details=(
-                                f"Failed to dispatch expiration alert for document ID '{doc.id}' "
-                                f"(Window: {alert.warning_window}). Error: {alert.last_error}"
-                            ),
-                            reason_for_change="System-initiated expiration alert generation",
-                        )
-                await session.commit()
-            except Exception as e:
-                logger.error(
-                    "Failed to update alert state/write audit log: %s",
-                    e,
-                    exc_info=True,
+            for alert in alerts:
+                # Fetch document details
+                stmt_doc = select(TMFDocument).where(
+                    TMFDocument.id == alert.document_id
                 )
-                await session.rollback()
+                res_doc = await session.execute(stmt_doc)
+                doc = res_doc.scalars().first()
+                if not doc:
+                    logger.warning(
+                        "Document with ID %s not found for alert %s. Skipping.",
+                        alert.document_id,
+                        alert.id,
+                    )
+                    continue
+
+                # Determine recipient: owner first, fallback role next
+                recipient_user_id = doc.document_owner_id
+                recipient_role = None if recipient_user_id else "CRA"
+
+                payload = {
+                    "recipient_user_id": recipient_user_id,
+                    "recipient_role": recipient_role,
+                    "category": "ALERTS",
+                    "priority": "HIGH",
+                    "channels": "IN_APP,EMAIL",
+                    "message_content": (
+                        f"Document '{doc.filename}' (ID: {doc.id}, Type: {doc.artifact_type}) "
+                        f"in study '{doc.study_id}' is approaching its warning threshold or has expired "
+                        f"(Window: {alert.warning_window} days)."
+                        if alert.warning_window != "EXPIRED"
+                        else f"Document '{doc.filename}' (ID: {doc.id}, Type: {doc.artifact_type}) in study '{doc.study_id}' has expired."
+                    ),
+                    "related_entity_id": f"{alert.document_id}:{alert.warning_window}:{alert.version_index}",
+                    "related_entity_type": "tmf_document_expiration",
+                }
+
+                success, notif_id, error_msg = await publish_expiration_notification(
+                    payload
+                )
+
+                # Re-fetch alert inside a nested transaction to update its status
+                try:
+                    async with session.begin_nested():
+                        # Ensure alert is merged/attached to session
+                        alert = await session.merge(alert)
+                        alert.attempts += 1
+                        if success:
+                            alert.dispatched = True
+                            alert.notification_id = notif_id
+                            alert.last_error = None
+
+                            # Record GxP audit event
+                            await write_audit_log(
+                                repo=repo,
+                                user_id="expiration_scanner",
+                                user_role="system",
+                                action="EXPIRATION_ALERT_DISPATCH",
+                                document_id=doc.id,
+                                details=(
+                                    f"Successfully dispatched expiration alert for document ID '{doc.id}' "
+                                    f"(Window: {alert.warning_window}) with notification ID '{notif_id}'."
+                                ),
+                                reason_for_change="System-initiated expiration alert generation",
+                            )
+                        else:
+                            alert.dispatched = False
+                            alert.last_error = (
+                                error_msg[:1000] if error_msg else "Unknown failure"
+                            )
+
+                            # Record GxP audit event
+                            await write_audit_log(
+                                repo=repo,
+                                user_id="expiration_scanner",
+                                user_role="system",
+                                action="EXPIRATION_ALERT_DISPATCH_FAILED",
+                                document_id=doc.id,
+                                details=(
+                                    f"Failed to dispatch expiration alert for document ID '{doc.id}' "
+                                    f"(Window: {alert.warning_window}). Error: {alert.last_error}"
+                                ),
+                                reason_for_change="System-initiated expiration alert generation",
+                            )
+                    await session.commit()
+                except Exception as e:
+                    logger.error(
+                        "Failed to update alert state/write audit log: %s",
+                        e,
+                        exc_info=True,
+                    )
+                    await session.rollback()
+        finally:
+            current_session.reset(token)
 
 
 async def start_background_etmf_expiration_scanner(
