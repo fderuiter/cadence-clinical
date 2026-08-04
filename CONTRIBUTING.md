@@ -392,4 +392,3 @@ You can check schemas locally before pushing:
 AUDIT_LOG_SECRET_KEY=dummy INBOUND_EMAIL_HMAC_SECRET=dummy uv run python scripts/validate_schemas.py
 ```
 This script runs in under 5 seconds and will report any violations, including overlapping model definitions and prefix mismatches.
-
