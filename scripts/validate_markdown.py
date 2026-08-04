@@ -18,18 +18,18 @@ from pathlib import Path
 
 # Inject default/mock environment configurations to prevent top-level execution errors during module loading
 MOCK_ENV_VARS = {
-    "DATABASE_URL": "postgresql://mock_user:mock_pass@localhost:5432/mock_db",
+    "DATABASE_URL": "postgresql://mock_user:mock_pass@localhost:5432/mock_db",  # pragma: allowlist secret
     "ENV": "development",
     "ENVIRONMENT": "development",
     "DEBUG": "True",
     "QUALITY_DATABASE_URL": "sqlite+aiosqlite:///:memory:",
     "SAFETY_DATABASE_URL": "sqlite+aiosqlite:///:memory:",
-    "GATEWAY_SECRET": "mock-gateway-secret-12345",
-    "SAFETY_SALT": "mock-safety-salt-12345",
-    "SIGNING_SECRET": "mock-signing-secret-12345",
+    "GATEWAY_SECRET": "mock-gateway-secret-12345",  # pragma: allowlist secret
+    "SAFETY_SALT": "mock-safety-salt-12345",  # pragma: allowlist secret
+    "SIGNING_SECRET": "mock-signing-secret-12345",  # pragma: allowlist secret
     "NEO4J_URI": "bolt://localhost:7687",
     "NEO4J_USER": "neo4j",
-    "NEO4J_PASSWORD": "password",
+    "NEO4J_PASSWORD": "password",  # pragma: allowlist secret
 }
 for k, v in MOCK_ENV_VARS.items():
     if k not in os.environ:
