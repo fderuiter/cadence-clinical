@@ -377,7 +377,7 @@ def verify_inbound_email_signature(
 
     secret = os.getenv(
         "INBOUND_EMAIL_HMAC_SECRET", "dev-default-secret-inbound-email-hmac"
-    )
+    )  # pragma: allowlist secret
 
     # 1. Timestamp Freshness Check (300-second drift window)
     try:

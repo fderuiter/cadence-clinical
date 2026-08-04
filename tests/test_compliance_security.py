@@ -258,3 +258,75 @@ def test_security_audit_scanner_detection_and_bypass():
             assert len(findings) == 0
         finally:
             os.unlink(f.name)
+
+
+def test_security_audit_scanner_multiline_and_mixedcase_bypass():
+    """Verify scanner handles multiline secrets, mixed-case prefixes, correct line mapping, and multiline bypasses.
+
+    Requirements: PRD-SYS-001, 21 CFR Part 11
+    """
+    import os
+    import tempfile
+
+    from scripts.audit_security import scan_file_for_secrets
+
+    # Case 1: Mixed-case bearer token (BEARER, Bearer, etc.)
+    with tempfile.NamedTemporaryFile(suffix=".py", mode="w+", delete=False) as f:
+        f.write(
+            "auth1 = 'BEARER eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'\n"
+            "auth2 = 'bEaReR eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'\n"
+        )
+        f.flush()
+        try:
+            findings = scan_file_for_secrets(f.name)
+            assert len(findings) == 2
+            assert "Hardcoded Bearer Token" in findings[0]
+            assert "Hardcoded Bearer Token" in findings[1]
+        finally:
+            os.unlink(f.name)
+
+    # Case 2: Multiline private key header split across line break
+    with tempfile.NamedTemporaryFile(suffix=".py", mode="w+", delete=False) as f:
+        f.write("-----BEGIN\nRSA KEY-----\n")
+        f.flush()
+        try:
+            findings = scan_file_for_secrets(f.name)
+            assert len(findings) == 1
+            assert "Generic Private Key" in findings[0]
+            # Verify correct line number is reported (starts on line 1)
+            assert f"{f.name}:1" in findings[0]
+        finally:
+            os.unlink(f.name)
+
+    # Case 3: Multiline environment fallback split across multiple line breaks
+    with tempfile.NamedTemporaryFile(suffix=".py", mode="w+", delete=False) as f:
+        f.write(
+            "GATEWAY_SECRET = os.getenv(\n"
+            "    'GATEWAY_SECRET',\n"
+            "    'internal-gateway-secret-12345'\n"
+            ")\n"
+        )
+        f.flush()
+        try:
+            findings = scan_file_for_secrets(f.name)
+            assert len(findings) == 1
+            assert "Hardcoded Environment Fallback" in findings[0]
+            # Verify correct line mapping (starts on line 1)
+            assert f"{f.name}:1" in findings[0]
+        finally:
+            os.unlink(f.name)
+
+    # Case 4: Multiline environment fallback bypassed correctly with trailing bypass comment
+    with tempfile.NamedTemporaryFile(suffix=".py", mode="w+", delete=False) as f:
+        f.write(
+            "GATEWAY_SECRET = os.getenv(\n"
+            "    'GATEWAY_SECRET',\n"
+            "    'internal-gateway-secret-12345'\n"
+            ")  # pragma: allowlist secret\n"
+        )
+        f.flush()
+        try:
+            findings = scan_file_for_secrets(f.name)
+            assert len(findings) == 0
+        finally:
+            os.unlink(f.name)
