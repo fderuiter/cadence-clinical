@@ -2,7 +2,7 @@
 
 * **Status:** Accepted
 * **Date:** 2026-08-04
-* **Authors:** @google-labs-jules[bot]
+* **Authors:** @google-labs-jules[bot], @jules
 * **Deciders:** @fderuiter
 
 ---
