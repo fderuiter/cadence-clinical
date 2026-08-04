@@ -415,31 +415,39 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
         ).toBe(false);
       });
     });
+<<<<<<< HEAD
   });
 
   describe("Demo Mode Build Configurations", () => {
     it("should permit login and logout fallbacks in demo build mode even if PROD is true", async () => {
       const authStore = useAuthStore();
+=======
+>>>>>>> origin/main
 
-      // Stub demo environment with PROD = true
-      const originalProd = import.meta.env.PROD;
-      const originalMode = import.meta.env.MODE;
-      import.meta.env.PROD = true;
-      import.meta.env.MODE = "demo";
+    describe("Demo Mode Build Configurations", () => {
+      it("should permit login and logout fallbacks in demo build mode even if PROD is true", async () => {
+        const authStore = useAuthStore();
 
-      authStore.isDemoMode = true;
+        // Stub demo environment with PROD = true
+        const originalProd = import.meta.env.PROD;
+        const originalMode = import.meta.env.MODE;
+        import.meta.env.PROD = true;
+        import.meta.env.MODE = "demo";
 
-      // This should succeed because of the check excluding MODE === "demo" from isProduction
-      await authStore.login();
-      expect(authStore.isAuthenticated).toBe(true);
-      expect(authStore.rawRoles).toContain("Sponsor Designer");
+        authStore.isDemoMode = true;
 
-      await authStore.logout();
-      expect(authStore.isAuthenticated).toBe(false);
+        // This should succeed because of the check excluding MODE === "demo" from isProduction
+        await authStore.login();
+        expect(authStore.isAuthenticated).toBe(true);
+        expect(authStore.rawRoles).toContain("Sponsor Designer");
 
-      // Clean up
-      import.meta.env.PROD = originalProd;
-      import.meta.env.MODE = originalMode;
+        await authStore.logout();
+        expect(authStore.isAuthenticated).toBe(false);
+
+        // Clean up
+        import.meta.env.PROD = originalProd;
+        import.meta.env.MODE = originalMode;
+      });
     });
   });
 });
