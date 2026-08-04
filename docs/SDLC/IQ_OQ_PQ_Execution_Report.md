@@ -2003,6 +2003,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_strategy_merge_lww_incoming_wins` | `tests.test_sync_engine` | PRD-EDC-008 | 🟢 PASSED | < 1s |
 | `test_strategy_merge_lww_timestamp_tie` | `tests.test_sync_engine` | PRD-EDC-008 | 🟢 PASSED | < 1s |
 | `test_strategy_server_wins` | `tests.test_sync_engine` | PRD-EDC-008 | 🟢 PASSED | < 1s |
+| `test_label_based_backlog_gating` | `tests.test_sync_github_project` | Trace-34 | 🟢 PASSED | < 1s |
 | `test_get_repository_fallback` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_repository_from_env` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_repository_from_git_https` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
