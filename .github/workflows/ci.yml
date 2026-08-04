@@ -518,6 +518,7 @@ jobs:
         with:
           name: junit-report-unit
           path: .
+          merge-multiple: true
 
       - name: Download Integration Test Report
         uses: actions/download-artifact@v4
@@ -525,6 +526,7 @@ jobs:
         with:
           name: junit-report-integration
           path: .
+          merge-multiple: true
 
       - name: Download Qualification Test Report
         uses: actions/download-artifact@v4
@@ -532,6 +534,7 @@ jobs:
         with:
           name: junit-report-qualification
           path: .
+          merge-multiple: true
 
       - name: Merge JUnit XML Reports
         run: python3 scripts/merge_junit.py report.xml report-unit.xml report-integration.xml report-qualification.xml
@@ -571,6 +574,7 @@ jobs:
         with:
           name: duplication-summary
           path: .
+          merge-multiple: true
 
       - name: Post PR Comment
         env:
