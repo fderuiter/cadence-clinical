@@ -5,7 +5,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import RulesView from "../../src/views/RulesView.vue";
 import { useAuthStore } from "../../src/stores/auth";
 import { useClinicalStore } from "../../src/stores/clinical";
-import { apiClient } from "../../src/api/apiClient";
+import { apiClient } from "@/api/apiClient";
 
 // Setup mock router
 const router = createRouter({
