@@ -1668,6 +1668,27 @@ async function initializeApp() {
       app.mount(appEl);
     }
 
+    // Dynamic Hover Pointer Capability Detection
+    if (typeof window.matchMedia === "function") {
+      const mediaQuery = window.matchMedia("(hover: hover)");
+      const updateHoverClass = (e) => {
+        if (e.matches) {
+          document.body.classList.add("can-hover");
+        } else {
+          document.body.classList.remove("can-hover");
+        }
+      };
+
+      updateHoverClass(mediaQuery);
+      if (mediaQuery.addEventListener) {
+        mediaQuery.addEventListener("change", updateHoverClass);
+      } else if (mediaQuery.addListener) {
+        mediaQuery.addListener(updateHoverClass);
+      }
+    } else {
+      document.body.classList.add("can-hover");
+    }
+
     // Set up global focus trapping for the signature modal dialog
     if (!window.__TAB_LISTENER_REGISTERED__) {
       window.__TAB_LISTENER_REGISTERED__ = true;
