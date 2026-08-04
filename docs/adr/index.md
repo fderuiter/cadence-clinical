@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-04: In Memory Terminology Search Cache](2026-08-04-in-memory-terminology-search-cache.md)
 - [2026-08-04: Centralized layout utilities and 48px touch targets](2026-08-04-centralized-layout-utilities-and-48px-touch-targets.md)
 - [2026-08-01: SDV and TSDV Data Model Foundations](2026-08-01-sdv-and-tsdv-data-model-foundations.md)
 - [2026-08-01: Unused ESLint Variable and DEID Exemption in UI Package](2026-08-01-unused-eslint-variable-and-deid-exemption-in-ui-package.md)
@@ -84,6 +85,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-01: Cryptographic Signature Verification Engine for Part 11 eSignatures](2026-08-01-cryptographic-signature-verification-engine-for-esignatures.md)
 
 ### 3. Clinical Data Interoperability & Standards
+- [2026-08-04: Thread-Safe In-Memory Terminology Search Cache](2026-08-04-in-memory-terminology-search-cache.md)
 - [2026-09-01: SAE Reconciliation & Safety Gateway (E2B)](2026-09-01-sae-reconciliation-safety-gateway-e2b.md)
 - [2026-08-26: SAE Reconciliation Architecture](2026-08-26-sae-reconciliation-architecture.md)
 

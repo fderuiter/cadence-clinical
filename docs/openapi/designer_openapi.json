@@ -780,7 +780,7 @@
     "/api/v1/terminology/search": {
       "get": {
         "summary": "Search Terminology",
-        "description": "Search or autocomplete terminology concepts by text query.\n\nArgs:\n    term (str): Search term.\n    from_record (int, optional): Record offset.\n    page_size (int, optional): Page size.\n\nReturns:\n    TerminologySearchResponse: Search results and status.",
+        "description": "Search or autocomplete terminology concepts by text query.\n\nArgs:\n    term (str): Search term.\n    from_record (int, optional): Record offset.\n    page_size (int, optional): Page size.\n    bypass_cache (bool, optional): Whether to bypass reading from cache. Defaults to False.\n    refresh (bool, optional): Whether to refresh the cache. Defaults to False.\n\nReturns:\n    TerminologySearchResponse: Search results and status.",
         "operationId": "search_terminology_api_v1_terminology_search_get",
         "parameters": [
           {
@@ -822,6 +822,26 @@
                 }
               ],
               "title": "Page Size"
+            }
+          },
+          {
+            "name": "bypass_cache",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Bypass Cache"
+            }
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Refresh"
             }
           }
         ],

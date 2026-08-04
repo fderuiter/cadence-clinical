@@ -19,8 +19,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
-          # Use PAT if available to checkout and support push triggering downstream actions
-          token: ${{ secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
+          # Use GITHUB_TOKEN directly for checkout to ensure it always succeeds
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
@@ -65,7 +66,8 @@ jobs:
 
       - name: Autonomous Self-Healing
         env:
-          GH_TOKEN: ${{ secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
+          # Prioritize SERVICE_ACCOUNT_TOKEN, falling back to GITHUB_TOKEN
+          GH_TOKEN: ${{ secrets.SERVICE_ACCOUNT_TOKEN || secrets.GITHUB_TOKEN }}
           PAT_FDERUITER: ${{ secrets.PAT_FDERUITER }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -78,7 +80,8 @@ jobs:
       - name: Post PR Quality Checklist Comment on Conflict Fallback
         if: failure()
         env:
-          GH_TOKEN: ${{ secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
+          # Prioritize SERVICE_ACCOUNT_TOKEN, falling back to GITHUB_TOKEN
+          GH_TOKEN: ${{ secrets.SERVICE_ACCOUNT_TOKEN || secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           CONFLICT_OUTCOME: "failure"
         run: python3 scripts/post_pr_comment.py
