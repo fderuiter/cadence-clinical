@@ -61,6 +61,7 @@ from apps.designer.db import (
     is_concept_referenced_by_active_recruiting_study,
     is_library_object_referenced_by_active_recruiting_study,
     terminology_cache,
+    terminology_search_cache,
     update_mock_rule,
 )
 from apps.designer.delta import (
@@ -706,6 +707,7 @@ async def clear_cache() -> dict[str, str]:
         Dict[str, str]: A success message indicating the cache was cleared.
     """
     terminology_cache.clear()
+    terminology_search_cache.clear()
     return {"status": "success", "message": "Cache cleared successfully"}
 
 
@@ -829,6 +831,8 @@ async def search_terminology(
     term: str = Query(...),
     from_record: int | None = Query(None),
     page_size: int | None = Query(None),
+    bypass_cache: bool = Query(False),
+    refresh: bool = Query(False),
 ) -> TerminologySearchResponse:
     """
     Search or autocomplete terminology concepts by text query.
@@ -837,6 +841,8 @@ async def search_terminology(
         term (str): Search term.
         from_record (int, optional): Record offset.
         page_size (int, optional): Page size.
+        bypass_cache (bool, optional): Whether to bypass reading from cache. Defaults to False.
+        refresh (bool, optional): Whether to refresh the cache. Defaults to False.
 
     Returns:
         TerminologySearchResponse: Search results and status.
@@ -846,6 +852,11 @@ async def search_terminology(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Search term cannot be empty or whitespace.",
         )
+
+    if not bypass_cache and not refresh:
+        cached_response = terminology_search_cache.get(term, from_record, page_size)
+        if cached_response is not None:
+            return cached_response
 
     try:
         client = NCIEVSClient()
@@ -861,12 +872,14 @@ async def search_terminology(
             )
             for c in search_results
         ]
-        return TerminologySearchResponse(
+        response = TerminologySearchResponse(
             query=term,
             state=CodeValidationState.VALID,
             results=concepts,
             total_results=len(concepts),
         )
+        terminology_search_cache.set(term, from_record, page_size, response)
+        return response
     except Exception as e:
         # Return source unavailability as a structured degraded response rather than an unhandled 5xx response
         return TerminologySearchResponse(
