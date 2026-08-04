@@ -249,26 +249,42 @@ def verify_asymmetric_signature(
             binary_data = stripped_payload.encode("utf-8")
 
         if isinstance(public_key, rsa.RSAPublicKey):
-            if is_prehashed:
-                public_key.verify(
-                    signature_bytes,
-                    binary_data,
-                    padding.PSS(
-                        mgf=padding.MGF1(hashes.SHA256()),
-                        salt_length=padding.PSS.MAX_LENGTH,
-                    ),
-                    Prehashed(hashes.SHA256()),
-                )
-            else:
-                public_key.verify(
-                    signature_bytes,
-                    binary_data,
-                    padding.PSS(
-                        mgf=padding.MGF1(hashes.SHA256()),
-                        salt_length=padding.PSS.MAX_LENGTH,
-                    ),
-                    hashes.SHA256(),
-                )
+            try:
+                if is_prehashed:
+                    public_key.verify(
+                        signature_bytes,
+                        binary_data,
+                        padding.PSS(
+                            mgf=padding.MGF1(hashes.SHA256()),
+                            salt_length=padding.PSS.MAX_LENGTH,
+                        ),
+                        Prehashed(hashes.SHA256()),
+                    )
+                else:
+                    public_key.verify(
+                        signature_bytes,
+                        binary_data,
+                        padding.PSS(
+                            mgf=padding.MGF1(hashes.SHA256()),
+                            salt_length=padding.PSS.MAX_LENGTH,
+                        ),
+                        hashes.SHA256(),
+                    )
+            except Exception:
+                if is_prehashed:
+                    public_key.verify(
+                        signature_bytes,
+                        binary_data,
+                        padding.PKCS1v15(),
+                        Prehashed(hashes.SHA256()),
+                    )
+                else:
+                    public_key.verify(
+                        signature_bytes,
+                        binary_data,
+                        padding.PKCS1v15(),
+                        hashes.SHA256(),
+                    )
         elif isinstance(public_key, ec.EllipticCurvePublicKey):
             if is_prehashed:
                 public_key.verify(
@@ -293,12 +309,16 @@ def verify_asymmetric_signature(
 
 def verify_electronic_signature(
     request: SignatureVerificationRequest,
-    secret_key: str = "gxp-audit-secret-key-cadence-2026",
+    secret_key: str | None = None,
 ) -> SignatureVerificationResult:
     """Verify electronic signature authenticity, signer binding, and tamper-resistance.
 
     Supports both RSA/ECDSA asymmetric verification and symmetric HMAC fallback verification.
     """
+    if secret_key is None:
+        from packages.security.audit_logger import AUDIT_LOG_SECRET_KEY
+
+        secret_key = AUDIT_LOG_SECRET_KEY
     if not request.signer_id:
         return SignatureVerificationResult(
             is_valid=False,
