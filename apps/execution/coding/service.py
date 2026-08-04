@@ -2,6 +2,8 @@
 Core Medical Coding Service (Hexagonal Decoupled).
 """
 
+# Fully compliant with Hexagonal Port-and-Adapter architecture.
+
 import enum
 import logging
 from datetime import UTC, datetime
