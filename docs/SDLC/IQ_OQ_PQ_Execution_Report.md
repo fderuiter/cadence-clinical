@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2082
-- **Passed:** 2082 🟢
+- **Total Automated Test Cases Run:** 2089
+- **Passed:** 2089 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -369,6 +369,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_load_categorized_ports_fallback` | `tests.test_check_ports` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_load_categorized_ports_with_compose` | `tests.test_check_ports` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_parse_port_entry` | `tests.test_check_ports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_classification_driven_multi_site_export` | `tests.test_classification_multi_site_export` | PRD-TMF-001 | 🟢 PASSED | < 1s |
+| `test_unresolved_site_level_omit_manually` | `tests.test_classification_multi_site_export` | PRD-TMF-001 | 🟢 PASSED | < 1s |
 | `test_rtm_generation_conftest_hook_detection` | `tests.test_cli_etmf_archival` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rtm_generation_with_cli_overrides` | `tests.test_cli_etmf_archival` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_gateway_routing` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1889,8 +1891,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_verify_gateway_signature_scope_fallback_restrictions` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_gateway_signature_tenant_and_multishape_restrictions` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_sig_token_helper_scenarios` | `tests.test_security_middleware` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_handle_github_api_error` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_is_safe_file` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_blocked_on_non_safe_files` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_graceful_exit_on_api_error` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_graceful_on_github_api_error` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_no_conflict_needed` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_skipped_if_no_safe_change_label` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2026,9 +2030,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_get_terminology_from_db_transport_error_but_in_mock` | `tests.test_terminology_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_offline_fallback_resolves_supported_seed_concepts` | `tests.test_terminology_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_terminology_cache_unreachable_database_exception_fallback` | `tests.test_terminology_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_search_terminology_endpoint_bypass_and_refresh` | `tests.test_terminology_validation` | PRD-MDR-007 | 🟢 PASSED | < 1s |
+| `test_search_terminology_endpoint_cache_behavior` | `tests.test_terminology_validation` | PRD-MDR-007 | 🟢 PASSED | < 1s |
 | `test_search_terminology_endpoint_degraded` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_search_terminology_endpoint_invalid_input` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_search_terminology_endpoint_success` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_terminology_search_cache_direct` | `tests.test_terminology_validation` | PRD-MDR-007 | 🟢 PASSED | < 1s |
 | `test_validate_concept_codes_degraded` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_concept_codes_success` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_single_code_endpoint` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
