@@ -208,7 +208,7 @@ jobs:
       - name: Run dependency audit
         id: run_audit
         if: always()
-        run: python3 scripts/validate_vulnerabilities.py
+        run: uv run python scripts/validate_vulnerabilities.py
 
       - name: Run secret detection
         id: run_secrets
