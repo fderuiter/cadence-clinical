@@ -201,6 +201,18 @@ def verify_asymmetric_signature(
     or hex-encoded hashes.
     Returns: (is_valid, error_code, error_message)
     """
+    # Reject mock signatures / certificates
+    if (
+        "mock" in payload_str.lower()
+        or "mock" in signature_b64.lower()
+        or "mock" in public_key_pem.lower()
+    ):
+        return (
+            False,
+            "MOCK_SIGNATURE_DETECTED",
+            "Mock signature detected and blocked.",
+        )
+
     try:
         try:
             cert = x509.load_pem_x509_certificate(public_key_pem.encode("utf-8"))
@@ -241,12 +253,21 @@ def verify_asymmetric_signature(
                 public_key.verify(
                     signature_bytes,
                     binary_data,
-                    padding.PKCS1v15(),
+                    padding.PSS(
+                        mgf=padding.MGF1(hashes.SHA256()),
+                        salt_length=padding.PSS.MAX_LENGTH,
+                    ),
                     Prehashed(hashes.SHA256()),
                 )
             else:
                 public_key.verify(
-                    signature_bytes, binary_data, padding.PKCS1v15(), hashes.SHA256()
+                    signature_bytes,
+                    binary_data,
+                    padding.PSS(
+                        mgf=padding.MGF1(hashes.SHA256()),
+                        salt_length=padding.PSS.MAX_LENGTH,
+                    ),
+                    hashes.SHA256(),
                 )
         elif isinstance(public_key, ec.EllipticCurvePublicKey):
             if is_prehashed:
@@ -336,6 +357,22 @@ def verify_electronic_signature(
             is_valid=False,
             error_code="DECODING_ERROR",
             error_message=f"Decoding error: {e}",
+            signer_id=request.signer_id,
+        )
+
+    # Check mock for both asymmetric and symmetric paths
+    req_payload_lower = (request.payload_hash or "").lower()
+    req_sig_lower = (request.signature_bytes_b64 or "").lower()
+    req_pk_lower = (public_key_pem or "").lower()
+    if (
+        "mock" in req_payload_lower
+        or "mock" in req_sig_lower
+        or "mock" in req_pk_lower
+    ):
+        return SignatureVerificationResult(
+            is_valid=False,
+            error_code="MOCK_SIGNATURE_DETECTED",
+            error_message="Mock signature detected and blocked.",
             signer_id=request.signer_id,
         )
 
