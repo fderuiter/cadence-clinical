@@ -151,7 +151,10 @@ async def test_actual_cryptographic_verification():
     cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
 
     from packages.security.cert_store import get_active_cert_store
-    get_active_cert_store().register_certificate(user_id="test_user_etmf", cert_pem=cert_pem)
+
+    get_active_cert_store().register_certificate(
+        user_id="test_user_etmf", cert_pem=cert_pem
+    )
 
     content_data = "This is the clinical trial protocol for study 001. Enforces double blind randomized controls."
     sig_bytes = private_key.sign(

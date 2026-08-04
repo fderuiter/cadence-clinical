@@ -28,7 +28,10 @@ def test_x509_cert():
         cert_bytes = f.read()
         cert = x509.load_pem_x509_certificate(cert_bytes)
         from packages.security.cert_store import get_active_cert_store
-        get_active_cert_store().register_certificate(user_id="test_user", cert_pem=cert_bytes.decode("utf-8"))
+
+        get_active_cert_store().register_certificate(
+            user_id="test_user", cert_pem=cert_bytes.decode("utf-8")
+        )
         return cert
 
 
