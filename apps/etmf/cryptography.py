@@ -325,7 +325,12 @@ def validate_document_signature(
         "protocol_signoff",
     )
     is_strict = is_strict_compliance or is_strict_compliance_active()
-    if is_strict and is_mandatory and is_bypass_requested(metadata_json) and not is_mock_allowed():
+    if (
+        is_strict
+        and is_mandatory
+        and is_bypass_requested(metadata_json)
+        and not is_mock_allowed()
+    ):
         return False, "Bypass attempt rejected for mandatory regulatory document."
 
     # 1. Attempt to extract from content
