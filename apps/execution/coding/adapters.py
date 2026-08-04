@@ -21,7 +21,11 @@ from apps.execution.exceptions import CodingAssignmentNotFoundError
 
 
 class SQLCodingRepository:
-    """SQLAlchemy implementation of the CodingRepositoryPort."""
+    """SQLAlchemy implementation of the CodingRepositoryPort.
+
+    Provides concrete persistence actions for medical coding assignments, clinical coding ledgers,
+    and associated queries over active database sessions, decoupling core logic from SQLAlchemy.
+    """
 
     def __init__(self, session: AsyncSession):
         self.session = session
