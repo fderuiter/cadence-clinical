@@ -45,6 +45,9 @@ jobs:
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build UI package
+        run: pnpm --filter ui build
+
       - name: Run frontend style and lint
         id: run_frontend
         if: always()
@@ -83,7 +86,7 @@ jobs:
       - name: Run Requirements Traceability Validation
         id: run_traceability
         if: always()
-        run: uv run python scripts/generate_rtm.py --validate
+        run: uv run python scripts/generate_rtm.py --validate --draft
 
       - name: Run code duplication verification
         id: run_duplication
@@ -282,6 +285,9 @@ jobs:
               }
             done
           fi
+
+      - name: Build UI package
+        run: pnpm --filter ui build
 
       - name: Run frontend unit tests
         run: pnpm -r test

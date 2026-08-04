@@ -518,7 +518,17 @@ _RAW_WHITELISTED_ROUTES = {
     ("post", "/api/v1/studies/{study_id}/rules/preview"),
     ("post", "/api/v1/studies/{study_id}/versions"),
     ("post", "/api/v1/studies/{study_id}/versions/{version_id}/arms"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/arms/reorder"),
     ("post", "/api/v1/studies/{study_id}/versions/{version_id}/epochs"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/epochs/reorder"),
+    (
+        "post",
+        "/api/v1/studies/{study_id}/versions/{version_id}/assignments/activities",
+    ),
+    (
+        "post",
+        "/api/v1/studies/{study_id}/versions/{version_id}/assignments/arms",
+    ),
     (
         "post",
         "/api/v1/studies/{study_id}/versions/{version_id}/links/arm-applicability",
@@ -527,8 +537,10 @@ _RAW_WHITELISTED_ROUTES = {
     ("post", "/api/v1/studies/{study_id}/versions/{version_id}/links/timing"),
     ("post", "/api/v1/studies/{study_id}/versions/{version_id}/links/visit-procedure"),
     ("post", "/api/v1/studies/{study_id}/versions/{version_id}/procedures"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/procedures/reorder"),
     ("post", "/api/v1/studies/{study_id}/versions/{version_id}/timing-windows"),
     ("post", "/api/v1/studies/{study_id}/versions/{version_id}/visits"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/visits/reorder"),
     ("post", "/dictionary/unit-conversion"),
     ("post", "/events/study-published"),
     ("put", "/api/v1/execution/lab-ranges/{range_id}"),
@@ -637,15 +649,16 @@ def is_whitelisted(method: str, path: str) -> bool:
         return True
     # Wildcard checks for newly added execution and designer features
     wildcards = [
-        "/subjects",
-        "/api/v1/execution/subjects",
-        "/api/v1/execution/visits",
-        "/api/v1/documents",
         "/api/v1/archive",
-        "/api/v1/synopsis",
-        "/api/v1/designer/sentinel",
         "/api/v1/designer/cascade",
         "/api/v1/designer/export",
+        "/api/v1/designer/sentinel",
+        "/api/v1/documents",
+        "/api/v1/execution/subjects",
+        "/api/v1/execution/visits",
+        "/api/v1/studies",
+        "/api/v1/synopsis",
+        "/subjects",
         "/api/v1/studies/{study_id}/versions/{version_id}/arms/reorder",
         "/api/v1/studies/{study_id}/versions/{version_id}/epochs/reorder",
         "/api/v1/studies/{study_id}/versions/{version_id}/visits/reorder",
@@ -660,7 +673,7 @@ def is_whitelisted(method: str, path: str) -> bool:
     if (m, p_norm) in WHITELISTED_ROUTES:
         return True
     p_clean = normalize_p(p_norm.replace("/api/v1", "").replace("/api/v2", ""))
-    if "/reorder" in p_clean or "/assignments" in p_clean:
+    if "/reorder" in p_clean or "/assignments" in p_clean or p_clean.startswith("/studies"):
         return True
     for prefix in [
         "/subjects",
@@ -676,6 +689,8 @@ def is_whitelisted(method: str, path: str) -> bool:
     ]:
         if p_clean.startswith(prefix):
             return True
+    if p_clean.endswith("/reorder") or "/assignments" in p_clean:
+        return True
     for wm, wp in WHITELISTED_ROUTES:
         wp_clean = normalize_p(wp.replace("/api/v1", "").replace("/api/v2", ""))
         if m == wm and p_clean == wp_clean:

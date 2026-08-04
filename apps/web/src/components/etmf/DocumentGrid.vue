@@ -52,8 +52,7 @@
           >
             <td
               :tabindex="0"
-              @click="selectCell(rIndex, 0)"
-              @keydown="handleCellKeyDown($event, rIndex, 0, doc)"
+
               :class="{
                 'cell-active':
                   activeRowIndex === rIndex && activeColIndex === 0,
@@ -61,6 +60,8 @@
               :data-row="rIndex"
               :data-col="0"
               class="doc-name-cell"
+              @click="selectCell(rIndex, 0)"
+              @keydown="handleCellKeyDown($event, rIndex, 0, doc)"
             >
               <span class="file-icon">📄</span>
               <span class="filename" :title="doc.filename">{{
@@ -73,15 +74,16 @@
                   ? -1
                   : 0
               "
-              @click="selectCell(rIndex, 1)"
-              @dblclick="startEditing(rIndex, doc)"
-              @keydown="handleCellKeyDown($event, rIndex, 1, doc)"
               :class="{
                 'cell-active':
                   activeRowIndex === rIndex && activeColIndex === 1,
               }"
               :data-row="rIndex"
               :data-col="1"
+              @click="selectCell(rIndex, 1)"
+              @dblclick="startEditing(rIndex, doc)"
+              @keydown="handleCellKeyDown($event, rIndex, 1, doc)"
+
             >
               <div
                 v-if="
@@ -90,12 +92,12 @@
                 class="inline-edit-container"
               >
                 <select
+                  ref="inlineSelectRef"
                   v-model="tempTaxonomyCode"
                   class="form-control inline-select"
                   @change="commitTaxonomy(doc)"
                   @keydown="handleSelectKeyDown($event, doc)"
                   @blur="cancelEditing"
-                  ref="inlineSelectRef"
                 >
                   <option
                     v-for="opt in taxonomyOptions"
@@ -115,27 +117,29 @@
             </td>
             <td
               :tabindex="0"
-              @click="selectCell(rIndex, 2)"
-              @keydown="handleCellKeyDown($event, rIndex, 2, doc)"
+
               :class="{
                 'cell-active':
                   activeRowIndex === rIndex && activeColIndex === 2,
               }"
               :data-row="rIndex"
               :data-col="2"
+              @click="selectCell(rIndex, 2)"
+              @keydown="handleCellKeyDown($event, rIndex, 2, doc)"
             >
               <span class="version-tag">v{{ doc.version_index }}.0</span>
             </td>
             <td
               :tabindex="0"
-              @click="selectCell(rIndex, 3)"
-              @keydown="handleCellKeyDown($event, rIndex, 3, doc)"
+
               :class="{
                 'cell-active':
                   activeRowIndex === rIndex && activeColIndex === 3,
               }"
               :data-row="rIndex"
               :data-col="3"
+              @click="selectCell(rIndex, 3)"
+              @keydown="handleCellKeyDown($event, rIndex, 3, doc)"
             >
               <span class="status-badge" :class="getStatusClass(doc.status)">
                 {{ formatStatus(doc.status) }}
@@ -143,14 +147,15 @@
             </td>
             <td
               :tabindex="0"
-              @click="selectCell(rIndex, 4)"
-              @keydown="handleCellKeyDown($event, rIndex, 4, doc)"
+
               :class="{
                 'cell-active':
                   activeRowIndex === rIndex && activeColIndex === 4,
               }"
               :data-row="rIndex"
               :data-col="4"
+              @click="selectCell(rIndex, 4)"
+              @keydown="handleCellKeyDown($event, rIndex, 4, doc)"
             >
               <div class="user-meta">
                 <span class="username">{{ doc.created_by }}</span>
@@ -158,8 +163,7 @@
             </td>
             <td
               :tabindex="0"
-              @click="selectCell(rIndex, 5)"
-              @keydown="handleCellKeyDown($event, rIndex, 5, doc)"
+
               :class="{
                 'cell-active':
                   activeRowIndex === rIndex && activeColIndex === 5,
@@ -167,13 +171,14 @@
               :data-row="rIndex"
               :data-col="5"
               class="date-cell"
+              @click="selectCell(rIndex, 5)"
+              @keydown="handleCellKeyDown($event, rIndex, 5, doc)"
             >
               {{ doc.formattedCreatedAt }}
             </td>
             <td
               :tabindex="0"
-              @click="selectCell(rIndex, 6)"
-              @keydown="handleCellKeyDown($event, rIndex, 6, doc)"
+
               :class="{
                 'cell-active':
                   activeRowIndex === rIndex && activeColIndex === 6,
@@ -181,6 +186,8 @@
               :data-row="rIndex"
               :data-col="6"
               class="actions-cell"
+              @click="selectCell(rIndex, 6)"
+              @keydown="handleCellKeyDown($event, rIndex, 6, doc)"
             >
               <button
                 class="btn btn-sm btn-outline-primary"

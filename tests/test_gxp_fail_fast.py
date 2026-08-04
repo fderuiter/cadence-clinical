@@ -160,4 +160,11 @@ def test_missing_report_gxp_sync_dry_run():
         if has_backup:
             backup_path.rename(report_path)
         # Clean up any modified SDLC files in actual repository
-        subprocess.run(["git", "checkout", "docs/SDLC/"])
+        subprocess.run(
+            [
+                "git",
+                "checkout",
+                "docs/SDLC/Requirements_Traceability_Matrix.md",
+                "docs/SDLC/IQ_OQ_PQ_Execution_Report.md",
+            ]
+        )

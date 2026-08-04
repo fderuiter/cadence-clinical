@@ -147,7 +147,16 @@ try {
 
   // 2. Run compliance compiler
   console.log('--- Step 2: Running Compliance Tracer ---');
-  runCommand('python3 scripts/generate_rtm.py');
+  const reportPath = path.join(repoRoot, 'report.xml');
+  const hasReport = fs.existsSync(reportPath) && fs.statSync(reportPath).size > 0;
+  const envDraft = process.env.RTM_DRAFT || process.env.GENERATE_RTM_DRAFT;
+  const isEnvDraft = envDraft && !['0', 'false', 'no', 'off'].includes(envDraft.toLowerCase());
+
+  if (hasReport && !isEnvDraft) {
+    runCommand('python3 scripts/generate_rtm.py');
+  } else {
+    runCommand('python3 scripts/generate_rtm.py --draft');
+  }
 
   // 3. Prepare files for VitePress
   console.log('--- Step 3: Preparing Documentation Files ---');

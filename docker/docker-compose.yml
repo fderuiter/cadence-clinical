@@ -57,7 +57,7 @@ services:
   designer:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: apps/designer/Dockerfile
     container_name: cadence-designer
     command: ["uvicorn", "apps.designer.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
     volumes:
@@ -75,7 +75,7 @@ services:
   execution:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: apps/execution/Dockerfile
     container_name: cadence-execution
     command: ["sh", "-c", "python -m apps.execution.database.migrate && uvicorn apps.execution.main:app --host 0.0.0.0 --port 8002 --reload"]
     volumes:
@@ -96,7 +96,7 @@ services:
   org:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: apps/org/Dockerfile
     container_name: cadence-org
     command: ["uvicorn", "apps.org.main:app", "--host", "0.0.0.0", "--port", "8012", "--reload"]
     volumes:
@@ -112,7 +112,7 @@ services:
   eisf:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: apps/eisf/Dockerfile
     container_name: cadence-eisf
     command: ["sh", "-c", "python -m apps.eisf.database.migrate && uvicorn apps.eisf.main:app --host 0.0.0.0 --port 8010 --reload"]
     volumes:
@@ -128,7 +128,7 @@ services:
   etmf:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: apps/etmf/Dockerfile
     container_name: cadence-etmf
     command: ["sh", "-c", "python -m apps.etmf.database.migrate && uvicorn apps.etmf.main:app --host 0.0.0.0 --port 8003 --reload"]
     volumes:
@@ -147,7 +147,7 @@ services:
   ctms:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: apps/ctms/Dockerfile
     container_name: cadence-ctms
     command: ["uvicorn", "apps.ctms.main:app", "--host", "0.0.0.0", "--port", "8007", "--reload"]
     volumes:
@@ -163,7 +163,7 @@ services:
   quality:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: apps/quality/Dockerfile
     container_name: cadence-quality
     command: ["uvicorn", "apps.quality.main:app", "--host", "0.0.0.0", "--port", "8005", "--reload"]
     volumes:
@@ -179,7 +179,7 @@ services:
   interop:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: apps/interop/Dockerfile
     container_name: cadence-interop
     command: ["uvicorn", "apps.interop.main:app", "--host", "0.0.0.0", "--port", "8004", "--reload"]
     volumes:
@@ -195,7 +195,7 @@ services:
   tickets:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: apps/tickets/Dockerfile
     container_name: cadence-tickets
     command: ["uvicorn", "apps.tickets.main:app", "--host", "0.0.0.0", "--port", "8009", "--reload"]
     volumes:
@@ -211,7 +211,7 @@ services:
   safety:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: apps/safety/Dockerfile
     container_name: cadence-safety
     command: ["uvicorn", "apps.safety.main:app", "--host", "0.0.0.0", "--port", "8008", "--reload"]
     volumes:
@@ -228,7 +228,7 @@ services:
   notifications:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: apps/notifications/Dockerfile
     container_name: cadence-notifications
     command: ["uvicorn", "apps.notifications.main:app", "--host", "0.0.0.0", "--port", "8006", "--reload"]
     volumes:
@@ -254,7 +254,7 @@ services:
   econsent:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: apps/econsent/Dockerfile
     container_name: cadence-econsent
     command: ["uvicorn", "apps.econsent.main:app", "--host", "0.0.0.0", "--port", "8011", "--reload"]
     volumes:
@@ -285,7 +285,7 @@ services:
   gateway:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: apps/gateway/Dockerfile
     container_name: cadence-gateway
     command: ["uvicorn", "apps.gateway.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     volumes:
