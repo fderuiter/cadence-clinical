@@ -27,12 +27,12 @@ def test_merge_secrets_baseline():
             "file_a.py": [
                 {
                     "filename": "file_a.py",
-                    "hashed_secret": "abc123curr",
+                    "hashed_secret": "abc123curr",  # pragma: allowlist secret
                     "line_number": 10,
                 },
                 {
                     "filename": "file_a.py",
-                    "hashed_secret": "common_hash",
+                    "hashed_secret": "common_hash",  # pragma: allowlist secret
                     "line_number": 12,
                 },
             ]
@@ -47,12 +47,12 @@ def test_merge_secrets_baseline():
             "file_a.py": [
                 {
                     "filename": "file_a.py",
-                    "hashed_secret": "xyz789oth",
+                    "hashed_secret": "xyz789oth",  # pragma: allowlist secret
                     "line_number": 20,
                 },
                 {
                     "filename": "file_a.py",
-                    "hashed_secret": "common_hash",
+                    "hashed_secret": "common_hash",  # pragma: allowlist secret
                     "line_number": 15,
                 },
             ]
