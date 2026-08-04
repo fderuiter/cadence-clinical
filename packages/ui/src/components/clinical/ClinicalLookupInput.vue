@@ -5,7 +5,6 @@
     :query="query"
     :grid-span="gridSpan"
     :error="error"
-    :attributes="attributes"
     tag="div"
     extra-class="clinical-lookup-container"
   >
@@ -16,6 +15,9 @@
         :name="slotId"
         :value="modelValue"
         autocomplete="off"
+        v-bind="attributes"
+        :aria-describedby="status !== 'none' ? `lookup-status-${id}` : undefined"
+        :aria-invalid="status === 'invalid' ? 'true' : undefined"
         @input="
           $emit('update:modelValue', $event.target.value);
           $emit('input', $event.target.value);
@@ -34,7 +36,10 @@
         role="status"
         aria-live="polite"
       >
-        <span class="lookup-status-icon" aria-hidden="true">{{
+        <span
+          class="lookup-status-icon"
+          aria-hidden="true"
+        >{{
           statusIcon
         }}</span>
         <span class="lookup-status-text">{{ ariaLiveMessage }}</span>
@@ -46,7 +51,7 @@
         role="status"
         aria-live="polite"
         style="display: none"
-      />
+      ></div>
     </template>
   </ClinicalFieldLayout>
 </template>
