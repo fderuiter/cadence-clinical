@@ -106,18 +106,39 @@ def cap_age_string(age_str: str, cap: int = 89) -> str:
     Returns:
         str: The generalized age string, or the original if age is below or equal to cap.
     """
-    match = re.search(r"\d{1,3}", age_str)
-    if not match:
+    pattern = re.compile(
+        r"\b(?:age[sd]?|age of)\s*[:\- ]?\s*(\d{1,3})\b"
+        r"|\b(\d{1,3})\s*(?:years?\s*(?:of\s*age)?\s*old|-years?-old|yo|-yo)\b",
+        re.IGNORECASE,
+    )
+
+    matches = list(re.finditer(pattern, age_str))
+    if not matches:
         return age_str
 
-    try:
-        age_val = int(match.group())
-        if age_val > cap:
-            return age_str.replace(match.group(), f"{cap}+", 1)
-    except Exception:
-        pass
+    result_parts = list(age_str)
+    for match in reversed(matches):
+        start_idx = -1
+        end_idx = -1
+        age_val_str = ""
+        if match.group(1) is not None:
+            start_idx = match.start(1)
+            end_idx = match.end(1)
+            age_val_str = match.group(1)
+        elif match.group(2) is not None:
+            start_idx = match.start(2)
+            end_idx = match.end(2)
+            age_val_str = match.group(2)
 
-    return age_str
+        if start_idx != -1 and end_idx != -1:
+            try:
+                age_val = int(age_val_str)
+                if age_val > cap:
+                    result_parts[start_idx:end_idx] = list(f"{cap}+")
+            except Exception:
+                pass
+
+    return "".join(result_parts)
 
 
 def apply_deid_transforms(
@@ -264,3 +285,46 @@ def cap_age_numeric(age: int | float, cap: int = 89) -> int | float:
             return float(cap)
         return int(cap)
     return age
+
+
+def normalize_and_cap_age(age_val: Any, cap: int = 89) -> Any:
+    """
+    Parses, normalizes, and caps all forms of age values (integers, floats, decimal strings,
+    and string-appended units/suffixes) if they exceed the specified cap.
+
+    If age is string-based, returns the capped age as a string (e.g., '89').
+    If it is numeric float/int, preserves its type (e.g., 89.0 or 89).
+    Ages equal to or below cap are returned unaltered.
+    Non-age values, None, and bool values are returned untouched.
+    """
+    if age_val is None or isinstance(age_val, bool):
+        return age_val
+
+    if isinstance(age_val, (int, float)):
+        if age_val > cap:
+            if isinstance(age_val, float):
+                return float(cap)
+            return int(cap)
+        return age_val
+
+    if isinstance(age_val, str):
+        val_strip = age_val.strip()
+        if not val_strip:
+            return age_val
+
+        # Centralized parser uses robust regular expressions to parse decimal strings and units
+        match = re.search(r"(\d+(?:\.\d+)?)", val_strip)
+        if not match:
+            return age_val
+
+        num_str = match.group(1)
+        try:
+            val = float(num_str) if "." in num_str else int(num_str)
+
+            if val > cap:
+                return str(cap)
+            return age_val
+        except ValueError:
+            return age_val
+
+    return age_val

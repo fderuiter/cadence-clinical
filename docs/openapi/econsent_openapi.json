@@ -1,0 +1,3096 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Cadence Clinical - eConsent",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Service health check endpoint.\nExempt from gateway authentication checks.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/documents": {
+      "post": {
+        "summary": "Create Consent Document",
+        "description": "Create a new clinical trial eConsent document.\nEnforces Part 11 validation and logs access to the immutable audit trail.",
+        "operationId": "create_consent_document_api_v1_econsent_documents_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentDocumentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentDocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/documents/{id}": {
+      "get": {
+        "summary": "Get Consent Document",
+        "description": "Retrieve an existing eConsent document by its unique identifier.\nLogs access to the audit trail.",
+        "operationId": "get_consent_document_api_v1_econsent_documents__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentDocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/clauses": {
+      "post": {
+        "summary": "Create Consent Clause",
+        "description": "Create/ingest a new ICF clause version (starts at version_index = 1).",
+        "operationId": "create_consent_clause_api_v1_econsent_clauses_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentClauseCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentClauseResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Consent Clauses",
+        "description": "List clauses, optionally filtering by study_id and/or clause_id.\nBy default, returns only the latest version of each unique clause.",
+        "operationId": "list_consent_clauses_api_v1_econsent_clauses_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "clause_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Clause Id"
+            }
+          },
+          {
+            "name": "all_versions",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "All Versions"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConsentClauseResponse"
+                  },
+                  "title": "Response List Consent Clauses Api V1 Econsent Clauses Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/clauses/{clause_id}": {
+      "put": {
+        "summary": "Update Consent Clause",
+        "description": "Create a new version of an existing ICF clause with incremented version_index.\nEnsures prior versions are preserved unchanged.",
+        "operationId": "update_consent_clause_api_v1_econsent_clauses__clause_id__put",
+        "parameters": [
+          {
+            "name": "clause_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clause Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentClauseUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentClauseResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get Consent Clause",
+        "description": "Retrieve a single clause by its clause_id. Returns the latest version by default\nunless version_index is specified.",
+        "operationId": "get_consent_clause_api_v1_econsent_clauses__clause_id__get",
+        "parameters": [
+          {
+            "name": "clause_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clause Id"
+            }
+          },
+          {
+            "name": "version_index",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version Index"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentClauseResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/templates": {
+      "post": {
+        "summary": "Create Consent Template",
+        "description": "Create/ingest a new consent template (starts at version_index = 1 and is_published = False).",
+        "operationId": "create_consent_template_api_v1_econsent_templates_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentTemplateCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentTemplateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Consent Templates",
+        "description": "List templates, optionally filtering by study_id and/or template_id.\nBy default, returns only the latest version of each unique template.",
+        "operationId": "list_consent_templates_api_v1_econsent_templates_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "template_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Template Id"
+            }
+          },
+          {
+            "name": "all_versions",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "All Versions"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConsentTemplateResponse"
+                  },
+                  "title": "Response List Consent Templates Api V1 Econsent Templates Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/archival-status/{correlation_id}": {
+      "get": {
+        "summary": "Get Archival Status Endpoint",
+        "description": "Retrieve eTMF archival delivery status by correlation ID.",
+        "operationId": "get_archival_status_endpoint_api_v1_econsent_archival_status__correlation_id__get",
+        "parameters": [
+          {
+            "name": "correlation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Correlation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchivalDeliveryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/archival-status": {
+      "get": {
+        "summary": "Get Archival Status Query Endpoint",
+        "description": "Retrieve eTMF archival delivery status by correlation ID, or by template_id, version_index, and subject_pseudonym.",
+        "operationId": "get_archival_status_query_endpoint_api_v1_econsent_archival_status_get",
+        "parameters": [
+          {
+            "name": "correlation_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Correlation Id"
+            }
+          },
+          {
+            "name": "template_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Template Id"
+            }
+          },
+          {
+            "name": "version_index",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version Index"
+            }
+          },
+          {
+            "name": "subject_pseudonym",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Pseudonym"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchivalDeliveryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent": {
+      "post": {
+        "summary": "Capture Subject Consent",
+        "description": "Canonically capture electronic signed subject consent after re-authentication.\nEnforces that template version exists and is published, comprehension checks passed,\nand step-up X-Sig-Token re-authentication was successfully processed.",
+        "operationId": "capture_subject_consent_api_v1_econsent_templates__template_id__versions__version_index__capture_consent_post",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          },
+          {
+            "name": "version_index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Version Index"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubjectConsentCaptureRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectConsentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/subjects/{subject_pseudonym}/consent-status": {
+      "get": {
+        "summary": "Get Subject Consent Status Endpoint",
+        "description": "Retrieve the latest, highest-version signed SubjectConsent status for Execution gating.",
+        "operationId": "get_subject_consent_status_endpoint_api_v1_econsent_subjects__subject_pseudonym__consent_status_get",
+        "parameters": [
+          {
+            "name": "subject_pseudonym",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subject Pseudonym"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectConsentStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/templates/{template_id}/versions/{version_index}/comprehension-checks": {
+      "post": {
+        "summary": "Create Or Update Comprehension Check",
+        "description": "Create or update the comprehension check definition for a specific template version.\nRecords a Part 11 compliant audit log entry.",
+        "operationId": "create_or_update_comprehension_check_api_v1_econsent_templates__template_id__versions__version_index__comprehension_checks_post",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          },
+          {
+            "name": "version_index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Version Index"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComprehensionCheckCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComprehensionCheckResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get Comprehension Check",
+        "description": "Retrieve the comprehension check definition for a specific template version.",
+        "operationId": "get_comprehension_check_api_v1_econsent_templates__template_id__versions__version_index__comprehension_checks_get",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          },
+          {
+            "name": "version_index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Version Index"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComprehensionCheckResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/templates/{template_id}/versions/{version_index}/submit-answers": {
+      "post": {
+        "summary": "Submit Comprehension Answers Endpoint",
+        "description": "Submit subject answers for comprehension checks, evaluate them, persist the append-only results,\nand return a UI-ready progression state.",
+        "operationId": "submit_comprehension_answers_endpoint_api_v1_econsent_templates__template_id__versions__version_index__submit_answers_post",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          },
+          {
+            "name": "version_index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Version Index"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComprehensionSubmissionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComprehensionSubmissionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/templates/{template_id}/versions/{version_index}/sign": {
+      "post": {
+        "summary": "Sign Consent Template Endpoint",
+        "description": "Electronic signature endpoint that requires all defined/required checks to pass for the exact template version.",
+        "operationId": "sign_consent_template_endpoint_api_v1_econsent_templates__template_id__versions__version_index__sign_post",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          },
+          {
+            "name": "version_index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Version Index"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentSignatureRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentSignatureResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/translations": {
+      "post": {
+        "summary": "Create Consent Translation",
+        "description": "Create/ingest a new translation draft (starts at version_index = 1, status = DRAFT).\nValidates that the source clause or template exists.",
+        "operationId": "create_consent_translation_api_v1_econsent_translations_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentTranslationCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentTranslationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Consent Translations",
+        "description": "List translations, optionally filtering by source_id, source_type, language_code, and/or status.\nBy default, returns only the latest version of each unique translation.",
+        "operationId": "list_consent_translations_api_v1_econsent_translations_get",
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Id"
+            }
+          },
+          {
+            "name": "source_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Type"
+            }
+          },
+          {
+            "name": "language_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Language Code"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "all_versions",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "All Versions"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConsentTranslationResponse"
+                  },
+                  "title": "Response List Consent Translations Api V1 Econsent Translations Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/translations/{translation_id}": {
+      "put": {
+        "summary": "Update Consent Translation",
+        "description": "Create a new version of an existing translation with incremented version_index.",
+        "operationId": "update_consent_translation_api_v1_econsent_translations__translation_id__put",
+        "parameters": [
+          {
+            "name": "translation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Translation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentTranslationUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentTranslationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get Consent Translation",
+        "description": "Retrieve a single translation by translation_id. Returns the latest version by default\nunless version_index is specified.",
+        "operationId": "get_consent_translation_api_v1_econsent_translations__translation_id__get",
+        "parameters": [
+          {
+            "name": "translation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Translation Id"
+            }
+          },
+          {
+            "name": "version_index",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version Index"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentTranslationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/translations/{translation_id}/transition": {
+      "post": {
+        "summary": "Transition Consent Translation",
+        "description": "Transition translation status: DRAFT -> IN_REVIEW -> APPROVED.\nInvalid transitions are rejected with HTTP 400.",
+        "operationId": "transition_consent_translation_api_v1_econsent_translations__translation_id__transition_post",
+        "parameters": [
+          {
+            "name": "translation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Translation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranslationTransitionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentTranslationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/templates/{template_id}/approved-content": {
+      "get": {
+        "summary": "Get Approved Composed Template",
+        "description": "Patient-facing endpoint to retrieve composed approved template content in a specific language.\nUses the thread-safe read-through cache with TTL and stale-on-error behavior.",
+        "operationId": "get_approved_composed_template_api_v1_econsent_templates__template_id__approved_content_get",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          },
+          {
+            "name": "language_code",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Language Code"
+            }
+          },
+          {
+            "name": "version_index",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version Index"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Approved Composed Template Api V1 Econsent Templates  Template Id  Approved Content Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/templates/{template_id}": {
+      "put": {
+        "summary": "Update Consent Template",
+        "description": "Create a new version of an existing consent template with incremented version_index.\nEnsures prior versions are preserved unchanged.",
+        "operationId": "update_consent_template_api_v1_econsent_templates__template_id__put",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentTemplateUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentTemplateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get Consent Template",
+        "description": "Retrieve a single template by its template_id. Returns the latest version by default\nunless version_index is specified.",
+        "operationId": "get_consent_template_api_v1_econsent_templates__template_id__get",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          },
+          {
+            "name": "version_index",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version Index"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentTemplateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/templates/{template_id}/compose": {
+      "get": {
+        "summary": "Compose Consent Template",
+        "description": "Retrieve a template and fully resolve/hydrate all its referenced clauses.",
+        "operationId": "compose_consent_template_api_v1_econsent_templates__template_id__compose_get",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          },
+          {
+            "name": "version_index",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version Index"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComposedTemplateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/templates/{template_id}/publish": {
+      "post": {
+        "summary": "Publish Consent Template",
+        "description": "Publish a consent template after validating that referenced clauses exist\nand required workflow steps (comprehension check and signature placeholder) are present.",
+        "operationId": "publish_consent_template_api_v1_econsent_templates__template_id__publish_post",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentTemplateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ArchivalDeliveryResponse": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "Chronological UTC timestamp when the record was created."
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Unique identifier of the user who created the record."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory explanation or audit justification for creating or mutating this record."
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "next_retry_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Retry At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "retry_eligible": {
+            "type": "boolean",
+            "title": "Retry Eligible"
+          },
+          "correlation_id": {
+            "type": "string",
+            "title": "Correlation Id"
+          },
+          "template_id": {
+            "type": "string",
+            "title": "Template Id"
+          },
+          "subject_pseudonym": {
+            "type": "string",
+            "title": "Subject Pseudonym"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "etmf_document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Etmf Document Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_by",
+          "reason_for_change",
+          "version_index",
+          "id",
+          "status",
+          "attempts",
+          "retry_eligible",
+          "correlation_id",
+          "template_id",
+          "subject_pseudonym",
+          "study_id"
+        ],
+        "title": "ArchivalDeliveryResponse",
+        "description": "Schema for retrieving the archival delivery status."
+      },
+      "ComposedClauseResponse": {
+        "properties": {
+          "clause_id": {
+            "type": "string",
+            "title": "Clause Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clause_id",
+          "title",
+          "text",
+          "version_index"
+        ],
+        "title": "ComposedClauseResponse",
+        "description": "Schema for a resolved clause inside a composed template."
+      },
+      "ComposedTemplateResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "template_id": {
+            "type": "string",
+            "title": "Template Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "template_name": {
+            "type": "string",
+            "title": "Template Name"
+          },
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version"
+          },
+          "is_published": {
+            "type": "boolean",
+            "title": "Is Published"
+          },
+          "requires_reconsent": {
+            "type": "boolean",
+            "title": "Requires Reconsent"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "clauses": {
+            "items": {
+              "$ref": "#/components/schemas/ComposedClauseResponse"
+            },
+            "type": "array",
+            "title": "Clauses"
+          },
+          "workflow_steps": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Workflow Steps"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "template_id",
+          "study_id",
+          "template_name",
+          "protocol_version",
+          "is_published",
+          "requires_reconsent",
+          "version_index",
+          "clauses",
+          "workflow_steps",
+          "created_at",
+          "created_by",
+          "reason_for_change"
+        ],
+        "title": "ComposedTemplateResponse",
+        "description": "Schema for a composed template with fully resolved clause texts."
+      },
+      "ComprehensionCheckCreate": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Chronological UTC timestamp when the record was created."
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Unique identifier of the user who created the record."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory explanation or audit justification for creating or mutating this record."
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Row version counter or index.",
+            "default": 1
+          },
+          "questions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Questions",
+            "description": "List of question dicts"
+          },
+          "expected_answers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Expected Answers",
+            "description": "Mapping of question_id to expected answer"
+          },
+          "threshold_policy": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Threshold Policy",
+            "description": "Evaluation threshold policy, e.g. {'min_correct': 2}"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_by",
+          "reason_for_change",
+          "questions",
+          "expected_answers",
+          "threshold_policy"
+        ],
+        "title": "ComprehensionCheckCreate",
+        "description": "Schema for creating/configuring a new comprehension check for a template version."
+      },
+      "ComprehensionCheckResponse": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "Chronological UTC timestamp when the record was created."
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Unique identifier of the user who created the record."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory explanation or audit justification for creating or mutating this record."
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "template_id": {
+            "type": "string",
+            "title": "Template Id"
+          },
+          "questions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Questions"
+          },
+          "expected_answers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Expected Answers"
+          },
+          "threshold_policy": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Threshold Policy"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_by",
+          "reason_for_change",
+          "version_index",
+          "id",
+          "template_id",
+          "questions",
+          "expected_answers",
+          "threshold_policy"
+        ],
+        "title": "ComprehensionCheckResponse",
+        "description": "Schema for retrieving comprehension check configurations."
+      },
+      "ComprehensionSubmissionRequest": {
+        "properties": {
+          "subject_pseudonym": {
+            "type": "string",
+            "title": "Subject Pseudonym",
+            "description": "Pseudonym identifier of the subject"
+          },
+          "submitted_answers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Submitted Answers",
+            "description": "Mapping of question_id to submitted answer"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Part 11 signature/evaluation change reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_pseudonym",
+          "submitted_answers",
+          "reason_for_change"
+        ],
+        "title": "ComprehensionSubmissionRequest",
+        "description": "Schema for submitting answers for evaluation."
+      },
+      "ComprehensionSubmissionResponse": {
+        "properties": {
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "total_questions": {
+            "type": "integer",
+            "title": "Total Questions"
+          },
+          "correct_count": {
+            "type": "integer",
+            "title": "Correct Count"
+          },
+          "min_required": {
+            "type": "integer",
+            "title": "Min Required"
+          },
+          "next_step": {
+            "type": "string",
+            "title": "Next Step"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "passed",
+          "score",
+          "total_questions",
+          "correct_count",
+          "min_required",
+          "next_step",
+          "message"
+        ],
+        "title": "ComprehensionSubmissionResponse",
+        "description": "Schema for the UI-ready progression state after submitting answers."
+      },
+      "ConsentClauseCreate": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Chronological UTC timestamp when the record was created."
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Unique identifier of the user who created the record."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory explanation or audit justification for creating or mutating this record."
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Row version counter or index.",
+            "default": 1
+          },
+          "clause_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clause Id",
+            "description": "Unique clause identifier across versions. Generated if not provided."
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique clinical study identifier"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Title",
+            "description": "Title of the clause"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "Content of the clause"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_by",
+          "reason_for_change",
+          "study_id",
+          "title",
+          "text"
+        ],
+        "title": "ConsentClauseCreate",
+        "description": "Schema for creating/ingesting a new eConsent clause."
+      },
+      "ConsentClauseResponse": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "Chronological UTC timestamp when the record was created."
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Unique identifier of the user who created the record."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory explanation or audit justification for creating or mutating this record."
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Row version counter or index.",
+            "default": 1
+          },
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique generated UUID of this version"
+          },
+          "clause_id": {
+            "type": "string",
+            "title": "Clause Id",
+            "description": "Unique clause identifier across versions"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique clinical study identifier"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Title of the clause"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "Content of the clause"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_by",
+          "reason_for_change",
+          "id",
+          "clause_id",
+          "study_id",
+          "title",
+          "text"
+        ],
+        "title": "ConsentClauseResponse",
+        "description": "Schema for retrieving an eConsent clause version."
+      },
+      "ConsentClauseUpdate": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Chronological UTC timestamp when the record was created."
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Unique identifier of the user who created the record."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory explanation or audit justification for creating or mutating this record."
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Row version counter or index.",
+            "default": 1
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique clinical study identifier"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Title",
+            "description": "Title of the clause"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "Content of the clause"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_by",
+          "reason_for_change",
+          "study_id",
+          "title",
+          "text"
+        ],
+        "title": "ConsentClauseUpdate",
+        "description": "Schema for updating/versioning an existing eConsent clause."
+      },
+      "ConsentDocumentCreate": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Chronological UTC timestamp when the record was created."
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Unique identifier of the user who created the record."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory explanation or audit justification for creating or mutating this record."
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Row version counter or index.",
+            "default": 1
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique clinical study identifier"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Unique clinical site identifier"
+          },
+          "document_name": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Document Name",
+            "description": "Name of the eConsent form/document"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Full text/content of the consent form"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_by",
+          "reason_for_change",
+          "study_id",
+          "site_id",
+          "document_name",
+          "content"
+        ],
+        "title": "ConsentDocumentCreate",
+        "description": "Schema for creating a new eConsent document.\nReuses the shared 21 CFR Part 11 AuditFields base."
+      },
+      "ConsentDocumentResponse": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "Chronological UTC timestamp when the record was created."
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Unique identifier of the user who created the record."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory explanation or audit justification for creating or mutating this record."
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Row version counter or index.",
+            "default": 1
+          },
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique generated UUID of the document"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique clinical study identifier"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Unique clinical site identifier"
+          },
+          "document_name": {
+            "type": "string",
+            "title": "Document Name",
+            "description": "Name of the eConsent form/document"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Full text/content of the consent form"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_by",
+          "reason_for_change",
+          "id",
+          "study_id",
+          "site_id",
+          "document_name",
+          "content"
+        ],
+        "title": "ConsentDocumentResponse",
+        "description": "Schema for eConsent document response.\nReuses the shared 21 CFR Part 11 AuditFields base."
+      },
+      "ConsentSignatureRequest": {
+        "properties": {
+          "subject_pseudonym": {
+            "type": "string",
+            "title": "Subject Pseudonym",
+            "description": "Pseudonym identifier of the subject"
+          },
+          "signature_data": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Data",
+            "description": "Electronic signature data (drawing or string)"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Change reason for signing"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional site identifier"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_pseudonym",
+          "reason_for_change"
+        ],
+        "title": "ConsentSignatureRequest",
+        "description": "Schema for submitting an electronic signature on a template version."
+      },
+      "ConsentSignatureResponse": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "Chronological UTC timestamp when the record was created."
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Unique identifier of the user who created the record."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory explanation or audit justification for creating or mutating this record."
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "template_id": {
+            "type": "string",
+            "title": "Template Id"
+          },
+          "subject_pseudonym": {
+            "type": "string",
+            "title": "Subject Pseudonym"
+          },
+          "signature_data": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Data"
+          },
+          "signed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Signed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_by",
+          "reason_for_change",
+          "version_index",
+          "id",
+          "template_id",
+          "subject_pseudonym",
+          "signature_data",
+          "signed_at"
+        ],
+        "title": "ConsentSignatureResponse",
+        "description": "Schema for signature response."
+      },
+      "ConsentTemplateCreate": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Chronological UTC timestamp when the record was created."
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Unique identifier of the user who created the record."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory explanation or audit justification for creating or mutating this record."
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Row version counter or index.",
+            "default": 1
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id",
+            "description": "Unique template identifier across versions. Generated if not provided."
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique clinical study identifier"
+          },
+          "template_name": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Template Name",
+            "description": "Name of the template"
+          },
+          "protocol_version": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Protocol Version",
+            "description": "Associated clinical protocol version"
+          },
+          "requires_reconsent": {
+            "type": "boolean",
+            "title": "Requires Reconsent",
+            "description": "Requires re-consent on change",
+            "default": false
+          },
+          "clauses": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Clauses",
+            "description": "Ordered clause_ids referenced by this template"
+          },
+          "workflow_steps": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Workflow Steps",
+            "description": "Workflow steps config"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_by",
+          "reason_for_change",
+          "study_id",
+          "template_name",
+          "protocol_version"
+        ],
+        "title": "ConsentTemplateCreate",
+        "description": "Schema for creating/ingesting a new eConsent template."
+      },
+      "ConsentTemplateResponse": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "Chronological UTC timestamp when the record was created."
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Unique identifier of the user who created the record."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory explanation or audit justification for creating or mutating this record."
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Row version counter or index.",
+            "default": 1
+          },
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique generated UUID of this version"
+          },
+          "template_id": {
+            "type": "string",
+            "title": "Template Id",
+            "description": "Unique template identifier across versions"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique clinical study identifier"
+          },
+          "template_name": {
+            "type": "string",
+            "title": "Template Name",
+            "description": "Name of the template"
+          },
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version",
+            "description": "Associated clinical protocol version"
+          },
+          "is_published": {
+            "type": "boolean",
+            "title": "Is Published",
+            "description": "Publication state"
+          },
+          "requires_reconsent": {
+            "type": "boolean",
+            "title": "Requires Reconsent",
+            "description": "Requires re-consent on change"
+          },
+          "clauses": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Clauses",
+            "description": "Ordered clause_ids referenced by this template"
+          },
+          "workflow_steps": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Workflow Steps",
+            "description": "Workflow steps config"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_by",
+          "reason_for_change",
+          "id",
+          "template_id",
+          "study_id",
+          "template_name",
+          "protocol_version",
+          "is_published",
+          "requires_reconsent"
+        ],
+        "title": "ConsentTemplateResponse",
+        "description": "Schema for retrieving an eConsent template version."
+      },
+      "ConsentTemplateUpdate": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Chronological UTC timestamp when the record was created."
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Unique identifier of the user who created the record."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory explanation or audit justification for creating or mutating this record."
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Row version counter or index.",
+            "default": 1
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique clinical study identifier"
+          },
+          "template_name": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Template Name",
+            "description": "Name of the template"
+          },
+          "protocol_version": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Protocol Version",
+            "description": "Associated clinical protocol version"
+          },
+          "requires_reconsent": {
+            "type": "boolean",
+            "title": "Requires Reconsent",
+            "description": "Requires re-consent on change",
+            "default": false
+          },
+          "clauses": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Clauses",
+            "description": "Ordered clause_ids referenced by this template"
+          },
+          "workflow_steps": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Workflow Steps",
+            "description": "Workflow steps config"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_by",
+          "reason_for_change",
+          "study_id",
+          "template_name",
+          "protocol_version"
+        ],
+        "title": "ConsentTemplateUpdate",
+        "description": "Schema for updating/versioning an existing eConsent template."
+      },
+      "ConsentTranslationCreate": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Chronological UTC timestamp when the record was created."
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Unique identifier of the user who created the record."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory explanation or audit justification for creating or mutating this record."
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Row version counter or index.",
+            "default": 1
+          },
+          "translation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Translation Id",
+            "description": "Unique translation identifier across versions. Generated if not provided."
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id",
+            "description": "Unique source clause_id or template_id being translated"
+          },
+          "source_type": {
+            "type": "string",
+            "title": "Source Type",
+            "description": "The type of the source: 'clause' or 'template'"
+          },
+          "source_version_index": {
+            "type": "integer",
+            "title": "Source Version Index",
+            "description": "The version of the source being translated"
+          },
+          "language_code": {
+            "type": "string",
+            "title": "Language Code",
+            "description": "Validated ISO 639-1 language code"
+          },
+          "translated_title": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Translated Title",
+            "description": "Translated title of the clause/template"
+          },
+          "translated_text": {
+            "type": "string",
+            "title": "Translated Text",
+            "description": "Translated text/content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_by",
+          "reason_for_change",
+          "source_id",
+          "source_type",
+          "source_version_index",
+          "language_code",
+          "translated_title",
+          "translated_text"
+        ],
+        "title": "ConsentTranslationCreate",
+        "description": "Schema for creating/ingesting a new consent translation."
+      },
+      "ConsentTranslationResponse": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "Chronological UTC timestamp when the record was created."
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Unique identifier of the user who created the record."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory explanation or audit justification for creating or mutating this record."
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Row version counter or index.",
+            "default": 1
+          },
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique generated UUID of this translation version"
+          },
+          "translation_id": {
+            "type": "string",
+            "title": "Translation Id",
+            "description": "Unique translation identifier across versions"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id",
+            "description": "Unique source clause_id or template_id being translated"
+          },
+          "source_type": {
+            "type": "string",
+            "title": "Source Type",
+            "description": "The type of the source: 'clause' or 'template'"
+          },
+          "source_version_index": {
+            "type": "integer",
+            "title": "Source Version Index",
+            "description": "The version of the source being translated"
+          },
+          "language_code": {
+            "type": "string",
+            "title": "Language Code",
+            "description": "Validated ISO 639-1 language code"
+          },
+          "translated_title": {
+            "type": "string",
+            "title": "Translated Title",
+            "description": "Translated title of the clause/template"
+          },
+          "translated_text": {
+            "type": "string",
+            "title": "Translated Text",
+            "description": "Translated text/content"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "The status of the translation (DRAFT, IN_REVIEW, APPROVED)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_by",
+          "reason_for_change",
+          "id",
+          "translation_id",
+          "source_id",
+          "source_type",
+          "source_version_index",
+          "language_code",
+          "translated_title",
+          "translated_text",
+          "status"
+        ],
+        "title": "ConsentTranslationResponse",
+        "description": "Schema for retrieving an eConsent translation version."
+      },
+      "ConsentTranslationUpdate": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Chronological UTC timestamp when the record was created."
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Unique identifier of the user who created the record."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory explanation or audit justification for creating or mutating this record."
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Row version counter or index.",
+            "default": 1
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id",
+            "description": "Unique source clause_id or template_id being translated"
+          },
+          "source_type": {
+            "type": "string",
+            "title": "Source Type",
+            "description": "The type of the source: 'clause' or 'template'"
+          },
+          "source_version_index": {
+            "type": "integer",
+            "title": "Source Version Index",
+            "description": "The version of the source being translated"
+          },
+          "language_code": {
+            "type": "string",
+            "title": "Language Code",
+            "description": "Validated ISO 639-1 language code"
+          },
+          "translated_title": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Translated Title",
+            "description": "Translated title of the clause/template"
+          },
+          "translated_text": {
+            "type": "string",
+            "title": "Translated Text",
+            "description": "Translated text/content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_by",
+          "reason_for_change",
+          "source_id",
+          "source_type",
+          "source_version_index",
+          "language_code",
+          "translated_title",
+          "translated_text"
+        ],
+        "title": "ConsentTranslationUpdate",
+        "description": "Schema for updating/versioning an existing eConsent translation."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "SubjectConsentCaptureRequest": {
+        "properties": {
+          "subject_pseudonym": {
+            "type": "string",
+            "title": "Subject Pseudonym",
+            "description": "Pseudonym identifier of the subject"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Unique clinical site identifier"
+          },
+          "device_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Timestamp",
+            "description": "Device-side timestamp"
+          },
+          "source_content_identity": {
+            "type": "string",
+            "title": "Source Content Identity",
+            "description": "Hash/clause-set identifier at capture time"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Part 11 rationale/change justification"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_pseudonym",
+          "site_id",
+          "source_content_identity",
+          "reason_for_change"
+        ],
+        "title": "SubjectConsentCaptureRequest"
+      },
+      "SubjectConsentResponse": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "Chronological UTC timestamp when the record was created."
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Unique identifier of the user who created the record."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory explanation or audit justification for creating or mutating this record."
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Row version counter or index.",
+            "default": 1
+          },
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique generated UUID of this consent record"
+          },
+          "subject_pseudonym": {
+            "type": "string",
+            "title": "Subject Pseudonym",
+            "description": "Pseudonym identifier of the subject"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique clinical study identifier"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Unique clinical site identifier"
+          },
+          "template_id": {
+            "type": "string",
+            "title": "Template Id",
+            "description": "The template identifier used for consent"
+          },
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version",
+            "description": "Associated clinical protocol version snapshot"
+          },
+          "source_content_identity": {
+            "type": "string",
+            "title": "Source Content Identity",
+            "description": "Hash/clause-set identifier at capture time"
+          },
+          "server_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Server Timestamp",
+            "description": "Server-side chronological capture timestamp"
+          },
+          "device_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Timestamp",
+            "description": "Device-side capture timestamp"
+          },
+          "signature_manifest": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Signature Manifest",
+            "description": "Detailed signature manifestation, canonical hmac signature, and payload hash"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_by",
+          "reason_for_change",
+          "id",
+          "subject_pseudonym",
+          "study_id",
+          "site_id",
+          "template_id",
+          "protocol_version",
+          "source_content_identity",
+          "server_timestamp",
+          "signature_manifest"
+        ],
+        "title": "SubjectConsentResponse"
+      },
+      "SubjectConsentStatusResponse": {
+        "properties": {
+          "subject_pseudonym": {
+            "type": "string",
+            "title": "Subject Pseudonym"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "template_id": {
+            "type": "string",
+            "title": "Template Id"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version"
+          },
+          "signed": {
+            "type": "boolean",
+            "title": "Signed"
+          },
+          "comprehension_passed": {
+            "type": "boolean",
+            "title": "Comprehension Passed"
+          },
+          "requires_reconsent": {
+            "type": "boolean",
+            "title": "Requires Reconsent",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_pseudonym",
+          "study_id",
+          "site_id",
+          "template_id",
+          "version_index",
+          "protocol_version",
+          "signed",
+          "comprehension_passed"
+        ],
+        "title": "SubjectConsentStatusResponse"
+      },
+      "TranslationTransitionRequest": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Target status: 'DRAFT', 'IN_REVIEW', or 'APPROVED'"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Explanation of transition"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "reason_for_change"
+        ],
+        "title": "TranslationTransitionRequest",
+        "description": "Request payload to transition translation status."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

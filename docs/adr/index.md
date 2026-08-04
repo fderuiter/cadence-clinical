@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-04: Centralized layout utilities and 48px touch targets](2026-08-04-centralized-layout-utilities-and-48px-touch-targets.md)
 - [2026-08-01: SDV and TSDV Data Model Foundations](2026-08-01-sdv-and-tsdv-data-model-foundations.md)
 - [2026-08-01: Unused ESLint Variable and DEID Exemption in UI Package](2026-08-01-unused-eslint-variable-and-deid-exemption-in-ui-package.md)
 - [2026-09-03: Centralized Study Scope and Lab Range Permissions](2026-09-03-centralized-study-scope-and-lab-range-permissions.md)
@@ -40,6 +41,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 2. API Gateway, Security & Identity
 - [2026-08-04: Refactor security context decorator for Python 3.14 compatibility](2026-08-04-refactor-security-context-decorator-for-python-314-compatibility.md)
+- [2026-08-04: Implement Native Interval Filtering and Custom Name Matching in Scrubber](2026-08-04-implement-native-interval-filtering-and-custom-name-matching-in-scrubber.md)
 - [2026-08-03: Decommission legacy V1 signatures and standalone rendering engine](2026-08-03-decommission-legacy-v1-signatures-and-standalone-rendering-engine.md)
 - [2026-09-08: Decommission Legacy V1 Signatures and Standalone Rendering Engine](2026-09-08-decommission-legacy-v1-signatures-and-rendering-engine.md)
 - [2026-08-03: Decommission Legacy V1 Signatures and Standalone Rendering Engine](2026-08-03-cleanup-legacy-rendering-v1-signatures.md)
@@ -154,8 +156,12 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-12: Deterministic GxP Report Generation and Signature Verification Rectification](2026-08-12-deterministic-gxp-report-generation-and-signature-verification.md)
 - [2026-08-17: Unified De-identification Compliance Scan CLI, Pre-commit Hook, and Blocking CI Gate](2026-08-17-unified-deid-compliance-scan-cli.md)
 - [2026-08-18: Document Redaction Architecture, Regulatory Data-Handling, and Compliance Profiles](2026-08-18-document-redaction-architecture.md)
+- [2026-08-03: Native Interval Filtering and Custom Name Matching](2026-08-03-native-interval-filtering-and-custom-name-matching.md)
 
 ### 6. Frontend & Design System
+- [2026-08-04: Viewport-Driven DOM Recycler for Large eCRFs](2026-08-04-viewport-driven-dom-recycler-for-large-ecrfs.md)
+- [2026-08-04: Scope CSS hover to can hover and add touch tap fallbacks](2026-08-04-scope-css-hover-to-can-hover-and-add-touch-tap-fallbacks.md)
+- [2026-08-28: Dynamic Hover Pointer Capability Detection and Touch-Safe Glossary Fallbacks](2026-08-28-dynamic-hover-detection-and-touch-safe-glossary-fallbacks.md)
 - [2026-08-03: Migrate Clinical Forms to Pre-Compiled Shared UI Library](2026-08-03-migrate-clinical-forms-to-pre-compiled-shared-ui-library.md)
 - [2026-08-03: Centralized Clinical Form Layout Wrapper](2026-08-03-centralized-clinical-form-layout-wrapper.md)
 - [2026-08-03: Optimized eTMF Document Registry with Store Indexing and Client-Side Pagination](2026-08-03-optimized-etmf-document-registry-with-store-indexing-and-client-side-pagination.md)
@@ -245,3 +251,5 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-07: Extend Centralized Permission Matrix for eCOA Diary Alert Actions](2026-09-07-extend-ecoa-diary-alert-permissions.md)
 - [2026-08-03: Decommission Legacy Standalone Frontend Rendering Engine and Legacy V1 Signatures](2026-08-03-cleanup-legacy-rendering-v1-signatures.md)
 - [2026-09-08: Decommission legacy rendering and v1 signatures](2026-09-08-decommission-legacy-rendering-and-v1-signatures.md)
+
+- [2026-08-04: Compile-Time Vite Build Mode for Interactive Public Demo](2026-08-04-compile-time-vite-build-mode-for-interactive-public-demo.md)

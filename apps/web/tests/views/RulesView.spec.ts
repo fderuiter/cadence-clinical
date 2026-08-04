@@ -24,6 +24,18 @@ const router = createRouter({
   routes: [{ path: "/rules", component: RulesView }],
 });
 
+// Mock apiClient to ensure consistent spying across Vitest worker threads
+vi.mock("../../src/api/apiClient", () => {
+  return {
+    apiClient: {
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+    },
+  };
+});
+
 describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () => {
   let pinia: any;
   let authStore: any;
@@ -129,6 +141,14 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
     });
 
     await flushPromises();
+
+    // Wait for the mock API call to have occurred (handles async crypto signature delay under CPU load)
+    let retries = 20;
+    while (vi.mocked(apiClient.get).mock.calls.length === 0 && retries > 0) {
+      await flushPromises();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      retries--;
+    }
 
     // Authorized role should NOT see the gating banner
     expect(wrapper.find(".rules-gating-banner").exists()).toBe(false);

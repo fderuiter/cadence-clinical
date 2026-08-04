@@ -25,7 +25,7 @@
       {{ globalError }}
     </div>
 
-    <div class="grid-2">
+    <div class="grid-2-responsive">
       <!-- Card 1: GxP Cryptographic Integrity Seal Verification -->
       <div class="card">
         <div class="card-title">
@@ -263,7 +263,7 @@
                 @change="handleTmfFileSelect"
               />
             </div>
-            <div class="grid-2" style="gap: 16px">
+            <div class="grid-2-responsive">
               <div class="form-group" style="margin-bottom: 0">
                 <label
                   for="tmf-zone-select"

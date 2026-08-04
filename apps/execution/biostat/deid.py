@@ -9,7 +9,11 @@ from typing import Any
 
 from dateutil import parser as date_parser
 
-from packages.deid.transforms import pseudonymize_value, shift_date_string
+from packages.deid.transforms import (
+    normalize_and_cap_age,
+    pseudonymize_value,
+    shift_date_string,
+)
 
 # Standard registry of date fields
 SDTM_DATE_FIELDS = {
@@ -140,16 +144,9 @@ def deidentify_record(row: dict[str, Any], salt: str) -> dict[str, Any]:
                 r[field_name] = val + offset
 
     # 4. Cap AGE field
-    # Cap the numeric AGE field (DM and any ADaM row carrying it) at the policy threshold (values > 89 set to 89)
+    # Cap the AGE field (DM and any ADaM row carrying it) at the policy threshold (values > 89 set to 89)
     if "AGE" in r:
-        age_val = r["AGE"]
-        if age_val is not None:
-            if isinstance(age_val, (int, float)):
-                if age_val > 89:
-                    r["AGE"] = 89
-            elif isinstance(age_val, str) and age_val.strip().isdigit():
-                if int(age_val) > 89:
-                    r["AGE"] = 89
+        r["AGE"] = normalize_and_cap_age(r["AGE"])
 
     return r
 

@@ -87,10 +87,16 @@ def test_cap_age_string():
     assert cap_age_string("92 years old", 89) == "89+ years old"
     assert cap_age_string("aged 102", 89) == "aged 89+"
     assert cap_age_string("91yo", 89) == "89+yo"
+    assert cap_age_string("91-yo", 89) == "89+-yo"
+    assert cap_age_string("age of 105", 89) == "age of 89+"
 
     # Below or equal to cap
     assert cap_age_string("age 45", 89) == "age 45"
     assert cap_age_string("89 years old", 89) == "89 years old"
+
+    # Multi-number strings / numeric prefixes
+    assert cap_age_string("Subject 123: age 94", 89) == "Subject 123: age 89+"
+    assert cap_age_string("ID 999: age 45", 89) == "ID 999: age 45"
 
     # No numeric age
     assert cap_age_string("old age", 89) == "old age"

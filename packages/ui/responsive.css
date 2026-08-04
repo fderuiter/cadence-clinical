@@ -2,16 +2,22 @@
 
 /* 1. Mobile-First Stack-to-Grid Layout Helpers */
 
-/* Default stack (single column) on mobile, becomes 12-column grid on tablet (768px) and up */
+/* Default stack (single column) on mobile, becomes 12-column grid on desktop (1024px) and up */
 .responsive-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--spacing-md, 16px);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .responsive-grid {
     grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1023px) {
+  .responsive-grid > * {
+    grid-column: span 1 / span 1 !important;
   }
 }
 
@@ -55,29 +61,42 @@
 
 /* 2. Grid Helpers modeled on .grid-layout & .grid-2 conventions */
 
-/* .grid-layout-responsive: 1 column on mobile/tablet, 1fr 2fr on larger screens (900px or tablet up) */
+/* .grid-layout-responsive: 1 column on mobile/tablet, 1fr 2fr on larger screens (1024px and up) */
 .grid-layout-responsive {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--spacing-xl, 24px);
 }
 
-@media (min-width: 900px) {
+@media (min-width: 1024px) {
   .grid-layout-responsive {
     grid-template-columns: 1fr 2fr;
   }
 }
 
-/* .grid-2-responsive: 1 column on mobile, 2 columns on tablet and up */
+/* .grid-2-responsive: 1 column on mobile, 2 columns on desktop (1024px) and up */
 .grid-2-responsive {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--spacing-xl, 24px);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .grid-2-responsive {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* .grid-asymmetric-responsive: 1 column on mobile, 1fr 1.2fr on desktop (1024px) and up */
+.grid-asymmetric-responsive {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-xl, 24px);
+}
+
+@media (min-width: 1024px) {
+  .grid-asymmetric-responsive {
+    grid-template-columns: 1fr 1.2fr;
   }
 }
 
@@ -119,8 +138,8 @@
 /* 4. Touch-Target Sizing Helpers */
 .touch-target,
 .min-touch-target {
-  min-height: var(--touch-target-min, 44px);
-  min-width: var(--touch-target-min, 44px);
+  min-height: var(--touch-target-min, 48px);
+  min-width: var(--touch-target-min, 48px);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -128,7 +147,7 @@
 
 /* Ensure interactive elements like buttons and input selectors comply with touch-targets when applied */
 .touch-target-interactive {
-  min-height: var(--touch-target-min, 44px);
+  min-height: var(--touch-target-min, 48px);
   box-sizing: border-box;
 }
 
