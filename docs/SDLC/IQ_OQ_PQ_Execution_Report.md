@@ -10,10 +10,10 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 2086
-- **Passed:** 2086 🟢
+- **Passed:** 2081 🟢
 - **Failed/Errors:** 0 🔴
-- **Skipped:** 0 ⚪
-- **Overall Operational Pass Rate:** 100.00%
+- **Skipped:** 5 ⚪
+- **Overall Operational Pass Rate:** 99.76%
 
 ## 2. Installation Qualification (IQ)
 
@@ -1286,11 +1286,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_unit_conversion_create_valid` | `tests.test_lab_schemas` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_unit_conversion_record_valid` | `tests.test_lab_schemas` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_unit_conversion_response_valid` | `tests.test_lab_schemas` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
