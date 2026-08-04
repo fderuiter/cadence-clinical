@@ -1,0 +1,15 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "packages-hexagonal"
+version = "0.1.0"
+description = "System-wide Hexagonal Architecture Base and Port/Adapter Utilities"
+requires-python = ">=3.14"
+dependencies = [
+    "sqlalchemy>=2.0.28",
+]
+
+[tool.hatch.build.targets.wheel.sources]
+"" = "packages/hexagonal"

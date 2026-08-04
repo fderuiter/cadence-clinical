@@ -4,7 +4,7 @@ Requirements: PRD-SYS-001
 """
 
 import os
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 import document_renderer
@@ -15,47 +15,19 @@ from ctms.doa_transport_models import (
     RevokeDelegationRequest,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.ctms.database import db_manager
-from apps.ctms.models import CTMSAuditLog, CTMSDelegation, write_audit_log
-from packages.database import DatabaseSessionDependency
+from apps.ctms.adapter.repositories import (
+    SQLAlchemCTMSDelegationRepository,
+    get_ctms_repository,
+)
+from apps.ctms.application.services import CTMSDelegationUseCase
+from apps.ctms.domain.exceptions import CTMSDelegationNotFoundError
 from packages.security.middleware import downstream_replay_cache, verify_sig_token
 from packages.security.rbac import Principal, get_principal, has_permission
 
 ProtocolDocumentRenderer = document_renderer.ProtocolDocumentRenderer
 
 router = APIRouter(prefix="/api/v1/ctms/doa", tags=["DOA"])
-
-get_db_session = DatabaseSessionDependency(db_manager)
-
-
-class CentralAuditLogger:
-    """Centralized audit logger for recording GxP events to CTMS audit trail.
-
-    Requirements: PRD-SYS-001
-    """
-
-    @staticmethod
-    async def record_event(
-        session: AsyncSession,
-        user_id: str,
-        user_role: str,
-        action: str,
-        details: str,
-    ) -> None:
-        """Log GxP compliant events to append-only database audit table.
-
-        Requirements: PRD-SYS-001
-        """
-        await write_audit_log(
-            session=session,
-            user_id=user_id,
-            user_role=user_role,
-            action=action,
-            details=details,
-        )
 
 
 def check_ctms_permission(principal: Principal, action: str) -> bool:
@@ -99,7 +71,7 @@ def check_ctms_permission(principal: Principal, action: str) -> bool:
 async def delegate_site_tasks(
     payload: DelegationTaskRequest,
     request: Request,
-    session: AsyncSession = Depends(get_db_session),
+    repo: SQLAlchemCTMSDelegationRepository = Depends(get_ctms_repository),
     principal: Principal = Depends(get_principal),
 ) -> dict[str, Any]:
     """Assign site trial task delegation requiring Principal Investigator sign-off.
@@ -110,36 +82,23 @@ async def delegate_site_tasks(
         raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     change_reason = principal.change_reason or payload.reason_for_change
+    user_roles = ",".join(principal.raw_roles) if principal.raw_roles else "CRA"
 
-    # Create inactive delegation record
-    delegation = CTMSDelegation(
+    use_case = CTMSDelegationUseCase(repo)
+    saved = await use_case.delegate_site_tasks(
         site_id=payload.site_id,
         staff_user_id=payload.staff_user_id,
         task_codes=payload.task_codes,
         start_date=payload.start_date,
-        is_active=False,
-        signed_off=False,
         created_by=principal.user_id,
         reason_for_change=change_reason,
-        version_index=1,
-    )
-    session.add(delegation)
-    await session.flush()
-
-    user_roles = ",".join(principal.raw_roles) if principal.raw_roles else "CRA"
-    # Record DOA_LOG_MODIFIED event in CentralAuditLogger
-    await CentralAuditLogger.record_event(
-        session=session,
-        user_id=principal.user_id,
-        user_role=user_roles,
-        action="DOA_LOG_MODIFIED",
-        details=f"Delegated tasks {payload.task_codes} to staff {payload.staff_user_id} at site {payload.site_id}. Status: PENDING_PI_APPROVAL. Reason: {change_reason}",
+        user_roles=user_roles,
     )
 
     return {
         "status": "PENDING_PI_APPROVAL",
         "site_id": payload.site_id,
-        "record_id": delegation.id,
+        "record_id": saved.id,
     }
 
 
@@ -147,7 +106,7 @@ async def delegate_site_tasks(
 async def revoke_site_tasks(
     payload: RevokeDelegationRequest,
     request: Request,
-    session: AsyncSession = Depends(get_db_session),
+    repo: SQLAlchemCTMSDelegationRepository = Depends(get_ctms_repository),
     principal: Principal = Depends(get_principal),
 ) -> dict[str, Any]:
     """Revoke or end a delegated trial duty with reason for change.
@@ -157,31 +116,19 @@ async def revoke_site_tasks(
     if not check_ctms_permission(principal, "write"):
         raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
-    stmt = select(CTMSDelegation).where(CTMSDelegation.id == payload.record_id)
-    result = await session.execute(stmt)
-    delegation = result.scalars().first()
-
-    if not delegation:
-        raise HTTPException(status_code=404, detail="Delegation record not found")
-
     change_reason = principal.change_reason or payload.reason_for_change
-
-    delegation.is_active = False
-    delegation.end_date = datetime.now(UTC).date().isoformat()
-    delegation.version_index += 1
-    delegation.reason_for_change = change_reason
-    session.add(delegation)
-    await session.flush()
-
     user_roles = ",".join(principal.raw_roles) if principal.raw_roles else "CRA"
-    # Record DOA_LOG_MODIFIED event in CentralAuditLogger
-    await CentralAuditLogger.record_event(
-        session=session,
-        user_id=principal.user_id,
-        user_role=user_roles,
-        action="DOA_LOG_MODIFIED",
-        details=f"Revoked delegation {payload.record_id} for site {delegation.site_id}. Reason: {change_reason}",
-    )
+
+    use_case = CTMSDelegationUseCase(repo)
+    try:
+        await use_case.revoke_site_tasks(
+            record_id=payload.record_id,
+            user_id=principal.user_id,
+            user_role=user_roles,
+            reason_for_change=change_reason,
+        )
+    except CTMSDelegationNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
     return {"status": "REVOKED", "record_id": payload.record_id}
 
@@ -190,7 +137,7 @@ async def revoke_site_tasks(
 async def sign_off_delegation(
     payload: DOASignOffRequest,
     request: Request,
-    session: AsyncSession = Depends(get_db_session),
+    repo: SQLAlchemCTMSDelegationRepository = Depends(get_ctms_repository),
     principal: Principal = Depends(get_principal),
 ) -> dict[str, Any]:
     """Endorse Delegation of Authority task assignment with Principal Investigator eSignature.
@@ -200,10 +147,8 @@ async def sign_off_delegation(
     if not check_ctms_permission(principal, "write"):
         raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
-    stmt = select(CTMSDelegation).where(CTMSDelegation.id == payload.record_id)
-    result = await session.execute(stmt)
-    delegation = result.scalars().first()
-
+    use_case = CTMSDelegationUseCase(repo)
+    delegation = await repo.get_by_id(payload.record_id)
     if not delegation:
         raise HTTPException(status_code=404, detail="Delegation record not found")
 
@@ -223,26 +168,17 @@ async def sign_off_delegation(
         raise HTTPException(status_code=401, detail="REAUTHENTICATION_REQUIRED")
 
     change_reason = principal.change_reason or payload.reason_for_change
-
-    delegation.signed_off = True
-    delegation.is_active = True
-    delegation.version_index += 1
-    delegation.reason_for_change = change_reason
-    session.add(delegation)
-    await session.flush()
-
     user_roles = (
         ",".join(principal.raw_roles)
         if principal.raw_roles
         else "Principal Investigator"
     )
-    # Record DOA_LOG_MODIFIED event in CentralAuditLogger
-    await CentralAuditLogger.record_event(
-        session=session,
+
+    await use_case.sign_off_delegation(
+        record_id=payload.record_id,
         user_id=principal.user_id,
         user_role=user_roles,
-        action="DOA_LOG_MODIFIED",
-        details=f"Signed off and activated delegation {payload.record_id} for site {delegation.site_id}. Reason: {change_reason}",
+        reason_for_change=change_reason,
     )
 
     return {"status": "ACTIVE", "record_id": payload.record_id, "signed_off": True}
@@ -252,7 +188,7 @@ async def sign_off_delegation(
 async def get_site_doa_log(
     site_id: str,
     request: Request,
-    session: AsyncSession = Depends(get_db_session),
+    repo: SQLAlchemCTMSDelegationRepository = Depends(get_ctms_repository),
     principal: Principal = Depends(get_principal),
 ) -> DOALogResponse:
     """Fetch active and historical DOA log matrix for a site.
@@ -262,10 +198,8 @@ async def get_site_doa_log(
     if not check_ctms_permission(principal, "read"):
         raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
-    # Get delegations
-    stmt = select(CTMSDelegation).where(CTMSDelegation.site_id == site_id)
-    res = await session.execute(stmt)
-    delegations = res.scalars().all()
+    use_case = CTMSDelegationUseCase(repo)
+    delegations, audit_logs = await use_case.get_site_doa_log(site_id)
 
     # Find PI name - let's check if there is a PI name mapped or default
     pi_name = "Dr. Arthur Pendragon"
@@ -273,29 +207,19 @@ async def get_site_doa_log(
         if d.staff_user_id == "kc-pi-001" or "PRINCIPAL_INVESTIGATOR" in d.task_codes:
             pi_name = "Dr. Arthur Pendragon"
 
-    # Get audit history
-    stmt_audit = (
-        select(CTMSAuditLog)
-        .where(CTMSAuditLog.action == "DOA_LOG_MODIFIED")
-        .order_by(CTMSAuditLog.timestamp.desc())
-    )
-    res_audit = await session.execute(stmt_audit)
-    audit_logs = res_audit.scalars().all()
-
     # Filter audits belonging to this site
     filtered_audits = []
     for log in audit_logs:
-        if site_id in log.details:
-            filtered_audits.append(
-                {
-                    "id": log.id,
-                    "timestamp": log.timestamp.isoformat(),
-                    "user_id": log.user_id,
-                    "user_role": log.user_role,
-                    "action": log.action,
-                    "details": log.details,
-                }
-            )
+        filtered_audits.append(
+            {
+                "id": log.id,
+                "timestamp": log.timestamp,
+                "user_id": log.user_id,
+                "user_role": log.user_role,
+                "action": log.action,
+                "details": log.details,
+            }
+        )
 
     delegated_staff = []
     for d in delegations:
@@ -327,7 +251,7 @@ async def get_site_doa_log(
 async def export_site_doa_pdf(
     site_id: str,
     request: Request,
-    session: AsyncSession = Depends(get_db_session),
+    repo: SQLAlchemCTMSDelegationRepository = Depends(get_ctms_repository),
     principal: Principal = Depends(get_principal),
 ) -> Response:
     """Export 21 CFR Part 11 signed DOA PDF log.
@@ -339,7 +263,7 @@ async def export_site_doa_pdf(
 
     # Get log details
     log_data = await get_site_doa_log(
-        site_id=site_id, request=request, session=session, principal=principal
+        site_id=site_id, request=request, repo=repo, principal=principal
     )
 
     html_content = f"""

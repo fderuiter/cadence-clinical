@@ -24,6 +24,7 @@ packages-database = { workspace = true }
 packages-deid = { workspace = true }
 packages-storage = { workspace = true }
 packages-core-models = { workspace = true }
+packages-hexagonal = { workspace = true }
 apps-compliance = { workspace = true }
 apps-ctms = { workspace = true }
 apps-designer = { workspace = true }
@@ -169,6 +170,7 @@ dev = [
     "playwright>=1.40.0",
     "pytest-playwright>=0.4.0",
     "pytest-xdist>=3.5.0",
+    "pytest-archon>=0.0.5",
 ]
 
 [tool.hatch.build.targets.wheel]
