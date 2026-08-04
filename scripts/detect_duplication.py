@@ -334,6 +334,10 @@ def main() -> None:
                                     "packages/database/__init__.py",
                                     "apps/etmf/database/migrate.py",
                                 },
+                                {
+                                    "apps/ctms/alembic/env.py",
+                                    "apps/quality/alembic/env.py",
+                                },
                             ]
                         ):
                             continue
