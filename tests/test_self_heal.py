@@ -15,9 +15,11 @@ def test_is_safe_file():
     assert not is_safe_file("docs/sdlc/process.md")
     assert not is_safe_file("apps/execution/docs/SDLC/policy.md")
 
-    # 2. Our self-healing script and tests (allowed)
+    # 2. Our self-healing script, tests, and configurations (allowed)
     assert is_safe_file("scripts/self_heal.py")
     assert is_safe_file("tests/test_self_heal.py")
+    assert is_safe_file(".github/workflows/conflict-check.yml")
+    assert is_safe_file("scripts/post_pr_comment.py")
 
     # 3. Lockfiles (allowed)
     assert is_safe_file("uv.lock")
