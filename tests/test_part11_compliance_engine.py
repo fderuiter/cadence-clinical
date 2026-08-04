@@ -9,7 +9,9 @@ Covers all 5 Acceptance Criteria:
 """
 
 import base64
+import os
 
+import pytest
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
@@ -18,6 +20,11 @@ from apps.etmf.cryptography import (
     validate_document_signature,
 )
 from packages.security.cert_store import get_active_cert_store
+
+
+@pytest.fixture(autouse=True)
+def disable_mock_signatures(monkeypatch):
+    monkeypatch.setenv("ALLOW_MOCK_SIGNATURES", "0")
 
 
 def generate_test_keys():
@@ -117,8 +124,9 @@ def test_rsassa_pss_succeeds():
     assert "successfully verified" in msg.lower()
 
 
-def test_mock_signatures_blocked():
+def test_mock_signatures_blocked(monkeypatch):
     """AC 1: Blocks and reports any uploaded document containing "MOCK" or "MOCK_SIGNATURE" within the signature payload."""
+    monkeypatch.setenv("ALLOW_MOCK_SIGNATURES", "0")
     document_content_1 = (
         "Some report content.\n"
         "-----BEGIN CERTIFICATE-----\nMOCK_SIGNATURE_PEM_BODY\n-----END CERTIFICATE-----\n"

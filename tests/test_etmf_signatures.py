@@ -51,7 +51,7 @@ async def test_signature_document_routing_and_classification():
         },
         headers=headers,
     )
-    assert resp_1572.status_code == 201
+    assert resp_1572.status_code == 201, resp_1572.json()
     data_1572 = resp_1572.json()
     assert data_1572["zone"] == 5
     assert data_1572["section"] == "05.02"
