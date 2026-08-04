@@ -9,8 +9,6 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2050
-- **Passed:** 2050 🟢
 - **Total Automated Test Cases Run:** 2055
 - **Passed:** 2055 🟢
 - **Failed/Errors:** 0 🔴
