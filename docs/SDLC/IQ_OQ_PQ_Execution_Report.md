@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2085
-- **Passed:** 2085 🟢
+- **Total Automated Test Cases Run:** 2086
+- **Passed:** 2086 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -558,6 +558,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_email_detector` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_fhir_narrative_and_notes_integration` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ip_mac_detector` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_is_excluded_path_alembic` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_medical_record_account_detector` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_overlap_resolution_deterministic` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_phone_fax_detector` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
