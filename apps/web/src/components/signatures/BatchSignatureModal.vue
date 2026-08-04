@@ -49,13 +49,6 @@
         </h3>
         <button
           class="btn-close"
-          style="
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #64748b;
-          "
           @click="$emit('close')"
         >
           &times;
@@ -117,15 +110,6 @@
           <div style="margin-top: 12px; text-align: right">
             <button
               class="btn-close-confirm btn"
-              style="
-                padding: 6px 12px;
-                font-size: 12px;
-                cursor: pointer;
-                background: #15803d;
-                color: white;
-                border: none;
-                border-radius: 4px;
-              "
               @click="$emit('close')"
             >
               Close
@@ -345,21 +329,10 @@
               Executing Electronic Signature...
             </div>
 
-            <div
-              class="modal-actions"
-              style="display: flex; justify-content: flex-end; gap: 8px"
-            >
+            <div class="modal-actions">
               <button
                 type="button"
                 class="btn-cancel btn"
-                style="
-                  padding: 6px 12px;
-                  font-size: 13px;
-                  cursor: pointer;
-                  border: 1px solid #cbd5e1;
-                  background: white;
-                  border-radius: 4px;
-                "
                 @click="$emit('close')"
               >
                 Cancel
@@ -367,15 +340,6 @@
               <button
                 type="submit"
                 class="btn-primary"
-                style="
-                  padding: 6px 12px;
-                  font-size: 13px;
-                  cursor: pointer;
-                  background: #2563eb;
-                  color: white;
-                  border: none;
-                  border-radius: 4px;
-                "
                 :disabled="isSigning || !password || !signatureMeaning"
               >
                 {{ isSigning ? "Signing..." : "Confirm & Execute Signature" }}
@@ -517,6 +481,74 @@ const handleExecuteSign = async () => {
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #64748b;
+}
+
+.btn-close-confirm {
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  background: #15803d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+}
+
+.btn-cancel {
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid #cbd5e1;
+  background: white;
+  border-radius: 4px;
+}
+
+.btn-primary {
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 4px;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 1024px) {
+  .btn,
+  .btn-close,
+  .btn-close-confirm,
+  .btn-cancel,
+  .btn-primary {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+  .modal-actions {
+    flex-wrap: wrap;
+    gap: 12px;
   }
 }
 </style>

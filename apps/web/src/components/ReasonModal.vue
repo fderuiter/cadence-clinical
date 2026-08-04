@@ -192,3 +192,36 @@ function onConfirm() {
   emit("confirm", finalReason);
 }
 </script>
+
+<style scoped>
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+@media (max-width: 1024px) {
+  .btn,
+  select,
+  textarea {
+    min-height: 44px;
+    font-size: 16px;
+    padding: 10px 14px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+</style>

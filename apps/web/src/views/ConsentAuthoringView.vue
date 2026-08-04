@@ -425,7 +425,6 @@
                 <button
                   type="button"
                   class="btn btn-move-up"
-                  style="padding: 4px 8px; font-size: 0.75rem"
                   :disabled="index === 0"
                   @click="moveClause(index, -1)"
                 >
@@ -434,7 +433,6 @@
                 <button
                   type="button"
                   class="btn btn-move-down"
-                  style="padding: 4px 8px; font-size: 0.75rem"
                   :disabled="index === editorForm.clauses.length - 1"
                   @click="moveClause(index, 1)"
                 >
@@ -443,14 +441,6 @@
                 <button
                   type="button"
                   class="btn btn-remove-clause"
-                  style="
-                    padding: 4px 8px;
-                    font-size: 0.75rem;
-                    background-color: var(--error);
-                    color: white;
-                    border: none;
-                    border-radius: 4px;
-                  "
                   @click="removeClauseRow(index)"
                 >
                   ✕
@@ -514,14 +504,6 @@
                   <button
                     type="button"
                     class="btn btn-remove-step"
-                    style="
-                      padding: 2px 6px;
-                      font-size: 0.7rem;
-                      background-color: var(--error);
-                      color: white;
-                      border: none;
-                      border-radius: 4px;
-                    "
                     @click="removeStep(index)"
                   >
                     Remove
@@ -987,5 +969,52 @@ onMounted(() => {
 .template-card:hover {
   border-color: var(--accent) !important;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+}
+
+.btn-move-up,
+.btn-move-down {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.btn-remove-clause {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  background-color: var(--error);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-remove-step {
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  background-color: var(--error);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+@media (max-width: 1024px) {
+  .btn-move-up,
+  .btn-move-down,
+  .btn-remove-clause,
+  .btn-remove-step {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+
+  .clause-order-row {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
 }
 </style>

@@ -31,8 +31,7 @@
         <div class="card-title">
           <span>GxP Execution Ledger Chain Verification</span>
           <button
-            class="btn btn-secondary badge"
-            style="padding: 4px 8px; font-size: 11px; cursor: pointer"
+            class="btn btn-secondary badge btn-verify-now"
             :disabled="integrity.loading"
             @click="verifyExecutionIntegrity"
           >
@@ -443,11 +442,11 @@
                   display: flex;
                   gap: 8px;
                   justify-content: flex-end;
+                  flex-wrap: wrap;
                 "
               >
                 <button
                   class="btn btn-secondary btn-preview-doc"
-                  style="padding: 4px 8px; font-size: 11px; cursor: pointer"
                   :aria-label="'Preview secure document ' + doc.filename"
                   @click="previewDocument(doc)"
                 >
@@ -456,7 +455,6 @@
                 <button
                   v-if="doc.status !== 'SIGNED'"
                   class="btn btn-primary btn-sign-doc"
-                  style="padding: 4px 8px; font-size: 11px; cursor: pointer"
                   :aria-label="
                     'Sign and manifestation seal document ' + doc.filename
                   "
@@ -466,7 +464,6 @@
                 </button>
                 <button
                   class="btn btn-secondary btn-download-watermarked"
-                  style="padding: 4px 8px; font-size: 11px; cursor: pointer"
                   :aria-label="
                     'Download secure watermarked copy of ' + doc.filename
                   "
@@ -942,7 +939,6 @@
         <span>eTMF Completeness Tracking &amp; Verification</span>
         <button
           class="btn btn-secondary badge btn-check-completeness"
-          style="padding: 4px 8px; font-size: 11px; cursor: pointer"
           :disabled="completenessLoading"
           @click="checkCompleteness"
         >
@@ -1232,7 +1228,6 @@
                   <button
                     v-if="art.document_id"
                     class="btn btn-secondary btn-preview-completeness-doc"
-                    style="padding: 3px 6px; font-size: 11px; cursor: pointer"
                     @click="
                       previewDocument({
                         id: art.document_id,
@@ -1732,6 +1727,40 @@ onMounted(() => {
   }
   100% {
     transform: rotate(360deg);
+  }
+}
+
+.btn-verify-now,
+.btn-check-completeness,
+.btn-preview-doc,
+.btn-sign-doc,
+.btn-download-watermarked {
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.btn-preview-completeness-doc {
+  padding: 3px 6px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+/* Touch screens & mobile / tablet viewports */
+@media (max-width: 1024px) {
+  .btn-verify-now,
+  .btn-check-completeness,
+  .btn-preview-doc,
+  .btn-sign-doc,
+  .btn-download-watermarked,
+  .btn-preview-completeness-doc {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 14px;
+    font-size: 14px;
   }
 }
 </style>

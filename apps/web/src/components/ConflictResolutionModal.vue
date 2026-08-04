@@ -224,20 +224,11 @@
         </div>
       </div>
 
-      <div
-        class="modal-footer"
-        style="
-          padding: 16px 20px;
-          display: flex;
-          justify-content: flex-end;
-          gap: 12px;
-        "
-      >
+      <div class="modal-footer">
         <button
           id="btn-cancel-conflict"
           class="btn touch-target-interactive"
           type="button"
-          style="background-color: #e2e8f0; color: #334155"
           @click="onCancel"
         >
           Cancel
@@ -246,7 +237,6 @@
           id="btn-confirm-conflict"
           class="btn btn-primary touch-target-interactive"
           type="button"
-          style="background-color: #f59e0b; border-color: #d97706; color: white"
           @click="onConfirm"
         >
           Save Resolution
@@ -329,3 +319,48 @@ function onConfirm() {
   });
 }
 </script>
+
+<style scoped>
+.modal-footer {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.touch-target-interactive {
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-weight: 500;
+  border: none;
+}
+
+#btn-cancel-conflict {
+  background-color: #e2e8f0;
+  color: #334155;
+}
+
+#btn-confirm-conflict {
+  background-color: #f59e0b;
+  border: 1px solid #d97706;
+  color: white;
+}
+
+@media (max-width: 1024px) {
+  .touch-target-interactive {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+  .modal-footer {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}
+</style>

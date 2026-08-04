@@ -372,7 +372,8 @@ select {
   border-top: 1px solid #e2e8f0;
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 12px;
+  flex-wrap: wrap;
   background: #f8fafc;
 }
 
