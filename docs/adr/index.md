@@ -158,6 +158,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-03: Native Interval Filtering and Custom Name Matching](2026-08-03-native-interval-filtering-and-custom-name-matching.md)
 
 ### 6. Frontend & Design System
+- [2026-08-04: Viewport-Driven DOM Recycler for Large eCRFs](2026-08-04-viewport-driven-dom-recycler-for-large-ecrfs.md)
 - [2026-08-04: Scope CSS hover to can hover and add touch tap fallbacks](2026-08-04-scope-css-hover-to-can-hover-and-add-touch-tap-fallbacks.md)
 - [2026-08-28: Dynamic Hover Pointer Capability Detection and Touch-Safe Glossary Fallbacks](2026-08-28-dynamic-hover-detection-and-touch-safe-glossary-fallbacks.md)
 - [2026-08-03: Migrate Clinical Forms to Pre-Compiled Shared UI Library](2026-08-03-migrate-clinical-forms-to-pre-compiled-shared-ui-library.md)
