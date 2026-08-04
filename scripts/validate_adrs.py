@@ -92,14 +92,25 @@ def is_architectural_file(filepath: str) -> bool:
         return True
 
     # 4. Storage model changes or migrations under execution
-    return bool(
-        (
-            filepath.startswith("apps/execution/database/")
-            or "migrations" in filepath
-            or "models" in filepath
-        )
-        and filepath.startswith("apps/execution/")
-    )
+    if (
+        filepath.startswith("apps/execution/database/")
+        or "migrations" in filepath
+        or "models" in filepath
+    ) and filepath.startswith("apps/execution/"):
+        return True
+
+    # 5. Storage model changes or database schemas/models under study designer (Requirement 5)
+    if filepath.startswith("apps/designer/"):
+        filename = os.path.basename(filepath)
+        if (
+            filename == "db.py"
+            or "model" in filename
+            or "schema" in filename
+            or "migration" in filename
+        ):
+            return True
+
+    return False
 
 
 def get_closest_local_branch_point() -> str:

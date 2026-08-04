@@ -18,22 +18,11 @@ vi.mock("@/api/apiClient", () => {
   };
 });
 
+
 // Setup mock router
 const router = createRouter({
   history: createWebHistory(),
   routes: [{ path: "/rules", component: RulesView }],
-});
-
-// Mock apiClient to ensure consistent spying across Vitest worker threads
-vi.mock("../../src/api/apiClient", () => {
-  return {
-    apiClient: {
-      get: vi.fn(),
-      post: vi.fn(),
-      put: vi.fn(),
-      delete: vi.fn(),
-    },
-  };
 });
 
 describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () => {
