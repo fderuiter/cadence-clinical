@@ -75,6 +75,8 @@ class Deviation(Base):
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
 
+    __mapper_args__ = {"version_id_col": version_index}
+
     # Relationships
     root_cause_analysis: Mapped[RootCauseAnalysis | None] = relationship(
         back_populates="deviation", uselist=False, cascade="all, delete-orphan"
@@ -114,6 +116,8 @@ class RootCauseAnalysis(Base):
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+    __mapper_args__ = {"version_id_col": version_index}
 
     # Relationships
     deviation: Mapped[Deviation] = relationship(back_populates="root_cause_analysis")
@@ -165,6 +169,8 @@ class CAPARecord(Base):
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+    __mapper_args__ = {"version_id_col": version_index}
 
     # Relationships
     deviation: Mapped[Deviation] = relationship(back_populates="capa_records")

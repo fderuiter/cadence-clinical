@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import DBAPIError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlalchemy.orm.exc import StaleDataError
 
 from apps.quality.database import db_manager
 from apps.quality.models import (
@@ -199,6 +200,16 @@ async def sqlite_dbapi_error_handler(request: Request, exc: DBAPIError):
             },
         )
     raise exc
+
+
+@app.exception_handler(StaleDataError)
+async def stale_data_error_handler(request: Request, exc: StaleDataError):
+    return JSONResponse(
+        status_code=409,
+        content={
+            "detail": f"Version conflict: The record has been modified by another process. Please retry. Error: {str(exc)}"
+        },
+    )
 
 
 # Dependable to obtain database session
