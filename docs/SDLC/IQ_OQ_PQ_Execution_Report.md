@@ -9,11 +9,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2084
-- **Passed:** 2079 🟢
+- **Total Automated Test Cases Run:** 2085
+- **Passed:** 2085 🟢
 - **Failed/Errors:** 0 🔴
-- **Skipped:** 5 ⚪
-- **Overall Operational Pass Rate:** 99.76%
+- **Skipped:** 0 ⚪
+- **Overall Operational Pass Rate:** 100.00%
 
 ## 2. Installation Qualification (IQ)
 
@@ -1285,11 +1285,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_unit_conversion_create_valid` | `tests.test_lab_schemas` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_unit_conversion_record_valid` | `tests.test_lab_schemas` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_unit_conversion_response_valid` | `tests.test_lab_schemas` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
-| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
-| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
-| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
-| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1890,6 +1890,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_is_safe_file` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_blocked_on_non_safe_files` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_no_conflict_needed` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_no_conflict_with_non_safe_files` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_skipped_if_no_safe_change_label` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cross_service_interception_and_replay` | `tests.test_shared_infrastructure` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_service_client_fixtures_isolation` | `tests.test_shared_infrastructure` | *Regression/Helper* | 🟢 PASSED | < 1s |
