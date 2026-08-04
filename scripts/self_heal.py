@@ -328,26 +328,62 @@ def main() -> None:
     print("Validation checks passed successfully!")
 
     # 7. Secure Pushing with High Privilege
-    pat = os.environ.get("PAT_FDERUITER") or os.environ.get("GH_TOKEN")
-    if pat:
-        print("Configuring remote URL with credentials...")
-        run_command(
-            [
-                "git",
-                "remote",
-                "set-url",
-                "origin",
-                f"https://x-access-token:{pat}@github.com/{repo}.git",
-            ]
-        )
+    pat_fderuiter = os.environ.get("PAT_FDERUITER")
+    gh_token = os.environ.get("GH_TOKEN")
 
-    print(f"Pushing healed branch to origin/HEAD:{head_branch}...")
-    push_out, push_err = run_command(
-        ["git", "push", "origin", f"HEAD:{head_branch}"], check=False
-    )
-    print(push_out)
-    if push_err:
-        print(f"Push warnings/errors: {push_err}")
+    success = False
+    if pat_fderuiter:
+        print("Attempting push using PAT_FDERUITER...")
+        try:
+            run_command(
+                [
+                    "git",
+                    "remote",
+                    "set-url",
+                    "origin",
+                    f"https://x-access-token:{pat_fderuiter}@github.com/{repo}.git",
+                ],
+                check=True,
+            )
+            push_out, push_err = run_command(
+                ["git", "push", "origin", f"HEAD:{head_branch}"], check=True
+            )
+            print(push_out)
+            if push_err:
+                print(f"Push warnings/info: {push_err}")
+            print("Push with PAT_FDERUITER completed successfully!")
+            success = True
+        except Exception as e:
+            print(f"Push with PAT_FDERUITER failed: {e}. Falling back to GH_TOKEN...")
+
+    if not success and gh_token:
+        print("Attempting push using GH_TOKEN...")
+        try:
+            run_command(
+                [
+                    "git",
+                    "remote",
+                    "set-url",
+                    "origin",
+                    f"https://x-access-token:{gh_token}@github.com/{repo}.git",
+                ],
+                check=True,
+            )
+            push_out, push_err = run_command(
+                ["git", "push", "origin", f"HEAD:{head_branch}"], check=True
+            )
+            print(push_out)
+            if push_err:
+                print(f"Push warnings/info: {push_err}")
+            print("Push with GH_TOKEN completed successfully!")
+            success = True
+        except Exception as e:
+            print(f"Push with GH_TOKEN failed: {e}")
+            sys.exit(1)
+
+    if not success:
+        print("No valid credentials found or push failed completely.")
+        sys.exit(1)
 
     print("Autonomous self-healing completed successfully and pushed!")
     update_pr_comment("success")
