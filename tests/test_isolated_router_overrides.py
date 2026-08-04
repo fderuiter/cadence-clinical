@@ -240,7 +240,7 @@ async def test_signature_sign_off_mocked_builder() -> None:
         "target_ids": ["form_vs_01", "form_lb_01", "form_ae_01"],
         "target_form_ids": ["form_vs_01", "form_lb_01", "form_ae_01"],
         "signing_reason": "I approve the accuracy and completeness of this casebook",
-        "password": "SecretPassword123!",
+        "password": "test-placeholder-pw",  # nosec B106
         "printed_name": "Dr. Alice Smith, MD",
     }
 
