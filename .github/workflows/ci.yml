@@ -274,8 +274,9 @@ jobs:
       - name: Install Playwright Browsers
         run: |
           if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
-            echo "Playwright cache hit detected. Installing only system dependencies..."
+            echo "Playwright cache hit detected. Installing system dependencies and verifying browser binary..."
             uv run playwright install-deps chromium
+            uv run playwright install chromium
           else
             echo "Playwright cache miss. Performing full browser installation..."
             for i in {1..3}; do
@@ -373,8 +374,9 @@ jobs:
       - name: Install Playwright Browsers
         run: |
           if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
-            echo "Playwright cache hit detected. Installing only system dependencies..."
+            echo "Playwright cache hit detected. Installing system dependencies and verifying browser binary..."
             uv run playwright install-deps chromium
+            uv run playwright install chromium
           else
             echo "Playwright cache miss. Performing full browser installation..."
             for i in {1..3}; do
