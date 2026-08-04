@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2097
-- **Passed:** 2092 🟢
+- **Total Automated Test Cases Run:** 2108
+- **Passed:** 2103 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
 - **Overall Operational Pass Rate:** 99.76%
@@ -1172,6 +1172,16 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_fail_fast_without_report_and_draft_flag` | `tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_missing_report_gxp_sync_dry_run` | `tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_success_with_draft_flag` | `tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_consent_form_record_immutability_domain` | `tests.test_hexagonal_domain` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_consent_signature_immutability_domain` | `tests.test_hexagonal_domain` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_safety_audit_log_immutability_domain` | `tests.test_hexagonal_domain` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_sqlalchemy_audit_repository_persistence` | `tests.test_hexagonal_domain` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_sqlalchemy_consent_repository_persistence` | `tests.test_hexagonal_domain` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_sqlalchemy_subject_repository_persistence` | `tests.test_hexagonal_domain` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_subject_lifecycle_pure_domain_transitions` | `tests.test_hexagonal_domain` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_subject_stratification_factors_locking_domain` | `tests.test_hexagonal_domain` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_unblinding_and_withdrawal_domain` | `tests.test_hexagonal_domain` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_workflows_with_in_memory_repositories` | `tests.test_hexagonal_domain` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_bulk_offline_sync` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compute_reminders_all_subjects_staff` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compute_reminders_by_subject_and_end_date_branch` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |

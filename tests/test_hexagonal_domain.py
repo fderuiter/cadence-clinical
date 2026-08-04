@@ -24,7 +24,10 @@ from apps.execution.subject_lifecycle import (
 
 
 def test_subject_lifecycle_pure_domain_transitions():
-    """Verify that clinical subject state transitions obey strict lifecycle paths purely in the domain layer, database-free."""
+    """Verify that clinical subject state transitions obey strict lifecycle paths purely in the domain layer, database-free.
+
+    @req:PRD-SYS-001
+    """
     # 1. Start in SCREENING
     subject = ClinicalSubjectDomain(
         subject_id="SUBJ-001", study_id="STUDY_A", strat_factors={"age": "GE_65"}
@@ -42,7 +45,10 @@ def test_subject_lifecycle_pure_domain_transitions():
 
 
 def test_subject_stratification_factors_locking_domain():
-    """Verify that stratification factors are mutable pre-randomization but locked post-randomization."""
+    """Verify that stratification factors are mutable pre-randomization but locked post-randomization.
+
+    @req:PRD-SYS-001
+    """
     subject = ClinicalSubjectDomain(
         subject_id="SUBJ-001", study_id="STUDY_A", strat_factors={"age": "GE_65"}
     )
@@ -72,7 +78,10 @@ def test_subject_stratification_factors_locking_domain():
 
 
 def test_unblinding_and_withdrawal_domain():
-    """Verify emergency unblinding and withdrawal transitions update fields correctly in domain model."""
+    """Verify emergency unblinding and withdrawal transitions update fields correctly in domain model.
+
+    @req:PRD-SYS-001
+    """
     subject = ClinicalSubjectDomain(
         subject_id="SUBJ-001", study_id="STUDY_A", status="SCREENING"
     )
@@ -96,7 +105,10 @@ def test_unblinding_and_withdrawal_domain():
 
 
 def test_consent_signature_immutability_domain():
-    """Verify that signed consent records cannot be modified or deleted directly in the domain layer."""
+    """Verify that signed consent records cannot be modified or deleted directly in the domain layer.
+
+    @req:PRD-SYS-001
+    """
     sig = ConsentSignatureDomain(
         subject_id="SUBJ-001",
         icf_version_id="ICF-V1",
@@ -117,7 +129,10 @@ def test_consent_signature_immutability_domain():
 
 
 def test_consent_form_record_immutability_domain():
-    """Verify that ConsentFormRecord blocks updates when SIGNED, except status transition to RECONSENT_REQUIRED."""
+    """Verify that ConsentFormRecord blocks updates when SIGNED, except status transition to RECONSENT_REQUIRED.
+
+    @req:PRD-SYS-001
+    """
     record = ConsentFormRecordDomain(
         subject_id="SUBJ-001",
         icf_version_id="ICF-V1",
@@ -150,7 +165,10 @@ def test_consent_form_record_immutability_domain():
 
 
 def test_safety_audit_log_immutability_domain():
-    """Verify that AuditLog domain model blocks updates and deletions to enforce GxP append-only integrity."""
+    """Verify that AuditLog domain model blocks updates and deletions to enforce GxP append-only integrity.
+
+    @req:PRD-SYS-001
+    """
     log = AuditLogDomain(
         table_name="clinical_subjects",
         record_id="SUBJ-001",
@@ -172,7 +190,10 @@ def test_safety_audit_log_immutability_domain():
 
 @pytest.mark.asyncio
 async def test_workflows_with_in_memory_repositories():
-    """Verify clean workflow simulation utilizing mock in-memory repositories completely database-free."""
+    """Verify clean workflow simulation utilizing mock in-memory repositories completely database-free.
+
+    @req:PRD-SYS-001
+    """
     subj_repo = InMemorySubjectRepository()
     consent_repo = InMemoryConsentRepository()
     audit_repo = InMemoryAuditRepository()
@@ -257,7 +278,10 @@ async def db_session():
 
 @pytest.mark.asyncio
 async def test_sqlalchemy_subject_repository_persistence(db_session):
-    """Verify that SQLAlchemySubjectRepository correctly persists changes to/from the database."""
+    """Verify that SQLAlchemySubjectRepository correctly persists changes to/from the database.
+
+    @req:PRD-SYS-001
+    """
     repo = SQLAlchemySubjectRepository(db_session)
 
     # 1. Save new subject domain model
@@ -290,7 +314,10 @@ async def test_sqlalchemy_subject_repository_persistence(db_session):
 
 @pytest.mark.asyncio
 async def test_sqlalchemy_consent_repository_persistence(db_session):
-    """Verify that SQLAlchemyConsentRepository correctly persists consent models."""
+    """Verify that SQLAlchemyConsentRepository correctly persists consent models.
+
+    @req:PRD-SYS-001
+    """
     repo = SQLAlchemyConsentRepository(db_session)
 
     # 1. Save consent signature
@@ -327,7 +354,10 @@ async def test_sqlalchemy_consent_repository_persistence(db_session):
 
 @pytest.mark.asyncio
 async def test_sqlalchemy_audit_repository_persistence(db_session):
-    """Verify that SQLAlchemyAuditRepository correctly persists safety audit logs."""
+    """Verify that SQLAlchemyAuditRepository correctly persists safety audit logs.
+
+    @req:PRD-SYS-001
+    """
     repo = SQLAlchemyAuditRepository(db_session)
 
     log_domain = AuditLogDomain(
