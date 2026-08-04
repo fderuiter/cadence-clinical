@@ -1189,6 +1189,7 @@ async def download_document(
             f"Downloaded content for eTMF document '{doc.filename}' (ID: {doc.id})."
         )
 
+    # Decode if stored as Base64 binary
     mime_lower = doc.mime_type.lower().strip()
     is_binary = (
         "pdf" in mime_lower
@@ -1196,11 +1197,12 @@ async def download_document(
         or "docx" in mime_lower
         or mime_lower == "application/octet-stream"
     )
-    if is_binary and isinstance(final_content, str):
-        try:
-            import base64
+    if is_binary:
+        import base64
 
-            final_content = base64.b64decode(final_content)
+        try:
+            if isinstance(final_content, str):
+                final_content = base64.b64decode(final_content)
         except Exception:
             pass
 
@@ -1262,6 +1264,7 @@ async def download_watermarked_document(
         doc.content, doc.mime_type, user_id, user_roles
     )
 
+    # Decode if stored as Base64 binary
     mime_lower = doc.mime_type.lower().strip()
     is_binary = (
         "pdf" in mime_lower
@@ -1269,11 +1272,12 @@ async def download_watermarked_document(
         or "docx" in mime_lower
         or mime_lower == "application/octet-stream"
     )
-    if is_binary and isinstance(watermarked_content, str):
-        try:
-            import base64
+    if is_binary:
+        import base64
 
-            watermarked_content = base64.b64decode(watermarked_content)
+        try:
+            if isinstance(watermarked_content, str):
+                watermarked_content = base64.b64decode(watermarked_content)
         except Exception:
             pass
 

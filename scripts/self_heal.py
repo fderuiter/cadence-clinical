@@ -40,7 +40,7 @@ def handle_github_api_error(stderr_msg: str) -> None:
         print(
             "WARNING: GitHub API permission or authentication error occurred.\n"
             f"Error details: {stderr_msg.strip()}\n"
-            "Skipping automated self-healing.",
+            "Skipping autonomous self-healing.",
             file=sys.stderr,
         )
         sys.exit(0)
@@ -209,6 +209,7 @@ def main() -> None:
         print(
             f"Could not fetch files from GitHub API: {files_err}. Falling back to git diff."
         )
+        handle_github_api_error(files_err)
         stdout, _ = run_command(
             ["git", "diff", "--name-only", f"origin/{base_branch}...HEAD"], check=False
         )

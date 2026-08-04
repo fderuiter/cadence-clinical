@@ -234,13 +234,12 @@ async def test_redaction_audit_trail_and_provenance():
         assert docs[0].id == source_id
         assert docs[0].version_index == 1
         content_v1 = docs[0].content
-        if " " not in content_v1:
-            try:
-                import base64
+        try:
+            import base64
 
-                content_v1 = base64.b64decode(content_v1).decode("utf-8")
-            except Exception:
-                pass
+            content_v1 = base64.b64decode(content_v1).decode("utf-8")
+        except Exception:
+            pass
         assert content_v1 == "Secret patient data: Bob Jones is unblinded."
         assert docs[0].is_redacted is False
 
@@ -248,13 +247,12 @@ async def test_redaction_audit_trail_and_provenance():
         assert docs[1].id == redacted_id
         assert docs[1].version_index == 2
         content_v2 = docs[1].content
-        if " " not in content_v2:
-            try:
-                import base64
+        try:
+            import base64
 
-                content_v2 = base64.b64decode(content_v2).decode("utf-8")
-            except Exception:
-                pass
+            content_v2 = base64.b64decode(content_v2).decode("utf-8")
+        except Exception:
+            pass
         assert content_v2 == "Secret patient data: [REDACTED] is unblinded."
         assert docs[1].is_redacted is True
         assert docs[1].redaction_source_id == source_id

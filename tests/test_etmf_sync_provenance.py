@@ -154,13 +154,12 @@ async def test_eisf_to_etmf_e2e_boundaries() -> None:
         assert docs[0].version_index == 1
         assert docs[1].version_index == 2
         content_v2 = docs[1].content
-        if " " not in content_v2:
-            try:
-                import base64
+        try:
+            import base64
 
-                content_v2 = base64.b64decode(content_v2).decode("utf-8")
-            except Exception:
-                pass
+            content_v2 = base64.b64decode(content_v2).decode("utf-8")
+        except Exception:
+            pass
         assert content_v2 == "Dr. Smith CV content revised V2"
 
 
