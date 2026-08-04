@@ -128,6 +128,27 @@ def test_handle_github_api_error():
 
 @patch("scripts.self_heal.run_command")
 @patch("scripts.self_heal.update_pr_comment")
+def test_main_graceful_on_github_api_error(mock_update_comment, mock_run_cmd):
+    # Mock gh pr view returning empty and error message containing 403 Forbidden
+    mock_run_cmd.side_effect = [
+        (
+            "",
+            "HTTP 403 Forbidden: Resource not accessible by integration",
+        )
+    ]
+
+    with patch.dict(
+        os.environ, {"GITHUB_REPOSITORY": "owner/repo", "PR_NUMBER": "123"}
+    ):
+        with patch("sys.exit", side_effect=SystemExit) as mock_exit:
+            with pytest.raises(SystemExit):
+                main()
+            # It should exit with 0 due to graceful API error handling
+            mock_exit.assert_called_once_with(0)
+
+
+@patch("scripts.self_heal.run_command")
+@patch("scripts.self_heal.update_pr_comment")
 def test_main_graceful_exit_on_api_error(mock_update_comment, mock_run_cmd):
     # Mock gh pr view to fail with authorization error
     mock_run_cmd.side_effect = [

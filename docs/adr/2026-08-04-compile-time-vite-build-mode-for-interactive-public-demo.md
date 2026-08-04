@@ -8,7 +8,7 @@
 ---
 
 ## 1. Context & Problem Statement
-The clinical platform must adhere to strict production compliance and lock down securely when identity providers (Keycloak) are offline. However, this compliance lockdown makes it impossible for developers, prospective clients, and users to interact with a public demo or sandbox environments without first running a local OIDC identity server. 
+The clinical platform must adhere to strict production compliance and lock down securely when identity providers (Keycloak) are offline. However, this compliance lockdown makes it impossible for developers, prospective clients, and users to interact with a public demo or sandbox environments without first running a local OIDC identity server.
 
 Requirements: PRD-SYS-001
 

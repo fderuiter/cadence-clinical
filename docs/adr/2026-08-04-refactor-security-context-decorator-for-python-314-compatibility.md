@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-The system security and audit logging layers rely on `packages/security/context.py` to establish context vars and audit trails during API execution. Inside `audit_context_decorator`, `asyncio.iscoroutinefunction` was previously used to inspect the target function and decide whether to return a synchronous or asynchronous wrapper. 
+The system security and audit logging layers rely on `packages/security/context.py` to establish context vars and audit trails during API execution. Inside `audit_context_decorator`, `asyncio.iscoroutinefunction` was previously used to inspect the target function and decide whether to return a synchronous or asynchronous wrapper.
 
 In Python 3.14+, `asyncio.iscoroutinefunction` is deprecated/removed and will trigger runtime failures. Therefore, we must migrate to a robust, future-proof mechanism to ensure standard compliance and seamless Python 3.14 runtime compatibility under PRD-SYS-001.
 

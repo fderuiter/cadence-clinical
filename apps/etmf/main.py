@@ -965,7 +965,7 @@ async def list_documents(
         stmt = stmt.where(TMFDocument.zone == zone)
     if search:
         # Simple SQLite/Postgres text search indexing
-        stmt = stmt.where(TMFDocument.content.contains(search))
+        stmt = stmt.where(TMFDocument._content.contains(search))
     if status:
         stmt = stmt.where(TMFDocument.status == status)
 
@@ -1189,6 +1189,28 @@ async def download_document(
             f"Downloaded content for eTMF document '{doc.filename}' (ID: {doc.id})."
         )
 
+    # Decode if stored as Base64 binary
+    mime_lower = doc.mime_type.lower().strip()
+    is_binary = (
+        "pdf" in mime_lower
+        or "wordprocessingml" in mime_lower
+        or "docx" in mime_lower
+        or mime_lower == "application/octet-stream"
+    )
+    if is_binary:
+        import base64
+
+        try:
+            if isinstance(final_content, str):
+                try:
+                    decoded = base64.b64decode(final_content)
+                    if decoded.startswith(b"%PDF") or decoded.startswith(b"PK\x03\x04"):
+                        final_content = decoded
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
     # Log action to immutable audit trail
     await write_audit_log(
         session=session,
@@ -1246,6 +1268,28 @@ async def download_watermarked_document(
     watermarked_content = apply_watermark(
         doc.content, doc.mime_type, user_id, user_roles
     )
+
+    # Decode if stored as Base64 binary
+    mime_lower = doc.mime_type.lower().strip()
+    is_binary = (
+        "pdf" in mime_lower
+        or "wordprocessingml" in mime_lower
+        or "docx" in mime_lower
+        or mime_lower == "application/octet-stream"
+    )
+    if is_binary:
+        import base64
+
+        try:
+            if isinstance(watermarked_content, str):
+                try:
+                    decoded = base64.b64decode(watermarked_content)
+                    if decoded.startswith(b"%PDF") or decoded.startswith(b"PK\x03\x04"):
+                        watermarked_content = decoded
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
     # Log action to immutable audit trail
     await write_audit_log(
@@ -3043,7 +3087,19 @@ async def inbound_email_webhook(
                 if len(att_bytes) > max_size:
                     raise HTTPException(status_code=413, detail="Attachment too large")
 
-                att_content = att_bytes.decode("utf-8", errors="ignore")
+                att_mime = att.content_type or "application/octet-stream"
+                att_mime_lower = att_mime.lower().strip()
+                is_att_binary = (
+                    "pdf" in att_mime_lower
+                    or "wordprocessingml" in att_mime_lower
+                    or "docx" in att_mime_lower
+                    or att_mime_lower == "application/octet-stream"
+                )
+
+                if is_att_binary:
+                    att_content = att_bytes
+                else:
+                    att_content = att_bytes.decode("utf-8", errors="ignore")
                 att_filename = att.filename or f"attachment_{idx}"
                 att_metadata = dict(metadata_json)
                 att_metadata["attachment_index"] = idx
@@ -3055,7 +3111,7 @@ async def inbound_email_webhook(
                     artifact_type=artifact_type,
                     filename=att_filename,
                     content=att_content,
-                    mime_type=att.content_type or "application/octet-stream",
+                    mime_type=att_mime,
                     created_by="system",
                     created_role="system",
                     zone=zone,
