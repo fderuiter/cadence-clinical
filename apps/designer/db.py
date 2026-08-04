@@ -418,6 +418,7 @@ class TerminologySearchCache:
         """
         import time
 
+        # Thread-safe lookup with TTL expiration check
         key = (term, from_record, page_size)
         now = time.time()
         with self._lock:
