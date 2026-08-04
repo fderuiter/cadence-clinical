@@ -25,6 +25,8 @@ ROW_KEYS: dict[str, str] = {
     "Git Merge Conflicts": "conflict",
     "Code Duplication Scan": "duplication",
     "Requirements Traceability": "traceability",
+    "GxP Container Validation Suite": "gxp_validation",
+    "Database Migration Integrity": "migration",
     "Markdown Validation": "markdown",
     "Architectural Drift Validation": "architecture",
 }
@@ -39,6 +41,8 @@ FIX_COMMANDS: dict[str, str] = {
     "deid": "`uv run python -m packages.deid.cli`",
     "duplication": "`python3 scripts/detect_duplication.py`",
     "traceability": "`python3 scripts/generate_rtm.py --validate`",
+    "gxp_validation": "`uv run pytest tests/validation/`",
+    "migration": "`uv run python3 apps/execution/database/rollback.py`",
     "markdown": "`python3 scripts/validate_markdown.py`",
     "architecture": "`python3 scripts/validate_architecture_drift.py`",
 }
@@ -164,6 +168,8 @@ def merge_outcomes(
         "deid",
         "duplication",
         "traceability",
+        "gxp_validation",
+        "migration",
         "markdown",
         "architecture",
     ]:
@@ -340,6 +346,8 @@ def build_comment_body(
         ("DEID Compliance Scan", "deid"),
         ("Code Duplication Scan", "detect_duplication.py"),
         ("Git Merge Conflicts", "conflict"),
+        ("GxP Container Validation Suite", "gxp_validation"),
+        ("Database Migration Integrity", "migration"),
         ("Markdown Validation (validate_markdown.py)", "markdown"),
         (
             "Architectural Drift Validation (validate_architecture_drift.py)",
@@ -441,6 +449,24 @@ def build_comment_body(
         except Exception as e:
             duplication_table = f"\n\n#### ⚠️ Code Duplication Scanner Warnings\n⚠️ Error reading duplication summary: {e}\n"
 
+    # Read AST-Aware custom merge driver report if present
+    ast_merge_table = ""
+    ast_report_path = "/tmp/ast_merge_report.json"
+    if os.path.exists(ast_report_path):
+        try:
+            with open(ast_report_path, encoding="utf-8") as f:
+                ast_report = json.load(f)
+            resolved_files = ast_report.get("resolved_files", [])
+            if resolved_files:
+                ast_merge_table = (
+                    "\n\n#### 🧬 AST-Aware Merge Driver Resolution Report\n"
+                )
+                ast_merge_table += "The following files containing structural updates (e.g., shifted helper functions, sorted imports) were successfully merged and resolved automatically using the AST-Aware Custom Merge Driver:\n"
+                for rf in resolved_files:
+                    ast_merge_table += f"- `{rf}`\n"
+        except Exception as e:
+            ast_merge_table = f"\n\n#### 🧬 AST-Aware Merge Driver Resolution Report\n⚠️ Error reading AST merge report: {e}\n"
+
     return f"""<!-- ID: CADENCE_PR_QUALITY_GATE_CHECKLIST -->
 {header_message}
 
@@ -448,6 +474,7 @@ def build_comment_body(
 {status_table}
 {vulnerability_table}
 {duplication_table}
+{ast_merge_table}
 
 #### 📦 Target Modules & Files Changed
 {component_summary}
@@ -580,6 +607,8 @@ def main() -> None:
             "deid": os.environ.get("DEID_OUTCOME", ""),
             "duplication": os.environ.get("DUPLICATION_OUTCOME", ""),
             "traceability": os.environ.get("TRACEABILITY_OUTCOME", ""),
+            "gxp_validation": os.environ.get("GXP_VALIDATION_OUTCOME", ""),
+            "migration": os.environ.get("MIGRATION_OUTCOME", ""),
             "markdown": os.environ.get("MARKDOWN_OUTCOME", ""),
             "architecture": os.environ.get("ARCHITECTURE_OUTCOME", ""),
         }

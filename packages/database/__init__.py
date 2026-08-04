@@ -1,3 +1,4 @@
+import json
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -18,19 +19,45 @@ class RelationalDatabaseManager:
         self.session_maker: async_sessionmaker[AsyncSession] | None = None
 
     def init_db(self, database_url: str, **kwargs: Any) -> None:
-        self.engine = create_async_engine(database_url, **kwargs)
+        engine_options = {}
 
-        @event.listens_for(self.engine.sync_engine, "connect")
-        def set_sqlite_pragma(dbapi_connection, connection_record):
-            """Enable SQLite foreign key support on connect event."""
-            cursor = dbapi_connection.cursor()
-            try:
-                cursor.execute("PRAGMA foreign_keys=ON")
-                cursor.execute("PRAGMA busy_timeout=30000")
-            except Exception:
-                pass
-            finally:
-                cursor.close()
+        # Standardize JSON serialization/deserialization across SQLite and PostgreSQL
+        engine_options["json_serializer"] = lambda obj: json.dumps(
+            obj, ensure_ascii=False
+        )
+        engine_options["json_deserializer"] = json.loads
+
+        if database_url.startswith("sqlite"):
+            self.engine = create_async_engine(
+                database_url, **{**engine_options, **kwargs}
+            )
+
+            @event.listens_for(self.engine.sync_engine, "connect")
+            def set_sqlite_pragma(dbapi_connection, connection_record):
+                """Enable SQLite foreign key support on connect event."""
+                cursor = dbapi_connection.cursor()
+                try:
+                    cursor.execute("PRAGMA foreign_keys=ON")
+                    cursor.execute("PRAGMA busy_timeout=30000")
+                except Exception:
+                    pass
+                finally:
+                    cursor.close()
+        else:
+            # PostgreSQL connection pool and other options
+            pg_options = {
+                "pool_size": 10,
+                "max_overflow": 20,
+                "pool_timeout": 30,
+                "pool_pre_ping": True,
+            }
+            # Merge with kwargs, letting kwargs override
+            for k, v in pg_options.items():
+                if k not in kwargs:
+                    kwargs[k] = v
+            self.engine = create_async_engine(
+                database_url, **{**engine_options, **kwargs}
+            )
 
         self.session_maker = async_sessionmaker(
             bind=self.engine, class_=AsyncSession, expire_on_commit=False
@@ -93,6 +120,32 @@ def get_relational_db_lifespan(
         if database_url.startswith("sqlite") and base_metadata is not None:
             async with db_manager.engine.begin() as conn:
                 await conn.run_sync(base_metadata.create_all)
+                # If this is the eTMF database with DocumentQCTransition, deploy SQLite triggers
+                from sqlalchemy import inspect, text
+
+                def has_table(sync_conn):
+                    return inspect(sync_conn).has_table("tmf_document_qc_transitions")
+
+                table_exists = await conn.run_sync(has_table)
+                if table_exists:
+                    await conn.execute(
+                        text("""
+                        CREATE TRIGGER IF NOT EXISTS tmf_document_qc_transitions_no_update
+                        BEFORE UPDATE ON tmf_document_qc_transitions
+                        BEGIN
+                            SELECT RAISE(FAIL, 'IMMUTABILITY_VIOLATION: DocumentQCTransition records are append-only and cannot be updated.');
+                        END;
+                    """)
+                    )
+                    await conn.execute(
+                        text("""
+                        CREATE TRIGGER IF NOT EXISTS tmf_document_qc_transitions_no_delete
+                        BEFORE DELETE ON tmf_document_qc_transitions
+                        BEGIN
+                            SELECT RAISE(FAIL, 'IMMUTABILITY_VIOLATION: DocumentQCTransition records are append-only and cannot be deleted.');
+                        END;
+                    """)
+                    )
 
         # Run service-specific asynchronous startup tasks
         if startup_hooks:

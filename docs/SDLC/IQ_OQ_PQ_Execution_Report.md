@@ -9,10 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2056
-- **Passed:** 2056 🟢
-- **Total Automated Test Cases Run:** 2063
-- **Passed:** 2063 🟢
+- **Total Automated Test Cases Run:** 2061
+- **Passed:** 2061 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -49,6 +47,7 @@ aioitertools             0.13.0
 aiosignal                1.4.0
 aiosmtplib               5.1.2
 aiosqlite                0.22.1
+alembic                  1.18.5
 annotated-doc            0.0.4
 annotated-types          0.7.0
 anyio                    4.14.2
@@ -114,6 +113,7 @@ jsonschema               4.26.0
 jsonschema-specifications 2025.9.1
 license-expression       30.4.4
 lxml                     6.1.1
+mako                     1.3.12
 markdown-it-py           4.2.0
 markupsafe               3.0.3
 mdurl                    0.1.2
@@ -260,6 +260,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_clean_postgres_databases_calls_truncate` | `tests.test_asgi_live_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_live_db_halt_when_neo4j_unreachable` | `tests.test_asgi_live_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_live_db_halt_when_postgres_unreachable` | `tests.test_asgi_live_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_js_reordered_helper_functions` | `tests.test_ast_merge_driver` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_python_edited_and_reordered` | `tests.test_ast_merge_driver` | PRD-SYS-002 | 🟢 PASSED | < 1s |
+| `test_python_imports_merged_and_sorted` | `tests.test_ast_merge_driver` | PRD-SYS-002 | 🟢 PASSED | < 1s |
+| `test_python_overlapping_logical_edits_fallback` | `tests.test_ast_merge_driver` | PRD-SYS-003 | 🟢 PASSED | < 1s |
+| `test_python_reordered_helper_functions` | `tests.test_ast_merge_driver` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_audit_records_ip_and_custom_timestamp` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_hard_delete_is_prevented` | `tests.test_audit` | Trace-1 | 🟢 PASSED | < 1s |
 | `test_insert_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | < 1s |
