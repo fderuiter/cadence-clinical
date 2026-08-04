@@ -99,7 +99,7 @@
       </div>
     </div>
 
-    <div class="grid-2-responsive" style="margin-top: var(--spacing-xl);">
+    <div class="grid-2-responsive" style="margin-top: var(--spacing-xl)">
       <!-- CRA Allocations & Workload Card -->
       <div class="card">
         <div class="card-title">CRA Allocation & Workload Summaries</div>

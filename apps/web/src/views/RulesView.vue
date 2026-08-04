@@ -77,10 +77,7 @@
       </div>
 
       <!-- Tab 1: Rules Designer -->
-      <div
-        v-if="activeTab === 'rules'"
-        class="grid-2-responsive"
-      >
+      <div v-if="activeTab === 'rules'" class="grid-2-responsive">
         <!-- Active Ruleset List -->
         <div
           class="card"

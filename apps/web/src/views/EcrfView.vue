@@ -39,7 +39,14 @@
       </div>
 
       <!-- Let user select role in demo mode to test Site Coordinator (CRC) vs Monitor (CRA) workflows -->
-      <div style="display: flex; gap: var(--spacing-xs); align-items: center; flex-wrap: wrap;">
+      <div
+        style="
+          display: flex;
+          gap: var(--spacing-xs);
+          align-items: center;
+          flex-wrap: wrap;
+        "
+      >
         <label
           for="role-tester-select"
           style="font-size: 0.8rem; font-weight: bold"

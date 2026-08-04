@@ -418,9 +418,7 @@
             <legend style="font-weight: bold; padding: 0 6px">
               Applicability, Custom Timing, and Arm Filtering
             </legend>
-            <div
-              class="grid-2-responsive"
-            >
+            <div class="grid-2-responsive">
               <div class="form-group">
                 <label for="link-procedure">Select Procedure</label>
                 <select
@@ -608,9 +606,7 @@
         concepts, or author new study concepts directly.
       </p>
 
-      <div
-        class="grid-asymmetric-responsive"
-      >
+      <div class="grid-asymmetric-responsive">
         <!-- Concept Search / Browse -->
         <div style="border-right: 1px solid var(--border); padding-right: 24px">
           <h3

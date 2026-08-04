@@ -44,10 +44,7 @@
     </div>
 
     <!-- Authorized view -->
-    <div
-      v-else
-      class="grid-2-responsive"
-    >
+    <div v-else class="grid-2-responsive">
       <!-- Templates List Pane -->
       <div
         class="card"
@@ -272,9 +269,7 @@
             >
               Metadata & Configuration
             </legend>
-            <div
-              class="grid-2-responsive"
-            >
+            <div class="grid-2-responsive">
               <div class="form-group">
                 <label
                   for="input-study-id"
@@ -398,7 +393,12 @@
                 v-for="(clauseId, index) in editorForm.clauses"
                 :key="index"
                 class="clause-order-row"
-                style="display: flex; gap: var(--spacing-xs); align-items: center; flex-wrap: wrap;"
+                style="
+                  display: flex;
+                  gap: var(--spacing-xs);
+                  align-items: center;
+                  flex-wrap: wrap;
+                "
               >
                 <span
                   style="
