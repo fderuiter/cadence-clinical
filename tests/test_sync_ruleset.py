@@ -306,11 +306,7 @@ def test_gxp_ruleset_file_structures():
     # 2. Strict compliance: release branches allow repository role ID 5 bypass, tags omit bypass_actors
     assert "bypass_actors" in release_data
     assert release_data["bypass_actors"] == [
-        {
-            "actor_id": 5,
-            "actor_type": "RepositoryRole",
-            "bypass_mode": "always"
-        }
+        {"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always"}
     ]
     assert "bypass_actors" not in tags_data or not tags_data["bypass_actors"]
 
