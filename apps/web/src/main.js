@@ -6,6 +6,7 @@ import { router } from "./router";
 import Keycloak from "keycloak-js";
 import { useAuthStore } from "./stores/auth";
 import { initHoverDetection } from "ui";
+import { resolveAssetUrl } from "./utils/url";
 
 const app = createApp(App);
 const pinia = createPinia();
@@ -53,8 +54,7 @@ checkKeycloakReachable().then((reachable) => {
     keycloak
       .init({
         onLoad: "check-sso",
-        silentCheckSsoRedirectUri:
-          window.location.origin + "/silent-check-sso.html",
+        silentCheckSsoRedirectUri: resolveAssetUrl("silent-check-sso.html"),
         pkceMethod: "S256",
       })
       .then((authenticated) => {
