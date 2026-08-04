@@ -39,6 +39,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
 
 ### 2. API Gateway, Security & Identity
+- [2026-08-04: Implement Native Interval Filtering and Custom Name Matching in Scrubber](2026-08-04-implement-native-interval-filtering-and-custom-name-matching-in-scrubber.md)
 - [2026-08-03: Decommission legacy V1 signatures and standalone rendering engine](2026-08-03-decommission-legacy-v1-signatures-and-standalone-rendering-engine.md)
 - [2026-09-08: Decommission Legacy V1 Signatures and Standalone Rendering Engine](2026-09-08-decommission-legacy-v1-signatures-and-rendering-engine.md)
 - [2026-08-03: Decommission Legacy V1 Signatures and Standalone Rendering Engine](2026-08-03-cleanup-legacy-rendering-v1-signatures.md)
@@ -153,6 +154,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-12: Deterministic GxP Report Generation and Signature Verification Rectification](2026-08-12-deterministic-gxp-report-generation-and-signature-verification.md)
 - [2026-08-17: Unified De-identification Compliance Scan CLI, Pre-commit Hook, and Blocking CI Gate](2026-08-17-unified-deid-compliance-scan-cli.md)
 - [2026-08-18: Document Redaction Architecture, Regulatory Data-Handling, and Compliance Profiles](2026-08-18-document-redaction-architecture.md)
+- [2026-08-03: Native Interval Filtering and Custom Name Matching](2026-08-03-native-interval-filtering-and-custom-name-matching.md)
 
 ### 6. Frontend & Design System
 - [2026-08-04: Scope CSS hover to can hover and add touch tap fallbacks](2026-08-04-scope-css-hover-to-can-hover-and-add-touch-tap-fallbacks.md)
@@ -246,3 +248,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-07: Extend Centralized Permission Matrix for eCOA Diary Alert Actions](2026-09-07-extend-ecoa-diary-alert-permissions.md)
 - [2026-08-03: Decommission Legacy Standalone Frontend Rendering Engine and Legacy V1 Signatures](2026-08-03-cleanup-legacy-rendering-v1-signatures.md)
 - [2026-09-08: Decommission legacy rendering and v1 signatures](2026-09-08-decommission-legacy-rendering-and-v1-signatures.md)
+

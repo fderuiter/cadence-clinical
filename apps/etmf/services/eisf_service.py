@@ -22,10 +22,9 @@ class PHIRedactorService:
 
     def redact_content(self, content: bytes, phi_terms: list[str]) -> bytes:
         text = content.decode("utf-8", errors="ignore")
-        for term in phi_terms:
-            if term:
-                text = text.replace(term, "[REDACTED]")
-        text = self.scrubber.scrub_phi(text)
+        text = self.scrubber.scrub_phi(
+            text, custom_terms=phi_terms, custom_replacement="[REDACTED]"
+        )
         return text.encode("utf-8")
 
 
