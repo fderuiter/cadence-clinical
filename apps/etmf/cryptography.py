@@ -14,9 +14,15 @@ logger = logging.getLogger("etmf-cryptography")
 def is_bypass_requested(metadata_json: dict[str, Any] | None) -> bool:
     if not metadata_json:
         return False
-    if "requires_signature" in metadata_json and metadata_json["requires_signature"] is False:
+    if (
+        "requires_signature" in metadata_json
+        and metadata_json["requires_signature"] is False
+    ):
         return True
-    if "require_signature" in metadata_json and metadata_json["require_signature"] is False:
+    if (
+        "require_signature" in metadata_json
+        and metadata_json["require_signature"] is False
+    ):
         return True
     for k, v in metadata_json.items():
         k_lower = k.lower()
@@ -52,10 +58,7 @@ def requires_signature(
             return metadata_json.get("require_signature") is True
 
     # If the artifact type explicitly mentions "signed" or "signature", it is required
-    if "signed" in norm or "signature" in norm:
-        return True
-
-    return False
+    return bool("signed" in norm or "signature" in norm)
 
 
 def extract_signature_from_content(
@@ -199,6 +202,7 @@ def verify_x509_signature(
 
         # Check self-signed and active status in trust store
         from packages.security.cert_store import get_active_cert_store
+
         cert_store = get_active_cert_store()
 
         is_self_signed = cert.issuer == cert.subject
@@ -260,7 +264,9 @@ def validate_document_signature(
 
     # 1. Attempt to extract from content
     try:
-        cert_pem, sig_bytes, signed_data = extract_signature_from_content(content, allow_mock=False)
+        cert_pem, sig_bytes, signed_data = extract_signature_from_content(
+            content, allow_mock=False
+        )
     except ValueError as e:
         msg = str(e)
         if "Mock signature detected and blocked" in msg:
@@ -318,6 +324,7 @@ def validate_document_signature(
 
     # 5. Perform active trust store validation (checking self-signed and temporal/revocation)
     from packages.security.cert_store import get_active_cert_store
+
     cert_store = get_active_cert_store()
 
     try:

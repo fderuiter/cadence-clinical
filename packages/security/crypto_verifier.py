@@ -364,11 +364,7 @@ def verify_electronic_signature(
     req_payload_lower = (request.payload_hash or "").lower()
     req_sig_lower = (request.signature_bytes_b64 or "").lower()
     req_pk_lower = (public_key_pem or "").lower()
-    if (
-        "mock" in req_payload_lower
-        or "mock" in req_sig_lower
-        or "mock" in req_pk_lower
-    ):
+    if "mock" in req_payload_lower or "mock" in req_sig_lower or "mock" in req_pk_lower:
         return SignatureVerificationResult(
             is_valid=False,
             error_code="MOCK_SIGNATURE_DETECTED",

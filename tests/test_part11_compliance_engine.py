@@ -8,18 +8,15 @@ Covers all 5 Acceptance Criteria:
 5. Signatures verified with self-signed certificates fail validation unless the certificate originates from an approved Certificate Authority in the trust store.
 """
 
-import pytest
 import base64
+
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 from apps.etmf.cryptography import (
     validate_document_signature,
-    requires_signature,
-    extract_signature_from_content,
 )
-from apps.compliance.services.esignature_verifier import ESignatureVerifier
 from packages.security.cert_store import get_active_cert_store
 
 
@@ -29,23 +26,27 @@ def generate_test_keys():
         public_exponent=65537,
         key_size=2048,
     )
-    subject = issuer = x509.Name([
-        x509.NameAttribute(x509.NameOID.COMMON_NAME, "test-ca.org"),
-    ])
+    subject = issuer = x509.Name(
+        [
+            x509.NameAttribute(x509.NameOID.COMMON_NAME, "test-ca.org"),
+        ]
+    )
     import datetime
-    cert = x509.CertificateBuilder().subject_name(
-        subject
-    ).issuer_name(
-        issuer
-    ).public_key(
-        private_key.public_key()
-    ).serial_number(
-        x509.random_serial_number()
-    ).not_valid_before(
-        datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=1)
-    ).not_valid_after(
-        datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365)
-    ).sign(private_key, hashes.SHA256())
+
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(private_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(
+            datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=1)
+        )
+        .not_valid_after(
+            datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365)
+        )
+        .sign(private_key, hashes.SHA256())
+    )
 
     return private_key, cert
 
@@ -77,7 +78,11 @@ def test_legacy_padding_pkcs1v15_fails():
     is_valid, msg = validate_document_signature("Approved Protocol", document_content)
     # Must fail because padding is legacy!
     assert not is_valid
-    assert "verification failed" in msg.lower() or "tampered" in msg.lower() or "invalid signature" in msg.lower()
+    assert (
+        "verification failed" in msg.lower()
+        or "tampered" in msg.lower()
+        or "invalid signature" in msg.lower()
+    )
 
 
 def test_rsassa_pss_succeeds():
@@ -130,7 +135,7 @@ def test_mandatory_documents_bypass_rejected():
     is_valid, msg = validate_document_signature(
         "FDA Form 1572",
         "Some form content.",
-        metadata_json={"requires_signature": False}
+        metadata_json={"requires_signature": False},
     )
     assert not is_valid
     assert "bypass" in msg.lower()
@@ -139,7 +144,7 @@ def test_mandatory_documents_bypass_rejected():
     is_valid_2, msg_2 = validate_document_signature(
         "Financial Disclosure",
         "Some disclosure content.",
-        metadata_json={"skip_signature": True}
+        metadata_json={"skip_signature": True},
     )
     assert not is_valid_2
     assert "bypass" in msg_2.lower()
@@ -153,9 +158,15 @@ def test_duplicate_certificate_injection_rejected():
         "-----BEGIN CERTIFICATE-----\nCERT_TWO_INJECTED\n-----END CERTIFICATE-----\n"
         "-----BEGIN SIGNATURE-----\nSIGNATURE\n-----END SIGNATURE-----"
     )
-    is_valid, msg = validate_document_signature("Approved Protocol", document_content_duplicate)
+    is_valid, msg = validate_document_signature(
+        "Approved Protocol", document_content_duplicate
+    )
     assert not is_valid
-    assert "duplicate" in msg.lower() or "structural" in msg.lower() or "injected" in msg.lower()
+    assert (
+        "duplicate" in msg.lower()
+        or "structural" in msg.lower()
+        or "injected" in msg.lower()
+    )
 
 
 def test_unapproved_self_signed_certificate_fails():
