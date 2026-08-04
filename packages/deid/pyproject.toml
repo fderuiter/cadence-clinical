@@ -13,5 +13,8 @@ dependencies = [
     "rapidfuzz>=3.14.5",
 ]
 
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
 [tool.hatch.build.targets.wheel.sources]
-"" = "packages/deid"
+"packages/deid" = ""

@@ -68,10 +68,13 @@ def handle_github_api_error(stderr_msg: str) -> None:
         "forbidden",
         "permission",
         "api error",
+        "rate limit",
+        "rate-limit",
+        "graphql",
     ]
     if any(p in combined for p in patterns):
         print(
-            "WARNING: GitHub API permission or authentication error occurred.\n"
+            "WARNING: GitHub API permission, authentication, or rate limit error occurred.\n"
             f"Error details: {stderr_msg.strip()}\n"
             "Skipping PR quality checklist comment.",
             file=sys.stderr,
@@ -190,13 +193,31 @@ def get_pr_metadata(repo: str, pr_number: str) -> tuple[str, list[str]]:
     pr_title = f"PR #{pr_number}"
     changed_files: list[str] = []
 
-    # Fetch PR title
-    title_json, _ = run_command(
-        ["gh", "api", f"repos/{repo}/pulls/{pr_number}", "--jq", ".title"],
-        check=False,
-    )
-    if title_json:
-        pr_title = title_json.strip()
+    # Try loading from local GITHUB_EVENT_PATH payload first to bypass API rate limits
+    event_path = os.environ.get("GITHUB_EVENT_PATH")
+    if event_path and os.path.exists(event_path):
+        try:
+            with open(event_path) as f:
+                event_data = json.load(f)
+            pr_payload = event_data.get("pull_request", {})
+            if pr_payload:
+                title = pr_payload.get("title")
+                if title:
+                    pr_title = title.strip()
+                    print(f"Loaded PR title from GITHUB_EVENT_PATH payload: {pr_title}")
+        except Exception as e:
+            print(
+                f"Failed to read/parse GITHUB_EVENT_PATH payload in post_pr_comment: {e}"
+            )
+
+    # Fetch PR title via gh api if not resolved or contains default format
+    if pr_title == f"PR #{pr_number}":
+        title_json, _ = run_command(
+            ["gh", "api", f"repos/{repo}/pulls/{pr_number}", "--jq", ".title"],
+            check=False,
+        )
+        if title_json:
+            pr_title = title_json.strip()
 
     # Fetch changed files
     files_json, _ = run_command(
@@ -214,6 +235,33 @@ def get_pr_metadata(repo: str, pr_number: str) -> tuple[str, list[str]]:
         changed_files = [
             line.strip() for line in files_json.splitlines() if line.strip()
         ]
+    else:
+        # Fallback to local git diff to get changed files when API rate limited or offline
+        base_branch = os.environ.get("GITHUB_BASE_REF") or "main"
+        print(
+            f"Failed to fetch changed files from API. Falling back to local git diff against origin/{base_branch}..."
+        )
+        try:
+            stdout, _ = run_command(
+                ["git", "diff", "--name-only", f"origin/{base_branch}...HEAD"],
+                check=False,
+            )
+            changed_files = [
+                line.strip() for line in stdout.splitlines() if line.strip()
+            ]
+            if not changed_files:
+                # Ultimate fallback
+                stdout, _ = run_command(
+                    ["git", "diff", "--name-only", "HEAD~1...HEAD"], check=False
+                )
+                changed_files = [
+                    line.strip() for line in stdout.splitlines() if line.strip()
+                ]
+            print(
+                f"Resolved {len(changed_files)} changed files via local git fallback."
+            )
+        except Exception as e:
+            print(f"Local git fallback failed: {e}")
 
     return pr_title, changed_files
 

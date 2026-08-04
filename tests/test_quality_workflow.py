@@ -879,3 +879,255 @@ def test_transition_capa_sig_token_matrix():
         headers=headers_valid,
     )
     assert res_replayed.status_code == 401
+
+
+def test_sibling_guarded_parent_closure():
+    """Verify that parent deviation is closed only when all sibling CAPAs are terminal.
+
+    This test validates that when multiple sibling CAPAs are linked to a parent
+    deviation, closing a subset of them does not prematurely close the parent.
+    The parent is only closed when the last open sibling CAPA is transitioned to CLOSED.
+
+    @req:Trace-7
+    """
+    client = TestClient(app)
+    headers = get_auth_headers(change_reason="Sibling-guarded parent closure setup")
+
+    # 1. Create a parent deviation
+    dev_payload = {
+        "study_id": "study_sibling_guard",
+        "title": "Sibling Guarded Deviation",
+        "description": "Requires multiple corrective actions",
+        "severity": "MAJOR",
+        "type": "ELIGIBILITY",
+    }
+    dev_res = client.post(
+        "/api/v1/quality/deviations", json=dev_payload, headers=headers
+    )
+    assert dev_res.status_code == 201
+    dev_id = dev_res.json()["id"]
+
+    # 2. Create CAPA 1
+    capa1_payload = {
+        "deviation_id": dev_id,
+        "capa_type": "CORRECTIVE",
+        "action_plan": "First action plan",
+    }
+    capa1_res = client.post(
+        "/api/v1/quality/capas", json=capa1_payload, headers=headers
+    )
+    assert capa1_res.status_code == 201
+    capa1_id = capa1_res.json()["id"]
+
+    # 3. Create CAPA 2
+    capa2_payload = {
+        "deviation_id": dev_id,
+        "capa_type": "PREVENTIVE",
+        "action_plan": "Second action plan",
+    }
+    capa2_res = client.post(
+        "/api/v1/quality/capas", json=capa2_payload, headers=headers
+    )
+    assert capa2_res.status_code == 201
+    capa2_id = capa2_res.json()["id"]
+
+    # Both CAPAs are INITIATED, deviation status is CAPA_INITIATED
+    dev_view = client.get(f"/api/v1/quality/deviations/{dev_id}", headers=headers)
+    assert dev_view.json()["status"] == "CAPA_INITIATED"
+
+    # Move CAPA 1 to CLOSED status through the transition path:
+    # INITIATED -> UNDER_REVIEW -> IMPLEMENTATION -> EFFECTIVENESS_CHECK -> CLOSED
+    qo_headers = get_auth_headers(
+        roles="quality_manager", change_reason="Closing CAPA 1"
+    )
+    client.post(
+        f"/api/v1/quality/capas/{capa1_id}/transition",
+        json={"to_status": "UNDER_REVIEW", "version_index": 1},
+        headers=qo_headers,
+    )
+    client.post(
+        f"/api/v1/quality/capas/{capa1_id}/transition",
+        json={"to_status": "IMPLEMENTATION", "version_index": 2},
+        headers=qo_headers,
+    )
+    client.post(
+        f"/api/v1/quality/capas/{capa1_id}/transition",
+        json={"to_status": "EFFECTIVENESS_CHECK", "version_index": 3},
+        headers=qo_headers,
+    )
+    sig_token1 = make_step_up_token(
+        user_id="quality_test_user",
+        action=f"/api/v1/quality/capas/{capa1_id}/transition",
+        semantic_action="quality.capa.close",
+    )
+    qo_headers_gated1 = qo_headers.copy()
+    qo_headers_gated1["X-Sig-Token"] = sig_token1
+    client.post(
+        f"/api/v1/quality/capas/{capa1_id}/transition",
+        json={"to_status": "CLOSED", "version_index": 4},
+        headers=qo_headers_gated1,
+    )
+
+    # CAPA 1 is now CLOSED, but CAPA 2 is still INITIATED.
+    # Deviation status must remain in active CAPA_INITIATED state!
+    dev_view = client.get(f"/api/v1/quality/deviations/{dev_id}", headers=headers)
+    assert dev_view.json()["status"] == "CAPA_INITIATED"
+
+    # Now move CAPA 2 to CLOSED status
+    qo_headers = get_auth_headers(
+        roles="quality_manager", change_reason="Closing CAPA 2"
+    )
+    client.post(
+        f"/api/v1/quality/capas/{capa2_id}/transition",
+        json={"to_status": "UNDER_REVIEW", "version_index": 1},
+        headers=qo_headers,
+    )
+    client.post(
+        f"/api/v1/quality/capas/{capa2_id}/transition",
+        json={"to_status": "IMPLEMENTATION", "version_index": 2},
+        headers=qo_headers,
+    )
+    client.post(
+        f"/api/v1/quality/capas/{capa2_id}/transition",
+        json={"to_status": "EFFECTIVENESS_CHECK", "version_index": 3},
+        headers=qo_headers,
+    )
+    sig_token2 = make_step_up_token(
+        user_id="quality_test_user",
+        action=f"/api/v1/quality/capas/{capa2_id}/transition",
+        semantic_action="quality.capa.close",
+    )
+    qo_headers_gated2 = qo_headers.copy()
+    qo_headers_gated2["X-Sig-Token"] = sig_token2
+    client.post(
+        f"/api/v1/quality/capas/{capa2_id}/transition",
+        json={"to_status": "CLOSED", "version_index": 4},
+        headers=qo_headers_gated2,
+    )
+
+    # Both CAPAs are CLOSED.
+    # Deviation status must automatically transition to CLOSED!
+    dev_view = client.get(f"/api/v1/quality/deviations/{dev_id}", headers=headers)
+    assert dev_view.json()["status"] == "CLOSED"
+
+
+def test_automatic_parent_reversion_upon_cancellation():
+    """Verify that a parent deviation reverts to active investigation state upon CAPA cancellations.
+
+    This test validates that when all associated CAPAs for a deviation are cancelled,
+    the deviation status is automatically reverted from CAPA_INITIATED back to an
+    active investigation state. It also verifies that the reverted state is
+    RCA_COMPLETE if an RCA exists, or UNDER_INVESTIGATION if no RCA exists.
+
+    @req:Trace-7
+    """
+    client = TestClient(app)
+    headers = get_auth_headers(change_reason="Cancellation reversion setup")
+
+    # --- Scenario A: Reversion without an RCA (should revert to UNDER_INVESTIGATION) ---
+    dev_payload = {
+        "study_id": "study_revert_a",
+        "title": "Deviation A",
+        "description": "No RCA attached",
+        "severity": "MINOR",
+        "type": "OTHER",
+    }
+    dev_res = client.post(
+        "/api/v1/quality/deviations", json=dev_payload, headers=headers
+    )
+    assert dev_res.status_code == 201
+    dev_id = dev_res.json()["id"]
+
+    # Create CAPA
+    capa_payload = {
+        "deviation_id": dev_id,
+        "capa_type": "CORRECTIVE",
+        "action_plan": "Action",
+    }
+    capa_res = client.post("/api/v1/quality/capas", json=capa_payload, headers=headers)
+    capa_id = capa_res.json()["id"]
+
+    # Parent deviation status is CAPA_INITIATED
+    dev_view = client.get(f"/api/v1/quality/deviations/{dev_id}", headers=headers)
+    assert dev_view.json()["status"] == "CAPA_INITIATED"
+
+    # Cancel the CAPA (INITIATED -> CANCELLED)
+    qo_headers = get_auth_headers(
+        roles="quality_manager", change_reason="Cancelling CAPA"
+    )
+    sig_token = make_step_up_token(
+        user_id="quality_test_user",
+        action=f"/api/v1/quality/capas/{capa_id}/transition",
+        semantic_action="quality.capa.cancel",
+    )
+    qo_headers_gated = qo_headers.copy()
+    qo_headers_gated["X-Sig-Token"] = sig_token
+    client.post(
+        f"/api/v1/quality/capas/{capa_id}/transition",
+        json={"to_status": "CANCELLED", "version_index": 1},
+        headers=qo_headers_gated,
+    )
+
+    # Since the only associated CAPA is cancelled, the parent deviation
+    # should automatically revert to UNDER_INVESTIGATION
+    dev_view = client.get(f"/api/v1/quality/deviations/{dev_id}", headers=headers)
+    assert dev_view.json()["status"] == "UNDER_INVESTIGATION"
+
+    # --- Scenario B: Reversion with an RCA (should revert to RCA_COMPLETE) ---
+    dev_payload_b = {
+        "study_id": "study_revert_b",
+        "title": "Deviation B",
+        "description": "With RCA attached",
+        "severity": "MINOR",
+        "type": "OTHER",
+    }
+    dev_res_b = client.post(
+        "/api/v1/quality/deviations", json=dev_payload_b, headers=headers
+    )
+    dev_id_b = dev_res_b.json()["id"]
+
+    # Create RCA
+    rca_payload = {
+        "methodology": "5 Whys",
+        "investigation_details": "Root cause detailed description",
+        "root_cause_summary": "Summary",
+    }
+    client.post(
+        f"/api/v1/quality/deviations/{dev_id_b}/rca",
+        json=rca_payload,
+        headers=headers,
+    )
+
+    # Create CAPA
+    capa_payload_b = {
+        "deviation_id": dev_id_b,
+        "capa_type": "CORRECTIVE",
+        "action_plan": "Action B",
+    }
+    capa_res_b = client.post(
+        "/api/v1/quality/capas", json=capa_payload_b, headers=headers
+    )
+    capa_id_b = capa_res_b.json()["id"]
+
+    # Parent deviation status is CAPA_INITIATED
+    dev_view_b = client.get(f"/api/v1/quality/deviations/{dev_id_b}", headers=headers)
+    assert dev_view_b.json()["status"] == "CAPA_INITIATED"
+
+    # Cancel the CAPA
+    sig_token_b = make_step_up_token(
+        user_id="quality_test_user",
+        action=f"/api/v1/quality/capas/{capa_id_b}/transition",
+        semantic_action="quality.capa.cancel",
+    )
+    qo_headers_gated_b = qo_headers.copy()
+    qo_headers_gated_b["X-Sig-Token"] = sig_token_b
+    client.post(
+        f"/api/v1/quality/capas/{capa_id_b}/transition",
+        json={"to_status": "CANCELLED", "version_index": 1},
+        headers=qo_headers_gated_b,
+    )
+
+    # Since the only associated CAPA is cancelled and an RCA exists, the parent deviation
+    # should automatically revert to RCA_COMPLETE
+    dev_view_b = client.get(f"/api/v1/quality/deviations/{dev_id_b}", headers=headers)
+    assert dev_view_b.json()["status"] == "RCA_COMPLETE"

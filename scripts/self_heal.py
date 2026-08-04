@@ -108,38 +108,91 @@ def main() -> None:
     print(f"Starting Autonomous Self-Healing for PR #{pr_number} in {repo}")
 
     # 1. Fetch PR details (labels, branch names, mergeable status)
-    print("Fetching PR details from GitHub API...")
-    pr_json, pr_err = run_command(
-        [
-            "gh",
-            "pr",
-            "view",
-            pr_number,
-            "--json",
-            "labels,headRefName,baseRefName,mergeable",
-        ],
-        check=False,
-    )
+    # To bypass GitHub API GraphQL/REST rate limit exhaustion errors, we prioritize
+    # reading the pull request metadata from the local on-disk GITHUB_EVENT_PATH payload.
+    # If the payload is unavailable, we gracefully fallback to the GitHub CLI (gh pr view)
+    # with robust error handling, and finally fallback to local Git command resolution.
+    labels = []
+    head_branch = os.environ.get("GITHUB_HEAD_REF")
+    base_branch = os.environ.get("GITHUB_BASE_REF") or "main"
+    mergeable_status = "UNKNOWN"
 
-    if not pr_json:
-        print(f"Error fetching PR details: {pr_err}")
+    # Try loading from local GITHUB_EVENT_PATH payload first to bypass API rate limits
+    event_path = os.environ.get("GITHUB_EVENT_PATH")
+    if event_path and os.path.exists(event_path):
+        try:
+            with open(event_path) as f:
+                event_data = json.load(f)
+            pr_payload = event_data.get("pull_request", {})
+            if pr_payload:
+                labels = [
+                    lbl["name"] for lbl in pr_payload.get("labels", []) if "name" in lbl
+                ]
+                if not head_branch:
+                    head_branch = pr_payload.get("head", {}).get("ref")
+                if base_branch == "main":
+                    base_branch = pr_payload.get("base", {}).get("ref") or "main"
+                m = pr_payload.get("mergeable")
+                if m is True:
+                    mergeable_status = "MERGEABLE"
+                elif m is False:
+                    mergeable_status = "CONFLICTING"
+                print("Loaded PR details from GITHUB_EVENT_PATH payload:")
+                print(f"  Labels: {labels}")
+                print(f"  Head branch: {head_branch}")
+                print(f"  Base branch: {base_branch}")
+                print(f"  Mergeable: {mergeable_status}")
+        except Exception as e:
+            print(f"Failed to read/parse GITHUB_EVENT_PATH payload: {e}")
+
+    # Backup / fallback: query via gh pr view
+    if not labels or not head_branch or mergeable_status == "UNKNOWN":
+        print("Querying GitHub API (via gh pr view) as fallback...")
+        pr_json, pr_err = run_command(
+            [
+                "gh",
+                "pr",
+                "view",
+                pr_number,
+                "--json",
+                "labels,headRefName,baseRefName,mergeable",
+            ],
+            check=False,
+        )
+
+        if pr_json:
+            try:
+                pr_data = json.loads(pr_json)
+                if not labels:
+                    labels = [lbl["name"] for lbl in pr_data.get("labels", [])]
+                if not head_branch:
+                    head_branch = pr_data.get("headRefName")
+                if base_branch == "main":
+                    base_branch = pr_data.get("baseRefName", "main")
+                mergeable_status = pr_data.get("mergeable", "UNKNOWN")
+                print("Successfully updated PR details from GitHub API.")
+            except Exception as e:
+                print(f"Failed to parse PR JSON from API fallback: {e}")
+        else:
+            print(f"GitHub API fallback view failed: {pr_err}")
+
+    # Ultimate fallback for head branch
+    if not head_branch:
+        try:
+            stdout, _ = run_command(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+            head_branch = stdout.strip()
+            print(f"Determined head branch from local git: {head_branch}")
+        except Exception as e:
+            print(f"Failed to resolve head branch from git: {e}")
+
+    if not head_branch:
+        print("Error: Head branch could not be resolved. Exiting.")
         sys.exit(1)
 
-    try:
-        pr_data = json.loads(pr_json)
-    except Exception as e:
-        print(f"Failed to parse PR JSON: {e}")
-        sys.exit(1)
-
-    labels = [lbl["name"] for lbl in pr_data.get("labels", [])]
-    head_branch = pr_data.get("headRefName")
-    base_branch = pr_data.get("baseRefName", "main")
-    mergeable_status = pr_data.get("mergeable", "UNKNOWN")
-
-    print(f"PR labels: {labels}")
-    print(f"Head branch: {head_branch}")
-    print(f"Base branch: {base_branch}")
-    print(f"Mergeability status: {mergeable_status}")
+    print(f"Final resolved labels: {labels}")
+    print(f"Final resolved head branch: {head_branch}")
+    print(f"Final resolved base branch: {base_branch}")
+    print(f"Final resolved mergeable status: {mergeable_status}")
 
     # 2. Label Check
     if "safe-change" not in labels:
@@ -194,26 +247,25 @@ def main() -> None:
 
     print("File guardrails check passed! All changed files are classified as 'safe'.")
 
-    # 4. Check if there's actually a merge conflict
-    if mergeable_status != "CONFLICTING":
-        print(f"PR mergeable status is {mergeable_status}. No conflict to heal.")
+    # 4. Check if there's actually a merge conflict (using git dry-run merge and mergeable_status)
+    if mergeable_status == "MERGEABLE":
+        print("PR is already marked as MERGEABLE. No conflict to heal.")
         sys.exit(0)
-
-    print("Merge conflict detected! Initiating autonomous healing...")
 
     # 5. Autonomous Git Merge
     # Configure helper identity
-    run_command(["git", "config", "user.name", "github-actions[bot]"])
+    run_command(["git", "config", "user.name", "github-actions[bot]"], check=False)
     run_command(
-        ["git", "config", "user.email", "github-actions[bot]@users.noreply.github.com"]
+        ["git", "config", "user.email", "github-actions[bot]@users.noreply.github.com"],
+        check=False,
     )
 
     # Fetch latest base branch
     print(f"Fetching latest {base_branch}...")
     run_command(["git", "fetch", "origin", base_branch], check=False)
 
-    # Attempt merge
-    print(f"Merging origin/{base_branch} into feature branch {head_branch}...")
+    # Attempt merge to test for conflicts
+    print(f"Testing merge of origin/{base_branch} into feature branch {head_branch}...")
     merge_stdout, merge_stderr = run_command(
         ["git", "merge", f"origin/{base_branch}", "--no-commit", "--no-ff"], check=False
     )
@@ -226,6 +278,13 @@ def main() -> None:
         line.strip() for line in conflict_stdout.splitlines() if line.strip()
     ]
     print(f"Conflicting files: {conflicting_files}")
+
+    if not conflicting_files:
+        print(
+            "No active merge conflicts detected via git merge dry-run. Aborting test merge."
+        )
+        run_command(["git", "merge", "--abort"], check=False)
+        sys.exit(0)
 
     # Check if there are non-safe files in conflict
     non_safe_conflicts = [f for f in conflicting_files if not is_safe_file(f)]

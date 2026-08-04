@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 from unittest.mock import patch
@@ -103,6 +104,56 @@ def test_main_no_conflict_needed(mock_update_comment, mock_run_cmd):
 
     with patch.dict(
         os.environ, {"GITHUB_REPOSITORY": "owner/repo", "PR_NUMBER": "123"}
+    ):
+        with patch("sys.exit", side_effect=SystemExit) as mock_exit:
+            with pytest.raises(SystemExit):
+                main()
+            mock_exit.assert_called_once_with(0)
+            mock_update_comment.assert_not_called()
+
+
+@patch("scripts.self_heal.run_command")
+@patch("scripts.self_heal.update_pr_comment")
+def test_main_event_payload_parsing(mock_update_comment, mock_run_cmd, tmp_path):
+    # Create a dummy event payload JSON file
+    event_file = tmp_path / "event.json"
+    event_payload = {
+        "pull_request": {
+            "number": 123,
+            "labels": [{"name": "safe-change"}],
+            "head": {"ref": "feat-docs"},
+            "base": {"ref": "main"},
+            "mergeable": False,  # False maps to CONFLICTING
+        }
+    }
+    with open(event_file, "w", encoding="utf-8") as f:
+        json.dump(event_payload, f)
+
+    # Mock the subsequent actions
+    mock_run_cmd.side_effect = [
+        # gh api files (guardrails check)
+        ("docs/architecture.md", ""),
+        # git config user.name
+        ("", ""),
+        # git config user.email
+        ("", ""),
+        # git fetch origin main
+        ("", ""),
+        # git merge
+        ("", ""),
+        # git diff --name-only --diff-filter=U (no conflicts)
+        ("", ""),
+        # git merge --abort
+        ("", ""),
+    ]
+
+    with patch.dict(
+        os.environ,
+        {
+            "GITHUB_REPOSITORY": "owner/repo",
+            "PR_NUMBER": "123",
+            "GITHUB_EVENT_PATH": str(event_file),
+        },
     ):
         with patch("sys.exit", side_effect=SystemExit) as mock_exit:
             with pytest.raises(SystemExit):

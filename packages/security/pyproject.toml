@@ -15,5 +15,8 @@ dependencies = [
     "cryptography>=4.5.0",
 ]
 
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
 [tool.hatch.build.targets.wheel.sources]
-"" = "packages/security"
+"packages/security" = ""

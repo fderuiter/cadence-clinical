@@ -281,8 +281,8 @@ try:
     patch_init_db()
     databases_pre_created = True
 
-    if os.environ.get("USE_LIVE_DB") == "true":
-        print("[conftest] USE_LIVE_DB=true: Initializing all PostgreSQL schemas...")
+    if os.environ.get("USE_LIVE_DB") == "true" or databases_pre_created:
+        print("[conftest] Initializing all PostgreSQL schemas...")
         run_sync(create_all_schemas_async(worker_suffix))
 except Exception as e:
     if os.environ.get("GITHUB_ACTIONS") == "true":
