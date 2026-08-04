@@ -2,7 +2,7 @@ name: Conflict Check
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, labeled]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -10,16 +10,40 @@ concurrency:
 
 jobs:
   conflict-check:
-    name: Check for Merge Conflicts
+    name: Check for Merge Conflicts & Autonomous Self-Healing
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          # Use PAT if available to checkout and support push triggering downstream actions
+          token: ${{ secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
 
       - name: Check mergeable status
         id: check_status
@@ -39,9 +63,22 @@ jobs:
           echo "Final mergeable status: $STATUS"
           echo "status=$STATUS" >> $GITHUB_OUTPUT
 
-      - name: Post PR Quality Checklist Comment on Conflict
+      - name: Autonomous Self-Healing
+        env:
+          GH_TOKEN: ${{ secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
+          PAT_FDERUITER: ${{ secrets.PAT_FDERUITER }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          # Only attempt self-healing if PR_NUMBER is set
+          if [ -n "$PR_NUMBER" ]; then
+            python3 scripts/self_heal.py
+          fi
+
+      - name: Post PR Quality Checklist Comment on Conflict Fallback
+        if: failure()
         env:
           GH_TOKEN: ${{ secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          CONFLICT_OUTCOME: ${{ steps.check_status.outputs.status == 'CONFLICTING' && 'failure' || 'success' }}
+          CONFLICT_OUTCOME: "failure"
         run: python3 scripts/post_pr_comment.py
