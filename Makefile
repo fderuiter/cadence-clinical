@@ -18,7 +18,7 @@ BOLD  := \033[1m
 
 setup: ## Install all Python + Node deps, Playwright browsers, and pre-commit hooks
 	uv sync --python 3.14 --all-extras
-	uv run playwright install chromium
+	uv run playwright install chromium chromium-headless-shell
 	uv run pre-commit install --install-hooks
 	pnpm install --frozen-lockfile
 	@echo "$(CYAN)✔ Environment ready. Run 'make verify' to confirm everything passes.$(RESET)"
