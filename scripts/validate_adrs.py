@@ -93,13 +93,10 @@ def is_architectural_file(filepath: str) -> bool:
 
     # 4. Storage model changes or migrations under execution
     if (
-        (
-            filepath.startswith("apps/execution/database/")
-            or "migrations" in filepath
-            or "models" in filepath
-        )
-        and filepath.startswith("apps/execution/")
-    ):
+        filepath.startswith("apps/execution/database/")
+        or "migrations" in filepath
+        or "models" in filepath
+    ) and filepath.startswith("apps/execution/"):
         return True
 
     # 5. Storage model changes or database schemas/models under study designer (Requirement 5)
