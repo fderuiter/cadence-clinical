@@ -34,6 +34,7 @@ def test_subject_lifecycle_pure_domain_transitions():
     # 1. Start in SCREENING (default state for new clinical subjects)
     # The clinical subject state machine defaults newly registered participants
     # to the SCREENING state to enforce initial eligibility validation gates.
+    # We verify that screening is the foundational starting status.
     subject = ClinicalSubjectDomain(
         subject_id="SUBJ-001", study_id="STUDY_A", strat_factors={"age": "GE_65"}
     )
