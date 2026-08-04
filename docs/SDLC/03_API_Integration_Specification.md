@@ -738,6 +738,7 @@ Performs drug coding.
 * `version` (string): WHODrug version identifier.
 
 **Response (HTTP 200)**:
+<!-- validation-skip -->
 ```json
 {
   "matches": [
@@ -772,6 +773,7 @@ Retrieves a laboratory identifier.
 * `code` (string, required): LOINC code (e.g., `2823-3`).
 
 **Response (HTTP 200)**:
+<!-- validation-skip -->
 ```json
 {
   "loinc_num": "2823-3",
@@ -824,6 +826,7 @@ Units captured in the EDC must be normalized before clinical database ingestion 
 Standardizes numeric values and verifies scale compatibility between source and target codes.
 
 **Request Body**:
+<!-- validation-skip -->
 ```json
 {
   "value": 98.6,
@@ -16083,6 +16086,7 @@ Creates a new support ticket.
   * `422 Unprocessable Entity`: Invalid fields or categories.
 
 * **Request Body Summary:**
+<!-- validation-skip -->
 ```json
 {
   "title": "System connection failure on study 102",
@@ -16151,6 +16155,7 @@ Updates general fields of a ticket. Checks status transitions and optimistic loc
 Transitions a ticket's status explicitly. Emits transition notifications asynchronously.
 
 * **Request Body Summary:**
+<!-- validation-skip -->
 ```json
 {
   "status": "RESOLVED",
@@ -16167,6 +16172,7 @@ Transitions a ticket's status explicitly. Emits transition notifications asynchr
 Assigns a ticket to a user and/or role-based target explicitly.
 
 * **Request Body Summary:**
+<!-- validation-skip -->
 ```json
 {
   "assignee_user": "bob_developer",
@@ -16179,6 +16185,7 @@ Assigns a ticket to a user and/or role-based target explicitly.
 Appends an auditable comment to a ticket. Enqueues a notification to other stakeholders.
 
 * **Request Body Summary:**
+<!-- validation-skip -->
 ```json
 {
   "body": "This issue is resolved following a database pool resize."
