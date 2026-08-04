@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "apps-execution"
+version = "0.1.0"
+description = "Execution microservice"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.139.2,<0.140.0",
+    "pydantic>=2.6.0",
+    "sqlalchemy>=2.0.28",
+    "sqlmodel>=0.0.39",
+    "asyncpg>=0.29.0",
+    "jinja2>=3.1.6,<4.0.0",
+    "PyMuPDF>=1.24.0",
+    "weasyprint>=61.0",
+    "python-docx>=1.1.0",
+    "python-multipart>=0.0.32",
+    "aioboto3>=13.0.0",
+    "aiosmtplib>=3.0.1",
+    "boto3>=1.34.0",
+    "jsonschema>=4.20.0",
+    "rapidfuzz>=3.14.5",
+    "cryptography>=4.5.0",
+    "packages-database",
+    "packages-security",
+    "packages-deid",
+    "packages-core-models",
+    "packages-storage",
+]
+
+[tool.hatch.build.targets.wheel.sources]
+"" = "apps/execution"

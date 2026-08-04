@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "apps-safety"
+version = "0.1.0"
+description = "Safety microservice"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.139.2,<0.140.0",
+    "pydantic>=2.6.0",
+    "sqlalchemy>=2.0.28",
+    "sqlmodel>=0.0.39",
+    "asyncpg>=0.29.0",
+    "defusedxml>=0.7.1,<0.8.0",
+    "packages-database",
+    "packages-security",
+    "packages-deid",
+]
+
+[tool.hatch.build.targets.wheel.sources]
+"" = "apps/safety"

@@ -10,15 +10,6 @@ import { createPinia, setActivePinia } from "pinia";
 import BatchSignatureModal from "../../src/components/signatures/BatchSignatureModal.vue";
 import { useSignatureStore } from "../../src/stores/signatures";
 
-// Mock the apiClient to prevent actual network calls during unit tests
-vi.mock("../../src/api/apiClient", () => {
-  return {
-    apiClient: {
-      post: vi.fn(),
-    },
-  };
-});
-
 import { apiClient } from "../../src/api/apiClient";
 
 describe("BatchSignatureModal.vue", () => {
@@ -27,7 +18,18 @@ describe("BatchSignatureModal.vue", () => {
   beforeEach(() => {
     pinia = createPinia();
     setActivePinia(pinia);
+
+    // Spy on the real apiClient directly
+    vi.spyOn(apiClient, "get").mockResolvedValue([]);
+    vi.spyOn(apiClient, "post").mockResolvedValue({});
+    vi.spyOn(apiClient, "put").mockResolvedValue({});
+    vi.spyOn(apiClient, "delete").mockResolvedValue({});
+
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("does not render modal structure when isOpen is false", () => {

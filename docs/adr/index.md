@@ -44,6 +44,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-03: Decommission Legacy V1 Signatures and Standalone Rendering Engine](2026-08-03-cleanup-legacy-rendering-v1-signatures.md)
 - [2026-08-03: Decommission Legacy V1 Signatures and Standalone Rendering Engine](2026-08-03-decommission-legacy-v1-signatures-and-standalone-rendering-engine.md)
 - [2026-08-03: Resolve RBAC Duplicate Key Static Lint Failures](2026-08-03-resolve-rbac-duplicate-key-static-lint-failures.md)
+- [2026-08-03: Ruff Lint Alignment and Centralized RBAC Validation](2026-08-03-ruff-lint-alignment-and-centralized-rbac-validation.md)
+- [2026-08-03: Clean up duplicate security entries in rbac configuration](2026-08-03-clean-up-duplicate-security-entries-in-rbac-configuration.md)
 - [2026-08-03: eConsent Gateway Integration and Orchestration Port Alignment](2026-08-03-econsent-gateway-integration-and-orchestration-port-alignment.md)
 - [2026-08-02: Enforce Ruff Style and Formatting on API Gateway Routers](2026-08-02-enforce-ruff-style-and-formatting-on-api-gateway-routers.md)
 - [2026-08-01: Cryptographic Signature Verification Engine and Multi-Format Support](2026-08-01-cryptographic-signature-verification-engine-and-multi-format-support.md)
@@ -177,6 +179,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-17: Interactive Mermaid Diagrams and Responsive Layout Controls](2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md)
 
 ### 7. DevOps, Tooling & CI/CD
+- [2026-08-03: Implement native uv workspaces with service-specific Dockerfiles](2026-08-03-implement-native-uv-workspaces-with-service-specific-dockerfiles.md)
 - [2026-08-03: Lightweight Path Pattern Boundary Linter](2026-08-03-lightweight-path-pattern-boundary-linter.md)
 - [2026-08-02: Dual-Mode Secret Scanner for Pre-Commit and CI Validation](2026-08-02-dual-mode-secret-scanner-for-pre-commit-and-ci-validation.md)
 - [2026-08-03: Upgrade Environments to Python 3.14](2026-08-03-upgrade-environments-to-python-314.md)
