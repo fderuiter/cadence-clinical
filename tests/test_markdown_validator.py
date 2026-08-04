@@ -106,6 +106,24 @@ def test_resolve_path(tmp_path):
         is None
     )
 
+    # 6. Compiled build artifacts (dist, build, node_modules) return None
+    assert (
+        vm.resolve_path(
+            "packages/ui/dist/index.js", md_file, repo_root, root_dirs, root_files
+        )
+        is None
+    )
+    assert (
+        vm.resolve_path("build/bundle.js", md_file, repo_root, root_dirs, root_files)
+        is None
+    )
+    assert (
+        vm.resolve_path(
+            "node_modules/vue/package.json", md_file, repo_root, root_dirs, root_files
+        )
+        is None
+    )
+
 
 def test_validate_path(tmp_path):
     """Verifies validate_path detects existing/nonexistent files and boundaries."""

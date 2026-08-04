@@ -255,6 +255,11 @@ def resolve_path(path_str, md_file_path, repo_root, root_dirs, root_files):
     # Standardize path separators
     path_str = path_str.replace("\\", "/")
 
+    # Ignore compiled/generated build artifacts that are typically gitignored
+    path_parts = path_str.split("/")
+    if "dist" in path_parts or "build" in path_parts or "node_modules" in path_parts:
+        return None
+
     # Strip leading slash for workspace relative resolve
     stripped_path = path_str.lstrip("/")
 
