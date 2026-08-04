@@ -480,6 +480,8 @@ def execute_pip_audit() -> tuple[str, str, int]:
         audit_cmd = [
             "uv",
             "run",
+            "--with",
+            "pip-audit",
             "pip-audit",
             "-r",
             temp_file_path,
