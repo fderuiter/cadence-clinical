@@ -718,24 +718,68 @@ async def transition_capa(
     capa.reason_for_change = change_reason
 
     # 4. Keep linked deviation state consistent (Settlement)
-    if target_status == CAPAStatus.CLOSED:
-        # Progress parent deviation to CLOSED
-        dev = capa.deviation
-        if dev and dev.status != DeviationStatus.CLOSED:
-            dev.status = DeviationStatus.CLOSED
-            dev.version_index += 1
-            dev.reason_for_change = (
-                "Settled and closed parent deviation because linked CAPA was closed."
-            )
-            await write_audit_log(
-                session=session,
-                user_id=user_id,
-                user_role=user_role,
-                action="DEVIATION_UPDATE",
-                details=f"Settled and closed parent deviation (ID: {dev.id}) following CAPA closure.",
-                record_id=dev.id,
-                change_reason=change_reason,
-            )
+    dev = capa.deviation
+    if dev:
+        # Safely fetch all associated child CAPAs to avoid lazy-loading issues
+        stmt_siblings = select(CAPARecord).where(CAPARecord.deviation_id == dev.id)
+        result_siblings = await session.execute(stmt_siblings)
+        siblings = result_siblings.scalars().all()
+
+        # Build list of statuses including the current CAPA's target status
+        sibling_statuses = []
+        for sib in siblings:
+            status = target_status if sib.id == capa.id else sib.status
+            sibling_statuses.append(status)
+
+        all_terminal = all(
+            s in (CAPAStatus.CLOSED, CAPAStatus.CANCELLED) for s in sibling_statuses
+        )
+        all_cancelled = all(s == CAPAStatus.CANCELLED for s in sibling_statuses)
+
+        if all_terminal:
+            if all_cancelled:
+                # Check if an RCA exists to determine appropriate active investigation state
+                stmt_rca = select(RootCauseAnalysis).where(
+                    RootCauseAnalysis.deviation_id == dev.id
+                )
+                result_rca = await session.execute(stmt_rca)
+                rca_exists = result_rca.scalars().first() is not None
+
+                target_dev_status = (
+                    DeviationStatus.RCA_COMPLETE
+                    if rca_exists
+                    else DeviationStatus.UNDER_INVESTIGATION
+                )
+
+                if dev.status != target_dev_status:
+                    old_status = dev.status
+                    dev.status = target_dev_status
+                    dev.version_index += 1
+                    dev.reason_for_change = f"Reverted parent deviation to active investigation state '{target_dev_status}' because all associated CAPAs were cancelled."
+                    await write_audit_log(
+                        session=session,
+                        user_id=user_id,
+                        user_role=user_role,
+                        action="DEVIATION_UPDATE",
+                        details=f"Reverted parent deviation (ID: {dev.id}) status from '{old_status}' to '{target_dev_status}' following cancellation of all CAPAs.",
+                        record_id=dev.id,
+                        change_reason=change_reason,
+                    )
+            else:
+                # At least one CAPA is CLOSED and all are terminal, so close the parent deviation
+                if dev.status != DeviationStatus.CLOSED:
+                    dev.status = DeviationStatus.CLOSED
+                    dev.version_index += 1
+                    dev.reason_for_change = "Settled and closed parent deviation because all associated CAPAs reached terminal state."
+                    await write_audit_log(
+                        session=session,
+                        user_id=user_id,
+                        user_role=user_role,
+                        action="DEVIATION_UPDATE",
+                        details=f"Settled and closed parent deviation (ID: {dev.id}) following CAPA closures.",
+                        record_id=dev.id,
+                        change_reason=change_reason,
+                    )
 
     await session.flush()
 
