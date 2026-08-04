@@ -1,3 +1,7 @@
+# Hexagonal architecture imports
+from apps.etmf.ports.repository import ETMFRepositoryPort
+from apps.etmf.adapters.repository import SQLETMFRepository
+from apps.etmf.database import transactional, get_session
 import email.utils
 import os
 import time
@@ -15,8 +19,8 @@ from fastapi.responses import Response
 from protocol_version_ref import ProtocolVersionRef
 from pydantic import BaseModel, Field, model_validator
 from signature import SigningReason
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+# select removed
+# AsyncSession removed
 from tmf_reference_model import (
     get_active_catalog,
     get_mandatory_artifacts,
@@ -41,7 +45,7 @@ from apps.etmf.models import (
 )
 from apps.etmf.routers.archive import router as archive_router
 from apps.etmf.routers.taxonomy import router as taxonomy_router
-from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
+from packages.database import get_relational_db_lifespan
 from packages.deid.detector import DeidDetector
 from packages.deid.manifest import build_redaction_manifest, sign_manifest_symmetric
 from packages.deid.models import ComplianceProfile, DetectionResult, DetectorCategory
@@ -67,7 +71,7 @@ def normalize_milestone(milestone: str) -> str:
 
 
 async def seed_default_edl(
-    session: AsyncSession, study_id: str, milestone: str
+    repo: ETMFRepositoryPort, study_id: str, milestone: str
 ) -> None:
     """
     Idempotently seeds default study-scope ExpectedDocument rows for a given study and milestone.
@@ -75,13 +79,8 @@ async def seed_default_edl(
     canonical = normalize_milestone(milestone)
 
     # Check if any expectations already exist for this study and milestone
-    stmt = select(ExpectedDocument).where(
-        ExpectedDocument.study_id == study_id,
-        ExpectedDocument.milestone == canonical,
-        ExpectedDocument.site_id.is_(None),
-    )
-    result = await session.execute(stmt)
-    existing = result.scalars().all()
+    existing = await repo.get_expected_documents_by_study_and_site(study_id, None)
+    existing = [e for e in existing if e.milestone == canonical]
     if existing:
         return
 
@@ -104,24 +103,30 @@ async def seed_default_edl(
             version_index=1,
             metadata_json={"default_seeded": True},
         )
-        session.add(doc)
-    await session.flush()
+        await repo.save_expected_document(doc)
+    await repo.session.flush()
 
 
 async def etmf_startup() -> None:
     """Startup hook to seed default EDL and start background sealer."""
     session_maker = db_manager.get_session_maker()
     async with session_maker() as session:
-        for study_id in [
-            "study_001",
-            "study_abc",
-            "study_xyz",
-            "study_123",
-            "study_111",
-        ]:
-            for milestone in ["INITIATION", "CONDUCT", "CLOSEOUT"]:
-                await seed_default_edl(session, study_id, milestone)
-        await session.commit()
+        from apps.etmf.database.context import current_session
+        token = current_session.set(session)
+        try:
+            repo = get_etmf_repository()
+            for study_id in [
+                "study_001",
+                "study_abc",
+                "study_xyz",
+                "study_123",
+                "study_111",
+            ]:
+                for milestone in ["INITIATION", "CONDUCT", "CLOSEOUT"]:
+                    await seed_default_edl(repo, study_id, milestone)
+            await session.commit()
+        finally:
+            current_session.reset(token)
 
     from apps.etmf.sealer import start_background_etmf_sealer
 
@@ -163,7 +168,9 @@ app.include_router(taxonomy_router)
 
 
 # Dependable to obtain database session
-get_db_session = DatabaseSessionDependency(db_manager)
+_repo_instance = SQLETMFRepository()
+def get_etmf_repository() -> ETMFRepositoryPort:
+    return _repo_instance
 
 
 # Helper to map standard artifact types to DIA TMF Zones
@@ -758,7 +765,7 @@ class DocumentVersionsResponse(BaseModel):
 
 # Helper to secure and log actions
 async def write_audit_log(
-    session: AsyncSession,
+    repo: ETMFRepositoryPort,
     user_id: str,
     user_role: str | list[str],
     action: str,
@@ -779,8 +786,7 @@ async def write_audit_log(
         details=details,
         reason_for_change=reason_for_change,
     )
-    session.add(log_entry)
-    await session.flush()
+    await repo.save_audit_log(log_entry)
 
 
 def enforce_document_site_visibility(doc: TMFDocument, principal: Principal) -> None:
@@ -811,16 +817,18 @@ async def health_check() -> dict[str, str]:
 
 @app.post("/events/publish", status_code=201)
 @app.post("/api/v1/etmf/ingest", status_code=201)
+@transactional
 async def ingest_document(
     request: Request,
     payload: IngestionRequest,
-    session: AsyncSession = Depends(get_db_session),
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
     principal: Principal = Depends(get_principal),
 ) -> dict[str, Any]:
     """
     Listen to and ingest system publication events or manual document archives.
     Automatically assigns DIA TMF Zone and Section taxonomy, and indexes the content.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -935,19 +943,21 @@ async def ingest_document(
 
 
 @app.get("/api/v1/etmf/documents", response_model=list[DocumentResponse])
+@transactional
 async def list_documents(
     request: Request,
     study_id: str | None = Query(None, description="Filter by study ID"),
     zone: int | None = Query(None, description="Filter by TMF Zone"),
     search: str | None = Query(None, description="Search document content"),
     status: str | None = Query(None, description="Filter by status"),
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> list[DocumentResponse]:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> list[DocumentResponse]:
     """
     Retrieve and search indexed, searchable eTMF document records.
     All views are logged to the immutable audit ledger.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -958,22 +968,7 @@ async def list_documents(
             detail="Forbidden: Insufficient permissions to read eTMF documents.",
         )
 
-    stmt = select(TMFDocument)
-    if study_id:
-        stmt = stmt.where(TMFDocument.study_id == study_id)
-    if zone:
-        stmt = stmt.where(TMFDocument.zone == zone)
-    if search:
-        # Simple SQLite/Postgres text search indexing
-        stmt = stmt.where(TMFDocument._content.contains(search))
-    if status:
-        stmt = stmt.where(TMFDocument.status == status)
-
-    # Apply the query-filter helper (site scope + fail-closed + raw-original suppression for non-read_raw callers)
-    stmt = apply_document_query_filter(stmt, principal)
-
-    result = await session.execute(stmt)
-    docs = result.scalars().all()
+    docs = await repo.get_documents_filtered(study_id, zone, search, status, principal)
 
     # Apply the centralized read authorization for defense in depth
     filtered_docs = []
@@ -986,8 +981,7 @@ async def list_documents(
 
     # Log action to immutable audit trail
     search_criteria = f"study_id={study_id}, zone={zone}, search={search}"
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action="LIST",
@@ -999,16 +993,18 @@ async def list_documents(
 
 
 @app.get("/api/v1/etmf/documents/{document_id}", response_model=DocumentResponse)
+@transactional
 async def view_document(
     request: Request,
     document_id: str,
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> DocumentResponse:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> DocumentResponse:
     """
     View metadata for a specific eTMF document.
     All views are logged to the immutable audit ledger.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -1019,9 +1015,7 @@ async def view_document(
             detail="Forbidden: Insufficient permissions to read eTMF documents.",
         )
 
-    stmt = select(TMFDocument).where(TMFDocument.id == document_id)
-    result = await session.execute(stmt)
-    doc = result.scalars().first()
+    doc = await repo.get_document_by_id(document_id)
 
     if not doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
@@ -1030,8 +1024,7 @@ async def view_document(
     await authorize_document_read(principal, doc, session)
 
     # Log action to immutable audit trail
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action="VIEW",
@@ -1046,21 +1039,21 @@ async def view_document(
     "/api/v1/etmf/documents/{document_id}/versions",
     response_model=DocumentVersionsResponse,
 )
+@transactional
 async def get_document_versions(
     request: Request,
     document_id: str,
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> DocumentVersionsResponse:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> DocumentVersionsResponse:
     """
     Retrieve all versions/revisions of a document's lineage and their QC transition histories.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
-    stmt = select(TMFDocument).where(TMFDocument.id == document_id)
-    result = await session.execute(stmt)
-    doc = result.scalars().first()
+    doc = await repo.get_document_by_id(document_id)
 
     if not doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
@@ -1068,28 +1061,11 @@ async def get_document_versions(
     # Centralized read-authorization policy
     await authorize_document_read(principal, doc, session)
 
-    # Query the full lineage (all documents of same study and artifact code) sorted by version_index asc
-    stmt_lineage = (
-        select(TMFDocument)
-        .where(
-            TMFDocument.study_id == doc.study_id,
-            TMFDocument.artifact_code == doc.artifact_code,
-        )
-        .order_by(TMFDocument.version_index.asc())
-    )
-    res_lineage = await session.execute(stmt_lineage)
-    versions_docs = res_lineage.scalars().all()
+    versions_docs = await repo.get_document_lineage(doc.study_id, doc.artifact_code)
 
     versions_list = []
     for v in versions_docs:
-        # For each version, fetch its QC transitions ordered chronologically by timestamp
-        stmt_transitions = (
-            select(DocumentQCTransition)
-            .where(DocumentQCTransition.document_id == v.id)
-            .order_by(DocumentQCTransition.timestamp.asc())
-        )
-        res_trans = await session.execute(stmt_transitions)
-        transitions = res_trans.scalars().all()
+        transitions = await repo.get_qc_transitions_by_document_id_asc(v.id)
 
         versions_list.append(
             DocumentVersionEntry(
@@ -1121,8 +1097,7 @@ async def get_document_versions(
             )
         )
 
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action="VERSION_HISTORY_VIEW",
@@ -1139,17 +1114,19 @@ async def get_document_versions(
 
 
 @app.get("/api/v1/etmf/documents/{document_id}/download")
+@transactional
 async def download_document(
     request: Request,
     document_id: str,
     watermark: bool = Query(False, description="Request watermarked document"),
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> Response:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> Response:
     """
     Download/stream indexed content for a specific eTMF document.
     All downloads are logged to the immutable audit ledger.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -1166,9 +1143,7 @@ async def download_document(
 
     should_watermark = watermark or is_auditor
 
-    stmt = select(TMFDocument).where(TMFDocument.id == document_id)
-    result = await session.execute(stmt)
-    doc = result.scalars().first()
+    doc = await repo.get_document_by_id(document_id)
 
     if not doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
@@ -1212,8 +1187,7 @@ async def download_document(
             pass
 
     # Log action to immutable audit trail
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action=action_name,
@@ -1229,16 +1203,18 @@ async def download_document(
 
 
 @app.get("/api/v1/etmf/documents/{document_id}/watermark")
+@transactional
 async def download_watermarked_document(
     request: Request,
     document_id: str,
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> Response:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> Response:
     """
     Dedicated watermarked view/download path for external auditors.
     Access is strictly auditor-role-gated.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -1253,9 +1229,7 @@ async def download_watermarked_document(
             detail="Forbidden: Access is restricted to authorized auditor/inspection roles.",
         )
 
-    stmt = select(TMFDocument).where(TMFDocument.id == document_id)
-    result = await session.execute(stmt)
-    doc = result.scalars().first()
+    doc = await repo.get_document_by_id(document_id)
 
     if not doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
@@ -1292,8 +1266,7 @@ async def download_watermarked_document(
             pass
 
     # Log action to immutable audit trail
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action="WATERMARKED_DOWNLOAD",
@@ -1309,6 +1282,7 @@ async def download_watermarked_document(
 
 
 @app.get("/api/v1/etmf/audit-logs", response_model=PaginatedAuditLogResponse)
+@transactional
 async def get_audit_trail(
     request: Request,
     user_id: str | None = Query(None, description="Filter logs by user ID"),
@@ -1324,13 +1298,14 @@ async def get_audit_trail(
         50, ge=1, le=250, description="Limit the number of audit log records returned"
     ),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> PaginatedAuditLogResponse:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> PaginatedAuditLogResponse:
     """
     Retrieve audit trail of all eTMF interactions.
     Restricted to authorized roles like regulatory inspectors.
     """
+    session = repo.session
     request_user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -1341,8 +1316,7 @@ async def get_audit_trail(
         )
 
     # Log access to the audit trail itself
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=request_user_id,
         user_role=user_roles,
         action="AUDIT_VIEW",
@@ -1350,39 +1324,15 @@ async def get_audit_trail(
         details="Accessed eTMF immutable audit trail logs.",
     )
 
-    # 1. Build base filter criteria
-    filters = []
-    if user_id:
-        filters.append(TMFAuditLog.user_id == user_id)
-    if action:
-        filters.append(TMFAuditLog.action == action)
-    if document_id:
-        filters.append(TMFAuditLog.document_id == document_id)
-    if start_time:
-        filters.append(TMFAuditLog.timestamp >= start_time)
-    if end_time:
-        filters.append(TMFAuditLog.timestamp <= end_time)
-
-    # 2. Query total count
-    from sqlalchemy import func
-
-    count_stmt = select(func.count()).select_from(TMFAuditLog)
-    if filters:
-        count_stmt = count_stmt.where(*filters)
-
-    total_res = await session.execute(count_stmt)
-    total_count = total_res.scalar_one()
-
-    # 3. Query items with pagination and descending timestamp order
-    stmt = select(TMFAuditLog)
-    if filters:
-        stmt = stmt.where(*filters)
-    # Order descending by timestamp, and secondary ID for determinism
-    stmt = stmt.order_by(TMFAuditLog.timestamp.desc(), TMFAuditLog.id.desc())
-    stmt = stmt.offset(offset).limit(limit)
-
-    result = await session.execute(stmt)
-    logs = result.scalars().all()
+    total_count, logs = await repo.get_audit_logs_paginated(
+        user_id=user_id,
+        action=action,
+        document_id=document_id,
+        start_time=start_time,
+        end_time=end_time,
+        offset=offset,
+        limit=limit,
+    )
 
     # 4. Construct metadata
     has_more = (offset + limit) < total_count
@@ -1432,32 +1382,26 @@ async def get_audit_trail(
 
 
 @app.get("/api/v1/etmf/edl", response_model=list[ExpectedDocumentResponse])
+@transactional
 async def list_expectations(
     request: Request,
     study_id: str = Query(..., description="The clinical study ID"),
     site_id: str | None = Query(None, description="Optional clinical site ID"),
     milestone: str | None = Query(None, description="Optional milestone"),
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> list[ExpectedDocumentResponse]:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> list[ExpectedDocumentResponse]:
     """
     List expected documents for a study, optionally filtered by site and milestone.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
-    stmt = select(ExpectedDocument).where(ExpectedDocument.study_id == study_id)
-    if site_id:
-        stmt = stmt.where(ExpectedDocument.site_id == site_id)
-    if milestone:
-        stmt = stmt.where(ExpectedDocument.milestone == normalize_milestone(milestone))
-
-    result = await session.execute(stmt)
-    expectations = result.scalars().all()
+    expectations = await repo.get_expected_documents_filtered(study_id, site_id, milestone)
 
     # Log action
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action="EDL_VIEW",
@@ -1485,15 +1429,17 @@ async def list_expectations(
 
 
 @app.post("/api/v1/etmf/edl", response_model=ExpectedDocumentResponse, status_code=201)
+@transactional
 async def create_expectation(
     request: Request,
     payload: ExpectedDocumentCreate,
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> ExpectedDocumentResponse:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> ExpectedDocumentResponse:
     """
     Create a new Expected Document List (EDL) expectation.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -1530,8 +1476,7 @@ async def create_expectation(
     await session.flush()
 
     # Log action
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action="EDL_UPDATE",
@@ -1556,16 +1501,18 @@ async def create_expectation(
 
 
 @app.put("/api/v1/etmf/edl/{edl_id}", response_model=ExpectedDocumentResponse)
+@transactional
 async def update_expectation(
     request: Request,
     edl_id: str,
     payload: ExpectedDocumentCreate,
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> ExpectedDocumentResponse:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> ExpectedDocumentResponse:
     """
     Update an existing Expected Document List (EDL) expectation.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -1583,9 +1530,7 @@ async def update_expectation(
             detail="Forbidden: Trial is currently locked in a read-only state due to a security violation.",
         )
 
-    stmt = select(ExpectedDocument).where(ExpectedDocument.id == edl_id)
-    result = await session.execute(stmt)
-    exp = result.scalars().first()
+    exp = await repo.get_expected_document_by_id(edl_id)
 
     if not exp:
         raise HTTPException(
@@ -1607,8 +1552,7 @@ async def update_expectation(
     await session.flush()
 
     # Log action
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action="EDL_UPDATE",
@@ -1633,18 +1577,20 @@ async def update_expectation(
 
 
 @app.get("/api/v1/etmf/completeness", response_model=CompletenessResponse)
+@transactional
 async def check_completeness(
     request: Request,
     study_id: str = Query(..., description="The clinical study ID"),
     milestone: str = Query(..., description="The transition milestone to check"),
     site_id: str | None = Query(None, description="Optional clinical site ID"),
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> CompletenessResponse:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> CompletenessResponse:
     """
     Completeness checking dashboard to verify mandatory artifacts
     before study milestone transitions.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -1682,27 +1628,11 @@ async def check_completeness(
         )
 
     # Idempotent dynamic seeding of default study-scope EDL if none exist yet for the study
-    await seed_default_edl(session, study_id, milestone_normalized)
+    await seed_default_edl(repo, study_id, milestone_normalized)
 
-    # Query expected documents for this study, milestone and site_id (if provided)
-    stmt = select(ExpectedDocument).where(
-        ExpectedDocument.study_id == study_id,
-        ExpectedDocument.milestone == milestone_normalized,
-    )
-    if site_id:
-        stmt = stmt.where(
-            (ExpectedDocument.site_id.is_(None)) | (ExpectedDocument.site_id == site_id)
-        )
-    else:
-        stmt = stmt.where(ExpectedDocument.site_id.is_(None))
-
-    result = await session.execute(stmt)
-    expected_docs = result.scalars().all()
-
-    # Query all archived documents for this study
-    stmt_docs = select(TMFDocument).where(TMFDocument.study_id == study_id)
-    result_docs = await session.execute(stmt_docs)
-    archived_docs = result_docs.scalars().all()
+    expected_docs = await repo.get_expected_documents_by_study_and_site(study_id, site_id)
+    expected_docs = [e for e in expected_docs if e.milestone == milestone_normalized]
+    archived_docs = await repo.get_documents_by_study(study_id)
 
     present_artifacts = []
     missing_artifacts = []
@@ -1782,8 +1712,7 @@ async def check_completeness(
     scope_repr = "site" if site_id else "study"
 
     # Log action to immutable audit trail
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action="COMPLETENESS",
@@ -1808,18 +1737,20 @@ async def check_completeness(
     response_model=DocumentResponse,
     status_code=201,
 )
+@transactional
 async def redact_document_endpoint(
     request: Request,
     document_id: str,
     payload: RedactRequest,
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> DocumentResponse:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> DocumentResponse:
     """
     Perform controlled redaction on an existing unredacted eTMF document, producing a new
     redacted document version linked to the source.
     All redactions are logged to the immutable audit trail and block auditor/inspector personas.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -1840,9 +1771,7 @@ async def redact_document_endpoint(
         )
 
     # 1. Fetch the source document
-    stmt = select(TMFDocument).where(TMFDocument.id == document_id)
-    result = await session.execute(stmt)
-    source_doc = result.scalars().first()
+    source_doc = await repo.get_document_by_id(document_id)
     if not source_doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
@@ -1856,8 +1785,7 @@ async def redact_document_endpoint(
         or source_doc.approval_status == "APPROVED"
         or source_doc.signature_manifestation is not None
     ):
-        await write_audit_log(
-            session=session,
+        await write_audit_log(repo=repo,
             user_id=user_id,
             user_role=user_roles,
             action="MUTATION_REJECTED",
@@ -1882,13 +1810,8 @@ async def redact_document_endpoint(
         )
 
     # 3. Determine new version index (highest version_index for this study + artifact_code)
-    stmt_v = (
-        select(TMFDocument.version_index)
-        .where(TMFDocument.study_id == source_doc.study_id)
-        .where(TMFDocument.artifact_code == source_doc.artifact_code)
-    )
-    res_v = await session.execute(stmt_v)
-    versions = res_v.scalars().all()
+    lineage_docs = await repo.get_document_lineage(source_doc.study_id, source_doc.artifact_code)
+    versions = [d.version_index for d in lineage_docs]
     new_version_index = max(versions) + 1 if versions else source_doc.version_index + 1
 
     # 4. Copy and prepare metadata
@@ -1934,8 +1857,7 @@ async def redact_document_endpoint(
         f"Redacted Document Reference ID: {redacted_doc.id} (Version {redacted_doc.version_index}). "
         f"Manifest Signature: {manifest_signature}."
     )
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action="REDACT",
@@ -1951,18 +1873,20 @@ async def redact_document_endpoint(
     response_model=AutomatedRedactResponse,
     status_code=201,
 )
+@transactional
 async def auto_redact_document_endpoint(
     request: Request,
     document_id: str,
     payload: AutomatedRedactRequest,
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> AutomatedRedactResponse:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> AutomatedRedactResponse:
     """
     Perform controlled automated redaction on an existing unredacted eTMF document, producing a new
     redacted document version linked to the source.
     All redactions are logged to the immutable audit trail and block auditor/inspector personas.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -1983,9 +1907,7 @@ async def auto_redact_document_endpoint(
         )
 
     # 1. Fetch the source document
-    stmt = select(TMFDocument).where(TMFDocument.id == document_id)
-    result = await session.execute(stmt)
-    source_doc = result.scalars().first()
+    source_doc = await repo.get_document_by_id(document_id)
     if not source_doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
@@ -1999,8 +1921,7 @@ async def auto_redact_document_endpoint(
         or source_doc.approval_status == "APPROVED"
         or source_doc.signature_manifestation is not None
     ):
-        await write_audit_log(
-            session=session,
+        await write_audit_log(repo=repo,
             user_id=user_id,
             user_role=user_roles,
             action="MUTATION_REJECTED",
@@ -2049,13 +1970,8 @@ async def auto_redact_document_endpoint(
         )
 
     # 5. Determine new version index
-    stmt_v = (
-        select(TMFDocument.version_index)
-        .where(TMFDocument.study_id == source_doc.study_id)
-        .where(TMFDocument.artifact_code == source_doc.artifact_code)
-    )
-    res_v = await session.execute(stmt_v)
-    versions = res_v.scalars().all()
+    lineage_docs = await repo.get_document_lineage(source_doc.study_id, source_doc.artifact_code)
+    versions = [d.version_index for d in lineage_docs]
     new_version_index = max(versions) + 1 if versions else source_doc.version_index + 1
 
     # 6. Build and symmetrically sign the redaction manifest
@@ -2123,8 +2039,7 @@ async def auto_redact_document_endpoint(
         f"Redacted Document Reference ID: {redacted_doc.id} (Version {redacted_doc.version_index}). "
         f"Manifest Signature: {manifest_signature}."
     )
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action="REDACT",
@@ -2147,18 +2062,20 @@ async def auto_redact_document_endpoint(
     response_model=ManualRedactResponse,
     status_code=201,
 )
+@transactional
 async def manual_redact_document_endpoint(
     request: Request,
     document_id: str,
     payload: ManualRedactRequest,
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> ManualRedactResponse:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> ManualRedactResponse:
     """
     Perform controlled manual redaction on an existing unredacted eTMF document using specified character spans and literal terms.
     Produces a new redacted document version linked to the source.
     All redactions are logged to the immutable audit trail and block auditor/inspector personas.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -2179,9 +2096,7 @@ async def manual_redact_document_endpoint(
         )
 
     # 1. Fetch the source document
-    stmt = select(TMFDocument).where(TMFDocument.id == document_id)
-    result = await session.execute(stmt)
-    source_doc = result.scalars().first()
+    source_doc = await repo.get_document_by_id(document_id)
     if not source_doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
@@ -2195,8 +2110,7 @@ async def manual_redact_document_endpoint(
         or source_doc.approval_status == "APPROVED"
         or source_doc.signature_manifestation is not None
     ):
-        await write_audit_log(
-            session=session,
+        await write_audit_log(repo=repo,
             user_id=user_id,
             user_role=user_roles,
             action="MUTATION_REJECTED",
@@ -2291,13 +2205,8 @@ async def manual_redact_document_endpoint(
         )
 
     # 6. Determine new version index
-    stmt_v = (
-        select(TMFDocument.version_index)
-        .where(TMFDocument.study_id == source_doc.study_id)
-        .where(TMFDocument.artifact_code == source_doc.artifact_code)
-    )
-    res_v = await session.execute(stmt_v)
-    versions = res_v.scalars().all()
+    lineage_docs = await repo.get_document_lineage(source_doc.study_id, source_doc.artifact_code)
+    versions = [d.version_index for d in lineage_docs]
     new_version_index = max(versions) + 1 if versions else source_doc.version_index + 1
 
     # 7. Build and symmetrically sign the redaction manifest
@@ -2364,8 +2273,7 @@ async def manual_redact_document_endpoint(
         f"Redacted Document Reference ID: {redacted_doc.id} (Version {redacted_doc.version_index}). "
         f"Manifest Signature: {manifest_signature}."
     )
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action="REDACT",
@@ -2384,33 +2292,35 @@ async def manual_redact_document_endpoint(
 
 
 @app.get("/api/v1/etmf/test-exception")
-async def test_exception_route(session: AsyncSession = Depends(get_db_session)):
+@transactional
+async def test_exception_route(repo: ETMFRepositoryPort = Depends(get_etmf_repository)):
     """
     Test-only endpoint to trigger a database session exception and rollback.
     """
+    session = repo.session
     raise RuntimeError("Intentional test database rollback error")
 
 
 @app.post(
     "/api/v1/etmf/documents/{document_id}/transition", response_model=dict[str, Any]
 )
+@transactional
 async def transition_document_status_endpoint(
     request: Request,
     document_id: str,
     payload: TransitionRequest,
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> dict[str, Any]:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> dict[str, Any]:
     """
     Perform a secure, 21 CFR Part 11 compliant Quality Control (QC) status transition on an eTMF document.
     Enforces role-based access gates and logs an append-only state transition history record.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
-    stmt = select(TMFDocument).where(TMFDocument.id == document_id)
-    result = await session.execute(stmt)
-    doc = result.scalars().first()
+    doc = await repo.get_document_by_id(document_id)
     if not doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
@@ -2439,8 +2349,7 @@ async def transition_document_status_endpoint(
         or doc.approval_status == "APPROVED"
         or doc.signature_manifestation is not None
     ):
-        await write_audit_log(
-            session=session,
+        await write_audit_log(repo=repo,
             user_id=user_id,
             user_role=user_roles,
             action="MUTATION_REJECTED",
@@ -2468,8 +2377,7 @@ async def transition_document_status_endpoint(
         raise HTTPException(status_code=403, detail=str(e))
 
     # Log action to immutable audit trail
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action="QC_TRANSITION",
@@ -2488,24 +2396,24 @@ async def transition_document_status_endpoint(
     "/api/v1/etmf/documents/{document_id}/expiration",
     response_model=DocumentResponse,
 )
+@transactional
 async def update_document_expiration_endpoint(
     request: Request,
     document_id: str,
     payload: DocumentExpirationUpdate,
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> DocumentResponse:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> DocumentResponse:
     """
     Update expiration-related metadata for an eTMF document.
     Enforces the etmf_document:manage_expiration permission and checks trial locks.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
     # 1. Fetch document by ID
-    stmt = select(TMFDocument).where(TMFDocument.id == document_id)
-    result = await session.execute(stmt)
-    doc = result.scalars().first()
+    doc = await repo.get_document_by_id(document_id)
     if not doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
@@ -2535,8 +2443,7 @@ async def update_document_expiration_endpoint(
         or doc.approval_status == "APPROVED"
         or doc.signature_manifestation is not None
     ):
-        await write_audit_log(
-            session=session,
+        await write_audit_log(repo=repo,
             user_id=user_id,
             user_role=user_roles,
             action="MUTATION_REJECTED",
@@ -2574,8 +2481,7 @@ async def update_document_expiration_endpoint(
         reason_for_change = principal.change_reason or "System operation"
     reason_for_change = reason_for_change.strip()
 
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action="UPDATE_EXPIRATION",
@@ -2596,18 +2502,20 @@ async def update_document_expiration_endpoint(
     response_model=DocumentResponse,
     status_code=200,
 )
+@transactional
 async def sign_document_endpoint(
     request: Request,
     document_id: str,
     payload: SignDocumentRequest,
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> DocumentResponse:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> DocumentResponse:
     """
     Approve and cryptographically sign an eTMF document, producing a 21 CFR Part 11 compliant
     persisted signature manifestation, recording immutable audit actions (SIGN & APPROVE),
     and transitioning the record to SIGNED.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -2628,9 +2536,7 @@ async def sign_document_endpoint(
         )
 
     # 1. Fetch document
-    stmt = select(TMFDocument).where(TMFDocument.id == document_id)
-    result = await session.execute(stmt)
-    doc = result.scalars().first()
+    doc = await repo.get_document_by_id(document_id)
     if not doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
@@ -2645,8 +2551,7 @@ async def sign_document_endpoint(
         or doc.signature_manifestation is not None
     ):
         # Already signed. Reject with IMMUTABILITY_VIOLATION and write rejected audit log!
-        await write_audit_log(
-            session=session,
+        await write_audit_log(repo=repo,
             user_id=user_id,
             user_role=user_roles,
             action="MUTATION_REJECTED",
@@ -2744,8 +2649,7 @@ async def sign_document_endpoint(
 
     # Verify signature
     if not manifest.verify():
-        await write_audit_log(
-            session=session,
+        await write_audit_log(repo=repo,
             user_id=user_id,
             user_role=user_roles,
             action="SIGNATURE_FAILED",
@@ -2766,8 +2670,7 @@ async def sign_document_endpoint(
     doc.signing_timestamp = now_utc.replace(tzinfo=None)
 
     # 6. Add immutable SIGN and APPROVE eTMF audit actions
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action="SIGN",
@@ -2775,8 +2678,7 @@ async def sign_document_endpoint(
         details=f"Successfully signed document '{doc.filename}' (ID: {doc.id}) with reason '{payload.signing_reason.value}'.",
     )
 
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action="APPROVE",
@@ -2793,16 +2695,18 @@ async def sign_document_endpoint(
     "/api/v1/etmf/studies/{study_id}/artifacts/{artifact_type}/history",
     response_model=list[DocumentResponse],
 )
+@transactional
 async def get_artifact_history(
     study_id: str,
     artifact_type: str,
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> list[DocumentResponse]:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> list[DocumentResponse]:
     """
     Retrieve the chronological, ordered version history of a specific artifact type within a study.
     All views are logged to the immutable audit trail.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -2824,20 +2728,7 @@ async def get_artifact_history(
     except ValueError:
         pass
 
-    stmt = select(TMFDocument).where(
-        TMFDocument.study_id == study_id,
-        (TMFDocument.artifact_type == canonical_name)
-        | (TMFDocument.artifact_type == artifact_type),
-    )
-
-    # Order chronologically by version_index ascending
-    stmt = stmt.order_by(TMFDocument.version_index.asc())
-
-    # Apply the query-filter helper
-    stmt = apply_document_query_filter(stmt, principal)
-
-    result = await session.execute(stmt)
-    docs = result.scalars().all()
+    docs = await repo.get_document_history(study_id, artifact_type, canonical_name, principal)
 
     # Apply the centralized read authorization for defense in depth
     filtered_docs = []
@@ -2849,8 +2740,7 @@ async def get_artifact_history(
             continue
 
     # Log action to immutable audit trail
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action="HISTORY_VIEW",
@@ -2865,15 +2755,17 @@ async def get_artifact_history(
     "/api/v1/etmf/documents/{document_id}/transitions",
     response_model=list[TransitionResponse],
 )
+@transactional
 async def get_document_transition_history(
     request: Request,
     document_id: str,
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> list[TransitionResponse]:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> list[TransitionResponse]:
     """
     Retrieve the append-only Quality Control (QC) transition history for a specific eTMF document.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -2885,26 +2777,17 @@ async def get_document_transition_history(
         )
 
     # Verify document exists
-    stmt_exist = select(TMFDocument).where(TMFDocument.id == document_id)
-    res_exist = await session.execute(stmt_exist)
-    doc_obj = res_exist.scalars().first()
+    doc_obj = await repo.get_document_by_id(document_id)
     if not doc_obj:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
     # Centralized read-authorization policy
     await authorize_document_read(principal, doc_obj, session)
 
-    stmt = (
-        select(DocumentQCTransition)
-        .where(DocumentQCTransition.document_id == document_id)
-        .order_by(DocumentQCTransition.timestamp.asc())
-    )
-    result = await session.execute(stmt)
-    transitions = result.scalars().all()
+    transitions = await repo.get_qc_transitions_by_document_id_asc(document_id)
 
     # Log action to immutable audit trail
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action="QC_HISTORY_VIEW",
@@ -2977,14 +2860,16 @@ def resolve_binder_hint(binder_hint: str | None) -> tuple[int, str, str, str]:
 
 
 @app.post("/api/v1/etmf/inbound-email", status_code=201)
+@transactional
 async def inbound_email_webhook(
     request: Request,
-    session: AsyncSession = Depends(get_db_session),
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
 ) -> dict[str, Any]:
     """
     Inbound-email webhook that validates provider requests, resolves a target study/binder location,
     and routes message content and attachments into the shared eTMF ingestion service.
     """
+    session = repo.session
     content_length_str = request.headers.get("content-length")
     max_size = int(os.getenv("INBOUND_EMAIL_MAX_SIZE_BYTES", str(10 * 1024 * 1024)))
     if content_length_str:
@@ -3034,11 +2919,8 @@ async def inbound_email_webhook(
         raise HTTPException(status_code=422, detail="Invalid routing metadata")
 
     if message_id:
-        stmt = select(TMFDocument).where(
-            TMFDocument.metadata_json["message_id"].as_string() == message_id
-        )
-        res = await session.execute(stmt)
-        if res.scalars().first():
+        existing_doc = await repo.get_document_by_message_id(message_id)
+        if existing_doc:
             return {"status": "accepted"}
 
     try:
@@ -3241,19 +3123,21 @@ def build_binder_structure(
     "/api/v1/etmf/studies/{study_id}/binder/structure",
     response_model=BinderStructureResponse,
 )
+@transactional
 async def get_binder_structure(
     study_id: str,
     milestone: str | None = Query(
         None, description="Optional clinical study milestone"
     ),
     site_id: str | None = Query(None, description="Optional clinical site ID"),
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> BinderStructureResponse:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> BinderStructureResponse:
     """
     Expose the structured Zone -> Section -> Artifact tree for a study binder,
     annotated with expected/present/missing status.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -3292,24 +3176,12 @@ async def get_binder_structure(
                 status_code=400,
                 detail=f"Unknown milestone. Supported: INITIATION, CONDUCT, CLOSEOUT. Error: {str(e)}",
             )
-        await seed_default_edl(session, study_id, milestone_normalized)
+        await seed_default_edl(repo, study_id, milestone_normalized)
 
-    stmt = select(ExpectedDocument).where(ExpectedDocument.study_id == study_id)
+    expected_docs = await repo.get_expected_documents_by_study_and_site(study_id, site_id)
     if milestone_normalized:
-        stmt = stmt.where(ExpectedDocument.milestone == milestone_normalized)
-    if site_id:
-        stmt = stmt.where(
-            (ExpectedDocument.site_id.is_(None)) | (ExpectedDocument.site_id == site_id)
-        )
-    else:
-        stmt = stmt.where(ExpectedDocument.site_id.is_(None))
-
-    result = await session.execute(stmt)
-    expected_docs = result.scalars().all()
-
-    stmt_docs = select(TMFDocument).where(TMFDocument.study_id == study_id)
-    result_docs = await session.execute(stmt_docs)
-    archived_docs = result_docs.scalars().all()
+        expected_docs = [e for e in expected_docs if e.milestone == milestone_normalized]
+    archived_docs = await repo.get_documents_by_study(study_id)
 
     expected_codes = set()
     for exp in expected_docs:
@@ -3329,8 +3201,7 @@ async def get_binder_structure(
         principal=principal,
     )
 
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action="BINDER_STRUCTURE_VIEW",
@@ -3350,17 +3221,19 @@ async def get_binder_structure(
 
 
 @app.get("/api/v1/etmf/studies/{study_id}/binder")
+@transactional
 async def export_regulatory_binder(
     study_id: str,
     include_history: bool = Query(
         False, description="Include full version history of documents"
     ),
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> Response:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> Response:
     """
     Generate an inspection-ready ZIP binder for an eTMF study.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -3372,15 +3245,14 @@ async def export_regulatory_binder(
         )
 
     # Log binder export action
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action="BINDER_EXPORT",
         document_id=None,
         details=f"Exported regulatory binder for study '{study_id}' (include_history={include_history}).",
     )
-    await session.commit()
+    await session.flush()
 
     # Generate the ZIP binder content
     zip_bytes = await generate_binder_zip(
@@ -3405,17 +3277,19 @@ async def export_regulatory_binder(
     response_model=StudyArchiveResponse,
     status_code=200,
 )
+@transactional
 async def bulk_archive_study_documents(
     request: Request,
     study_id: str,
     payload: StudyArchiveRequest,
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> StudyArchiveResponse:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> StudyArchiveResponse:
     """
     Perform authorized bulk study-level document archival transitioning eligible eTMF documents to
     the terminal ARCHIVED status under 21 CFR Part 11 requirements.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -3427,9 +3301,7 @@ async def bulk_archive_study_documents(
         )
 
     # Fetch all documents under the specified study
-    stmt = select(TMFDocument).where(TMFDocument.study_id == study_id)
-    result = await session.execute(stmt)
-    documents = result.scalars().all()
+    documents = await repo.get_documents_by_study(study_id)
 
     if not documents:
         # Repeating an already-completed archive request (or an empty study) is safe and observable
@@ -3522,8 +3394,7 @@ async def bulk_archive_study_documents(
         f"Bulk study archive completed for study '{study_id}'. "
         f"Status: {overall_status}. Successful: {successful_count}, Failed: {failed_count}, Skipped: {skipped_count}."
     )
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action="STUDY_ARCHIVE",
@@ -3546,15 +3417,17 @@ async def bulk_archive_study_documents(
     "/api/v1/etmf/documents/{document_id}/qc-history",
     response_model=list[TransitionResponse],
 )
+@transactional
 async def get_document_qc_history(
     request: Request,
     document_id: str,
-    session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),
-) -> list[TransitionResponse]:
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal)
+    )-> list[TransitionResponse]:
     """
     Retrieve the append-only Quality Control (QC) review history for a specific eTMF document.
     """
+    session = repo.session
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -3566,26 +3439,17 @@ async def get_document_qc_history(
         )
 
     # Verify document exists
-    stmt_exist = select(TMFDocument).where(TMFDocument.id == document_id)
-    res_exist = await session.execute(stmt_exist)
-    doc_obj = res_exist.scalars().first()
+    doc_obj = await repo.get_document_by_id(document_id)
     if not doc_obj:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
     # Centralized read-authorization policy
     await authorize_document_read(principal, doc_obj, session)
 
-    stmt = (
-        select(DocumentQCTransition)
-        .where(DocumentQCTransition.document_id == document_id)
-        .order_by(DocumentQCTransition.timestamp.asc())
-    )
-    result = await session.execute(stmt)
-    transitions = result.scalars().all()
+    transitions = await repo.get_qc_transitions_by_document_id_asc(document_id)
 
     # Log action to immutable audit trail
-    await write_audit_log(
-        session=session,
+    await write_audit_log(repo=repo,
         user_id=user_id,
         user_role=user_roles,
         action="QC_HISTORY_VIEW",

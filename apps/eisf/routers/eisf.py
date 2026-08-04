@@ -12,12 +12,8 @@ from etmf.eisf_transport_models import (
     EISFFolderNode,
 )
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.eisf.database import db_manager
 from apps.eisf.models import ISFAuditLog, ISFDocument
-from packages.database import DatabaseSessionDependency
 from packages.security.audit_logger import AuditLogPayload
 from packages.security.audit_logger import audit_logger_engine as central_audit_logger
 from packages.security.rbac import (
@@ -27,15 +23,23 @@ from packages.security.rbac import (
     require_permission,
 )
 
+from apps.eisf.database import transactional
+from apps.eisf.ports.repository import EISFRepositoryPort
+from apps.eisf.adapters.repository import SQLEISFRepository
+
 router = APIRouter(prefix="/api/v1/eisf")
 
-get_db_session = DatabaseSessionDependency(db_manager)
+_repo_instance = SQLEISFRepository()
+
+
+def get_eisf_repository() -> EISFRepositoryPort:
+    return _repo_instance
 
 
 async def enforce_site_isolation(
     principal: Principal,
     site_id: str,
-    session: AsyncSession,
+    repo: EISFRepositoryPort,
 ) -> None:
     """Enforces clinical site-scoped isolation based on requesting user's Principal.
 
@@ -68,20 +72,18 @@ async def enforce_site_isolation(
             details=details,
             reason_for_change=reason_for_change,
         )
-        session.add(alert)
-        await session.flush()
+        await repo.save_audit_log(alert)
 
         # Write to a separate committed session to ensure the alert survives the HTTP route rollback
-        async with db_manager.get_session_maker()() as audit_session:
-            audit_alert = ISFAuditLog(
+        await repo.save_security_alert_out_of_band(
+            ISFAuditLog(
                 actor_id=actor_id,
                 actor_role=actor_roles,
                 action="SECURITY_ALERT",
                 details=details,
                 reason_for_change=reason_for_change,
             )
-            audit_session.add(audit_alert)
-            await audit_session.commit()
+        )
 
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -90,7 +92,7 @@ async def enforce_site_isolation(
 
 
 async def write_local_audit_log(
-    session: AsyncSession,
+    repo: EISFRepositoryPort,
     actor_id: str,
     actor_role: str,
     action: str,
@@ -98,7 +100,7 @@ async def write_local_audit_log(
     details: str,
     reason_for_change: str,
 ) -> None:
-    """Appends an entry to the 21 CFR Part 11 compliant persistent ISFAuditLog.
+    """Appends an entry to the 21 CFR Part 11 compliant ISFAuditLog.
 
     Requirements: PRD-SYS-001
     """
@@ -110,29 +112,27 @@ async def write_local_audit_log(
         details=details,
         reason_for_change=reason_for_change,
     )
-    session.add(log_entry)
-    await session.flush()
+    await repo.save_audit_log(log_entry)
 
 
 @router.get(
     "/sites/{site_id}/binder",
     response_model=list[EISFFolderNode],
 )
+@transactional
 async def get_site_eisf_binder(
     site_id: str,
-    session: AsyncSession = Depends(get_db_session),
+    repo: EISFRepositoryPort = Depends(get_eisf_repository),
     principal: Principal = Depends(get_principal),
 ) -> list[EISFFolderNode]:
     """Retrieve eISF regulatory binder folder taxonomy with document counts.
 
     Requirements: PRD-SYS-001
     """
-    await enforce_site_isolation(principal, site_id, session)
+    await enforce_site_isolation(principal, site_id, repo)
 
     # Query all filed documents for the site
-    stmt = select(ISFDocument).where(ISFDocument.site_id == site_id)
-    result = await session.execute(stmt)
-    docs = result.scalars().all()
+    docs = await repo.get_documents_by_site(site_id)
 
     # Define standard binder classifications mapping to the target sections
     sec01_count = sum(
@@ -216,26 +216,21 @@ async def get_site_eisf_binder(
     "/sites/{site_id}/documents/{doc_id}",
     response_model=EISFDocumentDetail,
 )
+@transactional
 async def get_site_document_detail(
     site_id: str,
     doc_id: str,
-    session: AsyncSession = Depends(get_db_session),
+    repo: EISFRepositoryPort = Depends(get_eisf_repository),
     principal: Principal = Depends(get_principal),
 ) -> EISFDocumentDetail:
     """Fetch metadata details for a specific clinical site eISF document.
 
     Requirements: PRD-SYS-001
     """
-    await enforce_site_isolation(principal, site_id, session)
+    await enforce_site_isolation(principal, site_id, repo)
 
-    stmt = select(ISFDocument).where(
-        ISFDocument.id == doc_id,
-        ISFDocument.site_id == site_id,
-    )
-    result = await session.execute(stmt)
-    doc = result.scalars().first()
-
-    if not doc:
+    doc = await repo.get_document_by_id(doc_id)
+    if not doc or doc.site_id != site_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"eISF Document with ID '{doc_id}' not found.",
@@ -248,7 +243,7 @@ async def get_site_document_detail(
         else (",".join(principal.roles) if principal.roles else "anonymous")
     )
     await write_local_audit_log(
-        session=session,
+        repo=repo,
         actor_id=principal.user_id or "system",
         actor_role=actor_roles,
         action="VIEW",
@@ -294,26 +289,21 @@ async def get_site_document_detail(
 @router.get(
     "/sites/{site_id}/documents/{doc_id}/download",
 )
+@transactional
 async def download_site_document(
     site_id: str,
     doc_id: str,
-    session: AsyncSession = Depends(get_db_session),
+    repo: EISFRepositoryPort = Depends(get_eisf_repository),
     principal: Principal = Depends(get_principal),
 ):
     """Download/stream file content for a specific eISF document.
 
     Requirements: PRD-SYS-001
     """
-    await enforce_site_isolation(principal, site_id, session)
+    await enforce_site_isolation(principal, site_id, repo)
 
-    stmt = select(ISFDocument).where(
-        ISFDocument.id == doc_id,
-        ISFDocument.site_id == site_id,
-    )
-    result = await session.execute(stmt)
-    doc = result.scalars().first()
-
-    if not doc:
+    doc = await repo.get_document_by_id(doc_id)
+    if not doc or doc.site_id != site_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"eISF Document with ID '{doc_id}' not found.",
@@ -326,7 +316,7 @@ async def download_site_document(
         else (",".join(principal.roles) if principal.roles else "anonymous")
     )
     await write_local_audit_log(
-        session=session,
+        repo=repo,
         actor_id=principal.user_id or "system",
         actor_role=actor_roles,
         action="DOWNLOAD",
@@ -366,18 +356,19 @@ async def download_site_document(
     response_model=EISFDocumentDetail,
     status_code=status.HTTP_201_CREATED,
 )
+@transactional
 async def upload_site_document(
     site_id: str,
     payload: EISFDocumentUploadRequest,
     _not_auditor=Depends(require_permission("eisf_document:create")),
-    session: AsyncSession = Depends(get_db_session),
+    repo: EISFRepositoryPort = Depends(get_eisf_repository),
     principal: Principal = Depends(get_principal),
 ) -> EISFDocumentDetail:
     """Upload a new clinical site document to the eISF binder structure.
 
     Requirements: PRD-SYS-001
     """
-    await enforce_site_isolation(principal, site_id, session)
+    await enforce_site_isolation(principal, site_id, repo)
 
     if not payload.reason_for_change or len(payload.reason_for_change.strip()) < 10:
         raise HTTPException(
@@ -398,17 +389,7 @@ async def upload_site_document(
     checksum = hashlib.sha256(payload.content.encode("utf-8")).hexdigest()
 
     # Calculate version index
-    stmt = (
-        select(ISFDocument)
-        .where(
-            ISFDocument.study_id == payload.study_id,
-            ISFDocument.site_id == site_id,
-            ISFDocument.binder_classification == payload.section_code,
-        )
-        .order_by(ISFDocument.version_index.desc())
-    )
-    res = await session.execute(stmt)
-    latest_doc = res.scalars().first()
+    latest_doc = await repo.get_latest_document(payload.study_id, site_id, payload.section_code)
     new_version_index = (latest_doc.version_index + 1) if latest_doc else 1
 
     doc = ISFDocument(
@@ -425,8 +406,7 @@ async def upload_site_document(
         sync_status="PENDING",
         source_system="eISF",
     )
-    session.add(doc)
-    await session.flush()
+    await repo.save_document(doc)
 
     actor_roles = (
         ",".join(principal.raw_roles)
@@ -434,7 +414,7 @@ async def upload_site_document(
         else (",".join(principal.roles) if principal.roles else "anonymous")
     )
     await write_local_audit_log(
-        session=session,
+        repo=repo,
         actor_id=principal.user_id or "system",
         actor_role=actor_roles,
         action="CREATE_DOCUMENT",

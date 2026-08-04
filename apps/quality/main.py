@@ -3,9 +3,6 @@ from datetime import datetime
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from apps.quality.database import db_manager
 from apps.quality.models import (
@@ -19,13 +16,17 @@ from apps.quality.models import (
     QualityAuditLog,
     RootCauseAnalysis,
 )
-from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
+from packages.database import get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import (
     Principal,
     get_principal,
     has_permission,
 )
+
+from apps.quality.ports.repository import QualityRepositoryPort
+from apps.quality.adapters.repository import SQLQualityRepository
+from apps.quality.services.quality_service import QualityService
 
 
 # Pydantic Schemas for Request/Response Validation
@@ -173,12 +174,16 @@ app = FastAPI(
 app.add_middleware(GatewayAuthMiddleware)
 
 
-# Dependable to obtain database session
-get_db_session = DatabaseSessionDependency(db_manager)
+_repo_instance = SQLQualityRepository()
+
+
+def get_quality_service() -> QualityService:
+    """FastAPI dependency to retrieve the decoupled clinical service."""
+    return QualityService(_repo_instance)
 
 
 async def write_audit_log(
-    session: AsyncSession,
+    session,
     user_id: str,
     user_role: str,
     action: str,
@@ -186,9 +191,7 @@ async def write_audit_log(
     record_id: str | None = None,
     change_reason: str | None = None,
 ) -> None:
-    """
-    Utility helper to write to the append-only QualityAuditLog.
-    """
+    """Utility helper to write to the append-only QualityAuditLog (backward compatibility)."""
     log_entry = QualityAuditLog(
         user_id=user_id,
         user_role=user_role,
@@ -312,7 +315,7 @@ def map_capa_to_response(capa: CAPARecord) -> CAPAResponse:
 async def create_deviation(
     request: Request,
     payload: DeviationCreate,
-    session: AsyncSession = Depends(get_db_session),
+    service: QualityService = Depends(get_quality_service),
     principal: Principal = Depends(get_principal),
 ):
     """
@@ -320,37 +323,7 @@ async def create_deviation(
     """
     authorize_quality_write(principal)
     user_id, user_role, change_reason = get_user_context(principal)
-    if not change_reason:
-        raise HTTPException(
-            status_code=403, detail="Missing change justification reason"
-        )
-
-    dev = Deviation(
-        study_id=payload.study_id,
-        site_id=payload.site_id,
-        title=payload.title,
-        description=payload.description,
-        severity=payload.severity,
-        status=DeviationStatus.REPORTED,
-        type=payload.type,
-        is_protocol_violation=payload.is_protocol_violation,
-        created_by=user_id,
-        version_index=1,
-        reason_for_change=change_reason,
-    )
-    session.add(dev)
-    await session.flush()
-
-    await write_audit_log(
-        session=session,
-        user_id=user_id,
-        user_role=user_role,
-        action="DEVIATION_CREATE",
-        details=f"Created deviation '{payload.title}' for study '{payload.study_id}' with status REPORTED.",
-        record_id=dev.id,
-        change_reason=change_reason,
-    )
-
+    dev = await service.create_deviation(payload, user_id, user_role, change_reason)
     return map_deviation_to_response(dev)
 
 
@@ -360,35 +333,14 @@ async def list_deviations(
     study_id: str | None = Query(None, description="Filter by study ID"),
     site_id: str | None = Query(None, description="Filter by site ID"),
     status: DeviationStatus | None = Query(None, description="Filter by status"),
-    session: AsyncSession = Depends(get_db_session),
+    service: QualityService = Depends(get_quality_service),
     principal: Principal = Depends(get_principal),
 ):
     """
     Retrieve clinical deviation records with optional filtering.
     """
     user_id, user_role, change_reason = get_user_context(principal)
-
-    stmt = select(Deviation)
-    if study_id:
-        stmt = stmt.where(Deviation.study_id == study_id)
-    if site_id:
-        stmt = stmt.where(Deviation.site_id == site_id)
-    if status:
-        stmt = stmt.where(Deviation.status == status)
-
-    result = await session.execute(stmt)
-    deviations = result.scalars().all()
-
-    # Log listing action
-    filters = f"study_id={study_id}, site_id={site_id}, status={status}"
-    await write_audit_log(
-        session=session,
-        user_id=user_id,
-        user_role=user_role,
-        action="DEVIATION_LIST",
-        details=f"Listed deviations matching criteria: {filters}.",
-    )
-
+    deviations = await service.list_deviations(study_id, site_id, status, user_id, user_role)
     return [map_deviation_to_response(dev) for dev in deviations]
 
 
@@ -396,30 +348,14 @@ async def list_deviations(
 async def view_deviation(
     request: Request,
     id: str,
-    session: AsyncSession = Depends(get_db_session),
+    service: QualityService = Depends(get_quality_service),
     principal: Principal = Depends(get_principal),
 ):
     """
     Retrieve a specific clinical deviation by ID.
     """
     user_id, user_role, change_reason = get_user_context(principal)
-
-    stmt = select(Deviation).where(Deviation.id == id)
-    result = await session.execute(stmt)
-    dev = result.scalars().first()
-
-    if not dev:
-        raise HTTPException(status_code=404, detail="Deviation not found")
-
-    await write_audit_log(
-        session=session,
-        user_id=user_id,
-        user_role=user_role,
-        action="DEVIATION_VIEW",
-        details=f"Viewed deviation ID: {id}.",
-        record_id=id,
-    )
-
+    dev = await service.view_deviation(id, user_id, user_role)
     return map_deviation_to_response(dev)
 
 
@@ -429,7 +365,7 @@ async def create_or_update_rca(
     request: Request,
     id: str,
     payload: RCACreateOrUpdate,
-    session: AsyncSession = Depends(get_db_session),
+    service: QualityService = Depends(get_quality_service),
     principal: Principal = Depends(get_principal),
 ):
     """
@@ -438,82 +374,7 @@ async def create_or_update_rca(
     """
     authorize_quality_write(principal)
     user_id, user_role, change_reason = get_user_context(principal)
-    if not change_reason:
-        raise HTTPException(
-            status_code=403, detail="Missing change justification reason"
-        )
-
-    # Verify parent deviation exists
-    stmt_dev = select(Deviation).where(Deviation.id == id)
-    result_dev = await session.execute(stmt_dev)
-    dev = result_dev.scalars().first()
-
-    if not dev:
-        raise HTTPException(status_code=404, detail="Parent deviation not found")
-
-    # Check if RCA already exists
-    stmt_rca = select(RootCauseAnalysis).where(RootCauseAnalysis.deviation_id == id)
-    result_rca = await session.execute(stmt_rca)
-    rca = result_rca.scalars().first()
-
-    action = "RCA_CREATE"
-    if rca:
-        action = "RCA_UPDATE"
-        # Validate version mismatch for optimistic concurrency
-        if (
-            payload.version_index is not None
-            and rca.version_index != payload.version_index
-        ):
-            raise HTTPException(
-                status_code=409,
-                detail=f"Version conflict: The RCA has been modified by another process. Current version: {rca.version_index}.",
-            )
-        rca.methodology = payload.methodology
-        rca.investigation_details = payload.investigation_details
-        rca.root_cause_summary = payload.root_cause_summary
-        rca.version_index += 1
-        rca.reason_for_change = change_reason
-    else:
-        rca = RootCauseAnalysis(
-            deviation_id=id,
-            methodology=payload.methodology,
-            investigation_details=payload.investigation_details,
-            root_cause_summary=payload.root_cause_summary,
-            study_id=dev.study_id,
-            site_id=dev.site_id,
-            created_by=user_id,
-            version_index=1,
-            reason_for_change=change_reason,
-        )
-        session.add(rca)
-
-    # Automatically progress parent deviation to RCA_COMPLETE
-    if dev.status != DeviationStatus.RCA_COMPLETE:
-        dev.status = DeviationStatus.RCA_COMPLETE
-        dev.version_index += 1
-        dev.reason_for_change = f"Progressed status to RCA_COMPLETE via {action}"
-        await write_audit_log(
-            session=session,
-            user_id=user_id,
-            user_role=user_role,
-            action="DEVIATION_UPDATE",
-            details=f"Updated deviation '{dev.title}' (ID: {dev.id}) status to RCA_COMPLETE.",
-            record_id=dev.id,
-            change_reason=change_reason,
-        )
-
-    await session.flush()
-
-    await write_audit_log(
-        session=session,
-        user_id=user_id,
-        user_role=user_role,
-        action=action,
-        details=f"Performed {action} for deviation ID: {id}.",
-        record_id=rca.id,
-        change_reason=change_reason,
-    )
-
+    rca = await service.create_or_update_rca(id, payload, user_id, user_role, change_reason)
     return map_rca_to_response(rca)
 
 
@@ -521,7 +382,7 @@ async def create_or_update_rca(
 async def create_capa(
     request: Request,
     payload: CAPACreate,
-    session: AsyncSession = Depends(get_db_session),
+    service: QualityService = Depends(get_quality_service),
     principal: Principal = Depends(get_principal),
 ):
     """
@@ -529,93 +390,7 @@ async def create_capa(
     """
     authorize_quality_write(principal)
     user_id, user_role, change_reason = get_user_context(principal)
-    if not change_reason:
-        raise HTTPException(
-            status_code=403, detail="Missing change justification reason"
-        )
-
-    # 1. Validate parent deviation exists
-    stmt_dev = select(Deviation).where(Deviation.id == payload.deviation_id)
-    result_dev = await session.execute(stmt_dev)
-    dev = result_dev.scalars().first()
-
-    if not dev:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Parent deviation with ID '{payload.deviation_id}' not found.",
-        )
-
-    # Compatibility: Ensure deviation is not in a terminal/closed state
-    if dev.status in (DeviationStatus.CLOSED, DeviationStatus.RESOLVED):
-        raise HTTPException(
-            status_code=422,
-            detail=f"Cannot create CAPA for a settled or closed deviation (current status: {dev.status}).",
-        )
-
-    # 2. Validate optional RCA if specified
-    if payload.rca_id:
-        stmt_rca = select(RootCauseAnalysis).where(
-            RootCauseAnalysis.id == payload.rca_id
-        )
-        result_rca = await session.execute(stmt_rca)
-        rca = result_rca.scalars().first()
-
-        if not rca:
-            raise HTTPException(
-                status_code=422,
-                detail=f"RCA with ID '{payload.rca_id}' not found.",
-            )
-
-        if rca.deviation_id != payload.deviation_id:
-            raise HTTPException(
-                status_code=422,
-                detail=f"RCA ID '{payload.rca_id}' is not linked to deviation ID '{payload.deviation_id}'.",
-            )
-
-    # 3. Create CAPA
-    capa = CAPARecord(
-        deviation_id=payload.deviation_id,
-        rca_id=payload.rca_id,
-        capa_type=payload.capa_type,
-        action_plan=payload.action_plan,
-        status=CAPAStatus.INITIATED,
-        preventive_measures=payload.preventive_measures,
-        target_completion_date=payload.target_completion_date,
-        study_id=dev.study_id,
-        site_id=dev.site_id,
-        created_by=user_id,
-        version_index=1,
-        reason_for_change=change_reason,
-    )
-    session.add(capa)
-
-    # 4. Progress parent deviation status to CAPA_INITIATED
-    if dev.status != DeviationStatus.CAPA_INITIATED:
-        dev.status = DeviationStatus.CAPA_INITIATED
-        dev.version_index += 1
-        dev.reason_for_change = "Progressed status to CAPA_INITIATED via CAPA creation"
-        await write_audit_log(
-            session=session,
-            user_id=user_id,
-            user_role=user_role,
-            action="DEVIATION_UPDATE",
-            details=f"Updated deviation '{dev.title}' (ID: {dev.id}) status to CAPA_INITIATED.",
-            record_id=dev.id,
-            change_reason=change_reason,
-        )
-
-    await session.flush()
-
-    await write_audit_log(
-        session=session,
-        user_id=user_id,
-        user_role=user_role,
-        action="CAPA_CREATE",
-        details=f"Created CAPA (ID: {capa.id}) linked to deviation ID '{payload.deviation_id}' with status INITIATED.",
-        record_id=capa.id,
-        change_reason=change_reason,
-    )
-
+    capa = await service.create_capa(payload, user_id, user_role, change_reason)
     return map_capa_to_response(capa)
 
 
@@ -624,7 +399,7 @@ async def transition_capa(
     request: Request,
     id: str,
     payload: CAPATransitionRequest,
-    session: AsyncSession = Depends(get_db_session),
+    service: QualityService = Depends(get_quality_service),
     principal: Principal = Depends(get_principal),
 ):
     """
@@ -669,86 +444,9 @@ async def transition_capa(
         raise HTTPException(
             status_code=403, detail="Missing change justification reason"
         )
-
-    # Fetch CAPA and lock/load parent deviation
-    stmt_capa = (
-        select(CAPARecord)
-        .where(CAPARecord.id == id)
-        .options(selectinload(CAPARecord.deviation))
+    capa = await service.transition_capa(
+        id, payload.to_status, payload.version_index, user_id, user_role, change_reason
     )
-    result_capa = await session.execute(stmt_capa)
-    capa = result_capa.scalars().first()
-
-    if not capa:
-        raise HTTPException(
-            status_code=404, detail=f"CAPA record with ID '{id}' not found."
-        )
-
-    current_status = capa.status
-    target_status = payload.to_status
-
-    # Validate version mismatch for optimistic concurrency
-    if (
-        payload.version_index is not None
-        and capa.version_index != payload.version_index
-    ):
-        raise HTTPException(
-            status_code=409,
-            detail=f"Version conflict: The CAPA has been modified by another process. Current version: {capa.version_index}.",
-        )
-
-    # 1. Reject transition from terminal states
-    if current_status in (CAPAStatus.CLOSED, CAPAStatus.CANCELLED):
-        raise HTTPException(
-            status_code=422,
-            detail=f"Transitions out of terminal state '{current_status}' are irreversible and strictly prohibited.",
-        )
-
-    # 2. Validate against explicit transitions map
-    allowed_targets = CAPA_TRANSITIONS.get(current_status, set())
-    if target_status not in allowed_targets:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Invalid transition from state '{current_status}' to '{target_status}'. Allowed targets: {[s.value for s in allowed_targets]}.",
-        )
-
-    # 3. Transition status
-    capa.status = target_status
-    capa.version_index += 1
-    capa.reason_for_change = change_reason
-
-    # 4. Keep linked deviation state consistent (Settlement)
-    if target_status == CAPAStatus.CLOSED:
-        # Progress parent deviation to CLOSED
-        dev = capa.deviation
-        if dev and dev.status != DeviationStatus.CLOSED:
-            dev.status = DeviationStatus.CLOSED
-            dev.version_index += 1
-            dev.reason_for_change = (
-                "Settled and closed parent deviation because linked CAPA was closed."
-            )
-            await write_audit_log(
-                session=session,
-                user_id=user_id,
-                user_role=user_role,
-                action="DEVIATION_UPDATE",
-                details=f"Settled and closed parent deviation (ID: {dev.id}) following CAPA closure.",
-                record_id=dev.id,
-                change_reason=change_reason,
-            )
-
-    await session.flush()
-
-    await write_audit_log(
-        session=session,
-        user_id=user_id,
-        user_role=user_role,
-        action="CAPA_TRANSITION",
-        details=f"Transitioned CAPA (ID: {capa.id}) status from '{current_status}' to '{target_status}'.",
-        record_id=capa.id,
-        change_reason=change_reason,
-    )
-
     return map_capa_to_response(capa)
 
 
@@ -757,7 +455,7 @@ async def update_capa(
     request: Request,
     id: str,
     payload: CAPAUpdate,
-    session: AsyncSession = Depends(get_db_session),
+    service: QualityService = Depends(get_quality_service),
     principal: Principal = Depends(get_principal),
 ):
     """
@@ -765,60 +463,7 @@ async def update_capa(
     """
     authorize_quality_write(principal)
     user_id, user_role, change_reason = get_user_context(principal)
-    if not change_reason:
-        raise HTTPException(
-            status_code=403, detail="Missing change justification reason"
-        )
-
-    stmt_capa = select(CAPARecord).where(CAPARecord.id == id)
-    result_capa = await session.execute(stmt_capa)
-    capa = result_capa.scalars().first()
-
-    if not capa:
-        raise HTTPException(
-            status_code=404, detail=f"CAPA record with ID '{id}' not found."
-        )
-
-    # 1. Validate version mismatch for optimistic concurrency
-    if (
-        payload.version_index is not None
-        and capa.version_index != payload.version_index
-    ):
-        raise HTTPException(
-            status_code=409,
-            detail=f"Version conflict: The CAPA has been modified by another process. Current version: {capa.version_index}.",
-        )
-
-    # 2. Reject modifications in terminal states
-    if capa.status in (CAPAStatus.CLOSED, CAPAStatus.CANCELLED):
-        raise HTTPException(
-            status_code=422,
-            detail=f"Cannot update CAPA record because it is in terminal state '{capa.status}'.",
-        )
-
-    # 3. Apply updates
-    if payload.action_plan is not None:
-        capa.action_plan = payload.action_plan
-    if payload.preventive_measures is not None:
-        capa.preventive_measures = payload.preventive_measures
-    if payload.target_completion_date is not None:
-        capa.target_completion_date = payload.target_completion_date
-
-    capa.version_index += 1
-    capa.reason_for_change = change_reason
-
-    await session.flush()
-
-    await write_audit_log(
-        session=session,
-        user_id=user_id,
-        user_role=user_role,
-        action="CAPA_UPDATE",
-        details=f"Updated CAPA record details (ID: {capa.id}).",
-        record_id=capa.id,
-        change_reason=change_reason,
-    )
-
+    capa = await service.update_capa(id, payload, user_id, user_role, change_reason)
     return map_capa_to_response(capa)
 
 
@@ -838,27 +483,14 @@ class AuditLogResponse(BaseModel):
 @app.get("/api/v1/quality/audit-logs", response_model=list[AuditLogResponse])
 async def list_audit_logs(
     request: Request,
-    session: AsyncSession = Depends(get_db_session),
+    service: QualityService = Depends(get_quality_service),
     principal: Principal = Depends(get_principal),
 ):
     """
     Retrieve quality audit logs in descending chronological order.
     """
     user_id, user_role, change_reason = get_user_context(principal)
-
-    stmt = select(QualityAuditLog).order_by(QualityAuditLog.timestamp.desc())
-    result = await session.execute(stmt)
-    logs = result.scalars().all()
-
-    # Log listing action
-    await write_audit_log(
-        session=session,
-        user_id=user_id,
-        user_role=user_role,
-        action="AUDIT_LOG_LIST",
-        details="Listed quality audit logs.",
-    )
-
+    logs = await service.list_audit_logs(user_id, user_role)
     return [
         AuditLogResponse(
             id=log.id,
