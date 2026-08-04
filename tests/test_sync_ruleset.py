@@ -303,8 +303,15 @@ def test_gxp_ruleset_file_structures():
     assert tags_data["enforcement"] == "active"
     assert "refs/tags/v*" in tags_data["conditions"]["ref_name"]["include"]
 
-    # 2. Strict compliance: bypass_actors is omitted or empty
-    assert "bypass_actors" not in release_data or not release_data["bypass_actors"]
+    # 2. Strict compliance: release branches allow repository role ID 5 bypass, tags omit bypass_actors
+    assert "bypass_actors" in release_data
+    assert release_data["bypass_actors"] == [
+        {
+            "actor_id": 5,
+            "actor_type": "RepositoryRole",
+            "bypass_mode": "always"
+        }
+    ]
     assert "bypass_actors" not in tags_data or not tags_data["bypass_actors"]
 
     # 3. Blocking deletions and non-fast-forward pushes
