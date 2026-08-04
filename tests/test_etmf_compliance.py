@@ -127,21 +127,21 @@ async def test_signature_extraction_formats():
 @pytest.mark.asyncio
 async def test_mock_signature_bypass():
     """Test validator behavior when mock certificates are provided."""
-    # Valid mock
+    # Valid mock - must be blocked!
     is_valid, msg = validate_document_signature(
         "Approved Protocol",
         "Hello\n-----BEGIN CERTIFICATE-----\nMOCK_SIGNATURE\n-----END CERTIFICATE-----\n-----BEGIN SIGNATURE-----\nT09DSw==\n-----END SIGNATURE-----",
     )
-    assert is_valid
+    assert not is_valid
     assert "mock" in msg.lower()
 
-    # Invalid mock
+    # Invalid mock - must be blocked!
     is_valid, msg = validate_document_signature(
         "Approved Protocol",
         "Hello\n-----BEGIN CERTIFICATE-----\nMOCK_SIGNATURE_INVALID\n-----END CERTIFICATE-----\n-----BEGIN SIGNATURE-----\nT09DSw==\n-----END SIGNATURE-----",
     )
     assert not is_valid
-    assert "invalid" in msg.lower()
+    assert "mock" in msg.lower()
 
 
 @pytest.mark.asyncio
@@ -150,9 +150,17 @@ async def test_actual_cryptographic_verification():
     private_key, cert = generate_self_signed_cert()
     cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
 
+    from packages.security.cert_store import get_active_cert_store
+    get_active_cert_store().register_certificate(user_id="test_user_etmf", cert_pem=cert_pem)
+
     content_data = "This is the clinical trial protocol for study 001. Enforces double blind randomized controls."
     sig_bytes = private_key.sign(
-        content_data.encode("utf-8"), padding.PKCS1v15(), hashes.SHA256()
+        content_data.encode("utf-8"),
+        padding.PSS(
+            mgf=padding.MGF1(hashes.SHA256()),
+            salt_length=padding.PSS.MAX_LENGTH,
+        ),
+        hashes.SHA256(),
     )
     sig_b64 = base64.b64encode(sig_bytes).decode("utf-8")
 
@@ -209,7 +217,7 @@ async def test_missing_and_invalid_signature_ingestion():
     }
     resp = client.post("/api/v1/etmf/ingest", json=payload_invalid, headers=headers)
     assert resp.status_code == 422
-    assert "invalid mock digital signature" in resp.json()["detail"].lower()
+    assert "mock signature detected and blocked" in resp.json()["detail"].lower()
 
 
 @pytest.mark.asyncio

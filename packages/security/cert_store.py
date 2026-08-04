@@ -85,3 +85,32 @@ class CertificateStoreService:
             return True, "VALID"
         except Exception as exc:
             return False, f"INVALID_FORMAT: {str(exc)}"
+
+    def is_self_signed(self, cert_pem: str) -> bool:
+        """Check if a certificate is self-signed (issuer matches subject)."""
+        try:
+            cert = x509.load_pem_x509_certificate(cert_pem.encode("utf-8"))
+            return cert.issuer == cert.subject
+        except Exception:
+            return False
+
+    def is_approved(self, cert_pem: str) -> bool:
+        """Check if the certificate is approved (registered in the active trust store registry)."""
+        try:
+            cert = x509.load_pem_x509_certificate(cert_pem.encode("utf-8"))
+            serial_hex = hex(cert.serial_number)[2:].lower()
+            return serial_hex in self._cert_registry
+        except Exception:
+            return False
+
+
+_active_store_instance = None
+
+
+def get_active_cert_store() -> CertificateStoreService:
+    """Retrieve or initialize the active global CertificateStoreService instance."""
+    global _active_store_instance
+    if _active_store_instance is None:
+        _active_store_instance = CertificateStoreService()
+    return _active_store_instance
+
