@@ -39,6 +39,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
 
 ### 2. API Gateway, Security & Identity
+- [2026-08-04: Refactor security context decorator for Python 3.14 compatibility](2026-08-04-refactor-security-context-decorator-for-python-314-compatibility.md)
 - [2026-08-03: Decommission legacy V1 signatures and standalone rendering engine](2026-08-03-decommission-legacy-v1-signatures-and-standalone-rendering-engine.md)
 - [2026-09-08: Decommission Legacy V1 Signatures and Standalone Rendering Engine](2026-09-08-decommission-legacy-v1-signatures-and-rendering-engine.md)
 - [2026-08-03: Decommission Legacy V1 Signatures and Standalone Rendering Engine](2026-08-03-cleanup-legacy-rendering-v1-signatures.md)
