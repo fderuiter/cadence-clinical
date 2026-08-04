@@ -1209,7 +1209,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
 
         it("resolves the user's OIDC identity from local storage before establishing the initial session key", async () => {
           const portal = await import("../index.js");
-          
+
           // 1. Seed cached user identity in localStorage
           localStorage.setItem("oidc_user_id", "subject_cached_123");
 
@@ -1222,14 +1222,16 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
 
         it("saves the verified user identifier into the browser's persistent local storage upon successful login simulation", async () => {
           const portal = await import("../index.js");
-          
+
           // Simulate Keycloak authentication success by setting the state directly and triggering the save (or manually calling keycloak flows)
           portal.state.session.userId = "subject_logged_in_456";
-          
+
           // We also want to check that the login flow itself saves it.
           // Let's directly write to localStorage to simulate and test
           localStorage.setItem("oidc_user_id", "subject_logged_in_456");
-          expect(localStorage.getItem("oidc_user_id")).toBe("subject_logged_in_456");
+          expect(localStorage.getItem("oidc_user_id")).toBe(
+            "subject_logged_in_456"
+          );
         });
 
         it("automatically re-derives the AES-GCM encryption key as soon as the active user identifier changes", async () => {
@@ -1249,10 +1251,12 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
 
         it("triggers immediate deletion of the cached OIDC identifier from local storage on user logout", async () => {
           const portal = await import("../index.js");
-          
+
           // 1. Set cached OIDC user id in localStorage
           localStorage.setItem("oidc_user_id", "subject_to_logout");
-          expect(localStorage.getItem("oidc_user_id")).toBe("subject_to_logout");
+          expect(localStorage.getItem("oidc_user_id")).toBe(
+            "subject_to_logout"
+          );
 
           // 2. Trigger logout
           await portal.logout();

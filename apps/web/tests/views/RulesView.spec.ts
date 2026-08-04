@@ -18,7 +18,6 @@ vi.mock("@/api/apiClient", () => {
   };
 });
 
-
 // Setup mock router
 const router = createRouter({
   history: createWebHistory(),

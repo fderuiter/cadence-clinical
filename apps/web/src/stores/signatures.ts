@@ -32,7 +32,10 @@ export const useSignatureStore = defineStore("signatures", {
           savedLastSignatureResult = JSON.parse(stored);
         }
       } catch (e) {
-        console.error("Failed to parse lastSignatureResult from localStorage", e);
+        console.error(
+          "Failed to parse lastSignatureResult from localStorage",
+          e
+        );
       }
     }
     return {
@@ -57,18 +60,29 @@ export const useSignatureStore = defineStore("signatures", {
         if (authStore.isDemoMode && !isMocked) {
           await new Promise((resolve) => setTimeout(resolve, 300));
           const mockResponse: BatchSignResponse = {
-            signature_id: "mock-sig-" + Date.now() + "-" + Math.random().toString(36).substring(2, 7),
+            signature_id:
+              "mock-sig-" +
+              Date.now() +
+              "-" +
+              Math.random().toString(36).substring(2, 7),
             study_id: payload.studyId,
             subject_id: payload.subjectId,
             signed_forms_count: payload.formIds.length,
-            content_digest: "sha256-" + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join(""),
+            content_digest:
+              "sha256-" +
+              Array.from({ length: 64 }, () =>
+                Math.floor(Math.random() * 16).toString(16)
+              ).join(""),
             timestamp_utc: new Date().toISOString(),
             audit_tx: "tx-" + Math.random().toString(36).substring(2, 10),
           };
           this.lastSignatureResult = mockResponse;
           if (typeof window !== "undefined" && window.localStorage) {
             try {
-              window.localStorage.setItem("lastSignatureResult", JSON.stringify(mockResponse));
+              window.localStorage.setItem(
+                "lastSignatureResult",
+                JSON.stringify(mockResponse)
+              );
             } catch (e) {
               console.error("Failed to persist signature in demo mode", e);
             }

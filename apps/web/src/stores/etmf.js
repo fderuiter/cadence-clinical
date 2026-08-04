@@ -603,10 +603,10 @@ export const useEtmfStore = defineStore("etmf", {
       this.selectedArtifactId = artifactId;
       try {
         const authStore = useAuthStore();
-        const isMocked = etmfService.getDocuments && (
-          etmfService.getDocuments._isMockFunction ||
-          typeof etmfService.getDocuments.mock === "object"
-        );
+        const isMocked =
+          etmfService.getDocuments &&
+          (etmfService.getDocuments._isMockFunction ||
+            typeof etmfService.getDocuments.mock === "object");
         if (authStore.isDemoMode && !isMocked) {
           let allDocs = [];
           if (typeof window !== "undefined" && window.localStorage) {
@@ -615,7 +615,10 @@ export const useEtmfStore = defineStore("etmf", {
               allDocs = JSON.parse(stored);
             } else {
               allDocs = JSON.parse(JSON.stringify(defaultDocuments));
-              window.localStorage.setItem("demo_documents", JSON.stringify(allDocs));
+              window.localStorage.setItem(
+                "demo_documents",
+                JSON.stringify(allDocs)
+              );
             }
           } else {
             allDocs = JSON.parse(JSON.stringify(defaultDocuments));
@@ -658,17 +661,18 @@ export const useEtmfStore = defineStore("etmf", {
       this.isUploading = true;
       try {
         const authStore = useAuthStore();
-        const isMocked = etmfService.ingestDocument && (
-          etmfService.ingestDocument._isMockFunction ||
-          typeof etmfService.ingestDocument.mock === "object"
-        );
+        const isMocked =
+          etmfService.ingestDocument &&
+          (etmfService.ingestDocument._isMockFunction ||
+            typeof etmfService.ingestDocument.mock === "object");
         if (authStore.isDemoMode && !isMocked) {
           await new Promise((resolve) => setTimeout(resolve, 300));
           let body = {};
           let changeReason = "Initial upload";
 
           if (formData instanceof FormData) {
-            changeReason = formData.get("reason_for_change") || "Initial upload";
+            changeReason =
+              formData.get("reason_for_change") || "Initial upload";
             body = {
               study_id: formData.get("study_id") || this.currentStudyId,
               site_id: formData.get("site_id") || null,
@@ -692,7 +696,8 @@ export const useEtmfStore = defineStore("etmf", {
             body = {
               study_id: formData.study_id || this.currentStudyId,
               site_id: formData.site_id || null,
-              artifact_type: formData.artifact_type || "Clinical Trial Protocol",
+              artifact_type:
+                formData.artifact_type || "Clinical Trial Protocol",
               filename: formData.filename || "document.pdf",
               content: formData.content || "Mock base64 or plaintext content",
               mime_type: formData.mime_type || "application/pdf",
@@ -731,7 +736,10 @@ export const useEtmfStore = defineStore("etmf", {
               allDocs = JSON.parse(JSON.stringify(defaultDocuments));
             }
             allDocs.push(newDoc);
-            window.localStorage.setItem("demo_documents", JSON.stringify(allDocs));
+            window.localStorage.setItem(
+              "demo_documents",
+              JSON.stringify(allDocs)
+            );
           } else {
             this.documentsList.push(newDoc);
           }
