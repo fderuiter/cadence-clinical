@@ -93,7 +93,11 @@ def update_pr_comment(outcome: str) -> None:
 
 
 def handle_github_api_error(stderr_msg: str) -> None:
-    """Check for permission, authorization, or other non-blocking errors and exit gracefully."""
+    """Check for permission, authorization, or other non-blocking errors and exit gracefully.
+
+    Args:
+        stderr_msg: The standard error output message from the CLI command.
+    """
     combined = stderr_msg.lower()
     patterns = [
         "resource not accessible by integration",
@@ -153,13 +157,16 @@ def main() -> None:
     if not pr_json:
         handle_github_api_error(pr_err)
         print(f"Error fetching PR details: {pr_err}")
-        sys.exit(1)
+        handle_github_api_error(pr_err)
+        print("Gracefully skipping automated self-healing due to API fetch error.")
+        sys.exit(0)
 
     try:
         pr_data = json.loads(pr_json)
     except Exception as e:
         print(f"Failed to parse PR JSON: {e}")
-        sys.exit(1)
+        print("Gracefully skipping automated self-healing due to JSON parse error.")
+        sys.exit(0)
 
     labels = [lbl["name"] for lbl in pr_data.get("labels", [])]
     head_branch = pr_data.get("headRefName")
@@ -179,9 +186,20 @@ def main() -> None:
         update_pr_comment(outcome)
         sys.exit(0)
 
-    print("PR is labeled 'safe-change'. Proceeding with guardrail checks...")
+    print(
+        "PR is labeled 'safe-change'. Proceeding to check if merge conflict exists..."
+    )
 
-    # 3. File Guardrails Check
+    # 3. Check if there's actually a merge conflict
+    if mergeable_status != "CONFLICTING":
+        print(f"PR mergeable status is {mergeable_status}. No conflict to heal.")
+        sys.exit(0)
+
+    print(
+        "Merge conflict detected on labeled safe-change PR! Proceeding with file guardrail checks..."
+    )
+
+    # 4. File Guardrails Check
     # Fetch list of changed files in this PR
     print("Fetching changed files...")
     files_json, files_err = run_command(
@@ -223,13 +241,7 @@ def main() -> None:
         sys.exit(1)
 
     print("File guardrails check passed! All changed files are classified as 'safe'.")
-
-    # 4. Check if there's actually a merge conflict
-    if mergeable_status != "CONFLICTING":
-        print(f"PR mergeable status is {mergeable_status}. No conflict to heal.")
-        sys.exit(0)
-
-    print("Merge conflict detected! Initiating autonomous healing...")
+    print("Initiating autonomous healing...")
 
     # 5. Autonomous Git Merge
     # Configure helper identity

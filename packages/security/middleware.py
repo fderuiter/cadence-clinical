@@ -1,6 +1,7 @@
 import datetime
 import hashlib
 import os
+import threading
 import time
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any
@@ -24,16 +25,50 @@ from packages.security.context import (
 class DownstreamReplayCache:
     def __init__(self) -> None:
         self.used_tokens: dict[str, float] = {}
+        self._lock = threading.Lock()
 
     def is_replayed(self, token: str, exp: float, jti: str | None = None) -> bool:
-        now = time.time()
-        # Prune expired tokens
-        self.used_tokens = {t: e for t, e in self.used_tokens.items() if e > now}
         key = jti if jti else token
-        if key in self.used_tokens:
-            return True
-        self.used_tokens[key] = exp
-        return False
+        from packages.security.sig_token_verifier import get_redis_client
+
+        client = get_redis_client()
+        if client is not None:
+            redis_key = f"esign_replay:{key}"
+            ttl = int(exp - time.time())
+            if ttl <= 0:
+                ttl = 1
+            try:
+                res = client.set(redis_key, "1", ex=ttl, nx=True)
+                return not bool(res)
+            except Exception:
+                pass
+
+        now = time.time()
+        with self._lock:
+            # Prune expired tokens
+            self.used_tokens = {t: e for t, e in self.used_tokens.items() if e > now}
+            if key in self.used_tokens:
+                return True
+            self.used_tokens[key] = exp
+            return False
+
+    def reset(self) -> None:
+        """Clear the cache.
+
+        Useful for maintaining clean/isolated test state.
+        """
+        from packages.security.sig_token_verifier import get_redis_client
+
+        client = get_redis_client()
+        if client is not None:
+            try:
+                keys = client.keys("esign_replay:*")
+                if keys:
+                    client.delete(*keys)
+            except Exception:
+                pass
+        with self._lock:
+            self.used_tokens.clear()
 
 
 downstream_replay_cache = DownstreamReplayCache()
