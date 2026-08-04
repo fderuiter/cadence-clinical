@@ -18,6 +18,7 @@ from packages.deid.models import ComplianceProfile, DetectionResult, DetectorCat
 from packages.deid.transforms import (
     apply_deid_transforms,
     cap_age_string,
+    normalize_and_cap_age,
     pseudonymize_value,
     shift_date_string,
 )
@@ -496,3 +497,27 @@ def test_no_raw_matched_values_persisted():
     # Check manifest model representation and dictionary representation to verify John Doe is completely absent
     manifest_dict = manifest.model_dump()
     assert "John Doe" not in str(manifest_dict)
+
+
+def test_normalize_and_cap_age_direct():
+    """Verify normalize_and_cap_age direct inputs and outputs."""
+    # Test numeric floats and ints
+    assert normalize_and_cap_age(95) == 89
+    assert isinstance(normalize_and_cap_age(95), int)
+    assert normalize_and_cap_age(95.5) == 89.0
+    assert isinstance(normalize_and_cap_age(95.5), float)
+    assert normalize_and_cap_age(89) == 89
+    assert normalize_and_cap_age(45) == 45
+
+    # Test string variants
+    assert normalize_and_cap_age("95") == "89"
+    assert normalize_and_cap_age("92.5") == "89"
+    assert normalize_and_cap_age("95 years") == "89"
+    assert normalize_and_cap_age("34 yrs") == "34 yrs"
+    assert normalize_and_cap_age("89") == "89"
+
+    # Test non-age/edge values untouched
+    assert normalize_and_cap_age(None) is None
+    assert normalize_and_cap_age(True) is True
+    assert normalize_and_cap_age(False) is False
+    assert normalize_and_cap_age("unknown") == "unknown"
