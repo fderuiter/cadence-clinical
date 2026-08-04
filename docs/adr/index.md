@@ -150,6 +150,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-18: Document Redaction Architecture, Regulatory Data-Handling, and Compliance Profiles](2026-08-18-document-redaction-architecture.md)
 
 ### 6. Frontend & Design System
+- [2026-08-04: Enforce design token compliance and Vue scoped style validation](2026-08-04-enforce-design-token-compliance-and-vue-scoped-style-validation.md)
 - [2026-08-03: Migrate Clinical Forms to Pre-Compiled Shared UI Library](2026-08-03-migrate-clinical-forms-to-pre-compiled-shared-ui-library.md)
 - [2026-08-03: Centralized Clinical Form Layout Wrapper](2026-08-03-centralized-clinical-form-layout-wrapper.md)
 - [2026-08-03: Optimized eTMF Document Registry with Store Indexing and Client-Side Pagination](2026-08-03-optimized-etmf-document-registry-with-store-indexing-and-client-side-pagination.md)
