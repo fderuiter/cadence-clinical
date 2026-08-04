@@ -7,7 +7,7 @@ COPY packages/security ./packages/security
 COPY packages/deid ./packages/deid
 COPY apps/safety ./apps/safety
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --no-dev --package apps-safety
+    uv sync --frozen --no-dev --package apps-safety
 
 FROM python:3.14-slim-bookworm
 WORKDIR /app

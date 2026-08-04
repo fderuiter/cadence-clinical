@@ -6,7 +6,7 @@ COPY packages/database ./packages/database
 COPY packages/security ./packages/security
 COPY apps/notifications ./apps/notifications
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --no-dev --package apps-notifications
+    uv sync --frozen --no-dev --package apps-notifications
 
 FROM python:3.14-slim-bookworm
 WORKDIR /app

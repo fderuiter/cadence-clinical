@@ -6,7 +6,7 @@ COPY packages/database ./packages/database
 COPY packages/security ./packages/security
 COPY apps/eisf ./apps/eisf
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --no-dev --package apps-eisf
+    uv sync --frozen --no-dev --package apps-eisf
 
 FROM python:3.14-slim-bookworm
 WORKDIR /app

@@ -6,7 +6,7 @@ COPY packages/security ./packages/security
 COPY packages/core-models ./packages/core-models
 COPY apps/designer ./apps/designer
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --no-dev --package apps-designer
+    uv sync --frozen --no-dev --package apps-designer
 
 FROM python:3.14-slim-bookworm
 WORKDIR /app

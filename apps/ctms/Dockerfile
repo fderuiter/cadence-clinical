@@ -6,7 +6,7 @@ COPY packages/database ./packages/database
 COPY packages/security ./packages/security
 COPY apps/ctms ./apps/ctms
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --no-dev --package apps-ctms
+    uv sync --frozen --no-dev --package apps-ctms
 
 FROM python:3.14-slim-bookworm
 WORKDIR /app

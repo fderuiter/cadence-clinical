@@ -8,7 +8,7 @@ COPY packages/deid ./packages/deid
 COPY packages/core-models ./packages/core-models
 COPY apps/interop ./apps/interop
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --no-dev --package apps-interop
+    uv sync --frozen --no-dev --package apps-interop
 
 FROM python:3.14-slim-bookworm
 WORKDIR /app

@@ -9,7 +9,7 @@ COPY packages/core-models ./packages/core-models
 COPY packages/storage ./packages/storage
 COPY apps/execution ./apps/execution
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --no-dev --package apps-execution
+    uv sync --frozen --no-dev --package apps-execution
 
 FROM python:3.14-slim-bookworm
 WORKDIR /app

@@ -4,7 +4,7 @@ ENV UV_COMPILE_BYTECODE=1
 COPY pyproject.toml uv.lock ./
 COPY packages/security ./packages/security
 COPY apps/gateway ./apps/gateway
-RUN uv sync --no-dev --package apps-gateway
+RUN uv sync --frozen --no-dev --package apps-gateway
 
 FROM python:3.14-slim-bookworm
 WORKDIR /app

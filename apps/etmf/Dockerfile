@@ -8,7 +8,7 @@ COPY packages/deid ./packages/deid
 COPY packages/core-models ./packages/core-models
 COPY apps/etmf ./apps/etmf
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --no-dev --package apps-etmf
+    uv sync --frozen --no-dev --package apps-etmf
 
 FROM python:3.14-slim-bookworm
 WORKDIR /app
