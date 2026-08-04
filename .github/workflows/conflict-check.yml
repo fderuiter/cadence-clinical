@@ -21,8 +21,8 @@ jobs:
         with:
           # Use GITHUB_TOKEN directly for checkout to ensure it always succeeds
           token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.ref || github.head_ref || github.ref }}
           fetch-depth: 0
 
       - name: Set up uv

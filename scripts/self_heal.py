@@ -110,6 +110,10 @@ def handle_github_api_error(stderr_msg: str) -> None:
         "forbidden",
         "permission",
         "api error",
+        "rate limit",
+        "rate-limit",
+        "rate_limit",
+        "graphql",
     ]
     if any(p in combined for p in patterns):
         print(
