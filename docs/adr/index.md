@@ -259,3 +259,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 - [2026-08-04: Compile-Time Vite Build Mode for Interactive Public Demo](2026-08-04-compile-time-vite-build-mode-for-interactive-public-demo.md)
 - [2026-08-04: Centralized Redis eSignature Token Replay Prevention](2026-08-04-centralized-redis-esignature-token-replay-prevention.md)
+- [2026-08-04: RSA-PSS Cryptographic Padding for Electronic Signatures](2026-08-04-rsa-pss-cryptographic-padding-for-electronic-signatures.md)
