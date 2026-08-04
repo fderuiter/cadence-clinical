@@ -334,16 +334,24 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
         await notificationsStore.fetchNotifications();
 
         // Acknowledge notification 1
-        const ackRes = await notificationsStore.acknowledge("notif-001", "Acknowledge clinical warning");
+        const ackRes = await notificationsStore.acknowledge(
+          "notif-001",
+          "Acknowledge clinical warning"
+        );
         expect(ackRes.status).toBe("ACKNOWLEDGED");
         expect(ackRes.version_index).toBe(2);
         expect(ackRes.reason_for_change).toBe("Acknowledge clinical warning");
 
         // Resolve notification 2
-        const resRes = await notificationsStore.resolve("notif-002", "Checked subject CRF and resolved");
+        const resRes = await notificationsStore.resolve(
+          "notif-002",
+          "Checked subject CRF and resolved"
+        );
         expect(resRes.status).toBe("RESOLVED");
         expect(resRes.version_index).toBe(2);
-        expect(resRes.reason_for_change).toBe("Checked subject CRF and resolved");
+        expect(resRes.reason_for_change).toBe(
+          "Checked subject CRF and resolved"
+        );
 
         // Check localStorage persistence
         const stored = window.localStorage.getItem("demo_notifications");
@@ -361,7 +369,9 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
 
         await etmfStore.fetchDocuments("01.01.01");
         expect(etmfStore.documentsList.length).toBe(1);
-        expect(etmfStore.documentsList[0].filename).toBe("protocol_v1_draft.pdf");
+        expect(etmfStore.documentsList[0].filename).toBe(
+          "protocol_v1_draft.pdf"
+        );
       });
 
       it("uploads and files new documents into the tree locally in demo mode", async () => {
@@ -386,13 +396,19 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
         expect(res.document_id).toBeDefined();
 
         // Should be fetched locally after upload
-        expect(etmfStore.documentsList.some((doc) => doc.filename === "uploaded_doc.pdf")).toBe(true);
+        expect(
+          etmfStore.documentsList.some(
+            (doc) => doc.filename === "uploaded_doc.pdf"
+          )
+        ).toBe(true);
 
         // Verify localStorage persistence
         const stored = window.localStorage.getItem("demo_documents");
         expect(stored).toBeDefined();
         const storedList = JSON.parse(stored);
-        expect(storedList.some((doc) => doc.filename === "uploaded_doc.pdf")).toBe(true);
+        expect(
+          storedList.some((doc) => doc.filename === "uploaded_doc.pdf")
+        ).toBe(true);
       });
     });
 
@@ -405,17 +421,26 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
 
         // Mutate all stores
         await signatureStore.submitBatchSignature({
-          studyId: "S", subjectId: "SU", formIds: ["F"], password: "P", meaning: "M" // pragma: allowlist secret
+          studyId: "S",
+          subjectId: "SU",
+          formIds: ["F"],
+          password: "P",
+          meaning: "M", // pragma: allowlist secret
         });
         await notificationsStore.fetchNotifications();
         await notificationsStore.acknowledge("notif-001", "R1");
         await etmfStore.uploadDocument({
-          filename: "uploaded_doc.pdf", artifact_code: "01.01.01"
+          filename: "uploaded_doc.pdf",
+          artifact_code: "01.01.01",
         });
 
         // Verify they are mutated/stored in localStorage
-        expect(window.localStorage.getItem("lastSignatureResult")).not.toBeNull();
-        expect(window.localStorage.getItem("demo_notifications")).not.toBeNull();
+        expect(
+          window.localStorage.getItem("lastSignatureResult")
+        ).not.toBeNull();
+        expect(
+          window.localStorage.getItem("demo_notifications")
+        ).not.toBeNull();
         expect(window.localStorage.getItem("demo_documents")).not.toBeNull();
 
         // Trigger reset Demo Storage on each store
@@ -431,7 +456,11 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
         // Verify in-memory state is back to pristine default state
         expect(signatureStore.lastSignatureResult).toBeNull();
         expect(notificationsStore.notifications[0].status).toBe("OPEN"); // originally "OPEN", ack changed it to "ACKNOWLEDGED"
-        expect(etmfStore.documentsList.some((doc) => doc.filename === "uploaded_doc.pdf")).toBe(false);
+        expect(
+          etmfStore.documentsList.some(
+            (doc) => doc.filename === "uploaded_doc.pdf"
+          )
+        ).toBe(false);
       });
     });
   });
