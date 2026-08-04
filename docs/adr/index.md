@@ -156,6 +156,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 6. Frontend & Design System
 - [2026-08-04: Scope CSS hover to can hover and add touch tap fallbacks](2026-08-04-scope-css-hover-to-can-hover-and-add-touch-tap-fallbacks.md)
+- [2026-08-28: Dynamic Hover Pointer Capability Detection and Touch-Safe Glossary Fallbacks](2026-08-28-dynamic-hover-detection-and-touch-safe-glossary-fallbacks.md)
 - [2026-08-03: Migrate Clinical Forms to Pre-Compiled Shared UI Library](2026-08-03-migrate-clinical-forms-to-pre-compiled-shared-ui-library.md)
 - [2026-08-03: Centralized Clinical Form Layout Wrapper](2026-08-03-centralized-clinical-form-layout-wrapper.md)
 - [2026-08-03: Optimized eTMF Document Registry with Store Indexing and Client-Side Pagination](2026-08-03-optimized-etmf-document-registry-with-store-indexing-and-client-side-pagination.md)
