@@ -7,7 +7,7 @@
 # ==============================================================================
 
 .DEFAULT_GOAL := help
-.PHONY: help setup fix lint format check verify test sync-gxp rtm adr docs ports regenerate-templates
+.PHONY: help setup fix lint format check verify test sync-gxp rtm compliance-sweep adr docs ports regenerate-templates
 
 # Colour codes
 CYAN  := \033[0;36m
@@ -57,6 +57,9 @@ sync-gxp: ## Run tests → regenerate RTM docs → stage docs/SDLC/ (fixes the C
 
 rtm: ## Validate that checked-in RTM docs are up to date (read-only, no test run)
 	uv run python scripts/generate_rtm.py --validate
+
+compliance-sweep: ## Run manual, on-demand compliance sweep across active exclusions ledger
+	uv run python scripts/validate_vulnerabilities.py --local
 
 ##@ Architecture & Documentation
 

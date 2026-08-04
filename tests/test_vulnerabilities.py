@@ -916,3 +916,72 @@ def test_scan_for_inline_bypasses_comments_and_empty_lines(tmp_path):
         violations = scan_for_inline_bypasses()
         assert len(violations) == 1
         assert str(file) == violations[0][0]
+
+
+@patch("scripts.validate_vulnerabilities.sys.argv", ["validate_vulnerabilities.py", "--local"])
+@patch("scripts.validate_vulnerabilities.load_and_validate_ledger")
+@patch("scripts.validate_vulnerabilities.execute_pip_audit")
+@patch("scripts.validate_vulnerabilities.execute_pnpm_audit")
+@patch("scripts.validate_vulnerabilities.sys.exit")
+def test_main_local_only_mode(mock_exit, mock_execute_pnpm, mock_execute_pip, mock_load_ledger):
+    """Verify that in local/sweep mode, live dependency vulnerability audits are completely skipped but static ledger validation still runs.
+
+    Requirements: PRD-SYS-001
+    """
+    from scripts.validate_vulnerabilities import main
+
+    # Setup valid ledger mock
+    mock_load_ledger.return_value = (
+        [
+            {
+                "vulnerability_id": "CVE-2026-1111",
+                "package_name": "ecdsa",
+                "severity": 3,
+                "occurrence": 2,
+                "detectability": 2,
+                "rpn": 12,
+                "justification": "Approved exemption justification here",
+                "status": "active",
+            }
+        ],
+        [],
+    )
+
+    with patch("scripts.validate_vulnerabilities.scan_for_inline_bypasses", return_value=[]), \
+         patch("scripts.validate_vulnerabilities.scan_for_manifest_bypasses", return_value=[]), \
+         patch("scripts.validate_vulnerabilities.scan_for_config_bypasses", return_value=[]):
+        main()
+
+    # pip-audit and pnpm audit should NOT be executed
+    mock_execute_pip.assert_not_called()
+    mock_execute_pnpm.assert_not_called()
+    # It should pass with exit code 0 (mock_exit is not called)
+    mock_exit.assert_not_called()
+
+
+@patch("scripts.validate_vulnerabilities.sys.argv", ["validate_vulnerabilities.py", "--local"])
+@patch("scripts.validate_vulnerabilities.load_and_validate_ledger")
+@patch("scripts.validate_vulnerabilities.execute_pip_audit")
+@patch("scripts.validate_vulnerabilities.execute_pnpm_audit")
+@patch("scripts.validate_vulnerabilities.sys.exit")
+def test_main_local_only_mode_fails_on_ledger_error(mock_exit, mock_execute_pnpm, mock_execute_pip, mock_load_ledger):
+    """Verify that local/sweep mode still fails when there are ledger errors.
+
+    Requirements: PRD-SYS-001
+    """
+    from scripts.validate_vulnerabilities import main
+
+    # Setup invalid ledger mock (contains error)
+    mock_load_ledger.return_value = (
+        [],
+        ["Ledger entry has an invalid pre-calculated FMEA Risk Priority Number"]
+    )
+
+    with patch("scripts.validate_vulnerabilities.scan_for_inline_bypasses", return_value=[]), \
+         patch("scripts.validate_vulnerabilities.scan_for_manifest_bypasses", return_value=[]), \
+         patch("scripts.validate_vulnerabilities.scan_for_config_bypasses", return_value=[]):
+        main()
+
+    # It must exit with code 1 (failure)
+    mock_exit.assert_called_once_with(1)
+

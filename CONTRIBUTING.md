@@ -307,7 +307,31 @@ SKIP=gxp-rtm-validate git push
 
 ---
 
-## 8. Human vs. AI Agent Boundary
+## 8. Vulnerability Exclusions & FMEA Standards
+
+For GxP and FDA 21 CFR Part 11 / EU Annex 11 compliance, all package dependency vulnerability exemptions must be recorded in the central exclusions ledger located at `docs/SDLC/vulnerability_exclusions_ledger.json`.
+
+### FMEA Scoring Scales & Thresholds
+Exemptions are analyzed using Failure Mode and Effects Analysis (FMEA) across three criteria:
+- **Severity (S):** 1 (Negligible) to 5 (Critical)
+- **Occurrence (O):** 1 (Extremely Rare) to 5 (Frequent)
+- **Detectability (D):** 1 (Certain to Detect) to 5 (Completely Undetectable)
+
+The Risk Priority Number (RPN) is calculated as:
+$$\text{RPN} = \text{Severity} \times \text{Occurrence} \times \text{Detectability}$$
+
+- **Maximum Allowed Risk Score (RPN):** **Must be strictly less than 20**. Any vulnerability exclusion with an RPN equal to or exceeding 20 is strictly prohibited and will block local git commits.
+
+### Required Justification Description Lengths
+Every exemption entry in the ledger must provide a robust, compliance-grade justification:
+- **Frontend Vulnerability Exclusions (Vulnerability IDs starting with `GHSA-`):** Must provide a justification of **exceeding 10 characters** (minimum 11 characters).
+- **All Other Vulnerability Exclusions (Python/Core dependencies):** Must provide a justification of **at least 10 characters**.
+
+All exclusions are validated automatically in the pre-commit workflow.
+
+---
+
+## 9. Human vs. AI Agent Boundary
 
 This repository is co-authored by humans and autonomous AI agents. Agents must
 comply with `AGENTS.md`. Human developers use this guide.
@@ -318,7 +342,7 @@ Key distinctions:
 
 ---
 
-## 9. Binary File Hygiene
+## 10. Binary File Hygiene
 
 - **Never commit `.docx` files.** They are gitignored. Use `python3 scripts/regenerate_templates.py` to rebuild protocol templates dynamically.
 - **Never commit `report.xml`.** It is gitignored. Generate it locally with `uv run pytest --junitxml=report.xml` but do not stage it.
@@ -326,7 +350,7 @@ Key distinctions:
 
 ---
 
-## 10. Additional Resources
+## 11. Additional Resources
 
 | Document | Purpose |
 |---|---|

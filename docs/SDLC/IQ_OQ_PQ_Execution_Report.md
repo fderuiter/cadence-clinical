@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2053
-- **Passed:** 2053 🟢
+- **Total Automated Test Cases Run:** 2055
+- **Passed:** 2055 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -2202,6 +2202,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_load_and_validate_ledger_not_list` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_load_and_validate_ledger_rpn_threshold` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_load_and_validate_ledger_valid` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_local_only_mode` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_local_only_mode_fails_on_ledger_error` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scan_exits_successfully_on_unreadable_files` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scan_for_config_bypasses_no_violations` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scan_for_config_bypasses_with_violations` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
