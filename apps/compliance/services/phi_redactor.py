@@ -29,12 +29,9 @@ class PHIRedactorService:
         """
         text = content.decode("utf-8", errors="ignore")
 
-        # Redact specific literal terms
-        for term in phi_terms:
-            if term:
-                text = text.replace(term, "[REDACTED]")
-
-        # Also redact standard PHI via scrubber
-        text = self.scrubber.scrub_phi(text)
+        # Delegate direct name and pattern matching to the primary scrubber
+        text = self.scrubber.scrub_phi(
+            text, custom_terms=phi_terms, custom_replacement="[REDACTED]"
+        )
 
         return text.encode("utf-8")
