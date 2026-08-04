@@ -1,0 +1,1808 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Cadence Clinical - eISF Service",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/eisf/sites/{site_id}/binder": {
+      "get": {
+        "summary": "Get Site Eisf Binder",
+        "description": "Retrieve eISF regulatory binder folder taxonomy with document counts.\n\nRequirements: PRD-SYS-001",
+        "operationId": "get_site_eisf_binder_api_v1_eisf_sites__site_id__binder_get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EISFFolderNode"
+                  },
+                  "title": "Response Get Site Eisf Binder Api V1 Eisf Sites  Site Id  Binder Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/eisf/sites/{site_id}/documents/{doc_id}": {
+      "get": {
+        "summary": "Get Site Document Detail",
+        "description": "Fetch metadata details for a specific clinical site eISF document.\n\nRequirements: PRD-SYS-001",
+        "operationId": "get_site_document_detail_api_v1_eisf_sites__site_id__documents__doc_id__get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Doc Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EISFDocumentDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/eisf/sites/{site_id}/documents/{doc_id}/download": {
+      "get": {
+        "summary": "Download Site Document",
+        "description": "Download/stream file content for a specific eISF document.\n\nRequirements: PRD-SYS-001",
+        "operationId": "download_site_document_api_v1_eisf_sites__site_id__documents__doc_id__download_get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Doc Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/eisf/sites/{site_id}/documents/upload": {
+      "post": {
+        "summary": "Upload Site Document",
+        "description": "Upload a new clinical site document to the eISF binder structure.\n\nRequirements: PRD-SYS-001",
+        "operationId": "upload_site_document_api_v1_eisf_sites__site_id__documents_upload_post",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EISFDocumentUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EISFDocumentDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Service health check endpoint.\nExempt from gateway authentication checks.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/eisf/binders/{site_id}": {
+      "get": {
+        "summary": "Get Site Binder Endpoint",
+        "description": "Retrieve site-isolated regulatory binder documents for specified site.\nEnforces site isolation strictly.",
+        "operationId": "get_site_binder_endpoint_api_v1_eisf_binders__site_id__get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentResponse"
+                  },
+                  "title": "Response Get Site Binder Endpoint Api V1 Eisf Binders  Site Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/eisf/documents": {
+      "get": {
+        "summary": "List Documents",
+        "description": "List site-scoped, binder-classified documents. Constrains by the authenticated Principal scope.",
+        "operationId": "list_documents_api_v1_eisf_documents_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "binder_section",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by binder section / classification",
+              "title": "Binder Section"
+            },
+            "description": "Filter by binder section / classification"
+          },
+          {
+            "name": "binder_classification",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by binder section / classification",
+              "title": "Binder Classification"
+            },
+            "description": "Filter by binder section / classification"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentResponse"
+                  },
+                  "title": "Response List Documents Api V1 Eisf Documents Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Document",
+        "operationId": "create_document_api_v1_eisf_documents_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/eisf/ingest": {
+      "post": {
+        "summary": "Ingest Document",
+        "operationId": "ingest_document_api_v1_eisf_ingest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EISFIngestionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/events/publish": {
+      "post": {
+        "summary": "Ingest Document",
+        "operationId": "ingest_document_events_publish_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EISFIngestionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/eisf/documents/{document_id}": {
+      "get": {
+        "summary": "Get Document",
+        "description": "View metadata for a specific eISF document. Constrains by the authenticated site claim.",
+        "operationId": "get_document_api_v1_eisf_documents__document_id__get",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update Document",
+        "operationId": "update_document_api_v1_eisf_documents__document_id__put",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Document",
+        "operationId": "delete_document_api_v1_eisf_documents__document_id__delete",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "reason_for_change",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 10,
+              "maxLength": 1000,
+              "description": "Part 11 reason for change",
+              "title": "Reason For Change"
+            },
+            "description": "Part 11 reason for change"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/eisf/documents/{document_id}/download": {
+      "get": {
+        "summary": "Download Document",
+        "description": "Download/stream file content for a specific eISF document. Constrains by the authenticated site claim.",
+        "operationId": "download_document_api_v1_eisf_documents__document_id__download_get",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/eisf/completeness": {
+      "get": {
+        "summary": "Get Binder Completeness",
+        "description": "Check completeness of the electronic Investigator Site File (eISF) binder.\nCompares filed artifacts for the study and site against a required artifact list by section.\nEnforces site isolation strictly.",
+        "operationId": "get_binder_completeness_api_v1_eisf_completeness_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The clinical study ID",
+              "title": "Study Id"
+            },
+            "description": "The clinical study ID"
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The site ID",
+              "title": "Site Id"
+            },
+            "description": "The site ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BinderCompletenessResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/eisf/sync": {
+      "post": {
+        "summary": "Sync Documents",
+        "operationId": "sync_documents_api_v1_eisf_sync_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EISFSyncRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EISFSyncResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BinderCompletenessResponse": {
+        "properties": {
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "is_complete": {
+            "type": "boolean",
+            "title": "Is Complete"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/BinderSectionStatus"
+            },
+            "type": "array",
+            "title": "Sections"
+          }
+        },
+        "type": "object",
+        "required": [
+          "site_id",
+          "is_complete",
+          "sections"
+        ],
+        "title": "BinderCompletenessResponse"
+      },
+      "BinderSectionStatus": {
+        "properties": {
+          "section_name": {
+            "type": "string",
+            "title": "Section Name"
+          },
+          "required_artifacts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Required Artifacts"
+          },
+          "present": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Present"
+          },
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing"
+          }
+        },
+        "type": "object",
+        "required": [
+          "section_name",
+          "required_artifacts",
+          "present",
+          "missing"
+        ],
+        "title": "BinderSectionStatus"
+      },
+      "DocumentCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "The clinical study ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "The clinical site ID"
+          },
+          "binder_classification": {
+            "type": "string",
+            "title": "Binder Classification",
+            "description": "Binder classification"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Document filename"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Base64 or raw content"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type"
+          },
+          "metadata_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata Json",
+            "description": "Metadata JSON"
+          },
+          "correlation_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Key",
+            "description": "Correlation key"
+          },
+          "content_checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Checksum",
+            "description": "Content checksum"
+          },
+          "source_system": {
+            "type": "string",
+            "title": "Source System",
+            "description": "Source system name",
+            "default": "eISF"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Reason For Change",
+            "description": "Part 11 reason for change"
+          },
+          "issue_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue Date",
+            "description": "Optional document issue date"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date",
+            "description": "Optional document expiration date"
+          },
+          "document_owner_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Owner Id",
+            "description": "Optional document owner ID"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "binder_classification",
+          "filename",
+          "content",
+          "mime_type",
+          "reason_for_change"
+        ],
+        "title": "DocumentCreate"
+      },
+      "DocumentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "binder_classification": {
+            "type": "string",
+            "title": "Binder Classification"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "metadata_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata Json"
+          },
+          "correlation_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Key"
+          },
+          "content_checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Checksum"
+          },
+          "sync_status": {
+            "type": "string",
+            "title": "Sync Status"
+          },
+          "source_system": {
+            "type": "string",
+            "title": "Source System"
+          },
+          "issue_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue Date"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date"
+          },
+          "document_owner_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Owner Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "binder_classification",
+          "filename",
+          "content",
+          "mime_type",
+          "version_index",
+          "created_at",
+          "created_by",
+          "sync_status",
+          "source_system"
+        ],
+        "title": "DocumentResponse"
+      },
+      "DocumentUpdate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "The clinical study ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "The clinical site ID"
+          },
+          "binder_classification": {
+            "type": "string",
+            "title": "Binder Classification",
+            "description": "Binder classification"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Document filename"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Base64 or raw content"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type"
+          },
+          "metadata_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata Json",
+            "description": "Metadata JSON"
+          },
+          "correlation_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Key",
+            "description": "Correlation key"
+          },
+          "content_checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Checksum",
+            "description": "Content checksum"
+          },
+          "source_system": {
+            "type": "string",
+            "title": "Source System",
+            "description": "Source system name",
+            "default": "eISF"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Reason For Change",
+            "description": "Part 11 reason for change"
+          },
+          "issue_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue Date",
+            "description": "Optional document issue date"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date",
+            "description": "Optional document expiration date"
+          },
+          "document_owner_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Owner Id",
+            "description": "Optional document owner ID"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "binder_classification",
+          "filename",
+          "content",
+          "mime_type",
+          "reason_for_change"
+        ],
+        "title": "DocumentUpdate"
+      },
+      "EISFDocumentDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique document identifier"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Unique clinical site identifier"
+          },
+          "section_code": {
+            "type": "string",
+            "title": "Section Code",
+            "description": "Section code classification of the document"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Document file name"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "Document version index/string"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date",
+            "description": "Optional document expiration date (YYYY-MM-DD)"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Chronological UTC timestamp when record was created"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Unique identifier of creator"
+          },
+          "download_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Download Url",
+            "description": "Direct download URL for document streaming"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "site_id",
+          "section_code",
+          "filename",
+          "version",
+          "created_at",
+          "created_by"
+        ],
+        "title": "EISFDocumentDetail",
+        "description": "Fetch document details and download URL.\n\nRequirements: PRD-SYS-001"
+      },
+      "EISFDocumentUploadRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique protocol study identifier"
+          },
+          "section_code": {
+            "type": "string",
+            "title": "Section Code",
+            "description": "Section code classification for the document"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Document file name"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Base64 or raw text content of the document"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type of the document"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Reason For Change",
+            "description": "Part 11 change justification"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date",
+            "description": "Optional document expiration date (YYYY-MM-DD)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "section_code",
+          "filename",
+          "content",
+          "mime_type",
+          "reason_for_change"
+        ],
+        "title": "EISFDocumentUploadRequest",
+        "description": "Request payload for uploading a new site document with GxP metadata.\n\nRequirements: PRD-SYS-001"
+      },
+      "EISFFolderNode": {
+        "properties": {
+          "section_code": {
+            "type": "string",
+            "title": "Section Code",
+            "description": "Unique folder section code"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Human-readable title of the folder"
+          },
+          "document_count": {
+            "type": "integer",
+            "title": "Document Count",
+            "description": "Count of documents inside this folder"
+          },
+          "subfolders": {
+            "items": {
+              "$ref": "#/components/schemas/EISFFolderNode"
+            },
+            "type": "array",
+            "title": "Subfolders",
+            "description": "List of child folder nodes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "section_code",
+          "title",
+          "document_count"
+        ],
+        "title": "EISFFolderNode",
+        "description": "Tree view of eISF folders and document counts.\n\nRequirements: PRD-SYS-001"
+      },
+      "EISFIngestionRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "The clinical study ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "The clinical site ID"
+          },
+          "binder_classification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Binder Classification",
+            "description": "Binder classification"
+          },
+          "artifact_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Type",
+            "description": "Artifact classification metadata alias for binder_classification"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Document filename"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Base64 or raw content"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type"
+          },
+          "metadata_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata Json",
+            "description": "Metadata JSON"
+          },
+          "correlation_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Key",
+            "description": "Correlation key"
+          },
+          "content_checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Checksum",
+            "description": "Content checksum"
+          },
+          "source_system": {
+            "type": "string",
+            "title": "Source System",
+            "description": "Source system name",
+            "default": "eISF"
+          },
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000,
+                "minLength": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change",
+            "description": "Part 11 reason for change"
+          },
+          "issue_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue Date",
+            "description": "Optional document issue date"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date",
+            "description": "Optional document expiration date"
+          },
+          "document_owner_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Owner Id",
+            "description": "Optional document owner ID"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "filename",
+          "content",
+          "mime_type"
+        ],
+        "title": "EISFIngestionRequest"
+      },
+      "EISFSyncItem": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "The clinical study ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "The clinical site ID"
+          },
+          "binder_classification": {
+            "type": "string",
+            "title": "Binder Classification",
+            "description": "Binder classification"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Document filename"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Base64 or raw content"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type"
+          },
+          "version_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Index",
+            "description": "Optional version index"
+          },
+          "metadata_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata Json",
+            "description": "Metadata JSON"
+          },
+          "correlation_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Key",
+            "description": "Correlation key"
+          },
+          "content_checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Checksum",
+            "description": "Content checksum"
+          },
+          "source_system": {
+            "type": "string",
+            "title": "Source System",
+            "description": "Source system name",
+            "default": "eISF"
+          },
+          "sync_status": {
+            "type": "string",
+            "title": "Sync Status",
+            "description": "Sync status",
+            "default": "PENDING"
+          },
+          "conflict_policy": {
+            "type": "string",
+            "title": "Conflict Policy",
+            "description": "CLIENT_WINS, SERVER_WINS, or MERGE",
+            "default": "CLIENT_WINS"
+          },
+          "issue_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue Date",
+            "description": "Optional document issue date"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date",
+            "description": "Optional document expiration date"
+          },
+          "document_owner_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Owner Id",
+            "description": "Optional document owner ID"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "binder_classification",
+          "filename",
+          "content",
+          "mime_type"
+        ],
+        "title": "EISFSyncItem"
+      },
+      "EISFSyncRequest": {
+        "properties": {
+          "submissions": {
+            "items": {
+              "$ref": "#/components/schemas/EISFSyncItem"
+            },
+            "type": "array",
+            "title": "Submissions",
+            "description": "List of sync items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "submissions"
+        ],
+        "title": "EISFSyncRequest"
+      },
+      "EISFSyncResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "success"
+          },
+          "processed_count": {
+            "type": "integer",
+            "title": "Processed Count"
+          },
+          "created_count": {
+            "type": "integer",
+            "title": "Created Count"
+          },
+          "updated_count": {
+            "type": "integer",
+            "title": "Updated Count"
+          },
+          "ignored_count": {
+            "type": "integer",
+            "title": "Ignored Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "processed_count",
+          "created_count",
+          "updated_count",
+          "ignored_count"
+        ],
+        "title": "EISFSyncResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

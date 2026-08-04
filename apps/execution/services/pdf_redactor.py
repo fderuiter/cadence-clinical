@@ -102,19 +102,22 @@ class PDFRedactorService:
         """
         content_text = pdf_bytes.decode("utf-8", errors="ignore")
 
-        detected = self._scrubber.detect_phi(content_text)
-        total_redacted = len(target_snippets) + len(detected)
+        # Delegate direct name and pattern detection to the primary scrubber in a single pass
+        detected = self._scrubber.detect_phi(content_text, custom_terms=target_snippets)
+        total_redacted = len(detected)
 
-        redacted_text = content_text
-        for snippet in target_snippets:
-            if snippet in redacted_text:
-                redacted_text = redacted_text.replace(snippet, "[REDACTED_TEXT]")
-
-        redacted_text = self._scrubber.scrub_phi(redacted_text)
+        # Delegate redaction directly to the primary scrubber
+        redacted_text = self._scrubber.scrub_phi(
+            content_text,
+            custom_terms=target_snippets,
+            custom_replacement="[REDACTED_TEXT]",
+        )
         redacted_bytes = redacted_text.encode("utf-8")
         sha256_checksum = hashlib.sha256(redacted_bytes).hexdigest()
 
-        remaining_phi = self._scrubber.detect_phi(redacted_text)
+        remaining_phi = self._scrubber.detect_phi(
+            redacted_text, custom_terms=target_snippets
+        )
         is_clean = len(remaining_phi) == 0
 
         return {
