@@ -30,8 +30,8 @@ MOCK_ENV_VARS = {
     "NEO4J_URI": "bolt://localhost:7687",
     "NEO4J_USER": "neo4j",
     "NEO4J_PASSWORD": "password",  # pragma: allowlist secret
-    "AUDIT_LOG_SECRET_KEY": "test-gxp-audit-secret-key-placeholder-abc",
-    "INBOUND_EMAIL_HMAC_SECRET": "test-email-hmac-secret-placeholder-xyz",
+    "AUDIT_LOG_SECRET_KEY": "test-gxp-audit-secret-key-placeholder-abc",  # pragma: allowlist secret
+    "INBOUND_EMAIL_HMAC_SECRET": "test-email-hmac-secret-placeholder-xyz",  # pragma: allowlist secret
 }
 for k, v in MOCK_ENV_VARS.items():
     if k not in os.environ:
