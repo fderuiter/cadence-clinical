@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2061
-- **Passed:** 2061 🟢
+- **Total Automated Test Cases Run:** 2083
+- **Passed:** 2083 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -168,6 +168,7 @@ python-slugify           8.0.4
 pytz                     2026.2
 pyyaml                   6.0.3
 rapidfuzz                3.14.5
+redis                    8.1.0
 referencing              0.37.0
 requests                 2.34.2
 rich                     15.0.0
@@ -1126,6 +1127,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_gateway_usdm_export_authenticated` | `tests.test_gateway_usdm` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_usdm_import_authenticated` | `tests.test_gateway_usdm` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_usdm_unauthenticated_returns_401` | `tests.test_gateway_usdm` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_is_logical_code` | `tests.test_git_merge_driver` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_merge_generic_json` | `tests.test_git_merge_driver` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_merge_markdown_text` | `tests.test_git_merge_driver` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_merge_secrets_baseline` | `tests.test_git_merge_driver` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_invalid_data_element_default_unit_fails` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
 | `test_invalid_mismatched_type_payload_fails` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
 | `test_mutation_creation_requires_non_empty_change_reason` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
@@ -1482,6 +1487,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_build_comment_body` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_combined_audit_logic` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_status_emoji` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gxp_validation_and_migration_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_markdown_and_architecture_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_merge_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_parse_existing_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1880,6 +1886,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_verify_gateway_signature_scope_fallback_restrictions` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_gateway_signature_tenant_and_multishape_restrictions` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_sig_token_helper_scenarios` | `tests.test_security_middleware` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_is_safe_file` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_blocked_on_non_safe_files` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_no_conflict_needed` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_skipped_if_no_safe_change_label` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cross_service_interception_and_replay` | `tests.test_shared_infrastructure` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_service_client_fixtures_isolation` | `tests.test_shared_infrastructure` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signed_headers_generation` | `tests.test_shared_infrastructure` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1895,10 +1905,16 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_timing_window_validation` | `tests.test_shared_soa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_visit_reorder_request` | `tests.test_shared_soa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_visit_validation` | `tests.test_shared_soa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_verify_and_consume_sig_token_expired` | `tests.test_sig_token_verifier` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_verify_and_consume_sig_token_mismatched_user` | `tests.test_sig_token_verifier` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_verify_and_consume_sig_token_replay_blocked` | `tests.test_sig_token_verifier` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_verify_and_consume_sig_token_success` | `tests.test_sig_token_verifier` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_downstream_replay_cache_redis_reset` | `tests.test_sig_token_verifier` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_downstream_replay_cache_redis_success` | `tests.test_sig_token_verifier` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_redis_consumption_fallback_on_exception` | `tests.test_sig_token_verifier` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_redis_consumption_replay_blocked` | `tests.test_sig_token_verifier` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_redis_consumption_success` | `tests.test_sig_token_verifier` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_redis_reset` | `tests.test_sig_token_verifier` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_verify_and_consume_sig_token_expired` | `tests.test_sig_token_verifier` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_verify_and_consume_sig_token_mismatched_user` | `tests.test_sig_token_verifier` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_verify_and_consume_sig_token_replay_blocked` | `tests.test_sig_token_verifier` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_verify_and_consume_sig_token_success` | `tests.test_sig_token_verifier` | Trace-17 | 🟢 PASSED | < 1s |
 | `test_compute_content_digest` | `tests.test_signature_builder` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rsa_signature_sign_and_verify` | `tests.test_signature_builder` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_asymmetric_sign_and_verify` | `tests.test_signature_manifestation` | *Regression/Helper* | 🟢 PASSED | < 1s |
