@@ -7,169 +7,70 @@
     role="dialog"
     aria-modal="true"
     aria-label="Electronic Signature Capture Modal"
-    style="
-      display: flex;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    "
   >
-    <div
-      class="modal"
-      style="
-        background: white;
-        border-radius: 8px;
-        width: 100%;
-        max-width: 450px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        overflow: hidden;
-        color: #333;
-      "
-    >
-      <div
-        class="modal-header"
-        style="
-          padding: 16px;
-          border-bottom: 1px solid #e2e8f0;
-          font-weight: 600;
-          font-size: 16px;
-          color: white;
-        "
-      >
+    <div class="modal">
+      <div class="modal-header">
         Electronic Signature & Identity Verification
       </div>
-      <div class="modal-body" style="padding: 16px">
-        <p
-          style="
-            margin-bottom: 16px;
-            font-size: 13px;
-            color: #334155;
-            line-height: 1.4;
-          "
-        >
+      <div class="modal-body">
+        <p class="modal-desc">
           To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>, you
           must re-verify your credentials and select a controlled signing reason
           to apply this digital signature.
         </p>
 
-        <div class="form-group" style="margin-bottom: 12px">
-          <label
-            for="sig-username"
-            style="
-              display: block;
-              font-weight: 500;
-              margin-bottom: 4px;
-              font-size: 13px;
-              color: #475569;
-            "
-            >Username</label
-          >
+        <div class="form-group">
+          <label for="sig-username">Username</label>
           <input
             id="sig-username"
             v-model="usernameVal"
             type="text"
             placeholder="Username"
             :disabled="busy"
-            style="
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #cbd5e1;
-              border-radius: 4px;
-              font-size: 13px;
-            "
-          />
+          >
         </div>
 
-        <div class="form-group" style="margin-bottom: 12px">
-          <label
-            for="sig-password"
-            style="
-              display: block;
-              font-weight: 500;
-              margin-bottom: 4px;
-              font-size: 13px;
-              color: #475569;
-            "
-            >Password</label
-          >
+        <div class="form-group">
+          <label for="sig-password">Password</label>
           <input
             id="sig-password"
             v-model="password"
             type="password"
             placeholder="Enter your password to confirm identity..."
             :disabled="busy"
-            style="
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #cbd5e1;
-              border-radius: 4px;
-              font-size: 13px;
-            "
             @keyup.enter="confirm"
-          />
+          >
         </div>
 
-        <div class="form-group" style="margin-bottom: 12px">
-          <label
-            for="sig-totp"
-            style="
-              display: block;
-              font-weight: 500;
-              margin-bottom: 4px;
-              font-size: 13px;
-              color: #475569;
-            "
-            >MFA/TOTP Token (Optional)</label
-          >
+        <div class="form-group">
+          <label for="sig-totp">MFA/TOTP Token (Optional)</label>
           <input
             id="sig-totp"
             v-model="totp"
             type="text"
             placeholder="Enter 6-digit TOTP code..."
             :disabled="busy"
-            style="
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #cbd5e1;
-              border-radius: 4px;
-              font-size: 13px;
-            "
-          />
+          >
         </div>
 
-        <div class="form-group" style="margin-bottom: 16px">
-          <label
-            for="sig-reason"
-            style="
-              display: block;
-              font-weight: 500;
-              margin-bottom: 4px;
-              font-size: 13px;
-              color: #475569;
-            "
-            >Signing Reason</label
-          >
+        <div class="form-group last-group">
+          <label for="sig-reason">Signing Reason</label>
           <select
             id="sig-reason"
             v-model="signingReason"
             :disabled="busy"
-            style="
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #cbd5e1;
-              border-radius: 4px;
-              font-size: 13px;
-              background: white;
-            "
           >
-            <option value="" disabled>-- Select Reason --</option>
-            <option v-for="r in reasons" :key="r" :value="r">
+            <option
+              value=""
+              disabled
+            >
+              -- Select Reason --
+            </option>
+            <option
+              v-for="r in reasons"
+              :key="r"
+              :value="r"
+            >
               {{ r }}
             </option>
           </select>
@@ -178,38 +79,15 @@
         <div
           v-if="error"
           id="sig-error-msg"
-          style="
-            margin-top: 8px;
-            color: #ef4444;
-            font-size: 13px;
-            font-weight: 500;
-          "
+          class="error-msg"
         >
           {{ error }}
         </div>
       </div>
-      <div
-        class="modal-footer"
-        style="
-          padding: 12px 16px;
-          border-top: 1px solid #e2e8f0;
-          display: flex;
-          justify-content: flex-end;
-          gap: 8px;
-          background: #f8fafc;
-        "
-      >
+      <div class="modal-footer">
         <button
           id="btn-cancel-sig"
-          class="btn"
-          style="
-            padding: 6px 12px;
-            font-size: 13px;
-            cursor: pointer;
-            border: 1px solid #cbd5e1;
-            background: white;
-            border-radius: 4px;
-          "
+          class="btn btn-cancel"
           :disabled="busy"
           @click="cancel"
         >
@@ -218,15 +96,6 @@
         <button
           id="btn-confirm-sig"
           class="btn btn-primary"
-          style="
-            padding: 6px 12px;
-            font-size: 13px;
-            cursor: pointer;
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 4px;
-          "
           :disabled="busy"
           @click="confirm"
         >
@@ -420,3 +289,139 @@ async function confirm() {
   }
 }
 </script>
+
+<style scoped>
+.modal-overlay {
+  display: flex;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 450px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  color: #333;
+}
+
+.modal-header {
+  padding: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  font-weight: 600;
+  font-size: 16px;
+  color: white;
+}
+
+.modal-body {
+  padding: 16px;
+}
+
+.modal-desc {
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: #334155;
+  line-height: 1.4;
+}
+
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group.last-group {
+  margin-bottom: 16px;
+}
+
+label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: #475569;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 13px;
+  background: white;
+  box-sizing: border-box;
+}
+
+.error-msg {
+  margin-top: 8px;
+  color: #ef4444;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.modal-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  background: #f8fafc;
+}
+
+.btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.btn-cancel {
+  border: 1px solid #cbd5e1;
+  background: white;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  border: none;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Accessible focus outline ring */
+input:focus,
+select:focus,
+button:focus {
+  outline: none;
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible {
+  outline: 3px solid var(--accent, #2563eb) !important;
+  outline-offset: 2px !important;
+}
+
+/* Touch Target Sizes for mobile and tablet devices */
+@media (max-width: 1024px) {
+  input,
+  select,
+  .btn {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 16px;
+  }
+}
+</style>

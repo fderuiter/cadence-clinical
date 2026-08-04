@@ -8,116 +8,40 @@
     role="dialog"
     aria-modal="true"
     aria-label="eCRF Approval Handoff Modal"
-    style="
-      position: fixed;
-      top: 0;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      display: flex;
-      background: rgba(0, 0, 0, 0.5);
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    "
   >
-    <div
-      class="modal"
-      style="
-        border-radius: 8px;
-        background: #ffffff;
-        width: 100%;
-        max-width: 500px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        overflow: hidden;
-        color: #333333;
-      "
-    >
-      <div
-        class="modal-header"
-        style="
-          font-size: 16px;
-          padding: 16px;
-          border-bottom: 1px solid #e2e8f0;
-          font-weight: 600;
-          color: #1e293b;
-        "
-      >
+    <div class="modal">
+      <div class="modal-header">
         eCRF Formal Approval &amp; Production Handoff
       </div>
-      <div class="modal-body" style="padding: 16px">
-        <p
-          style="
-            font-size: 13px;
-            color: #64748b;
-            line-height: 1.4;
-            margin-bottom: 16px;
-          "
-        >
+      <div class="modal-body">
+        <p class="modal-desc">
           To comply with <strong>GxP 21 CFR Part 11</strong>, advancing this
           form design to production requires zero unresolved critical comments,
           complete edit-check verification, and electronic signature sign-off.
         </p>
 
         <!-- Checklist Section -->
-        <div
-          class="checklist-section"
-          style="
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            padding: 12px;
-            margin-bottom: 16px;
-          "
-        >
-          <h4
-            style="
-              margin: 0 0 8px 0;
-              font-size: 13px;
-              color: #475569;
-              font-weight: 600;
-            "
-          >
+        <div class="checklist-section">
+          <h4 class="checklist-title">
             Pre-Approval Checklist
           </h4>
-          <ul
-            style="
-              list-style: none;
-              padding: 0;
-              margin: 0;
-              font-size: 13px;
-              color: #334155;
-            "
-          >
-            <li
-              style="
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                margin-bottom: 6px;
-              "
-            >
+          <ul class="checklist-list">
+            <li class="checklist-item">
               <span
                 class="checklist-icon"
-                :style="
-                  hasZeroUnresolved ? 'color: #10b981;' : 'color: #ef4444;'
-                "
+                :class="hasZeroUnresolved ? 'text-success' : 'text-danger'"
               >
                 {{ hasZeroUnresolved ? "✓" : "❌" }}
               </span>
-              <span
-                >No unresolved CRITICAL review comments ({{
-                  unresolvedCount
-                }}
-                pending)</span
-              >
+              <span>No unresolved CRITICAL review comments ({{
+                unresolvedCount
+              }}
+                pending)</span>
             </li>
-            <li style="display: flex; align-items: center; gap: 8px">
+            <li class="checklist-item">
               <span
                 class="checklist-icon"
-                :style="
-                  editChecksVerified ? 'color: #10b981;' : 'color: #ef4444;'
-                "
+                :class="editChecksVerified ? 'text-success' : 'text-danger'"
               >
                 {{ editChecksVerified ? "✓" : "❌" }}
               </span>
@@ -127,51 +51,34 @@
         </div>
 
         <!-- Form fields -->
-        <div class="form-group" style="margin-bottom: 12px">
-          <label
-            for="approval-role"
-            style="
-              display: block;
-              font-weight: 500;
-              margin-bottom: 4px;
-              font-size: 13px;
-              color: #475569;
-            "
-          >
+        <div class="form-group">
+          <label for="approval-role">
             Select Role
           </label>
           <select
             id="approval-role"
             v-model="selectedRole"
-            style="
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #cbd5e1;
-              border-radius: 4px;
-              font-size: 13px;
-              background: white;
-            "
           >
-            <option value="" disabled>-- Select Role --</option>
-            <option value="Lead Data Manager">Lead Data Manager</option>
+            <option
+              value=""
+              disabled
+            >
+              -- Select Role --
+            </option>
+            <option value="Lead Data Manager">
+              Lead Data Manager
+            </option>
             <option value="Principal Investigator">
               Principal Investigator
             </option>
-            <option value="Lead Biostatistician">Lead Biostatistician</option>
+            <option value="Lead Biostatistician">
+              Lead Biostatistician
+            </option>
           </select>
         </div>
 
-        <div class="form-group" style="margin-bottom: 12px">
-          <label
-            for="approval-password"
-            style="
-              display: block;
-              font-weight: 500;
-              margin-bottom: 4px;
-              font-size: 13px;
-              color: #475569;
-            "
-          >
+        <div class="form-group">
+          <label for="approval-password">
             Password / Credentials Re-Authentication
           </label>
           <input
@@ -179,27 +86,11 @@
             v-model="password"
             type="password"
             placeholder="Enter password..."
-            style="
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #cbd5e1;
-              border-radius: 4px;
-              font-size: 13px;
-            "
-          />
+          >
         </div>
 
-        <div class="form-group" style="margin-bottom: 12px">
-          <label
-            for="approval-reason"
-            style="
-              display: block;
-              font-weight: 500;
-              margin-bottom: 4px;
-              font-size: 13px;
-              color: #475569;
-            "
-          >
+        <div class="form-group last-group">
+          <label for="approval-reason">
             Reason for Approval
           </label>
           <input
@@ -207,52 +98,22 @@
             v-model="reason"
             type="text"
             placeholder="Reason for approval (e.g. Protocol amendment complete)..."
-            style="
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #cbd5e1;
-              border-radius: 4px;
-              font-size: 13px;
-            "
-          />
+          >
         </div>
 
         <!-- Handoff Error Status Section -->
         <div
           v-if="error"
           id="approval-error-msg"
-          style="
-            margin-top: 8px;
-            color: #ef4444;
-            font-size: 13px;
-            font-weight: 500;
-          "
+          class="error-msg"
         >
           {{ props.isOpen ? error : "" }}
         </div>
       </div>
-      <div
-        class="modal-footer"
-        style="
-          padding: 12px 16px;
-          border-top: 1px solid #e2e8f0;
-          display: flex;
-          justify-content: flex-end;
-          gap: 8px;
-          background: #f8fafc;
-        "
-      >
+      <div class="modal-footer">
         <button
           id="btn-cancel-approval"
-          class="btn"
-          style="
-            padding: 6px 12px;
-            font-size: 13px;
-            cursor: pointer;
-            border: 1px solid #cbd5e1;
-            background: white;
-            border-radius: 4px;
-          "
+          class="btn btn-cancel"
           @click="cancel"
         >
           Cancel
@@ -260,15 +121,6 @@
         <button
           id="btn-confirm-approval"
           class="btn btn-primary"
-          style="
-            padding: 6px 12px;
-            font-size: 13px;
-            cursor: pointer;
-            background: #2563eb;
-            color: white;
-            border: none;
-            border-radius: 4px;
-          "
           :disabled="!isChecklistComplete"
           @click="confirm"
         >
@@ -360,3 +212,184 @@ const confirm = () => {
   });
 };
 </script>
+
+<style scoped>
+.modal-overlay {
+  display: flex;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.5);
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  border-radius: 8px;
+  background: #ffffff;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  color: #333333;
+}
+
+.modal-header {
+  font-size: 16px;
+  padding: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.modal-body {
+  padding: 16px;
+}
+
+.modal-desc {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.4;
+  margin-bottom: 16px;
+}
+
+.checklist-section {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.checklist-title {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: #475569;
+  font-weight: 600;
+}
+
+.checklist-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 13px;
+  color: #334155;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checklist-item:not(:last-child) {
+  margin-bottom: 6px;
+}
+
+.checklist-icon {
+  font-weight: bold;
+}
+
+.text-success {
+  color: #10b981;
+}
+
+.text-danger {
+  color: #ef4444;
+}
+
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group.last-group {
+  margin-bottom: 16px;
+}
+
+label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: #475569;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 13px;
+  background: white;
+  box-sizing: border-box;
+}
+
+.error-msg {
+  margin-top: 8px;
+  color: #ef4444;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.modal-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  background: #f8fafc;
+}
+
+.btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.btn-cancel {
+  border: 1px solid #cbd5e1;
+  background: white;
+}
+
+.btn-primary {
+  background: #2563eb;
+  color: white;
+  border: none;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Accessible focus outline ring */
+input:focus,
+select:focus,
+button:focus {
+  outline: none;
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible {
+  outline: 3px solid var(--accent, #2563eb) !important;
+  outline-offset: 2px !important;
+}
+
+/* Touch Target Sizes for mobile and tablet devices */
+@media (max-width: 1024px) {
+  input,
+  select,
+  .btn {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 16px;
+  }
+}
+</style>
