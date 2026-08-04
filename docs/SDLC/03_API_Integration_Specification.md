@@ -16203,7 +16203,6 @@ Retrieves the paginated audit trail ledger of ticket events in descending chrono
 * **Status Codes:**
   * `200 OK`: Returns paginated audit items.
   * `422 Unprocessable Entity`: Boundary validation failures (e.g. limit > 250, offset < 0).
-=======
 ## 11. In-Application Tickets Endpoints
 
 The Tickets microservice (`apps/tickets`) manages GxP and Part 11 compliant support tickets, comments, and audit trails. All endpoints are protected by the central API Gateway.

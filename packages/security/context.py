@@ -1,5 +1,6 @@
 import contextvars
 import functools
+import inspect
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from datetime import UTC, datetime
@@ -150,9 +151,7 @@ def audit_context_decorator(
             ):
                 return func(*args, **kwargs)
 
-        import asyncio
-
-        if asyncio.iscoroutinefunction(func):
+        if inspect.iscoroutinefunction(func):
             return async_wrapper  # type: ignore
         return sync_wrapper  # type: ignore
 
