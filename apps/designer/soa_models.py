@@ -210,7 +210,6 @@ class TimingWindowProperties(BaseModel):
 # --- Reordering and Assignment Request Contracts specific to designer ---
 
 
-
 class ArmReorderItem(BaseModel):
     arm_id: str = Field(..., min_length=1)
     sequence: int = Field(..., ge=1)
@@ -229,8 +228,6 @@ class EpochReorderRequest(BaseModel):
     epochs: list[EpochReorderItem] = Field(...)
 
 
-
-
 class ProcedureReorderItem(BaseModel):
     procedure_id: str = Field(..., min_length=1)
     sequence: int = Field(..., ge=1)
@@ -238,8 +235,6 @@ class ProcedureReorderItem(BaseModel):
 
 class ProcedureReorderRequest(BaseModel):
     procedures: list[ProcedureReorderItem] = Field(...)
-
-
 
 
 class VisitToArmAssignmentRequest(BaseModel):
