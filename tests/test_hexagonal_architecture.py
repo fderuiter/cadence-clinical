@@ -69,3 +69,13 @@ def test_api_routers_have_no_direct_db_imports():
         .should_not_import("apps.execution.database.models*")
         .check("apps", only_direct_imports=True)
     )
+
+
+def test_designer_core_isolation():
+    """Ensure core designer logic does not import database driver or session packages."""
+    (
+        archrule("Designer Core Isolation")
+        .match("apps.designer.delta*")
+        .should_not_import("neo4j*")
+        .check("apps", only_direct_imports=True)
+    )

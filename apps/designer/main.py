@@ -49,6 +49,7 @@ from protocol_render import SoAMatrixView
 from pydantic import BaseModel, Field, TypeAdapter
 from signature import SigningReason
 
+import apps.designer.adapter.repositories  # noqa: F401
 from apps.designer.db import (
     assert_mock_study_mutable,
     create_mock_rule,

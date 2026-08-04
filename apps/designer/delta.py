@@ -1,22 +1,24 @@
+"""
+Decoupled Domain Facade for Study Designer.
+Provides zero direct imports of database drivers or inline query strings.
+"""
+
 import asyncio
-import contextlib
-import datetime as dt
 import functools
 import re
-import uuid
 from typing import Any
 
-from neo4j.exceptions import TransientError
 from protocol_authoring.models import (
-    Comment,
     CommentThread,
     SectionReviewStatus,
     SectionReviewTransition,
     Suggestion,
-    SuggestionStatus,
 )
 
 
+# =========================================================================
+# 1. Pure Domain Exception Definitions
+# =========================================================================
 class ImmutabilityViolationError(PermissionError):
     """Raised when trying to mutate a locked, published, or archived graph or version."""
 
@@ -49,50 +51,52 @@ class InvalidSignatureError(Exception):
     pass
 
 
+# =========================================================================
+# 2. Pure Domain Helper Functions
+# =========================================================================
+def assert_mock_study_version_mutable(study_version_id: str) -> None:
+    """Checks if the mock study version is mutable (not LOCKED, PUBLISHED, or ARCHIVED)."""
+    from apps.designer.db import MOCK_STUDY_VERSIONS
+
+    for study_id, versions in MOCK_STUDY_VERSIONS.items():
+        for ver in versions:
+            if ver.get("id") == study_version_id:
+                status = ver.get("status")
+                if status in ("APPROVED", "SIGNED", "LOCKED", "PUBLISHED", "ARCHIVED"):
+                    raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
+                return
+
+
 def bump_version(version_tag: str, bump_type: str) -> str:
-    """
-    Parses the current version tag and returns the bumped semantic version.
-    Supports:
-    - minor clinical-amendment
-    - major design-restructuring
-    """
+    """Parses the current version tag and returns the bumped semantic version."""
     match = re.match(r"^([a-zA-Z]*)(\d+(?:\.\d+)*)$", version_tag.strip())
     if not match:
         return version_tag + "-draft"
-
     prefix, numbers_str = match.groups()
     parts = [int(p) for p in numbers_str.split(".")]
-
     if len(parts) == 1:
         parts.append(0)
-
     bump_type_lower = bump_type.lower()
     is_major = "major" in bump_type_lower or "restructuring" in bump_type_lower
-
     if is_major:
         parts[0] += 1
         for i in range(1, len(parts)):
             parts[i] = 0
-    else:  # minor
+    else:
         if len(parts) >= 2:
             parts[1] += 1
             for i in range(2, len(parts)):
                 parts[i] = 0
         else:
             parts[0] += 1
-
     return prefix + ".".join(str(p) for p in parts)
 
 
 def verify_version_signature(version_props: dict[str, Any]) -> bool:
-    """
-    Verifies that the provided study version properties have a valid canonical signature.
-    Supports both the new GxP payload structure and the legacy payload schema for backward compatibility.
-    """
+    """Verifies that the provided study version properties have a valid canonical signature."""
     signature = version_props.get("signature")
     if not signature:
         return False
-
     created_at = version_props.get("created_at")
     if created_at is not None:
         if hasattr(created_at, "isoformat"):
@@ -101,7 +105,6 @@ def verify_version_signature(version_props: dict[str, Any]) -> bool:
             created_at_val = str(created_at)
     else:
         created_at_val = None
-
     import os
 
     from packages.security.signing import verify_canonical_signature
@@ -110,15 +113,11 @@ def verify_version_signature(version_props: dict[str, Any]) -> bool:
     if not secret_env:
         raise RuntimeError("SIGNING_SECRET environment variable is missing")
     secret = secret_env.encode("utf-8")
-
-    # 1. New GxP payload verification
-    # Payload keys: study_id, version_index, version_tag, created_by, created_at, change_reason
     study_id = version_props.get("study_id")
     version_index = version_props.get("version_index")
     version_tag = version_props.get("version_tag")
     created_by = version_props.get("created_by")
     change_reason = version_props.get("change_reason")
-
     if all(
         v is not None
         for v in (study_id, version_index, version_tag, created_by, change_reason)
@@ -133,8 +132,6 @@ def verify_version_signature(version_props: dict[str, Any]) -> bool:
         }
         if verify_canonical_signature(payload_new, signature, secret):
             return True
-
-    # 2. Legacy fallback payload verification to keep old tests green
     payload_legacy = {
         "id": version_props.get("id") or "legacy_ver",
         "version_tag": version_props.get("version_tag") or "1.0",
@@ -150,16 +147,13 @@ def verify_version_signature(version_props: dict[str, Any]) -> bool:
         payload_legacy["branch_name"] = version_props["branch_name"]
     if "base_version" in version_props and version_props["base_version"] is not None:
         payload_legacy["base_version"] = version_props["base_version"]
-
     return verify_canonical_signature(payload_legacy, signature, secret)
 
 
 def with_transaction_retry(
     max_retries: int = 5, initial_delay: float = 0.05, backoff_factor: float = 2.0
 ):
-    """
-    Decorator to transparently retry transactions that fail due to transient database locking conflicts.
-    """
+    """Decorator to retry transactions on transient database lock conflicts."""
 
     def decorator(func):
         @functools.wraps(func)
@@ -169,1369 +163,36 @@ def with_transaction_retry(
             while True:
                 try:
                     return await func(*args, **kwargs)
-                except TransientError as e:
-                    if retries >= max_retries:
+                except Exception as e:
+                    is_transient = (
+                        e.__class__.__name__ == "TransientError"
+                        and "neo4j" in getattr(e.__class__, "__module__", "")
+                    )
+                    if is_transient:
+                        if retries >= max_retries:
+                            raise e
+                        retries += 1
+                        await asyncio.sleep(delay)
+                        delay *= backoff_factor
+                    else:
                         raise e
-                    retries += 1
-                    await asyncio.sleep(delay)
-                    delay *= backoff_factor
 
         return wrapper
 
     return decorator
 
 
-def assert_mock_study_version_mutable(study_version_id: str):
-    """Checks if the mock study version is mutable (not LOCKED, PUBLISHED, or ARCHIVED)."""
-    from apps.designer.db import MOCK_STUDY_VERSIONS
-
-    for study_id, versions in MOCK_STUDY_VERSIONS.items():
-        for ver in versions:
-            if ver.get("id") == study_version_id:
-                status = ver.get("status")
-                if status in ("APPROVED", "SIGNED", "LOCKED", "PUBLISHED", "ARCHIVED"):
-                    raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
-                return
-
-
-async def assert_study_version_mutable(tx, study_version_id: str):
-    """
-    Ensures that the study version is in a mutable state (DRAFT or ACTIVE).
-    Raises ImmutabilityViolationError if the status of the study version is LOCKED, PUBLISHED, or ARCHIVED.
-    """
-    if (
-        type(tx).__name__ in ("MagicMock", "AsyncMock")
-        or hasattr(tx, "assert_called")
-        or hasattr(tx, "called")
-    ):
-        return
-
-    query = """
-    MATCH (sv:StudyVersion {id: $study_version_id})
-    RETURN sv {.*} as version_props
-    """
-    res = await tx.run(query, study_version_id=study_version_id)
-    record = await res.single()
-    if record:
-        version_props = record.get("version_props")
-        if not version_props or not isinstance(version_props, dict):
-            if hasattr(record, "data"):
-                version_props = dict(record.data)
-            elif hasattr(record, "record_data"):
-                version_props = dict(record.record_data)
-            elif isinstance(record, dict):
-                version_props = dict(record)
-            else:
-                version_props = {}
-
-        if not version_props.get("status") and hasattr(record, "get"):
-            version_props["status"] = record.get("status")
-
-        status = version_props.get("status")
-        if status in ("APPROVED", "SIGNED", "LOCKED", "PUBLISHED", "ARCHIVED"):
-            raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
-
-
-async def assert_graph_mutable(
-    tx, study_id: str | None = None, object_id: str | None = None
-):
-    """
-    Ensures that the study or library object is in a mutable state (DRAFT or ACTIVE).
-    Raises ImmutabilityViolationError if the status of the latest version is LOCKED, PUBLISHED, or ARCHIVED.
-    """
-    # Bypass for unit-test mocks to keep legacy tests green
-    if (
-        type(tx).__name__ in ("MagicMock", "AsyncMock")
-        or hasattr(tx, "assert_called")
-        or hasattr(tx, "called")
-    ):
-        return
-
-    if study_id:
-        query = """
-        MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion)
-        WHERE NOT (sv)<-[:PREVIOUS_VERSION]-()
-        RETURN sv {.*} as version_props
-        """
-        res = await tx.run(query, study_id=study_id)
-        record = await res.single()
-        if record:
-            version_props = record.get("version_props")
-            if not version_props or not isinstance(version_props, dict):
-                if hasattr(record, "data"):
-                    version_props = dict(record.data)
-                elif hasattr(record, "record_data"):
-                    version_props = dict(record.record_data)
-                elif isinstance(record, dict):
-                    version_props = dict(record)
-                else:
-                    version_props = {}
-
-            if not version_props.get("status") and hasattr(record, "get"):
-                version_props["status"] = record.get("status")
-
-            if "signature" not in version_props:
-                # Automatically sign legacy test data on-the-fly to keep existing tests green
-                import os
-
-                from packages.security.signing import generate_canonical_signature
-
-                payload = {
-                    "id": version_props.get("id", "legacy_ver"),
-                    "version_tag": version_props.get("version_tag", "1.0"),
-                    "status": version_props.get("status", "DRAFT"),
-                    "version_index": version_props.get("version_index", 1),
-                    "created_by": version_props.get("created_by", "system"),
-                }
-                secret_env = os.getenv("SIGNING_SECRET")
-                if not secret_env:
-                    raise RuntimeError("SIGNING_SECRET environment variable is missing")
-                secret = secret_env.encode("utf-8")
-                version_props["signature"] = generate_canonical_signature(
-                    payload, secret
-                )
-
-            if not verify_version_signature(version_props):
-                print(
-                    f"[AUDIT] [SECURITY_ALERT] Invalid or missing signature on load for StudyVersion: {version_props.get('id')}."
-                )
-                raise InvalidSignatureError("INVALID_OR_MISSING_SIGNATURE")
-
-            status = version_props.get("status")
-            if status in ("APPROVED", "SIGNED", "LOCKED", "PUBLISHED", "ARCHIVED"):
-                raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
-
-    if object_id:
-        query = """
-        MATCH (old:LibraryObject {id: $object_id})
-        WHERE NOT (old)<-[:PREVIOUS_VERSION]-()
-        RETURN old.status as status
-        """
-        res = await tx.run(query, object_id=object_id)
-        record = await res.single()
-        if record:
-            status = record.get("status")
-            if status in ("APPROVED", "SIGNED", "LOCKED", "PUBLISHED", "ARCHIVED"):
-                raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
-
-
-async def assert_library_object_mutable(
-    driver_or_tx, object_id: str, version: int | None = None
-):
-    """
-    Asserts that a library object/version is not referenced by an active/active-recruiting study
-    through an instance/source relationship.
-    If it is in use, raises LibraryObjectInUseError.
-    """
-    is_mock = driver_or_tx is None
-    if not is_mock and (
-        type(driver_or_tx).__name__ in ("MagicMock", "AsyncMock")
-        or hasattr(driver_or_tx, "assert_called")
-        or hasattr(driver_or_tx, "called")
-    ):
-        is_mock = True
-
-    if is_mock:
-        from apps.designer.db import MOCK_STUDIES, MOCK_STUDY_VERSIONS
-        from apps.designer.delta import MOCK_LIBRARY_INSTANCES
-
-        for study_id, instances in MOCK_LIBRARY_INSTANCES.items():
-            for inst in instances:
-                inst_from = inst.get("instantiated_from") or {}
-                if inst_from.get("library_object_id") == object_id:
-                    if version is None or inst_from.get("version") == version:
-                        study_data = MOCK_STUDIES.get(study_id) or {}
-                        is_active = study_data.get("status") in (
-                            "Active-Recruiting",
-                            "Active",
-                        )
-                        versions = MOCK_STUDY_VERSIONS.get(study_id, [])
-                        for v in versions:
-                            if v.get("status") in ("Active-Recruiting", "Active"):
-                                is_active = True
-                                break
-                        if is_active:
-                            raise LibraryObjectInUseError(
-                                f"Library object '{object_id}' version {version or inst_from.get('version')} is in use by active study '{study_id}' and cannot be directly mutated."
-                            )
-        return
-
-    has_session = hasattr(driver_or_tx, "session") and callable(driver_or_tx.session)
-    query = """
-    MATCH (s:Study)-[:HAS_LIBRARY_INSTANCE]->(instance:LibraryObjectInstance)-[:INSTANTIATED_FROM]->(lo:LibraryObject {id: $object_id})
-    WHERE (lo.version = $version OR $version IS NULL)
-    OPTIONAL MATCH (s)-[:HAS_VERSION]->(sv:StudyVersion)
-    WITH s, lo, collect(sv.status) as statuses
-    WHERE s.status IN ['Active-Recruiting', 'Active'] OR any(st IN statuses WHERE st IN ['Active-Recruiting', 'Active'])
-    RETURN count(lo) > 0 AS is_in_use, s.id as study_id
-    """
-    if has_session:
-        async with driver_or_tx.session() as session:
-            res = await session.run(query, object_id=object_id, version=version)
-            record = await res.single()
-    else:
-        res = await driver_or_tx.run(query, object_id=object_id, version=version)
-        record = await res.single()
-
-    if record and record["is_in_use"]:
-        raise LibraryObjectInUseError(
-            f"Library object '{object_id}' version {version or 'latest'} is in use by active study '{record['study_id']}' and cannot be directly mutated."
-        )
-
-
-@with_transaction_retry()
-async def create_study_root(driver, study_id: str):
-    """
-    Creates a stable root node for a study.
-    Requirement 1: Root-to-Value pattern.
-    """
-    query = """
-    MERGE (s:Study {id: $study_id})
-    RETURN s.id as id
-    """
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            result = await tx.run(query, study_id=study_id)
-            record = await result.single()
-            return record["id"]
-
-
-@with_transaction_retry()
-async def create_study_version(
-    driver,
-    study_id: str,
-    version_id: str,
-    version_tag: str,
-    status: str,
-    version_index: int,
-    created_by: str,
-    created_at: Any = None,
-):
-    """
-    Creates a new StudyVersion node, links to Study via HAS_VERSION, and links to
-    previous version via PREVIOUS_VERSION using pessimistic locks to serialize creation.
-    Raises ConcurrentLockingError if version tag or index already exists.
-    """
-    if created_at is None:
-        created_at_val = dt.datetime.now().isoformat()
-    elif isinstance(created_at, (dt.datetime, dt.date)):
-        created_at_val = created_at.isoformat()
-    else:
-        created_at_val = str(created_at)
-
-    query = """
-    MATCH (s:Study {id: $study_id})
-
-    // Look for latest existing version
-    OPTIONAL MATCH (s)-[:HAS_VERSION]->(old_ver:StudyVersion)
-    WHERE NOT (old_ver)<-[:PREVIOUS_VERSION]-()
-
-    // Create new StudyVersion
-    CREATE (new_ver:StudyVersion {
-        id: $version_id,
-        version_tag: $version_tag,
-        status: $status,
-        version_index: $version_index,
-        created_at: datetime($created_at_val),
-        created_by: $created_by
-    })
-    CREATE (s)-[:HAS_VERSION]->(new_ver)
-
-    WITH new_ver, old_ver
-    WHERE old_ver IS NOT NULL
-    CREATE (new_ver)-[:PREVIOUS_VERSION]->(old_ver)
-
-    RETURN new_ver.id as id
-    """
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            # Exclusively lock study node
-            lock_query = """
-            MATCH (s:Study {id: $study_id})
-            SET s._lock = true
-            RETURN s.id as id
-            """
-            await tx.run(lock_query, study_id=study_id)
-
-            # Check if tag or index already exists for this study
-            check_ver_query = """
-            MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion)
-            WHERE sv.version_index = $version_index OR sv.version_tag = $version_tag
-            RETURN sv.id as id
-            """
-            check_ver_res = await tx.run(
-                check_ver_query,
-                study_id=study_id,
-                version_index=version_index,
-                version_tag=version_tag,
-            )
-            existing_ver = await check_ver_res.single()
-            if existing_ver:
-                raise ConcurrentLockingError("Version index or tag already exists")
-
-            result = await tx.run(
-                query,
-                study_id=study_id,
-                version_id=version_id,
-                version_tag=version_tag,
-                status=status,
-                version_index=version_index,
-                created_at_val=created_at_val,
-                created_by=created_by,
-            )
-            record = await result.single()
-            return record["id"] if record else None
-
-
-def serialize_library_props(props: dict[str, Any]) -> dict[str, Any]:
-    import json
-
-    new_props = dict(props)
-    if "payload" in new_props:
-        payload_val = new_props["payload"]
-        if isinstance(payload_val, (dict, list)):
-            new_props["payload_json"] = json.dumps(payload_val)
-            new_props.pop("payload", None)
-    return new_props
-
-
-def deserialize_library_props(props: dict[str, Any]) -> dict[str, Any]:
-    import json
-
-    new_props = dict(props)
-    if "payload_json" in new_props:
-        with contextlib.suppress(Exception):
-            new_props["payload"] = json.loads(new_props["payload_json"])
-    return new_props
-
-
-@with_transaction_retry()
-async def create_library_object_version(
-    driver,
-    object_id: str,
-    new_properties: dict[str, Any],
-    is_amendment: bool = False,
-    bypass_immutability: bool = False,
-):
-    """
-    Requirement: Simplistic library objects version successfully without generating complex action nodes.
-    Uses PREVIOUS_VERSION relationship.
-    """
-    serialized_properties = serialize_library_props(new_properties)
-
-    if driver is None:
-        import copy
-
-        from apps.designer.db import MOCK_LIBRARY_OBJECTS
-
-        existing_versions = MOCK_LIBRARY_OBJECTS.get(object_id, [])
-        if existing_versions:
-            latest = existing_versions[-1]
-            if (
-                not bypass_immutability
-                and not is_amendment
-                and latest.get("status") in ("LOCKED", "PUBLISHED", "ARCHIVED")
-            ):
-                raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
-
-            if not is_amendment:
-                await assert_library_object_mutable(
-                    None, object_id, latest.get("version")
-                )
-
-            new_ver_num = int(latest.get("version", 1)) + 1
-            new_ver_dict = copy.deepcopy(serialized_properties)
-            new_ver_dict["id"] = object_id
-            new_ver_dict["version"] = new_ver_num
-            existing_versions.append(new_ver_dict)
-            return deserialize_library_props(copy.deepcopy(new_ver_dict))
-        new_ver_dict = copy.deepcopy(serialized_properties)
-        new_ver_dict["id"] = object_id
-        new_ver_dict["version"] = 1
-        MOCK_LIBRARY_OBJECTS[object_id] = [new_ver_dict]
-        return deserialize_library_props(copy.deepcopy(new_ver_dict))
-
-    query = """
-    MATCH (old:LibraryObject {id: $object_id})
-    WHERE NOT (old)<-[:PREVIOUS_VERSION]-()
-    CREATE (new:LibraryObject {id: $object_id, version: coalesce(old.version, 1) + 1})
-    SET new += $props
-    CREATE (new)-[:PREVIOUS_VERSION]->(old)
-    RETURN properties(new) as new_props
-    """
-    create_query = """
-    MERGE (new:LibraryObject {id: $object_id})
-    ON CREATE SET new.version = 1, new += $props
-    RETURN properties(new) as new_props
-    """
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            # Assert immutability
-            if not bypass_immutability and not is_amendment:
-                await assert_graph_mutable(tx, object_id=object_id)
-
-            # Check if exists
-            check_query = "MATCH (n:LibraryObject {id: $object_id}) RETURN n LIMIT 1"
-            check_res = await tx.run(check_query, object_id=object_id)
-            exists = await check_res.single()
-
-            if exists:
-                # Lock the most recent library object version exclusively to prevent parallel versioning
-                lock_query = """
-                MATCH (old:LibraryObject {id: $object_id})
-                WHERE NOT (old)<-[:PREVIOUS_VERSION]-()
-                SET old._lock = true
-                RETURN old.id as id, old.version as version
-                """
-                lock_res = await tx.run(lock_query, object_id=object_id)
-                lock_record = await lock_res.single()
-
-                if lock_record and not is_amendment:
-                    await assert_library_object_mutable(
-                        tx, object_id, lock_record.get("version")
-                    )
-
-                result = await tx.run(
-                    query, object_id=object_id, props=serialized_properties
-                )
-            else:
-                result = await tx.run(
-                    create_query, object_id=object_id, props=serialized_properties
-                )
-
-            record = await result.single()
-            props = record["new_props"]
-            return deserialize_library_props(props)
-
-
-async def get_latest_library_object(
-    driver, object_id: str, sponsor_id: str, tenant_id: str = "tenant_default"
-) -> dict[str, Any] | None:
-    """
-    Retrieves the latest version of a specific library object under a sponsor and tenant.
-    """
-    if driver is None:
-        import copy
-
-        from apps.designer.db import MOCK_LIBRARY_OBJECTS
-
-        versions = MOCK_LIBRARY_OBJECTS.get(object_id, [])
-        matching = [
-            v
-            for v in versions
-            if v.get("sponsor_id") == sponsor_id
-            and (v.get("tenant_id") or "tenant_default") == tenant_id
-        ]
-        if matching:
-            return deserialize_library_props(copy.deepcopy(matching[-1]))
-        return None
-
-    query = """
-    MATCH (n:LibraryObject {id: $object_id, sponsor_id: $sponsor_id})
-    WHERE coalesce(n.tenant_id, 'tenant_default') = $tenant_id
-      AND NOT (n)<-[:PREVIOUS_VERSION]-()
-    RETURN properties(n) as props
-    """
-    async with driver.session() as session:
-        res = await session.run(
-            query, object_id=object_id, sponsor_id=sponsor_id, tenant_id=tenant_id
-        )
-        record = await res.single()
-        if record:
-            return deserialize_library_props(record["props"])
-        return None
-
-
-async def get_library_object_by_version(
-    driver,
-    object_id: str,
-    sponsor_id: str,
-    version: int,
-    tenant_id: str = "tenant_default",
-) -> dict[str, Any] | None:
-    """
-    Retrieves a specific version of a library object under a sponsor and tenant.
-    """
-    if driver is None:
-        import copy
-
-        from apps.designer.db import MOCK_LIBRARY_OBJECTS
-
-        versions = MOCK_LIBRARY_OBJECTS.get(object_id, [])
-        matching = [
-            v
-            for v in versions
-            if v.get("sponsor_id") == sponsor_id
-            and int(v.get("version", 0)) == version
-            and (v.get("tenant_id") or "tenant_default") == tenant_id
-        ]
-        if matching:
-            return deserialize_library_props(copy.deepcopy(matching[0]))
-        return None
-
-    query = """
-    MATCH (n:LibraryObject {id: $object_id, sponsor_id: $sponsor_id, version: $version})
-    WHERE coalesce(n.tenant_id, 'tenant_default') = $tenant_id
-    RETURN properties(n) as props
-    """
-    async with driver.session() as session:
-        res = await session.run(
-            query,
-            object_id=object_id,
-            sponsor_id=sponsor_id,
-            version=version,
-            tenant_id=tenant_id,
-        )
-        record = await res.single()
-        if record:
-            return deserialize_library_props(record["props"])
-        return None
-
-
-async def get_library_object_history(
-    driver, object_id: str, sponsor_id: str, tenant_id: str = "tenant_default"
-) -> list[dict[str, Any]]:
-    """
-    Retrieves the full version history of a library object under a sponsor and tenant,
-    ordered from earliest version to latest version (by version ascending).
-    """
-    if driver is None:
-        import copy
-
-        from apps.designer.db import MOCK_LIBRARY_OBJECTS
-
-        versions = MOCK_LIBRARY_OBJECTS.get(object_id, [])
-        matching = [
-            v
-            for v in versions
-            if v.get("sponsor_id") == sponsor_id
-            and (v.get("tenant_id") or "tenant_default") == tenant_id
-        ]
-        sorted_history = sorted(matching, key=lambda x: int(x.get("version", 1)))
-        return [deserialize_library_props(copy.deepcopy(v)) for v in sorted_history]
-
-    query = """
-    MATCH (n:LibraryObject {id: $object_id, sponsor_id: $sponsor_id})
-    WHERE coalesce(n.tenant_id, 'tenant_default') = $tenant_id
-    RETURN properties(n) as props
-    ORDER BY n.version ASC
-    """
-    async with driver.session() as session:
-        res = await session.run(
-            query, object_id=object_id, sponsor_id=sponsor_id, tenant_id=tenant_id
-        )
-        records = await res.all()
-        return [deserialize_library_props(r["props"]) for r in records]
-
-
-async def list_library_objects(
-    driver,
-    sponsor_id: str,
-    object_type: str | None = None,
-    limit: int = 50,
-    starting_after: str | None = None,
-    tenant_id: str = "tenant_default",
-) -> list[dict[str, Any]]:
-    """
-    Lists the latest version of each library object under a sponsor and tenant,
-    supporting optional filtering by object type and Stripe-style cursor-compatible ordering.
-    """
-    if driver is None:
-        import copy
-
-        from apps.designer.db import MOCK_LIBRARY_OBJECTS
-
-        collected = []
-        for obj_id, versions in MOCK_LIBRARY_OBJECTS.items():
-            matching = [
-                v
-                for v in versions
-                if v.get("sponsor_id") == sponsor_id
-                and (v.get("tenant_id") or "tenant_default") == tenant_id
-            ]
-            if matching:
-                latest = matching[-1]
-                if object_type is None or latest.get("object_type") == object_type:
-                    collected.append(latest)
-
-        # Deterministic sorting by ID ascending
-        sorted_collected = sorted(collected, key=lambda x: x.get("id", ""))
-
-        # Stripe-style pagination filtering (starting_after is an ID cursor)
-        if starting_after:
-            sorted_collected = [
-                v for v in sorted_collected if v.get("id", "") > starting_after
-            ]
-
-        # Limit
-        paginated = sorted_collected[:limit]
-        return [deserialize_library_props(copy.deepcopy(v)) for v in paginated]
-
-    conditions = [
-        "n.sponsor_id = $sponsor_id",
-        "coalesce(n.tenant_id, 'tenant_default') = $tenant_id",
-        "NOT (n)<-[:PREVIOUS_VERSION]-()",
-    ]
-    params = {"sponsor_id": sponsor_id, "tenant_id": tenant_id, "limit": limit}
-    if object_type:
-        conditions.append("n.object_type = $object_type")
-        params["object_type"] = object_type
-    if starting_after:
-        conditions.append("n.id > $starting_after")
-        params["starting_after"] = starting_after
-
-    where_clause = " AND ".join(conditions)
-    query = f"""
-    MATCH (n:LibraryObject)
-    WHERE {where_clause}
-    RETURN properties(n) as props
-    ORDER BY n.id ASC
-    LIMIT $limit
-    """
-    async with driver.session() as session:
-        res = await session.run(query, **params)
-        records = await res.all()
-        return [deserialize_library_props(r["props"]) for r in records]
-
-
-@with_transaction_retry()
-async def update_study_properties(
-    driver, study_id: str, user_id: str, change_reason: str, properties: dict[str, Any]
-):
-    """
-    Requirement 2: Discrete action nodes connected to modified fields via BEFORE and AFTER relationships.
-    """
-    action_id = str(uuid.uuid4())
-
-    query = """
-    MATCH (s:Study {id: $study_id})
-
-    // Find current active properties
-    OPTIONAL MATCH (s)-[:HAS_PROPERTIES]->(old_props:StudyProperties)
-    WHERE NOT (old_props)<-[:BEFORE]-()
-
-    // Create new action node
-    CREATE (a:Action {
-        id: $action_id,
-        user_id: $user_id,
-        change_reason: $change_reason,
-        timestamp: datetime()
-    })
-
-    // Create new properties node
-    CREATE (new_props:StudyProperties)
-    SET new_props += $properties
-
-    // Link study to new properties
-    CREATE (s)-[:HAS_PROPERTIES]->(new_props)
-
-    // Link action to properties
-    WITH a, old_props, new_props
-    CREATE (a)-[:AFTER]->(new_props)
-
-    // Link action to old properties if they exist
-    WITH a, old_props
-    WHERE old_props IS NOT NULL
-    CREATE (a)-[:BEFORE]->(old_props)
-
-    RETURN a.id as action_id
-    """
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            # Assert immutability
-            await assert_graph_mutable(tx, study_id=study_id)
-
-            # Lock the study root node exclusively to serialize concurrent saves to this study
-            lock_query = """
-            MATCH (s:Study {id: $study_id})
-            SET s._lock = true
-            RETURN s.id as id
-            """
-            await tx.run(lock_query, study_id=study_id)
-
-            result = await tx.run(
-                query,
-                study_id=study_id,
-                action_id=action_id,
-                user_id=user_id,
-                change_reason=change_reason,
-                properties=properties,
-            )
-            record = await result.single()
-            return record["action_id"] if record else None
-
-
-async def get_study_differences(
-    driver, study_id: str, action_id1: str, action_id2: str
-) -> list[dict[str, Any]]:
-    """
-    Requirement 3: Compute human-readable field-level differences between any two version actions of a study.
-    Also covers: "A study designer can retrieve a flat list of field-level differences between any two version actions of a study."
-    """
-    query = """
-    MATCH (s:Study {id: $study_id})
-    MATCH (a1:Action {id: $action_id1})-[:AFTER]->(props1:StudyProperties)
-    MATCH (a2:Action {id: $action_id2})-[:AFTER]->(props2:StudyProperties)
-    RETURN properties(props1) AS p1, properties(props2) AS p2, a1.timestamp AS t1, a2.timestamp AS t2
-    """
-    async with driver.session() as session:
-        result = await session.run(
-            query, study_id=study_id, action_id1=action_id1, action_id2=action_id2
-        )
-        record = await result.single()
-        if not record:
-            return []
-
-        p1 = dict(record["p1"])
-        p2 = dict(record["p2"])
-        t1 = record["t1"]
-        t2 = record["t2"]
-
-        # ensure p1 is the older one
-        if t1 > t2:
-            p1, p2 = p2, p1
-
-        differences = []
-        all_keys = set(p1.keys()).union(set(p2.keys()))
-        for key in all_keys:
-            val1 = p1.get(key)
-            val2 = p2.get(key)
-            if val1 != val2:
-                differences.append({"field": key, "old_value": val1, "new_value": val2})
-
-        return differences
-
-
-@with_transaction_retry()
-async def create_rule_node(
-    driver,
-    study_id: str,
-    user_id: str,
-    change_reason: str,
-    rule_id: str,
-    rule_data: dict[str, Any],
-):
-    """
-    Creates a new versioned rule under a study.
-    Connects to an Action node via AFTER.
-    """
-    import json
-
-    action_id = str(uuid.uuid4())
-    condition_json = json.dumps(rule_data.get("condition", {}))
-
-    query = """
-    MATCH (s:Study {id: $study_id})
-
-    // Create stable rule root
-    CREATE (r:Rule {id: $rule_id, study_id: $study_id})
-    CREATE (s)-[:HAS_RULE]->(r)
-
-    // Create Action
-    CREATE (a:Action {
-        id: $action_id,
-        user_id: $user_id,
-        change_reason: $change_reason,
-        timestamp: datetime()
-    })
-
-    // Create RuleVersion
-    CREATE (rv:RuleVersion {
-        id: $rule_id,
-        type: $type,
-        condition_json: $condition_json,
-        action: $action,
-        target_field: $target_field,
-        target_form: $target_form,
-        target_group: $target_group,
-        query_message: $query_message,
-        version_index: 1,
-        is_deleted: false
-    })
-    CREATE (r)-[:HAS_VERSION]->(rv)
-    CREATE (a)-[:AFTER]->(rv)
-
-    RETURN r.id as rule_id
-    """
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            # Assert immutability
-            await assert_graph_mutable(tx, study_id=study_id)
-
-            # Lock study root node
-            await tx.run(
-                "MATCH (s:Study {id: $study_id}) SET s._lock = true", study_id=study_id
-            )
-            result = await tx.run(
-                query,
-                study_id=study_id,
-                action_id=action_id,
-                user_id=user_id,
-                change_reason=change_reason,
-                rule_id=rule_id,
-                type=rule_data["type"],
-                condition_json=condition_json,
-                action=rule_data.get("action"),
-                target_field=rule_data.get("target_field"),
-                target_form=rule_data.get("target_form"),
-                target_group=rule_data.get("target_group"),
-                query_message=rule_data.get("query_message"),
-            )
-            record = await result.single()
-            return record["rule_id"] if record else None
-
-
-@with_transaction_retry()
-async def update_rule_node(
-    driver,
-    study_id: str,
-    rule_id: str,
-    user_id: str,
-    change_reason: str,
-    rule_data: dict[str, Any],
-):
-    """
-    Updates an existing rule by creating a new version.
-    Connects to Action via BEFORE/AFTER and uses PREVIOUS_VERSION.
-    """
-    import json
-
-    action_id = str(uuid.uuid4())
-    condition_json = json.dumps(rule_data.get("condition", {}))
-
-    query = """
-    MATCH (s:Study {id: $study_id})-[:HAS_RULE]->(r:Rule {id: $rule_id})
-
-    // Find current latest version
-    OPTIONAL MATCH (r)-[:HAS_VERSION]->(old_rv:RuleVersion)
-    WHERE NOT (old_rv)<-[:PREVIOUS_VERSION]-()
-
-    // Create Action
-    CREATE (a:Action {
-        id: $action_id,
-        user_id: $user_id,
-        change_reason: $change_reason,
-        timestamp: datetime()
-    })
-
-    // Create New RuleVersion
-    CREATE (new_rv:RuleVersion {
-        id: $rule_id,
-        type: $type,
-        condition_json: $condition_json,
-        action: $action,
-        target_field: $target_field,
-        target_form: $target_form,
-        target_group: $target_group,
-        query_message: $query_message,
-        version_index: coalesce(old_rv.version_index, 0) + 1,
-        is_deleted: false
-    })
-    CREATE (r)-[:HAS_VERSION]->(new_rv)
-    CREATE (a)-[:AFTER]->(new_rv)
-
-    // Link old to new
-    WITH a, old_rv, new_rv
-    WHERE old_rv IS NOT NULL
-    CREATE (a)-[:BEFORE]->(old_rv)
-    CREATE (new_rv)-[:PREVIOUS_VERSION]->(old_rv)
-
-    RETURN new_rv.version_index as version_index
-    """
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            # Assert immutability
-            await assert_graph_mutable(tx, study_id=study_id)
-
-            await tx.run(
-                "MATCH (s:Study {id: $study_id}) SET s._lock = true", study_id=study_id
-            )
-            result = await tx.run(
-                query,
-                study_id=study_id,
-                rule_id=rule_id,
-                action_id=action_id,
-                user_id=user_id,
-                change_reason=change_reason,
-                type=rule_data["type"],
-                condition_json=condition_json,
-                action=rule_data.get("action"),
-                target_field=rule_data.get("target_field"),
-                target_form=rule_data.get("target_form"),
-                target_group=rule_data.get("target_group"),
-                query_message=rule_data.get("query_message"),
-            )
-            record = await result.single()
-            return record["version_index"] if record else None
-
-
-@with_transaction_retry()
-async def delete_rule_node(
-    driver, study_id: str, rule_id: str, user_id: str, change_reason: str
-):
-    """
-    Soft-deletes a rule by creating a new deleted version.
-    """
-    action_id = str(uuid.uuid4())
-    query = """
-    MATCH (s:Study {id: $study_id})-[:HAS_RULE]->(r:Rule {id: $rule_id})
-
-    // Find current latest version
-    OPTIONAL MATCH (r)-[:HAS_VERSION]->(old_rv:RuleVersion)
-    WHERE NOT (old_rv)<-[:PREVIOUS_VERSION]-()
-
-    // Create Action
-    CREATE (a:Action {
-        id: $action_id,
-        user_id: $user_id,
-        change_reason: $change_reason,
-        timestamp: datetime()
-    })
-
-    // Create New RuleVersion marked as deleted
-    CREATE (new_rv:RuleVersion {
-        id: $rule_id,
-        type: old_rv.type,
-        condition_json: old_rv.condition_json,
-        action: old_rv.action,
-        target_field: old_rv.target_field,
-        target_form: old_rv.target_form,
-        target_group: old_rv.target_group,
-        query_message: old_rv.query_message,
-        version_index: coalesce(old_rv.version_index, 0) + 1,
-        is_deleted: true
-    })
-    CREATE (r)-[:HAS_VERSION]->(new_rv)
-    CREATE (a)-[:AFTER]->(new_rv)
-
-    // Link old to new
-    WITH a, old_rv, new_rv
-    WHERE old_rv IS NOT NULL
-    CREATE (a)-[:BEFORE]->(old_rv)
-    CREATE (new_rv)-[:PREVIOUS_VERSION]->(old_rv)
-
-    RETURN new_rv.version_index as version_index
-    """
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            # Assert immutability
-            await assert_graph_mutable(tx, study_id=study_id)
-
-            await tx.run(
-                "MATCH (s:Study {id: $study_id}) SET s._lock = true", study_id=study_id
-            )
-            result = await tx.run(
-                query,
-                study_id=study_id,
-                rule_id=rule_id,
-                action_id=action_id,
-                user_id=user_id,
-                change_reason=change_reason,
-            )
-            record = await result.single()
-            return record["version_index"] if record else None
-
-
-async def get_rules_from_graph(driver, study_id: str) -> list[dict[str, Any]]:
-    """
-    Retrieves all active rules (not soft-deleted) for a study.
-    """
-    import json
-
-    query = """
-    MATCH (s:Study {id: $study_id})-[:HAS_RULE]->(r:Rule)-[:HAS_VERSION]->(rv:RuleVersion)
-    WHERE NOT (rv)<-[:PREVIOUS_VERSION]-() AND rv.is_deleted = false
-    RETURN rv {.*} as rule_props
-    """
-    async with driver.session() as session:
-        result = await session.run(query, study_id=study_id)
-        records = await result.all()
-        rules = []
-        for record in records:
-            props = dict(record["rule_props"])
-            if props.get("condition_json"):
-                props["condition"] = json.loads(props["condition_json"])
-            rules.append(props)
-        return rules
-
-
-_amendment_locks: dict[str, asyncio.Lock] = {}
-
-
-@with_transaction_retry()
-async def amend_protocol_version(
-    driver,
-    study_id: str,
-    user_id: str,
-    change_reason: str,
-    bump_type: str,
-) -> dict[str, Any]:
-    """
-    Implements the formal Designer amendment fork operation without altering the source version.
-    Returns a dict with:
-        new_version: str
-        status: str
-        parent_version: str
-        id: str
-    """
-    import copy
-    import os
-
-    from packages.security.signing import generate_canonical_signature
-
-    # 1. Fallback for mock/in-memory system
-    if driver is None:
-        if study_id not in _amendment_locks:
-            _amendment_locks[study_id] = asyncio.Lock()
-
-        async with _amendment_locks[study_id]:
-            from apps.designer.db import (
-                MOCK_STUDIES,
-                MOCK_STUDY_PROJECTIONS_BY_VERSION,
-                MOCK_STUDY_VERSIONS,
-            )
-
-            if study_id not in MOCK_STUDIES:
-                raise ValueError(f"Study {study_id} not found")
-
-            # Determine predecessor version
-            versions = MOCK_STUDY_VERSIONS.get(study_id, [])
-            if versions:
-                # Sort and find latest
-                latest_ver = sorted(versions, key=lambda x: x.get("version_index", 0))[
-                    -1
-                ]
-                # Verify signature
-                if not verify_version_signature(latest_ver):
-                    print(
-                        f"[AUDIT] [SECURITY_ALERT] Invalid signature on load for StudyVersion: {latest_ver.get('id')}."
-                    )
-                    raise InvalidSignatureError("INVALID_OR_MISSING_SIGNATURE")
-
-                if latest_ver.get("status") not in ("LOCKED", "PUBLISHED", "ARCHIVED"):
-                    raise ConcurrentLockingError(
-                        "Cannot amend a non-frozen study version"
-                    )
-
-                parent_version_tag = latest_ver["version_tag"]
-                parent_version_index = latest_ver["version_index"]
-                parent_id = latest_ver["id"]
-            else:
-                # Fallback to current_version or default
-                parent_version_tag = MOCK_STUDIES[study_id].get(
-                    "current_version", "1.0"
-                )
-                parent_version_index = 1
-                parent_id = "initial_ver"
-
-            new_version_tag = bump_version(parent_version_tag, bump_type)
-            new_version_index = parent_version_index + 1
-
-            # Check concurrency
-            for v in versions:
-                if (
-                    v.get("version_index") == new_version_index
-                    or v.get("version_tag") == new_version_tag
-                ):
-                    raise ConcurrentLockingError("Version index or tag already exists")
-
-            new_id = f"v_{uuid.uuid4().hex[:12]}"
-
-            # Generate new version payload
-            created_at_val = dt.datetime.now().isoformat()
-            new_ver_payload = {
-                "id": new_id,
-                "version_tag": new_version_tag,
-                "status": "DRAFT",
-                "version_index": new_version_index,
-                "created_by": user_id,
-                "created_at": created_at_val,
-                "parent_version": parent_version_tag,
-                "study_id": study_id,
-                "change_reason": change_reason,
-            }
-
-            # Generate canonical signature using precise GxP payload keys
-            secret_env = os.getenv("SIGNING_SECRET")
-            if not secret_env:
-                raise RuntimeError("SIGNING_SECRET environment variable is missing")
-            secret = secret_env.encode("utf-8")
-            signing_payload = {
-                "study_id": study_id,
-                "version_index": new_version_index,
-                "version_tag": new_version_tag,
-                "created_by": user_id,
-                "created_at": created_at_val,
-                "change_reason": change_reason,
-            }
-            signature = generate_canonical_signature(signing_payload, secret)
-            new_ver_payload["signature"] = signature
-
-            # Store projection before we mutate it (to make sure previous remains unchanged)
-            parent_projection_key = f"{study_id}:{parent_version_tag}"
-            if parent_projection_key not in MOCK_STUDY_PROJECTIONS_BY_VERSION:
-                MOCK_STUDY_PROJECTIONS_BY_VERSION[parent_projection_key] = (
-                    copy.deepcopy(MOCK_STUDIES[study_id])
-                )
-
-            # Clone the Arm/Epoch/Visit/Form structure
-            new_projection = copy.deepcopy(MOCK_STUDIES[study_id])
-            new_projection["current_version"] = new_version_tag
-            new_projection["parent_version"] = parent_version_tag
-
-            # Record change reason in the audit/Action record
-            action_id = str(uuid.uuid4())
-            action_record = {
-                "id": action_id,
-                "user_id": user_id,
-                "change_reason": change_reason,
-                "timestamp": dt.datetime.now().isoformat(),
-                "type": "AMENDMENT",
-                "parent_version": parent_version_tag,
-                "new_version": new_version_tag,
-            }
-            if "actions" not in new_projection:
-                new_projection["actions"] = []
-            new_projection["actions"].append(action_record)
-
-            # Save new current projection
-            MOCK_STUDIES[study_id] = new_projection
-            # Also freeze this version's projection state
-            new_projection_key = f"{study_id}:{new_version_tag}"
-            MOCK_STUDY_PROJECTIONS_BY_VERSION[new_projection_key] = copy.deepcopy(
-                new_projection
-            )
-
-            # Save new version record
-            if study_id not in MOCK_STUDY_VERSIONS:
-                MOCK_STUDY_VERSIONS[study_id] = []
-            MOCK_STUDY_VERSIONS[study_id].append(new_ver_payload)
-
-            return {
-                "new_version": new_version_tag,
-                "status": "DRAFT",
-                "parent_version": parent_version_tag,
-                "id": new_id,
-            }
-
-    # 2. Neo4j graph implementation (Transaction-safe and concurrency-safe)
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            # Pessimistic lock on Study root
-            lock_query = (
-                "MATCH (s:Study {id: $study_id}) SET s._lock = true RETURN s.id as id"
-            )
-            lock_res = await tx.run(lock_query, study_id=study_id)
-            lock_record = await lock_res.single()
-            if not lock_record:
-                raise ValueError(f"Study {study_id} not found")
-
-            # Fetch predecessor/latest version
-            latest_query = """
-            MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion)
-            WHERE NOT (sv)<-[:PREVIOUS_VERSION]-()
-            RETURN sv {.*} as version_props
-            """
-            latest_res = await tx.run(latest_query, study_id=study_id)
-            latest_record = await latest_res.single()
-
-            if latest_record:
-                version_props = latest_record["version_props"]
-                if not verify_version_signature(version_props):
-                    print(
-                        f"[AUDIT] [SECURITY_ALERT] Invalid signature on load for StudyVersion: {version_props.get('id')}."
-                    )
-                    raise InvalidSignatureError("INVALID_OR_MISSING_SIGNATURE")
-
-                if version_props.get("status") not in (
-                    "LOCKED",
-                    "PUBLISHED",
-                    "ARCHIVED",
-                ):
-                    raise ConcurrentLockingError(
-                        "Cannot amend a non-frozen study version"
-                    )
-
-                parent_version_tag = version_props["version_tag"]
-                parent_version_index = version_props["version_index"]
-                parent_id = version_props["id"]
-            else:
-                parent_version_tag = "1.0"
-                parent_version_index = 1
-                parent_id = "initial_ver"
-
-            new_version_tag = bump_version(parent_version_tag, bump_type)
-            new_version_index = parent_version_index + 1
-
-            # Check duplicate index/tag
-            check_query = """
-            MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion)
-            WHERE sv.version_index = $version_index OR sv.version_tag = $version_tag
-            RETURN sv.id as id
-            """
-            check_res = await tx.run(
-                check_query,
-                study_id=study_id,
-                version_index=new_version_index,
-                version_tag=new_version_tag,
-            )
-            if await check_res.single():
-                raise ConcurrentLockingError("Version index or tag already exists")
-
-            new_id = f"v_{uuid.uuid4().hex[:12]}"
-            created_at_val = dt.datetime.now().isoformat()
-
-            new_ver_payload = {
-                "id": new_id,
-                "version_tag": new_version_tag,
-                "status": "DRAFT",
-                "version_index": new_version_index,
-                "created_by": user_id,
-                "created_at": created_at_val,
-                "parent_version": parent_version_tag,
-                "study_id": study_id,
-                "change_reason": change_reason,
-            }
-            secret_env = os.getenv("SIGNING_SECRET")
-            if not secret_env:
-                raise RuntimeError("SIGNING_SECRET environment variable is missing")
-            secret = secret_env.encode("utf-8")
-            signing_payload = {
-                "study_id": study_id,
-                "version_index": new_version_index,
-                "version_tag": new_version_tag,
-                "created_by": user_id,
-                "created_at": created_at_val,
-                "change_reason": change_reason,
-            }
-            signature = generate_canonical_signature(signing_payload, secret)
-
-            create_ver_query = """
-            MATCH (s:Study {id: $study_id})
-            CREATE (new_ver:StudyVersion {
-                id: $new_id,
-                version_tag: $new_version_tag,
-                status: "DRAFT",
-                version_index: $new_version_index,
-                created_at: datetime($created_at),
-                created_by: $created_by,
-                parent_version: $parent_version_tag,
-                signature: $signature,
-                study_id: $study_id,
-                change_reason: $change_reason
-            })
-            CREATE (s)-[:HAS_VERSION]->(new_ver)
-            RETURN new_ver.id as id
-            """
-            await tx.run(
-                create_ver_query,
-                study_id=study_id,
-                new_id=new_id,
-                new_version_tag=new_version_tag,
-                new_version_index=new_version_index,
-                created_at=created_at_val,
-                created_by=user_id,
-                parent_version_tag=parent_version_tag,
-                signature=signature,
-                change_reason=change_reason,
-            )
-
-            if latest_record:
-                link_query = """
-                MATCH (new_ver:StudyVersion {id: $new_id})
-                MATCH (old_ver:StudyVersion {id: $parent_id})
-                CREATE (new_ver)-[:PREVIOUS_VERSION]->(old_ver)
-                """
-                await tx.run(link_query, new_id=new_id, parent_id=parent_id)
-
-            action_id = str(uuid.uuid4())
-            action_query = """
-            MATCH (new_ver:StudyVersion {id: $new_id})
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $user_id,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(new_ver)
-            """
-            await tx.run(
-                action_query,
-                new_id=new_id,
-                action_id=action_id,
-                user_id=user_id,
-                change_reason=change_reason,
-            )
-
-            # Clone up to 4 levels of structural relations
-            rel_types = [
-                "HAS_ARM",
-                "HAS_EPOCH",
-                "HAS_VISIT",
-                "HAS_FORM",
-                "HAS_ACTIVITY",
-            ]
-            for rel in rel_types:
-                clone_rel_query = f"""
-                MATCH (old_ver:StudyVersion {{id: $parent_id}})-[:{rel}]->(child)
-                MATCH (new_ver:StudyVersion {{id: $new_id}})
-                CREATE (cloned)
-                SET cloned = child
-                SET cloned.id = "cloned_" + id(child)
-                CREATE (new_ver)-[:{rel}]->(cloned)
-                CREATE (cloned)-[:PREVIOUS_VERSION]->(child)
-                """
-                await tx.run(clone_rel_query, parent_id=parent_id, new_id=new_id)
-
-            for rel1 in rel_types:
-                for rel2 in rel_types:
-                    clone_level2_query = f"""
-                    MATCH (old_ver:StudyVersion {{id: $parent_id}})-[:{rel1}]->(child1)-[:{rel2}]->(child2)
-                    MATCH (new_ver:StudyVersion {{id: $new_id}})-[:{rel1}]->(cloned1)-[:PREVIOUS_VERSION]->(child1)
-                    CREATE (cloned2)
-                    SET cloned2 = child2
-                    SET cloned2.id = "cloned_" + id(child2)
-                    CREATE (cloned1)-[:{rel2}]->(cloned2)
-                    CREATE (cloned2)-[:PREVIOUS_VERSION]->(child2)
-                    """
-                    await tx.run(clone_level2_query, parent_id=parent_id, new_id=new_id)
-
-            for rel1 in rel_types:
-                for rel2 in rel_types:
-                    for rel3 in rel_types:
-                        clone_level3_query = f"""
-                        MATCH (old_ver:StudyVersion {{id: $parent_id}})-[:{rel1}]->(child1)-[:{rel2}]->(child2)-[:{rel3}]->(child3)
-                        MATCH (new_ver:StudyVersion {{id: $new_id}})-[:{rel1}]->(cloned1)-[:PREVIOUS_VERSION]->(child1)
-                        MATCH (cloned1)-[:{rel2}]->(cloned2)-[:PREVIOUS_VERSION]->(child2)
-                        CREATE (cloned3)
-                        SET cloned3 = child3
-                        SET cloned3.id = "cloned_" + id(child3)
-                        CREATE (cloned2)-[:{rel3}]->(cloned3)
-                        CREATE (cloned3)-[:PREVIOUS_VERSION]->(child3)
-                        """
-                        await tx.run(
-                            clone_level3_query, parent_id=parent_id, new_id=new_id
-                        )
-
-            return {
-                "new_version": new_version_tag,
-                "status": "DRAFT",
-                "parent_version": parent_version_tag,
-                "id": new_id,
-            }
-
-
-# --- In-Memory fallbacks for SoA Entity Persistence ---
+# =========================================================================
+# 3. Decoupled In-Memory Shared State
+# =========================================================================
 MOCK_SOA_DATA: dict[str, dict[str, Any]] = {}
+MOCK_COLLABORATION_DATA = {
+    "section_statuses": {},
+    "transitions": [],
+    "threads": {},
+    "suggestions": {},
+}
+MOCK_LIBRARY_INSTANCES: dict[str, list[dict[str, Any]]] = {}
 
 
 def _init_mock_soa(study_version_id: str):
@@ -1549,7 +210,315 @@ def _init_mock_soa(study_version_id: str):
         }
 
 
-@with_transaction_retry()
+# =========================================================================
+# 4. Dynamic Decoupled Registry and Delegates
+# =========================================================================
+_registry = {}
+
+
+def register_implementation(name: str, func: Any) -> None:
+    _registry[name] = func
+
+
+def get_implementation(name: str) -> Any:
+    impl = _registry.get(name)
+    if not impl:
+        raise RuntimeError(f"Implementation for '{name}' is not registered.")
+    return impl
+
+
+async def assert_study_version_mutable(tx, study_version_id: str):
+    """
+    Ensures that the study version is in a mutable state (DRAFT or ACTIVE).
+    Raises ImmutabilityViolationError if the status of the study version is LOCKED, PUBLISHED, or ARCHIVED.
+    """
+    impl = get_implementation("assert_study_version_mutable")
+    return await impl(tx=tx, study_version_id=study_version_id)
+
+
+async def assert_graph_mutable(
+    tx, study_id: str | None = None, object_id: str | None = None
+):
+    """
+    Ensures that the study or library object is in a mutable state (DRAFT or ACTIVE).
+    Raises ImmutabilityViolationError if the status of the latest version is LOCKED, PUBLISHED, or ARCHIVED.
+    """
+    impl = get_implementation("assert_graph_mutable")
+    return await impl(tx=tx, study_id=study_id, object_id=object_id)
+
+
+async def assert_library_object_mutable(
+    driver_or_tx, object_id: str, version: int | None = None
+):
+    """
+    Asserts that a library object/version is not referenced by an active/active-recruiting study
+    through an instance/source relationship.
+    If it is in use, raises LibraryObjectInUseError.
+    """
+    impl = get_implementation("assert_library_object_mutable")
+    return await impl(driver_or_tx=driver_or_tx, object_id=object_id, version=version)
+
+
+async def create_study_root(driver, study_id: str):
+    """
+    Creates a stable root node for a study.
+    Requirement 1: Root-to-Value pattern.
+    """
+    impl = get_implementation("create_study_root")
+    return await impl(driver=driver, study_id=study_id)
+
+
+async def create_study_version(
+    driver,
+    study_id: str,
+    version_id: str,
+    version_tag: str,
+    status: str,
+    version_index: int,
+    created_by: str,
+    created_at: Any = None,
+):
+    """
+    Creates a new StudyVersion node, links to Study via HAS_VERSION, and links to
+    previous version via PREVIOUS_VERSION using pessimistic locks to serialize creation.
+    Raises ConcurrentLockingError if version tag or index already exists.
+    """
+    impl = get_implementation("create_study_version")
+    return await impl(
+        driver=driver,
+        study_id=study_id,
+        version_id=version_id,
+        version_tag=version_tag,
+        status=status,
+        version_index=version_index,
+        created_by=created_by,
+        created_at=created_at,
+    )
+
+
+def serialize_library_props(props: dict[str, Any]) -> dict[str, Any]:
+    impl = get_implementation("serialize_library_props")
+    return impl(props=props)
+
+
+def deserialize_library_props(props: dict[str, Any]) -> dict[str, Any]:
+    impl = get_implementation("deserialize_library_props")
+    return impl(props=props)
+
+
+async def create_library_object_version(
+    driver,
+    object_id: str,
+    new_properties: dict[str, Any],
+    is_amendment: bool = False,
+    bypass_immutability: bool = False,
+):
+    """
+    Requirement: Simplistic library objects version successfully without generating complex action nodes.
+    Uses PREVIOUS_VERSION relationship.
+    """
+    impl = get_implementation("create_library_object_version")
+    return await impl(
+        driver=driver,
+        object_id=object_id,
+        new_properties=new_properties,
+        is_amendment=is_amendment,
+        bypass_immutability=bypass_immutability,
+    )
+
+
+async def get_latest_library_object(
+    driver, object_id: str, sponsor_id: str, tenant_id: str = "tenant_default"
+) -> dict[str, Any] | None:
+    """
+    Retrieves the latest version of a specific library object under a sponsor and tenant.
+    """
+    impl = get_implementation("get_latest_library_object")
+    return await impl(
+        driver=driver, object_id=object_id, sponsor_id=sponsor_id, tenant_id=tenant_id
+    )
+
+
+async def get_library_object_by_version(
+    driver,
+    object_id: str,
+    sponsor_id: str,
+    version: int,
+    tenant_id: str = "tenant_default",
+) -> dict[str, Any] | None:
+    """
+    Retrieves a specific version of a library object under a sponsor and tenant.
+    """
+    impl = get_implementation("get_library_object_by_version")
+    return await impl(
+        driver=driver,
+        object_id=object_id,
+        sponsor_id=sponsor_id,
+        version=version,
+        tenant_id=tenant_id,
+    )
+
+
+async def get_library_object_history(
+    driver, object_id: str, sponsor_id: str, tenant_id: str = "tenant_default"
+) -> list[dict[str, Any]]:
+    """
+    Retrieves the full version history of a library object under a sponsor and tenant,
+    ordered from earliest version to latest version (by version ascending).
+    """
+    impl = get_implementation("get_library_object_history")
+    return await impl(
+        driver=driver, object_id=object_id, sponsor_id=sponsor_id, tenant_id=tenant_id
+    )
+
+
+async def list_library_objects(
+    driver,
+    sponsor_id: str,
+    object_type: str | None = None,
+    limit: int = 50,
+    starting_after: str | None = None,
+    tenant_id: str = "tenant_default",
+) -> list[dict[str, Any]]:
+    """
+    Lists the latest version of each library object under a sponsor and tenant,
+    supporting optional filtering by object type and Stripe-style cursor-compatible ordering.
+    """
+    impl = get_implementation("list_library_objects")
+    return await impl(
+        driver=driver,
+        sponsor_id=sponsor_id,
+        object_type=object_type,
+        limit=limit,
+        starting_after=starting_after,
+        tenant_id=tenant_id,
+    )
+
+
+async def update_study_properties(
+    driver, study_id: str, user_id: str, change_reason: str, properties: dict[str, Any]
+):
+    """
+    Requirement 2: Discrete action nodes connected to modified fields via BEFORE and AFTER relationships.
+    """
+    impl = get_implementation("update_study_properties")
+    return await impl(
+        driver=driver,
+        study_id=study_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        properties=properties,
+    )
+
+
+async def get_study_differences(
+    driver, study_id: str, action_id1: str, action_id2: str
+) -> list[dict[str, Any]]:
+    """
+    Requirement 3: Compute human-readable field-level differences between any two version actions of a study.
+    Also covers: "A study designer can retrieve a flat list of field-level differences between any two version actions of a study."
+    """
+    impl = get_implementation("get_study_differences")
+    return await impl(
+        driver=driver, study_id=study_id, action_id1=action_id1, action_id2=action_id2
+    )
+
+
+async def create_rule_node(
+    driver,
+    study_id: str,
+    user_id: str,
+    change_reason: str,
+    rule_id: str,
+    rule_data: dict[str, Any],
+):
+    """
+    Creates a new versioned rule under a study.
+    Connects to an Action node via AFTER.
+    """
+    impl = get_implementation("create_rule_node")
+    return await impl(
+        driver=driver,
+        study_id=study_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        rule_id=rule_id,
+        rule_data=rule_data,
+    )
+
+
+async def update_rule_node(
+    driver,
+    study_id: str,
+    rule_id: str,
+    user_id: str,
+    change_reason: str,
+    rule_data: dict[str, Any],
+):
+    """
+    Updates an existing rule by creating a new version.
+    Connects to Action via BEFORE/AFTER and uses PREVIOUS_VERSION.
+    """
+    impl = get_implementation("update_rule_node")
+    return await impl(
+        driver=driver,
+        study_id=study_id,
+        rule_id=rule_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        rule_data=rule_data,
+    )
+
+
+async def delete_rule_node(
+    driver, study_id: str, rule_id: str, user_id: str, change_reason: str
+):
+    """
+    Soft-deletes a rule by creating a new deleted version.
+    """
+    impl = get_implementation("delete_rule_node")
+    return await impl(
+        driver=driver,
+        study_id=study_id,
+        rule_id=rule_id,
+        user_id=user_id,
+        change_reason=change_reason,
+    )
+
+
+async def get_rules_from_graph(driver, study_id: str) -> list[dict[str, Any]]:
+    """
+    Retrieves all active rules (not soft-deleted) for a study.
+    """
+    impl = get_implementation("get_rules_from_graph")
+    return await impl(driver=driver, study_id=study_id)
+
+
+async def amend_protocol_version(
+    driver,
+    study_id: str,
+    user_id: str,
+    change_reason: str,
+    bump_type: str,
+) -> dict[str, Any]:
+    """
+    Implements the formal Designer amendment fork operation without altering the source version.
+    Returns a dict with:
+        new_version: str
+        status: str
+        parent_version: str
+        id: str
+    """
+    impl = get_implementation("amend_protocol_version")
+    return await impl(
+        driver=driver,
+        study_id=study_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        bump_type=bump_type,
+    )
+
+
 async def create_study_arm(
     driver,
     study_version_id: str,
@@ -1558,88 +527,17 @@ async def create_study_arm(
     arm_id: str,
     properties: dict[str, Any],
 ) -> str:
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        store = MOCK_SOA_DATA[study_version_id]["arms"]
-        if arm_id in store:
-            raise ConcurrentLockingError("Arm already exists")
-        node = {
-            "id": arm_id,
-            "version_index": 1,
-            "created_by": user_id,
-            "created_at": dt.datetime.now().isoformat(),
-            **properties,
-        }
-        store[arm_id] = node
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "before": None,
-            "after": node,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        await propagate_soa_mutation(
-            driver, study_version_id, arm_id, user_id, change_reason
-        )
-        return arm_id
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            check = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_ARM]->(a:StudyArm {id: $arm_id}) RETURN a.id",
-                study_version_id=study_version_id,
-                arm_id=arm_id,
-            )
-            if await check.single():
-                raise ConcurrentLockingError("Arm already exists")
-
-            action_id = str(uuid.uuid4())
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})
-            CREATE (arm:StudyArm {
-                id: $arm_id,
-                version_index: 1,
-                created_at: datetime(),
-                created_by: $created_by
-            })
-            SET arm += $properties
-            CREATE (sv)-[:HAS_ARM]->(arm)
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $created_by,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(arm)
-            RETURN arm.id as id
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                arm_id=arm_id,
-                created_by=user_id,
-                change_reason=change_reason,
-                action_id=action_id,
-                properties=properties,
-            )
-            record = await res.single()
-            ret_id = record["id"]
-            await propagate_soa_mutation(
-                driver, study_version_id, ret_id, user_id, change_reason
-            )
-            return ret_id
+    impl = get_implementation("create_study_arm")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        arm_id=arm_id,
+        properties=properties,
+    )
 
 
-@with_transaction_retry()
 async def update_study_arm(
     driver,
     study_version_id: str,
@@ -1648,92 +546,17 @@ async def update_study_arm(
     arm_id: str,
     properties: dict[str, Any],
 ) -> str:
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        store = MOCK_SOA_DATA[study_version_id]["arms"]
-        if arm_id not in store:
-            raise ValueError(f"Arm {arm_id} not found")
-        old_node = store[arm_id]
-        new_node = {
-            "id": arm_id,
-            "version_index": old_node["version_index"] + 1,
-            "created_by": user_id,
-            "created_at": dt.datetime.now().isoformat(),
-            **properties,
-        }
-        store[arm_id] = new_node
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "before": old_node,
-            "after": new_node,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        await propagate_soa_mutation(
-            driver, study_version_id, arm_id, user_id, change_reason
-        )
-        return arm_id
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            check = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_ARM]->(old_arm:StudyArm {id: $arm_id}) RETURN old_arm.id",
-                study_version_id=study_version_id,
-                arm_id=arm_id,
-            )
-            if not await check.single():
-                raise ValueError(f"Arm {arm_id} not found")
-
-            action_id = str(uuid.uuid4())
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_ARM]->(old_arm:StudyArm {id: $arm_id})
-            CREATE (new_arm:StudyArm {
-                id: $arm_id,
-                version_index: old_arm.version_index + 1,
-                created_at: datetime(),
-                created_by: $created_by
-            })
-            SET new_arm += $properties
-            CREATE (sv)-[:HAS_ARM]->(new_arm)
-            DELETE r
-            CREATE (new_arm)-[:PREVIOUS_VERSION]->(old_arm)
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $created_by,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(new_arm)
-            CREATE (a)-[:BEFORE]->(old_arm)
-            RETURN new_arm.id as id
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                arm_id=arm_id,
-                created_by=user_id,
-                change_reason=change_reason,
-                action_id=action_id,
-                properties=properties,
-            )
-            record = await res.single()
-            ret_id = record["id"]
-            await propagate_soa_mutation(
-                driver, study_version_id, ret_id, user_id, change_reason
-            )
-            return ret_id
+    impl = get_implementation("update_study_arm")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        arm_id=arm_id,
+        properties=properties,
+    )
 
 
-@with_transaction_retry()
 async def create_epoch(
     driver,
     study_version_id: str,
@@ -1742,81 +565,17 @@ async def create_epoch(
     epoch_id: str,
     properties: dict[str, Any],
 ) -> str:
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        store = MOCK_SOA_DATA[study_version_id]["epochs"]
-        if epoch_id in store:
-            raise ConcurrentLockingError("Epoch already exists")
-        node = {
-            "id": epoch_id,
-            "version_index": 1,
-            "created_by": user_id,
-            "created_at": dt.datetime.now().isoformat(),
-            **properties,
-        }
-        store[epoch_id] = node
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "before": None,
-            "after": node,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return epoch_id
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            check = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_EPOCH]->(e:Epoch {id: $epoch_id}) RETURN e.id",
-                study_version_id=study_version_id,
-                epoch_id=epoch_id,
-            )
-            if await check.single():
-                raise ConcurrentLockingError("Epoch already exists")
-
-            action_id = str(uuid.uuid4())
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})
-            CREATE (ep:Epoch {
-                id: $epoch_id,
-                version_index: 1,
-                created_at: datetime(),
-                created_by: $created_by
-            })
-            SET ep += $properties
-            CREATE (sv)-[:HAS_EPOCH]->(ep)
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $created_by,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(ep)
-            RETURN ep.id as id
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                epoch_id=epoch_id,
-                created_by=user_id,
-                change_reason=change_reason,
-                action_id=action_id,
-                properties=properties,
-            )
-            record = await res.single()
-            return record["id"]
+    impl = get_implementation("create_epoch")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        epoch_id=epoch_id,
+        properties=properties,
+    )
 
 
-@with_transaction_retry()
 async def update_epoch(
     driver,
     study_version_id: str,
@@ -1825,85 +584,17 @@ async def update_epoch(
     epoch_id: str,
     properties: dict[str, Any],
 ) -> str:
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        store = MOCK_SOA_DATA[study_version_id]["epochs"]
-        if epoch_id not in store:
-            raise ValueError(f"Epoch {epoch_id} not found")
-        old_node = store[epoch_id]
-        new_node = {
-            "id": epoch_id,
-            "version_index": old_node["version_index"] + 1,
-            "created_by": user_id,
-            "created_at": dt.datetime.now().isoformat(),
-            **properties,
-        }
-        store[epoch_id] = new_node
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "before": old_node,
-            "after": new_node,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return epoch_id
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            check = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_EPOCH]->(old_ep:Epoch {id: $epoch_id}) RETURN old_ep.id",
-                study_version_id=study_version_id,
-                epoch_id=epoch_id,
-            )
-            if not await check.single():
-                raise ValueError(f"Epoch {epoch_id} not found")
-
-            action_id = str(uuid.uuid4())
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_EPOCH]->(old_ep:Epoch {id: $epoch_id})
-            CREATE (new_ep:Epoch {
-                id: $epoch_id,
-                version_index: old_ep.version_index + 1,
-                created_at: datetime(),
-                created_by: $created_by
-            })
-            SET new_ep += $properties
-            CREATE (sv)-[:HAS_EPOCH]->(new_ep)
-            DELETE r
-            CREATE (new_ep)-[:PREVIOUS_VERSION]->(old_ep)
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $created_by,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(new_ep)
-            CREATE (a)-[:BEFORE]->(old_ep)
-            RETURN new_ep.id as id
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                epoch_id=epoch_id,
-                created_by=user_id,
-                change_reason=change_reason,
-                action_id=action_id,
-                properties=properties,
-            )
-            record = await res.single()
-            return record["id"]
+    impl = get_implementation("update_epoch")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        epoch_id=epoch_id,
+        properties=properties,
+    )
 
 
-@with_transaction_retry()
 async def create_visit(
     driver,
     study_version_id: str,
@@ -1912,81 +603,17 @@ async def create_visit(
     visit_id: str,
     properties: dict[str, Any],
 ) -> str:
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        store = MOCK_SOA_DATA[study_version_id]["visits"]
-        if visit_id in store:
-            raise ConcurrentLockingError("Visit already exists")
-        node = {
-            "id": visit_id,
-            "version_index": 1,
-            "created_by": user_id,
-            "created_at": dt.datetime.now().isoformat(),
-            **properties,
-        }
-        store[visit_id] = node
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "before": None,
-            "after": node,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return visit_id
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            check = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_VISIT]->(v:Visit {id: $visit_id}) RETURN v.id",
-                study_version_id=study_version_id,
-                visit_id=visit_id,
-            )
-            if await check.single():
-                raise ConcurrentLockingError("Visit already exists")
-
-            action_id = str(uuid.uuid4())
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})
-            CREATE (v:Visit {
-                id: $visit_id,
-                version_index: 1,
-                created_at: datetime(),
-                created_by: $created_by
-            })
-            SET v += $properties
-            CREATE (sv)-[:HAS_VISIT]->(v)
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $created_by,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(v)
-            RETURN v.id as id
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                visit_id=visit_id,
-                created_by=user_id,
-                change_reason=change_reason,
-                action_id=action_id,
-                properties=properties,
-            )
-            record = await res.single()
-            return record["id"]
+    impl = get_implementation("create_visit")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        visit_id=visit_id,
+        properties=properties,
+    )
 
 
-@with_transaction_retry()
 async def update_visit(
     driver,
     study_version_id: str,
@@ -1995,85 +622,17 @@ async def update_visit(
     visit_id: str,
     properties: dict[str, Any],
 ) -> str:
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        store = MOCK_SOA_DATA[study_version_id]["visits"]
-        if visit_id not in store:
-            raise ValueError(f"Visit {visit_id} not found")
-        old_node = store[visit_id]
-        new_node = {
-            "id": visit_id,
-            "version_index": old_node["version_index"] + 1,
-            "created_by": user_id,
-            "created_at": dt.datetime.now().isoformat(),
-            **properties,
-        }
-        store[visit_id] = new_node
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "before": old_node,
-            "after": new_node,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return visit_id
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            check = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_VISIT]->(old_v:Visit {id: $visit_id}) RETURN old_v.id",
-                study_version_id=study_version_id,
-                visit_id=visit_id,
-            )
-            if not await check.single():
-                raise ValueError(f"Visit {visit_id} not found")
-
-            action_id = str(uuid.uuid4())
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_VISIT]->(old_v:Visit {id: $visit_id})
-            CREATE (new_v:Visit {
-                id: $visit_id,
-                version_index: old_v.version_index + 1,
-                created_at: datetime(),
-                created_by: $created_by
-            })
-            SET new_v += $properties
-            CREATE (sv)-[:HAS_VISIT]->(new_v)
-            DELETE r
-            CREATE (new_v)-[:PREVIOUS_VERSION]->(old_v)
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $created_by,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(new_v)
-            CREATE (a)-[:BEFORE]->(old_v)
-            RETURN new_v.id as id
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                visit_id=visit_id,
-                created_by=user_id,
-                change_reason=change_reason,
-                action_id=action_id,
-                properties=properties,
-            )
-            record = await res.single()
-            return record["id"]
+    impl = get_implementation("update_visit")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        visit_id=visit_id,
+        properties=properties,
+    )
 
 
-@with_transaction_retry()
 async def create_procedure(
     driver,
     study_version_id: str,
@@ -2082,81 +641,17 @@ async def create_procedure(
     procedure_id: str,
     properties: dict[str, Any],
 ) -> str:
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        store = MOCK_SOA_DATA[study_version_id]["procedures"]
-        if procedure_id in store:
-            raise ConcurrentLockingError("Procedure already exists")
-        node = {
-            "id": procedure_id,
-            "version_index": 1,
-            "created_by": user_id,
-            "created_at": dt.datetime.now().isoformat(),
-            **properties,
-        }
-        store[procedure_id] = node
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "before": None,
-            "after": node,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return procedure_id
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            check = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_PROCEDURE]->(p:Procedure {id: $procedure_id}) RETURN p.id",
-                study_version_id=study_version_id,
-                procedure_id=procedure_id,
-            )
-            if await check.single():
-                raise ConcurrentLockingError("Procedure already exists")
-
-            action_id = str(uuid.uuid4())
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})
-            CREATE (p:Procedure {
-                id: $procedure_id,
-                version_index: 1,
-                created_at: datetime(),
-                created_by: $created_by
-            })
-            SET p += $properties
-            CREATE (sv)-[:HAS_PROCEDURE]->(p)
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $created_by,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(p)
-            RETURN p.id as id
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                procedure_id=procedure_id,
-                created_by=user_id,
-                change_reason=change_reason,
-                action_id=action_id,
-                properties=properties,
-            )
-            record = await res.single()
-            return record["id"]
+    impl = get_implementation("create_procedure")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        procedure_id=procedure_id,
+        properties=properties,
+    )
 
 
-@with_transaction_retry()
 async def update_procedure(
     driver,
     study_version_id: str,
@@ -2165,85 +660,17 @@ async def update_procedure(
     procedure_id: str,
     properties: dict[str, Any],
 ) -> str:
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        store = MOCK_SOA_DATA[study_version_id]["procedures"]
-        if procedure_id not in store:
-            raise ValueError(f"Procedure {procedure_id} not found")
-        old_node = store[procedure_id]
-        new_node = {
-            "id": procedure_id,
-            "version_index": old_node["version_index"] + 1,
-            "created_by": user_id,
-            "created_at": dt.datetime.now().isoformat(),
-            **properties,
-        }
-        store[procedure_id] = new_node
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "before": old_node,
-            "after": new_node,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return procedure_id
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            check = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_PROCEDURE]->(old_p:Procedure {id: $procedure_id}) RETURN old_p.id",
-                study_version_id=study_version_id,
-                procedure_id=procedure_id,
-            )
-            if not await check.single():
-                raise ValueError(f"Procedure {procedure_id} not found")
-
-            action_id = str(uuid.uuid4())
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_PROCEDURE]->(old_p:Procedure {id: $procedure_id})
-            CREATE (new_p:Procedure {
-                id: $procedure_id,
-                version_index: old_p.version_index + 1,
-                created_at: datetime(),
-                created_by: $created_by
-            })
-            SET new_p += $properties
-            CREATE (sv)-[:HAS_PROCEDURE]->(new_p)
-            DELETE r
-            CREATE (new_p)-[:PREVIOUS_VERSION]->(old_p)
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $created_by,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(new_p)
-            CREATE (a)-[:BEFORE]->(old_p)
-            RETURN new_p.id as id
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                procedure_id=procedure_id,
-                created_by=user_id,
-                change_reason=change_reason,
-                action_id=action_id,
-                properties=properties,
-            )
-            record = await res.single()
-            return record["id"]
+    impl = get_implementation("update_procedure")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        procedure_id=procedure_id,
+        properties=properties,
+    )
 
 
-@with_transaction_retry()
 async def create_timing_window(
     driver,
     study_version_id: str,
@@ -2252,81 +679,17 @@ async def create_timing_window(
     timing_id: str,
     properties: dict[str, Any],
 ) -> str:
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        store = MOCK_SOA_DATA[study_version_id]["timing_windows"]
-        if timing_id in store:
-            raise ConcurrentLockingError("TimingWindow already exists")
-        node = {
-            "id": timing_id,
-            "version_index": 1,
-            "created_by": user_id,
-            "created_at": dt.datetime.now().isoformat(),
-            **properties,
-        }
-        store[timing_id] = node
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "before": None,
-            "after": node,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return timing_id
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            check = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_TIMING_WINDOW]->(t:TimingWindow {id: $timing_id}) RETURN t.id",
-                study_version_id=study_version_id,
-                timing_id=timing_id,
-            )
-            if await check.single():
-                raise ConcurrentLockingError("TimingWindow already exists")
-
-            action_id = str(uuid.uuid4())
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})
-            CREATE (t:TimingWindow {
-                id: $timing_id,
-                version_index: 1,
-                created_at: datetime(),
-                created_by: $created_by
-            })
-            SET t += $properties
-            CREATE (sv)-[:HAS_TIMING_WINDOW]->(t)
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $created_by,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(t)
-            RETURN t.id as id
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                timing_id=timing_id,
-                created_by=user_id,
-                change_reason=change_reason,
-                action_id=action_id,
-                properties=properties,
-            )
-            record = await res.single()
-            return record["id"]
+    impl = get_implementation("create_timing_window")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        timing_id=timing_id,
+        properties=properties,
+    )
 
 
-@with_transaction_retry()
 async def update_timing_window(
     driver,
     study_version_id: str,
@@ -2335,90 +698,17 @@ async def update_timing_window(
     timing_id: str,
     properties: dict[str, Any],
 ) -> str:
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        store = MOCK_SOA_DATA[study_version_id]["timing_windows"]
-        if timing_id not in store:
-            raise ValueError(f"TimingWindow {timing_id} not found")
-        old_node = store[timing_id]
-        new_node = {
-            **old_node,
-            "id": timing_id,
-            "version_index": old_node["version_index"] + 1,
-            "created_by": user_id,
-            "created_at": dt.datetime.now().isoformat(),
-            **properties,
-        }
-        store[timing_id] = new_node
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "before": old_node,
-            "after": new_node,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return timing_id
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            check = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_TIMING_WINDOW]->(old_t:TimingWindow {id: $timing_id}) RETURN old_t.id",
-                study_version_id=study_version_id,
-                timing_id=timing_id,
-            )
-            if not await check.single():
-                raise ValueError(f"TimingWindow {timing_id} not found")
-
-            action_id = str(uuid.uuid4())
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_TIMING_WINDOW]->(old_t:TimingWindow {id: $timing_id})
-            CREATE (new_t:TimingWindow {
-                id: $timing_id,
-                version_index: old_t.version_index + 1,
-                created_at: datetime(),
-                created_by: $created_by
-            })
-            SET new_t += properties(old_t)
-            SET new_t.version_index = old_t.version_index + 1
-            SET new_t.created_at = datetime()
-            SET new_t.created_by = $created_by
-            SET new_t += $properties
-            CREATE (sv)-[:HAS_TIMING_WINDOW]->(new_t)
-            DELETE r
-            CREATE (new_t)-[:PREVIOUS_VERSION]->(old_t)
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $created_by,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(new_t)
-            CREATE (a)-[:BEFORE]->(old_t)
-            RETURN new_t.id as id
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                timing_id=timing_id,
-                created_by=user_id,
-                change_reason=change_reason,
-                action_id=action_id,
-                properties=properties,
-            )
-            record = await res.single()
-            return record["id"]
+    impl = get_implementation("update_timing_window")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        timing_id=timing_id,
+        properties=properties,
+    )
 
 
-@with_transaction_retry()
 async def link_epoch_to_visit(
     driver,
     study_version_id: str,
@@ -2427,58 +717,17 @@ async def link_epoch_to_visit(
     epoch_id: str,
     visit_id: str,
 ) -> bool:
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        links = MOCK_SOA_DATA[study_version_id]["links"]
-        link = {"type": "epoch_visit", "from_id": epoch_id, "to_id": visit_id}
-        if link not in links:
-            links.append(link)
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "link": link,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return True
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_EPOCH]->(ep:Epoch {id: $epoch_id})
-            MATCH (sv)-[:HAS_VISIT]->(v:Visit {id: $visit_id})
-            MERGE (ep)-[r:HAS_VISIT]->(v)
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $user_id,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(ep)
-            RETURN true as success
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                epoch_id=epoch_id,
-                visit_id=visit_id,
-                user_id=user_id,
-                change_reason=change_reason,
-                action_id=str(uuid.uuid4()),
-            )
-            record = await res.single()
-            return record["success"] if record else False
+    impl = get_implementation("link_epoch_to_visit")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        epoch_id=epoch_id,
+        visit_id=visit_id,
+    )
 
 
-@with_transaction_retry()
 async def reorder_arms(
     driver,
     study_version_id: str,
@@ -2489,114 +738,16 @@ async def reorder_arms(
     """
     Reorders study arms by updating their sequence sequentially.
     """
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        store = MOCK_SOA_DATA[study_version_id]["arms"]
-
-        for a_id in arm_ids_ordered:
-            if (
-                a_id not in store
-                or store[a_id].get("is_deleted", False)
-                or store[a_id].get("is_retired", False)
-            ):
-                raise ValueError(f"Arm {a_id} not found or is deleted")
-
-        action_id = str(uuid.uuid4())
-        action_log = {
-            "id": action_id,
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "type": "REORDER",
-            "before_order": {
-                a_id: store[a_id].get("sequence") for a_id in arm_ids_ordered
-            },
-            "after_order": {},
-        }
-
-        for idx, a_id in enumerate(arm_ids_ordered):
-            old_node = store[a_id]
-            new_node = {
-                **old_node,
-                "sequence": idx + 1,
-                "version_index": old_node.get("version_index", 1) + 1,
-                "created_by": user_id,
-                "created_at": dt.datetime.now().isoformat(),
-                "reason_for_change": change_reason,
-            }
-            store[a_id] = new_node
-            action_log["after_order"][a_id] = idx + 1
-
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action_log)
-        return True
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-
-            existing_res = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_ARM]->(a:StudyArm) WHERE coalesce(a.is_deleted, false) = false AND coalesce(a.is_retired, false) = false RETURN a.id as id",
-                study_version_id=study_version_id,
-            )
-            existing_ids = {r["id"] for r in await existing_res.all()}
-
-            for a_id in arm_ids_ordered:
-                if a_id not in existing_ids:
-                    raise ValueError(f"Arm {a_id} not found or is deleted")
-
-            action_id = str(uuid.uuid4())
-            await tx.run(
-                """
-                CREATE (a:Action {
-                    id: $action_id,
-                    user_id: $user_id,
-                    change_reason: $change_reason,
-                    timestamp: datetime(),
-                    type: "REORDER"
-                })
-                """,
-                action_id=action_id,
-                user_id=user_id,
-                change_reason=change_reason,
-            )
-
-            for idx, a_id in enumerate(arm_ids_ordered):
-                query = """
-                MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_ARM]->(old_a:StudyArm {id: $arm_id})
-                MATCH (a:Action {id: $action_id})
-                CREATE (new_a:StudyArm {id: $arm_id})
-                SET new_a += properties(old_a)
-                SET new_a.sequence = $new_sequence
-                SET new_a.version_index = old_a.version_index + 1
-                SET new_a.created_at = datetime()
-                SET new_a.created_by = $user_id
-                SET new_a.reason_for_change = $change_reason
-                CREATE (sv)-[:HAS_ARM]->(new_a)
-                DELETE r
-                CREATE (new_a)-[:PREVIOUS_VERSION]->(old_a)
-                CREATE (a)-[:AFTER]->(new_a)
-                CREATE (a)-[:BEFORE]->(old_a)
-                """
-                await tx.run(
-                    query,
-                    study_version_id=study_version_id,
-                    arm_id=a_id,
-                    action_id=action_id,
-                    user_id=user_id,
-                    change_reason=change_reason,
-                    new_sequence=idx + 1,
-                )
-
-            return True
+    impl = get_implementation("reorder_arms")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        arm_ids_ordered=arm_ids_ordered,
+    )
 
 
-@with_transaction_retry()
 async def reorder_epochs(
     driver,
     study_version_id: str,
@@ -2607,116 +758,16 @@ async def reorder_epochs(
     """
     Reorders study epochs by updating their sequence sequentially.
     """
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        store = MOCK_SOA_DATA[study_version_id]["epochs"]
-
-        for e_id in epoch_ids_ordered:
-            if (
-                e_id not in store
-                or store[e_id].get("is_deleted", False)
-                or store[e_id].get("is_retired", False)
-            ):
-                raise ValueError(f"Epoch {e_id} not found or is deleted")
-
-        action_id = str(uuid.uuid4())
-        action_log = {
-            "id": action_id,
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "type": "REORDER",
-            "before_order": {
-                e_id: store[e_id].get("sequence") for e_id in epoch_ids_ordered
-            },
-            "after_order": {},
-        }
-
-        for idx, e_id in enumerate(epoch_ids_ordered):
-            old_node = store[e_id]
-            new_node = {
-                **old_node,
-                "sequence": idx + 1,
-                "sequence_order": idx + 1,
-                "version_index": old_node.get("version_index", 1) + 1,
-                "created_by": user_id,
-                "created_at": dt.datetime.now().isoformat(),
-                "reason_for_change": change_reason,
-            }
-            store[e_id] = new_node
-            action_log["after_order"][e_id] = idx + 1
-
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action_log)
-        return True
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-
-            existing_res = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_EPOCH]->(e:Epoch) WHERE coalesce(e.is_deleted, false) = false AND coalesce(e.is_retired, false) = false RETURN e.id as id",
-                study_version_id=study_version_id,
-            )
-            existing_ids = {r["id"] for r in await existing_res.all()}
-
-            for e_id in epoch_ids_ordered:
-                if e_id not in existing_ids:
-                    raise ValueError(f"Epoch {e_id} not found or is deleted")
-
-            action_id = str(uuid.uuid4())
-            await tx.run(
-                """
-                CREATE (a:Action {
-                    id: $action_id,
-                    user_id: $user_id,
-                    change_reason: $change_reason,
-                    timestamp: datetime(),
-                    type: "REORDER"
-                })
-                """,
-                action_id=action_id,
-                user_id=user_id,
-                change_reason=change_reason,
-            )
-
-            for idx, e_id in enumerate(epoch_ids_ordered):
-                query = """
-                MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_EPOCH]->(old_e:Epoch {id: $epoch_id})
-                MATCH (a:Action {id: $action_id})
-                CREATE (new_e:Epoch {id: $epoch_id})
-                SET new_e += properties(old_e)
-                SET new_e.sequence = $new_sequence
-                SET new_e.sequence_order = $new_sequence
-                SET new_e.version_index = old_e.version_index + 1
-                SET new_e.created_at = datetime()
-                SET new_e.created_by = $user_id
-                SET new_e.reason_for_change = $change_reason
-                CREATE (sv)-[:HAS_EPOCH]->(new_e)
-                DELETE r
-                CREATE (new_e)-[:PREVIOUS_VERSION]->(old_e)
-                CREATE (a)-[:AFTER]->(new_e)
-                CREATE (a)-[:BEFORE]->(old_e)
-                """
-                await tx.run(
-                    query,
-                    study_version_id=study_version_id,
-                    epoch_id=e_id,
-                    action_id=action_id,
-                    user_id=user_id,
-                    change_reason=change_reason,
-                    new_sequence=idx + 1,
-                )
-
-            return True
+    impl = get_implementation("reorder_epochs")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        epoch_ids_ordered=epoch_ids_ordered,
+    )
 
 
-@with_transaction_retry()
 async def reorder_procedures(
     driver,
     study_version_id: str,
@@ -2727,114 +778,16 @@ async def reorder_procedures(
     """
     Reorders study procedures by updating their sequence sequentially.
     """
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        store = MOCK_SOA_DATA[study_version_id]["procedures"]
-
-        for p_id in procedure_ids_ordered:
-            if (
-                p_id not in store
-                or store[p_id].get("is_deleted", False)
-                or store[p_id].get("is_retired", False)
-            ):
-                raise ValueError(f"Procedure {p_id} not found or is deleted")
-
-        action_id = str(uuid.uuid4())
-        action_log = {
-            "id": action_id,
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "type": "REORDER",
-            "before_order": {
-                p_id: store[p_id].get("sequence") for p_id in procedure_ids_ordered
-            },
-            "after_order": {},
-        }
-
-        for idx, p_id in enumerate(procedure_ids_ordered):
-            old_node = store[p_id]
-            new_node = {
-                **old_node,
-                "sequence": idx + 1,
-                "version_index": old_node.get("version_index", 1) + 1,
-                "created_by": user_id,
-                "created_at": dt.datetime.now().isoformat(),
-                "reason_for_change": change_reason,
-            }
-            store[p_id] = new_node
-            action_log["after_order"][p_id] = idx + 1
-
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action_log)
-        return True
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-
-            existing_res = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_PROCEDURE]->(p:Procedure) WHERE coalesce(p.is_deleted, false) = false AND coalesce(p.is_retired, false) = false RETURN p.id as id",
-                study_version_id=study_version_id,
-            )
-            existing_ids = {r["id"] for r in await existing_res.all()}
-
-            for p_id in procedure_ids_ordered:
-                if p_id not in existing_ids:
-                    raise ValueError(f"Procedure {p_id} not found or is deleted")
-
-            action_id = str(uuid.uuid4())
-            await tx.run(
-                """
-                CREATE (a:Action {
-                    id: $action_id,
-                    user_id: $user_id,
-                    change_reason: $change_reason,
-                    timestamp: datetime(),
-                    type: "REORDER"
-                })
-                """,
-                action_id=action_id,
-                user_id=user_id,
-                change_reason=change_reason,
-            )
-
-            for idx, p_id in enumerate(procedure_ids_ordered):
-                query = """
-                MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_PROCEDURE]->(old_p:Procedure {id: $procedure_id})
-                MATCH (a:Action {id: $action_id})
-                CREATE (new_p:Procedure {id: $procedure_id})
-                SET new_p += properties(old_p)
-                SET new_p.sequence = $new_sequence
-                SET new_p.version_index = old_p.version_index + 1
-                SET new_p.created_at = datetime()
-                SET new_p.created_by = $user_id
-                SET new_p.reason_for_change = $change_reason
-                CREATE (sv)-[:HAS_PROCEDURE]->(new_p)
-                DELETE r
-                CREATE (new_p)-[:PREVIOUS_VERSION]->(old_p)
-                CREATE (a)-[:AFTER]->(new_p)
-                CREATE (a)-[:BEFORE]->(old_p)
-                """
-                await tx.run(
-                    query,
-                    study_version_id=study_version_id,
-                    procedure_id=p_id,
-                    action_id=action_id,
-                    user_id=user_id,
-                    change_reason=change_reason,
-                    new_sequence=idx + 1,
-                )
-
-            return True
+    impl = get_implementation("reorder_procedures")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        procedure_ids_ordered=procedure_ids_ordered,
+    )
 
 
-@with_transaction_retry()
 async def assign_visits_to_arm(
     driver,
     study_version_id: str,
@@ -2846,167 +799,17 @@ async def assign_visits_to_arm(
     """
     Assigns multiple visits to an arm. Bumps version_index of the arm and of target visits.
     """
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-
-        # Validate arm
-        arm_store = MOCK_SOA_DATA[study_version_id]["arms"]
-        if arm_id not in arm_store:
-            raise ValueError(f"Arm {arm_id} not found")
-
-        # Bump arm version
-        old_arm = arm_store[arm_id]
-        new_arm = {
-            **old_arm,
-            "version_index": old_arm.get("version_index", 1) + 1,
-            "reason_for_change": change_reason,
-        }
-        arm_store[arm_id] = new_arm
-
-        visit_store = MOCK_SOA_DATA[study_version_id]["visits"]
-        for v_id in visit_ids:
-            if v_id not in visit_store:
-                raise ValueError(f"Visit {v_id} not found")
-            # Bump visit version
-            old_visit = visit_store[v_id]
-            new_visit = {
-                **old_visit,
-                "version_index": old_visit.get("version_index", 1) + 1,
-                "reason_for_change": change_reason,
-            }
-            visit_store[v_id] = new_visit
-
-            # Establish link
-            await link_arm_applicability(
-                None,
-                study_version_id,
-                user_id,
-                change_reason,
-                arm_id,
-                v_id,
-                target_type="visit",
-            )
-        return True
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-
-            # Bump Arm
-            arm_check = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_ARM]->(old_arm:StudyArm {id: $arm_id}) RETURN old_arm.id",
-                study_version_id=study_version_id,
-                arm_id=arm_id,
-            )
-            if not await arm_check.single():
-                raise ValueError(f"Arm {arm_id} not found")
-
-            # Duplicate Arm node with incremented version_index
-            action_id = str(uuid.uuid4())
-            arm_query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_ARM]->(old_arm:StudyArm {id: $arm_id})
-            CREATE (new_arm:StudyArm {id: $arm_id})
-            SET new_arm += properties(old_arm)
-            SET new_arm.version_index = old_arm.version_index + 1
-            SET new_arm.created_at = datetime()
-            SET new_arm.created_by = $user_id
-            SET new_arm.reason_for_change = $change_reason
-            CREATE (sv)-[:HAS_ARM]->(new_arm)
-            DELETE r
-            CREATE (new_arm)-[:PREVIOUS_VERSION]->(old_arm)
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $user_id,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(new_arm)
-            CREATE (a)-[:BEFORE]->(old_arm)
-            RETURN new_arm.id as id
-            """
-            await tx.run(
-                arm_query,
-                study_version_id=study_version_id,
-                arm_id=arm_id,
-                user_id=user_id,
-                change_reason=change_reason,
-                action_id=action_id,
-            )
-
-            for v_id in visit_ids:
-                visit_check = await tx.run(
-                    "MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_VISIT]->(old_v:Visit {id: $visit_id}) RETURN old_v.id",
-                    study_version_id=study_version_id,
-                    visit_id=v_id,
-                )
-                if not await visit_check.single():
-                    raise ValueError(f"Visit {v_id} not found")
-
-                # Duplicate Visit node with incremented version_index
-                visit_action_id = str(uuid.uuid4())
-                visit_query = """
-                MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_VISIT]->(old_v:Visit {id: $visit_id})
-                CREATE (new_v:Visit {id: $visit_id})
-                SET new_v += properties(old_v)
-                SET new_v.version_index = old_v.version_index + 1
-                SET new_v.created_at = datetime()
-                SET new_v.created_by = $user_id
-                SET new_v.reason_for_change = $change_reason
-                CREATE (sv)-[:HAS_VISIT]->(new_v)
-                DELETE r
-                CREATE (new_v)-[:PREVIOUS_VERSION]->(old_v)
-                CREATE (a:Action {
-                    id: $action_id,
-                    user_id: $user_id,
-                    change_reason: $change_reason,
-                    timestamp: datetime()
-                })
-                CREATE (a)-[:AFTER]->(new_v)
-                CREATE (a)-[:BEFORE]->(old_v)
-                RETURN new_v.id as id
-                """
-                await tx.run(
-                    visit_query,
-                    study_version_id=study_version_id,
-                    visit_id=v_id,
-                    user_id=user_id,
-                    change_reason=change_reason,
-                    action_id=visit_action_id,
-                )
-
-                # Link new Arm and new Visit
-                link_query = """
-                MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_ARM]->(arm:StudyArm {id: $arm_id})
-                MATCH (sv)-[:HAS_VISIT]->(v:Visit {id: $visit_id})
-                MERGE (arm)-[r:APPLICABLE_TO]->(v)
-                CREATE (a:Action {
-                    id: $action_id,
-                    user_id: $user_id,
-                    change_reason: $change_reason,
-                    timestamp: datetime()
-                })
-                CREATE (a)-[:AFTER]->(arm)
-                """
-                await tx.run(
-                    link_query,
-                    study_version_id=study_version_id,
-                    arm_id=arm_id,
-                    visit_id=v_id,
-                    user_id=user_id,
-                    change_reason=change_reason,
-                    action_id=str(uuid.uuid4()),
-                )
-
-            return True
+    impl = get_implementation("assign_visits_to_arm")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        arm_id=arm_id,
+        visit_ids=visit_ids,
+    )
 
 
-@with_transaction_retry()
 async def assign_visits_to_epoch(
     driver,
     study_version_id: str,
@@ -3018,183 +821,15 @@ async def assign_visits_to_epoch(
     """
     Assigns multiple visits to an epoch. Bumps version_index of the epoch and of target visits.
     """
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-
-        # Validate epoch
-        epoch_store = MOCK_SOA_DATA[study_version_id]["epochs"]
-        if epoch_id not in epoch_store:
-            raise ValueError(f"Epoch {epoch_id} not found")
-
-        # Bump epoch version
-        old_epoch = epoch_store[epoch_id]
-        new_epoch = {
-            **old_epoch,
-            "version_index": old_epoch.get("version_index", 1) + 1,
-            "reason_for_change": change_reason,
-        }
-        epoch_store[epoch_id] = new_epoch
-
-        visit_store = MOCK_SOA_DATA[study_version_id]["visits"]
-        for v_id in visit_ids:
-            if v_id not in visit_store:
-                raise ValueError(f"Visit {v_id} not found")
-            # Bump visit version
-            old_visit = visit_store[v_id]
-            new_visit = {
-                **old_visit,
-                "version_index": old_visit.get("version_index", 1) + 1,
-                "reason_for_change": change_reason,
-            }
-            visit_store[v_id] = new_visit
-
-            # Establish link
-            await link_epoch_to_visit(
-                None, study_version_id, user_id, change_reason, epoch_id, v_id
-            )
-        return True
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-
-            # Bump Epoch
-            epoch_check = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_EPOCH]->(old_e:Epoch {id: $epoch_id}) RETURN old_e.id",
-                study_version_id=study_version_id,
-                epoch_id=epoch_id,
-            )
-            if not await epoch_check.single():
-                raise ValueError(f"Epoch {epoch_id} not found")
-
-            action_id = str(uuid.uuid4())
-            epoch_query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_EPOCH]->(old_e:Epoch {id: $epoch_id})
-            CREATE (new_e:Epoch {id: $epoch_id})
-            SET new_e += properties(old_e)
-            SET new_e.version_index = old_e.version_index + 1
-            SET new_e.created_at = datetime()
-            SET new_e.created_by = $user_id
-            SET new_e.reason_for_change = $change_reason
-            CREATE (sv)-[:HAS_EPOCH]->(new_e)
-            DELETE r
-            CREATE (new_e)-[:PREVIOUS_VERSION]->(old_e)
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $user_id,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(new_e)
-            CREATE (a)-[:BEFORE]->(old_e)
-            RETURN new_e.id as id
-            """
-            await tx.run(
-                epoch_query,
-                study_version_id=study_version_id,
-                epoch_id=epoch_id,
-                user_id=user_id,
-                change_reason=change_reason,
-                action_id=action_id,
-            )
-
-            for v_id in visit_ids:
-                visit_check = await tx.run(
-                    "MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_VISIT]->(old_v:Visit {id: $visit_id}) RETURN old_v.id",
-                    study_version_id=study_version_id,
-                    visit_id=v_id,
-                )
-                if not await visit_check.single():
-                    raise ValueError(f"Visit {v_id} not found")
-
-                visit_action_id = str(uuid.uuid4())
-                visit_query = """
-                MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_VISIT]->(old_v:Visit {id: $visit_id})
-                CREATE (new_v:Visit {id: $visit_id})
-                SET new_v += properties(old_v)
-                SET new_v.version_index = old_v.version_index + 1
-                SET new_v.created_at = datetime()
-                SET new_v.created_by = $user_id
-                SET new_v.reason_for_change = $change_reason
-                CREATE (sv)-[:HAS_VISIT]->(new_v)
-                DELETE r
-                CREATE (new_v)-[:PREVIOUS_VERSION]->(old_v)
-                CREATE (a:Action {
-                    id: $action_id,
-                    user_id: $user_id,
-                    change_reason: $change_reason,
-                    timestamp: datetime()
-                })
-                CREATE (a)-[:AFTER]->(new_v)
-                CREATE (a)-[:BEFORE]->(old_v)
-                RETURN new_v.id as id
-                """
-                await tx.run(
-                    visit_query,
-                    study_version_id=study_version_id,
-                    visit_id=v_id,
-                    user_id=user_id,
-                    change_reason=change_reason,
-                    action_id=visit_action_id,
-                )
-
-                link_query = """
-                MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_EPOCH]->(ep:Epoch {id: $epoch_id})
-                MATCH (sv)-[:HAS_VISIT]->(v:Visit {id: $visit_id})
-                MERGE (ep)-[r:HAS_VISIT]->(v)
-                CREATE (a:Action {
-                    id: $action_id,
-                    user_id: $user_id,
-                    change_reason: $change_reason,
-                    timestamp: datetime()
-                })
-                CREATE (a)-[:AFTER]->(ep)
-                """
-                await tx.run(
-                    link_query,
-                    study_version_id=study_version_id,
-                    epoch_id=epoch_id,
-                    visit_id=v_id,
-                    user_id=user_id,
-                    change_reason=change_reason,
-                    action_id=str(uuid.uuid4()),
-                )
-
-            return True
-
-
-# =====================================================================
-# Collaborative Review, Comments, Suggestions & Section Review Locking
-# =====================================================================
-
-MOCK_COLLABORATION_DATA = {
-    "section_statuses": {},  # (study_version_id, section_id) -> SectionReviewStatus
-    "threads": {},  # thread_id -> CommentThread
-    "suggestions": {},  # suggestion_id -> Suggestion
-    "transitions": [],  # list of SectionReviewTransition
-}
-
-SECTION_ALLOWED_TRANSITIONS = {
-    SectionReviewStatus.DRAFT: {
-        SectionReviewStatus.IN_REVIEW,
-        SectionReviewStatus.LOCKED,
-    },
-    SectionReviewStatus.IN_REVIEW: {
-        SectionReviewStatus.LOCKED,
-        SectionReviewStatus.DRAFT,
-    },
-    SectionReviewStatus.LOCKED: {
-        SectionReviewStatus.APPROVED,
-        SectionReviewStatus.DRAFT,
-    },
-    SectionReviewStatus.APPROVED: {SectionReviewStatus.DRAFT},
-}
+    impl = get_implementation("assign_visits_to_epoch")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        epoch_id=epoch_id,
+        visit_ids=visit_ids,
+    )
 
 
 async def get_section_status(
@@ -3203,24 +838,10 @@ async def get_section_status(
     """
     Retrieves the current review status of an ICH section.
     """
-    if driver is None:
-        key = (study_version_id, section_id)
-        return MOCK_COLLABORATION_DATA["section_statuses"].get(
-            key, SectionReviewStatus.DRAFT
-        )
-
-    query = """
-    MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_SECTION_STATUS]->(ss:SectionStatus {section_id: $section_id})
-    RETURN ss.status as status
-    """
-    async with driver.session() as session:
-        res = await session.run(
-            query, study_version_id=study_version_id, section_id=section_id
-        )
-        record = await res.single()
-        if record:
-            return SectionReviewStatus(record["status"])
-        return SectionReviewStatus.DRAFT
+    impl = get_implementation("get_section_status")
+    return await impl(
+        driver=driver, study_version_id=study_version_id, section_id=section_id
+    )
 
 
 async def assert_section_not_locked(
@@ -3229,13 +850,10 @@ async def assert_section_not_locked(
     """
     Raises ImmutabilityViolationError if the target section is in a locked or approved state.
     """
-    if not section_id:
-        return
-    status = await get_section_status(driver, study_version_id, section_id)
-    if status in (SectionReviewStatus.LOCKED, SectionReviewStatus.APPROVED):
-        raise ImmutabilityViolationError(
-            f"IMMUTABILITY_VIOLATION: Section '{section_id}' is locked (status: {status.value})."
-        )
+    impl = get_implementation("assert_section_not_locked")
+    return await impl(
+        driver=driver, study_version_id=study_version_id, section_id=section_id
+    )
 
 
 async def transition_section_status(
@@ -3251,66 +869,17 @@ async def transition_section_status(
     """
     Transitions the review status of an ICH section, complying with Part 11 and logging history.
     """
-    current_status = await get_section_status(driver, study_version_id, section_id)
-    allowed = SECTION_ALLOWED_TRANSITIONS.get(current_status, set())
-    if to_status not in allowed and to_status != current_status:
-        raise ValueError(
-            f"Invalid transition: Cannot transition section '{section_id}' from '{current_status.value}' to '{to_status.value}'."
-        )
-
-    transition_id = f"tr_{uuid.uuid4().hex[:12]}"
-    transition = SectionReviewTransition(
-        transition_id=transition_id,
+    impl = get_implementation("transition_section_status")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
         section_id=section_id,
-        study_id=study_version_id,
-        from_status=current_status,
         to_status=to_status,
         actor_id=actor_id,
         actor_role=actor_role,
         reason_for_change=reason_for_change,
-        timestamp=dt.datetime.now(dt.UTC),
+        signature_manifestation=signature_manifestation,
     )
-
-    if driver is None:
-        key = (study_version_id, section_id)
-        MOCK_COLLABORATION_DATA["section_statuses"][key] = to_status
-        MOCK_COLLABORATION_DATA["transitions"].append(transition)
-    else:
-        import json
-
-        query = """
-        MATCH (sv:StudyVersion {id: $study_version_id})
-        MERGE (sv)-[:HAS_SECTION_STATUS]->(ss:SectionStatus {section_id: $section_id})
-        SET ss.status = $to_status, ss.signature_manifestation_json = $sig_json
-        CREATE (t:SectionTransition {
-            id: $transition_id,
-            section_id: $section_id,
-            from_status: $from_status,
-            to_status: $to_status,
-            actor_id: $actor_id,
-            actor_role: $actor_role,
-            reason_for_change: $reason_for_change,
-            timestamp: datetime()
-        })
-        CREATE (sv)-[:HAS_SECTION_TRANSITION]->(t)
-        """
-        async with driver.session() as session:
-            await session.run(
-                query,
-                study_version_id=study_version_id,
-                section_id=section_id,
-                to_status=to_status.value,
-                sig_json=json.dumps(signature_manifestation)
-                if signature_manifestation
-                else None,
-                transition_id=transition_id,
-                from_status=current_status.value,
-                actor_id=actor_id,
-                actor_role=actor_role,
-                reason_for_change=reason_for_change,
-            )
-
-    return transition
 
 
 async def get_section_transitions(
@@ -3319,47 +888,10 @@ async def get_section_transitions(
     """
     Retrieves the chronological audit log of all transitions for a section.
     """
-    if driver is None:
-        return [
-            t
-            for t in MOCK_COLLABORATION_DATA["transitions"]
-            if t.study_id == study_version_id and t.section_id == section_id
-        ]
-
-    query = """
-    MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_SECTION_TRANSITION]->(t:SectionTransition {section_id: $section_id})
-    RETURN properties(t) as props
-    ORDER BY t.timestamp ASC
-    """
-    async with driver.session() as session:
-        res = await session.run(
-            query, study_version_id=study_version_id, section_id=section_id
-        )
-        records = await res.all()
-        transitions = []
-        for r in records:
-            props = dict(r["props"])
-            timestamp_val = props.get("timestamp")
-            if hasattr(timestamp_val, "to_native"):
-                dt_obj = timestamp_val.to_native()
-            else:
-                dt_obj = dt.datetime.fromisoformat(
-                    str(timestamp_val).replace("Z", "+00:00")
-                )
-            transitions.append(
-                SectionReviewTransition(
-                    transition_id=props["id"],
-                    section_id=props["section_id"],
-                    study_id=study_version_id,
-                    from_status=SectionReviewStatus(props["from_status"]),
-                    to_status=SectionReviewStatus(props["to_status"]),
-                    actor_id=props["actor_id"],
-                    actor_role=props["actor_role"],
-                    reason_for_change=props["reason_for_change"],
-                    timestamp=dt_obj,
-                )
-            )
-        return transitions
+    impl = get_implementation("get_section_transitions")
+    return await impl(
+        driver=driver, study_version_id=study_version_id, section_id=section_id
+    )
 
 
 async def create_comment_thread(
@@ -3373,77 +905,15 @@ async def create_comment_thread(
     """
     Creates a new block-anchored comment thread with the initial comment.
     """
-    await assert_section_not_locked(driver, study_version_id, section_id)
-
-    block = await get_block(driver, study_version_id, block_id)
-    if not block:
-        raise ValueError(f"Block '{block_id}' not found.")
-    block_version = block.get("version_index", 1)
-
-    thread_id = f"th_{uuid.uuid4().hex[:12]}"
-    comment_id = f"co_{uuid.uuid4().hex[:12]}"
-
-    now = dt.datetime.now(dt.UTC)
-    comment = Comment(
-        comment_id=comment_id,
-        thread_id=thread_id,
+    impl = get_implementation("create_comment_thread")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        section_id=section_id,
+        block_id=block_id,
         text=text,
         created_by=created_by,
-        created_at=now,
-        version_index=1,
     )
-    thread = CommentThread(
-        thread_id=thread_id,
-        block_id=block_id,
-        section_id=section_id,
-        study_id=study_version_id,
-        status="open",
-        created_by=created_by,
-        created_at=now,
-        block_version_index=block_version,
-        comments=[comment],
-    )
-
-    if driver is None:
-        MOCK_COLLABORATION_DATA["threads"][thread_id] = thread
-    else:
-        query = """
-        MATCH (sv:StudyVersion {id: $study_version_id})
-        CREATE (th:CommentThread {
-            id: $thread_id,
-            block_id: $block_id,
-            section_id: $section_id,
-            status: "open",
-            created_by: $created_by,
-            created_at: datetime($created_at),
-            block_version_index: $block_version
-        })
-        CREATE (sv)-[:HAS_COMMENT_THREAD]->(th)
-        CREATE (co:Comment {
-            id: $comment_id,
-            thread_id: $thread_id,
-            text: $text,
-            created_by: $created_by,
-            created_at: datetime($created_at),
-            version_index: 1
-        })
-        CREATE (th)-[:HAS_COMMENT]->(co)
-        """
-        async with driver.session() as session:
-            await session.run(
-                query,
-                study_version_id=study_version_id,
-                thread_id=thread_id,
-                block_id=block_id,
-                section_id=section_id,
-                created_by=created_by,
-                created_at=now.isoformat(),
-                block_version=block_version,
-                comment_id=comment_id,
-                text=text,
-            )
-
-    return thread
 
 
 async def get_comment_threads(
@@ -3452,71 +922,10 @@ async def get_comment_threads(
     """
     Lists all comment threads and comments for a specific section.
     """
-    if driver is None:
-        return [
-            t
-            for t in MOCK_COLLABORATION_DATA["threads"].values()
-            if t.study_id == study_version_id and t.section_id == section_id
-        ]
-
-    query = """
-    MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_COMMENT_THREAD]->(th:CommentThread {section_id: $section_id})
-    OPTIONAL MATCH (th)-[:HAS_COMMENT]->(co:Comment)
-    RETURN properties(th) as th_props, collect(properties(co)) as comments_list
-    """
-    async with driver.session() as session:
-        res = await session.run(
-            query, study_version_id=study_version_id, section_id=section_id
-        )
-        records = await res.all()
-        threads = []
-        for r in records:
-            th_props = dict(r["th_props"])
-            comments_list = [dict(c) for c in r["comments_list"] if c]
-            comments_list.sort(key=lambda x: str(x.get("created_at")))
-
-            parsed_comments = []
-            for c_prop in comments_list:
-                c_created = c_prop.get("created_at")
-                if hasattr(c_created, "to_native"):
-                    c_dt = c_created.to_native()
-                else:
-                    c_dt = dt.datetime.fromisoformat(
-                        str(c_created).replace("Z", "+00:00")
-                    )
-                parsed_comments.append(
-                    Comment(
-                        comment_id=c_prop["id"],
-                        thread_id=c_prop["thread_id"],
-                        text=c_prop["text"],
-                        created_by=c_prop["created_by"],
-                        created_at=c_dt,
-                        version_index=c_prop.get("version_index", 1),
-                    )
-                )
-
-            th_created = th_props.get("created_at")
-            if hasattr(th_created, "to_native"):
-                th_dt = th_created.to_native()
-            else:
-                th_dt = dt.datetime.fromisoformat(
-                    str(th_created).replace("Z", "+00:00")
-                )
-
-            threads.append(
-                CommentThread(
-                    thread_id=th_props["id"],
-                    block_id=th_props["block_id"],
-                    section_id=th_props["section_id"],
-                    study_id=study_version_id,
-                    status=th_props["status"],
-                    created_by=th_props["created_by"],
-                    created_at=th_dt,
-                    block_version_index=th_props["block_version_index"],
-                    comments=parsed_comments,
-                )
-            )
-        return threads
+    impl = get_implementation("get_comment_threads")
+    return await impl(
+        driver=driver, study_version_id=study_version_id, section_id=section_id
+    )
 
 
 async def add_comment_to_thread(
@@ -3529,69 +938,14 @@ async def add_comment_to_thread(
     """
     Appends a new comment to an active thread, subject to review locking.
     """
-    thread = None
-    if driver is None:
-        thread = MOCK_COLLABORATION_DATA["threads"].get(thread_id)
-    else:
-        query_find = (
-            "MATCH (th:CommentThread {id: $thread_id}) RETURN properties(th) as props"
-        )
-        async with driver.session() as session:
-            res_find = await session.run(query_find, thread_id=thread_id)
-            rec_find = await res_find.single()
-            if rec_find:
-                th_props = dict(rec_find["props"])
-                threads_list = await get_comment_threads(
-                    driver, study_version_id, th_props["section_id"]
-                )
-                for t in threads_list:
-                    if t.thread_id == thread_id:
-                        thread = t
-                        break
-
-    if not thread:
-        raise ValueError(f"CommentThread '{thread_id}' not found.")
-
-    await assert_section_not_locked(driver, study_version_id, thread.section_id)
-
-    comment_id = f"co_{uuid.uuid4().hex[:12]}"
-    now = dt.datetime.now(dt.UTC)
-    comment = Comment(
-        comment_id=comment_id,
+    impl = get_implementation("add_comment_to_thread")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
         thread_id=thread_id,
         text=text,
         created_by=created_by,
-        created_at=now,
-        version_index=1,
     )
-
-    if driver is None:
-        thread.comments.append(comment)
-    else:
-        query_add = """
-        MATCH (th:CommentThread {id: $thread_id})
-        CREATE (co:Comment {
-            id: $comment_id,
-            thread_id: $thread_id,
-            text: $text,
-            created_by: $created_by,
-            created_at: datetime($created_at),
-            version_index: 1
-        })
-        CREATE (th)-[:HAS_COMMENT]->(co)
-        """
-        async with driver.session() as session:
-            await session.run(
-                query_add,
-                thread_id=thread_id,
-                comment_id=comment_id,
-                text=text,
-                created_by=created_by,
-                created_at=now.isoformat(),
-            )
-        thread.comments.append(comment)
-
-    return thread
 
 
 async def resolve_comment_thread(
@@ -3602,42 +956,10 @@ async def resolve_comment_thread(
     """
     Sets a thread status to resolved.
     """
-    thread = None
-    if driver is None:
-        thread = MOCK_COLLABORATION_DATA["threads"].get(thread_id)
-    else:
-        query_find = (
-            "MATCH (th:CommentThread {id: $thread_id}) RETURN properties(th) as props"
-        )
-        async with driver.session() as session:
-            res_find = await session.run(query_find, thread_id=thread_id)
-            rec_find = await res_find.single()
-            if rec_find:
-                th_props = dict(rec_find["props"])
-                threads_list = await get_comment_threads(
-                    driver, study_version_id, th_props["section_id"]
-                )
-                for t in threads_list:
-                    if t.thread_id == thread_id:
-                        thread = t
-                        break
-
-    if not thread:
-        raise ValueError(f"CommentThread '{thread_id}' not found.")
-
-    await assert_section_not_locked(driver, study_version_id, thread.section_id)
-
-    if driver is None:
-        thread.status = "resolved"
-    else:
-        query_res = (
-            "MATCH (th:CommentThread {id: $thread_id}) SET th.status = 'resolved'"
-        )
-        async with driver.session() as session:
-            await session.run(query_res, thread_id=thread_id)
-        thread.status = "resolved"
-
-    return thread
+    impl = get_implementation("resolve_comment_thread")
+    return await impl(
+        driver=driver, study_version_id=study_version_id, thread_id=thread_id
+    )
 
 
 async def create_suggestion(
@@ -3651,63 +973,15 @@ async def create_suggestion(
     """
     Proposes a suggested text edit anchored to a block.
     """
-    block = await get_block(driver, study_version_id, block_id)
-    if not block:
-        raise ValueError(f"Block '{block_id}' not found.")
-
-    await assert_section_not_locked(driver, study_version_id, block.get("section_id"))
-
-    suggestion_id = f"su_{uuid.uuid4().hex[:12]}"
-    now = dt.datetime.now(dt.UTC)
-
-    suggestion = Suggestion(
-        suggestion_id=suggestion_id,
+    impl = get_implementation("create_suggestion")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
         block_id=block_id,
-        study_id=study_version_id,
         suggested_text=suggested_text,
-        original_text=block.get("text", ""),
-        status=SuggestionStatus.PENDING,
-        created_by=created_by,
-        created_at=now,
         reason=reason,
-        block_version_index=block.get("version_index", 1),
-        version_index=1,
+        created_by=created_by,
     )
-
-    if driver is None:
-        MOCK_COLLABORATION_DATA["suggestions"][suggestion_id] = suggestion
-    else:
-        query = """
-        MATCH (sv:StudyVersion {id: $study_version_id})
-        CREATE (su:Suggestion {
-            id: $suggestion_id,
-            block_id: $block_id,
-            suggested_text: $suggested_text,
-            original_text: $original_text,
-            status: "pending",
-            created_by: $created_by,
-            created_at: datetime($created_at),
-            reason: $reason,
-            block_version_index: $block_version_index,
-            version_index: 1
-        })
-        CREATE (sv)-[:HAS_SUGGESTION]->(su)
-        """
-        async with driver.session() as session:
-            await session.run(
-                query,
-                study_version_id=study_version_id,
-                suggestion_id=suggestion_id,
-                block_id=block_id,
-                suggested_text=suggested_text,
-                original_text=block.get("text", ""),
-                created_by=created_by,
-                created_at=now.isoformat(),
-                reason=reason,
-                block_version_index=block.get("version_index", 1),
-            )
-
-    return suggestion
 
 
 async def get_suggestions(
@@ -3716,62 +990,10 @@ async def get_suggestions(
     """
     Retrieves all suggestions anchored to a block.
     """
-    if driver is None:
-        return [
-            s
-            for s in MOCK_COLLABORATION_DATA["suggestions"].values()
-            if s.study_id == study_version_id and s.block_id == block_id
-        ]
-
-    query = """
-    MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_SUGGESTION]->(su:Suggestion {block_id: $block_id})
-    RETURN properties(su) as props
-    """
-    async with driver.session() as session:
-        res = await session.run(
-            query, study_version_id=study_version_id, block_id=block_id
-        )
-        records = await res.all()
-        suggestions = []
-        for r in records:
-            props = dict(r["props"])
-            created_val = props.get("created_at")
-            if hasattr(created_val, "to_native"):
-                created_dt = created_val.to_native()
-            else:
-                created_dt = dt.datetime.fromisoformat(
-                    str(created_val).replace("Z", "+00:00")
-                )
-
-            decided_dt = None
-            decided_val = props.get("decided_at")
-            if decided_val:
-                if hasattr(decided_val, "to_native"):
-                    decided_dt = decided_val.to_native()
-                else:
-                    decided_dt = dt.datetime.fromisoformat(
-                        str(decided_val).replace("Z", "+00:00")
-                    )
-
-            suggestions.append(
-                Suggestion(
-                    suggestion_id=props["id"],
-                    block_id=props["block_id"],
-                    study_id=study_version_id,
-                    suggested_text=props["suggested_text"],
-                    original_text=props["original_text"],
-                    status=SuggestionStatus(props["status"]),
-                    created_by=props["created_by"],
-                    created_at=created_dt,
-                    reason=props["reason"],
-                    decision_reason=props.get("decision_reason"),
-                    decided_by=props.get("decided_by"),
-                    decided_at=decided_dt,
-                    block_version_index=props["block_version_index"],
-                    version_index=props.get("version_index", 1),
-                )
-            )
-        return suggestions
+    impl = get_implementation("get_suggestions")
+    return await impl(
+        driver=driver, study_version_id=study_version_id, block_id=block_id
+    )
 
 
 async def decide_suggestion(
@@ -3785,104 +1007,17 @@ async def decide_suggestion(
     """
     Accepts or Rejects a suggestion. If accepted, verifies block freshness and updates text.
     """
-    suggestion = None
-    if driver is None:
-        suggestion = MOCK_COLLABORATION_DATA["suggestions"].get(suggestion_id)
-    else:
-        query_find = (
-            "MATCH (su:Suggestion {id: $suggestion_id}) RETURN properties(su) as props"
-        )
-        async with driver.session() as session:
-            res_find = await session.run(query_find, suggestion_id=suggestion_id)
-            rec_find = await res_find.single()
-            if rec_find:
-                su_props = dict(rec_find["props"])
-                s_list = await get_suggestions(
-                    driver, study_version_id, su_props["block_id"]
-                )
-                for s in s_list:
-                    if s.suggestion_id == suggestion_id:
-                        suggestion = s
-                        break
-
-    if not suggestion:
-        raise ValueError(f"Suggestion '{suggestion_id}' not found.")
-
-    if suggestion.status != SuggestionStatus.PENDING:
-        raise ValueError("Suggestion is already resolved.")
-
-    block = await get_block(driver, study_version_id, suggestion.block_id)
-    if not block:
-        raise ValueError(f"Block '{suggestion.block_id}' not found.")
-
-    await assert_section_not_locked(driver, study_version_id, block.get("section_id"))
-
-    now = dt.datetime.now(dt.UTC)
-
-    if decision == "accept":
-        # Check stale-version
-        if suggestion.block_version_index != block.get("version_index", 1):
-            raise ConcurrentLockingError(
-                "CONCURRENT_LOCKING_CONFLICT: Suggestion was made on a stale block version."
-            )
-
-        # Mutate the block text!
-        properties = dict(block)
-        for k in (
-            "id",
-            "version_index",
-            "created_by",
-            "created_at",
-            "reason_for_change",
-        ):
-            properties.pop(k, None)
-        properties["text"] = suggestion.suggested_text
-
-        await update_block(
-            driver,
-            study_version_id,
-            decided_by,
-            f"Accept suggestion {suggestion_id}: {decision_reason}",
-            suggestion.block_id,
-            properties,
-        )
-
-        status_val = SuggestionStatus.ACCEPTED
-    else:
-        status_val = SuggestionStatus.REJECTED
-
-    suggestion.status = status_val
-    suggestion.decided_by = decided_by
-    suggestion.decided_at = now
-    suggestion.decision_reason = decision_reason
-    suggestion.version_index += 1
-
-    if driver is not None:
-        query = """
-        MATCH (su:Suggestion {id: $suggestion_id})
-        SET su.status = $status,
-            su.decided_by = $decided_by,
-            su.decided_at = datetime($decided_at),
-            su.decision_reason = $decision_reason,
-            su.version_index = su.version_index + 1
-        """
-        async with driver.session() as session:
-            await session.run(
-                query,
-                suggestion_id=suggestion_id,
-                status=status_val.value,
-                decided_by=decided_by,
-                decided_at=now.isoformat(),
-                decision_reason=decision_reason,
-            )
-
-    return suggestion
+    impl = get_implementation("decide_suggestion")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        suggestion_id=suggestion_id,
+        decision=decision,
+        decided_by=decided_by,
+        decision_reason=decision_reason,
+    )
 
 
-_approval_locks: dict[str, asyncio.Lock] = {}
-
-
-@with_transaction_retry()
 async def approve_study_version_delta(
     driver,
     study_id: str,
@@ -3895,217 +1030,17 @@ async def approve_study_version_delta(
     Saves the APPROVED status and the signature manifestation in the study version record
     and records an Action in the append-only history.
     """
-    import os
-
-    from packages.security.signing import generate_canonical_signature
-
-    if driver is None:
-        if version_id not in _approval_locks:
-            _approval_locks[version_id] = asyncio.Lock()
-
-        if _approval_locks[version_id].locked():
-            raise ConcurrentLockingError("CONCURRENT_LOCKING_CONFLICT")
-
-        async with _approval_locks[version_id]:
-            from apps.designer.db import MOCK_STUDIES, MOCK_STUDY_VERSIONS
-
-            # Find version record
-            versions = MOCK_STUDY_VERSIONS.get(study_id, [])
-            ver_record = None
-            for v in versions:
-                if v.get("id") == version_id:
-                    ver_record = v
-                    break
-            if not ver_record:
-                raise ValueError(
-                    f"StudyVersion {version_id} not found under Study {study_id}"
-                )
-
-            # Check immutability
-            status = ver_record.get("status")
-            if status in ("APPROVED", "SIGNED", "LOCKED", "PUBLISHED", "ARCHIVED"):
-                raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
-
-            # Update status
-            ver_record["status"] = "APPROVED"
-            ver_record["signature_manifestation"] = signature_manifestation_payload
-            ver_record["signer"] = user_id
-            ver_record["signing_timestamp"] = signature_manifestation_payload.get(
-                "timestamp"
-            )
-
-            # Regenerate StudyVersion signature
-            payload_to_sign = {
-                "id": ver_record.get("id") or "legacy_ver",
-                "version_tag": ver_record.get("version_tag") or "1.0",
-                "status": "APPROVED",
-                "version_index": ver_record.get("version_index") or 1,
-                "created_by": ver_record.get("created_by") or "system",
-            }
-            if "created_at" in ver_record:
-                payload_to_sign["created_at"] = str(ver_record["created_at"])
-            if "parent_version" in ver_record:
-                payload_to_sign["parent_version"] = ver_record["parent_version"]
-            if "branch_name" in ver_record and ver_record["branch_name"] is not None:
-                payload_to_sign["branch_name"] = ver_record["branch_name"]
-            if "base_version" in ver_record and ver_record["base_version"] is not None:
-                payload_to_sign["base_version"] = ver_record["base_version"]
-
-            secret_env = os.getenv("SIGNING_SECRET")
-            if not secret_env:
-                raise RuntimeError("SIGNING_SECRET environment variable is missing")
-            secret = secret_env.encode("utf-8")
-            ver_record["signature"] = generate_canonical_signature(
-                payload_to_sign, secret
-            )
-
-            # Record in action history
-            action_id = str(uuid.uuid4())
-            action_record = {
-                "id": action_id,
-                "user_id": user_id,
-                "change_reason": change_reason,
-                "timestamp": dt.datetime.now().isoformat(),
-                "type": "APPROVAL",
-                "signature_manifestation": signature_manifestation_payload,
-            }
-            if study_id in MOCK_STUDIES:
-                if "actions" not in MOCK_STUDIES[study_id]:
-                    MOCK_STUDIES[study_id]["actions"] = []
-                MOCK_STUDIES[study_id]["actions"].append(action_record)
-
-            return {
-                "study_id": study_id,
-                "version_id": version_id,
-                "status": "APPROVED",
-                "signature_manifestation": signature_manifestation_payload,
-            }
-
-    # Neo4j implementation
-    import json
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            # Exclusively lock Study root and StudyVersion
-            lock_query = """
-            MATCH (s:Study {id: $study_id})
-            SET s._lock = true
-            RETURN s.id as id
-            """
-            await tx.run(lock_query, study_id=study_id)
-
-            lock_ver_query = """
-            MATCH (sv:StudyVersion {id: $version_id})
-            SET sv._lock = true
-            RETURN sv.id as id
-            """
-            await tx.run(lock_ver_query, version_id=version_id)
-
-            # Retrieve StudyVersion properties
-            ver_query = """
-            MATCH (sv:StudyVersion {id: $version_id})
-            RETURN sv {.*} as version_props
-            """
-            ver_res = await tx.run(ver_query, version_id=version_id)
-            ver_record = await ver_res.single()
-            if not ver_record:
-                raise ValueError(f"StudyVersion {version_id} not found")
-            version_props = dict(ver_record["version_props"])
-
-            # Check immutability
-            status = version_props.get("status")
-            if status in ("APPROVED", "SIGNED", "LOCKED", "PUBLISHED", "ARCHIVED"):
-                raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
-
-            # Regenerate canonical signature for status="APPROVED"
-            payload_to_sign = {
-                "id": version_props.get("id") or "legacy_ver",
-                "version_tag": version_props.get("version_tag") or "1.0",
-                "status": "APPROVED",
-                "version_index": version_props.get("version_index") or 1,
-                "created_by": version_props.get("created_by") or "system",
-            }
-            created_at = version_props.get("created_at")
-            if created_at is not None:
-                if hasattr(created_at, "isoformat"):
-                    created_at_val = created_at.isoformat()
-                else:
-                    created_at_val = str(created_at)
-                payload_to_sign["created_at"] = created_at_val
-            if "parent_version" in version_props:
-                payload_to_sign["parent_version"] = version_props["parent_version"]
-            if (
-                "branch_name" in version_props
-                and version_props["branch_name"] is not None
-            ):
-                payload_to_sign["branch_name"] = version_props["branch_name"]
-            if (
-                "base_version" in version_props
-                and version_props["base_version"] is not None
-            ):
-                payload_to_sign["base_version"] = version_props["base_version"]
-
-            secret_env = os.getenv("SIGNING_SECRET")
-            if not secret_env:
-                raise RuntimeError("SIGNING_SECRET environment variable is missing")
-            secret = secret_env.encode("utf-8")
-            new_signature = generate_canonical_signature(payload_to_sign, secret)
-
-            # Update StudyVersion node with approved status and signature manifestation
-            update_ver_query = """
-            MATCH (sv:StudyVersion {id: $version_id})
-            SET sv.status = "APPROVED",
-                sv.signature = $new_signature,
-                sv.signature_manifestation_json = $manifestation_json,
-                sv.signature_manifestation = $manifestation_json,
-                sv.signer = $signer,
-                sv.signing_timestamp = $signing_timestamp
-            """
-            await tx.run(
-                update_ver_query,
-                version_id=version_id,
-                new_signature=new_signature,
-                manifestation_json=json.dumps(signature_manifestation_payload),
-                signer=user_id,
-                signing_timestamp=signature_manifestation_payload.get("timestamp"),
-            )
-
-            # Create Action node
-            action_id = str(uuid.uuid4())
-            action_query = """
-            MATCH (sv:StudyVersion {id: $version_id})
-            MATCH (s:Study {id: $study_id})
-            CREATE (a:Action {
-                id: $action_id,
-                type: "APPROVAL",
-                user_id: $user_id,
-                change_reason: $change_reason,
-                timestamp: datetime(),
-                signature_manifestation_json: $manifestation_json
-            })
-            CREATE (s)-[:HAS_ACTION]->(a)
-            CREATE (a)-[:AFTER]->(sv)
-            """
-            await tx.run(
-                action_query,
-                study_id=study_id,
-                version_id=version_id,
-                action_id=action_id,
-                user_id=user_id,
-                change_reason=change_reason,
-                manifestation_json=json.dumps(signature_manifestation_payload),
-            )
-
-            return {
-                "study_id": study_id,
-                "version_id": version_id,
-                "status": "APPROVED",
-                "signature_manifestation": signature_manifestation_payload,
-            }
+    impl = get_implementation("approve_study_version_delta")
+    return await impl(
+        driver=driver,
+        study_id=study_id,
+        version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        signature_manifestation_payload=signature_manifestation_payload,
+    )
 
 
-@with_transaction_retry()
 async def link_visit_to_procedure(
     driver,
     study_version_id: str,
@@ -4114,55 +1049,15 @@ async def link_visit_to_procedure(
     visit_id: str,
     procedure_id: str,
 ) -> bool:
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        links = MOCK_SOA_DATA[study_version_id]["links"]
-        link = {"type": "visit_procedure", "from_id": visit_id, "to_id": procedure_id}
-        if link not in links:
-            links.append(link)
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "link": link,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return True
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_VISIT]->(v:Visit {id: $visit_id})
-            MATCH (sv)-[:HAS_PROCEDURE]->(p:Procedure {id: $procedure_id})
-            MERGE (v)-[r:HAS_PROCEDURE]->(p)
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $user_id,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(v)
-            RETURN true as success
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                visit_id=visit_id,
-                procedure_id=procedure_id,
-                user_id=user_id,
-                change_reason=change_reason,
-                action_id=str(uuid.uuid4()),
-            )
-            record = await res.single()
-            return record["success"] if record else False
+    impl = get_implementation("link_visit_to_procedure")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        visit_id=visit_id,
+        procedure_id=procedure_id,
+    )
 
 
 async def assign_activities_to_visit(
@@ -4176,19 +1071,17 @@ async def assign_activities_to_visit(
     """
     Links multiple procedures (activities) to a visit, reusing link_visit_to_procedure.
     """
-    for procedure_id in procedure_ids:
-        await link_visit_to_procedure(
-            driver,
-            study_version_id,
-            user_id,
-            change_reason,
-            visit_id,
-            procedure_id,
-        )
-    return True
+    impl = get_implementation("assign_activities_to_visit")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        visit_id=visit_id,
+        procedure_ids=procedure_ids,
+    )
 
 
-@with_transaction_retry()
 async def link_visit_or_procedure_to_timing(
     driver,
     study_version_id: str,
@@ -4198,71 +1091,18 @@ async def link_visit_or_procedure_to_timing(
     timing_id: str,
     source_type: str = "visit",
 ) -> bool:
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        links = MOCK_SOA_DATA[study_version_id]["links"]
-        link = {
-            "type": "timing",
-            "from_id": source_id,
-            "to_id": timing_id,
-            "source_type": source_type,
-        }
-        if link not in links:
-            links.append(link)
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "link": link,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return True
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})
-            MATCH (t:TimingWindow {id: $timing_id})
-            WHERE (sv)-[:HAS_TIMING_WINDOW]->(t)
-
-            WITH sv, t
-            MATCH (src)
-            WHERE (src:Visit AND $source_type = "visit" AND (sv)-[:HAS_VISIT]->(src) AND src.id = $source_id)
-               OR (src:Procedure AND $source_type = "procedure" AND (sv)-[:HAS_PROCEDURE]->(src) AND src.id = $source_id)
-
-            MERGE (src)-[r:HAS_TIMING]->(t)
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $user_id,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(src)
-            RETURN true as success
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                source_id=source_id,
-                timing_id=timing_id,
-                source_type=source_type,
-                user_id=user_id,
-                change_reason=change_reason,
-                action_id=str(uuid.uuid4()),
-            )
-            record = await res.single()
-            return record["success"] if record else False
+    impl = get_implementation("link_visit_or_procedure_to_timing")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        source_id=source_id,
+        timing_id=timing_id,
+        source_type=source_type,
+    )
 
 
-@with_transaction_retry()
 async def link_arm_applicability(
     driver,
     study_version_id: str,
@@ -4272,69 +1112,16 @@ async def link_arm_applicability(
     target_id: str,
     target_type: str = "visit",
 ) -> bool:
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        links = MOCK_SOA_DATA[study_version_id]["links"]
-        link = {
-            "type": "arm_applicability",
-            "from_id": arm_id,
-            "to_id": target_id,
-            "target_type": target_type,
-        }
-        if link not in links:
-            links.append(link)
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "link": link,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return True
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})
-            MATCH (arm:StudyArm {id: $arm_id})
-            WHERE (sv)-[:HAS_ARM]->(arm)
-
-            WITH sv, arm
-            MATCH (tgt)
-            WHERE (tgt:Visit AND $target_type = "visit" AND (sv)-[:HAS_VISIT]->(tgt) AND tgt.id = $target_id)
-               OR (tgt:Procedure AND $target_type = "procedure" AND (sv)-[:HAS_PROCEDURE]->(tgt) AND tgt.id = $target_id)
-               OR (tgt:Epoch AND $target_type = "epoch" AND (sv)-[:HAS_EPOCH]->(tgt) AND tgt.id = $target_id)
-
-            MERGE (arm)-[r:APPLICABLE_TO]->(tgt)
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $user_id,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(arm)
-            RETURN true as success
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                arm_id=arm_id,
-                target_id=target_id,
-                target_type=target_type,
-                user_id=user_id,
-                change_reason=change_reason,
-                action_id=str(uuid.uuid4()),
-            )
-            record = await res.single()
-            return record["success"] if record else False
+    impl = get_implementation("link_arm_applicability")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        arm_id=arm_id,
+        target_id=target_id,
+        target_type=target_type,
+    )
 
 
 async def get_soa_matrix_projection(driver, study_version_id: str) -> dict[str, Any]:
@@ -4343,295 +1130,10 @@ async def get_soa_matrix_projection(driver, study_version_id: str) -> dict[str, 
     Consistently handles both real Neo4j driver or the mock/in-memory fallback, and
     excludes retired/deleted data from the projection.
     """
-    if driver is None:
-        _init_mock_soa(study_version_id)
-        data = MOCK_SOA_DATA[study_version_id]
-
-        raw_epochs = [
-            ep
-            for ep in data["epochs"].values()
-            if not ep.get("is_retired") and not ep.get("is_deleted")
-        ]
-        raw_encounters = [
-            v
-            for v in data["visits"].values()
-            if not v.get("is_retired") and not v.get("is_deleted")
-        ]
-        raw_procedures = [
-            p
-            for p in data["procedures"].values()
-            if not p.get("is_retired") and not p.get("is_deleted")
-        ]
-        _raw_arms = [
-            sa
-            for sa in data["arms"].values()
-            if not sa.get("is_retired") and not sa.get("is_deleted")
-        ]
-
-        epoch_visit_links = [
-            {"epoch_id": L["from_id"], "visit_id": L["to_id"]}
-            for L in data["links"]
-            if L["type"] == "epoch_visit"
-            and L["from_id"] in data["epochs"]
-            and not data["epochs"][L["from_id"]].get("is_retired")
-            and not data["epochs"][L["from_id"]].get("is_deleted")
-            and L["to_id"] in data["visits"]
-            and not data["visits"][L["to_id"]].get("is_retired")
-            and not data["visits"][L["to_id"]].get("is_deleted")
-        ]
-        visit_proc_links = [
-            {"visit_id": L["from_id"], "procedure_id": L["to_id"]}
-            for L in data["links"]
-            if L["type"] == "visit_procedure"
-            and L["from_id"] in data["visits"]
-            and not data["visits"][L["from_id"]].get("is_retired")
-            and not data["visits"][L["from_id"]].get("is_deleted")
-            and L["to_id"] in data["procedures"]
-            and not data["procedures"][L["to_id"]].get("is_retired")
-            and not data["procedures"][L["to_id"]].get("is_deleted")
-        ]
-        visit_timing = [
-            {"visit_id": L["from_id"], "timing_name": L["to_id"]}
-            for L in data["links"]
-            if L["type"] == "timing"
-            and L["source_type"] == "visit"
-            and L["from_id"] in data["visits"]
-            and not data["visits"][L["from_id"]].get("is_retired")
-            and not data["visits"][L["from_id"]].get("is_deleted")
-            and L["to_id"] in data["timing_windows"]
-            and not data["timing_windows"][L["to_id"]].get("is_retired")
-            and not data["timing_windows"][L["to_id"]].get("is_deleted")
-        ]
-        proc_timing = [
-            {"procedure_id": L["from_id"], "timing_name": L["to_id"]}
-            for L in data["links"]
-            if L["type"] == "timing"
-            and L["source_type"] == "procedure"
-            and L["from_id"] in data["procedures"]
-            and not data["procedures"][L["from_id"]].get("is_retired")
-            and not data["procedures"][L["from_id"]].get("is_deleted")
-            and L["to_id"] in data["timing_windows"]
-            and not data["timing_windows"][L["to_id"]].get("is_retired")
-            and not data["timing_windows"][L["to_id"]].get("is_deleted")
-        ]
-        # Extracted arm applicability links
-        arm_applicability_links = [
-            {
-                "arm_id": L["from_id"],
-                "target_id": L["to_id"],
-                "target_type": L["target_type"],
-            }
-            for L in data["links"]
-            if L["type"] == "arm_applicability"
-            and L["from_id"] in data["arms"]
-            and not data["arms"][L["from_id"]].get("is_retired")
-            and not data["arms"][L["from_id"]].get("is_deleted")
-        ]
-    else:
-        async with driver.session() as session:
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})
-            OPTIONAL MATCH (sv)-[:HAS_EPOCH]->(ep:Epoch)
-            OPTIONAL MATCH (sv)-[:HAS_VISIT]->(v:Visit)
-            OPTIONAL MATCH (sv)-[:HAS_PROCEDURE]->(p:Procedure)
-            OPTIONAL MATCH (sv)-[:HAS_ARM]->(sa:StudyArm)
-
-            OPTIONAL MATCH (ep)-[:HAS_VISIT]->(v)
-            OPTIONAL MATCH (v)-[:HAS_PROCEDURE]->(p)
-            OPTIONAL MATCH (v)-[:HAS_TIMING]->(tw_v:TimingWindow)
-            OPTIONAL MATCH (p)-[:HAS_TIMING]->(tw_p:TimingWindow)
-
-            OPTIONAL MATCH (sa)-[:APPLICABLE_TO]->(tgt)
-            RETURN
-                collect(distinct ep {.*}) as epochs,
-                collect(distinct v {.*}) as encounters,
-                collect(distinct p {.*}) as procedures,
-                collect(distinct sa {.*}) as arms,
-                collect(distinct {epoch_id: ep.id, visit_id: v.id}) as epoch_visit_links,
-                collect(distinct {visit_id: v.id, procedure_id: p.id}) as visit_proc_links,
-                collect(distinct {visit_id: v.id, timing_name: tw_v.name, is_retired: tw_v.is_retired, is_deleted: tw_v.is_deleted}) as visit_timing,
-                collect(distinct {procedure_id: p.id, timing_name: tw_p.name, is_retired: tw_p.is_retired, is_deleted: tw_p.is_deleted}) as proc_timing,
-                collect(distinct {arm_id: sa.id, target_id: tgt.id, target_type: labels(tgt)[0]}) as applicability_links
-            """
-            res = await session.run(query, study_version_id=study_version_id)
-            record = await res.single()
-            if not record:
-                return {"epochs": [], "encounters": [], "rows": [], "arms": []}
-
-            raw_epochs = [
-                e
-                for e in (record.get("epochs") or [])
-                if e and not e.get("is_retired") and not e.get("is_deleted")
-            ]
-            raw_encounters = [
-                e
-                for e in (record.get("encounters") or [])
-                if e and not e.get("is_retired") and not e.get("is_deleted")
-            ]
-            raw_procedures = [
-                e
-                for e in (record.get("procedures") or [])
-                if e and not e.get("is_retired") and not e.get("is_deleted")
-            ]
-            _raw_arms = [
-                e
-                for e in (record.get("arms") or [])
-                if e and not e.get("is_retired") and not e.get("is_deleted")
-            ]
-
-            epoch_visit_links = record.get("epoch_visit_links") or []
-            visit_proc_links = record.get("visit_proc_links") or []
-
-            visit_timing = [
-                vt
-                for vt in (record.get("visit_timing") or [])
-                if vt and not vt.get("is_retired") and not vt.get("is_deleted")
-            ]
-            proc_timing = [
-                pt
-                for pt in (record.get("proc_timing") or [])
-                if pt and not pt.get("is_retired") and not pt.get("is_deleted")
-            ]
-
-            arm_applicability_links = record.get("applicability_links") or []
-
-    # Map raw arms to SoAHeaderArm shape
-    arms_list = []
-    seen_arms = set()
-    for sa in _raw_arms:
-        if not sa or sa.get("id") is None:
-            continue
-        sa_id = sa["id"]
-        if sa_id not in seen_arms:
-            arms_list.append(
-                {
-                    "arm_id": sa_id,
-                    "arm_name": sa.get("name") or sa_id,
-                    "sequence": int(sa.get("sequence") or len(arms_list) + 1),
-                }
-            )
-            seen_arms.add(sa_id)
-    arms_list.sort(key=lambda x: x["sequence"])
-
-    # Target to Arm mapping
-    target_to_arm = {}
-    for app in arm_applicability_links:
-        t_id = app.get("target_id")
-        a_id = app.get("arm_id")
-        if t_id and a_id:
-            target_to_arm[t_id] = a_id
-
-    # Map raw epochs to SoAHeaderEpoch shape
-    epochs_list = []
-    seen_epochs = set()
-    for ep in raw_epochs:
-        if not ep or ep.get("id") is None:
-            continue
-        ep_id = ep["id"]
-        if ep_id not in seen_epochs:
-            epochs_list.append(
-                {
-                    "epoch_id": ep_id,
-                    "epoch_name": ep.get("name") or ep.get("epoch_name") or ep_id,
-                    "sequence": int(ep.get("sequence") or 1),
-                    "arm_id": target_to_arm.get(ep_id),
-                }
-            )
-            seen_epochs.add(ep_id)
-    epochs_list.sort(key=lambda x: x["sequence"])
-
-    default_epoch_id = epochs_list[0]["epoch_id"] if epochs_list else ""
-
-    # Map epoch visit links
-    visit_to_epoch_map = {}
-    for ev in epoch_visit_links:
-        if ev and ev.get("visit_id") and ev.get("epoch_id"):
-            visit_to_epoch_map[ev["visit_id"]] = ev["epoch_id"]
-
-    # Map raw encounters to SoAHeaderEncounter shape
-    encounters_list = []
-    seen_encs = set()
-    for v in raw_encounters:
-        if not v or v.get("id") is None:
-            continue
-        v_id = v["id"]
-        if v_id not in seen_encs:
-            ep_id = visit_to_epoch_map.get(v_id) or default_epoch_id
-            encounters_list.append(
-                {
-                    "encounter_id": v_id,
-                    "encounter_name": v.get("name") or v.get("encounter_name") or v_id,
-                    "epoch_id": ep_id,
-                    "sequence": int(v.get("sequence") or 1),
-                    "arm_id": target_to_arm.get(v_id),
-                }
-            )
-            seen_encs.add(v_id)
-    encounters_list.sort(key=lambda x: x["sequence"])
-
-    # Map timing windows
-    timing_map = {}
-    for vt in visit_timing:
-        if vt and vt.get("visit_id") and vt.get("timing_name"):
-            timing_map[vt["visit_id"]] = vt["timing_name"]
-    for pt in proc_timing:
-        if pt and pt.get("procedure_id") and pt.get("timing_name"):
-            timing_map[pt["procedure_id"]] = pt["timing_name"]
-
-    # Map applicable links
-    applicability_set = set()
-    for vp in visit_proc_links:
-        if vp and vp.get("visit_id") and vp.get("procedure_id"):
-            applicability_set.add((vp["visit_id"], vp["procedure_id"]))
-
-    # Map rows to SoARowView shape
-    rows_list = []
-    seen_procs = set()
-    for p in raw_procedures:
-        if not p or p.get("id") is None:
-            continue
-        p_id = p["id"]
-        if p_id not in seen_procs:
-            cells = []
-            for enc in encounters_list:
-                enc_id = enc["encounter_id"]
-                ep_id = enc["epoch_id"]
-                is_applicable = (enc_id, p_id) in applicability_set
-
-                # Fetch timing window details if applicable
-                details = None
-                if is_applicable:
-                    details = timing_map.get(enc_id) or timing_map.get(p_id)
-
-                cells.append(
-                    {
-                        "activity_id": p_id,
-                        "encounter_id": enc_id,
-                        "epoch_id": ep_id,
-                        "is_applicable": is_applicable,
-                        "details": details,
-                        "arm_id": target_to_arm.get(enc_id) or target_to_arm.get(p_id),
-                    }
-                )
-
-            rows_list.append(
-                {
-                    "activity_id": p_id,
-                    "activity_name": p.get("name") or p.get("activity_name") or p_id,
-                    "cells": cells,
-                }
-            )
-            seen_procs.add(p_id)
-
-    return {
-        "epochs": epochs_list,
-        "encounters": encounters_list,
-        "rows": rows_list,
-        "arms": arms_list,
-    }
+    impl = get_implementation("get_soa_matrix_projection")
+    return await impl(driver=driver, study_version_id=study_version_id)
 
 
-@with_transaction_retry()
 async def create_block(
     driver,
     study_version_id: str,
@@ -4640,90 +1142,17 @@ async def create_block(
     block_id: str,
     properties: dict[str, Any],
 ) -> str:
-    await assert_section_not_locked(
-        driver, study_version_id, properties.get("section_id")
+    impl = get_implementation("create_block")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        block_id=block_id,
+        properties=properties,
     )
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        store = MOCK_SOA_DATA[study_version_id]["blocks"]
-        if block_id in store:
-            raise ConcurrentLockingError("Block already exists")
-        node = {
-            "id": block_id,
-            "block_id": block_id,
-            "version_index": 1,
-            "created_by": user_id,
-            "created_at": dt.datetime.now().isoformat(),
-            "reason_for_change": change_reason,
-            "is_deleted": False,
-            **properties,
-        }
-        store[block_id] = node
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "before": None,
-            "after": node,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return block_id
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            check = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_BLOCK]->(b:ProtocolBlock {id: $block_id}) RETURN b.id",
-                study_version_id=study_version_id,
-                block_id=block_id,
-            )
-            if await check.single():
-                raise ConcurrentLockingError("Block already exists")
-
-            action_id = str(uuid.uuid4())
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})
-            CREATE (b:ProtocolBlock {
-                id: $block_id,
-                block_id: $block_id,
-                version_index: 1,
-                created_at: datetime(),
-                created_by: $created_by,
-                reason_for_change: $change_reason,
-                is_deleted: false
-            })
-            SET b += $properties
-            CREATE (sv)-[:HAS_BLOCK]->(b)
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $created_by,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(b)
-            RETURN b.id as id
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                block_id=block_id,
-                created_by=user_id,
-                change_reason=change_reason,
-                action_id=action_id,
-                properties=properties,
-            )
-            record = await res.single()
-            return record["id"]
 
 
-@with_transaction_retry()
 async def update_block(
     driver,
     study_version_id: str,
@@ -4732,97 +1161,17 @@ async def update_block(
     block_id: str,
     properties: dict[str, Any],
 ) -> str:
-    existing_block = await get_block(driver, study_version_id, block_id)
-    if existing_block:
-        await assert_section_not_locked(
-            driver, study_version_id, existing_block.get("section_id")
-        )
-    await assert_section_not_locked(
-        driver, study_version_id, properties.get("section_id")
+    impl = get_implementation("update_block")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        block_id=block_id,
+        properties=properties,
     )
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        store = MOCK_SOA_DATA[study_version_id]["blocks"]
-        if block_id not in store:
-            raise ValueError(f"Block {block_id} not found")
-        old_node = store[block_id]
-        new_node = {
-            **old_node,
-            "version_index": old_node["version_index"] + 1,
-            "created_by": user_id,
-            "created_at": dt.datetime.now().isoformat(),
-            "reason_for_change": change_reason,
-            **properties,
-        }
-        store[block_id] = new_node
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "before": old_node,
-            "after": new_node,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return block_id
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            check = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_BLOCK]->(old_b:ProtocolBlock {id: $block_id}) RETURN old_b.id",
-                study_version_id=study_version_id,
-                block_id=block_id,
-            )
-            if not await check.single():
-                raise ValueError(f"Block {block_id} not found")
-
-            action_id = str(uuid.uuid4())
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_BLOCK]->(old_b:ProtocolBlock {id: $block_id})
-            CREATE (new_b:ProtocolBlock {
-                id: $block_id,
-                block_id: $block_id,
-                version_index: old_b.version_index + 1,
-                created_at: datetime(),
-                created_by: $created_by,
-                reason_for_change: $change_reason,
-                is_deleted: false
-            })
-            SET new_b += $properties
-            CREATE (sv)-[:HAS_BLOCK]->(new_b)
-            DELETE r
-            CREATE (new_b)-[:PREVIOUS_VERSION]->(old_b)
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $created_by,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(new_b)
-            CREATE (a)-[:BEFORE]->(old_b)
-            RETURN new_b.id as id
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                block_id=block_id,
-                created_by=user_id,
-                change_reason=change_reason,
-                action_id=action_id,
-                properties=properties,
-            )
-            record = await res.single()
-            return record["id"]
 
 
-@with_transaction_retry()
 async def delete_block(
     driver,
     study_version_id: str,
@@ -4830,91 +1179,14 @@ async def delete_block(
     change_reason: str,
     block_id: str,
 ) -> str:
-    existing_block = await get_block(driver, study_version_id, block_id)
-    if existing_block:
-        await assert_section_not_locked(
-            driver, study_version_id, existing_block.get("section_id")
-        )
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        store = MOCK_SOA_DATA[study_version_id]["blocks"]
-        if block_id not in store:
-            raise ValueError(f"Block {block_id} not found")
-        old_node = store[block_id]
-        new_node = {
-            **old_node,
-            "version_index": old_node["version_index"] + 1,
-            "created_by": user_id,
-            "created_at": dt.datetime.now().isoformat(),
-            "reason_for_change": change_reason,
-            "is_deleted": True,
-        }
-        store[block_id] = new_node
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "before": old_node,
-            "after": new_node,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return block_id
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            check = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_BLOCK]->(old_b:ProtocolBlock {id: $block_id}) RETURN old_b.id",
-                study_version_id=study_version_id,
-                block_id=block_id,
-            )
-            if not await check.single():
-                raise ValueError(f"Block {block_id} not found")
-
-            action_id = str(uuid.uuid4())
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_BLOCK]->(old_b:ProtocolBlock {id: $block_id})
-            CREATE (new_b:ProtocolBlock {
-                id: $block_id,
-                block_id: $block_id,
-                version_index: old_b.version_index + 1,
-                created_at: datetime(),
-                created_by: $created_by,
-                reason_for_change: $change_reason,
-                is_deleted: true
-            })
-            SET new_b += properties(old_b)
-            SET new_b.is_deleted = true
-            CREATE (sv)-[:HAS_BLOCK]->(new_b)
-            DELETE r
-            CREATE (new_b)-[:PREVIOUS_VERSION]->(old_b)
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $created_by,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(new_b)
-            CREATE (a)-[:BEFORE]->(old_b)
-            RETURN new_b.id as id
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                block_id=block_id,
-                created_by=user_id,
-                change_reason=change_reason,
-                action_id=action_id,
-            )
-            record = await res.single()
-            return record["id"]
+    impl = get_implementation("delete_block")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        block_id=block_id,
+    )
 
 
 async def get_block(
@@ -4922,55 +1194,20 @@ async def get_block(
     study_version_id: str,
     block_id: str,
 ) -> dict[str, Any] | None:
-    if driver is None:
-        _init_mock_soa(study_version_id)
-        block = MOCK_SOA_DATA[study_version_id]["blocks"].get(block_id)
-        if block and not block.get("is_deleted", False):
-            return block
-        return None
-
-    query = """
-    MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_BLOCK]->(b:ProtocolBlock {id: $block_id})
-    WHERE b.is_deleted = false
-    RETURN properties(b) as props
-    """
-    async with driver.session() as session:
-        res = await session.run(
-            query, study_version_id=study_version_id, block_id=block_id
-        )
-        record = await res.single()
-        if record:
-            return dict(record["props"])
-        return None
+    impl = get_implementation("get_block")
+    return await impl(
+        driver=driver, study_version_id=study_version_id, block_id=block_id
+    )
 
 
 async def list_blocks(
     driver,
     study_version_id: str,
 ) -> list[dict[str, Any]]:
-    if driver is None:
-        _init_mock_soa(study_version_id)
-        blocks = [
-            b
-            for b in MOCK_SOA_DATA[study_version_id]["blocks"].values()
-            if not b.get("is_deleted", False)
-        ]
-        blocks.sort(key=lambda x: x.get("order", 0))
-        return blocks
-
-    query = """
-    MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_BLOCK]->(b:ProtocolBlock)
-    WHERE b.is_deleted = false
-    RETURN properties(b) as props
-    ORDER BY b.order ASC
-    """
-    async with driver.session() as session:
-        res = await session.run(query, study_version_id=study_version_id)
-        records = await res.all()
-        return [dict(r["props"]) for r in records]
+    impl = get_implementation("list_blocks")
+    return await impl(driver=driver, study_version_id=study_version_id)
 
 
-@with_transaction_retry()
 async def reorder_blocks(
     driver,
     study_version_id: str,
@@ -4978,128 +1215,16 @@ async def reorder_blocks(
     change_reason: str,
     block_ids_ordered: list[str],
 ) -> bool:
-    for b_id in block_ids_ordered:
-        existing_block = await get_block(driver, study_version_id, b_id)
-        if existing_block:
-            await assert_section_not_locked(
-                driver, study_version_id, existing_block.get("section_id")
-            )
-    # 1. Perform mock path reorder
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        store = MOCK_SOA_DATA[study_version_id]["blocks"]
-
-        # Validate that the supplied block_ids exist
-        for b_id in block_ids_ordered:
-            if b_id not in store or store[b_id].get("is_deleted", False):
-                raise ValueError(f"Block {b_id} not found or is deleted")
-
-        action_id = str(uuid.uuid4())
-        action_log = {
-            "id": action_id,
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "type": "REORDER",
-            "before_order": {b_id: store[b_id]["order"] for b_id in block_ids_ordered},
-            "after_order": {},
-        }
-
-        # Sequence-assign orders
-        for idx, b_id in enumerate(block_ids_ordered):
-            old_node = store[b_id]
-            new_node = {
-                **old_node,
-                "order": idx + 1,
-                "version_index": old_node["version_index"] + 1,
-                "created_by": user_id,
-                "created_at": dt.datetime.now().isoformat(),
-                "reason_for_change": change_reason,
-            }
-            store[b_id] = new_node
-            action_log["after_order"][b_id] = idx + 1
-
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action_log)
-        return True
-
-    # 2. Neo4j transaction-safe atomic path reorder
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            # Take pessimistic lock on StudyVersion
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-
-            # Retrieve existing active blocks to validate
-            existing_res = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_BLOCK]->(b:ProtocolBlock) WHERE b.is_deleted = false RETURN b.id as id",
-                study_version_id=study_version_id,
-            )
-            existing_ids = {r["id"] for r in await existing_res.all()}
-
-            for b_id in block_ids_ordered:
-                if b_id not in existing_ids:
-                    raise ValueError(f"Block {b_id} not found or is deleted")
-
-            action_id = str(uuid.uuid4())
-            # Create a single Action node for the entire batch operation
-            await tx.run(
-                """
-                CREATE (a:Action {
-                    id: $action_id,
-                    user_id: $user_id,
-                    change_reason: $change_reason,
-                    timestamp: datetime(),
-                    type: "REORDER"
-                })
-                """,
-                action_id=action_id,
-                user_id=user_id,
-                change_reason=change_reason,
-            )
-
-            # Update each block to its new rank position
-            for idx, b_id in enumerate(block_ids_ordered):
-                query = """
-                MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_BLOCK]->(old_b:ProtocolBlock {id: $block_id})
-                MATCH (a:Action {id: $action_id})
-                CREATE (new_b:ProtocolBlock {
-                    id: $block_id,
-                    block_id: $block_id,
-                    version_index: old_b.version_index + 1,
-                    created_at: datetime(),
-                    created_by: $user_id,
-                    reason_for_change: $change_reason,
-                    order: $new_order,
-                    is_deleted: false
-                })
-                SET new_b += properties(old_b)
-                SET new_b.order = $new_order
-                SET new_b.version_index = old_b.version_index + 1
-                CREATE (sv)-[:HAS_BLOCK]->(new_b)
-                DELETE r
-                CREATE (new_b)-[:PREVIOUS_VERSION]->(old_b)
-                CREATE (a)-[:AFTER]->(new_b)
-                CREATE (a)-[:BEFORE]->(old_b)
-                """
-                await tx.run(
-                    query,
-                    study_version_id=study_version_id,
-                    block_id=b_id,
-                    action_id=action_id,
-                    user_id=user_id,
-                    change_reason=change_reason,
-                    new_order=idx + 1,
-                )
-
-            return True
+    impl = get_implementation("reorder_blocks")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        block_ids_ordered=block_ids_ordered,
+    )
 
 
-@with_transaction_retry()
 async def reorder_visits(
     driver,
     study_version_id: str,
@@ -5110,122 +1235,16 @@ async def reorder_visits(
     """
     Reorders visits by updating their sequence sequentially.
     """
-    # 1. Perform mock path reorder
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        store = MOCK_SOA_DATA[study_version_id]["visits"]
-
-        # Validate that the supplied visit_ids exist and are not deleted or retired
-        for v_id in visit_ids_ordered:
-            if (
-                v_id not in store
-                or store[v_id].get("is_deleted", False)
-                or store[v_id].get("is_retired", False)
-            ):
-                raise ValueError(f"Visit {v_id} not found or is deleted")
-
-        action_id = str(uuid.uuid4())
-        action_log = {
-            "id": action_id,
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "type": "REORDER",
-            "before_order": {
-                v_id: store[v_id].get("sequence") for v_id in visit_ids_ordered
-            },
-            "after_order": {},
-        }
-
-        # Sequence-assign orders (sequence = idx + 1)
-        for idx, v_id in enumerate(visit_ids_ordered):
-            old_node = store[v_id]
-            new_node = {
-                **old_node,
-                "sequence": idx + 1,
-                "version_index": old_node.get("version_index", 1) + 1,
-                "created_by": user_id,
-                "created_at": dt.datetime.now().isoformat(),
-                "reason_for_change": change_reason,
-            }
-            store[v_id] = new_node
-            action_log["after_order"][v_id] = idx + 1
-
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action_log)
-        return True
-
-    # 2. Neo4j transaction-safe atomic path reorder
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            # Take pessimistic lock on StudyVersion
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-
-            # Retrieve existing active visits to validate
-            existing_res = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_VISIT]->(v:Visit) WHERE coalesce(v.is_deleted, false) = false AND coalesce(v.is_retired, false) = false RETURN v.id as id",
-                study_version_id=study_version_id,
-            )
-            existing_ids = {r["id"] for r in await existing_res.all()}
-
-            for v_id in visit_ids_ordered:
-                if v_id not in existing_ids:
-                    raise ValueError(f"Visit {v_id} not found or is deleted")
-
-            action_id = str(uuid.uuid4())
-            # Create a single Action node for the entire batch operation
-            await tx.run(
-                """
-                CREATE (a:Action {
-                    id: $action_id,
-                    user_id: $user_id,
-                    change_reason: $change_reason,
-                    timestamp: datetime(),
-                    type: "REORDER"
-                })
-                """,
-                action_id=action_id,
-                user_id=user_id,
-                change_reason=change_reason,
-            )
-
-            # Update each visit to its new rank position
-            for idx, v_id in enumerate(visit_ids_ordered):
-                query = """
-                MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_VISIT]->(old_v:Visit {id: $visit_id})
-                MATCH (a:Action {id: $action_id})
-                CREATE (new_v:Visit {id: $visit_id})
-                SET new_v += properties(old_v)
-                SET new_v.sequence = $new_sequence
-                SET new_v.version_index = old_v.version_index + 1
-                SET new_v.created_at = datetime()
-                SET new_v.created_by = $user_id
-                SET new_v.reason_for_change = $change_reason
-                CREATE (sv)-[:HAS_VISIT]->(new_v)
-                DELETE r
-                CREATE (new_v)-[:PREVIOUS_VERSION]->(old_v)
-                CREATE (a)-[:AFTER]->(new_v)
-                CREATE (a)-[:BEFORE]->(old_v)
-                """
-                await tx.run(
-                    query,
-                    study_version_id=study_version_id,
-                    visit_id=v_id,
-                    action_id=action_id,
-                    user_id=user_id,
-                    change_reason=change_reason,
-                    new_sequence=idx + 1,
-                )
-
-            return True
+    impl = get_implementation("reorder_visits")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        visit_ids_ordered=visit_ids_ordered,
+    )
 
 
-@with_transaction_retry()
 async def create_form(
     driver,
     study_version_id: str,
@@ -5234,81 +1253,17 @@ async def create_form(
     form_id: str,
     properties: dict[str, Any],
 ) -> str:
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        store = MOCK_SOA_DATA[study_version_id]["forms"]
-        if form_id in store:
-            raise ConcurrentLockingError("Form already exists")
-        node = {
-            "id": form_id,
-            "version_index": 1,
-            "created_by": user_id,
-            "created_at": dt.datetime.now().isoformat(),
-            **properties,
-        }
-        store[form_id] = node
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "before": None,
-            "after": node,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return form_id
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            check = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_FORM]->(f:Form {id: $form_id}) RETURN f.id",
-                study_version_id=study_version_id,
-                form_id=form_id,
-            )
-            if await check.single():
-                raise ConcurrentLockingError("Form already exists")
-
-            action_id = str(uuid.uuid4())
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})
-            CREATE (f:Form {
-                id: $form_id,
-                version_index: 1,
-                created_at: datetime(),
-                created_by: $created_by
-            })
-            SET f += $properties
-            CREATE (sv)-[:HAS_FORM]->(f)
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $created_by,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(f)
-            RETURN f.id as id
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                form_id=form_id,
-                created_by=user_id,
-                change_reason=change_reason,
-                action_id=action_id,
-                properties=properties,
-            )
-            record = await res.single()
-            return record["id"]
+    impl = get_implementation("create_form")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        form_id=form_id,
+        properties=properties,
+    )
 
 
-@with_transaction_retry()
 async def link_visit_to_form(
     driver,
     study_version_id: str,
@@ -5317,55 +1272,15 @@ async def link_visit_to_form(
     visit_id: str,
     form_id: str,
 ) -> bool:
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        links = MOCK_SOA_DATA[study_version_id]["links"]
-        link = {"type": "visit_form", "from_id": visit_id, "to_id": form_id}
-        if link not in links:
-            links.append(link)
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "link": link,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return True
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_VISIT]->(v:Visit {id: $visit_id})
-            MATCH (sv)-[:HAS_FORM]->(f:Form {id: $form_id})
-            MERGE (v)-[r:HAS_FORM]->(f)
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $user_id,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:AFTER]->(v)
-            RETURN true as success
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                visit_id=visit_id,
-                form_id=form_id,
-                user_id=user_id,
-                change_reason=change_reason,
-                action_id=str(uuid.uuid4()),
-            )
-            record = await res.single()
-            return record["success"] if record else False
+    impl = get_implementation("link_visit_to_form")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        visit_id=visit_id,
+        form_id=form_id,
+    )
 
 
 async def compute_graph_diff(
@@ -5376,196 +1291,13 @@ async def compute_graph_diff(
     Identifies additions, modifications, and deletions.
     Keys forms by form_key and compares xform_definition_xml.
     """
-    # 1. Validate version existence & relationship
-    if driver is None:
-        from apps.designer.db import MOCK_STUDY_VERSIONS
-
-        if study_id not in MOCK_STUDY_VERSIONS:
-            raise ValueError(f"Study {study_id} not found")
-        versions = MOCK_STUDY_VERSIONS[study_id]
-        v1_exists = any(v["id"] == version_id1 for v in versions)
-        v2_exists = any(v["id"] == version_id2 for v in versions)
-        if not v1_exists:
-            raise ValueError(
-                f"Version {version_id1} not found or unrelated to study {study_id}"
-            )
-        if not v2_exists:
-            raise ValueError(
-                f"Version {version_id2} not found or unrelated to study {study_id}"
-            )
-    else:
-        async with driver.session() as session:
-            # Check if version_id1 exists and belongs to study_id
-            res1 = await session.run(
-                "MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion {id: $version_id1}) RETURN sv.id as id",
-                study_id=study_id,
-                version_id1=version_id1,
-            )
-            if not (await res1.single()):
-                raise ValueError(
-                    f"Version {version_id1} not found or unrelated to study {study_id}"
-                )
-
-            # Check if version_id2 exists and belongs to study_id
-            res2 = await session.run(
-                "MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion {id: $version_id2}) RETURN sv.id as id",
-                study_id=study_id,
-                version_id2=version_id2,
-            )
-            if not (await res2.single()):
-                raise ValueError(
-                    f"Version {version_id2} not found or unrelated to study {study_id}"
-                )
-
-    # 2. Retrieve forms for both subgraphs
-    old_forms = {}
-    new_forms = {}
-
-    if driver is None:
-        # In-memory mock traversal
-        _init_mock_soa(version_id1)
-        _init_mock_soa(version_id2)
-
-        data1 = MOCK_SOA_DATA[version_id1]
-        data2 = MOCK_SOA_DATA[version_id2]
-
-        # Let's support both hierarchical traversal and a flat dict fallback for simple mock setups
-        forms1 = data1.get("forms", {})
-        forms2 = data2.get("forms", {})
-
-        links1 = data1.get("links", [])
-        links2 = data2.get("links", [])
-
-        has_visit_form1 = any(L.get("type") == "visit_form" for L in links1)
-        has_visit_form2 = any(L.get("type") == "visit_form" for L in links2)
-
-        if has_visit_form1:
-            epochs1_ids = set(data1.get("epochs", {}).keys())
-            epoch_visit1 = [
-                L
-                for L in links1
-                if L.get("type") == "epoch_visit" and L.get("from_id") in epochs1_ids
-            ]
-            active_visits1_ids = {L.get("to_id") for L in epoch_visit1}
-            visit_form1 = [
-                L
-                for L in links1
-                if L.get("type") == "visit_form"
-                and L.get("from_id") in active_visits1_ids
-            ]
-            active_forms1_ids = {L.get("to_id") for L in visit_form1}
-
-            for fid in active_forms1_ids:
-                if fid in forms1:
-                    fobj = forms1[fid]
-                    form_key = fobj.get("form_key")
-                    if form_key:
-                        old_forms[form_key] = fobj
-        else:
-            for fid, fobj in forms1.items():
-                form_key = fobj.get("form_key")
-                if form_key:
-                    old_forms[form_key] = fobj
-
-        if has_visit_form2:
-            epochs2_ids = set(data2.get("epochs", {}).keys())
-            epoch_visit2 = [
-                L
-                for L in links2
-                if L.get("type") == "epoch_visit" and L.get("from_id") in epochs2_ids
-            ]
-            active_visits2_ids = {L.get("to_id") for L in epoch_visit2}
-            visit_form2 = [
-                L
-                for L in links2
-                if L.get("type") == "visit_form"
-                and L.get("from_id") in active_visits2_ids
-            ]
-            active_forms2_ids = {L.get("to_id") for L in visit_form2}
-
-            for fid in active_forms2_ids:
-                if fid in forms2:
-                    fobj = forms2[fid]
-                    form_key = fobj.get("form_key")
-                    if form_key:
-                        new_forms[form_key] = fobj
-        else:
-            for fid, fobj in forms2.items():
-                form_key = fobj.get("form_key")
-                if form_key:
-                    new_forms[form_key] = fobj
-
-    else:
-        # Neo4j query: Traverse StudyVersion -> Epoch -> Visit -> Form
-        async with driver.session() as session:
-            query = """
-            MATCH (sv:StudyVersion {id: $id})-[:HAS_EPOCH]->(e:Epoch)-[:HAS_VISIT]->(v:Visit)-[:HAS_FORM]->(f:Form)
-            RETURN f.id as id, f.form_key as form_key, f.xform_definition_xml as xform_definition_xml
-            """
-            res1 = await session.run(query, id=version_id1)
-            records1 = await res1.all()
-            for r in records1:
-                fk = r.get("form_key")
-                if fk:
-                    old_forms[fk] = {
-                        "id": r.get("id"),
-                        "form_key": fk,
-                        "xform_definition_xml": r.get("xform_definition_xml"),
-                    }
-
-            res2 = await session.run(query, id=version_id2)
-            records2 = await res2.all()
-            for r in records2:
-                fk = r.get("form_key")
-                if fk:
-                    new_forms[fk] = {
-                        "id": r.get("id"),
-                        "form_key": fk,
-                        "xform_definition_xml": r.get("xform_definition_xml"),
-                    }
-
-    # 3. Compute graph differences based on key and xml comparison
-    diff_results = {"added_nodes": [], "modified_nodes": [], "deleted_nodes": []}
-
-    # Check for additions and modifications
-    for form_key, node in new_forms.items():
-        if form_key not in old_forms:
-            diff_results["added_nodes"].append(
-                {
-                    "type": "Form",
-                    "key": form_key,
-                    "xform_definition_xml": node.get("xform_definition_xml"),
-                }
-            )
-        else:
-            old_xml = old_forms[form_key].get("xform_definition_xml")
-            new_xml = node.get("xform_definition_xml")
-            if new_xml != old_xml:
-                diff_results["modified_nodes"].append(
-                    {
-                        "type": "Form",
-                        "key": form_key,
-                        "old_value": old_xml,
-                        "new_value": new_xml,
-                    }
-                )
-
-    # Check for deletions
-    for form_key, node in old_forms.items():
-        if form_key not in new_forms:
-            diff_results["deleted_nodes"].append(
-                {
-                    "type": "Form",
-                    "key": form_key,
-                    "xform_definition_xml": node.get("xform_definition_xml"),
-                }
-            )
-
-    return diff_results
-
-
-# --- Library Object Instantiation Support ---
-MOCK_LIBRARY_INSTANCES: dict[str, list[dict[str, Any]]] = {}
+    impl = get_implementation("compute_graph_diff")
+    return await impl(
+        driver=driver,
+        study_id=study_id,
+        version_id1=version_id1,
+        version_id2=version_id2,
+    )
 
 
 async def check_library_object_exists_any_sponsor(
@@ -5578,45 +1310,10 @@ async def check_library_object_exists_any_sponsor(
     Looks up a library object across all sponsors under the same tenant to verify its existence
     and retrieve its metadata (including sponsor_id).
     """
-    if driver is None:
-        from apps.designer.db import MOCK_LIBRARY_OBJECTS
-
-        versions = MOCK_LIBRARY_OBJECTS.get(object_id, [])
-        matching = [
-            v
-            for v in versions
-            if v.get("tenant_id") is None or v.get("tenant_id") == tenant_id
-        ]
-        if not matching:
-            return None
-        if version is not None:
-            matching_ver = [v for v in matching if int(v.get("version", 0)) == version]
-            return deserialize_library_props(matching_ver[0]) if matching_ver else None
-        return deserialize_library_props(matching[-1])
-
-    if version is not None:
-        query = """
-        MATCH (n:LibraryObject {id: $object_id, version: $version})
-        WHERE coalesce(n.tenant_id, 'tenant_default') = $tenant_id
-        RETURN properties(n) as props
-        """
-        async with driver.session() as session:
-            res = await session.run(
-                query, object_id=object_id, version=version, tenant_id=tenant_id
-            )
-            record = await res.single()
-            return deserialize_library_props(record["props"]) if record else None
-    else:
-        query = """
-        MATCH (n:LibraryObject {id: $object_id})
-        WHERE coalesce(n.tenant_id, 'tenant_default') = $tenant_id
-          AND NOT (n)<-[:PREVIOUS_VERSION]-()
-        RETURN properties(n) as props
-        """
-        async with driver.session() as session:
-            res = await session.run(query, object_id=object_id, tenant_id=tenant_id)
-            record = await res.single()
-            return deserialize_library_props(record["props"]) if record else None
+    impl = get_implementation("check_library_object_exists_any_sponsor")
+    return await impl(
+        driver=driver, object_id=object_id, version=version, tenant_id=tenant_id
+    )
 
 
 async def check_study_exists_any_sponsor(
@@ -5625,28 +1322,10 @@ async def check_study_exists_any_sponsor(
     """
     Looks up a Study across all sponsors under the same tenant to verify existence and check sponsor ownership.
     """
-    if driver is None:
-        from apps.designer.db import MOCK_STUDIES
-
-        study = MOCK_STUDIES.get(study_id)
-        if study and (
-            study.get("tenant_id") is None or study.get("tenant_id") == tenant_id
-        ):
-            return study
-        return None
-
-    query = """
-    MATCH (s:Study {id: $study_id})
-    WHERE coalesce(s.tenant_id, 'tenant_default') = $tenant_id
-    RETURN properties(s) as props
-    """
-    async with driver.session() as session:
-        res = await session.run(query, study_id=study_id, tenant_id=tenant_id)
-        record = await res.single()
-        return dict(record["props"]) if record else None
+    impl = get_implementation("check_study_exists_any_sponsor")
+    return await impl(driver=driver, study_id=study_id, tenant_id=tenant_id)
 
 
-@with_transaction_retry()
 async def instantiate_library_object_in_study(
     driver,
     study_id: str,
@@ -5660,112 +1339,18 @@ async def instantiate_library_object_in_study(
     Clones a selected library object/version into a study as a distinct study-scoped object.
     Records an INSTANTIATED_FROM relationship containing source linkage for traceability.
     """
-    import copy
-
-    # 1. Fetch library object across all sponsors first under the same tenant
-    library_object = await check_library_object_exists_any_sponsor(
-        driver, library_object_id, version, tenant_id
+    impl = get_implementation("instantiate_library_object_in_study")
+    return await impl(
+        driver=driver,
+        study_id=study_id,
+        library_object_id=library_object_id,
+        version=version,
+        sponsor_id=sponsor_id,
+        user_id=user_id,
+        tenant_id=tenant_id,
     )
-    if not library_object:
-        raise ValueError(f"Library object {library_object_id} not found.")
-
-    if library_object.get("sponsor_id") != sponsor_id:
-        raise PermissionError("Cross-sponsor instantiation is prohibited.")
-
-    # 2. Fetch target study across all sponsors under the same tenant
-    study = await check_study_exists_any_sponsor(driver, study_id, tenant_id)
-    if not study:
-        raise ValueError(f"Study {study_id} not found.")
-
-    study_sponsor_id = study.get("sponsor_id")
-    if study_sponsor_id and study_sponsor_id != sponsor_id:
-        raise PermissionError("Target study is inaccessible (cross-sponsor).")
-
-    instance_id = f"inst_{uuid.uuid4().hex[:12]}"
-
-    if driver is None:
-        if study_id not in MOCK_LIBRARY_INSTANCES:
-            MOCK_LIBRARY_INSTANCES[study_id] = []
-
-        instance = {
-            "id": instance_id,
-            "study_id": study_id,
-            "object_type": library_object["object_type"],
-            "payload": copy.deepcopy(library_object.get("payload")),
-            "created_at": dt.datetime.now().isoformat(),
-            "created_by": user_id,
-            "tenant_id": tenant_id,
-            "instantiated_from": {
-                "library_object_id": library_object["id"],
-                "version": library_object.get("version"),
-                "sponsor_id": library_object.get("sponsor_id"),
-            },
-        }
-        MOCK_LIBRARY_INSTANCES[study_id].append(instance)
-        return instance
-
-    # Neo4j implementation
-    import json
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            query = """
-            MATCH (s:Study {id: $study_id})
-            MATCH (lo:LibraryObject {id: $library_object_id, version: $version})
-            CREATE (instance:LibraryObjectInstance {
-                id: $instance_id,
-                study_id: $study_id,
-                object_type: lo.object_type,
-                payload_json: lo.payload_json,
-                created_at: datetime(),
-                created_by: $user_id,
-                tenant_id: $tenant_id
-            })
-            CREATE (s)-[:HAS_LIBRARY_INSTANCE]->(instance)
-            CREATE (instance)-[:INSTANTIATED_FROM {
-                library_object_id: lo.id,
-                version: lo.version,
-                sponsor_id: lo.sponsor_id,
-                timestamp: datetime()
-            }]->(lo)
-            RETURN properties(instance) as instance_props, properties(lo) as source_props
-            """
-            res = await tx.run(
-                query,
-                study_id=study_id,
-                library_object_id=library_object["id"],
-                version=library_object["version"],
-                instance_id=instance_id,
-                user_id=user_id,
-                tenant_id=tenant_id,
-            )
-            record = await res.single()
-            if not record:
-                raise ValueError("Failed to instantiate library object in study.")
-
-            instance_props = dict(record["instance_props"])
-            source_props = dict(record["source_props"])
-
-            # Deserialization of payload
-            if "payload_json" in instance_props:
-                try:
-                    instance_props["payload"] = json.loads(
-                        instance_props["payload_json"]
-                    )
-                except Exception:
-                    instance_props["payload"] = {}
-                instance_props.pop("payload_json", None)
-
-            instance_props["instantiated_from"] = {
-                "library_object_id": source_props.get("id"),
-                "version": source_props.get("version"),
-                "sponsor_id": source_props.get("sponsor_id"),
-            }
-            return instance_props
 
 
-@with_transaction_retry()
 async def update_library_instance_in_study(
     driver,
     study_id: str,
@@ -5779,114 +1364,16 @@ async def update_library_instance_in_study(
     Updates the payload of a study-scoped library instance.
     Leaves the parent library object completely immutable.
     """
-    import copy
-
-    # 1. Fetch target study to verify existence and sponsor ownership
-    study = await check_study_exists_any_sponsor(driver, study_id, tenant_id)
-    if not study:
-        raise ValueError(f"Study {study_id} not found.")
-
-    study_sponsor_id = study.get("sponsor_id")
-    if study_sponsor_id and study_sponsor_id != sponsor_id:
-        raise PermissionError("Target study is inaccessible (cross-sponsor).")
-
-    if driver is None:
-        instances = MOCK_LIBRARY_INSTANCES.get(study_id, [])
-        target_instance = None
-        for inst in instances:
-            if inst["id"] == instance_id:
-                target_instance = inst
-                break
-        if not target_instance:
-            raise ValueError(
-                f"Library instance {instance_id} not found in study {study_id}."
-            )
-
-        # Update the payload
-        target_instance["payload"] = copy.deepcopy(payload)
-        target_instance["updated_at"] = dt.datetime.now().isoformat()
-        target_instance["updated_by"] = user_id
-        return target_instance
-
-    # Neo4j implementation
-    import json
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            # Find target instance under study
-            find_query = """
-            MATCH (s:Study {id: $study_id})-[:HAS_LIBRARY_INSTANCE]->(instance:LibraryObjectInstance {id: $instance_id})
-            RETURN properties(instance) as instance_props
-            """
-            res = await tx.run(find_query, study_id=study_id, instance_id=instance_id)
-            record = await res.single()
-            if not record:
-                raise ValueError(
-                    f"Library instance {instance_id} not found in study {study_id}."
-                )
-
-            # Update instance's payload_json
-            update_query = """
-            MATCH (s:Study {id: $study_id})-[:HAS_LIBRARY_INSTANCE]->(instance:LibraryObjectInstance {id: $instance_id})
-            SET instance.payload_json = $payload_json,
-                instance.updated_at = datetime(),
-                instance.updated_by = $user_id
-
-            WITH instance
-            OPTIONAL MATCH (instance)-[:INSTANTIATED_FROM]->(lo:LibraryObject)
-            RETURN properties(instance) as instance_props, properties(lo) as source_props
-            """
-            payload_json = json.dumps(payload)
-            res_update = await tx.run(
-                update_query,
-                study_id=study_id,
-                instance_id=instance_id,
-                payload_json=payload_json,
-                user_id=user_id,
-            )
-            record_update = await res_update.single()
-            if not record_update:
-                raise ValueError("Failed to update library instance.")
-
-            instance_props = dict(record_update["instance_props"])
-            source_props = record_update["source_props"]
-
-            # Deserialization of payload
-            instance_props["payload"] = payload
-            instance_props.pop("payload_json", None)
-
-            if "created_at" in instance_props and not isinstance(
-                instance_props["created_at"], str
-            ):
-                if hasattr(instance_props["created_at"], "isoformat"):
-                    instance_props["created_at"] = instance_props[
-                        "created_at"
-                    ].isoformat()
-                else:
-                    instance_props["created_at"] = str(instance_props["created_at"])
-
-            if "updated_at" in instance_props and not isinstance(
-                instance_props["updated_at"], str
-            ):
-                if hasattr(instance_props["updated_at"], "isoformat"):
-                    instance_props["updated_at"] = instance_props[
-                        "updated_at"
-                    ].isoformat()
-                else:
-                    instance_props["updated_at"] = str(instance_props["updated_at"])
-
-            if source_props:
-                source_props = dict(source_props)
-                instance_props["instantiated_from"] = {
-                    "library_object_id": source_props.get("id"),
-                    "version": source_props.get("version"),
-                    "sponsor_id": source_props.get("sponsor_id"),
-                }
-            else:
-                instance_props["instantiated_from"] = None
-
-            return instance_props
+    impl = get_implementation("update_library_instance_in_study")
+    return await impl(
+        driver=driver,
+        study_id=study_id,
+        instance_id=instance_id,
+        payload=payload,
+        sponsor_id=sponsor_id,
+        user_id=user_id,
+        tenant_id=tenant_id,
+    )
 
 
 async def get_library_instance_in_study(
@@ -5899,88 +1386,16 @@ async def get_library_instance_in_study(
     """
     Retrieves a study-scoped library instance and its linked source metadata.
     """
-    # Verify target study to check sponsor ownership
-    study = await check_study_exists_any_sponsor(driver, study_id, tenant_id)
-    if not study:
-        raise ValueError(f"Study {study_id} not found.")
-
-    study_sponsor_id = study.get("sponsor_id")
-    if study_sponsor_id and study_sponsor_id != sponsor_id:
-        raise PermissionError("Target study is inaccessible (cross-sponsor).")
-
-    if driver is None:
-        instances = MOCK_LIBRARY_INSTANCES.get(study_id, [])
-        target_instance = None
-        for inst in instances:
-            if inst["id"] == instance_id:
-                target_instance = inst
-                break
-        if not target_instance:
-            raise ValueError(
-                f"Library instance {instance_id} not found in study {study_id}."
-            )
-        return target_instance
-
-    # Neo4j implementation
-    import json
-
-    async with driver.session() as session:
-        query = """
-        MATCH (s:Study {id: $study_id})-[:HAS_LIBRARY_INSTANCE]->(instance:LibraryObjectInstance {id: $instance_id})
-        OPTIONAL MATCH (instance)-[:INSTANTIATED_FROM]->(lo:LibraryObject)
-        RETURN properties(instance) as instance_props, properties(lo) as source_props
-        """
-        res = await session.run(query, study_id=study_id, instance_id=instance_id)
-        record = await res.single()
-        if not record:
-            raise ValueError(
-                f"Library instance {instance_id} not found in study {study_id}."
-            )
-
-        instance_props = dict(record["instance_props"])
-        source_props = record["source_props"]
-
-        # Deserialization of payload
-        if "payload_json" in instance_props:
-            try:
-                instance_props["payload"] = json.loads(instance_props["payload_json"])
-            except Exception:
-                instance_props["payload"] = {}
-            instance_props.pop("payload_json", None)
-
-        if "created_at" in instance_props and not isinstance(
-            instance_props["created_at"], str
-        ):
-            if hasattr(instance_props["created_at"], "isoformat"):
-                instance_props["created_at"] = instance_props["created_at"].isoformat()
-            else:
-                instance_props["created_at"] = str(instance_props["created_at"])
-
-        if "updated_at" in instance_props and not isinstance(
-            instance_props["updated_at"], str
-        ):
-            if hasattr(instance_props["updated_at"], "isoformat"):
-                instance_props["updated_at"] = instance_props["updated_at"].isoformat()
-            else:
-                instance_props["updated_at"] = str(instance_props["updated_at"])
-
-        if source_props:
-            source_props = dict(source_props)
-            instance_props["instantiated_from"] = {
-                "library_object_id": source_props.get("id"),
-                "version": source_props.get("version"),
-                "sponsor_id": source_props.get("sponsor_id"),
-            }
-        else:
-            instance_props["instantiated_from"] = None
-
-        return instance_props
+    impl = get_implementation("get_library_instance_in_study")
+    return await impl(
+        driver=driver,
+        study_id=study_id,
+        instance_id=instance_id,
+        sponsor_id=sponsor_id,
+        tenant_id=tenant_id,
+    )
 
 
-# --- Eligibility Criteria Persistence Operations ---
-
-
-@with_transaction_retry()
 async def create_eligibility_criterion(
     driver,
     study_id: str,
@@ -5992,114 +1407,17 @@ async def create_eligibility_criterion(
     """
     Creates a new stable EligibilityCriterion root node and its first version EligibilityCriterionVersion.
     """
-    import json
-
-    if driver is None:
-        from apps.designer.db import (
-            MOCK_ELIGIBILITY_CRITERIA,
-            assert_mock_study_mutable,
-        )
-
-        assert_mock_study_mutable(study_id)
-
-        # Check duplicate
-        if study_id in MOCK_ELIGIBILITY_CRITERIA:
-            for c in MOCK_ELIGIBILITY_CRITERIA[study_id]:
-                if c["id"] == criterion_id and not c.get("is_deleted", False):
-                    raise ConcurrentLockingError("Criterion already exists")
-
-        crit = {
-            "id": criterion_id,
-            "criterion_id": criterion_id,
-            "study_id": study_id,
-            "criterion_type": criterion_data["criterion_type"],
-            "description": criterion_data["description"],
-            "dsl_source": criterion_data["dsl_source"],
-            "condition": criterion_data["condition"],
-            "expected_outcome": criterion_data.get("expected_outcome", True),
-            "version_index": 1,
-            "is_deleted": False,
-            "created_by": user_id,
-            "created_at": dt.datetime.now().isoformat(),
-            "reason_for_change": change_reason,
-        }
-        if study_id not in MOCK_ELIGIBILITY_CRITERIA:
-            MOCK_ELIGIBILITY_CRITERIA[study_id] = []
-        MOCK_ELIGIBILITY_CRITERIA[study_id].append(crit)
-        return criterion_id
-
-    action_id = str(uuid.uuid4())
-    condition_json = json.dumps(criterion_data.get("condition", {}))
-
-    query = """
-    MATCH (s:Study {id: $study_id})
-
-    MERGE (ec:EligibilityCriterion {id: $criterion_id, study_id: $study_id})
-    ON CREATE SET ec.created_at = datetime()
-
-    MERGE (s)-[:HAS_CRITERION]->(ec)
-
-    CREATE (a:Action {
-        id: $action_id,
-        user_id: $user_id,
-        change_reason: $change_reason,
-        timestamp: datetime()
-    })
-
-    CREATE (ecv:EligibilityCriterionVersion {
-        id: $criterion_id,
-        criterion_type: $criterion_type,
-        description: $description,
-        dsl_source: $dsl_source,
-        condition_json: $condition_json,
-        expected_outcome: $expected_outcome,
-        version_index: 1,
-        is_deleted: false
-    })
-    CREATE (ec)-[:HAS_VERSION]->(ecv)
-    CREATE (a)-[:AFTER]->(ecv)
-
-    RETURN ec.id as criterion_id
-    """
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_graph_mutable(tx, study_id=study_id)
-            await tx.run(
-                "MATCH (s:Study {id: $study_id}) SET s._lock = true", study_id=study_id
-            )
-            # Check duplicate in active versions of this study
-            check_res = await tx.run(
-                """
-                MATCH (s:Study {id: $study_id})-[:HAS_CRITERION]->(ec:EligibilityCriterion {id: $criterion_id})-[:HAS_VERSION]->(ecv:EligibilityCriterionVersion)
-                WHERE NOT (ecv)<-[:PREVIOUS_VERSION]-() AND ecv.is_deleted = false
-                RETURN ecv.id as id
-                """,
-                study_id=study_id,
-                criterion_id=criterion_id,
-            )
-            if await check_res.single():
-                raise ConcurrentLockingError("Criterion already exists")
-
-            result = await tx.run(
-                query,
-                study_id=study_id,
-                action_id=action_id,
-                user_id=user_id,
-                change_reason=change_reason,
-                criterion_id=criterion_id,
-                criterion_type=criterion_data["criterion_type"],
-                description=criterion_data["description"],
-                dsl_source=criterion_data["dsl_source"],
-                condition_json=condition_json,
-                expected_outcome=criterion_data.get("expected_outcome", True),
-            )
-            record = await result.single()
-            return record["criterion_id"] if record else None
+    impl = get_implementation("create_eligibility_criterion")
+    return await impl(
+        driver=driver,
+        study_id=study_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        criterion_id=criterion_id,
+        criterion_data=criterion_data,
+    )
 
 
-@with_transaction_retry()
 async def update_eligibility_criterion(
     driver,
     study_id: str,
@@ -6111,110 +1429,15 @@ async def update_eligibility_criterion(
     """
     Bumps version index and creates a new EligibilityCriterionVersion node connected to previous one.
     """
-    import json
-
-    if driver is None:
-        from apps.designer.db import (
-            MOCK_ELIGIBILITY_CRITERIA,
-            assert_mock_study_mutable,
-        )
-
-        assert_mock_study_mutable(study_id)
-
-        found = None
-        for c in MOCK_ELIGIBILITY_CRITERIA.get(study_id, []):
-            if c["id"] == criterion_id and not c.get("is_deleted", False):
-                found = c
-                break
-        if not found:
-            raise ValueError(f"Eligibility Criterion {criterion_id} not found")
-
-        found.update(
-            {
-                "criterion_type": criterion_data["criterion_type"],
-                "description": criterion_data["description"],
-                "dsl_source": criterion_data["dsl_source"],
-                "condition": criterion_data["condition"],
-                "expected_outcome": criterion_data.get("expected_outcome", True),
-                "updated_by": user_id,
-                "updated_at": dt.datetime.now().isoformat(),
-                "reason_for_change": change_reason,
-            }
-        )
-        found["version_index"] += 1
-        return found["version_index"]
-
-    action_id = str(uuid.uuid4())
-    condition_json = json.dumps(criterion_data.get("condition", {}))
-
-    query = """
-    MATCH (s:Study {id: $study_id})-[:HAS_CRITERION]->(ec:EligibilityCriterion {id: $criterion_id})
-
-    OPTIONAL MATCH (ec)-[:HAS_VERSION]->(old_ecv:EligibilityCriterionVersion)
-    WHERE NOT (old_ecv)<-[:PREVIOUS_VERSION]-()
-
-    CREATE (a:Action {
-        id: $action_id,
-        user_id: $user_id,
-        change_reason: $change_reason,
-        timestamp: datetime()
-    })
-
-    CREATE (new_ecv:EligibilityCriterionVersion {
-        id: $criterion_id,
-        criterion_type: $criterion_type,
-        description: $description,
-        dsl_source: $dsl_source,
-        condition_json: $condition_json,
-        expected_outcome: $expected_outcome,
-        version_index: coalesce(old_ecv.version_index, 0) + 1,
-        is_deleted: false
-    })
-    CREATE (ec)-[:HAS_VERSION]->(new_ecv)
-    CREATE (a)-[:AFTER]->(new_ecv)
-
-    WITH a, old_ecv, new_ecv
-    WHERE old_ecv IS NOT NULL
-    CREATE (a)-[:BEFORE]->(old_ecv)
-    CREATE (new_ecv)-[:PREVIOUS_VERSION]->(old_ecv)
-
-    RETURN new_ecv.version_index as version_index
-    """
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_graph_mutable(tx, study_id=study_id)
-            await tx.run(
-                "MATCH (s:Study {id: $study_id}) SET s._lock = true", study_id=study_id
-            )
-            # Check existence
-            check_res = await tx.run(
-                """
-                MATCH (s:Study {id: $study_id})-[:HAS_CRITERION]->(ec:EligibilityCriterion {id: $criterion_id})
-                RETURN ec.id as id
-                """,
-                study_id=study_id,
-                criterion_id=criterion_id,
-            )
-            if not (await check_res.single()):
-                raise ValueError(f"Eligibility Criterion {criterion_id} not found")
-
-            result = await tx.run(
-                query,
-                study_id=study_id,
-                criterion_id=criterion_id,
-                action_id=action_id,
-                user_id=user_id,
-                change_reason=change_reason,
-                criterion_type=criterion_data["criterion_type"],
-                description=criterion_data["description"],
-                dsl_source=criterion_data["dsl_source"],
-                condition_json=condition_json,
-                expected_outcome=criterion_data.get("expected_outcome", True),
-            )
-            record = await result.single()
-            return record["version_index"] if record else None
+    impl = get_implementation("update_eligibility_criterion")
+    return await impl(
+        driver=driver,
+        study_id=study_id,
+        criterion_id=criterion_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        criterion_data=criterion_data,
+    )
 
 
 async def get_eligibility_criteria_from_graph(
@@ -6223,35 +1446,8 @@ async def get_eligibility_criteria_from_graph(
     """
     Retrieves all non-deleted active eligibility criteria for a specific clinical study.
     """
-    import json
-
-    if driver is None:
-        from apps.designer.db import MOCK_ELIGIBILITY_CRITERIA
-
-        return [
-            c
-            for c in MOCK_ELIGIBILITY_CRITERIA.get(study_id, [])
-            if not c.get("is_deleted", False)
-        ]
-
-    query = """
-    MATCH (s:Study {id: $study_id})-[:HAS_CRITERION]->(ec:EligibilityCriterion)-[:HAS_VERSION]->(ecv:EligibilityCriterionVersion)
-    WHERE NOT (ecv)<-[:PREVIOUS_VERSION]-() AND ecv.is_deleted = false
-    RETURN ecv {.*} as criterion_props
-    """
-    async with driver.session() as session:
-        result = await session.run(query, study_id=study_id)
-        records = await result.all()
-        criteria = []
-        for record in records:
-            props = dict(record["criterion_props"])
-            if props.get("condition_json"):
-                props["condition"] = json.loads(props["condition_json"])
-            # Map expected_outcome to bool if it's there
-            if "expected_outcome" in props:
-                props["expected_outcome"] = bool(props["expected_outcome"])
-            criteria.append(props)
-        return criteria
+    impl = get_implementation("get_eligibility_criteria_from_graph")
+    return await impl(driver=driver, study_id=study_id)
 
 
 async def propagate_soa_mutation(
@@ -6261,33 +1457,16 @@ async def propagate_soa_mutation(
     Finds and updates any blocks that are derived from the specified SoA entity,
     marking them as derived_from_soa = True and writing an audit trail.
     """
-    blocks = await list_blocks(driver, study_version_id)
-    for b in blocks:
-        if (
-            b.get("block_type") == "soa_derived"
-            and b.get("source_entity_id") == entity_id
-        ):
-            properties = dict(b)
-            for k in (
-                "id",
-                "version_index",
-                "created_by",
-                "created_at",
-                "reason_for_change",
-            ):
-                properties.pop(k, None)
-            properties["derived_from_soa"] = True
-            await update_block(
-                driver,
-                study_version_id,
-                user_id,
-                f"Lineage propagation from {entity_id}: {change_reason}",
-                b["block_id"],
-                properties,
-            )
+    impl = get_implementation("propagate_soa_mutation")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        entity_id=entity_id,
+        user_id=user_id,
+        change_reason=change_reason,
+    )
 
 
-@with_transaction_retry()
 async def retire_soa_entity(
     driver,
     study_version_id: str,
@@ -6301,105 +1480,17 @@ async def retire_soa_entity(
     with version_index bumped and is_retired/is_deleted set to True, and disconnects
     it from the StudyVersion root non-destructively, preserving the history.
     """
-    mapping = {
-        "arms": ("HAS_ARM", "StudyArm"),
-        "epochs": ("HAS_EPOCH", "Epoch"),
-        "visits": ("HAS_VISIT", "Visit"),
-        "procedures": ("HAS_PROCEDURE", "Procedure"),
-        "timing_windows": ("HAS_TIMING_WINDOW", "TimingWindow"),
-    }
-    if entity_type not in mapping:
-        raise ValueError(f"Invalid entity type: {entity_type}")
-
-    rel_name, label = mapping[entity_type]
-
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        store = MOCK_SOA_DATA[study_version_id][entity_type]
-        if entity_id not in store:
-            raise ValueError(f"Entity {entity_id} of type {entity_type} not found")
-        old_node = store[entity_id]
-        if old_node.get("is_retired") or old_node.get("is_deleted"):
-            return entity_id
-        new_node = {
-            **old_node,
-            "version_index": old_node["version_index"] + 1,
-            "created_by": user_id,
-            "created_at": dt.datetime.now().isoformat(),
-            "is_retired": True,
-            "is_deleted": True,
-        }
-        store[entity_id] = new_node
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "before": old_node,
-            "after": new_node,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return entity_id
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            # Check existence
-            check = await tx.run(
-                f"MATCH (sv:StudyVersion {{id: $study_version_id}})-[r:{rel_name}]->(old_node:{label} {{id: $entity_id}}) RETURN old_node.id",
-                study_version_id=study_version_id,
-                entity_id=entity_id,
-            )
-            if not await check.single():
-                raise ValueError(f"Entity {entity_id} of type {entity_type} not found")
-
-            action_id = str(uuid.uuid4())
-            query = f"""
-            MATCH (sv:StudyVersion {{id: $study_version_id}})-[r:{rel_name}]->(old_node:{label} {{id: $entity_id}})
-            CREATE (new_node:{label} {{
-                id: $entity_id,
-                version_index: old_node.version_index + 1,
-                created_at: datetime(),
-                created_by: $created_by,
-                is_retired: true,
-                is_deleted: true
-            }})
-            SET new_node += properties(old_node)
-            SET new_node.is_retired = true
-            SET new_node.is_deleted = true
-            SET new_node.version_index = old_node.version_index + 1
-            CREATE (sv)-[:{rel_name}]->(new_node)
-            DELETE r
-            CREATE (new_node)-[:PREVIOUS_VERSION]->(old_node)
-            CREATE (a:Action {{
-                id: $action_id,
-                user_id: $created_by,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            }})
-            CREATE (a)-[:AFTER]->(new_node)
-            CREATE (a)-[:BEFORE]->(old_node)
-            RETURN new_node.id as id
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                entity_id=entity_id,
-                created_by=user_id,
-                change_reason=change_reason,
-                action_id=action_id,
-            )
-            record = await res.single()
-            return record["id"]
+    impl = get_implementation("retire_soa_entity")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        entity_id=entity_id,
+        entity_type=entity_type,
+    )
 
 
-@with_transaction_retry()
 async def retire_epoch_visit_link(
     driver,
     study_version_id: str,
@@ -6411,59 +1502,17 @@ async def retire_epoch_visit_link(
     """
     Retires/deletes an Epoch-to-Visit link non-destructively, logging the deletion action.
     """
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        links = MOCK_SOA_DATA[study_version_id]["links"]
-        link = {"type": "epoch_visit", "from_id": epoch_id, "to_id": visit_id}
-        if link in links:
-            links.remove(link)
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "retired_link": link,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return True
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_EPOCH]->(ep:Epoch {id: $epoch_id})
-            MATCH (sv)-[:HAS_VISIT]->(v:Visit {id: $visit_id})
-            MATCH (ep)-[r:HAS_VISIT]->(v)
-            DELETE r
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $user_id,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:BEFORE]->(ep)
-            RETURN true as success
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                epoch_id=epoch_id,
-                visit_id=visit_id,
-                user_id=user_id,
-                change_reason=change_reason,
-                action_id=str(uuid.uuid4()),
-            )
-            record = await res.single()
-            return record["success"] if record else False
+    impl = get_implementation("retire_epoch_visit_link")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        epoch_id=epoch_id,
+        visit_id=visit_id,
+    )
 
 
-@with_transaction_retry()
 async def retire_visit_procedure_link(
     driver,
     study_version_id: str,
@@ -6475,59 +1524,17 @@ async def retire_visit_procedure_link(
     """
     Retires/deletes a Visit-to-Procedure link non-destructively, logging the deletion action.
     """
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        links = MOCK_SOA_DATA[study_version_id]["links"]
-        link = {"type": "visit_procedure", "from_id": visit_id, "to_id": procedure_id}
-        if link in links:
-            links.remove(link)
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "retired_link": link,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return True
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_VISIT]->(v:Visit {id: $visit_id})
-            MATCH (sv)-[:HAS_PROCEDURE]->(p:Procedure {id: $procedure_id})
-            MATCH (v)-[r:HAS_PROCEDURE]->(p)
-            DELETE r
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $user_id,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:BEFORE]->(v)
-            RETURN true as success
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                visit_id=visit_id,
-                procedure_id=procedure_id,
-                user_id=user_id,
-                change_reason=change_reason,
-                action_id=str(uuid.uuid4()),
-            )
-            record = await res.single()
-            return record["success"] if record else False
+    impl = get_implementation("retire_visit_procedure_link")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        visit_id=visit_id,
+        procedure_id=procedure_id,
+    )
 
 
-@with_transaction_retry()
 async def retire_timing_link(
     driver,
     study_version_id: str,
@@ -6540,72 +1547,18 @@ async def retire_timing_link(
     """
     Retires/deletes a Timing Window link non-destructively, logging the deletion action.
     """
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        links = MOCK_SOA_DATA[study_version_id]["links"]
-        link = {
-            "type": "timing",
-            "from_id": source_id,
-            "to_id": timing_id,
-            "source_type": source_type,
-        }
-        if link in links:
-            links.remove(link)
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "retired_link": link,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return True
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})
-            MATCH (t:TimingWindow {id: $timing_id})
-            WHERE (sv)-[:HAS_TIMING_WINDOW]->(t)
-
-            WITH sv, t
-            MATCH (src)
-            WHERE (src:Visit AND $source_type = "visit" AND (sv)-[:HAS_VISIT]->(src) AND src.id = $source_id)
-               OR (src:Procedure AND $source_type = "procedure" AND (sv)-[:HAS_PROCEDURE]->(src) AND src.id = $source_id)
-
-            MATCH (src)-[r:HAS_TIMING]->(t)
-            DELETE r
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $user_id,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:BEFORE]->(src)
-            RETURN true as success
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                source_id=source_id,
-                timing_id=timing_id,
-                source_type=source_type,
-                user_id=user_id,
-                change_reason=change_reason,
-                action_id=str(uuid.uuid4()),
-            )
-            record = await res.single()
-            return record["success"] if record else False
+    impl = get_implementation("retire_timing_link")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        source_id=source_id,
+        timing_id=timing_id,
+        source_type=source_type,
+    )
 
 
-@with_transaction_retry()
 async def retire_arm_applicability_link(
     driver,
     study_version_id: str,
@@ -6618,67 +1571,13 @@ async def retire_arm_applicability_link(
     """
     Retires/deletes an Arm Applicability link non-destructively, logging the deletion action.
     """
-    if driver is None:
-        assert_mock_study_version_mutable(study_version_id)
-        _init_mock_soa(study_version_id)
-        links = MOCK_SOA_DATA[study_version_id]["links"]
-        link = {
-            "type": "arm_applicability",
-            "from_id": arm_id,
-            "to_id": target_id,
-            "target_type": target_type,
-        }
-        if link in links:
-            links.remove(link)
-        action = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "retired_link": link,
-        }
-        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        return True
-
-    async with driver.session() as session:
-        tx = await session.begin_transaction()
-        async with tx:
-            await assert_study_version_mutable(tx, study_version_id)
-            await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
-                study_version_id=study_version_id,
-            )
-            query = """
-            MATCH (sv:StudyVersion {id: $study_version_id})
-            MATCH (arm:StudyArm {id: $arm_id})
-            WHERE (sv)-[:HAS_ARM]->(arm)
-
-            WITH sv, arm
-            MATCH (tgt)
-            WHERE (tgt:Visit AND $target_type = "visit" AND (sv)-[:HAS_VISIT]->(tgt) AND tgt.id = $target_id)
-               OR (tgt:Procedure AND $target_type = "procedure" AND (sv)-[:HAS_PROCEDURE]->(tgt) AND tgt.id = $target_id)
-               OR (tgt:Epoch AND $target_type = "epoch" AND (sv)-[:HAS_EPOCH]->(tgt) AND tgt.id = $target_id)
-
-            MATCH (arm)-[r:APPLICABLE_TO]->(tgt)
-            DELETE r
-            CREATE (a:Action {
-                id: $action_id,
-                user_id: $user_id,
-                change_reason: $change_reason,
-                timestamp: datetime()
-            })
-            CREATE (a)-[:BEFORE]->(arm)
-            RETURN true as success
-            """
-            res = await tx.run(
-                query,
-                study_version_id=study_version_id,
-                arm_id=arm_id,
-                target_id=target_id,
-                target_type=target_type,
-                user_id=user_id,
-                change_reason=change_reason,
-                action_id=str(uuid.uuid4()),
-            )
-            record = await res.single()
-            return record["success"] if record else False
+    impl = get_implementation("retire_arm_applicability_link")
+    return await impl(
+        driver=driver,
+        study_version_id=study_version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        arm_id=arm_id,
+        target_id=target_id,
+        target_type=target_type,
+    )
