@@ -71,8 +71,14 @@
             <span class="info-lbl">Status:</span>
             <span class="info-val text-success">Active</span>
           </div>
-          <div class="info-row" style="margin-top: 12px;">
-            <button id="btn-logout" type="button" class="btn btn-secondary" style="width: 100%; padding: 4px 8px; font-size: 12px;" @click="handleLogout">
+          <div class="info-row" style="margin-top: 12px">
+            <button
+              id="btn-logout"
+              type="button"
+              class="btn btn-secondary"
+              style="width: 100%; padding: 4px 8px; font-size: 12px"
+              @click="handleLogout"
+            >
               Logout
             </button>
           </div>
