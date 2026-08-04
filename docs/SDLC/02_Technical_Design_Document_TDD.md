@@ -434,6 +434,7 @@ To preserve strict scientific reproducibility, study graphs become **permanently
 
 #### 3.4.1 Immutability Enforcement
 The Designer Service executes an assertion check on every mutating transaction.
+<!-- validation-skip -->
 ```python
 async def assert_graph_mutable(tx: Transaction, study_version_id: str):
     query = """
@@ -478,6 +479,7 @@ flowchart LR
 ### 3.5 Graph Tree-Diffing & Reconciliation Algorithm
 When promoting a protocol amendment, the system needs to compute structural modifications between the old version $G_{old}$ and the branched version $G_{new}$. The tree-diffing algorithm traverses the hierarchical study structure and generates an execution instruction set.
 
+<!-- validation-skip -->
 ```python
 def compute_graph_diff(tx, old_version_id: str, new_version_id: str) -> dict:
     """

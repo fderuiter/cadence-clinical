@@ -31,7 +31,7 @@ def test_gxp_compliance_drifts_identified():
     # Walk docs/SDLC and process all markdown files
     sdlc_dir = repo_root / "docs" / "SDLC"
     for p in sdlc_dir.rglob("*.md"):
-        vm.process_markdown_file(p, repo_root, root_dirs, root_files, codebase_map)
+        vm.process_markdown_file(p, repo_root, root_dirs, root_files, codebase_map, strict=True)
 
     error_messages = [e["message"] for e in vm.errors]
 
