@@ -29,6 +29,11 @@ from apps.execution.trial_lock import TrialLockManager
 from tests.test_etmf import get_auth_headers
 
 
+@pytest.fixture(autouse=True)
+def disable_mock_signatures(monkeypatch):
+    monkeypatch.setenv("ALLOW_MOCK_SIGNATURES", "0")
+
+
 def generate_self_signed_cert() -> tuple[rsa.RSAPrivateKey, x509.Certificate]:
     """Generates a real RSAPrivateKey and self-signed X.509 Certificate for testing."""
     private_key = rsa.generate_private_key(

@@ -2,6 +2,7 @@ import base64
 import hashlib
 import hmac
 import json
+import os
 from typing import Any
 
 from cryptography import x509
@@ -375,6 +376,12 @@ class InboundEmailReplayCache:
         return False
 
 
+INBOUND_EMAIL_HMAC_SECRET = os.getenv("INBOUND_EMAIL_HMAC_SECRET", "").strip()
+if not INBOUND_EMAIL_HMAC_SECRET:
+    raise RuntimeError(
+        "INBOUND_EMAIL_HMAC_SECRET environment variable is missing or empty"
+    )
+
 inbound_email_replay_cache = InboundEmailReplayCache()
 
 
@@ -385,11 +392,10 @@ def verify_inbound_email_signature(
     message_id: str | None = None,
 ) -> bool:
     """Verifies that the inbound email HMAC signature is correct, fresh, and not replayed."""
-    import os
     import time
 
-    secret = os.getenv(
-        "INBOUND_EMAIL_HMAC_SECRET", "dev-default-secret-inbound-email-hmac"
+    secret = (
+        os.getenv("INBOUND_EMAIL_HMAC_SECRET", "").strip() or INBOUND_EMAIL_HMAC_SECRET
     )
 
     # 1. Timestamp Freshness Check (300-second drift window)

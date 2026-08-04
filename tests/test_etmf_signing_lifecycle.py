@@ -16,6 +16,12 @@ from apps.etmf.sealer import (
 )
 from apps.gateway.main import generate_signature
 
+
+@pytest.fixture(autouse=True)
+def allow_legacy_signatures_for_this_suite(monkeypatch):
+    monkeypatch.setenv("ALLOW_LEGACY_MOCK_SIGNATURES", "true")
+
+
 GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
 
 

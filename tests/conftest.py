@@ -8,8 +8,15 @@ from neo4j.exceptions import TransientError
 
 # Ensure offline terminology fallback is active for test isolation and speed
 os.environ.setdefault("TERMINOLOGY_OFFLINE", "true")
+os.environ.setdefault("ALLOW_MOCK_SIGNATURES", "1")
 os.environ.setdefault("GATEWAY_SECRET", "internal-gateway-secret-12345")
 os.environ.setdefault("SIGNING_SECRET", "designer-amendment-secure-key-12345")
+os.environ.setdefault(
+    "AUDIT_LOG_SECRET_KEY", "test-gxp-audit-secret-key-placeholder-abc"
+)
+os.environ.setdefault(
+    "INBOUND_EMAIL_HMAC_SECRET", "test-email-hmac-secret-placeholder-xyz"
+)
 
 
 # Identify and override Database URL for workers early, and ensure database isolation
@@ -287,6 +294,12 @@ try:
 except Exception as e:
     if os.environ.get("GITHUB_ACTIONS") == "true":
         print(f"[conftest] ERROR: Database initialization failed in CI: {e}")
+        if os.environ.get("USE_LIVE_DB") == "true":
+            import pytest
+
+            pytest.exit(
+                f"Database connection error: PostgreSQL instance is unreachable. {e}"
+            )
         raise
     elif os.environ.get("USE_LIVE_DB") == "true":
         import pytest

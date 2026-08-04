@@ -1,4 +1,6 @@
 import { execSync } from "child_process";
+import fs from "fs";
+import path from "path";
 import { describe, it, expect } from "vitest";
 import {
   canonicalSerialize,
@@ -173,7 +175,27 @@ describe("sha256", () => {
 describe("cross-language parity", () => {
   const getPythonOutput = (script) => {
     const cwd = process.cwd();
-    const env = { ...process.env, PYTHONPATH: cwd };
+    let repoRoot = cwd;
+    for (let i = 0; i < 5; i++) {
+      if (fs.existsSync(path.join(repoRoot, "pyproject.toml"))) {
+        break;
+      }
+      repoRoot = path.dirname(repoRoot);
+    }
+    const env = {
+      ...process.env,
+      PYTHONPATH: repoRoot,
+      AUDIT_LOG_SECRET_KEY:
+        process.env.AUDIT_LOG_SECRET_KEY ||
+        "test-gxp-audit-secret-key-placeholder-abc",
+      INBOUND_EMAIL_HMAC_SECRET:
+        process.env.INBOUND_EMAIL_HMAC_SECRET ||
+        "test-email-hmac-secret-placeholder-xyz",
+      GATEWAY_SECRET:
+        process.env.GATEWAY_SECRET || "internal-gateway-secret-12345",
+      SIGNING_SECRET:
+        process.env.SIGNING_SECRET || "designer-amendment-secure-key-12345",
+    };
     const pyScript = script
       .trim()
       .split("\n")
@@ -181,11 +203,11 @@ describe("cross-language parity", () => {
       .filter(Boolean)
       .join("; ");
     try {
-      return execSync(`uv run python -c "${pyScript}"`, { env, cwd })
+      return execSync(`uv run python -c "${pyScript}"`, { env, cwd: repoRoot })
         .toString()
         .trim();
     } catch {
-      return execSync(`python3 -c "${pyScript}"`, { env, cwd })
+      return execSync(`python3 -c "${pyScript}"`, { env, cwd: repoRoot })
         .toString()
         .trim();
     }

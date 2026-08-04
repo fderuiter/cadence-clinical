@@ -9,6 +9,11 @@ from apps.etmf.models import Base, TMFDocument
 from tests.test_etmf import get_auth_headers
 
 
+@pytest.fixture(autouse=True)
+def allow_legacy_signatures_for_this_suite(monkeypatch):
+    monkeypatch.setenv("ALLOW_LEGACY_MOCK_SIGNATURES", "true")
+
+
 @pytest_asyncio.fixture(autouse=True)
 async def setup_db():
     """
@@ -51,7 +56,7 @@ async def test_signature_document_routing_and_classification():
         },
         headers=headers,
     )
-    assert resp_1572.status_code == 201
+    assert resp_1572.status_code == 201, resp_1572.json()
     data_1572 = resp_1572.json()
     assert data_1572["zone"] == 5
     assert data_1572["section"] == "05.02"

@@ -309,12 +309,16 @@ def verify_asymmetric_signature(
 
 def verify_electronic_signature(
     request: SignatureVerificationRequest,
-    secret_key: str = "gxp-audit-secret-key-cadence-2026",
+    secret_key: str | None = None,
 ) -> SignatureVerificationResult:
     """Verify electronic signature authenticity, signer binding, and tamper-resistance.
 
     Supports both RSA/ECDSA asymmetric verification and symmetric HMAC fallback verification.
     """
+    if secret_key is None:
+        from packages.security.audit_logger import AUDIT_LOG_SECRET_KEY
+
+        secret_key = AUDIT_LOG_SECRET_KEY
     if not request.signer_id:
         return SignatureVerificationResult(
             is_valid=False,
