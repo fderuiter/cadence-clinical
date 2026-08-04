@@ -28,7 +28,7 @@ async def ingest_tmf_document(
     study_id: str,
     artifact_type: str,
     filename: str,
-    content: str,
+    content: str | bytes,
     mime_type: str,
     created_by: str,
     created_role: str,
@@ -58,6 +58,45 @@ async def ingest_tmf_document(
     validation, and TMFDocument persistence, all wrapped in transactional
     boundaries with corresponding audit log registration.
     """
+    # 0. Normalize binary content to prevent database string conversion loss
+    mime_lower = mime_type.lower().strip()
+    is_binary = (
+        "pdf" in mime_lower
+        or "wordprocessingml" in mime_lower
+        or "docx" in mime_lower
+        or mime_lower == "application/octet-stream"
+    )
+
+    if is_binary:
+        if isinstance(content, bytes):
+            raw_bytes = content
+            base64_str = base64.b64encode(content).decode("utf-8")
+            sig_validation_content = content.decode("utf-8", errors="ignore")
+        else:
+            is_already_b64 = False
+            try:
+                decoded = base64.b64decode(content)
+                if decoded.startswith(b"%PDF") or decoded.startswith(b"PK\x03\x04"):
+                    is_already_b64 = True
+                    raw_bytes = decoded
+                    base64_str = content
+                    sig_validation_content = decoded.decode("utf-8", errors="ignore")
+            except Exception:
+                pass
+
+            if not is_already_b64:
+                raw_bytes = content.encode("utf-8", errors="surrogateescape")
+                base64_str = base64.b64encode(raw_bytes).decode("utf-8")
+                sig_validation_content = content
+    else:
+        if isinstance(content, bytes):
+            raw_bytes = content
+            content = content.decode("utf-8", errors="ignore")
+            sig_validation_content = content
+        else:
+            raw_bytes = content.encode("utf-8", errors="surrogateescape")
+            sig_validation_content = content
+
     # 1. Determine TMF taxonomy version
     tax_version = taxonomy_version or get_active_catalog().version
 
@@ -128,14 +167,14 @@ async def ingest_tmf_document(
     # 5. Validate embedded X.509 signature
     is_valid, status_msg = validate_document_signature(
         artifact_type=canonical_artifact_type,
-        content=content,
+        content=sig_validation_content,
         metadata_json=metadata_json,
     )
     if not is_valid:
         raise ValueError(f"Validation Error: {status_msg}")
 
     # Extract signature to set signature verification status in metadata
-    cert_pem, sig_bytes, _ = extract_signature_from_content(content)
+    cert_pem, sig_bytes, _ = extract_signature_from_content(sig_validation_content)
     if not cert_pem and metadata_json:
         for key in ["signature", "digital_signature", "x509_signature"]:
             sig_obj = metadata_json.get(key)
@@ -174,7 +213,7 @@ async def ingest_tmf_document(
     if cert_pem and sig_b64:
         # We have a valid validated signature!
         # Compute hash of the payload content
-        content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+        content_hash = hashlib.sha256(raw_bytes).hexdigest()
 
         # Extract signer identity (CN) from cert_pem
         signer_name = None
@@ -214,8 +253,8 @@ async def ingest_tmf_document(
 
     # Compute deterministic SHA-256 of raw content UTF-8 if not provided
     resolved_checksum = content_checksum
-    if not resolved_checksum and content is not None:
-        resolved_checksum = hashlib.sha256(content.encode("utf-8")).hexdigest()
+    if not resolved_checksum and raw_bytes is not None:
+        resolved_checksum = hashlib.sha256(raw_bytes).hexdigest()
 
     # 5b. Idempotency Key check
     if idempotency_key:
@@ -370,7 +409,7 @@ async def ingest_tmf_document(
                 section=res_section,
                 artifact_type=canonical_artifact_type,
                 filename=filename,
-                content=content,
+                content=base64_str if is_binary else content,
                 mime_type=mime_type,
                 created_by=created_by,
                 version_index=new_version_index,

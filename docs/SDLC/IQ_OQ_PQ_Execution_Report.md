@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2092
-- **Passed:** 2087 🟢
+- **Total Automated Test Cases Run:** 2097
+- **Passed:** 2092 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
 - **Overall Operational Pass Rate:** 99.76%
@@ -1758,6 +1758,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_notifications_gxp_medical_monitor_alert` | `tests.test_sae_reconciliation_jobs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reconciliation_job_failure_path` | `tests.test_sae_reconciliation_jobs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_trigger_and_poll_reconciliation_job_success` | `tests.test_sae_reconciliation_jobs` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_automated_webhook_non_degraded_ingestion` | `tests.test_safe_binary_storage_watermark` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_native_docx_watermarking` | `tests.test_safe_binary_storage_watermark` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_native_pdf_watermarking` | `tests.test_safe_binary_storage_watermark` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_safe_binary_ingestion_and_export` | `tests.test_safe_binary_storage_watermark` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_e2b_xml_happy_path` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_e2b_xml_invalid_raises_value_error` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_icsr_version_and_reason_for_change_rendering` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1893,6 +1897,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_is_safe_file` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_blocked_on_non_safe_files` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_graceful_exit_on_api_error` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_graceful_on_github_api_error` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_no_conflict_needed` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_no_conflict_with_non_safe_files` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_skipped_if_no_safe_change_label` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |

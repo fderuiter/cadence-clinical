@@ -19,10 +19,10 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
-          # Use GITHUB_TOKEN directly for checkout to ensure it always succeeds
+          # Use GITHUB_TOKEN for safe and always-valid checkout
           token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
           fetch-depth: 0
 
       - name: Set up uv

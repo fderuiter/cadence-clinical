@@ -30,6 +30,7 @@ def run_command(args: list[str], check: bool = True) -> tuple[str, str]:
         print(f"Command failed: {' '.join(args)}")
         print(f"Stdout: {e.stdout}")
         print(f"Stderr: {e.stderr}")
+        handle_github_api_error(e.stderr)
         if check:
             raise e
         return e.stdout.strip(), e.stderr.strip()
@@ -157,7 +158,6 @@ def main() -> None:
     if not pr_json:
         handle_github_api_error(pr_err)
         print(f"Error fetching PR details: {pr_err}")
-        handle_github_api_error(pr_err)
         print("Gracefully skipping automated self-healing due to API fetch error.")
         sys.exit(0)
 
@@ -224,6 +224,7 @@ def main() -> None:
         print(
             f"Could not fetch files from GitHub API: {files_err}. Falling back to git diff."
         )
+        handle_github_api_error(files_err)
         stdout, _ = run_command(
             ["git", "diff", "--name-only", f"origin/{base_branch}...HEAD"], check=False
         )
