@@ -4,7 +4,11 @@ Clinical Domain Exceptions for hexagonal decoupling.
 
 
 class DomainError(Exception):
-    """Base exception for all domain-level errors."""
+    """Base exception for all domain-level errors.
+
+    Used for framework-agnostic error propagation across service boundaries,
+    ensuring decoupling from web or persistence exceptions.
+    """
 
     def __init__(self, message: str):
         super().__init__(message)
