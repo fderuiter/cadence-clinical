@@ -16,15 +16,34 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Inject default/mock environment configurations to prevent top-level execution errors during module loading
+MOCK_ENV_VARS = {
+    "DATABASE_URL": "postgresql://mock_user:mock_pass@localhost:5432/mock_db",
+    "ENV": "development",
+    "ENVIRONMENT": "development",
+    "DEBUG": "True",
+    "QUALITY_DATABASE_URL": "sqlite+aiosqlite:///:memory:",
+    "SAFETY_DATABASE_URL": "sqlite+aiosqlite:///:memory:",
+    "GATEWAY_SECRET": "mock-gateway-secret-12345",
+    "SAFETY_SALT": "mock-safety-salt-12345",
+    "SIGNING_SECRET": "mock-signing-secret-12345",
+    "NEO4J_URI": "bolt://localhost:7687",
+    "NEO4J_USER": "neo4j",
+    "NEO4J_PASSWORD": "password",
+}
+for k, v in MOCK_ENV_VARS.items():
+    if k not in os.environ:
+        os.environ[k] = v
+
 # Add packages subfolders and apps to sys.path to resolve imports within modules
 for p in Path("/app/packages").glob("*"):
     if p.is_dir() and str(p) not in sys.path:
-        sys.path.insert(0, str(p))
+        sys.path.append(str(p))
 for p in Path("/app/apps").glob("*"):
     if p.is_dir() and str(p) not in sys.path:
-        sys.path.insert(0, str(p))
+        sys.path.append(str(p))
 if "/app" not in sys.path:
-    sys.path.insert(0, "/app")
+    sys.path.append("/app")
 
 # Common developer tools/executables we whitelist even if not natively installed
 ALLOWED_COMMON_TOOLS = {
@@ -468,6 +487,8 @@ def build_codebase_map(repo_root):
                 ".mypy_cache",
                 "build",
                 "dist",
+                "tests",
+                "test",
             }
             and not d.startswith(".")
         ]
@@ -568,6 +589,9 @@ def get_model_fields_ast_from_map(class_name, codebase_map):
 
 def import_class_by_name_from_map(class_name, codebase_map):
     occurrences = codebase_map.get(class_name, [])
+    if not occurrences:
+        return None, f"Class '{class_name}' not found in codebase map."
+    last_err = None
     for occ in occurrences:
         if occ["type"] == "class":
             p = occ["file_path"]
@@ -580,10 +604,12 @@ def import_class_by_name_from_map(class_name, codebase_map):
                 spec.loader.exec_module(module)
                 cls = getattr(module, class_name, None)
                 if cls is not None:
-                    return cls
-            except Exception:
-                pass
-    return None
+                    return cls, None
+                else:
+                    last_err = f"Class '{class_name}' not found in module '{p}'."
+            except Exception as e:
+                last_err = f"{type(e).__name__}: {str(e)}"
+    return None, last_err
 
 
 def clean_json_text(text):
@@ -868,8 +894,10 @@ def validate_json_block(
     if matched_model_name:
         success = False
         err_msgs = []
+        cls = None
+        import_error = None
         try:
-            cls = import_class_by_name_from_map(matched_model_name, codebase_map)
+            cls, import_error = import_class_by_name_from_map(matched_model_name, codebase_map)
             if cls is not None:
                 try:
                     cls.model_validate(doc_dict)
@@ -884,8 +912,23 @@ def validate_json_block(
                     success = False
                 else:
                     success = True
-        except Exception:
-            pass
+            else:
+                warning_msg = (
+                    f"[WARNING] Degraded linter coverage at {file_path}:{start_line}\n"
+                    f"Failed to dynamically load Pydantic model '{matched_model_name}'.\n"
+                    f"Underlying import error: {import_error or 'Unknown error'}\n"
+                    f"Falling back to basic shallow AST structure verification."
+                )
+                print(warning_msg, file=sys.stderr)
+        except Exception as e:
+            import_error = f"{type(e).__name__}: {str(e)}"
+            warning_msg = (
+                f"[WARNING] Degraded linter coverage at {file_path}:{start_line}\n"
+                f"Failed to dynamically load Pydantic model '{matched_model_name}'.\n"
+                f"Underlying import error: {import_error}\n"
+                f"Falling back to basic shallow AST structure verification."
+            )
+            print(warning_msg, file=sys.stderr)
 
         if not success and not err_msgs:
             fields = get_model_fields_ast_from_map(matched_model_name, codebase_map)
