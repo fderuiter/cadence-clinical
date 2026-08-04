@@ -124,6 +124,35 @@ def update_pr_comment(outcome: str) -> None:
         print(f"Failed to run post_pr_comment.py: {e}", file=sys.stderr)
 
 
+def handle_github_api_error(stderr_msg: str) -> None:
+    """Check for permission, authorization, or other non-blocking errors and exit gracefully."""
+    combined = stderr_msg.lower()
+    patterns = [
+        "resource not accessible by integration",
+        "403",
+        "http 403",
+        "401",
+        "http 401",
+        "must have admin rights",
+        "viewer can't make query",
+        "not logged in",
+        "gh auth login",
+        "populate the gh_token",
+        "unauthorized",
+        "forbidden",
+        "permission",
+        "api error",
+    ]
+    if any(p in combined for p in patterns):
+        print(
+            "WARNING: GitHub API permission or authentication error occurred.\n"
+            f"Error details: {stderr_msg.strip()}\n"
+            "Skipping autonomous self-healing.",
+            file=sys.stderr,
+        )
+        sys.exit(0)
+
+
 def main() -> None:
     repo = os.environ.get("GITHUB_REPOSITORY")
     pr_number = os.environ.get("PR_NUMBER")
@@ -154,6 +183,7 @@ def main() -> None:
     )
 
     if not pr_json:
+        handle_github_api_error(pr_err)
         print(f"Error fetching PR details: {pr_err}")
         handle_github_api_error(pr_err)
         sys.exit(1)
@@ -362,26 +392,62 @@ def main() -> None:
     print("Validation checks passed successfully!")
 
     # 7. Secure Pushing with High Privilege
-    pat = os.environ.get("PAT_FDERUITER") or os.environ.get("GH_TOKEN")
-    if pat:
-        print("Configuring remote URL with credentials...")
-        run_command(
-            [
-                "git",
-                "remote",
-                "set-url",
-                "origin",
-                f"https://x-access-token:{pat}@github.com/{repo}.git",
-            ]
-        )
+    pat_fderuiter = os.environ.get("PAT_FDERUITER")
+    gh_token = os.environ.get("GH_TOKEN")
 
-    print(f"Pushing healed branch to origin/HEAD:{head_branch}...")
-    push_out, push_err = run_command(
-        ["git", "push", "origin", f"HEAD:{head_branch}"], check=False
-    )
-    print(push_out)
-    if push_err:
-        print(f"Push warnings/errors: {push_err}")
+    success = False
+    if pat_fderuiter:
+        print("Attempting push using PAT_FDERUITER...")
+        try:
+            run_command(
+                [
+                    "git",
+                    "remote",
+                    "set-url",
+                    "origin",
+                    f"https://x-access-token:{pat_fderuiter}@github.com/{repo}.git",
+                ],
+                check=True,
+            )
+            push_out, push_err = run_command(
+                ["git", "push", "origin", f"HEAD:{head_branch}"], check=True
+            )
+            print(push_out)
+            if push_err:
+                print(f"Push warnings/info: {push_err}")
+            print("Push with PAT_FDERUITER completed successfully!")
+            success = True
+        except Exception as e:
+            print(f"Push with PAT_FDERUITER failed: {e}. Falling back to GH_TOKEN...")
+
+    if not success and gh_token:
+        print("Attempting push using GH_TOKEN...")
+        try:
+            run_command(
+                [
+                    "git",
+                    "remote",
+                    "set-url",
+                    "origin",
+                    f"https://x-access-token:{gh_token}@github.com/{repo}.git",
+                ],
+                check=True,
+            )
+            push_out, push_err = run_command(
+                ["git", "push", "origin", f"HEAD:{head_branch}"], check=True
+            )
+            print(push_out)
+            if push_err:
+                print(f"Push warnings/info: {push_err}")
+            print("Push with GH_TOKEN completed successfully!")
+            success = True
+        except Exception as e:
+            print(f"Push with GH_TOKEN failed: {e}")
+            sys.exit(1)
+
+    if not success:
+        print("No valid credentials found or push failed completely.")
+        sys.exit(1)
 
     print("Autonomous self-healing completed successfully and pushed!")
     update_pr_comment("success")

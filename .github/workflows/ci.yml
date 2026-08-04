@@ -78,22 +78,22 @@ jobs:
       - name: Run ADR validation
         id: run_adr
         if: always()
-        run: python3 scripts/validate_adrs.py
+        run: uv run python scripts/validate_adrs.py
 
       - name: Run Cross-Service Import Validation
         id: run_imports
         if: always()
-        run: python3 scripts/validate_imports.py
+        run: uv run python scripts/validate_imports.py
 
       - name: Run Architecture Drift Validation
         id: run_arch_drift
         if: always()
-        run: python3 scripts/validate_architecture_drift.py
+        run: uv run python scripts/validate_architecture_drift.py
 
       - name: Run Path-Pattern Boundary Validation
         id: run_path_patterns
         if: always()
-        run: python3 scripts/validate_path_patterns.py --all
+        run: uv run python scripts/validate_path_patterns.py --all
 
       - name: Compile UI library for markdown checks
         run: pnpm --filter ui build
@@ -101,12 +101,12 @@ jobs:
       - name: Run Markdown validation
         id: run_markdown
         if: always()
-        run: python3 scripts/validate_markdown.py
+        run: uv run python scripts/validate_markdown.py
 
       - name: Run Architectural validation
         id: run_architecture
         if: always()
-        run: python3 scripts/validate_architecture_drift.py
+        run: uv run python scripts/validate_architecture_drift.py
 
 
       - name: Run documentation compilation
@@ -131,12 +131,12 @@ jobs:
             CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '\.(py|js|vue|css)$' || true)
           fi
           if [ -n "$CHANGED_FILES" ]; then
-            python3 scripts/detect_duplication.py $CHANGED_FILES
+            uv run python scripts/detect_duplication.py $CHANGED_FILES
           else
             # Fallback to scanning git status (staged/unstaged files)
             CHANGED_FILES=$(git status --porcelain | awk '{print $2}' | grep -E '\.(py|js|vue|css)$' || true)
             if [ -n "$CHANGED_FILES" ]; then
-              python3 scripts/detect_duplication.py $CHANGED_FILES
+              uv run python scripts/detect_duplication.py $CHANGED_FILES
             else
               echo "No relevant files changed."
             fi
@@ -208,7 +208,7 @@ jobs:
       - name: Run dependency audit
         id: run_audit
         if: always()
-        run: python3 scripts/validate_vulnerabilities.py
+        run: uv run python scripts/validate_vulnerabilities.py
 
       - name: Run secret detection
         id: run_secrets
@@ -537,7 +537,7 @@ jobs:
           merge-multiple: true
 
       - name: Merge JUnit XML Reports
-        run: python3 scripts/merge_junit.py report.xml report-unit.xml report-integration.xml report-qualification.xml
+        run: uv run python scripts/merge_junit.py report.xml report-unit.xml report-integration.xml report-qualification.xml
 
       - name: Generate Compliance Reports
         run: uv run python scripts/generate_rtm.py
@@ -700,7 +700,7 @@ jobs:
           GH_TOKEN: ${{ secrets.SERVICE_ACCOUNT_TOKEN || secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
           FAIL_ON_RULESET_SYNC_ERROR: "true"
         run: |
-          python3 scripts/sync_ruleset.py
+          uv run python scripts/sync_ruleset.py
 
   release-and-archive:
     name: Call Production Pipeline

@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.etmf.models import TMFAuditLog, TMFDocument
+from apps.etmf.models import TMFAuditLog, TMFDocument, is_site_level_artifact
 from apps.etmf.watermark import apply_watermark
 from packages.security.rbac import Principal
 
@@ -57,27 +57,42 @@ async def generate_binder_zip(
     else:
         authorized_docs = list(all_docs)
 
+    # Omit quarantined documents or documents with unresolved site metadata
+    filtered_docs = []
+    for doc in authorized_docs:
+        if doc.site_id == "QUARANTINED":
+            continue
+        is_site = is_site_level_artifact(doc.artifact_type or "", doc.artifact_code)
+        if is_site and (not doc.site_id or not doc.site_id.strip()):
+            continue
+        filtered_docs.append(doc)
+    authorized_docs = filtered_docs
+
     # 2. Filter latest versions or full history
     if not include_history:
-        latest_by_code = {}
+        latest_by_key = {}
         for doc in authorized_docs:
-            code = doc.artifact_code
+            if is_site_level_artifact(doc.artifact_type or "", doc.artifact_code):
+                key = (doc.artifact_code, doc.site_id)
+            else:
+                key = doc.artifact_code
             if (
-                code not in latest_by_code
-                or doc.version_index > latest_by_code[code].version_index
+                key not in latest_by_key
+                or doc.version_index > latest_by_key[key].version_index
             ):
-                latest_by_code[code] = doc
-        documents_to_export = list(latest_by_code.values())
+                latest_by_key[key] = doc
+        documents_to_export = list(latest_by_key.values())
     else:
         documents_to_export = authorized_docs
 
-    # Deterministically sort documents by zone -> section -> artifact_code -> version_index
+    # Deterministically sort documents by zone -> section -> artifact_code -> site_id -> version_index
     documents_to_export = sorted(
         documents_to_export,
         key=lambda d: (
             d.zone or 0,
             d.section or "",
             d.artifact_code or "",
+            d.site_id or "",
             d.version_index or 0,
         ),
     )
@@ -172,7 +187,11 @@ async def generate_binder_zip(
                     "status": doc.status,
                     "zone": doc.zone,
                     "section": doc.section,
-                    "site_id": doc.site_id,
+                    "site_id": doc.site_id
+                    if is_site_level_artifact(
+                        doc.artifact_type or "", doc.artifact_code
+                    )
+                    else None,
                     "is_redacted": doc.is_redacted,
                     "redaction_source_id": doc.redaction_source_id,
                     "archive_path": doc_paths[doc.id],

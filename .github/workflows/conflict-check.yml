@@ -66,8 +66,7 @@ jobs:
 
       - name: Autonomous Self-Healing
         env:
-          GH_TOKEN: ${{ secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
-          PAT_FDERUITER: ${{ secrets.PAT_FDERUITER }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
@@ -79,7 +78,7 @@ jobs:
       - name: Post PR Quality Checklist Comment on Conflict Fallback
         if: failure()
         env:
-          GH_TOKEN: ${{ secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           CONFLICT_OUTCOME: "failure"
         run: python3 scripts/post_pr_comment.py
