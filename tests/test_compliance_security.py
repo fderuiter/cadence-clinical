@@ -258,3 +258,56 @@ def test_security_audit_scanner_detection_and_bypass():
             assert len(findings) == 0
         finally:
             os.unlink(f.name)
+
+
+def test_audit_logger_raises_runtime_error_if_secret_missing(monkeypatch):
+    """Verify that the security module raises a RuntimeError if AUDIT_LOG_SECRET_KEY is missing or empty."""
+    import importlib
+    import sys
+    import pytest
+
+    # Store original modules
+    orig_audit = sys.modules.get("packages.security.audit_logger")
+    orig_security = sys.modules.get("packages.security")
+
+    monkeypatch.delenv("AUDIT_LOG_SECRET_KEY", raising=False)
+    sys.modules.pop("packages.security.audit_logger", None)
+    sys.modules.pop("packages.security", None)
+
+    try:
+        with pytest.raises(RuntimeError) as exc_info:
+            importlib.import_module("packages.security.audit_logger")
+        assert "AUDIT_LOG_SECRET_KEY environment variable is missing or empty" in str(exc_info.value)
+    finally:
+        if orig_audit is not None:
+            sys.modules["packages.security.audit_logger"] = orig_audit
+        else:
+            sys.modules.pop("packages.security.audit_logger", None)
+        if orig_security is not None:
+            sys.modules["packages.security"] = orig_security
+
+
+def test_signing_raises_runtime_error_if_email_secret_missing(monkeypatch):
+    """Verify that the signing module raises a RuntimeError if INBOUND_EMAIL_HMAC_SECRET is missing or empty."""
+    import importlib
+    import sys
+    import pytest
+
+    orig_signing = sys.modules.get("packages.security.signing")
+    orig_security = sys.modules.get("packages.security")
+
+    monkeypatch.delenv("INBOUND_EMAIL_HMAC_SECRET", raising=False)
+    sys.modules.pop("packages.security.signing", None)
+    sys.modules.pop("packages.security", None)
+
+    try:
+        with pytest.raises(RuntimeError) as exc_info:
+            importlib.import_module("packages.security.signing")
+        assert "INBOUND_EMAIL_HMAC_SECRET environment variable is missing or empty" in str(exc_info.value)
+    finally:
+        if orig_signing is not None:
+            sys.modules["packages.security.signing"] = orig_signing
+        else:
+            sys.modules.pop("packages.security.signing", None)
+        if orig_security is not None:
+            sys.modules["packages.security"] = orig_security
