@@ -64,6 +64,7 @@
         >
         <div style="display: flex; gap: 16px; margin-top: 8px">
           <label
+            class="touch-target-interactive"
             style="
               display: flex;
               align-items: center;
@@ -75,6 +76,7 @@
             <input v-model="exportFormat" type="radio" value="CSV" /> CSV
           </label>
           <label
+            class="touch-target-interactive"
             style="
               display: flex;
               align-items: center;
@@ -86,6 +88,7 @@
             <input v-model="exportFormat" type="radio" value="PDF" /> PDF
           </label>
           <label
+            class="touch-target-interactive"
             style="
               display: flex;
               align-items: center;
@@ -109,14 +112,7 @@
           "
           >Date Range Bounds</label
         >
-        <div
-          style="
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-top: 8px;
-          "
-        >
+        <div class="grid-2-responsive" style="margin-top: 8px">
           <div>
             <label
               style="
@@ -130,7 +126,7 @@
             <input
               v-model="startDate"
               type="date"
-              class="export-start-date"
+              class="export-start-date touch-target-interactive"
               style="
                 width: 100%;
                 padding: 8px;
@@ -155,7 +151,7 @@
             <input
               v-model="endDate"
               type="date"
-              class="export-end-date"
+              class="export-end-date touch-target-interactive"
               style="
                 width: 100%;
                 padding: 8px;
@@ -178,11 +174,14 @@
           margin-top: 24px;
         "
       >
-        <button class="btn btn-secondary" @click="$emit('close')">
+        <button
+          class="btn btn-secondary touch-target-interactive"
+          @click="$emit('close')"
+        >
           Cancel
         </button>
         <button
-          class="btn btn-primary"
+          class="btn btn-primary touch-target-interactive"
           :disabled="exporting"
           @click="handleExport"
         >
