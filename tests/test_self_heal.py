@@ -192,3 +192,4 @@ def test_main_graceful_exit_on_api_error(mock_update_comment, mock_run_cmd):
             with pytest.raises(SystemExit):
                 main()
             mock_exit.assert_called_once_with(0)
+            mock_update_comment.assert_not_called()

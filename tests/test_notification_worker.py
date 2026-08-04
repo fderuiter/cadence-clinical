@@ -537,6 +537,7 @@ async def test_start_stop_notification_worker_integration():
     # Gather diagnostics if the assert is about to fail
     if len(notifs) == 0:
         import apps.notifications.workers.notification_worker as nw
+
         task_done = nw._worker_task.done() if nw._worker_task else None
         task_cancelled = nw._worker_task.cancelled() if nw._worker_task else None
         task_exc = None
@@ -546,7 +547,7 @@ async def test_start_stop_notification_worker_integration():
             except Exception as e:
                 task_exc = f"Could not get exception: {e}"
         queue_size = nw._get_mock_queue().qsize()
-        print(f"DIAGNOSTICS - len(notifs) is 0!")
+        print("DIAGNOSTICS - len(notifs) is 0!")
         print(f"DIAGNOSTICS - _worker_task exists: {nw._worker_task is not None}")
         print(f"DIAGNOSTICS - _worker_task done: {task_done}")
         print(f"DIAGNOSTICS - _worker_task cancelled: {task_cancelled}")
