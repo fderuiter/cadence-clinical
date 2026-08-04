@@ -162,3 +162,27 @@ def test_main_graceful_exit_on_api_error(mock_update_comment, mock_run_cmd):
             with pytest.raises(SystemExit):
                 main()
             mock_exit.assert_called_once_with(0)
+
+
+@patch("scripts.self_heal.run_command")
+@patch("scripts.self_heal.update_pr_comment")
+def test_main_no_conflict_with_non_safe_files(mock_update_comment, mock_run_cmd):
+    # Mock PR with safe-change label, non-safe files, but already mergeable.
+    # The script should exit with 0 during the conflict check step without
+    # failing on file guardrails.
+    mock_run_cmd.side_effect = [
+        # gh pr view
+        (
+            '{"labels": [{"name": "safe-change"}], "headRefName": "feat-docs", "baseRefName": "main", "mergeable": "MERGEABLE"}',
+            "",
+        )
+    ]
+
+    with patch.dict(
+        os.environ, {"GITHUB_REPOSITORY": "owner/repo", "PR_NUMBER": "123"}
+    ):
+        with patch("sys.exit", side_effect=SystemExit) as mock_exit:
+            with pytest.raises(SystemExit):
+                main()
+            mock_exit.assert_called_once_with(0)
+            mock_update_comment.assert_not_called()

@@ -361,6 +361,7 @@ def is_excluded_path(path: str, root_dir: str) -> bool:
             "stores",
             "alembic",
             "deid",
+            "coverage",
         }:
             return True
 
@@ -380,6 +381,7 @@ def is_excluded_path(path: str, root_dir: str) -> bool:
             "pnpm-workspace.yaml",
             "pnpm-lock.yaml",
             "uv.lock",
+            ".secrets.baseline",
             "readme.md",
             # Developer-facing documentation files that will legitimately contain
             # repository URLs, CLI examples with usernames, and similar content
