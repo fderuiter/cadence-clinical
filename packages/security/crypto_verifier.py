@@ -271,6 +271,7 @@ def verify_asymmetric_signature(
                         hashes.SHA256(),
                     )
             except Exception:
+                # Fallback to PKCS#1 v1.5 padding
                 if is_prehashed:
                     public_key.verify(
                         signature_bytes,
