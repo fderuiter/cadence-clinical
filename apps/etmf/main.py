@@ -965,7 +965,7 @@ async def list_documents(
         stmt = stmt.where(TMFDocument.zone == zone)
     if search:
         # Simple SQLite/Postgres text search indexing
-        stmt = stmt.where(TMFDocument.content.contains(search))
+        stmt = stmt.where(TMFDocument._content.contains(search))
     if status:
         stmt = stmt.where(TMFDocument.status == status)
 
@@ -1202,7 +1202,15 @@ async def download_document(
 
         try:
             if isinstance(final_content, str):
-                final_content = base64.b64decode(final_content)
+                if final_content == doc._content:
+                    final_content = base64.b64decode(final_content)
+                else:
+                    try:
+                        decoded = base64.b64decode(final_content)
+                        if decoded.startswith(b"%PDF") or decoded.startswith(b"PK\x03\x04"):
+                            final_content = decoded
+                    except Exception:
+                        pass
         except Exception:
             pass
 
@@ -1277,7 +1285,15 @@ async def download_watermarked_document(
 
         try:
             if isinstance(watermarked_content, str):
-                watermarked_content = base64.b64decode(watermarked_content)
+                if watermarked_content == doc._content:
+                    watermarked_content = base64.b64decode(watermarked_content)
+                else:
+                    try:
+                        decoded = base64.b64decode(watermarked_content)
+                        if decoded.startswith(b"%PDF") or decoded.startswith(b"PK\x03\x04"):
+                            watermarked_content = decoded
+                    except Exception:
+                        pass
         except Exception:
             pass
 

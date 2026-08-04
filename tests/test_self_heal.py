@@ -6,7 +6,7 @@ import pytest
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from scripts.self_heal import handle_github_api_error, is_safe_file, main
+from scripts.self_heal import is_safe_file, main
 
 
 def test_is_safe_file():
