@@ -11,6 +11,21 @@ from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
 logger = logging.getLogger("etmf-cryptography")
 
 
+def is_bypass_requested(metadata_json: dict[str, Any] | None) -> bool:
+    if not metadata_json:
+        return False
+    if "requires_signature" in metadata_json and metadata_json["requires_signature"] is False:
+        return True
+    if "require_signature" in metadata_json and metadata_json["require_signature"] is False:
+        return True
+    for k, v in metadata_json.items():
+        k_lower = k.lower()
+        if "bypass" in k_lower or "skip" in k_lower:
+            if v is True or (isinstance(v, str) and v.lower() in ("true", "1", "yes")):
+                return True
+    return False
+
+
 def requires_signature(
     artifact_type: str, metadata_json: dict[str, Any] | None = None
 ) -> bool:
@@ -18,19 +33,8 @@ def requires_signature(
     Determines if a given eTMF artifact type requires a cryptographic signature
     to satisfy regulatory compliance (such as FDA 21 CFR Part 11).
     """
-    if metadata_json is not None:
-        if "requires_signature" in metadata_json:
-            return metadata_json.get("requires_signature") is True
-        if "require_signature" in metadata_json:
-            return metadata_json.get("require_signature") is True
-
-    # If the artifact type explicitly mentions "signed" or "signature", it is required
     norm = artifact_type.strip().lower()
-    if "signed" in norm or "signature" in norm:
-        return True
-
-    # Check for mandatory in-scope regulatory document types
-    return norm in (
+    is_mandatory = norm in (
         "fda form 1572",
         "financial disclosure",
         "protocol sign-off",
@@ -38,10 +42,25 @@ def requires_signature(
         "financial_disclosure",
         "protocol_signoff",
     )
+    if is_mandatory:
+        return True
+
+    if metadata_json is not None:
+        if "requires_signature" in metadata_json:
+            return metadata_json.get("requires_signature") is True
+        if "require_signature" in metadata_json:
+            return metadata_json.get("require_signature") is True
+
+    # If the artifact type explicitly mentions "signed" or "signature", it is required
+    if "signed" in norm or "signature" in norm:
+        return True
+
+    return False
 
 
 def extract_signature_from_content(
     content: str,
+    allow_mock: bool = True,
 ) -> tuple[str | None, bytes | None, str | None]:
     """
     Scans the document content to extract an embedded X.509 certificate and signature.
@@ -53,6 +72,17 @@ def extract_signature_from_content(
             - signature_bytes (bytes)
             - signed_data (str) (document content with the signature blocks stripped)
     """
+    # Check for duplicate or injected certificate/signature blocks
+    # e.g., -----BEGIN CERTIFICATE----- or <X509Certificate> occurring more than once, or multiple signatures
+    if (
+        content.count("-----BEGIN CERTIFICATE-----") > 1
+        or content.count("-----BEGIN SIGNATURE-----") > 1
+        or content.count("<X509Certificate>") > 1
+        or content.count("<SignatureValue>") > 1
+        or content.count("<Signature>") > 1
+    ):
+        raise ValueError("Duplicate or injected certificate/signature blocks detected.")
+
     # 1. Try PEM-style blocks
     if "-----BEGIN CERTIFICATE-----" in content:
         cert_match = re.search(
@@ -68,11 +98,15 @@ def extract_signature_from_content(
 
         if cert_match:
             cert_pem = cert_match.group(1).strip()
+            if not allow_mock and "mock" in cert_pem.lower():
+                raise ValueError("Mock signature detected and blocked.")
+
             sig_bytes = None
             if sig_match:
                 sig_str = sig_match.group(1).strip()
+                if not allow_mock and "mock" in sig_str.lower():
+                    raise ValueError("Mock signature detected and blocked.")
                 try:
-                    # Try Base64 first, then hex
                     sig_bytes = base64.b64decode(sig_str)
                 except Exception:
                     with contextlib.suppress(Exception):
@@ -105,6 +139,9 @@ def extract_signature_from_content(
 
         if cert_match:
             cert_body = cert_match.group(1).strip()
+            if not allow_mock and "mock" in cert_body.lower():
+                raise ValueError("Mock signature detected and blocked.")
+
             # If not wrapped in PEM, wrap it
             if "-----BEGIN CERTIFICATE-----" not in cert_body:
                 cert_pem = f"-----BEGIN CERTIFICATE-----\n{cert_body}\n-----END CERTIFICATE-----"
@@ -114,6 +151,8 @@ def extract_signature_from_content(
             sig_bytes = None
             if sig_match:
                 sig_str = sig_match.group(1).strip()
+                if not allow_mock and "mock" in sig_str.lower():
+                    raise ValueError("Mock signature detected and blocked.")
                 try:
                     sig_bytes = base64.b64decode(sig_str)
                 except Exception:
@@ -149,14 +188,42 @@ def verify_x509_signature(
     Performs active cryptographic verification of signed data using an X.509 certificate.
     """
     try:
+        # Check for mock signatures
+        if "mock" in cert_pem.lower():
+            logger.warning("Mock signature detected and blocked.")
+            return False
+
         # Load the certificate
         cert = x509.load_pem_x509_certificate(cert_pem.encode("utf-8"))
         public_key = cert.public_key()
 
-        # Verify the signature using the public key
+        # Check self-signed and active status in trust store
+        from packages.security.cert_store import get_active_cert_store
+        cert_store = get_active_cert_store()
+
+        is_self_signed = cert.issuer == cert.subject
+        if is_self_signed:
+            serial_hex = hex(cert.serial_number)[2:].lower()
+            if serial_hex not in cert_store._cert_registry:
+                logger.warning("Self-signed certificate is not approved in trust store")
+                return False
+
+        # Verify certificate temporal status and CRL revocation
+        is_valid_status, status_msg = cert_store.verify_certificate_status(cert_pem)
+        if not is_valid_status:
+            logger.warning("Certificate validation failed: %s", status_msg)
+            return False
+
+        # Verify the signature using the public key with RSA-PSS padding
         if isinstance(public_key, rsa.RSAPublicKey):
             public_key.verify(
-                signature_bytes, signed_data, padding.PKCS1v15(), hashes.SHA256()
+                signature_bytes,
+                signed_data,
+                padding.PSS(
+                    mgf=padding.MGF1(hashes.SHA256()),
+                    salt_length=padding.PSS.MAX_LENGTH,
+                ),
+                hashes.SHA256(),
             )
         elif isinstance(public_key, ec.EllipticCurvePublicKey):
             public_key.verify(signature_bytes, signed_data, ec.ECDSA(hashes.SHA256()))
@@ -178,8 +245,29 @@ def validate_document_signature(
     Returns:
         Tuple[bool, str]: (is_valid, status_message)
     """
+    # 0. Bypass prevention check for mandatory regulatory documents
+    norm = artifact_type.strip().lower()
+    is_mandatory = norm in (
+        "fda form 1572",
+        "financial disclosure",
+        "protocol sign-off",
+        "form_1572",
+        "financial_disclosure",
+        "protocol_signoff",
+    )
+    if is_mandatory and is_bypass_requested(metadata_json):
+        return False, "Bypass attempt rejected for mandatory regulatory document."
+
     # 1. Attempt to extract from content
-    cert_pem, sig_bytes, signed_data = extract_signature_from_content(content)
+    try:
+        cert_pem, sig_bytes, signed_data = extract_signature_from_content(content, allow_mock=False)
+    except ValueError as e:
+        msg = str(e)
+        if "Mock signature detected and blocked" in msg:
+            return False, "Mock signature detected and blocked."
+        if "Duplicate or injected certificate" in msg:
+            return False, "Duplicate or injected certificate/signature blocks detected."
+        return False, f"Structural signature block anomaly: {msg}"
 
     # 2. If not found in content, attempt to extract from metadata
     if not cert_pem and metadata_json:
@@ -206,7 +294,18 @@ def validate_document_signature(
                     signed_data = content.strip()
                     break
 
-    # 3. Check requirements
+    # 3. Check for Mock signatures in extracted metadata blocks
+    if cert_pem and "mock" in cert_pem.lower():
+        return False, "Mock signature detected and blocked."
+    if sig_bytes:
+        try:
+            sig_str_check = sig_bytes.decode("utf-8", errors="ignore").lower()
+            if "mock" in sig_str_check:
+                return False, "Mock signature detected and blocked."
+        except Exception:
+            pass
+
+    # 4. Check requirements
     is_required = requires_signature(artifact_type, metadata_json)
 
     if not cert_pem or not sig_bytes:
@@ -217,14 +316,25 @@ def validate_document_signature(
             )
         return True, "No signature present (none required)."
 
-    # 4. Handle Mock/Test cases cleanly
-    # Allow mock signatures for simple testing paths if requested explicitly in test suite
-    if "MOCK_SIGNATURE" in cert_pem or b"MOCK" in sig_bytes:
-        if b"INVALID" in sig_bytes or "INVALID" in cert_pem:
-            return False, "Invalid mock digital signature detected."
-        return True, "Valid mock digital signature verified."
+    # 5. Perform active trust store validation (checking self-signed and temporal/revocation)
+    from packages.security.cert_store import get_active_cert_store
+    cert_store = get_active_cert_store()
 
-    # 5. Perform actual cryptographic validation
+    try:
+        cert = x509.load_pem_x509_certificate(cert_pem.encode("utf-8"))
+        is_self_signed = cert.issuer == cert.subject
+        if is_self_signed:
+            serial_hex = hex(cert.serial_number)[2:].lower()
+            if serial_hex not in cert_store._cert_registry:
+                return False, "Self-signed certificate is not approved in trust store"
+    except Exception as e:
+        return False, f"Failed to parse certificate: {e}"
+
+    is_valid_status, status_msg = cert_store.verify_certificate_status(cert_pem)
+    if not is_valid_status:
+        return False, f"Certificate validation failed: {status_msg}"
+
+    # 6. Perform actual cryptographic validation
     is_valid = verify_x509_signature(cert_pem, sig_bytes, signed_data.encode("utf-8"))
     if not is_valid:
         return False, "Cryptographic signature verification failed (invalid signature)."
