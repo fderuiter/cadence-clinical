@@ -36,7 +36,7 @@ describe("Viewport-Driven DOM Recycler Integration Tests", () => {
 
   it("should enforce a minimum height of 44px to satisfy WCAG", () => {
     /**
-     * Requirement 3: The layout wrapper must track and enforce a minimum height of 44px 
+     * Requirement 3: The layout wrapper must track and enforce a minimum height of 44px
      * to satisfy WCAG touch-target requirements.
      */
     const field = { id: "field-1", label: "Test Input", type: "text" };
@@ -54,7 +54,7 @@ describe("Viewport-Driven DOM Recycler Integration Tests", () => {
 
   it("should mount child components when intersecting", async () => {
     /**
-     * Requirement 1: The system must wrap each clinical form field in a layout wrapper 
+     * Requirement 1: The system must wrap each clinical form field in a layout wrapper
      * that monitors viewport entry and exit using a native browser IntersectionObserver.
      */
     const field = { id: "field-1", label: "Test Input", type: "text" };
@@ -77,9 +77,9 @@ describe("Viewport-Driven DOM Recycler Integration Tests", () => {
 
   it("should unmount child components when offscreen to save memory", async () => {
     /**
-     * Requirement 2: The system must unmount the child components of off-screen fields 
+     * Requirement 2: The system must unmount the child components of off-screen fields
      * to reduce active DOM elements while retaining their dynamic visual height.
-     * Requirement 5: The system must support dynamic height transitions when query 
+     * Requirement 5: The system must support dynamic height transitions when query
      * panels expand or validation errors display on active fields.
      */
     const field = { id: "field-1", label: "Test Input", type: "text" };
@@ -95,10 +95,12 @@ describe("Viewport-Driven DOM Recycler Integration Tests", () => {
     await wrapper.vm.$nextTick();
 
     // Mock measuring height
-    resizeCallback([{
-      target: wrapper.element,
-      borderBoxSize: [{ blockSize: 80 }],
-    }]);
+    resizeCallback([
+      {
+        target: wrapper.element,
+        borderBoxSize: [{ blockSize: 80 }],
+      },
+    ]);
     await wrapper.vm.$nextTick();
 
     // Simulate element exiting viewport
@@ -116,8 +118,8 @@ describe("Viewport-Driven DOM Recycler Integration Tests", () => {
 
   it("retains user input state when scrolled out and back into the viewport", async () => {
     /**
-     * Requirement 4: The system must maintain field validation, query statuses, 
-     * and rules engine execution state in the store regardless of whether fields 
+     * Requirement 4: The system must maintain field validation, query statuses,
+     * and rules engine execution state in the store regardless of whether fields
      * are currently mounted in the DOM.
      */
     const field = { id: "field-1", label: "Test Input", type: "text" };

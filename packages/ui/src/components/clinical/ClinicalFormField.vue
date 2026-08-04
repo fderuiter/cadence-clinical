@@ -1,9 +1,5 @@
 <template>
-  <div
-    ref="elRef"
-    :style="wrapperStyle"
-    class="clinical-form-field-wrapper"
-  >
+  <div ref="elRef" :style="wrapperStyle" class="clinical-form-field-wrapper">
     <template v-if="isIntersecting">
       <ClinicalRadioGroup
         v-if="field.type === 'radio' || field.type === 'choice_single'"
@@ -132,12 +128,15 @@ const wrapperStyle = computed(() => {
 
 onMounted(() => {
   if (typeof IntersectionObserver !== "undefined") {
-    io = new IntersectionObserver((entries) => {
-      const entry = entries[0];
-      isIntersecting.value = entry.isIntersecting;
-    }, {
-      rootMargin: "200px" // Render slightly ahead of viewport to avoid visual pop-in
-    });
+    io = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        isIntersecting.value = entry.isIntersecting;
+      },
+      {
+        rootMargin: "200px", // Render slightly ahead of viewport to avoid visual pop-in
+      }
+    );
     if (elRef.value) {
       io.observe(elRef.value);
     }
@@ -150,9 +149,10 @@ onMounted(() => {
       if (!isIntersecting.value) return;
       const entry = entries[0];
       if (entry) {
-        const height = entry.borderBoxSize && entry.borderBoxSize[0]
-          ? entry.borderBoxSize[0].blockSize
-          : entry.target.getBoundingClientRect().height;
+        const height =
+          entry.borderBoxSize && entry.borderBoxSize[0]
+            ? entry.borderBoxSize[0].blockSize
+            : entry.target.getBoundingClientRect().height;
         if (height >= 44) {
           measuredHeight.value = height;
         }
