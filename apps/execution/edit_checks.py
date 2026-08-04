@@ -11,6 +11,7 @@ import logging
 from datetime import datetime
 from typing import Any
 
+from datetime_helpers import get_utc_now_naive
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -554,7 +555,7 @@ async def run_synchronous_edit_checks(
             if existing_query:
                 existing_query.status = "CLOSED"
                 existing_query.resolver = "SYSTEM"
-                existing_query.resolved_at = datetime.utcnow()
+                existing_query.resolved_at = get_utc_now_naive()
                 existing_query.response = (
                     f"Auto-resolved: data corrected and {rule.rule_id} check passes."
                 )
@@ -691,7 +692,7 @@ async def run_asynchronous_edit_checks(
                         if existing_query:
                             existing_query.status = "CLOSED"
                             existing_query.resolver = "SYSTEM"
-                            existing_query.resolved_at = datetime.utcnow()
+                            existing_query.resolved_at = get_utc_now_naive()
                             existing_query.response = f"Auto-resolved: data corrected and {rule.rule_id} check passes."
                             existing_query.version += 1
                             logger.info(
@@ -800,7 +801,7 @@ async def resolve_pending_predecessor_checks(
                 if existing_query:
                     existing_query.status = "CLOSED"
                     existing_query.resolver = "SYSTEM"
-                    existing_query.resolved_at = datetime.utcnow()
+                    existing_query.resolved_at = get_utc_now_naive()
                     existing_query.response = f"Auto-resolved: data corrected and {rule.rule_id} check passes."
                     existing_query.version += 1
                     logger.info(
@@ -921,7 +922,7 @@ async def resolve_pending_predecessor_checks_for_form(
                             if existing_query:
                                 existing_query.status = "CLOSED"
                                 existing_query.resolver = "SYSTEM"
-                                existing_query.resolved_at = datetime.utcnow()
+                                existing_query.resolved_at = get_utc_now_naive()
                                 existing_query.response = f"Auto-resolved: data corrected and {rule.rule_id} check passes."
                                 existing_query.version += 1
                                 logger.info(

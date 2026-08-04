@@ -4,6 +4,7 @@ import time
 from datetime import UTC, date, datetime
 from typing import Any
 
+from datetime_helpers import get_utc_now_naive
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
@@ -1340,7 +1341,7 @@ async def sync_documents(
                     except Exception:
                         pass
             if not t_inc:
-                t_inc = datetime.utcnow()
+                t_inc = get_utc_now_naive()
 
             t_exist = None
             if latest_existing.metadata_json:
@@ -1358,7 +1359,7 @@ async def sync_documents(
                 t_exist = (
                     latest_existing.created_at.replace(tzinfo=None)
                     if latest_existing.created_at
-                    else datetime.utcnow()
+                    else get_utc_now_naive()
                 )
 
             # Get tiebreaker identifiers

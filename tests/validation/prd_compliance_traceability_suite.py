@@ -3,9 +3,8 @@ GxP Requirements Traceability Matrix Validation Module.
 Ensures that all specified product requirements have registered test outcomes.
 """
 
-from datetime import datetime
-
 import fitz
+from datetime_helpers import get_utc_now_naive
 from execution.econsent_models import EConsentSignRequest
 
 from apps.designer.renderers.document_renderer import ProtocolDocumentRenderer
@@ -151,7 +150,7 @@ def test_fda_compliant_pdf_generation():
     econsent_pdf_bytes = _render_pdf_certificate(
         payload=dummy_payload,
         sig_hash="8f4e69b2d9a3b4e78a2e1d0f5c6b7e8d9a0c1b2a3f4e5d6c7b8a9f0e1d2c3b4a",  # pragma: allowlist secret
-        now=datetime.utcnow(),
+        now=get_utc_now_naive(),
     )
 
     assert isinstance(econsent_pdf_bytes, bytes)

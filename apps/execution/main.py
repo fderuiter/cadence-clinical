@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
+from datetime_helpers import get_utc_now_aware, get_utc_now_naive
 from fastapi import (
     BackgroundTasks,
     Depends,
@@ -803,7 +804,7 @@ async def record_subject_consent_endpoint(
                 if payload.icf_signed_date:
                     existing.icf_signed_date = payload.icf_signed_date
                 elif not existing.icf_signed_date:
-                    existing.icf_signed_date = datetime.utcnow()
+                    existing.icf_signed_date = get_utc_now_naive()
                 existing.requires_reconsent = payload.requires_reconsent
                 consent_db = existing
             else:
@@ -813,7 +814,7 @@ async def record_subject_consent_endpoint(
                     version_tag=version_tag,
                     version_index=version_index,
                     icf_signed=payload.icf_signed,
-                    icf_signed_date=payload.icf_signed_date or datetime.utcnow(),
+                    icf_signed_date=payload.icf_signed_date or get_utc_now_naive(),
                     requires_reconsent=payload.requires_reconsent,
                 )
                 session.add(consent_db)
@@ -1933,7 +1934,7 @@ async def create_observation(
                     suggestions=suggestions,
                     domain=domain_upper,
                     assigned_by="system",
-                    assigned_at=datetime.utcnow(),
+                    assigned_at=get_utc_now_naive(),
                 )
                 session.add(assignment)
 
@@ -1988,7 +1989,7 @@ async def create_observation(
                         new_coded_term=coded_term,
                         recoding_reason="Auto-coded by Medical Coding Engine",
                         decision_by="system",
-                        decision_at=datetime.utcnow(),
+                        decision_at=get_utc_now_naive(),
                     )
                     session.add(ledger)
 
@@ -2819,7 +2820,7 @@ async def generate_cdisc_export_xml(study_id: str) -> str:
 
         xml_content = template.render(
             study_id=study_id,
-            creation_datetime=datetime.utcnow().isoformat() + "Z",
+            creation_datetime=get_utc_now_aware().isoformat().replace("+00:00", "Z"),
             subjects=subjects,
         )
 
@@ -2998,7 +2999,7 @@ async def import_dictionary(
             dictionary_type=db_type,
             dictionary_version=version,
             status=ImportState.PENDING,
-            started_at=datetime.utcnow(),
+            started_at=get_utc_now_naive(),
             progress_percentage=0,
             records_imported=0,
             errors_encountered=0,
@@ -4042,7 +4043,9 @@ async def post_batch_sign_off(
                     if "pi" in username.lower() or "investigator" in username.lower():
                         full_name += ", MD"
 
-                    signing_timestamp_utc = datetime.utcnow().isoformat() + "Z"
+                    signing_timestamp_utc = (
+                        get_utc_now_aware().isoformat().replace("+00:00", "Z")
+                    )
 
                     reason_mapping = {
                         "I attest that this data is accurate and complete.": (
@@ -4880,7 +4883,7 @@ async def sync_queries(
                         QueryService.validate_transition(q.status, "CLOSED")
                         q.status = "CLOSED"
                         q.resolver = request.state.user_id
-                        q.resolved_at = datetime.utcnow()
+                        q.resolved_at = get_utc_now_naive()
                         session.add(q)
                         processed_count += 1
                     except StateTransitionError:

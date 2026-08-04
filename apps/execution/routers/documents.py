@@ -8,6 +8,7 @@ import hashlib
 import io
 import uuid
 
+from datetime_helpers import get_utc_now_naive
 from fastapi import (
     APIRouter,
     Depends,
@@ -141,7 +142,7 @@ async def download_document(
             action="DOCUMENT_VIEW",
             user_id=user_id,
             ip_address="127.0.0.1",
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=get_utc_now_naive(),
             old_values={},
             new_values={"filename": doc["filename"]},
             change_reason="Document Download",

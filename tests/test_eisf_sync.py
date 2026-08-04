@@ -1,7 +1,8 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, timedelta
 
 import pytest
 import pytest_asyncio
+from datetime_helpers import get_utc_now_naive
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
@@ -538,7 +539,7 @@ async def test_eisf_sync_conflict_merge_lexicographic_tiebreaker(
     )
 
     # Pre-populate existing document with timestamp and modified_by = "alpha"
-    timestamp_iso = datetime.utcnow().replace(tzinfo=UTC).isoformat()
+    timestamp_iso = get_utc_now_naive().replace(tzinfo=UTC).isoformat()
     payload_init = {
         "study_id": "study-100",
         "site_id": "site-boston-01",
@@ -634,7 +635,7 @@ async def test_eisf_sync_per_field_metadata_lww(mock_etmf_propagation) -> None:
         change_reason="Filing required site document",
     )
 
-    t_base = datetime.utcnow()
+    t_base = get_utc_now_naive()
 
     # Pre-populate existing document with per-field timestamps
     payload_init = {

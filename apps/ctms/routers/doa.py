@@ -14,6 +14,7 @@ from ctms.doa_transport_models import (
     DOASignOffRequest,
     RevokeDelegationRequest,
 )
+from datetime_helpers import get_utc_now_naive
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -357,7 +358,7 @@ async def export_site_doa_pdf(
         <h1>Delegation of Authority (DOA) Log</h1>
         <p><strong>Site ID:</strong> {log_data.site_id}</p>
         <p><strong>Principal Investigator:</strong> {log_data.pi_name}</p>
-        <p><strong>Generated At:</strong> {datetime.utcnow().isoformat()}</p>
+        <p><strong>Generated At:</strong> {get_utc_now_naive().isoformat()}</p>
 
         <h2>Delegated Staff Matrix</h2>
         <table>

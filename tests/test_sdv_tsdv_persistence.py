@@ -6,6 +6,7 @@ from datetime import datetime
 
 import httpx
 import pytest
+from datetime_helpers import get_utc_now_naive
 from sqlalchemy import select, text
 
 from apps.execution.database.core import db_manager
@@ -519,7 +520,7 @@ async def test_sdv_automatic_verification_drop():
             value=6.5,
             is_sdv_verified=True,
             sdv_verified_by="CRA-VERIFIER",
-            sdv_verified_at=datetime.utcnow(),
+            sdv_verified_at=get_utc_now_naive(),
         )
         session.add(obs)
 
@@ -530,7 +531,7 @@ async def test_sdv_automatic_verification_drop():
             study_id="STUDY-2",
             is_verified=True,
             verified_by="CRA-VERIFIER",
-            verified_at=datetime.utcnow(),
+            verified_at=get_utc_now_naive(),
         )
         session.add(signoff)
 

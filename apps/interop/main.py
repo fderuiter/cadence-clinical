@@ -1,9 +1,10 @@
 import os
-from datetime import UTC, datetime, timezone
+from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
 import httpx
+from datetime_helpers import get_utc_now_naive
 from eligibility import evaluate_eligibility
 from execution.epro_transport_models import (
     AssignmentComplianceDetail,
@@ -1238,11 +1239,7 @@ async def get_subject_compliance(
                 sub_idx += 1
 
     # Determine status and build details list
-    now = (
-        datetime.now(UTC).replace(tzinfo=None)
-        if hasattr(timezone, "utc")
-        else datetime.utcnow()
-    )
+    now = get_utc_now_naive()
     details = []
     completed_cnt = 0
     pending_cnt = 0
@@ -1348,11 +1345,7 @@ async def compute_reminders(
                 sub_idx += 1
 
     # Check due assignments
-    now = (
-        datetime.now(UTC).replace(tzinfo=None)
-        if hasattr(timezone, "utc")
-        else datetime.utcnow()
-    )
+    now = get_utc_now_naive()
     created_count = 0
 
     stmt_notifs = select(SubjectNotification)
@@ -1475,11 +1468,7 @@ async def acknowledge_notification(
         request.state, "change_reason", "system_operation"
     )
 
-    now = (
-        datetime.now(UTC).replace(tzinfo=None)
-        if hasattr(timezone, "utc")
-        else datetime.utcnow()
-    )
+    now = get_utc_now_naive()
     notification.is_read = True
     notification.read_at = now
     notification.version_index += 1

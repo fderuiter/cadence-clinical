@@ -132,3 +132,42 @@ def test_pydantic_defaults_are_timezone_aware():
     # 3. Comment
     comment = Comment(comment_id="c1", thread_id="t1", text="text", created_by="u1")
     assert comment.created_at.tzinfo == UTC
+
+
+def test_centralized_datetime_helpers():
+    """Verify the behavior of centralized datetime helpers.
+
+    @req:PRD-SYS-001
+    """
+    from datetime_helpers import (
+        get_utc_now_aware,
+        get_utc_now_naive,
+        normalize_to_utc_aware,
+        normalize_to_utc_naive,
+    )
+
+    # Test aware and naive UTC now generators
+    aware_now = get_utc_now_aware()
+    assert aware_now.tzinfo == UTC
+
+    naive_now = get_utc_now_naive()
+    assert naive_now.tzinfo is None
+
+    # Test normalization to naive UTC
+    # 1. From timezone-aware UTC datetime
+    norm_naive_from_aware = normalize_to_utc_naive(aware_now)
+    assert norm_naive_from_aware.tzinfo is None
+    # 2. From timezone-naive UTC datetime
+    norm_naive_from_naive = normalize_to_utc_naive(naive_now)
+    assert norm_naive_from_naive.tzinfo is None
+    assert norm_naive_from_naive == naive_now
+
+    # Test normalization to aware UTC
+    # 1. From timezone-naive UTC datetime
+    norm_aware_from_naive = normalize_to_utc_aware(naive_now)
+    assert norm_aware_from_naive.tzinfo == UTC
+    assert norm_aware_from_naive.replace(tzinfo=None) == naive_now
+    # 2. From timezone-aware UTC datetime
+    norm_aware_from_aware = normalize_to_utc_aware(aware_now)
+    assert norm_aware_from_aware.tzinfo == UTC
+    assert norm_aware_from_aware == aware_now

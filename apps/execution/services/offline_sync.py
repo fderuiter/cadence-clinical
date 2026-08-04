@@ -5,9 +5,13 @@ Requirements: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
+from datetime_helpers import (
+    get_utc_now_naive,
+    normalize_to_utc_aware,
+)
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
@@ -156,8 +160,9 @@ class OfflineSyncEngine:
 
                     has_conflict = False
                     if latest_audit:
-                        server_ts = latest_audit.timestamp.replace(tzinfo=UTC)
-                        if server_ts > client_ts:
+                        server_ts = normalize_to_utc_aware(latest_audit.timestamp)
+                        client_ts_norm = normalize_to_utc_aware(client_ts)
+                        if server_ts > client_ts_norm:
                             has_conflict = True
 
                     if has_conflict:
@@ -170,7 +175,7 @@ class OfflineSyncEngine:
                             action="CONFLICT",
                             user_id="offline_sync",
                             ip_address="127.0.0.1",
-                            timestamp=datetime.utcnow(),
+                            timestamp=get_utc_now_naive(),
                             old_values={
                                 "status": existing_submission.status,
                                 "version": existing_submission.version,
@@ -289,7 +294,7 @@ class OfflineSyncEngine:
         processed = ProcessedOfflineBatch(
             client_batch_id=batch.client_batch_id,
             device_id=batch.device_id,
-            synced_at=datetime.utcnow(),
+            synced_at=get_utc_now_naive(),
         )
         self.session.add(processed)
 

@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2053
-- **Passed:** 2053 🟢
+- **Total Automated Test Cases Run:** 2054
+- **Passed:** 2054 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -531,6 +531,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_conformance_validation_string_data_type_error` | `tests.test_dataset_json_builder` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_dynamic_fallback_unknown_domain` | `tests.test_dataset_json_builder` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_accept_timezone_aware_inputs` | `tests.test_datetime_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_centralized_datetime_helpers` | `tests.test_datetime_validation` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_no_silent_fallback_to_system_time` | `tests.test_datetime_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_pydantic_defaults_are_timezone_aware` | `tests.test_datetime_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reject_timezone_naive_datetime_objects` | `tests.test_datetime_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
