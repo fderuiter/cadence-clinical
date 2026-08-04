@@ -5,6 +5,8 @@ import sys
 import time
 import uuid
 from collections.abc import Awaitable, Callable
+from contextlib import asynccontextmanager
+from types import ModuleType
 from typing import Any
 
 import httpx
@@ -56,13 +58,48 @@ def validate_environment() -> None:
 
 validate_environment()
 
+
+@asynccontextmanager
+async def lifespan(app_instance: FastAPI):
+    # Initialize the http_client inside lifespan
+    app_instance.state.http_client = httpx.AsyncClient()
+    app_instance.state.jwks_fetch_lock = asyncio.Lock()
+    app_instance.state.jwks_cache = None
+
+    is_testing = (
+        os.getenv("TESTING", "").lower() in ("true", "1", "yes")
+        or os.getenv("GATEWAY_TESTING", "").lower() in ("true", "1", "yes")
+        or os.getenv("APP_ENV", "").lower() == "test"
+    )
+
+    if not is_testing and not os.getenv("SKIP_JWKS_FETCH"):
+        try:
+            resp = await app_instance.state.http_client.get(JWKS_URL, timeout=5.0)
+            if resp.status_code == 200:
+                app_instance.state.jwks_cache = resp.json()
+        except Exception:
+            pass
+
+    yield
+
+    # Clean up resources on shutdown
+    if hasattr(app_instance.state, "http_client") and app_instance.state.http_client:
+        await app_instance.state.http_client.aclose()
+
+
 app = FastAPI(
     title="Cadence Clinical - API Gateway",
     version="0.1.0",
     openapi_url=None,
     docs_url=None,
     redoc_url=None,
+    lifespan=lifespan,
 )
+
+# Application State Initialization (previously global namespaces)
+app.state.jwks_cache = None
+app.state.http_client = None
+app.state.jwks_fetch_lock = asyncio.Lock()
 
 app.include_router(cdisc_router, prefix="/api/v1/cdisc", tags=["CDISC Standards"])
 app.include_router(usdm_router, prefix="/api/v1/usdm", tags=["USDM Data Flow"])
@@ -180,12 +217,9 @@ SERVICES = {
     "econsent": os.getenv("ECONSENT_URL", "http://localhost:8011"),
 }
 
-jwks_cache: dict[str, Any] | None = None
-http_client: httpx.AsyncClient | None = None
-jwks_fetch_lock = asyncio.Lock()
-
 
 def _is_kid_cached(kid: str | None) -> bool:
+    jwks_cache = getattr(app.state, "jwks_cache", None)
     if not kid or not jwks_cache:
         return False
     keys = jwks_cache.get("keys", [])
@@ -194,35 +228,32 @@ def _is_kid_cached(kid: str | None) -> bool:
     return any(isinstance(k, dict) and k.get("kid") == kid for k in keys)
 
 
-@app.on_event("startup")
 async def startup() -> None:
     """
-    Initialize resources on gateway startup.
-
-    Creates an HTTP client instance and attempts to fetch Keycloak JWKS
-    public keys for local caching, unless SKIP_JWKS_FETCH is enabled.
+    Deprecated gateway startup function kept for backward compatibility with baseline test suites.
     """
-    global jwks_cache, http_client
-    http_client = httpx.AsyncClient()
-    if not os.getenv("SKIP_JWKS_FETCH"):
+    app.state.http_client = httpx.AsyncClient()
+
+    is_testing = (
+        os.getenv("TESTING", "").lower() in ("true", "1", "yes")
+        or os.getenv("GATEWAY_TESTING", "").lower() in ("true", "1", "yes")
+        or os.getenv("APP_ENV", "").lower() == "test"
+    )
+    if not is_testing and not os.getenv("SKIP_JWKS_FETCH"):
         try:
-            resp = await http_client.get(JWKS_URL, timeout=5.0)
+            resp = await app.state.http_client.get(JWKS_URL, timeout=5.0)
             if resp.status_code == 200:
-                jwks_cache = resp.json()
+                app.state.jwks_cache = resp.json()
         except Exception:
             pass
 
 
-@app.on_event("shutdown")
 async def shutdown() -> None:
     """
-    Clean up resources on gateway shutdown.
-
-    Closes the global asynchronous HTTP client to prevent resource leaks.
+    Deprecated gateway shutdown function kept for backward compatibility with baseline test suites.
     """
-    global http_client
-    if http_client:
-        await http_client.aclose()
+    if hasattr(app.state, "http_client") and app.state.http_client:
+        await app.state.http_client.aclose()
 
 
 async def verify_token(token: str) -> dict[str, Any]:
@@ -270,16 +301,19 @@ async def verify_token(token: str) -> dict[str, Any]:
     is_cached = _is_kid_cached(kid)
 
     if not is_cached and kid:
+        jwks_fetch_lock = getattr(app.state, "jwks_fetch_lock", None)
+        if jwks_fetch_lock is None:
+            jwks_fetch_lock = asyncio.Lock()
         async with jwks_fetch_lock:
             if not _is_kid_cached(kid):
                 try:
+                    http_client = getattr(app.state, "http_client", None)
                     client_to_use = (
                         http_client if http_client is not None else httpx.AsyncClient()
                     )
                     resp = await client_to_use.get(JWKS_URL, timeout=5.0)
                     if resp.status_code == 200:
-                        global jwks_cache
-                        jwks_cache = resp.json()
+                        app.state.jwks_cache = resp.json()
                     else:
                         logger = logging.getLogger("gateway")
                         logger.error(
@@ -289,6 +323,7 @@ async def verify_token(token: str) -> dict[str, Any]:
                     logger = logging.getLogger("gateway")
                     logger.error(f"Failed to fetch JWKS dynamically: {str(e)}")
 
+    jwks_cache = getattr(app.state, "jwks_cache", None)
     if not jwks_cache:
         # Fallback if JWKS is unreachable and we have no test secret
         if os.getenv("ALLOW_UNVERIFIED_JWT_FOR_TEST"):
@@ -414,6 +449,7 @@ async def get_openapi_json() -> Response:
             "X-Change-Reason": change_reason,
         }
         try:
+            http_client = getattr(app.state, "http_client", None)
             if http_client:
                 resp = await http_client.get(
                     f"{service_url}/openapi.json", headers=headers, timeout=5.0
@@ -965,6 +1001,7 @@ async def proxy_requests(request: Request, path: str) -> Response:
         headers.pop("host", None)
         try:
             body: bytes = await request.body()
+            http_client = getattr(app.state, "http_client", None)
             if http_client is None:
                 return JSONResponse(
                     status_code=500,
@@ -1305,6 +1342,7 @@ async def proxy_requests(request: Request, path: str) -> Response:
 
     try:
         body: bytes = await request.body()
+        http_client = getattr(app.state, "http_client", None)
         if http_client is None:
             return JSONResponse(
                 status_code=500,
@@ -1334,3 +1372,32 @@ async def proxy_requests(request: Request, path: str) -> Response:
         return JSONResponse(
             status_code=502, content={"detail": f"Bad Gateway: {str(e)}"}
         )
+
+
+class GatewayModule(ModuleType):
+    @property
+    def jwks_cache(self):
+        return getattr(app.state, "jwks_cache", None)
+
+    @jwks_cache.setter
+    def jwks_cache(self, value):
+        app.state.jwks_cache = value
+
+    @property
+    def http_client(self):
+        return getattr(app.state, "http_client", None)
+
+    @http_client.setter
+    def http_client(self, value):
+        app.state.http_client = value
+
+    @property
+    def jwks_fetch_lock(self):
+        return getattr(app.state, "jwks_fetch_lock", None)
+
+    @jwks_fetch_lock.setter
+    def jwks_fetch_lock(self, value):
+        app.state.jwks_fetch_lock = value
+
+
+sys.modules[__name__].__class__ = GatewayModule

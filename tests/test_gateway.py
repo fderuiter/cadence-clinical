@@ -2310,3 +2310,107 @@ async def test_gateway_startup_offline_idp_recovery(
     payload = await gateway_main.verify_token(token)
     assert payload["sub"] == "user_123"
     assert gateway_main.jwks_cache == jwks
+
+
+@pytest.mark.asyncio
+async def test_gateway_lifespan_initializes_app_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test that the gateway's async lifespan context manager initializes local state
+    correctly when the testing flag is NOT enabled.
+    """
+    import httpx
+    from fastapi import FastAPI
+
+    from apps.gateway.main import JWKS_URL, lifespan
+
+    # Ensure testing flag is disabled for this test
+    monkeypatch.setenv("TESTING", "false")
+    monkeypatch.setenv("GATEWAY_TESTING", "false")
+    monkeypatch.setenv("APP_ENV", "development")
+
+    class MockResponse:
+        status_code = 200
+
+        def json(self):
+            return {"keys": [{"kid": "test-kid"}]}
+
+    called = []
+
+    async def mock_get(client, url, *args, **kwargs):
+        if url == JWKS_URL:
+            called.append(url)
+            return MockResponse()
+        raise Exception("Unexpected call")
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", mock_get)
+
+    test_app = FastAPI()
+    async with lifespan(test_app):
+        assert test_app.state.http_client is not None
+        assert test_app.state.jwks_cache == {"keys": [{"kid": "test-kid"}]}
+        assert len(called) == 1
+
+
+@pytest.mark.asyncio
+async def test_gateway_lifespan_blocks_outbound_when_testing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test that the gateway's async lifespan context manager blocks/disables any outbound
+    network connection attempts when the testing flag (or gateway testing/test env) is enabled.
+    """
+    import httpx
+    from fastapi import FastAPI
+
+    from apps.gateway.main import lifespan
+
+    # Enable testing flags
+    monkeypatch.setenv("TESTING", "true")
+
+    called = []
+
+    async def mock_get(client, url, *args, **kwargs):
+        called.append(url)
+        return
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", mock_get)
+
+    test_app = FastAPI()
+    async with lifespan(test_app):
+        assert test_app.state.http_client is not None
+        # Should NOT make any outbound calls and keep cache empty/None
+        assert test_app.state.jwks_cache is None
+        assert len(called) == 0
+
+
+@pytest.mark.asyncio
+async def test_designer_lifespan_initializes_and_closes_driver(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test that the designer's async lifespan context manager initializes the neo4j driver
+    and closes it cleanly on exit.
+    """
+    from fastapi import FastAPI
+    from neo4j import AsyncGraphDatabase
+
+    from apps.designer.main import lifespan
+
+    mock_driver = MagicMock()
+    mock_close = AsyncMock()
+    mock_driver.close = mock_close
+
+    def mock_driver_factory(*args, **kwargs):
+        return mock_driver
+
+    monkeypatch.setattr(AsyncGraphDatabase, "driver", mock_driver_factory)
+
+    test_app = FastAPI()
+    async with lifespan(test_app):
+        assert test_app.state.driver == mock_driver
+        mock_close.assert_not_called()
+
+    mock_close.assert_called_once()
+    assert test_app.state.driver is None

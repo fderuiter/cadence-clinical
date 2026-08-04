@@ -25,6 +25,7 @@ the top-level structure of the delivered JSON payload includes:
 
 import os
 import time
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any, Literal
@@ -273,7 +274,27 @@ class ProblemDetails(BaseModel):
     invalid_params: list[InvalidParam] | None = None
 
 
-app = FastAPI(title="Cadence Clinical - Designer (MDR/SDR)", version="0.1.0")
+@asynccontextmanager
+async def lifespan(app_instance: FastAPI):
+    """Manage Designer service resources using lifespan."""
+    uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+    user = os.getenv("NEO4J_USER", "neo4j")
+    password = os.getenv("NEO4J_PASSWORD", "password")  # pragma: allowlist secret
+    app_instance.state.driver = AsyncGraphDatabase.driver(uri, auth=(user, password))
+
+    yield
+
+    driver = getattr(app_instance.state, "driver", None)
+    if driver is not None:
+        await driver.close()
+    app_instance.state.driver = None
+
+
+app = FastAPI(
+    title="Cadence Clinical - Designer (MDR/SDR)",
+    version="0.1.0",
+    lifespan=lifespan,
+)
 
 from apps.designer.routers.cascade import router as cascade_router
 from apps.designer.routers.comments import router as comments_router
@@ -484,24 +505,6 @@ async def get_neo4j_driver(request: Request):
     Lightweight dependency/accessor to retrieve the active Neo4j driver.
     """
     return getattr(request.app.state, "driver", None)
-
-
-@app.on_event("startup")
-async def startup() -> None:
-    """Initialize resources on designer startup."""
-    uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
-    user = os.getenv("NEO4J_USER", "neo4j")
-    password = os.getenv("NEO4J_PASSWORD", "password")  # pragma: allowlist secret
-    app.state.driver = AsyncGraphDatabase.driver(uri, auth=(user, password))
-
-
-@app.on_event("shutdown")
-async def shutdown() -> None:
-    """Clean up resources on designer shutdown."""
-    driver = getattr(app.state, "driver", None)
-    if driver is not None:
-        await driver.close()
-    app.state.driver = None
 
 
 @app.get("/health")
