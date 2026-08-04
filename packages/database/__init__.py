@@ -1,5 +1,5 @@
 import json
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -165,3 +165,62 @@ def get_relational_db_lifespan(
             await db_manager.close()
 
     return lifespan
+
+
+def create_transactional_decorator(
+    db_manager: RelationalDatabaseManager,
+    current_session_var: Any,
+) -> Any:
+    """
+    Creates a standardized transactional decorator for a specific database manager and contextvar.
+    """
+    import functools
+
+    from sqlalchemy import text
+
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs) -> Any:
+            session_maker = db_manager.get_session_maker()
+            async with session_maker() as session:
+                async with session.begin():
+                    token = current_session_var.set(session)
+                    try:
+                        # Propagate context variables into database session if context variables exist
+                        try:
+                            from packages.security.context import (
+                                current_change_reason,
+                                current_user_id,
+                            )
+
+                            user_id = current_user_id.get()
+                            reason = current_change_reason.get()
+                            if user_id:
+                                await session.execute(
+                                    text(
+                                        "SELECT set_config('cadence.current_user_id', :user_id, true);"
+                                    ),
+                                    {"user_id": user_id},
+                                )
+                            if reason:
+                                await session.execute(
+                                    text(
+                                        "SELECT set_config('cadence.current_change_reason', :reason, true);"
+                                    ),
+                                    {"reason": reason},
+                                )
+                            await session.execute(
+                                text(
+                                    "SELECT set_config('cadence.app_writing', 'true', true);"
+                                )
+                            )
+                        except Exception:
+                            pass
+
+                        return await func(*args, **kwargs)
+                    finally:
+                        current_session_var.reset(token)
+
+        return wrapper
+
+    return decorator
