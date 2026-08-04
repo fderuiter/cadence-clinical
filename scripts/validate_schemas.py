@@ -19,10 +19,12 @@ from typing import Any
 
 # Prevent import errors due to missing secret keys in offline environment
 os.environ.setdefault(
-    "AUDIT_LOG_SECRET_KEY", "test-gxp-audit-secret-key-placeholder-abc"
+    "AUDIT_LOG_SECRET_KEY",
+    "test-gxp-audit-secret-key-placeholder-abc",  # pragma: allowlist secret
 )
 os.environ.setdefault(
-    "INBOUND_EMAIL_HMAC_SECRET", "test-email-hmac-secret-placeholder-xyz"
+    "INBOUND_EMAIL_HMAC_SECRET",
+    "test-email-hmac-secret-placeholder-xyz",  # pragma: allowlist secret
 )
 
 # Set up python path for local imports and package paths to ensure absolute isolation
