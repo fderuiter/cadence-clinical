@@ -117,7 +117,11 @@ def extract_signature_from_content(
             sig_bytes = None
             if sig_match:
                 sig_str = sig_match.group(1).strip()
-                if not allow_mock and "mock" in sig_str.lower() and not is_mock_allowed():
+                if (
+                    not allow_mock
+                    and "mock" in sig_str.lower()
+                    and not is_mock_allowed()
+                ):
                     raise ValueError("Mock signature detected and blocked.")
                 try:
                     sig_bytes = base64.b64decode(sig_str)
@@ -164,7 +168,11 @@ def extract_signature_from_content(
             sig_bytes = None
             if sig_match:
                 sig_str = sig_match.group(1).strip()
-                if not allow_mock and "mock" in sig_str.lower() and not is_mock_allowed():
+                if (
+                    not allow_mock
+                    and "mock" in sig_str.lower()
+                    and not is_mock_allowed()
+                ):
                     raise ValueError("Mock signature detected and blocked.")
                 try:
                     sig_bytes = base64.b64decode(sig_str)
@@ -322,7 +330,11 @@ def validate_document_signature(
             pass
 
     # 3b. Handle Mock/Test cases cleanly if allowed
-    if is_mock_allowed() and cert_pem and ("MOCK_SIGNATURE" in cert_pem or b"MOCK" in (sig_bytes or b"")):
+    if (
+        is_mock_allowed()
+        and cert_pem
+        and ("MOCK_SIGNATURE" in cert_pem or b"MOCK" in (sig_bytes or b""))
+    ):
         if b"INVALID" in (sig_bytes or b"") or "INVALID" in cert_pem:
             return False, "Invalid mock digital signature detected."
         return True, "Valid mock digital signature verified."

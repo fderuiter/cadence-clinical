@@ -1,7 +1,6 @@
 import asyncio
 import base64
 import datetime
-import os
 
 import pytest
 import pytest_asyncio
@@ -19,11 +18,6 @@ from apps.etmf.cryptography import (
 )
 from apps.etmf.database import db_manager
 from apps.etmf.main import app
-
-
-@pytest.fixture(autouse=True)
-def disable_mock_signatures(monkeypatch):
-    monkeypatch.setenv("ALLOW_MOCK_SIGNATURES", "0")
 from apps.etmf.models import Base, TMFAuditLedgerSeal, TMFAuditLog
 from apps.etmf.sealer import (
     execute_etmf_audit_sealing_cycle,
@@ -33,6 +27,11 @@ from apps.etmf.sealer import (
 )
 from apps.execution.trial_lock import TrialLockManager
 from tests.test_etmf import get_auth_headers
+
+
+@pytest.fixture(autouse=True)
+def disable_mock_signatures(monkeypatch):
+    monkeypatch.setenv("ALLOW_MOCK_SIGNATURES", "0")
 
 
 def generate_self_signed_cert() -> tuple[rsa.RSAPrivateKey, x509.Certificate]:

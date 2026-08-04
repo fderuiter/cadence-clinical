@@ -9,7 +9,6 @@ Covers all 5 Acceptance Criteria:
 """
 
 import base64
-import os
 
 import pytest
 from cryptography import x509
