@@ -150,4 +150,3 @@ def test_main_no_conflict_with_non_safe_files(mock_update_comment, mock_run_cmd)
                 main()
             mock_exit.assert_called_once_with(0)
             mock_update_comment.assert_not_called()
-
