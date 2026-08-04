@@ -239,7 +239,7 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
           studyId: "STUDY-01",
           subjectId: "SUBJ-01",
           formIds: ["FORM-01", "Form-02"],
-          password: "my-password",
+          password: "my-password", // pragma: allowlist secret
           meaning: "APPROVED",
         };
 
