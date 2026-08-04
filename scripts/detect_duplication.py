@@ -315,6 +315,7 @@ def main() -> None:
                                     "packages/core-models/protocol_authoring/soa.py",
                                 },
                                 {
+                                {
                                     "apps/designer/soa_models.py",
                                     "packages/core-models/protocol_authoring/__init__.py",
                                 },
@@ -322,6 +323,7 @@ def main() -> None:
                                     "apps/web/src/style.css",
                                     "apps/subject-portal/style.css",
                                 },
+                                {
                                 {
                                     "packages/ui/src/components/clinical/ClinicalInput.vue",
                                     "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",

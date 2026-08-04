@@ -11,6 +11,8 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 2050
 - **Passed:** 2050 🟢
+- **Total Automated Test Cases Run:** 2055
+- **Passed:** 2055 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1185,6 +1187,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_resolve_concept_id` | `tests.test_inverse_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unmapped_fields_preservation` | `tests.test_inverse_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unsupported_rule_expression_raises_value_error` | `tests.test_inverse_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cascading_signature_deletion_on_observation_change` | `tests.test_item_level_sdv_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sdv_flag_endpoint_cra_success` | `tests.test_item_level_sdv_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sdv_flag_endpoint_forbidden_for_other_roles` | `tests.test_item_level_sdv_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sdv_resolve_endpoint_cra_success` | `tests.test_item_level_sdv_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sdv_resolve_endpoint_forbidden_for_other_roles` | `tests.test_item_level_sdv_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_master_migrations` | `tests.test_lab_master_migrations` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_migration_upgrade_and_idempotency` | `tests.test_lab_master_migrations` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_migration_upgrade_and_idempotency_explicit` | `tests.test_lab_master_migrations` | *Regression/Helper* | 🟢 PASSED | < 1s |

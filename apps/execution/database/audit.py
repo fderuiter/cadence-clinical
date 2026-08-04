@@ -550,19 +550,6 @@ def receive_before_flush(session: Session, flush_context, instances):
         ):
             continue
 
-        # Check if this observation was previously verified
-        is_previously_verified = False
-        history_verified = get_history(obj, "is_sdv_verified")
-        if history_verified.has_changes():
-            if history_verified.deleted and history_verified.deleted[0] is True:
-                is_previously_verified = True
-        else:
-            if obj.is_sdv_verified is True:
-                is_previously_verified = True
-
-        if not is_previously_verified:
-            continue
-
         # Check if any clinical value field actually changed
         value_changed = False
         for attr in ["value", "value_string", "normalized_value"]:
@@ -574,7 +561,20 @@ def receive_before_flush(session: Session, flush_context, instances):
                     value_changed = True
                     break
 
-        if value_changed:
+        if not value_changed:
+            continue
+
+        # Check if this observation was previously verified
+        is_previously_verified = False
+        history_verified = get_history(obj, "is_sdv_verified")
+        if history_verified.has_changes():
+            if history_verified.deleted and history_verified.deleted[0] is True:
+                is_previously_verified = True
+        else:
+            if obj.is_sdv_verified is True:
+                is_previously_verified = True
+
+        if is_previously_verified:
             # Require a meaningful, non-default GxP change reason from the existing audit context.
             if not reason or reason.strip() in (
                 "",
@@ -629,6 +629,41 @@ def receive_before_flush(session: Session, flush_context, instances):
 
                 router = NotificationRouter()
                 router.send_dashboard_notification(recipients, payload)
+
+        # Requirement 4: Automatically delete parent page and visit verification records
+        with session.no_autoflush:
+            from sqlalchemy import and_, or_, update
+
+            from .models import SDVSignOff
+
+            conditions = []
+            if obj.page_id:
+                conditions.append(
+                    and_(
+                        SDVSignOff.scope == "PAGE",
+                        SDVSignOff.target_id == str(obj.page_id),
+                    )
+                )
+            if obj.visit_id:
+                conditions.append(
+                    and_(
+                        SDVSignOff.scope == "VISIT",
+                        SDVSignOff.target_id == str(obj.visit_id),
+                    )
+                )
+
+            if conditions:
+                stmt_del = (
+                    update(SDVSignOff)
+                    .where(
+                        SDVSignOff.study_id == obj.study_id,
+                        SDVSignOff.subject_id == obj.subject_id,
+                        SDVSignOff.is_deleted.is_(False),
+                        or_(*conditions),
+                    )
+                    .values(is_deleted=True, is_verified=False)
+                )
+                session.execute(stmt_del)
 
     audit_logs = []
     user_id = current_user_id.get()

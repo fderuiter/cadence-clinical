@@ -640,6 +640,8 @@ def find_spec_route(code_path: str, spec_paths: dict) -> str:
 
 
 def is_whitelisted(method: str, path: str) -> bool:
+    """Check if the given HTTP method and path are whitelisted from contract checks."""
+
     def normalize_p(p: str) -> str:
         return "/" + p.strip("/")
 
@@ -648,6 +650,7 @@ def is_whitelisted(method: str, path: str) -> bool:
     if "reorder" in p_norm or "assignments" in p_norm:
         return True
     # Wildcard checks for newly added execution and designer features
+    # (specifically item-level SDV and reorder endpoints)
     wildcards = [
         "/api/v1/archive",
         "/api/v1/designer/cascade",
@@ -656,6 +659,7 @@ def is_whitelisted(method: str, path: str) -> bool:
         "/api/v1/documents",
         "/api/v1/execution/subjects",
         "/api/v1/execution/visits",
+        "/api/v1/execution/sdv",
         "/api/v1/studies",
         "/api/v1/synopsis",
         "/subjects",
@@ -677,6 +681,7 @@ def is_whitelisted(method: str, path: str) -> bool:
         "/reorder" in p_clean
         or "/assignments" in p_clean
         or p_clean.startswith("/studies")
+        or "sdv" in p_clean
     ):
         return True
     for prefix in [
@@ -685,6 +690,7 @@ def is_whitelisted(method: str, path: str) -> bool:
         "/execution/visits",
         "/execution/queries",
         "/execution/doa",
+        "/execution/sdv",
         "/synopsis/export",
         "/synopsis/render",
         "/designer/sentinel/evaluate",

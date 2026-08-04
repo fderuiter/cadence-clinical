@@ -41,6 +41,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ### 2. API Gateway, Security & Identity
 - [2026-08-03: Ruff Lint Alignment and Centralized RBAC Validation](2026-08-03-ruff-lint-alignment-and-centralized-rbac-validation.md)
 - [2026-08-03: Clean up duplicate security entries in rbac configuration](2026-08-03-clean-up-duplicate-security-entries-in-rbac-configuration.md)
+- [2026-09-08: Item-Level SDV and Study-Design Reordering Authorization](2026-09-08-item-level-sdv-rbac-authorization.md)
 - [2026-08-03: eConsent Gateway Integration and Orchestration Port Alignment](2026-08-03-econsent-gateway-integration-and-orchestration-port-alignment.md)
 - [2026-08-02: Enforce Ruff Style and Formatting on API Gateway Routers](2026-08-02-enforce-ruff-style-and-formatting-on-api-gateway-routers.md)
 - [2026-08-01: Cryptographic Signature Verification Engine and Multi-Format Support](2026-08-01-cryptographic-signature-verification-engine-and-multi-format-support.md)
@@ -237,3 +238,5 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-06: Enforce Strict Fail-Closed Environment Rules and Narrow Scanner Exclusions](2026-09-06-enforce-strict-fail-closed-environment-rules.md)
 - [2026-08-03: Upgrade Environments to Python 3.14](2026-08-03-upgrade-environments-to-python-3-14.md)
 - [2026-09-07: Extend Centralized Permission Matrix for eCOA Diary Alert Actions](2026-09-07-extend-ecoa-diary-alert-permissions.md)
+- [2026-09-08: Item-Level Source Data Verification (SDV) GxP Compliance and RBAC Isolation](2026-09-08-item-level-sdv-gxp-compliance.md)
+- [2026-09-08: Centralized RBAC and Cascading Signature Invalidation for Item-Level SDV](2026-09-08-item-level-sdv-and-cascading-signatures.md)

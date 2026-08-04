@@ -78,6 +78,9 @@ jobs:
         if: always()
         run: python3 scripts/validate_adrs.py
 
+      - name: Build packages/ui
+        run: pnpm --filter ui build
+
       - name: Run documentation compilation
         id: run_docs_build
         if: always()
@@ -249,6 +252,9 @@ jobs:
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build packages/ui
+        run: pnpm --filter ui build
+
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
         with:
@@ -291,7 +297,7 @@ jobs:
         run: pnpm --filter ui build
 
       - name: Run frontend unit tests
-        run: pnpm -r test
+        run: pnpm -r --workspace-concurrency=1 test
 
       - name: Run backend unit tests and coverage
         id: run_tests

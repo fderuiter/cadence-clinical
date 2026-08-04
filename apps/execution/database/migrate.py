@@ -389,6 +389,8 @@ async def upgrade_existing_tables(conn) -> None:
             ("sdv_verified_by", "VARCHAR(255)"),
             ("sdv_verified_at", "TIMESTAMP"),
             ("page_id", "VARCHAR(255)"),
+            ("is_sdv_flagged", "BOOLEAN NOT NULL DEFAULT FALSE"),
+            ("sdv_flag_reason", "VARCHAR(1000)"),
         ]
         for col_name, col_type in new_obs_cols:
             if col_name not in obs_cols:
