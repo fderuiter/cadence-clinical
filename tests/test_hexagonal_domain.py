@@ -26,6 +26,9 @@ from apps.execution.subject_lifecycle import (
 def test_subject_lifecycle_pure_domain_transitions():
     """Verify that clinical subject state transitions obey strict lifecycle paths purely in the domain layer, database-free.
 
+    All states and transition logic are validated database-free to ensure perfect
+    isolation in our pure Python hexagonal domain models.
+
     @req:PRD-SYS-001
     """
     # 1. Start in SCREENING (default state for new clinical subjects)
