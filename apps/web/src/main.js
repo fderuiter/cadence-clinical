@@ -6,6 +6,7 @@ import { router } from "./router";
 import Keycloak from "keycloak-js";
 import { useAuthStore } from "./stores/auth";
 import { initHoverDetection } from "ui";
+import { resolveAssetUrl } from "./utils/url";
 
 const app = createApp(App);
 const pinia = createPinia();
@@ -46,50 +47,75 @@ const checkKeycloakReachable = async () => {
   }
 };
 
-checkKeycloakReachable().then((reachable) => {
-  const isProduction =
-    import.meta.env.PROD || import.meta.env.MODE === "production";
-  if (reachable) {
-    keycloak
-      .init({
-        onLoad: "check-sso",
-        silentCheckSsoRedirectUri:
-          window.location.origin + "/silent-check-sso.html",
-        pkceMethod: "S256",
-      })
-      .then((authenticated) => {
-        console.log(`Keycloak initialized. Authenticated: ${authenticated}`);
-        authStore.setAuth(keycloak);
-        app.mount("#app");
-      })
-      .catch((err) => {
-        console.error("Keycloak initialization failed:", err);
-        if (isProduction) {
-          authStore.isDemoMode = false;
-          throw new Error(
-            "Production lockdown: Keycloak OIDC initialization failed. Refusing to run in offline demo mode."
-          );
-        } else {
-          authStore.isDemoMode = true;
+if (import.meta.env.MODE === "demo") {
+  console.log(
+    "Running in dedicated public demo mode. Seeding mock clinical credentials and mounting instantly."
+  );
+  authStore.isDemoMode = true;
+  authStore.isAuthenticated = true;
+  authStore.user = {
+    username: "fderuiter",
+    email: "fderuiter@example.com", // deid-ignore
+    firstName: "Frans",
+    lastName: "de Ruiter",
+    id: "fderuiter-id-12345",
+  };
+  authStore.rawRoles = [
+    "Sponsor Admin",
+    "Sponsor Designer",
+    "CRA",
+    "Data Manager",
+    "Site Investigator",
+    "Auditor",
+  ];
+  authStore.persist();
+  app.mount("#app");
+} else {
+  checkKeycloakReachable().then((reachable) => {
+    const isProduction =
+      (import.meta.env.PROD || import.meta.env.MODE === "production") &&
+      import.meta.env.MODE !== "demo";
+    if (reachable) {
+      keycloak
+        .init({
+          onLoad: "check-sso",
+          silentCheckSsoRedirectUri: resolveAssetUrl("silent-check-sso.html"),
+          pkceMethod: "S256",
+        })
+        .then((authenticated) => {
+          console.log(`Keycloak initialized. Authenticated: ${authenticated}`);
+          authStore.setAuth(keycloak);
           app.mount("#app");
-        }
-      });
-  } else {
-    if (isProduction) {
-      authStore.isDemoMode = false;
-      console.error(
-        "Production lockdown: Keycloak server is offline. Refusing to start in offline demo mode."
-      );
-      throw new Error("Production lockdown: Keycloak server is offline.");
+        })
+        .catch((err) => {
+          console.error("Keycloak initialization failed:", err);
+          if (isProduction) {
+            authStore.isDemoMode = false;
+            throw new Error(
+              "Production lockdown: Keycloak OIDC initialization failed. Refusing to run in offline demo mode."
+            );
+          } else {
+            authStore.isDemoMode = true;
+            app.mount("#app");
+          }
+        });
     } else {
-      console.log(
-        "Keycloak server is offline. Mounting app in offline/demo mode."
-      );
-      authStore.isDemoMode = true;
-      app.mount("#app");
+      if (isProduction) {
+        authStore.isDemoMode = false;
+        console.error(
+          "Production lockdown: Keycloak server is offline. Refusing to start in offline demo mode."
+        );
+        throw new Error("Production lockdown: Keycloak server is offline.");
+      } else {
+        console.log(
+          "Keycloak server is offline. Mounting app in offline/demo mode."
+        );
+        authStore.isDemoMode = true;
+        app.mount("#app");
+      }
     }
-  }
-});
+  });
+}
 
 // Dynamic Hover Pointer Capability Detection
 initHoverDetection();
