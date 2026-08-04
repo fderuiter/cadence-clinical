@@ -13,6 +13,7 @@ dependencies = [
     "python-jose[cryptography]>=3.3.0",
     "ecdsa>=0.19.2",
     "cryptography>=4.5.0",
+    "redis>=5.0.0",
 ]
 
 [tool.hatch.build.targets.wheel.sources]

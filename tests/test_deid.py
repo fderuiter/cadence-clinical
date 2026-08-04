@@ -407,3 +407,23 @@ def test_cli_main_bypass_comments_and_false_positives(tmp_path, monkeypatch):
 
     main()
     assert exit_code == 0
+
+
+def test_is_excluded_path_alembic():
+    from packages.deid.cli import is_excluded_path
+
+    # Files inside alembic directory should be excluded
+    assert (
+        is_excluded_path(
+            "apps/etmf/alembic/versions/f7ebdb42c09c_initial_baseline.py", "/app"
+        )
+        is True
+    )
+    assert (
+        is_excluded_path(
+            "apps/quality/alembic/versions/c040ea61d4c3_initial_baseline.py", "/app"
+        )
+        is True
+    )
+    # Non-alembic files should not be excluded
+    assert is_excluded_path("packages/security/middleware.py", "/app") is False
