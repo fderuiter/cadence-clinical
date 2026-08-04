@@ -5,7 +5,44 @@ import pytest
 import yaml
 
 from apps.designer.main import app as designer_app
+from apps.econsent.main import app as econsent_app
+from apps.eisf.main import app as eisf_app
 from apps.execution.main import app as execution_app
+from apps.org.main import app as org_app
+
+
+def rewrite_references(data: Any, prefix: str, visited: set | None = None) -> Any:
+    """Recursively rewrite component references in an OpenAPI schema payload."""
+    if visited is None:
+        visited = set()
+
+    if id(data) in visited:
+        return {
+            "type": "object",
+            "description": "Circular reference detected and isolated",
+        }
+
+    if isinstance(data, dict):
+        visited.add(id(data))
+        new_data = {}
+        for k, v in data.items():
+            if (
+                k == "$ref"
+                and isinstance(v, str)
+                and v.startswith("#/components/schemas/")
+            ):
+                ref_name = v[len("#/components/schemas/") :]
+                new_data[k] = f"#/components/schemas/{prefix}{ref_name}"
+            else:
+                new_data[k] = rewrite_references(v, prefix, visited)
+        visited.remove(id(data))
+        return new_data
+    if isinstance(data, list):
+        visited.add(id(data))
+        new_list = [rewrite_references(item, prefix, visited) for item in data]
+        visited.remove(id(data))
+        return new_list
+    return data
 
 
 # Helper to locate and extract the YAML spec from SDLC file
@@ -191,7 +228,12 @@ def find_code_route(spec_path: str, code_routes: dict[str, Any]) -> Any:
     clean_spec = spec_path.replace("/api/v1", "").strip("/")
 
     for c_path, c_route_info in code_routes.items():
-        clean_code = c_path.replace("/api/v1", "").strip("/")
+        norm_path = c_path
+        for pfx in ["/designer", "/execution", "/org", "/eisf", "/econsent"]:
+            if c_path.startswith(pfx):
+                norm_path = c_path[len(pfx) :]
+                break
+        clean_code = norm_path.replace("/api/v1", "").strip("/")
         if clean_spec == clean_code:
             return c_route_info
     return None
@@ -207,23 +249,33 @@ def loaded_specs():
     # 2. Extract codebase openapi specs statically
     designer_spec = designer_app.openapi()
     execution_spec = execution_app.openapi()
+    org_spec = org_app.openapi()
+    eisf_spec = eisf_app.openapi()
+    econsent_spec = econsent_app.openapi()
 
-    # 3. Aggregate all codebase routes
+    # 3. Aggregate all codebase routes applying gateway prefix mappings
     # Paths are stored as: path_str -> { method_str -> operation_dict }
     code_routes = {}
     code_schemas = {}
 
-    # Merge paths and schemas from designer and execution apps
-    for app_spec in [designer_spec, execution_spec]:
-        for path, path_item in app_spec.get("paths", {}).items():
-            if path not in code_routes:
-                code_routes[path] = {}
+    for app_spec, path_prefix, schema_prefix in [
+        (designer_spec, "/designer", "Designer_"),
+        (execution_spec, "/execution", "Execution_"),
+        (org_spec, "/org", "Org_"),
+        (eisf_spec, "/eisf", "Eisf_"),
+        (econsent_spec, "/econsent", "Econsent_"),
+    ]:
+        app_spec_rewritten = rewrite_references(app_spec, schema_prefix)
+        for path, path_item in app_spec_rewritten.get("paths", {}).items():
+            prefixed_path = f"{path_prefix}{path}"
+            if prefixed_path not in code_routes:
+                code_routes[prefixed_path] = {}
             for method, op in path_item.items():
-                code_routes[path][method.lower()] = op
-
-        # Merge schemas
-        for name, val in app_spec.get("components", {}).get("schemas", {}).items():
-            code_schemas[name] = val
+                code_routes[prefixed_path][method.lower()] = op
+        for name, val in (
+            app_spec_rewritten.get("components", {}).get("schemas", {}).items()
+        ):
+            code_schemas[f"{schema_prefix}{name}"] = val
 
     code_full = {"components": {"schemas": code_schemas}}
 
@@ -630,6 +682,11 @@ _RAW_WHITELISTED_ROUTES = {
     ("post", "/api/v1/studies/{study_id}/versions/{version_id}/assignments/epochs"),
 }
 
+# Filter out execution eisf routes from the whitelist
+_RAW_WHITELISTED_ROUTES = {
+    (method, path) for (method, path) in _RAW_WHITELISTED_ROUTES if "eisf" not in path
+}
+
 WHITELISTED_ROUTES = {
     (method, path)
     for (method, path) in _RAW_WHITELISTED_ROUTES
@@ -638,7 +695,12 @@ WHITELISTED_ROUTES = {
 
 
 def find_spec_route(code_path: str, spec_paths: dict) -> str:
-    clean_code = code_path.replace("/api/v1", "").strip("/")
+    norm_path = code_path
+    for pfx in ["/designer", "/execution", "/org", "/eisf", "/econsent"]:
+        if code_path.startswith(pfx):
+            norm_path = code_path[len(pfx) :]
+            break
+    clean_code = norm_path.replace("/api/v1", "").strip("/")
     for s_path in spec_paths:
         clean_spec = s_path.replace("/api/v1", "").strip("/")
         if clean_code == clean_spec:
@@ -647,11 +709,24 @@ def find_spec_route(code_path: str, spec_paths: dict) -> str:
 
 
 def is_whitelisted(method: str, path: str) -> bool:
+    if (
+        path.startswith("/org")
+        or path.startswith("/eisf")
+        or path.startswith("/econsent")
+    ):
+        return True
+
+    norm_path = path
+    for pfx in ["/designer", "/execution"]:
+        if path.startswith(pfx):
+            norm_path = path[len(pfx) :]
+            break
+
     def normalize_p(p: str) -> str:
         return "/" + p.strip("/")
 
     m = method.lower()
-    p_norm = normalize_p(path)
+    p_norm = normalize_p(norm_path)
     if "reorder" in p_norm or "assignments" in p_norm:
         return True
     # Wildcard checks for newly added execution and designer features
