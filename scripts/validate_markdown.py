@@ -1289,7 +1289,9 @@ def main():
     else:
         print(f"Scanning {len(md_files)} markdown files across the repository...")
     for md_file in sorted(md_files):
-        process_markdown_file(md_file, repo_root, root_dirs, root_files, codebase_map, strict=strict)
+        process_markdown_file(
+            md_file, repo_root, root_dirs, root_files, codebase_map, strict=strict
+        )
 
     if errors:
         print(f"\n[!] Markdown Validation Failed with {len(errors)} error(s):")

@@ -251,7 +251,14 @@ def asymmetric_sign(
         private_key_pem.encode("utf-8"), password=password
     )
     if isinstance(private_key, rsa.RSAPrivateKey):
-        signature_bytes = private_key.sign(data, padding.PKCS1v15(), hashes.SHA256())
+        signature_bytes = private_key.sign(
+            data,
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH,
+            ),
+            hashes.SHA256(),
+        )
     elif isinstance(private_key, ec.EllipticCurvePrivateKey):
         signature_bytes = private_key.sign(data, ec.ECDSA(hashes.SHA256()))
     else:
@@ -278,7 +285,13 @@ def asymmetric_verify(
 
         if isinstance(public_key, rsa.RSAPublicKey):
             public_key.verify(
-                signature_bytes, data, padding.PKCS1v15(), hashes.SHA256()
+                signature_bytes,
+                data,
+                padding.PSS(
+                    mgf=padding.MGF1(hashes.SHA256()),
+                    salt_length=padding.PSS.MAX_LENGTH,
+                ),
+                hashes.SHA256(),
             )
         elif isinstance(public_key, ec.EllipticCurvePublicKey):
             public_key.verify(signature_bytes, data, ec.ECDSA(hashes.SHA256()))
