@@ -1,5 +1,5 @@
 // Upgraded eCOA Subject Portal Dispatch and Failure-State Rendering Contract
-import { reactive, createApp } from "vue";
+import { reactive, createApp, watch } from "vue";
 import App from "./App.vue";
 import {
   buildLedgerBlock,
@@ -16,6 +16,7 @@ import {
   updateSubmissionStatus,
   clearAllSubmissions,
   initSessionKey,
+  clearSessionKey,
 } from "./sync-queue.js";
 
 // Mock Data fallbacks for high-fidelity offline/sandbox usage
@@ -1653,6 +1654,18 @@ async function syncOfflineQueue() {
 
 // Bootstrap Initialization
 async function initializeApp() {
+  // Check and restore cached user identity from local storage before establishing key derivation
+  let cachedUserId = null;
+  try {
+    cachedUserId = localStorage.getItem("oidc_user_id");
+  } catch (err) {
+    console.warn("Failed to read oidc_user_id from localStorage:", err);
+  }
+
+  if (cachedUserId) {
+    state.session.userId = cachedUserId;
+  }
+
   const sessionMaterial =
     state.session.token || state.session.userId || "demo-material";
   try {
@@ -1740,6 +1753,10 @@ async function initializeApp() {
             realm: "cadence",
             clientId: "cadence-web",
           });
+          window.keycloakInstance = keycloak;
+          keycloak.onAuthLogout = () => {
+            logout();
+          };
 
           await keycloak.init({
             onLoad: "check-sso",
@@ -1747,7 +1764,8 @@ async function initializeApp() {
           });
 
           if (keycloak.authenticated) {
-            state.session.userId = keycloak.subject || "subject_001";
+            const authenticatedUserId = keycloak.subject || "subject_001";
+            state.session.userId = authenticatedUserId;
             state.session.token = keycloak.token;
             state.session.isOfflineMode = false;
             state.session.isDemoMode = false;
@@ -1755,6 +1773,13 @@ async function initializeApp() {
               "OIDC Session Verified for subject:",
               state.session.userId
             );
+
+            // Save the verified user identifier into persistent local storage upon successful login
+            try {
+              localStorage.setItem("oidc_user_id", authenticatedUserId);
+            } catch (err) {
+              console.warn("Failed to save oidc_user_id to localStorage:", err);
+            }
           } else {
             state.session.isDemoMode = true;
           }
@@ -2163,6 +2188,46 @@ async function initializeApp() {
       window.__TAB_TRAP_LISTENER_ADDED__ = true;
     }
   }
+
+  // Automatically re-derive the AES-GCM encryption key as soon as the active user identifier changes
+  watch(
+    () => state.session.userId,
+    async (newUid, oldUid) => {
+      if (newUid !== oldUid) {
+        console.log(`[Auth] User identity changed from ${oldUid} to ${newUid}. Re-deriving encryption key.`);
+        const sessionMaterial = state.session.token || newUid || "demo-material";
+        try {
+          await initSessionKey(sessionMaterial);
+        } catch (err) {
+          console.warn("Failed to re-derive session key on identity change:", err);
+        }
+      }
+    }
+  );
+}
+
+// User logout events trigger immediate deletion of the cached OIDC identifier from local storage
+async function logout() {
+  try {
+    localStorage.removeItem("oidc_user_id");
+  } catch (err) {
+    console.warn("Failed to clear oidc_user_id from localStorage:", err);
+  }
+
+  state.session.userId = "subject_001";
+  state.session.token = null;
+  state.session.isOfflineMode = true;
+  state.session.isDemoMode = true;
+
+  clearSessionKey();
+
+  if (window.keycloakInstance && typeof window.keycloakInstance.logout === "function") {
+    try {
+      await window.keycloakInstance.logout();
+    } catch (err) {
+      console.warn("Keycloak logout failed:", err);
+    }
+  }
 }
 
 // Auto-run on load in DOM environments
@@ -2198,6 +2263,7 @@ export {
   openSignatureModal,
   closeSignatureModal,
   markFieldInvalid,
+  logout,
 };
 
 function createClinicalInput(
