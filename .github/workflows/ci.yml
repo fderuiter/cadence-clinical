@@ -24,6 +24,8 @@ jobs:
       adr_outcome: ${{ steps.run_adr.outcome }}
       duplication_outcome: ${{ steps.run_duplication.outcome }}
       traceability_outcome: ${{ steps.run_traceability.outcome }}
+      markdown_outcome: ${{ steps.run_markdown.outcome }}
+      architecture_outcome: ${{ steps.run_architecture.outcome }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -80,6 +82,16 @@ jobs:
 
       - name: Compile UI library for markdown checks
         run: pnpm --filter ui build
+
+      - name: Run Markdown validation
+        id: run_markdown
+        if: always()
+        run: python3 scripts/validate_markdown.py
+
+      - name: Run Architectural validation
+        id: run_architecture
+        if: always()
+        run: python3 scripts/validate_architecture_drift.py
 
       - name: Run documentation compilation
         id: run_docs_build
@@ -558,6 +570,8 @@ jobs:
           DEID_OUTCOME: ${{ needs.security.outputs.deid_outcome }}
           DUPLICATION_OUTCOME: ${{ needs.style.outputs.duplication_outcome }}
           TRACEABILITY_OUTCOME: ${{ needs.style.outputs.traceability_outcome }}
+          MARKDOWN_OUTCOME: ${{ needs.style.outputs.markdown_outcome }}
+          ARCHITECTURE_OUTCOME: ${{ needs.style.outputs.architecture_outcome }}
         run: python3 scripts/post_pr_comment.py
   classify:
     name: Classify Change
