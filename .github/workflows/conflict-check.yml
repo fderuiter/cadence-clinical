@@ -51,6 +51,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
+          # Query with retry and silent error suppressing to bypass any potential GitHub API rate limiting
           STATUS="UNKNOWN"
           for i in {1..6}; do
             STATUS=$(gh pr view "$PR_NUMBER" --json mergeable --jq .mergeable 2>/dev/null || echo "UNKNOWN")

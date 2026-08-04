@@ -108,6 +108,10 @@ def main() -> None:
     print(f"Starting Autonomous Self-Healing for PR #{pr_number} in {repo}")
 
     # 1. Fetch PR details (labels, branch names, mergeable status)
+    # To bypass GitHub API GraphQL/REST rate limit exhaustion errors, we prioritize
+    # reading the pull request metadata from the local on-disk GITHUB_EVENT_PATH payload.
+    # If the payload is unavailable, we gracefully fallback to the GitHub CLI (gh pr view)
+    # with robust error handling, and finally fallback to local Git command resolution.
     labels = []
     head_branch = os.environ.get("GITHUB_HEAD_REF")
     base_branch = os.environ.get("GITHUB_BASE_REF") or "main"
