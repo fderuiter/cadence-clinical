@@ -119,15 +119,39 @@ async def generate_binder_zip(
             doc_paths[doc.id] = archive_path
 
             # Watermark the copy
-            watermarked_content = apply_watermark(
-                content=doc.content,
-                mime_type=doc.mime_type,
-                user_id=requester_id,
-                user_role=requester_role,
+            mime_lower = doc.mime_type.lower().strip()
+            is_binary = (
+                "pdf" in mime_lower
+                or "wordprocessingml" in mime_lower
+                or "docx" in mime_lower
+                or mime_lower == "application/octet-stream"
             )
 
-            # Write to ZIP
-            z.writestr(archive_path, watermarked_content.encode("utf-8"))
+            if is_binary:
+                import base64
+                try:
+                    raw_content_bytes = base64.b64decode(doc.content)
+                except Exception:
+                    raw_content_bytes = doc.content.encode("utf-8")
+
+                watermarked_bytes = apply_watermark(
+                    content=raw_content_bytes,
+                    mime_type=doc.mime_type,
+                    user_id=requester_id,
+                    user_role=requester_role,
+                )
+
+                if isinstance(watermarked_bytes, str):
+                    watermarked_bytes = watermarked_bytes.encode("utf-8")
+                z.writestr(archive_path, watermarked_bytes)
+            else:
+                watermarked_content = apply_watermark(
+                    content=doc.content,
+                    mime_type=doc.mime_type,
+                    user_id=requester_id,
+                    user_role=requester_role,
+                )
+                z.writestr(archive_path, watermarked_content.encode("utf-8"))
 
         # Build manifest
         manifest_data = {

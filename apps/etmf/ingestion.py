@@ -12,7 +12,7 @@ async def ingest_document_service(
     study_id: str,
     artifact_type: str,
     filename: str,
-    content: str,
+    content: str | bytes,
     mime_type: str,
     user_id: str,
     user_roles: str,

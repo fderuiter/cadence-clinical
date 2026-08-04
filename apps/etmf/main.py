@@ -3043,7 +3043,19 @@ async def inbound_email_webhook(
                 if len(att_bytes) > max_size:
                     raise HTTPException(status_code=413, detail="Attachment too large")
 
-                att_content = att_bytes.decode("utf-8", errors="ignore")
+                att_mime = att.content_type or "application/octet-stream"
+                att_mime_lower = att_mime.lower().strip()
+                is_att_binary = (
+                    "pdf" in att_mime_lower
+                    or "wordprocessingml" in att_mime_lower
+                    or "docx" in att_mime_lower
+                    or att_mime_lower == "application/octet-stream"
+                )
+
+                if is_att_binary:
+                    att_content = att_bytes
+                else:
+                    att_content = att_bytes.decode("utf-8", errors="ignore")
                 att_filename = att.filename or f"attachment_{idx}"
                 att_metadata = dict(metadata_json)
                 att_metadata["attachment_index"] = idx
@@ -3055,7 +3067,7 @@ async def inbound_email_webhook(
                     artifact_type=artifact_type,
                     filename=att_filename,
                     content=att_content,
-                    mime_type=att.content_type or "application/octet-stream",
+                    mime_type=att_mime,
                     created_by="system",
                     created_role="system",
                     zone=zone,
