@@ -76,18 +76,16 @@ async def build_eligibility_context(
 
     # 2. Fetch observations with precedence rules
     # Query all active non-deleted observations, sorting is performed in pure Python
-    stmt_obs = (
-        select(ClinicalObservation)
-        .where(
-            ClinicalObservation.subject_id == subject_id,
-            ClinicalObservation.is_deleted.is_(False),
-        )
+    stmt_obs = select(ClinicalObservation).where(
+        ClinicalObservation.subject_id == subject_id,
+        ClinicalObservation.is_deleted.is_(False),
     )
     res_obs = await session.execute(stmt_obs)
     observations = list(res_obs.scalars().all())
 
     # Sort observations using pure-Python collection sorters to break ties deterministically
     from datetime import date, datetime
+
     def observation_sort_key(obs):
         obs_date = obs.observation_date
         if obs_date is None:
@@ -98,7 +96,7 @@ async def build_eligibility_context(
             obs_date_val = datetime.combine(obs_date, datetime.min.time())
         else:
             obs_date_val = obs_date
-        
+
         version_val = obs.version if obs.version is not None else -1
         # Use string representation of id for safe heterogeneous sorting if needed
         id_val = str(obs.id) if obs.id is not None else ""

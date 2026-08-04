@@ -10,7 +10,6 @@ from unittest.mock import patch
 import pytest
 import pytest_asyncio
 from eligibility.models import EligibilityCriterion
-from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
@@ -482,6 +481,7 @@ async def test_randomization_allocation_rejection_gate():
 
     # 1. SCREENING subject randomization must be blocked
     from apps.execution.exceptions import SubjectEligibilityError
+
     with pytest.raises(SubjectEligibilityError) as exc:
         subj_screening.randomize("RAND-101", "KIT-01", {})
     assert "Only ENROLLED subjects can proceed" in str(exc.value)

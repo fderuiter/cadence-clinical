@@ -89,6 +89,14 @@ from apps.execution.edit_checks import (
     run_asynchronous_edit_checks,
     run_synchronous_edit_checks,
 )
+from apps.execution.exceptions import (
+    ChangeRequestNotFoundError,
+    CodingAssignmentNotFoundError,
+    DictionaryNotFoundError,
+    InvalidChangeRequestActionError,
+    InvalidCodingActionError,
+    SubjectEligibilityError,
+)
 from apps.execution.lab_range_cache import get_active_lab_ranges, lab_range_cache
 from apps.execution.outliers import recalculate_cohort_outliers
 from apps.execution.query_service import QueryService, StateTransitionError
@@ -377,15 +385,6 @@ async def authorization_denied_handler(
     )
 
 
-from apps.execution.exceptions import (
-    SubjectEligibilityError,
-    CodingAssignmentNotFoundError,
-    InvalidCodingActionError,
-    DictionaryNotFoundError,
-    ChangeRequestNotFoundError,
-    InvalidChangeRequestActionError,
-)
-
 @app.exception_handler(SubjectEligibilityError)
 async def subject_eligibility_error_handler(
     request: Request, exc: SubjectEligibilityError
@@ -399,6 +398,7 @@ async def subject_eligibility_error_handler(
         code="SUBJECT_ELIGIBILITY_ERROR",
     )
     return JSONResponse(status_code=400, content=problem.model_dump(exclude_none=True))
+
 
 @app.exception_handler(CodingAssignmentNotFoundError)
 async def coding_assignment_not_found_handler(
@@ -414,6 +414,7 @@ async def coding_assignment_not_found_handler(
     )
     return JSONResponse(status_code=404, content=problem.model_dump(exclude_none=True))
 
+
 @app.exception_handler(InvalidCodingActionError)
 async def invalid_coding_action_handler(
     request: Request, exc: InvalidCodingActionError
@@ -427,6 +428,7 @@ async def invalid_coding_action_handler(
         code="INVALID_CODING_ACTION",
     )
     return JSONResponse(status_code=400, content=problem.model_dump(exclude_none=True))
+
 
 @app.exception_handler(DictionaryNotFoundError)
 async def dictionary_not_found_handler(
@@ -442,6 +444,7 @@ async def dictionary_not_found_handler(
     )
     return JSONResponse(status_code=404, content=problem.model_dump(exclude_none=True))
 
+
 @app.exception_handler(ChangeRequestNotFoundError)
 async def change_request_not_found_handler(
     request: Request, exc: ChangeRequestNotFoundError
@@ -455,6 +458,7 @@ async def change_request_not_found_handler(
         code="CHANGE_REQUEST_NOT_FOUND",
     )
     return JSONResponse(status_code=404, content=problem.model_dump(exclude_none=True))
+
 
 @app.exception_handler(InvalidChangeRequestActionError)
 async def invalid_change_request_action_handler(

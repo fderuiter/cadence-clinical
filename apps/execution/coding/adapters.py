@@ -1,6 +1,7 @@
 """
 SQLAlchemy database adapters for the Medical Coding Service (Hexagonal Decoupling).
 """
+
 from typing import Any
 
 from sqlalchemy import select
@@ -58,7 +59,7 @@ class SQLCodingRepository:
                 try:
                     status_enum = CodingState[status.upper()]
                     stmt = stmt.where(ClinicalCodingAssignment.status == status_enum)
-                except (KeyError, ValueError):
+                except KeyError, ValueError:
                     stmt = stmt.where(ClinicalCodingAssignment.status == status)
         if verbatim_text:
             stmt = stmt.where(ClinicalCodingAssignment.verbatim_text == verbatim_text)
@@ -74,7 +75,7 @@ class SQLCodingRepository:
                     stmt = stmt.where(
                         ClinicalCodingAssignment.dictionary_type == dict_type_enum
                     )
-                except (KeyError, ValueError):
+                except KeyError, ValueError:
                     stmt = stmt.where(
                         ClinicalCodingAssignment.dictionary_type == dictionary_type
                     )
@@ -138,5 +139,7 @@ class SQLCodingRepository:
     async def get_meddra_hierarchy(self, term_record: Any, version: str) -> list[Any]:
         return await _get_meddra_hierarchy(self.session, term_record, version)
 
-    async def get_whodrug_context(self, rec_record: Any, version: str) -> tuple[list[Any], list[Any]]:
+    async def get_whodrug_context(
+        self, rec_record: Any, version: str
+    ) -> tuple[list[Any], list[Any]]:
         return await _get_whodrug_context(self.session, rec_record, version)

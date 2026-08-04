@@ -1,6 +1,7 @@
 """
 Abstract Ports for the Medical Coding Service (Hexagonal Decoupling).
 """
+
 from typing import Any, Protocol
 
 
@@ -49,6 +50,8 @@ class CodingRepositoryPort(Protocol):
         """Retrieve MedDRA hierarchy path for a term record."""
         ...
 
-    async def get_whodrug_context(self, rec_record: Any, version: str) -> tuple[list[Any], list[Any]]:
+    async def get_whodrug_context(
+        self, rec_record: Any, version: str
+    ) -> tuple[list[Any], list[Any]]:
         """Retrieve ATC context and ingredients for a WHODrug record."""
         ...

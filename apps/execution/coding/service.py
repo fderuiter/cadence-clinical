@@ -1,6 +1,7 @@
 """
 Core Medical Coding Service (Hexagonal Decoupled).
 """
+
 import enum
 import logging
 from datetime import UTC, datetime
@@ -46,6 +47,7 @@ def _get_repository(repo_or_session: Any) -> Any:
     """Helper to resolve database session or repository adapter."""
     if hasattr(repo_or_session, "execute"):
         from apps.execution.coding.adapters import SQLCodingRepository
+
         return SQLCodingRepository(repo_or_session)
     return repo_or_session
 
@@ -87,42 +89,8 @@ async def search_dictionary(
             score = parent_match.get("score", 0.0)
             if parent_match.get("hierarchies"):
                 for h in parent_match.get("hierarchies", []):
-                    matches.append({
-                        "llt_code": h.get("llt_code") or "",
-                        "llt_name": h.get("llt_name") or "",
-                        "pt_code": h.get("pt_code") or "",
-                        "pt_name": h.get("pt_name") or "",
-                        "hlt_code": h.get("hlt_code") or "",
-                        "hlt_name": h.get("hlt_name") or "",
-                        "hlgt_code": h.get("hlgt_code") or "",
-                        "hlgt_name": h.get("hlgt_name") or "",
-                        "soc_code": h.get("soc_code") or "",
-                        "soc_name": h.get("soc_name") or "",
-                        "primary_soc_flag": h.get("primary_soc_flag"),
-                        "score": score,
-                    })
-            else:
-                is_llt = parent_match.get("level") == "LLT"
-                matches.append({
-                    "llt_code": parent_match.get("code") if is_llt else "",
-                    "llt_name": parent_match.get("term_name") if is_llt else "",
-                    "pt_code": parent_match.get("code") if not is_llt else "",
-                    "pt_name": parent_match.get("term_name") if not is_llt else "",
-                    "hlt_code": "",
-                    "hlt_name": "",
-                    "hlgt_code": "",
-                    "hlgt_name": "",
-                    "soc_code": "",
-                    "soc_name": "",
-                    "primary_soc_flag": None,
-                    "score": score,
-                })
-        elif res.get("suggestions"):
-            for sug in res["suggestions"]:
-                score = sug.get("score", 0.0)
-                if sug.get("hierarchies"):
-                    for h in sug.get("hierarchies", []):
-                        matches.append({
+                    matches.append(
+                        {
                             "llt_code": h.get("llt_code") or "",
                             "llt_name": h.get("llt_name") or "",
                             "pt_code": h.get("pt_code") or "",
@@ -135,14 +103,16 @@ async def search_dictionary(
                             "soc_name": h.get("soc_name") or "",
                             "primary_soc_flag": h.get("primary_soc_flag"),
                             "score": score,
-                        })
-                else:
-                    is_llt = sug.get("level") == "LLT"
-                    matches.append({
-                        "llt_code": sug.get("code") if is_llt else "",
-                        "llt_name": sug.get("term_name") if is_llt else "",
-                        "pt_code": sug.get("code") if not is_llt else "",
-                        "pt_name": sug.get("term_name") if not is_llt else "",
+                        }
+                    )
+            else:
+                is_llt = parent_match.get("level") == "LLT"
+                matches.append(
+                    {
+                        "llt_code": parent_match.get("code") if is_llt else "",
+                        "llt_name": parent_match.get("term_name") if is_llt else "",
+                        "pt_code": parent_match.get("code") if not is_llt else "",
+                        "pt_name": parent_match.get("term_name") if not is_llt else "",
                         "hlt_code": "",
                         "hlt_name": "",
                         "hlgt_code": "",
@@ -151,7 +121,47 @@ async def search_dictionary(
                         "soc_name": "",
                         "primary_soc_flag": None,
                         "score": score,
-                    })
+                    }
+                )
+        elif res.get("suggestions"):
+            for sug in res["suggestions"]:
+                score = sug.get("score", 0.0)
+                if sug.get("hierarchies"):
+                    for h in sug.get("hierarchies", []):
+                        matches.append(
+                            {
+                                "llt_code": h.get("llt_code") or "",
+                                "llt_name": h.get("llt_name") or "",
+                                "pt_code": h.get("pt_code") or "",
+                                "pt_name": h.get("pt_name") or "",
+                                "hlt_code": h.get("hlt_code") or "",
+                                "hlt_name": h.get("hlt_name") or "",
+                                "hlgt_code": h.get("hlgt_code") or "",
+                                "hlgt_name": h.get("hlgt_name") or "",
+                                "soc_code": h.get("soc_code") or "",
+                                "soc_name": h.get("soc_name") or "",
+                                "primary_soc_flag": h.get("primary_soc_flag"),
+                                "score": score,
+                            }
+                        )
+                else:
+                    is_llt = sug.get("level") == "LLT"
+                    matches.append(
+                        {
+                            "llt_code": sug.get("code") if is_llt else "",
+                            "llt_name": sug.get("term_name") if is_llt else "",
+                            "pt_code": sug.get("code") if not is_llt else "",
+                            "pt_name": sug.get("term_name") if not is_llt else "",
+                            "hlt_code": "",
+                            "hlt_name": "",
+                            "hlgt_code": "",
+                            "hlgt_name": "",
+                            "soc_code": "",
+                            "soc_name": "",
+                            "primary_soc_flag": None,
+                            "score": score,
+                        }
+                    )
         return {
             "status": res.get("status", "UNCODABLE"),
             "matches": matches,
@@ -161,48 +171,52 @@ async def search_dictionary(
         whodrug_matches = []
         if res.get("match"):
             m = res["match"]
-            whodrug_matches.append({
-                "drug_code": m.get("drug_code") or "",
-                "preferred_name": m.get("preferred_name") or "",
-                "drug_name": m.get("drug_name"),
-                "score": m.get("score", 0.0),
-                "atc_context": [
-                    {
-                        "atc_code": a.get("atc_code") or "",
-                        "description": a.get("description") or "",
-                    }
-                    for a in m.get("atc_context", [])
-                ],
-                "ingredients": [
-                    {
-                        "ingredient_code": i.get("ingredient_code") or "",
-                        "ingredient_name": i.get("ingredient_name") or "",
-                    }
-                    for i in m.get("ingredients", [])
-                ],
-            })
-        elif res.get("suggestions"):
-            for sug in res["suggestions"]:
-                whodrug_matches.append({
-                    "drug_code": sug.get("drug_code") or "",
-                    "preferred_name": sug.get("preferred_name") or "",
-                    "drug_name": sug.get("drug_name"),
-                    "score": sug.get("score", 0.0),
+            whodrug_matches.append(
+                {
+                    "drug_code": m.get("drug_code") or "",
+                    "preferred_name": m.get("preferred_name") or "",
+                    "drug_name": m.get("drug_name"),
+                    "score": m.get("score", 0.0),
                     "atc_context": [
                         {
                             "atc_code": a.get("atc_code") or "",
                             "description": a.get("description") or "",
                         }
-                        for a in sug.get("atc_context", [])
+                        for a in m.get("atc_context", [])
                     ],
                     "ingredients": [
                         {
                             "ingredient_code": i.get("ingredient_code") or "",
                             "ingredient_name": i.get("ingredient_name") or "",
                         }
-                        for i in sug.get("ingredients", [])
+                        for i in m.get("ingredients", [])
                     ],
-                })
+                }
+            )
+        elif res.get("suggestions"):
+            for sug in res["suggestions"]:
+                whodrug_matches.append(
+                    {
+                        "drug_code": sug.get("drug_code") or "",
+                        "preferred_name": sug.get("preferred_name") or "",
+                        "drug_name": sug.get("drug_name"),
+                        "score": sug.get("score", 0.0),
+                        "atc_context": [
+                            {
+                                "atc_code": a.get("atc_code") or "",
+                                "description": a.get("description") or "",
+                            }
+                            for a in sug.get("atc_context", [])
+                        ],
+                        "ingredients": [
+                            {
+                                "ingredient_code": i.get("ingredient_code") or "",
+                                "ingredient_name": i.get("ingredient_name") or "",
+                            }
+                            for i in sug.get("ingredients", [])
+                        ],
+                    }
+                )
 
         return {
             "status": res.get("status", "UNCODABLE"),
@@ -264,8 +278,9 @@ async def process_coding_action(
     if not resolved_actor or resolved_actor == "system":
         try:
             from apps.execution.database.context import current_user_id
+
             resolved_actor = current_user_id.get() or "system"
-        except (LookupError, ValueError):
+        except LookupError, ValueError:
             resolved_actor = "system"
 
     # 1. Fetch existing assignment
@@ -377,7 +392,9 @@ async def process_coding_action(
                 )
 
             # Re-derive context
-            atc_context, ingredients = await repo.get_whodrug_context(rec_record, version)
+            atc_context, ingredients = await repo.get_whodrug_context(
+                rec_record, version
+            )
             hierarchy = {"atc_context": atc_context, "ingredients": ingredients}
 
         score = 1.0  # Perfect manual certainty
@@ -405,24 +422,27 @@ async def process_coding_action(
 
     # 3. Create a ledger record for ACCEPT or OVERRIDE
     if action_upper in ("ACCEPT", "OVERRIDE"):
-        await repo.add_ledger({
-            "assignment_id": assignment.id,
-            "verbatim_text": assignment.verbatim_text,
-            "observation_id": assignment.observation_id,
-            "dictionary_type": dict_type,
-            "old_dictionary_version": old_version if old_code else None,
-            "old_coded_code": old_code,
-            "old_coded_term": old_term,
-            "new_dictionary_version": version,
-            "new_coded_code": coded_code,
-            "new_coded_term": coded_term,
-            "recoding_reason": reason_for_change or f"Manual decision: {action_upper}",
-            "decision_by": resolved_actor,
-            "decision_at": datetime.now(UTC).replace(tzinfo=None),
-            "old_hierarchy": old_hierarchy,
-            "new_hierarchy": hierarchy,
-            "recoding_status": assignment.recoding_status,
-        })
+        await repo.add_ledger(
+            {
+                "assignment_id": assignment.id,
+                "verbatim_text": assignment.verbatim_text,
+                "observation_id": assignment.observation_id,
+                "dictionary_type": dict_type,
+                "old_dictionary_version": old_version if old_code else None,
+                "old_coded_code": old_code,
+                "old_coded_term": old_term,
+                "new_dictionary_version": version,
+                "new_coded_code": coded_code,
+                "new_coded_term": coded_term,
+                "recoding_reason": reason_for_change
+                or f"Manual decision: {action_upper}",
+                "decision_by": resolved_actor,
+                "decision_at": datetime.now(UTC).replace(tzinfo=None),
+                "old_hierarchy": old_hierarchy,
+                "new_hierarchy": hierarchy,
+                "recoding_status": assignment.recoding_status,
+            }
+        )
 
         # Close any open/active SYSTEM_CODING queries for this observation
         active_queries = await repo.get_active_queries(assignment.observation_id)
@@ -444,6 +464,7 @@ async def trigger_impact_analysis(
 ) -> dict[str, Any]:
     """Manually triggers up-versioning impact analysis on existing coded assignments."""
     from apps.execution.coding.impact import run_impact_analysis
+
     try:
         return await run_impact_analysis(
             session=session,

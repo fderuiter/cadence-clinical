@@ -3,6 +3,7 @@ Unit tests for hexagonal decoupled services running 100% in-memory.
 These tests verify that services run natively with zero reliance on web servers,
 live databases, or SQLAlchemy/FastAPI framework imports.
 """
+
 from typing import Any
 
 import pytest
@@ -25,7 +26,7 @@ class DummySubject:
 def test_in_memory_eligibility_rejection():
     """Verify verify_subject_eligible_for_randomization raises domain error for non-ENROLLED subjects in-memory."""
     subj_screening = DummySubject("SUBJ-123", "SCREENING")
-    
+
     with pytest.raises(SubjectEligibilityError) as exc:
         verify_subject_eligible_for_randomization(subj_screening)
     assert "Only ENROLLED subjects can proceed" in str(exc.value)
@@ -48,6 +49,7 @@ def test_in_memory_eligibility_success():
 
 
 # --- Coding Service In-Memory Mocks ---
+
 
 class DummyAssignment:
     def __init__(self):
@@ -111,7 +113,9 @@ class InMemoryCodingRepository:
     async def get_meddra_hierarchy(self, term_record: Any, version: str) -> list[Any]:
         return [{"llt_code": "10029300"}]
 
-    async def get_whodrug_context(self, rec_record: Any, version: str) -> tuple[list[Any], list[Any]]:
+    async def get_whodrug_context(
+        self, rec_record: Any, version: str
+    ) -> tuple[list[Any], list[Any]]:
         return ([], [])
 
 
@@ -119,14 +123,14 @@ class InMemoryCodingRepository:
 async def test_process_coding_action_accept_in_memory():
     """Verify that process_coding_action processes an ACCEPT action successfully in-memory with a mock repository."""
     repo = InMemoryCodingRepository()
-    
+
     # Process ACCEPT on suggestion index 0
     updated_assignment = await process_coding_action(
         session=repo,
         assignment_id="assign_1",
         action="ACCEPT",
         suggestion_index=0,
-        actor="test_user"
+        actor="test_user",
     )
 
     assert updated_assignment.status == "CODED"
@@ -141,13 +145,13 @@ async def test_process_coding_action_accept_in_memory():
 async def test_process_coding_action_invalid_code_in_memory():
     """Verify that process_coding_action rejects an invalid code action in-memory with a mock repository."""
     repo = InMemoryCodingRepository()
-    
+
     with pytest.raises(InvalidCodingActionError) as exc:
         await process_coding_action(
             session=repo,
             assignment_id="assign_1",
             action="ACCEPT",
             code="INVALID_CODE",
-            actor="test_user"
+            actor="test_user",
         )
     assert "does not match any available suggestions" in str(exc.value)
