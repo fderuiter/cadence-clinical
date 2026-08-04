@@ -11,6 +11,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 1. Core Platform & Execution Engine
 - [2026-08-04: Implement Hexagonal Domain Repository Separation](2026-08-04-implement-hexagonal-domain-repository-separation.md)
+- [2026-08-04: System-Wide Hexagonal Architecture and Pytest-Archon Enforcement](2026-08-04-system-wide-hexagonal-architecture-and-pytest-archon-enforcement.md)
 - [2026-08-04: In Memory Terminology Search Cache](2026-08-04-in-memory-terminology-search-cache.md)
 - [2026-08-04: Centralized layout utilities and 48px touch targets](2026-08-04-centralized-layout-utilities-and-48px-touch-targets.md)
 - [2026-08-01: SDV and TSDV Data Model Foundations](2026-08-01-sdv-and-tsdv-data-model-foundations.md)

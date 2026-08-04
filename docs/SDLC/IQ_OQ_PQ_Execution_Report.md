@@ -126,6 +126,7 @@ openpyxl                 3.1.5
 packages-core-models     0.1.0
 packages-database        0.1.0
 packages-deid            0.1.0
+packages-hexagonal       0.1.0
 packages-security        0.1.0
 packages-storage         0.1.0
 packageurl-python        0.17.6
@@ -153,6 +154,7 @@ pymupdf                  1.28.0
 pyparsing                3.3.2
 pyphen                   0.17.2
 pytest                   9.1.1
+pytest-archon            0.0.7
 pytest-asyncio           1.4.0
 pytest-base-url          2.1.0
 pytest-cov               7.1.0

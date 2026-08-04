@@ -962,7 +962,7 @@ def validate_json_block(
 
 
 def process_markdown_file(
-    file_path, repo_root, root_dirs, root_files, codebase_map=None
+    file_path, repo_root, root_dirs, root_files, codebase_map=None, strict=False
 ):
     """Parses a markdown file to validate inline paths, links, and code blocks."""
     if codebase_map is None:
@@ -1073,10 +1073,19 @@ def process_markdown_file(
                             w in preceding_line for w in ("skip", "raw-text", "raw")
                         )
 
+                    if strict:
+                        is_skip_block_active = False
+                        has_skip_comment_active = False
+                        has_preceding_skip_active = False
+                    else:
+                        is_skip_block_active = is_skip_block
+                        has_skip_comment_active = has_skip_comment
+                        has_preceding_skip_active = has_preceding_skip
+
                     if (
-                        not is_skip_block
-                        and not has_skip_comment
-                        and not has_preceding_skip
+                        not is_skip_block_active
+                        and not has_skip_comment_active
+                        and not has_preceding_skip_active
                     ) and ("adr" not in Path(file_path).parts):
                         validate_python_block(
                             file_path,
@@ -1100,7 +1109,14 @@ def process_markdown_file(
                             w in preceding_line for w in ("skip", "raw-text", "raw")
                         )
 
-                    if not is_skip_block and not has_preceding_skip:
+                    if strict:
+                        is_skip_block_active = False
+                        has_preceding_skip_active = False
+                    else:
+                        is_skip_block_active = is_skip_block
+                        has_preceding_skip_active = has_preceding_skip
+
+                    if not is_skip_block_active and not has_preceding_skip_active:
                         if "adr" not in Path(file_path).parts:
                             validate_json_block(
                                 file_path,
@@ -1239,14 +1255,20 @@ def main():
         "dist",
     }
 
+    strict = False
+    args_to_process = []
+    for arg in sys.argv[1:]:
+        if arg in ("--strict", "-s"):
+            strict = True
+        else:
+            args_to_process.append(arg)
+
     # Scan and process target .md files
     md_files = []
-    if len(sys.argv) > 1:
-        for arg in sys.argv[1:]:
+    if args_to_process:
+        for arg in args_to_process:
             p = Path(arg).resolve()
             if p.is_file() and p.suffix == ".md":
-                if "docs/SDLC" in p.as_posix() or "docs\\SDLC" in p.as_posix():
-                    continue
                 md_files.append(p)
     else:
         for root, dirs, files in os.walk(repo_root):
@@ -1257,24 +1279,17 @@ def main():
             for f in files:
                 if f.endswith(".md"):
                     file_path = Path(root) / f
-                    # Skip SDLC documentation suite from standard CLI validation as they contain intentional
-                    # compliance drifts used for testing the linter in gxp_compliance_suite.py
-                    if (
-                        "docs/SDLC" in file_path.as_posix()
-                        or "docs\\SDLC" in file_path.as_posix()
-                    ):
-                        continue
                     md_files.append(file_path)
 
     print("Building codebase map for targeted validations...")
     codebase_map = build_codebase_map(repo_root)
 
-    if len(sys.argv) > 1:
+    if args_to_process:
         print(f"Scanning {len(md_files)} specified markdown file(s)...")
     else:
         print(f"Scanning {len(md_files)} markdown files across the repository...")
     for md_file in sorted(md_files):
-        process_markdown_file(md_file, repo_root, root_dirs, root_files, codebase_map)
+        process_markdown_file(md_file, repo_root, root_dirs, root_files, codebase_map, strict=strict)
 
     if errors:
         print(f"\n[!] Markdown Validation Failed with {len(errors)} error(s):")

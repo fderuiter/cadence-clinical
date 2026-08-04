@@ -43,7 +43,14 @@ class PKCS7Signer:
         cert_pem = self.cert.public_bytes(serialization.Encoding.PEM).strip()
         # Sign the combination of data and certificate to bind them together securely
         to_sign = data + cert_pem
-        signature = self.key.sign(to_sign, padding.PKCS1v15(), hashes.SHA256())
+        signature = self.key.sign(
+            to_sign,
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH,
+            ),
+            hashes.SHA256(),
+        )
         sig_b64 = base64.b64encode(signature)
 
         return (

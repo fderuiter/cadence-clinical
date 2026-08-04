@@ -29,14 +29,14 @@ To enable multiple developers to work concurrently without code collisions, issu
 
 | Stream | Functional Domain | Primary Microservices & Modules |
 | :--- | :--- | :--- |
-| **Stream 1** | **eTMF & Regulated Document Management** | `apps/etmf/`, `packages/core-models/tmf_reference_model/` |
-| **Stream 2** | **RTSM & IP Supply Chain** | `apps/execution/rtsm/`, `apps/execution/ip_supply/` |
-| **Stream 3** | **Study Designer, eCRF & SoA** | `apps/designer/`, `packages/core-models/cdisc/` |
-| **Stream 4** | **eCOA, ePRO & Subject Portal** | `apps/subject-portal/`, `apps/execution/ecoa/` |
-| **Stream 5** | **Frontend Vue 3 SPA** | `apps/web/src/`, `packages/ui/` |
-| **Stream 6** | **Platform Security, RBAC & Audit Ledger** | `apps/gateway/`, `packages/security/`, `apps/execution/audit/` |
-| **Stream 7** | **Biostatistics & Dataset Exports** | `apps/execution/exports/`, `packages/core-models/sdtm/` |
-| **Stream 8** | **Clinical Operations, SDV & Lab Ranges** | `apps/execution/sdv/`, `apps/execution/labs/` |
+| **Stream 1** | **eTMF & Regulated Document Management** | `apps/etmf/`, `packages/core-models/tmf_reference_model/*` |
+| **Stream 2** | **RTSM & IP Supply Chain** | `apps/execution/rtsm/*`, `apps/execution/ip_supply/*` |
+| **Stream 3** | **Study Designer, eCRF & SoA** | `apps/designer/`, `packages/core-models/cdisc/*` |
+| **Stream 4** | **eCOA, ePRO & Subject Portal** | `apps/subject-portal/*`, `apps/execution/ecoa/*` |
+| **Stream 5** | **Frontend Vue 3 SPA** | `apps/web/src/`, `packages/ui/*` |
+| **Stream 6** | **Platform Security, RBAC & Audit Ledger** | `apps/gateway/`, `packages/security/`, `apps/execution/audit/*` |
+| **Stream 7** | **Biostatistics & Dataset Exports** | `apps/execution/exports/`, `packages/core-models/sdtm/*` |
+| **Stream 8** | **Clinical Operations, SDV & Lab Ranges** | `apps/execution/sdv/*`, `apps/execution/labs/*` |
 
 ---
 

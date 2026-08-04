@@ -1,3 +1,4 @@
+# Execution Domain Layer
 from apps.execution.domain.models import (
     AuditLogDomain,
     ClinicalSubjectDomain,
@@ -7,12 +8,6 @@ from apps.execution.domain.models import (
 from apps.execution.domain.repositories import (
     AuditRepository,
     ConsentRepository,
-    InMemoryAuditRepository,
-    InMemoryConsentRepository,
-    InMemorySubjectRepository,
-    SQLAlchemyAuditRepository,
-    SQLAlchemyConsentRepository,
-    SQLAlchemySubjectRepository,
     SubjectRepository,
 )
 
@@ -24,10 +19,4 @@ __all__ = [
     "SubjectRepository",
     "ConsentRepository",
     "AuditRepository",
-    "SQLAlchemySubjectRepository",
-    "SQLAlchemyConsentRepository",
-    "SQLAlchemyAuditRepository",
-    "InMemorySubjectRepository",
-    "InMemoryConsentRepository",
-    "InMemoryAuditRepository",
 ]

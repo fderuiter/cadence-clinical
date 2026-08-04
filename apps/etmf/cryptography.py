@@ -39,8 +39,8 @@ def requires_signature(
     Determines if a given eTMF artifact type requires a cryptographic signature
     to satisfy regulatory compliance (such as FDA 21 CFR Part 11).
     """
-    import sys
     import os
+    import sys
     is_testing = "pytest" in sys.modules or "PYTEST_CURRENT_TEST" in os.environ
     current_test = os.environ.get("PYTEST_CURRENT_TEST", "")
     strict_gxp = True
@@ -217,8 +217,8 @@ def verify_x509_signature(
 
         cert_store = get_active_cert_store()
 
-        import sys
         import os
+        import sys
         is_testing = "pytest" in sys.modules or "PYTEST_CURRENT_TEST" in os.environ
         current_test = os.environ.get("PYTEST_CURRENT_TEST", "")
         strict_gxp = True
@@ -282,8 +282,8 @@ def validate_document_signature(
     Returns:
         Tuple[bool, str]: (is_valid, status_message)
     """
-    import sys
     import os
+    import sys
     is_testing = "pytest" in sys.modules or "PYTEST_CURRENT_TEST" in os.environ
     current_test = os.environ.get("PYTEST_CURRENT_TEST", "")
     strict_gxp = True

@@ -9,7 +9,7 @@ from apps.execution.domain.models import (
     ConsentFormRecordDomain,
     ConsentSignatureDomain,
 )
-from apps.execution.domain.repositories import (
+from apps.execution.adapter.repositories import (
     InMemoryAuditRepository,
     InMemoryConsentRepository,
     InMemorySubjectRepository,
