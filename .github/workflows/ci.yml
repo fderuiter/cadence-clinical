@@ -150,10 +150,8 @@ jobs:
         with:
           python-version: '3.14'
 
-      - name: Create venv and install static tools
-        run: |
-          uv venv
-          uv pip install pip-audit bandit pre-commit detect-secrets pydantic python-dateutil cryptography fastapi httpx python-jose
+      - name: Sync dependencies from lockfile
+        run: uv sync --locked --no-install-project --no-install-workspace --all-extras
 
       - name: Cache pre-commit
         uses: actions/cache@v4
