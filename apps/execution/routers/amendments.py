@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 import packages  # noqa: F401
+from apps.execution.dependencies import get_study_version_diff_engine
 from apps.execution.services.amendment_diff import StudyVersionDiffEngine
 from packages.security.middleware import get_current_user
 
@@ -61,12 +62,12 @@ _AMENDMENT_STORE: dict[str, dict] = {}
 async def publish_amendment_endpoint(
     payload: PublishAmendmentRequest,
     current_user: dict = Depends(get_current_user),
+    diff_engine: StudyVersionDiffEngine = Depends(get_study_version_diff_engine),
 ) -> PublishAmendmentResponse:
     """Publish protocol amendment version and compute structural summary of changes.
 
     Requirements: PRD-SYS-001
     """
-    diff_engine = StudyVersionDiffEngine()
     diff = diff_engine.compare_usdm_snapshots(
         payload.baseline_snapshot, payload.amended_snapshot
     )

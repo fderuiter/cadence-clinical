@@ -19,6 +19,7 @@ from fastapi import (
     status,
 )
 from fastapi.responses import StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 from storage.document_models import (
     DocumentMetadataResponse,
     DocumentUploadResponse,
@@ -26,8 +27,8 @@ from storage.document_models import (
 from watermark import apply_watermark
 
 import packages  # noqa: F401
-from apps.execution.database.core import db_manager
 from apps.execution.database.models import AuditLog
+from apps.execution.dependencies import get_db
 from packages.security.middleware import get_current_user
 
 router = APIRouter(prefix="/api/v1/documents", tags=["Documents"])
@@ -109,6 +110,7 @@ async def download_document(
     doc_id: str,
     request: Request,
     current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
     """Stream file content with dynamic watermarking.
 
@@ -133,7 +135,7 @@ async def download_document(
     content_bytes = watermarked_content.encode("utf-8")
 
     # Record GxP audit event (DOCUMENT_VIEW) in execution's relational AuditLog table
-    async with db_manager.get_session_maker()() as session, session.begin():
+    async with session.begin():
         audit_log = AuditLog(
             id=str(uuid.uuid4()),
             table_name="clinical_documents",

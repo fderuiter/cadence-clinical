@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 import packages  # noqa: F401
+from apps.execution.dependencies import get_auditor_access_token_service
 from packages.security.auditor_token import AuditorAccessTokenService
 from packages.security.middleware import get_current_user
 
@@ -33,6 +34,7 @@ class GenerateAuditorTokenRequest(BaseModel):
 async def generate_auditor_token_endpoint(
     payload: GenerateAuditorTokenRequest,
     current_user: dict = Depends(get_current_user),
+    service: AuditorAccessTokenService = Depends(get_auditor_access_token_service),
 ) -> dict[str, Any]:
     """Generate temporary time-bounded access token for regulatory auditors.
 
@@ -44,7 +46,6 @@ async def generate_auditor_token_endpoint(
             detail="Reason for access is required when generating auditor token.",
         )
 
-    service = AuditorAccessTokenService()
     return service.generate_auditor_token(
         auditor_email=payload.auditor_email,
         study_id=payload.study_id,

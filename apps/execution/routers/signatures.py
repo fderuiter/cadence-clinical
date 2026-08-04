@@ -13,6 +13,7 @@ from execution.signature_transport_models import (
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 import packages  # noqa: F401
+from apps.execution.dependencies import get_signature_builder
 from packages.security.middleware import get_current_user
 from packages.security.sig_token_verifier import verify_and_consume_sig_token
 from packages.security.signature_builder import CryptographicSignatureBuilder
@@ -29,6 +30,7 @@ async def batch_signature_sign_off_endpoint(
     request: Request,
     payload: BatchSignatureRequest,
     current_user: dict = Depends(get_current_user),
+    builder: CryptographicSignatureBuilder = Depends(get_signature_builder),
 ) -> BatchSignatureResponse:
     """Execute 21 CFR Part 11 batch electronic signature casebook sign-off.
 
@@ -49,7 +51,6 @@ async def batch_signature_sign_off_endpoint(
             detail="Re-authentication password is required for 21 CFR Part 11 sign-off.",
         )
 
-    builder = CryptographicSignatureBuilder()
     content_digest = builder.compute_content_digest(payload.target_form_ids)
 
     sig_id = f"sig_{uuid.uuid4().hex[:8]}"

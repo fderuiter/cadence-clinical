@@ -15,6 +15,7 @@ from execution.safety_transport_models import (
 from fastapi import APIRouter, Depends, HTTPException
 
 import packages  # noqa: F401
+from apps.execution.dependencies import get_e2b_parser, get_sae_reconciler
 from apps.execution.services.e2b_parser import E2BR3Parser
 from apps.execution.services.sae_reconciler import SAEReconciler
 from packages.security.middleware import get_current_user
@@ -53,17 +54,17 @@ async def dispatch_safety_report_endpoint(
 async def reconcile_sae_cases_endpoint(
     payload: SAEReconcileRequest,
     current_user: dict = Depends(get_current_user),
+    parser: E2BR3Parser = Depends(get_e2b_parser),
+    reconciler: SAEReconciler = Depends(get_sae_reconciler),
 ) -> dict[str, Any]:
     """Execute automated EDC AE to Safety ICSR case reconciliation.
 
     Requirements: PRD-SYS-001
     """
-    parser = E2BR3Parser()
     safety_cases = []
 
     if payload.safety_cases_xml:
         for xml_str in payload.safety_cases_xml:
             safety_cases.append(parser.parse_e2b_xml(xml_str))
 
-    reconciler = SAEReconciler()
     return reconciler.reconcile_edc_and_safety(payload.edc_ae_events, safety_cases)

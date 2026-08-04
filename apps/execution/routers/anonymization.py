@@ -10,14 +10,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 import packages  # noqa: F401
+from apps.execution.dependencies import get_redactor, get_scrubber
 from apps.execution.services.pdf_redactor import PDFRedactorService
 from packages.security.middleware import get_current_user
 from packages.security.ner_scrubber import PHINameEntityScrubber
 
 router = APIRouter(prefix="/api/v1/execution/anonymization", tags=["Anonymization"])
-
-_SCRUBBER = PHINameEntityScrubber()
-_REDACTOR = PDFRedactorService()
 
 
 class PHIScanRequest(BaseModel):
@@ -45,16 +43,17 @@ class RedactPDFRequest(BaseModel):
 async def scan_phi_endpoint(
     payload: PHIScanRequest,
     current_user: dict = Depends(get_current_user),
+    _scrubber: PHINameEntityScrubber = Depends(get_scrubber),
 ) -> dict[str, Any]:
     """Scan text payload for Protected Health Information (PHI) identifiers.
 
     Requirements: PRD-SYS-001
     """
-    entities = _SCRUBBER.detect_phi(payload.text)
+    entities = _scrubber.detect_phi(payload.text)
     return {
         "phi_detected_count": len(entities),
         "entities": entities,
-        "scrubbed_text_preview": _SCRUBBER.scrub_phi(payload.text),
+        "scrubbed_text_preview": _scrubber.scrub_phi(payload.text),
     }
 
 
@@ -62,6 +61,7 @@ async def scan_phi_endpoint(
 async def redact_pdf_endpoint(
     payload: RedactPDFRequest,
     current_user: dict = Depends(get_current_user),
+    _redactor: PDFRedactorService = Depends(get_redactor),
 ) -> dict[str, Any]:
     """Apply non-destructive PHI redaction overlays to PDF document.
 
@@ -72,7 +72,7 @@ async def redact_pdf_endpoint(
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid base64 PDF payload.")
 
-    result = _REDACTOR.apply_redaction_overlay(pdf_bytes, payload.target_snippets)
+    result = _redactor.apply_redaction_overlay(pdf_bytes, payload.target_snippets)
     redacted_b64 = base64.b64encode(result["redacted_content"]).decode("utf-8")
 
     return {

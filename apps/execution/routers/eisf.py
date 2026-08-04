@@ -11,12 +11,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 import packages  # noqa: F401
+from apps.execution.dependencies import get_eisf_service
 from apps.execution.services.eisf_service import EISFService
 from packages.security.middleware import get_current_user
 
 router = APIRouter(prefix="/api/v1/execution/eisf", tags=["eISF"])
-
-_EISF_SERVICE = EISFService()
 
 
 class UploadEISFDocumentRequest(BaseModel):
@@ -41,6 +40,7 @@ class UploadEISFDocumentRequest(BaseModel):
 async def upload_eisf_document_endpoint(
     payload: UploadEISFDocumentRequest,
     current_user: dict = Depends(get_current_user),
+    _eisf_service: EISFService = Depends(get_eisf_service),
 ) -> EISFDocumentRecord:
     """Upload eISF regulatory binder document and calculate SHA-256 integrity checksum.
 
@@ -57,7 +57,7 @@ async def upload_eisf_document_endpoint(
 
     uploader = current_user.get("sub", "crc_user")
 
-    return _EISF_SERVICE.upload_document(
+    return _eisf_service.upload_document(
         study_id=payload.study_id,
         site_id=payload.site_id,
         category=payload.category,
@@ -73,6 +73,7 @@ async def get_site_regulatory_binder_endpoint(
     study_id: str,
     site_id: str,
     current_user: dict = Depends(get_current_user),
+    _eisf_service: EISFService = Depends(get_eisf_service),
 ) -> list[EISFDocumentRecord]:
     """Retrieve site-isolated regulatory binder documents for specified study and site.
 
@@ -80,6 +81,6 @@ async def get_site_regulatory_binder_endpoint(
     """
     return [
         doc
-        for doc in _EISF_SERVICE._document_store.values()
+        for doc in _eisf_service._document_store.values()
         if doc.study_id == study_id and doc.site_id == site_id
     ]

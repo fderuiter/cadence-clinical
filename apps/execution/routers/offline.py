@@ -14,8 +14,8 @@ from execution.offline_models import (
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.execution.database.core import db_manager
 from apps.execution.database.models import (
     AuditLog,
     ClinicalObservation,
@@ -23,6 +23,7 @@ from apps.execution.database.models import (
     FormSubmission,
     SyncedBatchIdempotencyKey,
 )
+from apps.execution.dependencies import get_db, get_offline_sync_engine
 from apps.execution.services.offline_sync import (
     OfflineSyncEngine as ServiceOfflineSyncEngine,
 )
@@ -144,97 +145,95 @@ async def sync_offline_batch(
     payload: OfflineBatchSyncRequest,
     request: Request,
     user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
 ) -> OfflineBatchSyncResponse:
     """Ingest batch of queued offline eCRF/ePRO deltas idempotently.
 
     Requirements: PRD-SYS-001
     """
-    async with db_manager.get_session_maker()() as session:
-        # Check idempotency first outside the write transaction to allow instant return
-        stmt = select(SyncedBatchIdempotencyKey).where(
-            SyncedBatchIdempotencyKey.client_batch_id == payload.client_batch_id
-        )
-        res = await session.execute(stmt)
-        existing_key = res.scalar_one_or_none()
+    # Check idempotency first outside the write transaction to allow instant return
+    stmt = select(SyncedBatchIdempotencyKey).where(
+        SyncedBatchIdempotencyKey.client_batch_id == payload.client_batch_id
+    )
+    res = await session.execute(stmt)
+    existing_key = res.scalar_one_or_none()
 
-        if existing_key is not None:
-            return OfflineBatchSyncResponse(
-                client_batch_id=payload.client_batch_id,
-                status="ALREADY_PROCESSED",
-                processed_count=existing_key.processed_count,
-                conflicts=[],
-            )
-
-        # To start a new explicit write transaction, we commit/rollback any active implicit transaction
-        await session.rollback()
-
-        # Open transactional block
-        async with session.begin():
-            user_val = user.get("sub") or "system"
-            reason_val = (
-                getattr(request.state, "change_reason", None)
-                or "Offline batch synchronization"
-            )
-
-            await session.execute(
-                text("SELECT set_config('cadence.current_user_id', :user_id, true);"),
-                {"user_id": user_val},
-            )
-            await session.execute(
-                text(
-                    "SELECT set_config('cadence.current_change_reason', :reason, true);"
-                ),
-                {"reason": reason_val},
-            )
-            await session.execute(
-                text("SELECT set_config('cadence.app_writing', 'true', true);")
-            )
-
-            processed_count, conflicts = await OfflineSyncEngine.process_delta_batch(
-                session, payload.deltas
-            )
-
-            status_str = "SUCCESS" if not conflicts else "PARTIAL_SUCCESS"
-
-            # Record OFFLINE_SYNC_BATCH audit event
-            audit_log = AuditLog(
-                id=str(uuid.uuid4()),
-                table_name="synced_batch_idempotency_keys",
-                record_id=payload.client_batch_id,
-                action="OFFLINE_SYNC_BATCH",
-                user_id=user_val,
-                ip_address=getattr(request.client, "host", None) or "127.0.0.1"
-                if request.client
-                else "127.0.0.1",
-                timestamp=datetime.now(UTC).replace(tzinfo=None),
-                old_values={},
-                new_values={
-                    "device_id": payload.device_id,
-                    "deltas_count": len(payload.deltas),
-                    "processed_count": processed_count,
-                    "client_batch_id": payload.client_batch_id,
-                    "status": status_str,
-                },
-                version_index=1,
-                change_reason=reason_val,
-            )
-            session.add(audit_log)
-
-            # Persist idempotency key record
-            idempotency_key_record = SyncedBatchIdempotencyKey(
-                client_batch_id=payload.client_batch_id,
-                device_id=payload.device_id,
-                processed_count=processed_count,
-                processed_at=datetime.now(UTC).replace(tzinfo=None),
-            )
-            session.add(idempotency_key_record)
-
+    if existing_key is not None:
         return OfflineBatchSyncResponse(
             client_batch_id=payload.client_batch_id,
-            status=status_str,
-            processed_count=processed_count,
-            conflicts=conflicts,
+            status="ALREADY_PROCESSED",
+            processed_count=existing_key.processed_count,
+            conflicts=[],
         )
+
+    # To start a new explicit write transaction, we commit/rollback any active implicit transaction
+    await session.rollback()
+
+    # Open transactional block
+    async with session.begin():
+        user_val = user.get("sub") or "system"
+        reason_val = (
+            getattr(request.state, "change_reason", None)
+            or "Offline batch synchronization"
+        )
+
+        await session.execute(
+            text("SELECT set_config('cadence.current_user_id', :user_id, true);"),
+            {"user_id": user_val},
+        )
+        await session.execute(
+            text("SELECT set_config('cadence.current_change_reason', :reason, true);"),
+            {"reason": reason_val},
+        )
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', true);")
+        )
+
+        processed_count, conflicts = await OfflineSyncEngine.process_delta_batch(
+            session, payload.deltas
+        )
+
+        status_str = "SUCCESS" if not conflicts else "PARTIAL_SUCCESS"
+
+        # Record OFFLINE_SYNC_BATCH audit event
+        audit_log = AuditLog(
+            id=str(uuid.uuid4()),
+            table_name="synced_batch_idempotency_keys",
+            record_id=payload.client_batch_id,
+            action="OFFLINE_SYNC_BATCH",
+            user_id=user_val,
+            ip_address=getattr(request.client, "host", None) or "127.0.0.1"
+            if request.client
+            else "127.0.0.1",
+            timestamp=datetime.now(UTC).replace(tzinfo=None),
+            old_values={},
+            new_values={
+                "device_id": payload.device_id,
+                "deltas_count": len(payload.deltas),
+                "processed_count": processed_count,
+                "client_batch_id": payload.client_batch_id,
+                "status": status_str,
+            },
+            version_index=1,
+            change_reason=reason_val,
+        )
+        session.add(audit_log)
+
+        # Persist idempotency key record
+        idempotency_key_record = SyncedBatchIdempotencyKey(
+            client_batch_id=payload.client_batch_id,
+            device_id=payload.device_id,
+            processed_count=processed_count,
+            processed_at=datetime.now(UTC).replace(tzinfo=None),
+        )
+        session.add(idempotency_key_record)
+
+    return OfflineBatchSyncResponse(
+        client_batch_id=payload.client_batch_id,
+        status=status_str,
+        processed_count=processed_count,
+        conflicts=conflicts,
+    )
 
 
 @router.post(
@@ -242,22 +241,23 @@ async def sync_offline_batch(
     status_code=status.HTTP_200_OK,
     response_model=dict[str, Any],
 )
-async def offline_sync_endpoint(payload: dict[str, Any]) -> dict[str, Any]:
+async def offline_sync_endpoint(
+    payload: dict[str, Any],
+    engine: ServiceOfflineSyncEngine = Depends(get_offline_sync_engine),
+) -> dict[str, Any]:
     """Synchronize queued offline delta transactions.
 
     Requirements: PRD-SYS-001
     """
-    async with db_manager.get_session_maker()() as session:
-        try:
-            engine = ServiceOfflineSyncEngine(session=session)
-            return await engine.process_delta_batch(payload)
-        except ValueError as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e),
-            )
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Synchronization failure: {str(e)}",
-            )
+    try:
+        return await engine.process_delta_batch(payload)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Synchronization failure: {str(e)}",
+        )
