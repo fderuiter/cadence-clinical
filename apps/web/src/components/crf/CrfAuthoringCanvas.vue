@@ -1,5 +1,5 @@
 <template>
-  <div class="authoring-canvas-layout flex flex-col lg:flex-row gap-6">
+  <div id="primary-design-canvas" tabindex="-1" class="authoring-canvas-layout flex flex-col lg:flex-row gap-6 focus:outline-none">
     <!-- Left/Center Side: Resizable Canvas Area -->
     <div class="flex-1 flex flex-col gap-4">
       <div
@@ -18,9 +18,14 @@
         <div class="flex items-center gap-4 flex-wrap">
           <!-- Viewport Selector Buttons -->
           <div
+            role="tablist"
+            aria-label="Viewport Switcher"
             class="viewport-selector flex bg-slate-100 p-1 rounded-lg border border-slate-200"
           >
             <button
+              role="tab"
+              :aria-selected="designerStore.viewport === 'desktop' ? 'true' : 'false'"
+              :tabindex="designerStore.viewport === 'desktop' ? 0 : -1"
               class="btn-viewport-desktop px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1"
               :class="
                 designerStore.viewport === 'desktop'
@@ -28,10 +33,14 @@
                   : 'text-slate-600 hover:text-slate-800'
               "
               @click="designerStore.setViewport('desktop')"
+              @keydown="e => handleViewportTabKeydown(e, 'desktop')"
             >
               🖥️ <span>Desktop</span>
             </button>
             <button
+              role="tab"
+              :aria-selected="designerStore.viewport === 'tablet' ? 'true' : 'false'"
+              :tabindex="designerStore.viewport === 'tablet' ? 0 : -1"
               class="btn-viewport-tablet px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1"
               :class="
                 designerStore.viewport === 'tablet'
@@ -39,10 +48,14 @@
                   : 'text-slate-600 hover:text-slate-800'
               "
               @click="designerStore.setViewport('tablet')"
+              @keydown="e => handleViewportTabKeydown(e, 'tablet')"
             >
               📟 <span>Tablet</span>
             </button>
             <button
+              role="tab"
+              :aria-selected="designerStore.viewport === 'mobile' ? 'true' : 'false'"
+              :tabindex="designerStore.viewport === 'mobile' ? 0 : -1"
               class="btn-viewport-mobile px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1"
               :class="
                 designerStore.viewport === 'mobile'
@@ -50,6 +63,7 @@
                   : 'text-slate-600 hover:text-slate-800'
               "
               @click="designerStore.setViewport('mobile')"
+              @keydown="e => handleViewportTabKeydown(e, 'mobile')"
             >
               📱 <span>Mobile</span>
             </button>
@@ -163,7 +177,8 @@
 
         <div
           v-else
-          class="space-y-4 bg-slate-50 border border-slate-100 rounded-xl p-4"
+          class="properties-inspector-container space-y-4 bg-slate-50 border border-slate-100 rounded-xl p-4"
+          @keydown="handleInspectorKeydown"
         >
           <div
             class="flex items-center justify-between text-xs font-semibold text-slate-700 border-b border-slate-200 pb-2"
@@ -302,6 +317,11 @@
         </div>
       </div>
     </div>
+
+    <!-- Polite Live Region for accessibility announcements (Requirement 4) -->
+    <div style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;" aria-live="polite">
+      {{ designerStore.announcement }}
+    </div>
   </div>
 </template>
 
@@ -313,10 +333,12 @@
  * Integrates drag-and-drop sections/fields, a device switcher toolbar, real-time simulated column
  * width validation, property inspector synchronizations, and compiler quality gating rules.
  */
-import { computed, ref } from "vue";
+import { computed, ref, watch, nextTick } from "vue";
 import draggable from "vuedraggable";
 import FormSectionContainer from "./FormSectionContainer.vue";
 import { useDesignerStore } from "../../stores/designer.js";
+
+const designerStore = useDesignerStore();
 
 const props = defineProps({
   formSchema: {
@@ -331,7 +353,86 @@ const props = defineProps({
 
 const emit = defineEmits(["update-schema", "select-field"]);
 
-const designerStore = useDesignerStore();
+function handleViewportTabKeydown(e, currentMode) {
+  const modes = ["desktop", "tablet", "mobile"];
+  const currentIndex = modes.indexOf(currentMode);
+  if (currentIndex === -1) return;
+
+  let nextIndex;
+  if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+    e.preventDefault();
+    nextIndex = (currentIndex + 1) % modes.length;
+  } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+    e.preventDefault();
+    nextIndex = (currentIndex - 1 + modes.length) % modes.length;
+  } else {
+    return;
+  }
+
+  const nextMode = modes[nextIndex];
+  designerStore.setViewport(nextMode);
+
+  nextTick(() => {
+    const nextBtn = document.querySelector(`.btn-viewport-${nextMode}`);
+    if (nextBtn) {
+      nextBtn.focus();
+    }
+  });
+}
+
+function handleInspectorKeydown(e) {
+  if (e.key === "Escape") {
+    e.preventDefault();
+    if (props.selectedFieldId) {
+      const widget = document.getElementById(`field-${props.selectedFieldId}`);
+      if (widget) {
+        widget.focus();
+        designerStore.setFocusedItemId(props.selectedFieldId);
+      }
+    }
+    return;
+  }
+  if (e.key === "Tab") {
+    const container = e.currentTarget;
+    const focusables = Array.from(
+      container.querySelectorAll("input, select, button, textarea, [tabindex=\"0\"]")
+    ).filter((item) => !item.disabled && item.getAttribute("tabindex") !== "-1");
+    if (focusables.length === 0) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  }
+}
+
+watch(
+  () => props.selectedFieldId,
+  (newId) => {
+    if (newId) {
+      nextTick(() => {
+        const container = document.querySelector(".properties-inspector-container");
+        if (container) {
+          const focusables = Array.from(
+            container.querySelectorAll("input, select, button, textarea, [tabindex=\"0\"]")
+          ).filter((item) => !item.disabled && item.getAttribute("tabindex") !== "-1");
+          if (focusables.length > 0) {
+            focusables[0].focus();
+          }
+        }
+      });
+    }
+  }
+);
+
 const compilationStatus = ref(null);
 
 const sections = computed({

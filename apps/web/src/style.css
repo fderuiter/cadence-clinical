@@ -948,3 +948,25 @@ a:focus-visible,
   border-color: var(--color-primary-dark, #014d76) !important;
   color: #ffffff !important;
 }
+
+/* 4. Accessibility Skip Link Styles (Requirement 5) */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 16px;
+  background: #002c44; /* matching Primary dark */
+  color: white !important;
+  padding: 10px 16px;
+  z-index: 9999;
+  font-weight: bold;
+  border-radius: 0 0 8px 8px;
+  text-decoration: none;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  transition: top 0.2s ease-in-out;
+}
+.skip-link:focus-visible,
+.skip-link:focus {
+  top: 0 !important;
+  outline: 3px solid var(--color-accent, #4338ca) !important;
+  outline-offset: 2px !important;
+}

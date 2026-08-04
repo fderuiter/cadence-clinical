@@ -1,5 +1,7 @@
 <template>
   <div id="vue-app-root">
+    <!-- Skip Link (Requirement 5) -->
+    <a href="#primary-design-canvas" class="skip-link">Skip to primary design canvas</a>
     <!-- Header -->
     <header>
       <div class="header-title-area">

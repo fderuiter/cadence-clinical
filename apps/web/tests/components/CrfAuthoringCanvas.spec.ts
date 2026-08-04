@@ -482,4 +482,101 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
       expect(inputElement.classes()).toContain("touch-target-interactive");
     });
   });
+
+  describe("Keyboard-First Access & Accessibility Suite", () => {
+    it("assigns appropriate roving tabindex to section headers and field widgets", async () => {
+      const section = {
+        id: "section-1",
+        name: "Demographics",
+        isCollapsed: false,
+        items: [
+          { id: "field-1", label: "Subject Initials", type: "text", gridSpan: 6 },
+          { id: "field-2", label: "Date of Birth", type: "date", gridSpan: 6 },
+        ],
+      };
+      
+      const store = useDesignerStore();
+      store.activeForm = { id: "form-1", name: "Draft", sections: [section] };
+      store.setFocusedItemId(null); // start pristine
+
+      const wrapper = mount(CrfAuthoringCanvas, {
+        props: {
+          formSchema: store.activeForm,
+          selectedFieldId: null,
+        },
+      });
+
+      // Section 1 header should have tabindex="0" because focusedItemId is null and it is the first section
+      const sectionHeader = wrapper.find("#section-section-1");
+      expect(sectionHeader.attributes("tabindex")).toBe("0");
+
+      // Fields should have tabindex="-1"
+      const field1 = wrapper.find("#field-field-1");
+      expect(field1.attributes("tabindex")).toBe("-1");
+
+      // Focus field 1
+      store.setFocusedItemId("field-1");
+      await wrapper.vm.$nextTick();
+
+      // Section 1 header should now have tabindex="-1"
+      expect(sectionHeader.attributes("tabindex")).toBe("-1");
+      // Field 1 should have tabindex="0"
+      expect(field1.attributes("tabindex")).toBe("0");
+    });
+
+    it("supports Alt + ArrowUp/ArrowDown to move fields up/down and trigger screen reader announcements", async () => {
+      const section = {
+        id: "section-1",
+        name: "Demographics",
+        isCollapsed: false,
+        items: [
+          { id: "field-1", label: "Subject Initials", type: "text", gridSpan: 6 },
+          { id: "field-2", label: "Date of Birth", type: "date", gridSpan: 6 },
+        ],
+      };
+      
+      const store = useDesignerStore();
+      store.activeForm = { id: "form-1", name: "Draft", sections: [section] };
+
+      const wrapper = mount(CrfAuthoringCanvas, {
+        props: {
+          formSchema: store.activeForm,
+          selectedFieldId: "field-2",
+        },
+      });
+
+      const field2Widget = wrapper.find("#field-field-2");
+      expect(field2Widget.exists()).toBe(true);
+
+      // Trigger Alt + ArrowUp on field 2
+      await field2Widget.trigger("keydown", { key: "ArrowUp", altKey: true });
+      await wrapper.vm.$nextTick();
+
+      // Positions should swap: field-2 is now index 0
+      expect(store.activeForm.sections[0].items[0].id).toBe("field-2");
+      // Should make an announcement
+      expect(store.announcement).toContain("Moved field Date of Birth up");
+    });
+
+    it("supports Viewport controls as WAI-ARIA tablist with arrow-key navigation", async () => {
+      const store = useDesignerStore();
+      const wrapper = mount(CrfAuthoringCanvas, {
+        props: {
+          formSchema: store.activeForm,
+          selectedFieldId: null,
+        },
+      });
+
+      const tablist = wrapper.find('[role="tablist"]');
+      expect(tablist.exists()).toBe(true);
+
+      const desktopTab = wrapper.find(".btn-viewport-desktop");
+      expect(desktopTab.attributes("role")).toBe("tab");
+      expect(desktopTab.attributes("aria-selected")).toBe("true");
+
+      // Press ArrowRight on desktop tab to switch to tablet
+      await desktopTab.trigger("keydown", { key: "ArrowRight" });
+      expect(store.viewport).toBe("tablet");
+    });
+  });
 });

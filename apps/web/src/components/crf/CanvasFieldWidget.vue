@@ -1,6 +1,10 @@
 <template>
   <div
-    class="canvas-field-widget p-3 rounded-lg border-2 transition-all relative group bg-white shadow-sm"
+    :id="`field-${field.id}`"
+    role="button"
+    :aria-pressed="isSelected ? 'true' : 'false'"
+    :aria-expanded="isSelected ? 'true' : 'false'"
+    class="canvas-field-widget focusable-canvas-item p-3 rounded-lg border-2 transition-all relative group bg-white shadow-sm"
     :class="[
       isSelected
         ? 'border-indigo-600 ring-2 ring-indigo-100'
@@ -8,7 +12,10 @@
           ? 'border-amber-400 bg-amber-50/10 hover:border-amber-500'
           : 'border-gray-200 hover:border-gray-300',
     ]"
+    :tabindex="designerStore.focusedItemId === field.id ? 0 : -1"
     @click="selectField"
+    @focus="onFocus"
+    @keydown="onKeydown"
   >
     <!-- Field Header / Metadata -->
     <div class="flex justify-between items-start mb-2">
@@ -40,7 +47,8 @@
       <template v-if="field.type === 'text'">
         <input
           type="text"
-          disabled
+          readonly="true"
+          tabindex="-1"
           class="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
           :class="{
             'touch-target-interactive': designerStore.viewport !== 'desktop',
@@ -52,7 +60,8 @@
       <template v-else-if="field.type === 'numeric'">
         <input
           type="number"
-          disabled
+          readonly="true"
+          tabindex="-1"
           class="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
           :class="{
             'touch-target-interactive': designerStore.viewport !== 'desktop',
@@ -64,7 +73,8 @@
       <template v-else-if="field.type === 'date'">
         <input
           type="date"
-          disabled
+          readonly="true"
+          tabindex="-1"
           class="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
           :class="{
             'touch-target-interactive': designerStore.viewport !== 'desktop',
@@ -74,11 +84,14 @@
 
       <template v-else-if="field.type === 'select'">
         <select
-          disabled
+          readonly="true"
+          tabindex="-1"
           class="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
           :class="{
             'touch-target-interactive': designerStore.viewport !== 'desktop',
           }"
+          @mousedown.prevent
+          @keydown.prevent
         >
           <option value="" disabled selected>-- Select Option --</option>
           <option
@@ -104,12 +117,14 @@
           >
             <input
               type="radio"
-              disabled
+              tabindex="-1"
               class="text-indigo-600 focus:ring-indigo-500 h-4 w-4 border-gray-300"
               :class="{
                 'touch-target-interactive':
                   designerStore.viewport !== 'desktop',
               }"
+              @mousedown.prevent
+              @keydown.prevent
             />
             <span>{{ opt.label }}</span>
           </label>
@@ -205,7 +220,7 @@
  * Represents an individual interactive field widget on the eCRF designer canvas.
  * Handles selection, duplication, deletion, property inspection, and live responsive width alerts.
  */
-import { computed } from "vue";
+import { computed, nextTick } from "vue";
 import { useDesignerStore } from "../../stores/designer.js";
 
 const designerStore = useDesignerStore();
@@ -237,6 +252,71 @@ const isSelected = computed(() => {
 
 function selectField() {
   emit("select-field", props.field.id);
+}
+
+function onFocus() {
+  designerStore.setFocusedItemId(props.field.id);
+}
+
+function onKeydown(e) {
+  if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+    e.preventDefault();
+    const direction = e.key === "ArrowUp" ? "up" : "down";
+
+    const sectionsList = designerStore.activeForm?.sections || [];
+    let section = null;
+    let idx = -1;
+    for (const s of sectionsList) {
+      if (s.items) {
+        idx = s.items.findIndex((item) => item.id === props.field.id);
+        if (idx !== -1) {
+          section = s;
+          break;
+        }
+      }
+    }
+    if (!section || idx === -1) return;
+
+    if (direction === "up" && idx === 0) return;
+    if (direction === "down" && idx === section.items.length - 1) return;
+
+    designerStore.moveField(props.field.id, direction);
+
+    const newIdx = direction === "up" ? idx - 1 : idx + 1;
+    designerStore.announce(
+      `Moved field ${props.field.label || "Untitled Field"} ${direction}. New position: ${newIdx + 1} of ${section.items.length} in section ${section.name || "Unnamed Section"}.`
+    );
+
+    nextTick(() => {
+      const el = document.getElementById(`field-${props.field.id}`);
+      if (el) el.focus();
+    });
+    return;
+  }
+
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    const items = Array.from(document.querySelectorAll(".focusable-canvas-item"));
+    const currentIndex = items.indexOf(document.activeElement);
+    if (currentIndex === -1) return;
+
+    let nextIndex;
+    if (e.key === "ArrowDown") {
+      nextIndex = (currentIndex + 1) % items.length;
+    } else {
+      nextIndex = (currentIndex - 1 + items.length) % items.length;
+    }
+
+    const nextItem = items[nextIndex];
+    if (nextItem) {
+      nextItem.focus();
+    }
+  }
+
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    selectField();
+  }
 }
 </script>
 

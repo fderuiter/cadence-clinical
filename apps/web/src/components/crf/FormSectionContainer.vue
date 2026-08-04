@@ -8,8 +8,14 @@
   >
     <!-- Section Header Card -->
     <div
-      class="section-header px-4 py-3 bg-white border-b border-gray-200 flex items-center justify-between cursor-pointer select-none"
+      :id="`section-${section.id}`"
+      role="button"
+      :aria-expanded="!section.isCollapsed ? 'true' : 'false'"
+      class="section-header focusable-canvas-item px-4 py-3 bg-white border-b border-gray-200 flex items-center justify-between cursor-pointer select-none"
+      :tabindex="designerStore.focusedItemId === section.id || (!designerStore.focusedItemId && isFirstSection) ? 0 : -1"
       @click="toggleCollapse"
+      @focus="onFocus"
+      @keydown="onKeydown"
     >
       <div class="flex items-center gap-3">
         <!-- Drag Handle for Section Reordering -->
@@ -97,7 +103,7 @@
  * Manages intra-section and inter-section dragging operations, row appending, collapsing,
  * and passes viewport alerts downstream to individual CanvasFieldWidgets.
  */
-import { ref, computed } from "vue";
+import { ref, computed, nextTick } from "vue";
 import draggable from "vuedraggable";
 import CanvasFieldWidget from "./CanvasFieldWidget.vue";
 import { useDesignerStore } from "../../stores/designer.js";
@@ -117,6 +123,64 @@ const emit = defineEmits(["select-field", "update-section"]);
 
 const designerStore = useDesignerStore();
 const isDragging = ref(false);
+
+const isFirstSection = computed(() => {
+  return designerStore.activeForm?.sections?.[0]?.id === props.section.id;
+});
+
+function onFocus() {
+  designerStore.setFocusedItemId(props.section.id);
+}
+
+function onKeydown(e) {
+  if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+    e.preventDefault();
+    const direction = e.key === "ArrowUp" ? "up" : "down";
+    const sectionsList = designerStore.activeForm?.sections || [];
+    const idx = sectionsList.findIndex((s) => s.id === props.section.id);
+    if (idx === -1) return;
+
+    if (direction === "up" && idx === 0) return;
+    if (direction === "down" && idx === sectionsList.length - 1) return;
+
+    designerStore.moveSection(props.section.id, direction);
+
+    const newIdx = direction === "up" ? idx - 1 : idx + 1;
+    designerStore.announce(
+      `Moved section ${props.section.name || "Unnamed Section"} ${direction}. New position: ${newIdx + 1} of ${sectionsList.length}.`
+    );
+
+    nextTick(() => {
+      const el = document.getElementById(`section-${props.section.id}`);
+      if (el) el.focus();
+    });
+    return;
+  }
+
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    const items = Array.from(document.querySelectorAll(".focusable-canvas-item"));
+    const currentIndex = items.indexOf(document.activeElement);
+    if (currentIndex === -1) return;
+
+    let nextIndex;
+    if (e.key === "ArrowDown") {
+      nextIndex = (currentIndex + 1) % items.length;
+    } else {
+      nextIndex = (currentIndex - 1 + items.length) % items.length;
+    }
+
+    const nextItem = items[nextIndex];
+    if (nextItem) {
+      nextItem.focus();
+    }
+  }
+
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    toggleCollapse();
+  }
+}
 
 const viewportWidth = computed(() => {
   const vp = designerStore.viewport || "desktop";
@@ -157,15 +221,18 @@ const items = computed({
 });
 
 function toggleCollapse() {
+  const isCollapsedNow = !props.section.isCollapsed;
   const storeSection = designerStore.activeForm?.sections?.find(
     (s) => s.id === props.section.id
   );
   if (storeSection) {
     storeSection.isCollapsed = !storeSection.isCollapsed;
   } else {
-    const isCollapsed = !props.section.isCollapsed;
-    emit("update-section", { ...props.section, isCollapsed });
+    emit("update-section", { ...props.section, isCollapsed: isCollapsedNow });
   }
+  designerStore.announce(
+    `Section ${props.section.name || "Unnamed Section"} ${isCollapsedNow ? "collapsed" : "expanded"}`
+  );
 }
 
 function addNewItem() {

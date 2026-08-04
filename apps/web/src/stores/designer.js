@@ -8,6 +8,7 @@
  * Conforms to clinical metadata-driven layout validation guidelines.
  */
 import { defineStore } from "pinia";
+import { nextTick } from "vue";
 
 export const useDesignerStore = defineStore("designer", {
   state: () => ({
@@ -41,12 +42,57 @@ export const useDesignerStore = defineStore("designer", {
       ],
     },
     selectedFieldId: null,
+    focusedItemId: null,
+    announcement: "",
     // Manage simulated eCRF designer canvas viewports (desktop, tablet, mobile)
     viewport: "desktop",
     // Track user explicit confirmation to override dense grid layouts during compilation
     dismissedWarnings: false,
   }),
   actions: {
+    setFocusedItemId(id) {
+      this.focusedItemId = id;
+    },
+    announce(message) {
+      this.announcement = "";
+      nextTick(() => {
+        this.announcement = message;
+      });
+    },
+    moveSection(sectionId, direction) {
+      if (!this.activeForm?.sections) return;
+      const idx = this.activeForm.sections.findIndex((s) => s.id === sectionId);
+      if (idx === -1) return;
+
+      const newIdx = direction === "up" ? idx - 1 : idx + 1;
+      if (newIdx < 0 || newIdx >= this.activeForm.sections.length) return;
+
+      const temp = this.activeForm.sections[idx];
+      this.activeForm.sections.splice(idx, 1);
+      this.activeForm.sections.splice(newIdx, 0, temp);
+    },
+    moveField(fieldId, direction) {
+      if (!this.activeForm?.sections) return;
+      let section = null;
+      let idx = -1;
+      for (const s of this.activeForm.sections) {
+        if (s.items) {
+          idx = s.items.findIndex((item) => item.id === fieldId);
+          if (idx !== -1) {
+            section = s;
+            break;
+          }
+        }
+      }
+      if (!section || idx === -1) return;
+
+      const newIdx = direction === "up" ? idx - 1 : idx + 1;
+      if (newIdx < 0 || newIdx >= section.items.length) return;
+
+      const temp = section.items[idx];
+      section.items.splice(idx, 1);
+      section.items.splice(newIdx, 0, temp);
+    },
     setViewport(viewport) {
       this.viewport = viewport;
     },
