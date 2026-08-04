@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { useAuthStore } from "../src/stores/auth";
+import { useSignatureStore } from "../src/stores/signatures";
+import { useNotificationsStore } from "../src/stores/notifications";
+import { useEtmfStore } from "../src/stores/etmf";
 
 describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
   beforeEach(() => {
@@ -214,6 +217,174 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
       // Clean up
       import.meta.env.PROD = originalProd;
       import.meta.env.MODE = originalMode;
+    });
+  });
+
+  describe("Stores Demo Mode Local Simulation tests", () => {
+    let authStore;
+
+    beforeEach(() => {
+      authStore = useAuthStore();
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.clear();
+      }
+    });
+
+    describe("Signatures Store Simulation", () => {
+      it("intercepts batch signature submission and persists to localStorage in demo mode", async () => {
+        authStore.isDemoMode = true;
+        const signatureStore = useSignatureStore();
+
+        const payload = {
+          studyId: "STUDY-01",
+          subjectId: "SUBJ-01",
+          formIds: ["FORM-01", "Form-02"],
+          password: "my-password",
+          meaning: "APPROVED",
+        };
+
+        const res = await signatureStore.submitBatchSignature(payload);
+
+        expect(res.signature_id).toBeDefined();
+        expect(res.signature_id.startsWith("mock-sig-")).toBe(true);
+        expect(res.signed_forms_count).toBe(2);
+        expect(signatureStore.lastSignatureResult).toEqual(res);
+
+        // Verify localStorage persistence
+        const stored = window.localStorage.getItem("lastSignatureResult");
+        expect(stored).toBeDefined();
+        expect(JSON.parse(stored).signature_id).toBe(res.signature_id);
+      });
+    });
+
+    describe("Notifications Store Simulation", () => {
+      it("fetches static alert templates locally in demo mode and applies filters", async () => {
+        authStore.isDemoMode = true;
+        const notificationsStore = useNotificationsStore();
+
+        // Clear filters
+        notificationsStore.filters.category = "";
+        notificationsStore.filters.priority = "";
+        notificationsStore.filters.status = "";
+
+        const list = await notificationsStore.fetchNotifications();
+        expect(list.length).toBe(3); // our 3 default templates
+        expect(list[0].id).toBe("notif-001");
+
+        // Filter by category
+        notificationsStore.filters.category = "ALERTS";
+        const filtered = await notificationsStore.fetchNotifications();
+        expect(filtered.length).toBe(1);
+        expect(filtered[0].category).toBe("ALERTS");
+      });
+
+      it("supports interactive acknowledge and resolve actions locally in demo mode", async () => {
+        authStore.isDemoMode = true;
+        const notificationsStore = useNotificationsStore();
+
+        // Initialize notifications
+        await notificationsStore.fetchNotifications();
+
+        // Acknowledge notification 1
+        const ackRes = await notificationsStore.acknowledge("notif-001", "Acknowledge clinical warning");
+        expect(ackRes.status).toBe("ACKNOWLEDGED");
+        expect(ackRes.version_index).toBe(2);
+        expect(ackRes.reason_for_change).toBe("Acknowledge clinical warning");
+
+        // Resolve notification 2
+        const resRes = await notificationsStore.resolve("notif-002", "Checked subject CRF and resolved");
+        expect(resRes.status).toBe("RESOLVED");
+        expect(resRes.version_index).toBe(2);
+        expect(resRes.reason_for_change).toBe("Checked subject CRF and resolved");
+
+        // Check localStorage persistence
+        const stored = window.localStorage.getItem("demo_notifications");
+        expect(stored).toBeDefined();
+        const storedList = JSON.parse(stored);
+        expect(storedList[0].status).toBe("ACKNOWLEDGED");
+        expect(storedList[1].status).toBe("RESOLVED");
+      });
+    });
+
+    describe("eTMF Store Simulation", () => {
+      it("fetches pre-seeded eTMF documents locally in demo mode", async () => {
+        authStore.isDemoMode = true;
+        const etmfStore = useEtmfStore();
+
+        await etmfStore.fetchDocuments("01.01.01");
+        expect(etmfStore.documentsList.length).toBe(1);
+        expect(etmfStore.documentsList[0].filename).toBe("protocol_v1_draft.pdf");
+      });
+
+      it("uploads and files new documents into the tree locally in demo mode", async () => {
+        authStore.isDemoMode = true;
+        const etmfStore = useEtmfStore();
+        etmfStore.selectedArtifactId = "01.01.01";
+
+        const fileData = {
+          study_id: "STUDY-USDM-001",
+          artifact_type: "Clinical Trial Protocol",
+          filename: "uploaded_doc.pdf",
+          content: "some base64 content",
+          mime_type: "application/pdf",
+          artifact_code: "01.01.01",
+          zone: 1,
+          section: "01.01",
+          reason_for_change: "New protocol version uploaded during demo",
+        };
+
+        const res = await etmfStore.uploadDocument(fileData);
+        expect(res.status).toBe("success");
+        expect(res.document_id).toBeDefined();
+
+        // Should be fetched locally after upload
+        expect(etmfStore.documentsList.some((doc) => doc.filename === "uploaded_doc.pdf")).toBe(true);
+
+        // Verify localStorage persistence
+        const stored = window.localStorage.getItem("demo_documents");
+        expect(stored).toBeDefined();
+        const storedList = JSON.parse(stored);
+        expect(storedList.some((doc) => doc.filename === "uploaded_doc.pdf")).toBe(true);
+      });
+    });
+
+    describe("Clean Reset Simulation", () => {
+      it("successfully clears local storage and returns the stores back to their static baseline states", async () => {
+        authStore.isDemoMode = true;
+        const signatureStore = useSignatureStore();
+        const notificationsStore = useNotificationsStore();
+        const etmfStore = useEtmfStore();
+
+        // Mutate all stores
+        await signatureStore.submitBatchSignature({
+          studyId: "S", subjectId: "SU", formIds: ["F"], password: "P", meaning: "M"
+        });
+        await notificationsStore.fetchNotifications();
+        await notificationsStore.acknowledge("notif-001", "R1");
+        await etmfStore.uploadDocument({
+          filename: "uploaded_doc.pdf", artifact_code: "01.01.01"
+        });
+
+        // Verify they are mutated/stored in localStorage
+        expect(window.localStorage.getItem("lastSignatureResult")).not.toBeNull();
+        expect(window.localStorage.getItem("demo_notifications")).not.toBeNull();
+        expect(window.localStorage.getItem("demo_documents")).not.toBeNull();
+
+        // Trigger reset Demo Storage on each store
+        signatureStore.resetDemoStorage();
+        notificationsStore.resetDemoStorage();
+        etmfStore.resetDemoStorage();
+
+        // Verify localStorage is cleared
+        expect(window.localStorage.getItem("lastSignatureResult")).toBeNull();
+        expect(window.localStorage.getItem("demo_notifications")).toBeNull();
+        expect(window.localStorage.getItem("demo_documents")).toBeNull();
+
+        // Verify in-memory state is back to pristine default state
+        expect(signatureStore.lastSignatureResult).toBeNull();
+        expect(notificationsStore.notifications[0].status).toBe("OPEN"); // originally "OPEN", ack changed it to "ACKNOWLEDGED"
+        expect(etmfStore.documentsList.some((doc) => doc.filename === "uploaded_doc.pdf")).toBe(false);
+      });
     });
   });
 });

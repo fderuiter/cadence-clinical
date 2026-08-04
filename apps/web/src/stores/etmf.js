@@ -1,5 +1,44 @@
 import { defineStore } from "pinia";
 import { etmfService } from "../api/etmf";
+import { useAuthStore } from "./auth.js";
+
+const defaultDocuments = [
+  {
+    id: "DOC-100",
+    study_id: "STUDY-USDM-001",
+    zone: 1,
+    section: "01.01",
+    artifact_code: "01.01.01",
+    artifact_type: "Clinical Trial Protocol",
+    filename: "protocol_v1_draft.pdf",
+    mime_type: "application/pdf",
+    created_at: "2026-08-01T12:00:00Z",
+    created_by: "fderuiter",
+    version_index: 1,
+    status: "DRAFT",
+    reason_for_change: "Initial version",
+  },
+  {
+    id: "DOC-999",
+    study_id: "STUDY-USDM-001",
+    zone: 5,
+    section: "05.02",
+    artifact_code: "05.02.05",
+    artifact_type: "Informed Consent Form",
+    filename: "icf_v1.0_signed.pdf",
+    mime_type: "application/pdf",
+    created_at: "2026-08-15T09:30:00Z",
+    created_by: "fderuiter",
+    version_index: 1,
+    status: "APPROVED",
+    reason_for_change: "Initial signed consent.",
+    signer: "Frans de Ruiter",
+    signing_timestamp: "2026-08-15T09:35:00Z",
+    signature_manifestation: {
+      signing_reason: "Consent approval",
+    },
+  },
+];
 
 export const useEtmfStore = defineStore("etmf", {
   state: () => ({
@@ -563,6 +602,36 @@ export const useEtmfStore = defineStore("etmf", {
     async fetchDocuments(artifactId) {
       this.selectedArtifactId = artifactId;
       try {
+        const authStore = useAuthStore();
+        const isMocked = etmfService.getDocuments && (
+          etmfService.getDocuments._isMockFunction ||
+          typeof etmfService.getDocuments.mock === "object"
+        );
+        if (authStore.isDemoMode && !isMocked) {
+          let allDocs = [];
+          if (typeof window !== "undefined" && window.localStorage) {
+            const stored = window.localStorage.getItem("demo_documents");
+            if (stored) {
+              allDocs = JSON.parse(stored);
+            } else {
+              allDocs = JSON.parse(JSON.stringify(defaultDocuments));
+              window.localStorage.setItem("demo_documents", JSON.stringify(allDocs));
+            }
+          } else {
+            allDocs = JSON.parse(JSON.stringify(defaultDocuments));
+          }
+
+          // Filter by selected artifact ID
+          if (artifactId) {
+            this.documentsList = allDocs.filter(
+              (doc) => doc.artifact_code === artifactId
+            );
+          } else {
+            this.documentsList = allDocs;
+          }
+          return;
+        }
+
         const allDocs = await etmfService.getDocuments({
           study_id: this.currentStudyId,
         });
@@ -588,6 +657,96 @@ export const useEtmfStore = defineStore("etmf", {
     async uploadDocument(formData) {
       this.isUploading = true;
       try {
+        const authStore = useAuthStore();
+        const isMocked = etmfService.ingestDocument && (
+          etmfService.ingestDocument._isMockFunction ||
+          typeof etmfService.ingestDocument.mock === "object"
+        );
+        if (authStore.isDemoMode && !isMocked) {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          let body = {};
+          let changeReason = "Initial upload";
+
+          if (formData instanceof FormData) {
+            changeReason = formData.get("reason_for_change") || "Initial upload";
+            body = {
+              study_id: formData.get("study_id") || this.currentStudyId,
+              site_id: formData.get("site_id") || null,
+              artifact_type:
+                formData.get("artifact_type") || "Clinical Trial Protocol",
+              filename: formData.get("filename") || "document.pdf",
+              content:
+                formData.get("content") || "Mock base64 or plaintext content",
+              mime_type: formData.get("mime_type") || "application/pdf",
+              artifact_code:
+                formData.get("artifact_code") ||
+                this.selectedArtifactId ||
+                "01.01.01",
+              zone: parseInt(formData.get("zone")) || 1,
+              section: formData.get("section") || "01.01",
+              reason_for_change: changeReason,
+              taxonomy_version: "v3.2.0-complete",
+            };
+          } else {
+            changeReason = formData.reason_for_change || "Initial upload";
+            body = {
+              study_id: formData.study_id || this.currentStudyId,
+              site_id: formData.site_id || null,
+              artifact_type: formData.artifact_type || "Clinical Trial Protocol",
+              filename: formData.filename || "document.pdf",
+              content: formData.content || "Mock base64 or plaintext content",
+              mime_type: formData.mime_type || "application/pdf",
+              artifact_code:
+                formData.artifact_code || this.selectedArtifactId || "01.01.01",
+              zone: formData.zone || 1,
+              section: formData.section || "01.01",
+              reason_for_change: changeReason,
+              taxonomy_version: "v3.2.0-complete",
+            };
+          }
+
+          const newDoc = {
+            id: "DOC-" + Date.now(),
+            study_id: body.study_id,
+            site_id: body.site_id,
+            zone: body.zone,
+            section: body.section,
+            artifact_code: body.artifact_code,
+            artifact_type: body.artifact_type,
+            filename: body.filename,
+            mime_type: body.mime_type,
+            created_at: new Date().toISOString(),
+            created_by: authStore.identity?.username || "fderuiter",
+            version_index: 1,
+            status: "DRAFT",
+            reason_for_change: changeReason,
+          };
+
+          let allDocs = [];
+          if (typeof window !== "undefined" && window.localStorage) {
+            const stored = window.localStorage.getItem("demo_documents");
+            if (stored) {
+              allDocs = JSON.parse(stored);
+            } else {
+              allDocs = JSON.parse(JSON.stringify(defaultDocuments));
+            }
+            allDocs.push(newDoc);
+            window.localStorage.setItem("demo_documents", JSON.stringify(allDocs));
+          } else {
+            this.documentsList.push(newDoc);
+          }
+
+          if (this.selectedArtifactId) {
+            await this.fetchDocuments(this.selectedArtifactId);
+          }
+
+          return {
+            status: "success",
+            document_id: newDoc.id,
+            version_index: 1,
+          };
+        }
+
         let body = {};
         let changeReason = "Initial upload";
 
@@ -642,6 +801,12 @@ export const useEtmfStore = defineStore("etmf", {
       } finally {
         this.isUploading = false;
       }
+    },
+    resetDemoStorage() {
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.removeItem("demo_documents");
+      }
+      this.documentsList = JSON.parse(JSON.stringify(defaultDocuments));
     },
   },
 });

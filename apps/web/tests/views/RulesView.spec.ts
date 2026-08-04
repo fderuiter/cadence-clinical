@@ -7,6 +7,18 @@ import { useAuthStore } from "../../src/stores/auth";
 import { useClinicalStore } from "../../src/stores/clinical";
 import { apiClient } from "../../src/api/apiClient";
 
+// Mock the API client to avoid thread pollution
+vi.mock("../../src/api/apiClient", () => {
+  return {
+    apiClient: {
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+    },
+  };
+});
+
 // Setup mock router
 const router = createRouter({
   history: createWebHistory(),
