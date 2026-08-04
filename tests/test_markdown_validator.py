@@ -441,6 +441,53 @@ class TestModel(BaseModel):
     assert len(vm.errors) == 0
 
 
+def test_contributing_guide_skip_and_validation(tmp_path):
+    """Verifies that an inline skip comment inside a Python block prevents validation,
+    while non-annotated blocks in the same file are still validated and fail on mismatch.
+    """
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    # Create a codebase file with a function
+    apps_dir = repo_root / "apps" / "designer"
+    apps_dir.mkdir(parents=True)
+    cb_file = apps_dir / "delta.py"
+    cb_file.write_text("def test_func(tx, study_id):\n    pass\n")
+
+    # Create a markdown file (guideline)
+    md_file = repo_root / "CONTRIBUTING.md"
+
+    md_content = """# Guide
+
+This block is skipped because of the inline skip comment:
+```python
+# skip
+def test_func(tx, study_version_id):
+    pass
+```
+
+This block is standard, so it should be validated and fail on mismatch:
+```python
+# apps/designer/delta.py
+def test_func(tx, study_version_id):
+    pass
+```
+"""
+    md_file.write_text(md_content)
+
+    codebase_map = vm.build_codebase_map(repo_root)
+    # Clear errors before run
+    vm.errors.clear()
+    vm.process_markdown_file(md_file, repo_root, set(), set(), codebase_map)
+
+    # We expect exactly 1 error (from the second block)
+    assert len(vm.errors) == 1
+    assert (
+        "Mismatched Python signature for function 'test_func'"
+        in vm.errors[0]["message"]
+    )
+
+
 def test_main_with_arguments(monkeypatch):
     """Verifies that main() processes only the markdown files specified in sys.argv."""
     import sys
