@@ -2,19 +2,12 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createRouter, createWebHistory } from "vue-router";
-import RulesView from "../../src/views/RulesView.vue";
-import { useAuthStore } from "../../src/stores/auth";
-import { useClinicalStore } from "../../src/stores/clinical";
-import { apiClient } from "../../src/api/apiClient";
+import RulesView from "@/views/RulesView.vue";
+import { useAuthStore } from "@/stores/auth";
+import { useClinicalStore } from "@/stores/clinical";
+import { apiClient } from "@/api/apiClient";
 
-// Setup mock router
-const router = createRouter({
-  history: createWebHistory(),
-  routes: [{ path: "/rules", component: RulesView }],
-});
-
-// Mock apiClient to ensure consistent spying across Vitest worker threads
-vi.mock("../../src/api/apiClient", () => {
+vi.mock("@/api/apiClient", () => {
   return {
     apiClient: {
       get: vi.fn(),
@@ -23,6 +16,13 @@ vi.mock("../../src/api/apiClient", () => {
       delete: vi.fn(),
     },
   };
+});
+
+
+// Setup mock router
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [{ path: "/rules", component: RulesView }],
 });
 
 describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () => {
@@ -42,7 +42,7 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
     authStore.isDemoMode = false;
     authStore.rawRoles = ["Data Manager"];
 
-    // Mock apiClient methods
+    // Setup mock implementations for apiClient
     vi.mocked(apiClient.get).mockImplementation((url) => {
       if (url.includes("/rules")) {
         return Promise.resolve([

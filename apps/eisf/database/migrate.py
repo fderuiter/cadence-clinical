@@ -88,9 +88,16 @@ async def run_migrations(database_url: str) -> None:
             await conn.run_sync(Base.metadata.create_all)
 
             # Create SQLModel tables (EISFSectionTaxonomy and EISFDocumentRecord)
-            from sqlmodel import SQLModel
+            from apps.eisf.models import (
+                EISFDocumentRecord,
+                EISFSectionTaxonomy,
+            )
 
-            await conn.run_sync(SQLModel.metadata.create_all)
+            def create_eisf_tables(sync_conn):
+                EISFSectionTaxonomy.__table__.create(sync_conn, checkfirst=True)
+                EISFDocumentRecord.__table__.create(sync_conn, checkfirst=True)
+
+            await conn.run_sync(create_eisf_tables)
 
             # Apply migrations for existing schema instances
             await upgrade_existing_tables(conn, dialect_name)
@@ -98,7 +105,7 @@ async def run_migrations(database_url: str) -> None:
             # Seed standard eISF section taxonomies if empty
             from sqlalchemy import select
 
-            from apps.eisf.models import STANDARD_EISF_SECTIONS, EISFSectionTaxonomy
+            from apps.eisf.models import STANDARD_EISF_SECTIONS
 
             res = await conn.execute(select(EISFSectionTaxonomy))
             existing_sections = res.scalars().all()
