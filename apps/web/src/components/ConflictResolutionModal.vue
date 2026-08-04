@@ -30,13 +30,8 @@
 
         <!-- Side-by-side Diff Section -->
         <div
-          class="diff-container"
-          style="
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 20px;
-          "
+          class="diff-container grid-2-responsive"
+          style="margin-bottom: 20px"
         >
           <!-- Client Offline Edit -->
           <div
@@ -104,6 +99,7 @@
           >
           <div style="display: flex; flex-direction: column; gap: 8px">
             <label
+              class="touch-target-interactive"
               style="
                 display: flex;
                 align-items: flex-start;
@@ -132,6 +128,7 @@
             </label>
 
             <label
+              class="touch-target-interactive"
               style="
                 display: flex;
                 align-items: flex-start;
@@ -160,6 +157,7 @@
             </label>
 
             <label
+              class="touch-target-interactive"
               style="
                 display: flex;
                 align-items: flex-start;
@@ -200,6 +198,7 @@
           <textarea
             id="conflict-reason-text"
             v-model="reasonText"
+            class="touch-target-interactive"
             placeholder="Document the exact clinical or technical reasoning for this resolution choice..."
             style="
               width: 100%;
@@ -236,7 +235,7 @@
       >
         <button
           id="btn-cancel-conflict"
-          class="btn"
+          class="btn touch-target-interactive"
           type="button"
           style="background-color: #e2e8f0; color: #334155"
           @click="onCancel"
@@ -245,7 +244,7 @@
         </button>
         <button
           id="btn-confirm-conflict"
-          class="btn btn-primary"
+          class="btn btn-primary touch-target-interactive"
           type="button"
           style="background-color: #f59e0b; border-color: #d97706; color: white"
           @click="onConfirm"
