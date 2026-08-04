@@ -108,7 +108,9 @@ describe("ApprovalHandoffModal", () => {
 
     await wrapper.find("#approval-role").setValue("Lead Data Manager");
     await wrapper.find("#approval-password").setValue("mySecretPassword"); // pragma: allowlist secret
-    await wrapper.find("#approval-reason").setValue("Protocol amendment complete");
+    await wrapper
+      .find("#approval-reason")
+      .setValue("Protocol amendment complete");
 
     await wrapper.find("#btn-confirm-approval").trigger("click");
 

@@ -27,7 +27,7 @@ This decision supports compliance tracing and standardized trial audits under **
 ### Option A: Standard pre-compiled shared UI library with Vite bundling (Selected)
 * **Overview:** Configure `packages/ui` to compile into distributable ESM and CJS formats using a dedicated Vite bundling pipeline. Move the clinical form orchestration engine and all leaf inputs (such as `ClinicalFormField.vue`, `ClinicalInput.vue`, `ClinicalRadioGroup.vue`, `ClinicalLookupInput.vue`, `ClinicalQueryFlag.vue`, and `ClinicalQueryPanel.vue`) along with their custom accessibility composables into `packages/ui`.
 * **Pros:**
-  * ✅ Solves compiler drift by compiling `.vue` and JS assets into stable distributed assets (`packages/ui/dist/index.js`).
+  * ✅ Solves compiler drift by compiling `.vue` and JS assets into stable distributed assets (`packages/ui/dist/[index.js]`).
   * ✅ Promotes absolute parity in rendering behavior, styles, and accessibility across portals.
   * ✅ Decouples internal logic dynamically via runtime store lookup using Pinia instead of static relative imports.
 * **Cons:**
@@ -61,7 +61,7 @@ Chosen option: **Option A (Standard pre-compiled shared UI library with Vite bun
   * Updated `index.js` to export these components and composables.
 * **Consumer Application (`apps/web`):**
   * Removed legacy duplicated component implementations in `src/components/clinical/`.
-  * Configured `apps/web/vite.config.js` to map `ui` to the pre-compiled `packages/ui/dist/index.js`.
+  * Configured `apps/web/vite.config.js` to map `ui` to the pre-compiled `packages/ui/dist/[index.js]`.
   * Updated views (such as `EcrfView.vue`) and unit tests to import components directly from `ui`.
 * **Verification Plan:**
   * Verified using standard linter/formatter scripts (`pnpm lint`, `pnpm format`).

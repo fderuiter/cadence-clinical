@@ -27,7 +27,7 @@
             type="text"
             placeholder="Username"
             :disabled="busy"
-          >
+          />
         </div>
 
         <div class="form-group">
@@ -39,7 +39,7 @@
             placeholder="Enter your password to confirm identity..."
             :disabled="busy"
             @keyup.enter="confirm"
-          >
+          />
         </div>
 
         <div class="form-group">
@@ -50,37 +50,20 @@
             type="text"
             placeholder="Enter 6-digit TOTP code..."
             :disabled="busy"
-          >
+          />
         </div>
 
         <div class="form-group last-group">
           <label for="sig-reason">Signing Reason</label>
-          <select
-            id="sig-reason"
-            v-model="signingReason"
-            :disabled="busy"
-          >
-            <option
-              value=""
-              disabled
-            >
-              -- Select Reason --
-            </option>
-            <option
-              v-for="r in reasons"
-              :key="r"
-              :value="r"
-            >
+          <select id="sig-reason" v-model="signingReason" :disabled="busy">
+            <option value="" disabled>-- Select Reason --</option>
+            <option v-for="r in reasons" :key="r" :value="r">
               {{ r }}
             </option>
           </select>
         </div>
 
-        <div
-          v-if="error"
-          id="sig-error-msg"
-          class="error-msg"
-        >
+        <div v-if="error" id="sig-error-msg" class="error-msg">
           {{ error }}
         </div>
       </div>
