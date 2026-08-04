@@ -2194,12 +2194,18 @@ async function initializeApp() {
     () => state.session.userId,
     async (newUid, oldUid) => {
       if (newUid !== oldUid) {
-        console.log(`[Auth] User identity changed from ${oldUid} to ${newUid}. Re-deriving encryption key.`);
-        const sessionMaterial = state.session.token || newUid || "demo-material";
+        console.log(
+          `[Auth] User identity changed from ${oldUid} to ${newUid}. Re-deriving encryption key.`
+        );
+        const sessionMaterial =
+          state.session.token || newUid || "demo-material";
         try {
           await initSessionKey(sessionMaterial);
         } catch (err) {
-          console.warn("Failed to re-derive session key on identity change:", err);
+          console.warn(
+            "Failed to re-derive session key on identity change:",
+            err
+          );
         }
       }
     }
@@ -2221,7 +2227,10 @@ async function logout() {
 
   clearSessionKey();
 
-  if (window.keycloakInstance && typeof window.keycloakInstance.logout === "function") {
+  if (
+    window.keycloakInstance &&
+    typeof window.keycloakInstance.logout === "function"
+  ) {
     try {
       await window.keycloakInstance.logout();
     } catch (err) {
