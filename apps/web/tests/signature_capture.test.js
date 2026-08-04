@@ -276,4 +276,19 @@ describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
     // Credentials must be wiped
     expect(wrapper.vm.password).toBe("");
   });
+
+  it("passes WCAG 2.1 AA accessibility audit with zero violations", async () => {
+    const wrapper = mount(SignatureCaptureModal, {
+      props: {
+        isOpen: true,
+        username: "fderuiter",
+        actionUrl: "/api/v1/etmf/documents/doc-123/sign-off",
+      },
+      global: {
+        plugins: [pinia],
+      },
+    });
+
+    await expect(wrapper).toBeAccessible();
+  });
 });
