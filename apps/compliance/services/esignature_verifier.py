@@ -136,6 +136,7 @@ class ESignatureVerifier:
 
             # Trust store validation
             from packages.security.cert_store import get_active_cert_store
+
             cert_store = get_active_cert_store()
 
             # Check self-signed
@@ -150,11 +151,15 @@ class ESignatureVerifier:
                     )
 
             # Check active status (expiration and revocation)
-            is_valid_status, status_msg = cert_store.verify_certificate_status(cert_pem_str)
+            is_valid_status, status_msg = cert_store.verify_certificate_status(
+                cert_pem_str
+            )
             if not is_valid_status:
                 return VerificationResult(
                     is_valid=False,
-                    status=status_msg if "REVOKED" in status_msg else "CERTIFICATE_INVALID",
+                    status=status_msg
+                    if "REVOKED" in status_msg
+                    else "CERTIFICATE_INVALID",
                     failure_reason=f"Certificate validation failed: {status_msg}",
                 )
 

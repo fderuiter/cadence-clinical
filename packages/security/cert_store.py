@@ -113,4 +113,3 @@ def get_active_cert_store() -> CertificateStoreService:
     if _active_store_instance is None:
         _active_store_instance = CertificateStoreService()
     return _active_store_instance
-
