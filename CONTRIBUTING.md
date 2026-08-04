@@ -207,7 +207,7 @@ uv run python scripts/sync_gxp.py --commit
 
 For the RTM to track your test, add a requirement ID to the test docstring:
 
-```python
+```python skip
 async def test_enrollment_transition():
     """Validate subject state machine on enrollment.
 

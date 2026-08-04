@@ -1022,8 +1022,7 @@ def process_markdown_file(
                         and not has_skip_comment
                         and not has_preceding_skip
                     ) and (
-                        "docs" in Path(file_path).parts
-                        and "adr" not in Path(file_path).parts
+                        "adr" not in Path(file_path).parts
                     ):
                         validate_python_block(
                             file_path,
@@ -1049,8 +1048,7 @@ def process_markdown_file(
 
                     if not is_skip_block and not has_preceding_skip:
                         if (
-                            "docs" in Path(file_path).parts
-                            and "adr" not in Path(file_path).parts
+                            "adr" not in Path(file_path).parts
                         ):
                             validate_json_block(
                                 file_path,
