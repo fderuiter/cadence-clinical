@@ -330,6 +330,10 @@ def main() -> None:
                                     "apps/web/src/composables/useFocusTrap.js",
                                     "packages/ui/src/composables/useFocusTrap.js",
                                 },
+                                {
+                                    "packages/database/__init__.py",
+                                    "apps/etmf/database/migrate.py",
+                                },
                             ]
                         ):
                             continue
