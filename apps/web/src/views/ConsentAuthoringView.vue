@@ -46,8 +46,7 @@
     <!-- Authorized view -->
     <div
       v-else
-      class="grid-2"
-      style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px"
+      class="grid-2-responsive"
     >
       <!-- Templates List Pane -->
       <div
@@ -274,7 +273,7 @@
               Metadata & Configuration
             </legend>
             <div
-              style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px"
+              class="grid-2-responsive"
             >
               <div class="form-group">
                 <label
@@ -399,7 +398,7 @@
                 v-for="(clauseId, index) in editorForm.clauses"
                 :key="index"
                 class="clause-order-row"
-                style="display: flex; gap: 8px; align-items: center"
+                style="display: flex; gap: var(--spacing-xs); align-items: center; flex-wrap: wrap;"
               >
                 <span
                   style="
@@ -424,8 +423,8 @@
                 />
                 <button
                   type="button"
-                  class="btn btn-move-up"
-                  style="padding: 4px 8px; font-size: 0.75rem"
+                  class="btn btn-move-up touch-target-interactive"
+                  style="font-size: 0.75rem"
                   :disabled="index === 0"
                   @click="moveClause(index, -1)"
                 >
@@ -433,8 +432,8 @@
                 </button>
                 <button
                   type="button"
-                  class="btn btn-move-down"
-                  style="padding: 4px 8px; font-size: 0.75rem"
+                  class="btn btn-move-down touch-target-interactive"
+                  style="font-size: 0.75rem"
                   :disabled="index === editorForm.clauses.length - 1"
                   @click="moveClause(index, 1)"
                 >
@@ -442,9 +441,8 @@
                 </button>
                 <button
                   type="button"
-                  class="btn btn-remove-clause"
+                  class="btn btn-remove-clause touch-target-interactive"
                   style="
-                    padding: 4px 8px;
                     font-size: 0.75rem;
                     background-color: var(--error);
                     color: white;

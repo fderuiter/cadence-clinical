@@ -45,8 +45,9 @@
         class="tabs-navigation"
         style="
           display: flex;
-          gap: 12px;
-          margin-bottom: 20px;
+          flex-wrap: wrap;
+          gap: var(--spacing-sm);
+          margin-bottom: var(--spacing-lg);
           border-bottom: 2px solid var(--border);
           padding-bottom: 10px;
         "
@@ -78,8 +79,7 @@
       <!-- Tab 1: Rules Designer -->
       <div
         v-if="activeTab === 'rules'"
-        class="grid-2"
-        style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px"
+        class="grid-2-responsive"
       >
         <!-- Active Ruleset List -->
         <div
