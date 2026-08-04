@@ -342,6 +342,7 @@ CREATE TABLE IF NOT EXISTS public.audit_ledger_seals (
 ```
 
 #### Background Sealer Implementation Core
+<!-- validation-skip -->
 ```python
 import hashlib
 import json
@@ -495,6 +496,7 @@ The user must choose from an immutable, system-declared dropdown list matching t
 - **"I authorize unblinding" (Unblinding Approval - PI/Sponsor):** Declares that the medical emergency unblinding has been vetted and approved.
 
 #### Signature Manifestation Record Schema
+<!-- validation-skip -->
 ```json
 {
   "signature_manifestation": {

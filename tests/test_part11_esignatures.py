@@ -23,9 +23,16 @@ def test_private_key():
 
 @pytest.fixture
 def test_x509_cert():
-    """Load the test self-signed X.509 certificate from fixtures."""
+    """Load the test self-signed X.509 certificate from fixtures and register in active trust store."""
     with open("tests/fixtures/keys/certificate.crt", "rb") as f:
-        return x509.load_pem_x509_certificate(f.read())
+        cert_bytes = f.read()
+        cert = x509.load_pem_x509_certificate(cert_bytes)
+        from packages.security.cert_store import get_active_cert_store
+
+        get_active_cert_store().register_certificate(
+            user_id="test_user", cert_pem=cert_bytes.decode("utf-8")
+        )
+        return cert
 
 
 def test_valid_part11_signature_verification(test_x509_cert, test_private_key):

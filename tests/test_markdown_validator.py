@@ -497,9 +497,13 @@ def test_main_with_arguments(monkeypatch):
     processed_files = []
     original_process = vm.process_markdown_file
 
-    def mock_process(file_path, repo_root_arg, root_dirs, root_files, codebase_map):
+    def mock_process(
+        file_path, repo_root_arg, root_dirs, root_files, codebase_map, *args, **kwargs
+    ):
         processed_files.append(Path(file_path).name)
-        original_process(file_path, repo_root_arg, root_dirs, root_files, codebase_map)
+        original_process(
+            file_path, repo_root_arg, root_dirs, root_files, codebase_map, *args, **kwargs
+        )
 
     monkeypatch.setattr(vm, "process_markdown_file", mock_process)
 
