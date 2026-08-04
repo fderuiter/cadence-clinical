@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-In distributed multi-node production environments, verifying electronic signatures solely within local process memory introduced a potential security vulnerability. Signature tokens could be replayed across different server instances within their 60-second validity window. This violated strict 21 CFR Part 11 electronic signature compliance and GxP data integrity standards (specifically **Trace-17**). 
+In distributed multi-node production environments, verifying electronic signatures solely within local process memory introduced a potential security vulnerability. Signature tokens could be replayed across different server instances within their 60-second validity window. This violated strict 21 CFR Part 11 electronic signature compliance and GxP data integrity standards (specifically **Trace-17**).
 
 We need to guarantee that once an electronic signature token (`X-Sig-Token`) is executed or verified, it is treated as spent and cannot be replayed on any server node within the distributed cluster. At the same time, we must maintain zero friction for local development and test suite runs by not forcing a mandatory local Redis dependency.
 
