@@ -48,13 +48,18 @@ def is_safe_file(filepath: str) -> bool:
     - Test files (*test*, tests/)
     - Lockfiles (uv.lock, pnpm-lock.yaml)
     - The self_heal.py script itself and its tests
+    - Automation configurations and scripts (.github/, scripts/)
     """
     # 1. Regulated compliance files under docs/SDLC are strictly prohibited
     if "docs/SDLC" in filepath or "docs/sdlc" in filepath.lower():
         return False
 
-    # 2. Allow our own self-healing script and its tests for development and validation
-    if filepath == "scripts/self_heal.py" or "test_self_heal" in filepath:
+    # 2. Allow our own self-healing script, tests, and general GitHub action / automation scripts
+    if (
+        filepath.startswith(".github/")
+        or filepath.startswith("scripts/")
+        or "test_self_heal" in filepath
+    ):
         return True
 
     # 3. Lockfiles are allowed
@@ -300,23 +305,22 @@ def main() -> None:
     print("Executing validation checks...")
     # Ruff Linting Check
     print("Running Ruff linting check...")
-    lint_out, lint_err = run_command(["uv", "run", "ruff", "check", "."], check=False)
-    if "All checks passed!" not in lint_out and lint_err:
+    try:
+        run_command(["uv", "run", "ruff", "check", "."], check=True)
+    except subprocess.CalledProcessError:
         print("Ruff linting failed! Aborting healing.")
-        print(lint_err)
         run_command(["git", "reset", "--hard", "HEAD~1"], check=False)
         update_pr_comment("failure")
         sys.exit(1)
 
     # Pytest Unit Tests Check
     print("Running targeted unit/integration tests validation...")
-    test_out, test_err = run_command(
-        ["uv", "run", "pytest", "tests/test_pr_comment.py", "--no-cov"], check=False
-    )
-    if "failed" in test_out.lower() or "error" in test_out.lower() or test_err:
+    try:
+        run_command(
+            ["uv", "run", "pytest", "tests/test_pr_comment.py", "--no-cov"], check=True
+        )
+    except subprocess.CalledProcessError:
         print("Tests validation failed! Aborting healing.")
-        print(test_out)
-        print(test_err)
         run_command(["git", "reset", "--hard", "HEAD~1"], check=False)
         update_pr_comment("failure")
         sys.exit(1)
