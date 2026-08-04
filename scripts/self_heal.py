@@ -15,37 +15,6 @@ import subprocess
 import sys
 
 
-def handle_github_api_error(stderr_msg: str) -> None:
-    """Check for permission, authorization, or other non-blocking errors and exit gracefully.
-
-    Args:
-        stderr_msg: The standard error output message from the CLI command.
-    """
-    combined = stderr_msg.lower()
-    patterns = [
-        "resource not accessible by integration",
-        "403",
-        "http 403",
-        "must have admin rights",
-        "viewer can't make query",
-        "not logged in",
-        "gh auth login",
-        "populate the gh_token",
-        "unauthorized",
-        "forbidden",
-        "permission",
-        "api error",
-    ]
-    if any(p in combined for p in patterns):
-        print(
-            "WARNING: GitHub API permission or authentication error occurred.\n"
-            f"Error details: {stderr_msg.strip()}\n"
-            "Skipping autonomous self-healing.",
-            file=sys.stderr,
-        )
-        sys.exit(0)
-
-
 def run_command(args: list[str], check: bool = True) -> tuple[str, str]:
     """Run a system command and return (stdout, stderr)."""
     try:
