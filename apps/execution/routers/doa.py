@@ -10,7 +10,7 @@ from execution.doa_models import (
     DOATaskDelegationEnum,
     DOATaskRoleEnum,
 )
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.params import Depends as DependsClass
 from pydantic import BaseModel, Field
 
@@ -101,6 +101,18 @@ router = APIRouter(prefix="/api/v1/execution/doa", tags=["DOA"])
 _DOA_SERVICE = DOAService()
 
 
+def _check_change_reason_header(request: Request | None) -> None:
+    if request is not None:
+        change_reason = request.headers.get("x-change-reason") or request.headers.get(
+            "X-Change-Reason"
+        )
+        if not change_reason or not change_reason.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="GxP Compliance: x-change-reason header is required.",
+            )
+
+
 async def _run_with_repo(repo, func):
     if repo is None or isinstance(repo, DependsClass):
         session_maker = db_manager.get_session_maker()
@@ -146,12 +158,14 @@ class DOASignOffRequest(BaseModel):
 )
 async def add_doa_assignment_endpoint(
     payload: AddDOAAssignmentRequest,
+    request: Request = None,
     current_user: dict = Depends(get_current_user),
 ) -> DOAAssignmentRecord:
     """Add site personnel task delegation entry to Delegation of Authority log.
 
     Requirements: PRD-SYS-001
     """
+    _check_change_reason_header(request)
     return _DOA_SERVICE.add_assignment(
         study_id=payload.study_id,
         site_id=payload.site_id,
@@ -166,12 +180,14 @@ async def add_doa_assignment_endpoint(
 @router.post("/sign-off", response_model=DOAAssignmentRecord)
 async def sign_off_doa_assignment_endpoint(
     payload: DOASignOffRequest,
+    request: Request = None,
     current_user: dict = Depends(get_current_user),
 ) -> DOAAssignmentRecord:
     """Endorse Delegation of Authority task assignment with Principal Investigator eSignature.
 
     Requirements: PRD-SYS-001
     """
+    _check_change_reason_header(request)
     pi_user = current_user.get("sub", "pi_user")
     try:
         return _DOA_SERVICE.sign_off_assignment(
@@ -199,8 +215,11 @@ async def get_site_doa_log_endpoint(
 @router.post("/delegate", response_model=DOADelegationRecordResponse)
 async def delegate_task_endpoint(
     payload: DelegateTaskRequest,
+    request: Request = None,
     repo: SQLAlchemExecutionDOARepository = Depends(get_execution_doa_repository),
 ):
+    _check_change_reason_header(request)
+
     async def _action(r):
         use_case = ExecutionDOAUseCase(r)
         try:
@@ -222,8 +241,10 @@ async def delegate_task_endpoint(
 @router.post("/endorse", response_model=DOADelegationRecordResponse)
 async def approve_delegation_endpoint(
     payload: ApproveDelegationRequest,
+    request: Request = None,
     repo: SQLAlchemExecutionDOARepository = Depends(get_execution_doa_repository),
 ):
+    _check_change_reason_header(request)
     is_wrong_pwd = (
         payload.password == "wrong_password"  # pragma: allowlist secret
         or "invalid" in payload.password
@@ -251,8 +272,11 @@ async def approve_delegation_endpoint(
 @router.post("/endorse_task", response_model=DOADelegationRecordResponse)
 async def approve_task_endpoint(
     payload: ApproveTaskDelegationRequest,
+    request: Request = None,
     repo: SQLAlchemExecutionDOARepository = Depends(get_execution_doa_repository),
 ):
+    _check_change_reason_header(request)
+
     async def _action(r):
         use_case = ExecutionDOAUseCase(r)
         try:
@@ -271,8 +295,11 @@ async def approve_task_endpoint(
 @router.post("/revoke", response_model=DOADelegationRecordResponse)
 async def revoke_delegation_endpoint(
     payload: RevokeDelegationRequest,
+    request: Request = None,
     repo: SQLAlchemExecutionDOARepository = Depends(get_execution_doa_repository),
 ):
+    _check_change_reason_header(request)
+
     async def _action(r):
         use_case = ExecutionDOAUseCase(r)
         try:
@@ -290,8 +317,11 @@ async def revoke_delegation_endpoint(
 @router.post("/staff", response_model=SiteStaffMemberResponse, status_code=201)
 async def create_staff_endpoint(
     payload: SiteStaffMemberRequest,
+    request: Request = None,
     repo: SQLAlchemExecutionDOARepository = Depends(get_execution_doa_repository),
 ):
+    _check_change_reason_header(request)
+
     async def _action(r):
         use_case = ExecutionDOAUseCase(r)
         return await use_case.create_or_update_staff(

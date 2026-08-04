@@ -29,6 +29,7 @@ from apps.execution.database.models import (
 )
 from apps.execution.rtsm_authz import verify_site_access
 from apps.execution.sdv_helper import validate_and_upsert_sdv_target
+from apps.execution.trial_lock import TrialLockManager
 from apps.execution.tsdv import evaluate_tsdv_requirement
 from packages.security import can_access_study, get_principal, run_async
 from packages.security.rbac import (
@@ -447,6 +448,12 @@ async def bulk_sdv_signoff(
             site_id = payload.site_id or (
                 subj_db.site_id if hasattr(subj_db, "site_id") else None
             )
+
+            # Check trial lock and site lock before database mutations
+            if TrialLockManager.is_locked():
+                raise PermissionError("Trial is currently locked.")
+            if site_id and TrialLockManager.is_site_locked(site_id):
+                raise PermissionError(f"Site {site_id} is currently locked.")
 
             # Query existing SDVSignOff records for these targets
             stmt_signoffs = select(SDVSignOff).where(

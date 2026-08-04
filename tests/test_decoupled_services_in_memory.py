@@ -4,17 +4,26 @@ These tests verify that services run natively with zero reliance on web servers,
 live databases, or SQLAlchemy/FastAPI framework imports.
 """
 
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
 
+from apps.execution.application.ports import IExecutionDOARepository
+from apps.execution.application.services import ExecutionDOAUseCase
 from apps.execution.coding.service import process_coding_action
+from apps.execution.domain.models import (
+    ExecutionAuditLogEntity,
+    ExecutionDelegationEntity,
+    ExecutionStaffEntity,
+)
 from apps.execution.eligibility_service import verify_subject_eligible_for_randomization
 from apps.execution.exceptions import (
     CodingAssignmentNotFoundError,
     InvalidCodingActionError,
     SubjectEligibilityError,
 )
+from apps.execution.tsdv import evaluate_bulk_tsdv, evaluate_tsdv_requirement
 
 
 class DummySubject:
@@ -155,3 +164,149 @@ async def test_process_coding_action_invalid_code_in_memory():
             actor="test_user",
         )
     assert "does not match any available suggestions" in str(exc.value)
+
+
+class InMemoryExecutionDOARepository(IExecutionDOARepository):
+    """InMemory execution repository implementation for testing Delegation of Authority logic."""
+
+    def __init__(self) -> None:
+        self.staff_store: dict[str, ExecutionStaffEntity] = {}
+        self.delegation_store: dict[str, ExecutionDelegationEntity] = {}
+        self.audit_logs: list[ExecutionAuditLogEntity] = []
+
+    async def get_staff(
+        self, site_id: str, staff_user_id: str
+    ) -> ExecutionStaffEntity | None:
+        staff = self.staff_store.get(staff_user_id)
+        if staff and staff.site_id == site_id:
+            return staff
+        return None
+
+    async def get_staff_by_user_id(
+        self, staff_user_id: str
+    ) -> ExecutionStaffEntity | None:
+        return self.staff_store.get(staff_user_id)
+
+    async def save_staff(self, staff: ExecutionStaffEntity) -> ExecutionStaffEntity:
+        self.staff_store[staff.staff_user_id] = staff
+        return staff
+
+    async def get_delegation_by_id(
+        self, delegation_id: str
+    ) -> ExecutionDelegationEntity | None:
+        return self.delegation_store.get(delegation_id)
+
+    async def save_delegation(
+        self, delegation: ExecutionDelegationEntity
+    ) -> ExecutionDelegationEntity:
+        if not delegation.id:
+            import uuid
+
+            delegation.id = f"delegation_{uuid.uuid4().hex[:8]}"
+        self.delegation_store[delegation.id] = delegation
+        return delegation
+
+    async def save_audit_log(self, audit: ExecutionAuditLogEntity) -> None:
+        self.audit_logs.append(audit)
+
+    async def get_all_audit_logs(self) -> list[ExecutionAuditLogEntity]:
+        return self.audit_logs
+
+    async def get_all_delegations(self) -> list[ExecutionDelegationEntity]:
+        return list(self.delegation_store.values())
+
+
+@pytest.mark.asyncio
+async def test_in_memory_execution_doa():
+    """Verify Delegation of Authority logic executes 100% in-memory without database connection."""
+    repo = InMemoryExecutionDOARepository()
+    use_case = ExecutionDOAUseCase(repo)
+
+    # 1. Create a staff member
+    staff = await use_case.create_or_update_staff(
+        site_id="site_abc",
+        staff_user_id="staff_1",
+        name="John Doe",
+        email="john@doe.com",
+        has_gcp_training=True,
+    )
+    assert staff.staff_user_id == "staff_1"
+    assert staff.has_gcp_training is True
+
+    # 2. Delegate a task
+    delegation = await use_case.delegate_task(
+        site_id="site_abc",
+        staff_user_id="staff_1",
+        task_code="SUBJECT_INFORMED_CONSENT",
+        pi_user_id="pi_1",
+        reason_for_change="Assignment of nursing task",
+    )
+    assert delegation.status == "PENDING_PI_APPROVAL"
+    assert delegation.task_code == "SUBJECT_INFORMED_CONSENT"
+
+    # 3. Approve delegation (by PI)
+    approved = await use_case.approve_delegation(
+        delegation_id=delegation.id,
+        pi_user_id="pi_1",
+    )
+    assert approved.status == "ACTIVE"
+    assert approved.is_active is True
+
+    # 4. Revoke delegation
+    revoked = await use_case.revoke_delegation(
+        delegation_id=delegation.id,
+        end_date=datetime.now(UTC),
+        reason_for_change="Task completed",
+    )
+    assert revoked.status == "REVOKED"
+    assert revoked.is_active is False
+
+
+def test_in_memory_tsdv_verification():
+    """Verify that clinical sampling rules evaluate compliance targets without active DB connection."""
+
+    class DummyConfig:
+        def __init__(self):
+            self.sampling_model = "SUBJECT_BASED"
+            self.initial_full_sdv_subject_count = 2
+            self.random_sample_percentage = 50.0
+            self.trial_random_seed = 42
+            self.full_sdv_domains = ["VS", "DM"]
+            self.safety_endpoints = ["AE"]
+            self.zero_sdv_domains = ["LB"]
+
+    config = DummyConfig()
+
+    # Precedence check: Domain-level safety endpoint vs subject-level
+    required, _, field_dec, exp = evaluate_tsdv_requirement(
+        config=config, subject_uuid="subj_003", enrollment_index=3, domain="AE"
+    )
+    assert required is True
+    assert field_dec is True
+    assert "safety/full-SDV" in exp
+
+    # Precedence check: Zero-SDV domain
+    required, _, field_dec, exp = evaluate_tsdv_requirement(
+        config=config, subject_uuid="subj_003", enrollment_index=3, domain="LB"
+    )
+    assert required is False
+    assert field_dec is False
+    assert "zero-SDV" in exp
+
+    # Initial subjects always full SDV
+    required, subj_sel, _, exp = evaluate_tsdv_requirement(
+        config=config, subject_uuid="subj_001", enrollment_index=1, domain="MH"
+    )
+    assert required is True
+    assert subj_sel is True
+    assert "first 2 enrolled subjects" in exp
+
+    # Bulk evaluation
+    targets = [
+        ("subj_001", 1, "AE"),
+        ("subj_003", 3, "LB"),
+    ]
+    results = evaluate_bulk_tsdv(config, targets)
+    assert len(results) == 2
+    assert results[0].required is True
+    assert results[1].required is False

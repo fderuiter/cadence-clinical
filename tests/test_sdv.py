@@ -1345,3 +1345,81 @@ async def test_bulk_query_generation_input_validation(signed_headers):
             headers=headers,
         )
         assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_bulk_sdv_signoff_locks() -> None:
+    """Verify that bulk SDV signoff rolls back on trial or site locks.
+
+    @req:PRD-SYS-001
+    """
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # 1. Populate DB with test subject and observation
+        async with db_manager.get_session_maker()() as session, session.begin():
+            await session.execute(
+                text("SELECT set_config('cadence.app_writing', 'true', 1);")
+            )
+            subj = ClinicalSubject(
+                subject_id="SUBJ-LOCK-1",
+                study_id="STUDY-LOCK-TEST",
+                site_id="SITE-LOCKED",
+            )
+            obs = ClinicalObservation(
+                id="OBS-LOCK-1",
+                subject_id="SUBJ-LOCK-1",
+                study_id="STUDY-LOCK-TEST",
+                site_id="SITE-LOCKED",
+                domain="VS",
+                test_code="SYSBP",
+                test_name="Systolic Blood Pressure",
+                is_sdv_verified=False,
+            )
+            session.add_all([subj, obs])
+
+        payload = {
+            "study_id": "STUDY-LOCK-TEST",
+            "subject_id": "SUBJ-LOCK-1",
+            "scope": "FIELD",
+            "target_ids": ["OBS-LOCK-1"],
+            "reason_for_change": "Lock test",
+            "site_id": "SITE-LOCKED",
+        }
+        headers = get_bulk_sdv_auth_headers(roles="CRA", payload=payload)
+
+        # A. Lock the site and try bulk SDV signoff (should raise PermissionError due to lock)
+        TrialLockManager.lock_site("SITE-LOCKED")
+        try:
+            with pytest.raises(
+                PermissionError, match="Site SITE-LOCKED is currently locked"
+            ):
+                await client.post(
+                    "/api/v1/execution/sdv/bulk-sign-off",
+                    json=payload,
+                    headers=headers,
+                )
+        finally:
+            TrialLockManager.reset()
+
+        # B. Lock the entire trial and try bulk SDV signoff
+        TrialLockManager.lock_trial("Security violation")
+        headers_trial = get_bulk_sdv_auth_headers(roles="CRA", payload=payload)
+        try:
+            with pytest.raises(PermissionError, match="Trial is currently locked"):
+                await client.post(
+                    "/api/v1/execution/sdv/bulk-sign-off",
+                    json=payload,
+                    headers=headers_trial,
+                )
+        finally:
+            TrialLockManager.reset()
+
+        # Verify that observation remains unverified (proper rollback occurred!)
+        async with db_manager.get_session_maker()() as session:
+            stmt = select(ClinicalObservation).where(
+                ClinicalObservation.id == "OBS-LOCK-1"
+            )
+            res_db = await session.execute(stmt)
+            obs_db = res_db.scalar_one()
+            assert obs_db.is_sdv_verified is False

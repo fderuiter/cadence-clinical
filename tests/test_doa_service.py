@@ -288,3 +288,112 @@ async def test_doa_manager_service_class_interface():
         )
         assert revoked.status == "REVOKED"
         assert revoked.is_active is False
+
+
+@pytest.mark.asyncio
+async def test_doa_endpoints_require_change_reason_header():
+    """Verify that a delegation update without change-reason headers fails to execute and leaves the database unaltered."""
+    import hashlib
+    import hmac
+    import json
+    import time
+
+    import httpx
+
+    from apps.execution.main import app
+
+    # Pre-populate SiteStaffMember
+    async with db_manager.get_session_maker()() as session:
+        staff = SiteStaffMember(
+            site_id="site-999",
+            staff_user_id="staff-999",
+            name="Alice Cooper",
+            email="alice@alice.org",
+            has_gcp_training=True,
+        )
+        session.add(staff)
+        await session.commit()
+
+    # Generate valid gateway signature headers but omit the X-Change-Reason header
+    gateway_secret = "internal-gateway-secret-12345"
+    timestamp = str(time.time())
+
+    header_payload = {
+        "change_reason": "",
+        "roles": "pi",
+        "timestamp": timestamp,
+        "user_id": "pi-1",
+    }
+    serialized = json.dumps(header_payload, sort_keys=True, separators=(",", ":"))
+    signature = hmac.new(
+        gateway_secret.encode(), serialized.encode(), hashlib.sha256
+    ).hexdigest()
+
+    headers_missing = {
+        "X-User-Id": "pi-1",
+        "X-User-Roles": "pi",
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": signature,
+        "X-Signature-Version": "2",
+        # Omit X-Change-Reason header!
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # 1. Attempt to delegate without the x-change-reason header
+        payload = {
+            "site_id": "site-999",
+            "staff_user_id": "staff-999",
+            "task_code": "CRF_ENTRY",
+            "pi_user_id": "pi-1",
+            "reason_for_change": "Initial assignment",
+        }
+        res = await client.post(
+            "/api/v1/execution/doa/delegate",
+            json=payload,
+            headers=headers_missing,
+        )
+        # It must fail (HTTP 403 Forbidden from Gateway Middleware)
+        assert res.status_code == 403
+        assert "Missing change justification reason" in res.json()["detail"]
+
+        # 2. Attempt to delegate with whitespace-only x-change-reason header
+        header_payload_blank = {
+            "change_reason": "   ",
+            "roles": "pi",
+            "timestamp": timestamp,
+            "user_id": "pi-1",
+        }
+        serialized_blank = json.dumps(
+            header_payload_blank, sort_keys=True, separators=(",", ":")
+        )
+        signature_blank = hmac.new(
+            gateway_secret.encode(), serialized_blank.encode(), hashlib.sha256
+        ).hexdigest()
+
+        headers_blank_reason = {
+            "X-User-Id": "pi-1",
+            "X-User-Roles": "pi",
+            "X-Gateway-Timestamp": timestamp,
+            "X-Gateway-Signature": signature_blank,
+            "X-Signature-Version": "2",
+            "X-Change-Reason": "   ",
+        }
+        res_blank = await client.post(
+            "/api/v1/execution/doa/delegate",
+            json=payload,
+            headers=headers_blank_reason,
+        )
+        # It must fail (HTTP 400 Bad Request from Endpoint Guard)
+        assert res_blank.status_code == 400
+        assert "x-change-reason header is required" in res_blank.json()["detail"]
+
+        # Verify database is unaltered (no delegation record created!)
+        async with db_manager.get_session_maker()() as session:
+            stmt = select(DOADelegationRecord).where(
+                DOADelegationRecord.staff_user_id == "staff-999"
+            )
+            res_db = await session.execute(stmt)
+            records = res_db.scalars().all()
+            assert len(records) == 0
