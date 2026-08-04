@@ -287,35 +287,35 @@ function formatDate(dateStr) {
   display: flex;
   flex: 1;
   overflow: hidden;
-  background-color: #f1f5f9;
+  background-color: var(--color-surface-muted);
 }
 
 /* Metadata Sidebar styling */
 .metadata-sidebar {
   width: 300px;
-  background-color: #ffffff;
-  border-right: 1px solid #cbd5e1;
+  background-color: var(--color-surface);
+  border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
-  padding: 16px;
+  padding: var(--spacing-md);
   overflow-y: auto;
   box-sizing: border-box;
 }
 
 .meta-section {
-  margin-bottom: 20px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .meta-section.border-top {
-  border-top: 1px solid #e2e8f0;
-  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--spacing-md);
 }
 
 .meta-section h4 {
-  margin: 0 0 12px 0;
+  margin: 0 0 var(--spacing-sm) 0;
   font-size: 0.95rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-text);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -323,17 +323,17 @@ function formatDate(dateStr) {
 .meta-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-xs);
   font-size: 0.85rem;
 }
 
 .meta-label {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-weight: 500;
 }
 
 .meta-value {
-  color: #0f172a;
+  color: var(--color-text);
   text-align: right;
   word-break: break-all;
 }
@@ -348,44 +348,44 @@ function formatDate(dateStr) {
 
 /* Status colors */
 .text-muted {
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 .text-warning {
-  color: #d97706;
+  color: var(--color-warning);
 }
 .text-success {
-  color: #16a34a;
+  color: var(--color-success);
 }
 .text-danger {
-  color: #dc2626;
+  color: var(--color-error);
 }
 
 .change-reason-block h5,
 .checksum-block h5 {
-  margin: 0 0 6px 0;
+  margin: 0 0 var(--spacing-2xs) 0;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #475569;
+  color: var(--color-text-muted);
 }
 
 .reason-text {
   font-size: 0.8rem;
-  color: #1e293b;
-  background-color: #f8fafc;
-  padding: 8px;
+  color: var(--color-text);
+  background-color: var(--color-surface-muted);
+  padding: var(--spacing-xs);
   border-radius: 4px;
   margin: 0;
   line-height: 1.4;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
 }
 
 .checksum-text {
   display: block;
   font-family: monospace;
   font-size: 0.75rem;
-  background-color: #f1f5f9;
-  color: #0f172a;
-  padding: 6px;
+  background-color: var(--color-surface-muted);
+  color: var(--color-text);
+  padding: var(--spacing-2xs);
   border-radius: 4px;
   overflow-x: auto;
   word-break: break-all;
@@ -394,32 +394,32 @@ function formatDate(dateStr) {
 /* Signature Cards */
 .manifest-card {
   border-radius: 6px;
-  padding: 12px;
+  padding: var(--spacing-sm);
   font-size: 0.8rem;
 }
 
 .manifest-card.signed {
-  background-color: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #166534;
+  background-color: var(--color-success-bg);
+  border: 1px solid var(--color-success-bg);
+  color: var(--color-success);
 }
 
 .manifest-card.unsigned {
-  background-color: #fffbeb;
-  border: 1px solid #fef3c7;
-  color: #92400e;
+  background-color: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-bg);
+  color: var(--color-warning);
 }
 
 .sign-status {
   font-weight: 700;
-  margin: 0 0 6px 0;
+  margin: 0 0 var(--spacing-2xs) 0;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-2xs);
 }
 
 .signer-meta {
-  margin: 0 0 4px 0;
+  margin: 0 0 var(--spacing-2xs) 0;
 }
 
 .unsigned-warning {
@@ -432,7 +432,7 @@ function formatDate(dateStr) {
   flex: 1;
   display: flex;
   justify-content: center;
-  padding: 24px;
+  padding: var(--spacing-xl);
   overflow-y: auto;
   position: relative;
 }
@@ -440,9 +440,9 @@ function formatDate(dateStr) {
 .pdf-document-canvas {
   width: 100%;
   max-width: 650px;
-  background-color: #ffffff;
+  background-color: var(--color-surface);
   box-shadow:
-    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 10px 15px -3px var(--color-border),
     0 4px 6px -2px rgba(0, 0, 0, 0.05);
   border-radius: 4px;
   position: relative;
@@ -477,7 +477,7 @@ function formatDate(dateStr) {
   font-family: Arial, sans-serif;
   font-size: 1rem;
   font-weight: 900;
-  color: #ef4444;
+  color: var(--color-error);
   letter-spacing: 0.1em;
 }
 
@@ -486,7 +486,7 @@ function formatDate(dateStr) {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 48px;
+  padding: var(--spacing-4xl);
   box-sizing: border-box;
   z-index: 10;
 }
@@ -495,10 +495,10 @@ function formatDate(dateStr) {
   display: flex;
   justify-content: space-between;
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   font-weight: 600;
   text-transform: uppercase;
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .page-content {
@@ -508,37 +508,37 @@ function formatDate(dateStr) {
 .doc-title {
   font-size: 1.6rem;
   font-weight: 800;
-  color: #1e293b;
-  margin: 0 0 8px 0;
+  color: var(--color-text);
+  margin: 0 0 var(--spacing-xs) 0;
 }
 
 .doc-subtitle {
   font-size: 0.85rem;
-  color: #64748b;
-  margin: 0 0 16px 0;
+  color: var(--color-text-muted);
+  margin: 0 0 var(--spacing-md) 0;
 }
 
 .divider {
   border: none;
-  border-top: 2px solid #cbd5e1;
-  margin-bottom: 24px;
+  border-top: 2px solid var(--color-border);
+  margin-bottom: var(--spacing-xl);
 }
 
 .doc-section-content {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .doc-section-content h3 {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #1e293b;
-  margin: 0 0 10px 0;
+  color: var(--color-text);
+  margin: 0 0 var(--spacing-xs) 0;
 }
 
 .doc-section-content p {
   font-size: 0.85rem;
   line-height: 1.6;
-  color: #334155;
+  color: var(--color-text);
   margin: 0;
 }
 
@@ -546,9 +546,9 @@ function formatDate(dateStr) {
   display: flex;
   justify-content: space-between;
   font-size: 0.7rem;
-  color: #94a3b8;
-  border-top: 1px solid #e2e8f0;
-  padding-top: 12px;
-  margin-top: 32px;
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--spacing-sm);
+  margin-top: var(--spacing-2xl);
 }
 </style>

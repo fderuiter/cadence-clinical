@@ -184,10 +184,10 @@ const updateTranslation = (q) => {
 .comprehension-quiz-builder-container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  background-color: white;
-  padding: 16px;
-  border: 1px solid var(--border);
+  gap: var(--spacing-md);
+  background-color: var(--color-surface);
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
 }
 
@@ -195,26 +195,26 @@ const updateTranslation = (q) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--spacing-sm);
 }
 
 .quiz-header h3 {
   margin: 0;
   font-size: 1.15rem;
-  color: var(--neutral-dark);
+  color: var(--color-text);
 }
 
 .threshold-control {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-xs);
 }
 
 .threshold-control label {
   font-weight: 600;
   font-size: 0.85rem;
-  color: var(--neutral-dark);
+  color: var(--color-text);
 }
 
 .threshold-input-wrapper {
@@ -225,41 +225,42 @@ const updateTranslation = (q) => {
 
 .threshold-input {
   width: 75px;
-  padding: 6px 16px 6px 8px;
+  padding: var(--spacing-xs) var(--spacing-xl) var(--spacing-xs)
+    var(--spacing-xs);
   text-align: right;
   font-weight: bold;
 }
 
 .percentage-symbol {
   position: absolute;
-  right: 6px;
+  right: var(--spacing-2xs);
   font-weight: bold;
   font-size: 0.85rem;
   pointer-events: none;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .questions-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--spacing-md);
 }
 
 .no-questions {
   text-align: center;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-style: italic;
-  padding: 20px 0;
+  padding: var(--spacing-lg) 0;
 }
 
 .question-item {
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  padding: 16px;
-  background-color: var(--neutral-light);
+  padding: var(--spacing-md);
+  background-color: var(--color-surface-muted);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--spacing-sm);
 }
 
 .question-item-header {
@@ -270,40 +271,40 @@ const updateTranslation = (q) => {
 
 .question-item-header h4 {
   margin: 0;
-  color: var(--primary);
+  color: var(--color-primary);
   font-size: 0.95rem;
 }
 
 .btn-delete {
   background-color: transparent;
-  color: var(--error);
+  color: var(--color-error);
   border: none;
   cursor: pointer;
   font-weight: bold;
   font-size: 0.8rem;
-  padding: 4px 8px;
+  padding: var(--spacing-2xs) var(--spacing-xs);
   border-radius: 4px;
 }
 
 .btn-delete:hover {
-  background-color: #fef2f2;
+  background-color: var(--color-error-bg);
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--spacing-2xs);
 }
 
 .form-group label {
   font-weight: 600;
   font-size: 0.85rem;
-  color: var(--neutral-dark);
+  color: var(--color-text);
 }
 
 .form-control {
-  padding: 8px 12px;
-  border: 1px solid var(--border);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   font-size: 0.9rem;
 }
@@ -311,24 +312,24 @@ const updateTranslation = (q) => {
 .options-builder {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--spacing-xs);
 }
 
 .options-builder label {
   font-weight: 600;
   font-size: 0.85rem;
-  color: var(--neutral-dark);
+  color: var(--color-text);
 }
 
 .option-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-xs);
 }
 
 .option-row input[type="radio"] {
-  width: 18px;
-  height: 18px;
+  width: var(--touch-target-min, 44px);
+  height: var(--touch-target-min, 44px);
   cursor: pointer;
 }
 
@@ -338,15 +339,15 @@ const updateTranslation = (q) => {
 
 .btn-remove-opt {
   background-color: transparent;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   border: none;
   font-size: 1.1rem;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: var(--spacing-2xs) var(--spacing-xs);
 }
 
 .btn-remove-opt:hover:not(:disabled) {
-  color: var(--error);
+  color: var(--color-error);
 }
 
 .btn-remove-opt:disabled {
@@ -357,12 +358,12 @@ const updateTranslation = (q) => {
 .btn-small {
   align-self: flex-start;
   font-size: 0.8rem;
-  padding: 4px 8px;
+  padding: var(--spacing-2xs) var(--spacing-xs);
 }
 
 .hint-group {
-  border-top: 1px dashed var(--border);
-  padding-top: 12px;
+  border-top: 1px dashed var(--color-border);
+  padding-top: var(--spacing-sm);
 }
 
 .btn-add-question {

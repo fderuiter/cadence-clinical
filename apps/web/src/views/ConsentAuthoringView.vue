@@ -985,7 +985,7 @@ onMounted(() => {
 
 <style scoped>
 .template-card:hover {
-  border-color: var(--accent) !important;
+  border-color: var(--color-accent) !important;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
 }
 </style>

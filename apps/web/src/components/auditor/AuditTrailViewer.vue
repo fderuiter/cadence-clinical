@@ -316,6 +316,6 @@ function getActionBadgeClass(action) {
 
 <style scoped>
 .clinical-table tr:hover {
-  background-color: rgba(0, 0, 0, 0.01);
+  background-color: var(--color-surface-muted);
 }
 </style>

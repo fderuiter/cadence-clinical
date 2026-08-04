@@ -511,11 +511,11 @@ const handleExecuteSign = async () => {
 </script>
 
 <style scoped>
-@keyframes spin {
-  from {
+@keyframes spin {{
+  from
     transform: rotate(0deg);
-  }
-  to {
+  }{
+  to
     transform: rotate(360deg);
   }
 }

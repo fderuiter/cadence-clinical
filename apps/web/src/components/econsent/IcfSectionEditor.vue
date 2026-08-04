@@ -342,80 +342,80 @@ const hidePopover = () => {
 .icf-section-editor-container {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  background-color: white;
-  padding: 16px;
+  background-color: var(--color-surface);
+  padding: var(--spacing-md);
 }
 
 .editor-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-sm);
 }
 
 .editor-header h3 {
   margin: 0;
   font-size: 1.15rem;
-  color: var(--neutral-dark);
+  color: var(--color-text);
 }
 
 .section-id-badge {
   font-family: monospace;
   font-size: 0.8rem;
-  background-color: var(--neutral-light);
-  padding: 4px 8px;
+  background-color: var(--color-surface-muted);
+  padding: var(--spacing-2xs) var(--spacing-xs);
   border-radius: 4px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border);
 }
 
 .editor-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 8px;
-  background-color: var(--neutral-light);
-  border: 1px solid var(--border);
+  gap: var(--spacing-2xs);
+  padding: var(--spacing-xs);
+  background-color: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
   border-bottom: none;
   border-radius: 6px 6px 0 0;
 }
 
 .toolbar-btn {
-  padding: 6px 12px;
+  padding: var(--spacing-2xs) var(--spacing-sm);
   font-size: 0.85rem;
-  background-color: white;
-  border: 1px solid var(--border);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-2xs);
 }
 
 .toolbar-btn:hover {
-  background-color: #f1f5f9;
-  border-color: var(--accent);
+  background-color: var(--color-surface-muted);
+  border-color: var(--color-accent);
 }
 
 .glossary-btn {
-  background-color: #eff6ff;
-  border-color: #bfdbfe;
-  color: #1e40af;
+  background-color: var(--color-primary-light);
+  border-color: var(--color-primary-light);
+  color: var(--color-primary-dark);
 }
 
 .glossary-btn:hover {
-  background-color: #dbeafe;
+  background-color: var(--color-primary-light);
 }
 
 .editor-canvas {
   min-height: 250px;
   max-height: 500px;
   overflow-y: auto;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border);
   border-radius: 0 0 6px 6px;
-  padding: 16px;
+  padding: var(--spacing-md);
   outline: 2px solid transparent;
   font-family: var(--font-sans, system-ui, sans-serif);
   line-height: 1.6;
@@ -423,7 +423,7 @@ const hidePopover = () => {
 }
 
 .editor-canvas:focus {
-  border-color: var(--accent);
+  border-color: var(--color-accent);
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
 }
 
@@ -434,7 +434,7 @@ const hidePopover = () => {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: var(--color-text-muted);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -444,35 +444,35 @@ const hidePopover = () => {
 .glossary-modal {
   width: 90%;
   max-width: 450px;
-  background-color: white;
-  padding: 20px;
+  background-color: var(--color-surface);
+  padding: var(--spacing-lg);
   border-radius: 8px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 15px -3px var(--color-border);
 }
 
 .selected-text-preview {
-  background-color: #f8fafc;
-  padding: 8px 12px;
+  background-color: var(--color-surface-muted);
+  padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: 4px;
-  border-left: 3px solid #3b82f6;
-  margin: 12px 0;
+  border-left: 3px solid var(--color-accent);
+  margin: var(--spacing-sm) 0;
 }
 
 .form-group {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-md);
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: var(--spacing-2xs);
   font-weight: 600;
   font-size: 0.85rem;
 }
 
 .form-control {
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   font-size: 0.9rem;
 }
@@ -480,29 +480,29 @@ const hidePopover = () => {
 .modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--spacing-xs);
 }
 
 /* Popover styles */
 .glossary-popover {
   position: absolute;
-  background-color: #1e293b;
-  color: white;
-  padding: 8px 12px;
+  background-color: var(--color-text);
+  color: var(--color-surface);
+  padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: 6px;
   font-size: 0.8rem;
   max-width: 280px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px -1px var(--color-border);
   z-index: 1050;
   pointer-events: none;
 }
 
 .popover-title {
   font-weight: bold;
-  border-bottom: 1px solid #475569;
-  padding-bottom: 4px;
-  margin-bottom: 4px;
-  color: #93c5fd;
+  border-bottom: 1px solid var(--color-text-muted);
+  padding-bottom: var(--spacing-2xs);
+  margin-bottom: var(--spacing-2xs);
+  color: var(--color-primary-light);
   text-transform: uppercase;
   font-size: 0.7rem;
   letter-spacing: 0.05em;

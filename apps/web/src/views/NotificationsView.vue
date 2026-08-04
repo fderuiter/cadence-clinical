@@ -640,6 +640,6 @@ onMounted(async () => {
 }
 .notification-card:hover {
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-  border-color: var(--accent-light) !important;
+  border-color: var(--color-primary-light) !important;
 }
 </style>

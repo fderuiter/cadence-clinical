@@ -415,23 +415,23 @@ function getUnreadBadgeCount(node) {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: #ffffff;
-  border-right: 1px solid #e2e8f0;
-  padding: 16px;
+  background-color: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  padding: var(--spacing-md);
   box-sizing: border-box;
 }
 
 .tree-search-bar {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-md);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--spacing-xs);
 }
 
 .search-input {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #cbd5e1;
+  padding: var(--spacing-sm) var(--spacing-sm);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   font-size: 0.9rem;
   outline: 2px solid transparent;
@@ -439,41 +439,41 @@ function getUnreadBadgeCount(node) {
 }
 
 .search-input:focus {
-  border-color: #3b82f6;
+  border-color: var(--color-accent);
 }
 
 .zone-filter-select {
   width: 100%;
-  padding: 8px 10px;
-  border: 1px solid #cbd5e1;
+  padding: var(--spacing-xs) var(--spacing-xs);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   font-size: 0.85rem;
-  background-color: #f8fafc;
+  background-color: var(--color-surface-muted);
   outline: 2px solid transparent;
 }
 
 .tree-root-nodes {
   flex: 1;
   overflow-y: auto;
-  padding-right: 4px;
+  padding-right: var(--spacing-2xs);
 }
 
 .empty-tree-message {
-  padding: 16px;
+  padding: var(--spacing-md);
   text-align: center;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-style: italic;
   font-size: 0.9rem;
 }
 
 .tree-node {
-  margin-bottom: 4px;
+  margin-bottom: var(--spacing-2xs);
 }
 
 .node-header {
   display: flex;
   align-items: center;
-  padding: 8px 10px;
+  padding: var(--spacing-xs) var(--spacing-xs);
   border-radius: 6px;
   cursor: pointer;
   user-select: none;
@@ -482,41 +482,41 @@ function getUnreadBadgeCount(node) {
 }
 
 .node-header:hover {
-  background-color: #f1f5f9;
+  background-color: var(--color-surface-muted);
 }
 
 .toggle-icon {
   font-size: 0.7rem;
   width: 16px;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .folder-icon,
 .file-icon {
-  margin-right: 8px;
+  margin-right: var(--spacing-xs);
   font-size: 1.1rem;
 }
 
 .zone-label {
   font-weight: 700;
-  color: #1e293b;
-  margin-right: 6px;
+  color: var(--color-text);
+  margin-right: var(--spacing-2xs);
 }
 
 .section-label {
   font-weight: 600;
-  color: #475569;
-  margin-right: 6px;
+  color: var(--color-text-muted);
+  margin-right: var(--spacing-2xs);
 }
 
 .artifact-code {
   font-family: monospace;
   font-size: 0.8rem;
-  color: #2563eb;
-  background-color: #eff6ff;
-  padding: 2px 4px;
+  color: var(--color-accent);
+  background-color: var(--color-primary-light);
+  padding: var(--spacing-2xs) var(--spacing-2xs);
   border-radius: 4px;
-  margin-right: 8px;
+  margin-right: var(--spacing-xs);
 }
 
 .node-name {
@@ -527,39 +527,39 @@ function getUnreadBadgeCount(node) {
 }
 
 .unread-badge {
-  background-color: #ef4444;
-  color: #ffffff;
+  background-color: var(--color-error);
+  color: var(--color-surface);
   font-size: 0.75rem;
   font-weight: 700;
-  padding: 2px 6px;
+  padding: var(--spacing-2xs) var(--spacing-xs);
   border-radius: 10px;
-  margin-left: 8px;
+  margin-left: var(--spacing-xs);
   min-width: 14px;
   text-align: center;
 }
 
 .node-children {
-  margin-left: 16px;
-  padding-left: 8px;
-  border-left: 1px dashed #cbd5e1;
+  margin-left: var(--spacing-md);
+  padding-left: var(--spacing-xs);
+  border-left: 1px dashed var(--color-border);
 }
 
 .artifact-node {
   border-radius: 6px;
-  margin-left: 12px;
+  margin-left: var(--spacing-sm);
 }
 
 .artifact-node:hover {
-  background-color: #f1f5f9;
+  background-color: var(--color-surface-muted);
 }
 
 .artifact-node.is-selected {
-  background-color: #dbeafe;
-  border-left: 3px solid #2563eb;
+  background-color: var(--color-primary-light);
+  border-left: 3px solid var(--color-accent);
 }
 
 .artifact-node.is-selected .node-name {
   font-weight: 600;
-  color: #1e40af;
+  color: var(--color-primary-dark);
 }
 </style>

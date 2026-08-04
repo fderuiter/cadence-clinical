@@ -1309,19 +1309,19 @@ onMounted(async () => {
 
 <style scoped>
 .rule-card:hover {
-  border-color: var(--accent) !important;
+  border-color: var(--color-accent) !important;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
 }
 
 .rules-gating-banner {
-  border-left: 4px solid var(--error);
-  background-color: var(--error-bg);
-  padding: 24px;
+  border-left: 4px solid var(--color-error);
+  background-color: var(--color-error-bg);
+  padding: var(--spacing-xl);
 }
 
 .rules-gating-content {
   display: flex;
-  gap: 16px;
+  gap: var(--spacing-md);
   align-items: flex-start;
 }
 
@@ -1330,23 +1330,23 @@ onMounted(async () => {
 }
 
 .rules-gating-title {
-  color: var(--error);
+  color: var(--color-error);
   font-weight: bold;
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-xs);
 }
 
 .rules-gating-text {
-  color: var(--neutral-dark);
+  color: var(--color-text);
   font-size: 0.95rem;
   line-height: 1.6;
 }
 
 .rule-card-item {
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
-  background-color: var(--neutral-light);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  background-color: var(--color-surface-muted);
   transition: all 0.2s;
 }
 
@@ -1354,6 +1354,6 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-xs);
 }
 </style>

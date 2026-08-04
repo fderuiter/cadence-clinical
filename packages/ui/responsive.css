@@ -138,7 +138,7 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   margin-bottom: var(--spacing-md, 16px);
-  border: 1px solid var(--color-border, #e2e8f0);
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: 8px;
 }
 

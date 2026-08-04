@@ -1713,24 +1713,24 @@ onMounted(() => {
 <style scoped>
 .clinical-table th,
 .clinical-table td {
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--color-border);
 }
 .clinical-table tr:hover {
-  background-color: rgba(0, 0, 0, 0.02);
+  background-color: var(--color-surface-muted);
 }
 .spinner {
-  border: 3px solid rgba(0, 0, 0, 0.1);
+  border: 3px solid var(--color-border);
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  border-left-color: var(--accent);
+  border-left-color: var(--color-accent);
   animation: spin 1s linear infinite;
 }
-@keyframes spin {
-  0% {
+@keyframes spin {{
+  0%
     transform: rotate(0deg);
-  }
-  100% {
+  }{
+  100%
     transform: rotate(360deg);
   }
 }

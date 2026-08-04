@@ -79,10 +79,10 @@ const selectLanguage = (langCode) => {
 .language-translation-tabs-container {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  background-color: white;
-  padding: 12px 16px;
-  border: 1px solid var(--border);
+  gap: var(--spacing-sm);
+  background-color: var(--color-surface);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
 }
 
@@ -90,42 +90,42 @@ const selectLanguage = (langCode) => {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--spacing-sm);
 }
 
 .tabs-label {
   font-weight: 600;
   font-size: 0.9rem;
-  color: var(--neutral-dark);
+  color: var(--color-text);
 }
 
 .tabs-list {
   display: flex;
-  gap: 8px;
+  gap: var(--spacing-xs);
 }
 
 .tab-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  gap: var(--spacing-2xs);
+  padding: var(--spacing-2xs) var(--spacing-sm);
   font-size: 0.85rem;
-  background-color: var(--neutral-light);
-  border: 1px solid var(--border);
+  background-color: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .tab-item:hover {
-  background-color: #f1f5f9;
-  border-color: var(--accent);
+  background-color: var(--color-surface-muted);
+  border-color: var(--color-accent);
 }
 
 .tab-item.active {
-  background-color: #eff6ff;
-  border-color: var(--accent);
-  color: var(--primary);
+  background-color: var(--color-primary-light);
+  border-color: var(--color-accent);
+  color: var(--color-primary);
   box-shadow: 0 1px 3px rgba(59, 130, 246, 0.1);
   font-weight: 600;
 }
@@ -136,28 +136,28 @@ const selectLanguage = (langCode) => {
 
 .lang-code-badge {
   font-size: 0.7rem;
-  background-color: rgba(0, 0, 0, 0.05);
-  padding: 1px 4px;
+  background-color: var(--color-surface-muted);
+  padding: var(--spacing-2xs) var(--spacing-2xs);
   border-radius: 3px;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .active-lang-banner {
-  background-color: #f8fafc;
-  border-left: 3px solid var(--accent);
-  padding: 10px 12px;
+  background-color: var(--color-surface-muted);
+  border-left: 3px solid var(--color-accent);
+  padding: var(--spacing-sm) var(--spacing-sm);
   border-radius: 0 6px 6px 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--spacing-sm);
 }
 
 .active-lang-banner p {
   margin: 0;
   font-size: 0.8rem;
-  color: #475569;
+  color: var(--color-text-muted);
   line-height: 1.4;
   flex: 1;
 }
@@ -168,10 +168,10 @@ const selectLanguage = (langCode) => {
 
 .metric-badge {
   font-size: 0.75rem;
-  background-color: #f0fdf4;
-  color: #166534;
-  border: 1px solid #bbf7d0;
-  padding: 2px 8px;
+  background-color: var(--color-success-bg);
+  color: var(--color-success);
+  border: 1px solid var(--color-success-bg);
+  padding: var(--spacing-2xs) var(--spacing-xs);
   border-radius: 9999px;
   font-weight: 600;
 }

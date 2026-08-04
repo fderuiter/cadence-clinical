@@ -59,17 +59,17 @@ onMounted(() => {
 .document-manager-layout {
   display: flex;
   height: calc(100vh - 120px);
-  gap: 20px;
-  background-color: #f8fafc;
-  margin: -20px;
-  padding: 20px;
+  gap: var(--spacing-lg);
+  background-color: var(--color-surface-muted);
+  margin: calc(-1 * var(--spacing-lg));
+  padding: var(--spacing-lg);
   overflow: hidden;
 }
 
 .sidebar-binder-tree {
   width: 340px;
   min-width: 300px;
-  background-color: #ffffff;
+  background-color: var(--color-surface);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -77,7 +77,7 @@ onMounted(() => {
 
 .document-content-area {
   flex: 1;
-  background-color: #ffffff;
+  background-color: var(--color-surface);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);

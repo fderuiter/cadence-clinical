@@ -256,7 +256,7 @@ function handleKeyDown(e) {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: var(--color-text-muted);
   backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
@@ -266,12 +266,12 @@ function handleKeyDown(e) {
 }
 
 .command-palette-container {
-  background: white;
+  background: var(--color-surface);
   border-radius: 12px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border);
   box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    0 20px 25px -5px var(--color-border),
+    0 8px 10px -6px var(--color-border);
   width: 100%;
   max-width: 600px;
   overflow: hidden;
@@ -280,16 +280,16 @@ function handleKeyDown(e) {
 }
 
 .command-palette-header {
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-sm);
 }
 
 .command-palette-search-icon {
   font-size: 1.25rem;
-  color: var(--primary-light);
+  color: var(--color-primary-light);
 }
 
 .command-palette-input {
@@ -297,7 +297,7 @@ function handleKeyDown(e) {
   border: none;
   outline: none;
   font-size: 1.1rem;
-  color: var(--primary);
+  color: var(--color-primary);
   font-family: var(--font);
   background: transparent;
 }
@@ -307,8 +307,8 @@ function handleKeyDown(e) {
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: var(--primary-light);
-  padding: 0 4px;
+  color: var(--color-primary-light);
+  padding: 0 var(--spacing-2xs);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -316,23 +316,23 @@ function handleKeyDown(e) {
 }
 
 .command-palette-close-btn:hover {
-  color: var(--primary);
+  color: var(--color-primary);
 }
 
 .command-palette-list {
   max-height: 350px;
   overflow-y: auto;
-  padding: 8px;
+  padding: var(--spacing-xs);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--spacing-2xs);
 }
 
 .command-item {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 10px 14px;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-sm) var(--spacing-md);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s ease-in-out;
@@ -340,8 +340,8 @@ function handleKeyDown(e) {
 }
 
 .command-item.active {
-  background-color: var(--neutral-light);
-  border-left-color: var(--accent);
+  background-color: var(--color-surface-muted);
+  border-left-color: var(--color-accent);
 }
 
 .command-icon {
@@ -360,39 +360,39 @@ function handleKeyDown(e) {
 .command-name {
   font-weight: 600;
   font-size: 0.95rem;
-  color: var(--primary);
+  color: var(--color-primary);
 }
 
 .command-desc {
   font-size: 0.8rem;
-  color: var(--primary-light);
-  margin-top: 2px;
+  color: var(--color-primary-light);
+  margin-top: var(--spacing-2xs);
 }
 
 .command-palette-no-results {
-  padding: 24px;
+  padding: var(--spacing-xl);
   text-align: center;
-  color: var(--primary-light);
+  color: var(--color-primary-light);
   font-size: 0.95rem;
 }
 
 .command-palette-footer {
-  padding: 10px 16px;
-  background-color: var(--neutral-light);
-  border-top: 1px solid var(--border);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--color-surface-muted);
+  border-top: 1px solid var(--color-border);
   display: flex;
   justify-content: space-between;
   font-size: 0.75rem;
-  color: var(--primary-light);
+  color: var(--color-primary-light);
 }
 
 .command-palette-hints kbd {
-  background-color: white;
-  border: 1px solid var(--border);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  padding: 1px 5px;
+  padding: var(--spacing-2xs) var(--spacing-2xs);
   font-family: monospace;
   font-size: 0.75rem;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 0 var(--color-border);
 }
 </style>
