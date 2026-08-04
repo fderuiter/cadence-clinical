@@ -357,7 +357,7 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
 
         // Mutate all stores
         await signatureStore.submitBatchSignature({
-          studyId: "S", subjectId: "SU", formIds: ["F"], password: "P", meaning: "M"
+          studyId: "S", subjectId: "SU", formIds: ["F"], password: "P", meaning: "M" // pragma: allowlist secret
         });
         await notificationsStore.fetchNotifications();
         await notificationsStore.acknowledge("notif-001", "R1");
