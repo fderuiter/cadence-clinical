@@ -9,10 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2056
-- **Passed:** 2056 🟢
-- **Total Automated Test Cases Run:** 2063
-- **Passed:** 2063 🟢
+- **Total Automated Test Cases Run:** 2061
+- **Passed:** 2061 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -262,6 +260,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_clean_postgres_databases_calls_truncate` | `tests.test_asgi_live_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_live_db_halt_when_neo4j_unreachable` | `tests.test_asgi_live_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_live_db_halt_when_postgres_unreachable` | `tests.test_asgi_live_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_js_reordered_helper_functions` | `tests.test_ast_merge_driver` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_python_edited_and_reordered` | `tests.test_ast_merge_driver` | PRD-SYS-002 | 🟢 PASSED | < 1s |
+| `test_python_imports_merged_and_sorted` | `tests.test_ast_merge_driver` | PRD-SYS-002 | 🟢 PASSED | < 1s |
+| `test_python_overlapping_logical_edits_fallback` | `tests.test_ast_merge_driver` | PRD-SYS-003 | 🟢 PASSED | < 1s |
+| `test_python_reordered_helper_functions` | `tests.test_ast_merge_driver` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_audit_records_ip_and_custom_timestamp` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_hard_delete_is_prevented` | `tests.test_audit` | Trace-1 | 🟢 PASSED | < 1s |
 | `test_insert_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | < 1s |
