@@ -22,9 +22,7 @@
 
         <!-- Checklist Section -->
         <div class="checklist-section">
-          <h4 class="checklist-title">
-            Pre-Approval Checklist
-          </h4>
+          <h4 class="checklist-title">Pre-Approval Checklist</h4>
           <ul class="checklist-list">
             <li class="checklist-item">
               <span
@@ -33,10 +31,12 @@
               >
                 {{ hasZeroUnresolved ? "✓" : "❌" }}
               </span>
-              <span>No unresolved CRITICAL review comments ({{
-                unresolvedCount
-              }}
-                pending)</span>
+              <span
+                >No unresolved CRITICAL review comments ({{
+                  unresolvedCount
+                }}
+                pending)</span
+              >
             </li>
             <li class="checklist-item">
               <span
@@ -52,28 +52,14 @@
 
         <!-- Form fields -->
         <div class="form-group">
-          <label for="approval-role">
-            Select Role
-          </label>
-          <select
-            id="approval-role"
-            v-model="selectedRole"
-          >
-            <option
-              value=""
-              disabled
-            >
-              -- Select Role --
-            </option>
-            <option value="Lead Data Manager">
-              Lead Data Manager
-            </option>
+          <label for="approval-role"> Select Role </label>
+          <select id="approval-role" v-model="selectedRole">
+            <option value="" disabled>-- Select Role --</option>
+            <option value="Lead Data Manager">Lead Data Manager</option>
             <option value="Principal Investigator">
               Principal Investigator
             </option>
-            <option value="Lead Biostatistician">
-              Lead Biostatistician
-            </option>
+            <option value="Lead Biostatistician">Lead Biostatistician</option>
           </select>
         </div>
 
@@ -86,36 +72,26 @@
             v-model="password"
             type="password"
             placeholder="Enter password..."
-          >
+          />
         </div>
 
         <div class="form-group last-group">
-          <label for="approval-reason">
-            Reason for Approval
-          </label>
+          <label for="approval-reason"> Reason for Approval </label>
           <input
             id="approval-reason"
             v-model="reason"
             type="text"
             placeholder="Reason for approval (e.g. Protocol amendment complete)..."
-          >
+          />
         </div>
 
         <!-- Handoff Error Status Section -->
-        <div
-          v-if="error"
-          id="approval-error-msg"
-          class="error-msg"
-        >
+        <div v-if="error" id="approval-error-msg" class="error-msg">
           {{ props.isOpen ? error : "" }}
         </div>
       </div>
       <div class="modal-footer">
-        <button
-          id="btn-cancel-approval"
-          class="btn btn-cancel"
-          @click="cancel"
-        >
+        <button id="btn-cancel-approval" class="btn btn-cancel" @click="cancel">
           Cancel
         </button>
         <button
@@ -387,7 +363,7 @@ button:focus-visible {
   input,
   select,
   .btn {
-    min-height: 44px;
+    min-height: 48px;
     padding: 10px 14px;
     font-size: 16px;
   }

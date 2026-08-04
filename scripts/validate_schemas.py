@@ -12,6 +12,7 @@ Compliance:
 - Gate 3: Executed as part of continuous integration checks.
 """
 
+import importlib
 import os
 import sys
 from typing import Any
@@ -27,32 +28,42 @@ for name in ["core-models", "database", "deid", "security", "ui"]:
     if pkg_path not in sys.path:
         sys.path.insert(0, pkg_path)
 
-try:
-    from apps.ctms.main import app as ctms_app
-    from apps.designer.main import app as designer_app
-    from apps.etmf.main import app as etmf_app
-    from apps.execution.main import app as execution_app
-    from apps.interop.main import app as interop_app
-    from apps.notifications.main import app as notifications_app
-    from apps.quality.main import app as quality_app
-    from apps.safety.main import app as safety_app
-    from apps.tickets.main import app as tickets_app
-except ImportError as e:
-    print(f"Error importing service entrypoints: {e}", file=sys.stderr)
-    sys.exit(1)
+
+def discover_services() -> dict[str, dict[str, Any]]:
+    """Dynamically scan apps directory and load microservices with their API configurations."""
+    config = {}
+    apps_dir = os.path.join(app_root, "apps")
+    if not os.path.isdir(apps_dir):
+        return config
+
+    # Scan subdirectories under apps/
+    for name in sorted(os.listdir(apps_dir)):
+        dir_path = os.path.join(apps_dir, name)
+        # Exclude gateway aggregator, non-directories, and hidden files/folders
+        if name == "gateway" or name.startswith(".") or not os.path.isdir(dir_path):
+            continue
+
+        # Check for main.py entrypoint containing FastAPI application object
+        main_path = os.path.join(dir_path, "main.py")
+        if not os.path.isfile(main_path):
+            continue
+
+        # Dynamically load the module using Python's standard dynamic import machinery
+        try:
+            module = importlib.import_module(f"apps.{name}.main")
+            app = getattr(module, "app", None)
+            if app is not None:
+                # Decide prefix
+                prefix = "ETMF_" if name == "etmf" else f"{name.capitalize()}_"
+                config[name] = {"app": app, "prefix": prefix}
+        except Exception as e:
+            print(f"Error dynamically importing service '{name}': {e}", file=sys.stderr)
+
+    return config
+
 
 # Map downstream service identifiers to their corresponding FastAPI apps and gateway prefixes
-SERVICES_CONFIG = {
-    "designer": {"app": designer_app, "prefix": "Designer_"},
-    "execution": {"app": execution_app, "prefix": "Execution_"},
-    "etmf": {"app": etmf_app, "prefix": "ETMF_"},
-    "interop": {"app": interop_app, "prefix": "Interop_"},
-    "ctms": {"app": ctms_app, "prefix": "Ctms_"},
-    "notifications": {"app": notifications_app, "prefix": "Notifications_"},
-    "quality": {"app": quality_app, "prefix": "Quality_"},
-    "safety": {"app": safety_app, "prefix": "Safety_"},
-    "tickets": {"app": tickets_app, "prefix": "Tickets_"},
-}
+SERVICES_CONFIG = discover_services()
 
 
 def validate_schemas() -> bool:

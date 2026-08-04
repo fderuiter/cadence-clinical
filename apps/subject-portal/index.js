@@ -7,6 +7,7 @@ import {
   normalizeApprovedConsent,
   shapeComprehensionAnswers,
   interpretComprehensionResult,
+  initHoverDetection,
 } from "ui";
 import {
   queueSubmission,
@@ -1667,6 +1668,9 @@ async function initializeApp() {
       const app = createApp(App);
       app.mount(appEl);
     }
+
+    // Dynamic Hover Pointer Capability Detection
+    initHoverDetection();
 
     // Set up global focus trapping for the signature modal dialog
     if (!window.__TAB_LISTENER_REGISTERED__) {

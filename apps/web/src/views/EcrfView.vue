@@ -14,6 +14,8 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        flex-wrap: wrap;
+        gap: var(--spacing-sm);
         background-color: #f8fafc;
         border: 1px solid var(--border);
         border-radius: 8px;
@@ -37,7 +39,14 @@
       </div>
 
       <!-- Let user select role in demo mode to test Site Coordinator (CRC) vs Monitor (CRA) workflows -->
-      <div style="display: flex; gap: 8px; align-items: center">
+      <div
+        style="
+          display: flex;
+          gap: var(--spacing-xs);
+          align-items: center;
+          flex-wrap: wrap;
+        "
+      >
         <label
           for="role-tester-select"
           style="font-size: 0.8rem; font-weight: bold"
@@ -58,7 +67,7 @@
       </div>
     </div>
 
-    <div class="grid-2">
+    <div class="grid-2-responsive">
       <!-- Dynamic eCRF Form -->
       <div class="card">
         <div class="card-title">Subject eCRF Data Entry Form</div>
@@ -67,8 +76,9 @@
         <div
           style="
             display: flex;
-            gap: 16px;
-            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
             border-bottom: 1px solid var(--border);
             padding-bottom: 12px;
           "
@@ -124,10 +134,12 @@
             border: 1px solid #bfdbfe;
             border-radius: 8px;
             padding: 12px 16px;
-            margin-bottom: 16px;
+            margin-bottom: var(--spacing-md);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
           "
         >
           <div style="font-size: 0.9rem; font-weight: 600; color: #1e40af">
@@ -152,12 +164,7 @@
 
         <form
           id="form-VS_DEMO"
-          class="clinical-form clinical-form-grid"
-          style="
-            display: grid;
-            grid-template-columns: repeat(12, 1fr);
-            gap: 16px;
-          "
+          class="clinical-form responsive-grid"
           @submit.prevent
         >
           <template v-for="field in store.ecrfFields" :key="field.id">

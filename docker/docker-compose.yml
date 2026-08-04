@@ -66,8 +66,6 @@ services:
       - NEO4J_URI=bolt://neo4j:7687
       - NEO4J_USER=neo4j
       - NEO4J_PASSWORD=cadence_password
-    ports:
-      - "8001:8001"
     depends_on:
       neo4j:
         condition: service_healthy
@@ -87,8 +85,6 @@ services:
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - DATABASE_URL=postgresql+asyncpg://cadence:cadence_password@postgres:5432/cadence_edc
-    ports:
-      - "8002:8002"
     depends_on:
       postgres:
         condition: service_healthy
@@ -103,8 +99,6 @@ services:
       - ..:/app
     environment:
       - ORG_DATABASE_URL=postgresql+asyncpg://cadence:cadence_password@postgres:5432/cadence_edc
-    ports:
-      - "8012:8012"
     depends_on:
       postgres:
         condition: service_healthy
@@ -119,8 +113,6 @@ services:
       - ..:/app
     environment:
       - EISF_DATABASE_URL=sqlite+aiosqlite:////app/eisf.db
-    ports:
-      - "8010:8010"
     depends_on:
       postgres:
         condition: service_healthy
@@ -138,8 +130,6 @@ services:
       - INBOUND_EMAIL_HMAC_SECRET=dev-default-secret-inbound-email-hmac
       - INBOUND_EMAIL_MAX_SIZE_BYTES=10485760
       - NOTIFICATIONS_URL=http://notifications:8006
-    ports:
-      - "8003:8003"
     depends_on:
       postgres:
         condition: service_healthy
@@ -154,8 +144,6 @@ services:
       - ..:/app
     environment:
       - CTMS_DATABASE_URL=sqlite+aiosqlite:////app/ctms.db
-    ports:
-      - "8007:8007"
     depends_on:
       postgres:
         condition: service_healthy
@@ -170,8 +158,6 @@ services:
       - ..:/app
     environment:
       - QUALITY_DATABASE_URL=sqlite+aiosqlite:////app/quality.db
-    ports:
-      - "8005:8005"
     depends_on:
       postgres:
         condition: service_healthy
@@ -186,8 +172,6 @@ services:
       - ..:/app
     environment:
       - INTEROP_DATABASE_URL=sqlite+aiosqlite:////app/interop.db
-    ports:
-      - "8004:8004"
     depends_on:
       postgres:
         condition: service_healthy
@@ -202,8 +186,6 @@ services:
       - ..:/app
     environment:
       - TICKETS_DATABASE_URL=sqlite+aiosqlite:////app/tickets.db
-    ports:
-      - "8009:8009"
     depends_on:
       postgres:
         condition: service_healthy
@@ -219,8 +201,6 @@ services:
     environment:
       - SAFETY_DATABASE_URL=sqlite+aiosqlite:////app/safety.db
       - SAFETY_SALT=internal-safety-salt-12345
-    ports:
-      - "8008:8008"
     depends_on:
       postgres:
         condition: service_healthy
@@ -245,8 +225,6 @@ services:
       - WEBHOOK_URL=http://webhooks.local/receiver
       - WEBHOOK_SIGNING_SECRET=dev_webhook_secret_key_12345
       - WEBHOOK_TIMEOUT=5.0
-    ports:
-      - "8006:8006"
     depends_on:
       postgres:
         condition: service_healthy
@@ -263,8 +241,6 @@ services:
       - ECONSENT_DATABASE_URL=sqlite+aiosqlite:////app/econsent.db
       - GATEWAY_URL=http://gateway:8000
       - GATEWAY_SECRET=internal-gateway-secret-12345
-    ports:
-      - "8011:8011"
     depends_on:
       postgres:
         condition: service_healthy
