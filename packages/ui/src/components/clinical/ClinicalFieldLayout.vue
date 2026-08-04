@@ -13,12 +13,15 @@
     <legend v-if="tag === 'fieldset'">
       {{ label }}
     </legend>
-    <label v-else :for="id">{{ label }}</label>
+    <label
+      v-else
+      :for="id"
+    >{{ label }}</label>
 
     <div
       :class="tag === 'fieldset' ? 'radio-options-wrapper' : 'input-wrapper'"
     >
-      <slot :id="id" />
+      <slot :id="id"></slot>
 
       <!-- Query Flag -->
       <ClinicalQueryFlag
@@ -30,10 +33,13 @@
     </div>
 
     <!-- Additional markup like lookup status indicators -->
-    <slot name="after-input" />
+    <slot name="after-input"></slot>
 
     <!-- Validation Error -->
-    <div v-if="showError" class="validation-error-msg">
+    <div
+      v-if="showError"
+      class="validation-error-msg"
+    >
       {{ error }}
     </div>
 
