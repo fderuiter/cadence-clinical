@@ -19,6 +19,8 @@ class RelationalDatabaseManager:
         self.session_maker: async_sessionmaker[AsyncSession] | None = None
 
     def init_db(self, database_url: str, **kwargs: Any) -> None:
+        if self.engine is not None:
+            return
         engine_options = {}
 
         # Standardize JSON serialization/deserialization across SQLite and PostgreSQL
