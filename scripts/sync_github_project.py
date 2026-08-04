@@ -624,12 +624,20 @@ def main():
         native_blocked_by = issue.get("blockedBy", {}).get("nodes", [])
         open_native_blockers = [b for b in native_blocked_by if b["state"] == "OPEN"]
 
+        # Backlog gating logic (Label-Based Backlog Gating)
+        is_backlog_gated = False
+        if "needs-triage" in labels:
+            if "bug" in labels and "enhancement" not in labels:
+                is_backlog_gated = False
+            else:
+                is_backlog_gated = True
+
         # Status logic
         if state == "CLOSED":
             target_status = "Done"
         elif "jules" in labels:
             target_status = "In progress"
-        elif open_native_blockers or num in epics:
+        elif is_backlog_gated or open_native_blockers or num in epics:
             target_status = "Backlog"
         else:
             target_status = "Ready"
