@@ -381,7 +381,9 @@ def verify_inbound_email_signature(
     """Verifies that the inbound email HMAC signature is correct, fresh, and not replayed."""
     import time
 
-    secret = os.getenv("INBOUND_EMAIL_HMAC_SECRET", "").strip() or INBOUND_EMAIL_HMAC_SECRET
+    secret = (
+        os.getenv("INBOUND_EMAIL_HMAC_SECRET", "").strip() or INBOUND_EMAIL_HMAC_SECRET
+    )
 
     # 1. Timestamp Freshness Check (300-second drift window)
     try:
