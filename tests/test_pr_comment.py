@@ -96,14 +96,17 @@ def test_build_comment_body():
         "adr": "success",
         "audit": "success",
         "conflict": "success",
+        "duplication": "success",
     }
     body = build_comment_body(outcomes, has_failures=False)
     assert "### ✅ PR Quality Verification Passed" in body
     assert "✅ Passed" in body
     assert "✅ No Conflicts" in body
+    assert "**Code Duplication Scan** | ✅ Passed" in body
 
-    body_fail = build_comment_body(outcomes, has_failures=True)
+    body_fail = build_comment_body({"duplication": "failure"}, has_failures=True)
     assert "### ⚠️ Action Required: Quality Gate Verification Issues" in body_fail
+    assert "**Code Duplication Scan** | ❌ Failed" in body_fail
 
 
 def test_traceability_outcome_handling():

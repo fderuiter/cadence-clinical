@@ -344,7 +344,7 @@ def build_comment_body(
         ("ADR Validation (validate_adrs.py)", "adr"),
         ("Dependency, Static Audit & Secrets Scan", "audit"),
         ("DEID Compliance Scan", "deid"),
-        ("Code Duplication Scan", "detect_duplication.py"),
+        ("Code Duplication Scan", "duplication"),
         ("Git Merge Conflicts", "conflict"),
         ("GxP Container Validation Suite", "gxp_validation"),
         ("Database Migration Integrity", "migration"),

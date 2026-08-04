@@ -236,6 +236,7 @@ When CI fails, use this table to identify the root cause and exact fix:
 | `ADR validation failed` | Architectural change without a matching ADR | `python3 scripts/create_adr.py ...` — fill in rationale |
 | `Bandit: high severity issue` | Security-sensitive pattern in code | Fix the flagged pattern; if intentional add `# nosec B<code>: <justification>` |
 | `Secret detected` | Credential or token in source | Remove the secret; update `.secrets.baseline` with `detect-secrets scan` |
+| `Code Duplication Detected Above Threshold` | A consecutive block of 15 or more normalized lines of code is duplicated across different files. | Run `python3 scripts/detect_duplication.py` to identify, refactor to share logic, or add to the inline list of ignored sets inside `scripts/detect_duplication.py` if exempt. |
 
 ---
 
@@ -333,6 +334,55 @@ When testing endpoints protected by `packages/security/middleware.py` (`GatewayA
 
 When executing `uv run` commands in sandboxed terminal environments, ensure Python virtual environment binaries are synchronized (`uv sync --all-extras`) or run commands with appropriate environment permissions if subprocess execution requires external Python path resolution.
 
+### 11. Code Duplication Prevention & Detection Guidelines
+
+To prevent pipeline failures caused by unexpected code duplication, agents must understand the mechanics of the workspace's automated Code Duplication Scanner and how to manage logical similarity.
+
+#### Duplication Thresholds & Targets
+- **15-Line Sliding Window:** The detection engine uses a sliding-window threshold of **15 consecutive identical normalized lines**. Any contiguous block of logic meeting or exceeding this threshold across different files will trigger a pipeline blockage.
+- **Target File Formats:** The scanner targets only the following extension formats: `.py`, `.js`, `.vue`, and `.css`.
+
+#### Line Normalization Mechanics
+The scanner is highly robust against surface-level styling differences. To prevent false positives, each line of code is normalized through the following steps before comparison:
+1. **URL Masking:** Standard URLs are mapped to a generic placeholder to prevent differences in URL endpoints from masking duplicated structures.
+2. **Comment Stripping:**
+   - Single-line comments starting with `#` or `//` are completely stripped.
+   - Multi-line block comments (`/* ... */` format in JS/CSS) are removed.
+   - Inline comments are truncated from the line.
+3. **Whitespace & Boilerplate Removal:** All leading/trailing whitespaces are trimmed. Empty lines and standard boilerplate instructions—such as `import`, `from`, `export`, destructuring assignments like `const {`, and standalone brackets/braces (`{`, `}`, `[`, `]`)—are ignored.
+4. **String Format Standardization:** Single quotes `'` and backticks `` ` `` are replaced with standard double quotes `"` to treat functionally equivalent strings identically.
+
+#### Running the Scanner Locally
+Agents must run the duplication scanner locally to verify changes before pushing them:
+- **Workspace-wide Scan:**
+  ```bash
+  python3 scripts/detect_duplication.py
+  ```
+- **Targeted Scan (Changed Files Mode):**
+  Pass specific target files as arguments to run the scanner in a faster, incremental mode:
+  ```bash
+  python3 scripts/detect_duplication.py apps/execution/main.py apps/execution/routers/sdv.py
+  ```
+  To dynamically run against all staged and unstaged modified files from Git:
+  ```bash
+  python3 scripts/detect_duplication.py $(git diff --name-only | grep -E '\.(py|js|vue|css)$')
+  ```
+
+#### How to Whitelist Legitimate Duplications (Inline Exemptions)
+In scenarios where refactoring to shared helpers is highly impractical or technically impossible due to strict microservice/module boundaries, you may exempt specific file pairs from the scanner.
+1. Open the scanner script at `/app/scripts/detect_duplication.py`.
+2. Locate the hardcoded inline list of `ignored` sets in the loop that evaluates duplicates (around line 223).
+3. Append a new set containing the relative repo paths of the files to exempt. For example:
+
+```python
+ignored_pair = {
+    "apps/my-new-app/main.py",
+    "apps/another-app/main.py",
+}
+```
+
+4. **Note:** External configuration files (such as YAML/JSON) must not be created or modified for whitelists, keeping the scanner self-contained and inline.
+
 ---
 
 ## Environment State Recovery
@@ -401,6 +451,8 @@ Agents may invoke these tools directly when needed:
 | `python3 scripts/validate_markdown.py` | Check all Markdown link integrity |
 | `uv run pytest -n auto --cov=apps --cov=packages` | Run full test suite with coverage |
 | `uv run bandit -c pyproject.toml -ll -ii -r apps packages` | Static security analysis |
+| `python3 scripts/detect_duplication.py` | Run workspace-wide code duplication scanner |
+| `python3 scripts/detect_duplication.py <files>` | Run duplication scanner in target changed-files mode |
 
 ---
 
@@ -417,4 +469,5 @@ Before submitting a PR, verify all items:
 * [ ] All local checks pass: `uv run ruff check .` and `uv run ruff format --check .`
 * [ ] GxP compliance docs are up to date: `uv run python scripts/sync_gxp.py` run and committed.
 * [ ] `docs/SDLC/` Markdown docs updated if a service boundary or data flow changed.
+* [ ] No code duplication failures (run `python3 scripts/detect_duplication.py` locally to verify, or whitelist if exempt).
 * [ ] No binary `.docx` files, `report.xml`, or secrets are staged.
