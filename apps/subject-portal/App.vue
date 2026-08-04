@@ -71,6 +71,11 @@
             <span class="info-lbl">Status:</span>
             <span class="info-val text-success">Active</span>
           </div>
+          <div class="info-row" style="margin-top: 12px;">
+            <button id="btn-logout" type="button" class="btn btn-secondary" style="width: 100%; padding: 4px 8px; font-size: 12px;" @click="handleLogout">
+              Logout
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -715,7 +720,11 @@
 
 <script setup>
 import { onMounted, nextTick } from "vue";
-import { state, showView } from "./index.js";
+import { state, showView, logout } from "./index.js";
+
+function handleLogout() {
+  logout();
+}
 
 const tabs = [
   { id: "tasks", label: "My Tasks", icon: "📋", viewId: "view-tasks" },
