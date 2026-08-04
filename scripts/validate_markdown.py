@@ -605,8 +605,7 @@ def import_class_by_name_from_map(class_name, codebase_map):
                 cls = getattr(module, class_name, None)
                 if cls is not None:
                     return cls, None
-                else:
-                    last_err = f"Class '{class_name}' not found in module '{p}'."
+                last_err = f"Class '{class_name}' not found in module '{p}'."
             except Exception as e:
                 last_err = f"{type(e).__name__}: {str(e)}"
     return None, last_err
@@ -897,7 +896,9 @@ def validate_json_block(
         cls = None
         import_error = None
         try:
-            cls, import_error = import_class_by_name_from_map(matched_model_name, codebase_map)
+            cls, import_error = import_class_by_name_from_map(
+                matched_model_name, codebase_map
+            )
             if cls is not None:
                 try:
                     cls.model_validate(doc_dict)

@@ -526,6 +526,7 @@ def test_sys_path_append():
     """Verifies that packages and apps subdirectories are appended to sys.path, not prepended."""
     import sys
     from pathlib import Path
+
     for p in Path("/app/packages").glob("*"):
         if p.is_dir():
             path_str = str(p)
@@ -537,6 +538,7 @@ def test_sys_path_append():
 def test_mock_environment_variables():
     """Verifies that default/mock environment configurations are injected into os.environ."""
     import os
+
     assert os.environ.get("DATABASE_URL") is not None
     assert os.environ.get("ENV") is not None
     assert os.environ.get("ENVIRONMENT") is not None
@@ -547,21 +549,21 @@ def test_exclude_tests_from_codebase_map(tmp_path):
     """Verifies that 'tests' and 'test' directories are excluded during codebase map generation."""
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
-    
+
     apps_dir = repo_root / "apps" / "designer"
     apps_dir.mkdir(parents=True)
     (apps_dir / "models.py").write_text("class RealModel:\n    pass\n")
-    
+
     tests_dir = repo_root / "tests"
     tests_dir.mkdir()
     (tests_dir / "test_models.py").write_text("class TestModel:\n    pass\n")
-    
+
     test_dir = repo_root / "test"
     test_dir.mkdir()
     (test_dir / "test_something.py").write_text("class AnotherTestModel:\n    pass\n")
-    
+
     codebase_map = vm.build_codebase_map(repo_root)
-    
+
     assert "RealModel" in codebase_map
     assert "TestModel" not in codebase_map
     assert "AnotherTestModel" not in codebase_map
@@ -571,7 +573,7 @@ def test_degraded_linter_warnings_and_fallback(tmp_path, capsys):
     """Verifies that a dynamic import failure emits a degraded coverage warning to stderr, then falls back."""
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
-    
+
     packages_dir = repo_root / "packages" / "core-models"
     packages_dir.mkdir(parents=True)
     cb_file = packages_dir / "failing_model.py"
@@ -580,11 +582,11 @@ raise ValueError("Simulated top-level import failure")
 class BrokenModel(BaseModel):
     id: str = Field(...)
 """)
-    
+
     docs_dir = repo_root / "docs"
     docs_dir.mkdir()
     md_file = docs_dir / "test_doc.md"
-    
+
     md_content = """# Doc
 #### BrokenModel
 ```json
@@ -594,20 +596,20 @@ class BrokenModel(BaseModel):
 ```
 """
     md_file.write_text(md_content)
-    
+
     codebase_map = vm.build_codebase_map(repo_root)
-    
+
     assert "BrokenModel" in codebase_map
-    
+
     vm.process_markdown_file(md_file, repo_root, set(), set(), codebase_map)
-    
+
     captured = capsys.readouterr()
-    
+
     assert "[WARNING] Degraded linter coverage" in captured.err
     assert "Failed to dynamically load Pydantic model 'BrokenModel'" in captured.err
     assert "ValueError: Simulated top-level import failure" in captured.err
     assert "Falling back to basic shallow AST structure verification" in captured.err
-    
+
     assert len(vm.errors) == 0
 
 
@@ -615,7 +617,7 @@ def test_degraded_linter_warnings_and_fallback_failure(tmp_path, capsys):
     """Verifies that if fallback also fails (missing required field), errors are reported."""
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
-    
+
     packages_dir = repo_root / "packages" / "core-models"
     packages_dir.mkdir(parents=True)
     cb_file = packages_dir / "failing_model2.py"
@@ -625,11 +627,11 @@ class BrokenModel2(BaseModel):
     id: str = Field(...)
     name: str = Field(...)
 """)
-    
+
     docs_dir = repo_root / "docs"
     docs_dir.mkdir()
     md_file = docs_dir / "test_doc.md"
-    
+
     md_content = """# Doc
 #### BrokenModel2
 ```json
@@ -639,17 +641,19 @@ class BrokenModel2(BaseModel):
 ```
 """
     md_file.write_text(md_content)
-    
+
     codebase_map = vm.build_codebase_map(repo_root)
-    
+
     vm.process_markdown_file(md_file, repo_root, set(), set(), codebase_map)
-    
+
     captured = capsys.readouterr()
-    
+
     assert "[WARNING] Degraded linter coverage" in captured.err
     assert "ValueError: Another simulated top-level failure" in captured.err
-    
-    assert len(vm.errors) == 1
-    assert "JSON example mismatch with Pydantic model 'BrokenModel2'" in vm.errors[0]["message"]
-    assert "Missing required fields: ['name']" in vm.errors[0]["message"]
 
+    assert len(vm.errors) == 1
+    assert (
+        "JSON example mismatch with Pydantic model 'BrokenModel2'"
+        in vm.errors[0]["message"]
+    )
+    assert "Missing required fields: ['name']" in vm.errors[0]["message"]
