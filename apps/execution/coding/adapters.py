@@ -59,7 +59,7 @@ class SQLCodingRepository:
                 try:
                     status_enum = CodingState[status.upper()]
                     stmt = stmt.where(ClinicalCodingAssignment.status == status_enum)
-                except KeyError, ValueError:
+                except (KeyError, ValueError):
                     stmt = stmt.where(ClinicalCodingAssignment.status == status)
         if verbatim_text:
             stmt = stmt.where(ClinicalCodingAssignment.verbatim_text == verbatim_text)
@@ -75,7 +75,7 @@ class SQLCodingRepository:
                     stmt = stmt.where(
                         ClinicalCodingAssignment.dictionary_type == dict_type_enum
                     )
-                except KeyError, ValueError:
+                except (KeyError, ValueError):
                     stmt = stmt.where(
                         ClinicalCodingAssignment.dictionary_type == dictionary_type
                     )
