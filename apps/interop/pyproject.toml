@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "apps-interop"
+version = "0.1.0"
+description = "Interop microservice"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.139.2,<0.140.0",
+    "pydantic>=2.6.0",
+    "sqlalchemy>=2.0.28",
+    "sqlmodel>=0.0.39",
+    "asyncpg>=0.29.0",
+    "httpx>=0.27.0",
+    "packages-database",
+    "packages-security",
+    "packages-deid",
+    "packages-core-models",
+]
+
+[tool.hatch.build.targets.wheel.sources]
+"" = "apps/interop"

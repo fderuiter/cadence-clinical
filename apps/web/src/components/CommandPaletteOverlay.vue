@@ -47,8 +47,12 @@
         >
           <span class="command-icon" aria-hidden="true">{{ dest.icon }}</span>
           <div class="command-details">
-            <div class="command-name">{{ dest.name }}</div>
-            <div class="command-desc">{{ dest.description }}</div>
+            <div class="command-name">
+              {{ dest.name }}
+            </div>
+            <div class="command-desc">
+              {{ dest.description }}
+            </div>
           </div>
         </div>
       </div>

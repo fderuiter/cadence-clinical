@@ -119,7 +119,7 @@ flowchart TD
         tickets[tickets - Ticket tracking service]
         safety[safety - Clinical safety microservice]
         notifications[notifications - Notifications & Webhooks Dispatcher]
-        econsent[econsent - eConsent Gateway Integration]
+        econsent[econsent - Electronic Consent Service]
 
         %% Databases
         postgres[(postgres - Relational Database)]
