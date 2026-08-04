@@ -208,6 +208,13 @@ def resolve_path(path_str, md_file_path, repo_root, root_dirs, root_files):
     if not path_str:
         return None
 
+    # Ignore gitignored build folders or coverage folders
+    if any(
+        p in path_str.replace("\\", "/").split("/")
+        for p in ("dist", "build", "node_modules", "coverage")
+    ):
+        return None
+
     # Ignore web/external URLs
     if (
         path_str.startswith(("http://", "https://", "mailto:", "tel:"))
