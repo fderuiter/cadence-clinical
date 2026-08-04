@@ -41,6 +41,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
 
 ### 2. API Gateway, Security & Identity
+- [2026-08-04: Fail-Fast Environment Validation for Cryptographic Secrets](2026-08-04-fail-fast-environment-validation-for-cryptographic-secrets.md)
 - [2026-08-04: Multi-Node Signature Replay Prevention with Redis Fallback](2026-08-04-multi-node-signature-replay-prevention-with-redis-fallback.md)
 - [2026-08-04: Refactor security context decorator for Python 3.14 compatibility](2026-08-04-refactor-security-context-decorator-for-python-314-compatibility.md)
 - [2026-08-04: Implement Native Interval Filtering and Custom Name Matching in Scrubber](2026-08-04-implement-native-interval-filtering-and-custom-name-matching-in-scrubber.md)
