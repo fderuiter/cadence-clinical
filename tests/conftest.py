@@ -294,6 +294,12 @@ try:
 except Exception as e:
     if os.environ.get("GITHUB_ACTIONS") == "true":
         print(f"[conftest] ERROR: Database initialization failed in CI: {e}")
+        if os.environ.get("USE_LIVE_DB") == "true":
+            import pytest
+
+            pytest.exit(
+                f"Database connection error: PostgreSQL instance is unreachable. {e}"
+            )
         raise
     elif os.environ.get("USE_LIVE_DB") == "true":
         import pytest
