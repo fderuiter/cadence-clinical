@@ -280,7 +280,7 @@ async def process_coding_action(
             from apps.execution.database.context import current_user_id
 
             resolved_actor = current_user_id.get() or "system"
-        except (LookupError, ValueError):
+        except (LookupError, ValueError):  # fmt: skip
             resolved_actor = "system"
 
     # 1. Fetch existing assignment
