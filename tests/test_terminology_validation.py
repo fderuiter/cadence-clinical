@@ -10,6 +10,15 @@ from apps.designer.validator import (
 )
 
 
+@pytest.fixture(autouse=True)
+def clear_caches():
+    """Clear all terminology caches before each test."""
+    from apps.designer.db import terminology_cache, terminology_search_cache
+
+    terminology_cache.clear()
+    terminology_search_cache.clear()
+
+
 def test_validate_concept_codes_success():
     """
     Test validate_concept_codes with a mix of valid and invalid codes.
@@ -705,3 +714,140 @@ async def test_validate_single_code_endpoint_marked_invalid():
             assert data["concept_code"] == "C123"
             assert data["state"] == "INVALID"
             assert "marked as invalid" in data["error_message"]
+
+
+@pytest.mark.asyncio
+async def test_terminology_search_cache_direct():
+    """Test TerminologySearchCache direct operations (get, set, clear, and FIFO eviction).
+
+    @req:PRD-MDR-007
+    """
+    from apps.designer.db import TerminologySearchCache
+
+    # Create a small cache of size 3 to test FIFO eviction
+    cache = TerminologySearchCache(max_size=3, ttl=10.0)
+
+    # Initially empty
+    assert cache.get("a", None, None) is None
+
+    # Set some items
+    cache.set("a", None, None, {"result": "A"})
+    cache.set("b", 1, 10, {"result": "B"})
+    cache.set("c", None, 5, {"result": "C"})
+
+    assert cache.get("a", None, None) == {"result": "A"}
+    assert cache.get("b", 1, 10) == {"result": "B"}
+    assert cache.get("c", None, 5) == {"result": "C"}
+    assert cache.get_status()["size"] == 3
+
+    # Adding a 4th item must evict the oldest item ("a")
+    cache.set("d", None, None, {"result": "D"})
+    assert cache.get("a", None, None) is None  # Evicted
+    assert cache.get("b", 1, 10) == {"result": "B"}
+    assert cache.get("c", None, 5) == {"result": "C"}
+    assert cache.get("d", None, None) == {"result": "D"}
+    assert cache.get_status()["size"] == 3
+
+    # Clear cache
+    cache.clear()
+    assert cache.get("b", 1, 10) is None
+    assert cache.get_status()["size"] == 0
+
+
+@pytest.mark.asyncio
+async def test_search_terminology_endpoint_cache_behavior():
+    """Test that the search terminology endpoint intercepts and caches repeated queries.
+
+    @req:PRD-MDR-007
+    """
+    import httpx
+
+    from apps.designer.main import app
+    from tests.test_soa_endpoints import get_auth_headers
+
+    mock_concepts_1 = [{"code": "C123", "decode": "Concept 1", "system": "NCI"}]
+    mock_concepts_2 = [{"code": "C456", "decode": "Concept 2", "system": "NCI"}]
+
+    with patch(
+        "apps.designer.evs_client.NCIEVSClient.search_concepts",
+        new_callable=AsyncMock,
+    ) as mock_search:
+        # First call returns mock_concepts_1, second call returns mock_concepts_2 (which shouldn't be called if cached)
+        mock_search.side_effect = [mock_concepts_1, mock_concepts_2]
+
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            headers = get_auth_headers()
+
+            # 1. First call - should query external EVS service
+            response1 = await client.get(
+                "/api/v1/terminology/search?term=pain", headers=headers
+            )
+            assert response1.status_code == 200
+            data1 = response1.json()
+            assert len(data1["results"]) == 1
+            assert data1["results"][0]["code"] == "C123"
+            assert mock_search.call_count == 1
+
+            # 2. Second call - should return cached results, NOT call EVS service again
+            response2 = await client.get(
+                "/api/v1/terminology/search?term=pain", headers=headers
+            )
+            assert response2.status_code == 200
+            data2 = response2.json()
+            assert len(data2["results"]) == 1
+            assert data2["results"][0]["code"] == "C123"  # Still C123
+            assert mock_search.call_count == 1  # Still 1 call count
+
+
+@pytest.mark.asyncio
+async def test_search_terminology_endpoint_bypass_and_refresh():
+    """Test that the search endpoint bypasses cache if bypass_cache or refresh is set to True.
+
+    @req:PRD-MDR-007
+    """
+    import httpx
+
+    from apps.designer.main import app
+    from tests.test_soa_endpoints import get_auth_headers
+
+    mock_concepts_1 = [{"code": "C123", "decode": "Concept 1", "system": "NCI"}]
+    mock_concepts_2 = [{"code": "C456", "decode": "Concept 2", "system": "NCI"}]
+
+    with patch(
+        "apps.designer.evs_client.NCIEVSClient.search_concepts",
+        new_callable=AsyncMock,
+    ) as mock_search:
+        mock_search.side_effect = [mock_concepts_1, mock_concepts_2, mock_concepts_1]
+
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            headers = get_auth_headers()
+
+            # 1. Initial query to populate cache
+            res1 = await client.get(
+                "/api/v1/terminology/search?term=pain", headers=headers
+            )
+            assert res1.status_code == 200
+            assert mock_search.call_count == 1
+
+            # 2. Query with bypass_cache=true - should fetch from external API and update cache
+            res2 = await client.get(
+                "/api/v1/terminology/search?term=pain&bypass_cache=true",
+                headers=headers,
+            )
+            assert res2.status_code == 200
+            data2 = res2.json()
+            assert data2["results"][0]["code"] == "C456"
+            assert mock_search.call_count == 2
+
+            # 3. Query with refresh=true - should fetch from external API again
+            res3 = await client.get(
+                "/api/v1/terminology/search?term=pain&refresh=true", headers=headers
+            )
+            assert res3.status_code == 200
+            data3 = res3.json()
+            assert data3["results"][0]["code"] == "C123"
+            assert mock_search.call_count == 3
