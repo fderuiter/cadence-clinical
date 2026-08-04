@@ -37,6 +37,7 @@ Use this table to resolve CI errors without digging through logs:
 | `GxP compliance documentation is out of sync` | RTM docs not regenerated after test changes | `make sync-gxp` — runs tests → generates RTM → stages docs |
 | `Found N errors` (ruff, no `[*]`) | Manual fix needed; error is not auto-fixable | Check error code in ruff docs, fix manually, then `make fix` |
 | `Coverage < 80%` | New code paths not covered by tests | Add tests for the uncovered lines shown in the coverage report |
+| `Schema validation failed or namespace collision detected` | Prefix mismatch, duplicate model definitions, or naming collision in microservice models | Follow the [Schema Validation Failures](#schema-validation-failures) guidelines to prefix or rename your model |
 | `ADR validation failed` | Architectural change without a matching ADR file | `make adr` to scaffold an ADR, then fill in the rationale |
 | `Bandit: high severity issue found` | Security-sensitive code pattern detected | Review the flagged line; add `# nosec B...` with justification if intentional |
 
@@ -345,3 +346,50 @@ Key distinctions:
 | [`docs/adr/index.md`](docs/adr/index.md) | Architecture Decision Record index |
 | [`docs/SDLC/Requirements_Traceability_Matrix.md`](docs/SDLC/Requirements_Traceability_Matrix.md) | Live RTM — test ↔ requirement coverage |
 | [`Makefile`](Makefile) | All developer shortcuts — run `make help` |
+
+---
+
+## Schema Validation Failures
+
+To prevent namespace collisions in the gateway schema aggregation layer, each downstream microservice is assigned a unique name-based prefix. If the schema validator detects non-namespaced schemas, name overlaps, or prefix mismatches, it will fail the build.
+
+### Microservice Schema Prefix Matrix
+
+All data models/schemas defined in downstream microservices must start with their designated prefix rule to ensure clean merging at the Interoperability Gateway level.
+
+| Microservice Name | Target Directory | Prefix Rule | Expected Prefix |
+| :--- | :--- | :--- | :--- |
+| Clinical Trial Management System | `apps/ctms/` | Capitalized name | `Ctms_` |
+| Protocol Designer | `apps/designer/` | Capitalized name | `Designer_` |
+| Electronic Consent | `apps/econsent/` | Capitalized name | `Econsent_` |
+| electronic Investigator Site File | `apps/eisf/` | Capitalized name | `Eisf_` |
+| electronic Trial Master File | `apps/etmf/` | Special Case (All-caps) | `ETMF_` |
+| EDC Execution Engine | `apps/execution/` | Capitalized name | `Execution_` |
+| Interoperability Gateway | `apps/interop/` | Capitalized name | `Interop_` |
+| Notification Service | `apps/notifications/` | Capitalized name | `Notifications_` |
+| Organization Directory | `apps/org/` | Capitalized name | `Org_` |
+| Quality & CAPA Engine | `apps/quality/` | Capitalized name | `Quality_` |
+| Safety & Pharmacovigilance | `apps/safety/` | Capitalized name | `Safety_` |
+| Support Ticketing | `apps/tickets/` | Capitalized name | `Tickets_` |
+
+*Note: The `apps/gateway` aggregator service, the shared packages under `packages/`, the `apps/compliance` utility library, and frontend single-page web applications (`apps/web`, `apps/subject-portal`) are excluded from prefix enforcement.*
+
+### Troubleshooting Schema Validation Issues
+
+#### 1. What are namespace collisions?
+A namespace collision occurs when two downstream microservices define a model with the exact same name (e.g. `CommentCreate`). When the gateway merges these schemas into a single aggregated schema dictionary, one definition will overwrite the other, leading to API type definition discrepancies, broken client generation, or run-time failures.
+
+#### 2. How to resolve overlapping models
+If you see validation failures indicating a name collision or overlapping model (e.g., `ValidationError` or `ConflictStrategy` is defined in multiple services):
+1. **Locate the model definition** in the downstream service (usually under `models.py` or a router file).
+2. **Rename the model** to include the correct prefix. For example, if you are working in `apps/tickets/` and define a `CommentCreate` model, you must rename it to `Tickets_CommentCreate`.
+3. If a model is truly shared/common, do not duplicate it across microservices. Instead, define it in a shared package (e.g., in `packages/core-models/`) or use service-specific prefixed copies if isolated domain boundaries are desired.
+
+#### 3. How to run local validation
+You can check schemas locally before pushing:
+```bash
+# Run schema validation offline with required environment variables
+AUDIT_LOG_SECRET_KEY=dummy INBOUND_EMAIL_HMAC_SECRET=dummy uv run python scripts/validate_schemas.py
+```
+This script runs in under 5 seconds and will report any violations, including overlapping model definitions and prefix mismatches.
+
