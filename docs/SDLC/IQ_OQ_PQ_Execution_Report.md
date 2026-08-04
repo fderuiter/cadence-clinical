@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2077
-- **Passed:** 2077 🟢
+- **Total Automated Test Cases Run:** 2080
+- **Passed:** 2080 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1601,6 +1601,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_readability_metrics_and_scoring` | `tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_syllable_counter_deterministic` | `tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_log_endpoint_properties` | `tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_automatic_parent_reversion_upon_cancellation` | `tests.test_quality_workflow` | Trace-7 | 🟢 PASSED | < 1s |
 | `test_capa_approval_closure_requires_quality_oversight` | `tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_capa_creation_validations` | `tests.test_quality_workflow` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `test_capa_lifecycle_transitions` | `tests.test_quality_workflow` | PRD-SUB-001 | 🟢 PASSED | < 1s |
@@ -1610,6 +1611,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_mutation_without_change_reason_rejected` | `tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_permission_failure_leaves_no_misleading_audit_entry` | `tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_read_only_roles_forbidden` | `tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sibling_guarded_parent_closure` | `tests.test_quality_workflow` | Trace-7 | 🟢 PASSED | < 1s |
 | `test_successful_mutation_creates_audit_log_and_is_atomic` | `tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_transition_capa_sig_token_matrix` | `tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_digest_window_configurations` | `tests.test_queries_escalation` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1887,6 +1889,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_verify_sig_token_helper_scenarios` | `tests.test_security_middleware` | Trace-17 | 🟢 PASSED | < 1s |
 | `test_is_safe_file` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_blocked_on_non_safe_files` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_event_payload_parsing` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_no_conflict_needed` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_skipped_if_no_safe_change_label` | `tests.test_self_heal` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cross_service_interception_and_replay` | `tests.test_shared_infrastructure` | *Regression/Helper* | 🟢 PASSED | < 1s |
