@@ -1,5 +1,4 @@
 import os
-from typing import Any
 
 import pytest
 import yaml
@@ -9,234 +8,13 @@ from apps.econsent.main import app as econsent_app
 from apps.eisf.main import app as eisf_app
 from apps.execution.main import app as execution_app
 from apps.org.main import app as org_app
-
-
-def rewrite_references(data: Any, prefix: str, visited: set | None = None) -> Any:
-    """Recursively rewrite component references in an OpenAPI schema payload."""
-    if visited is None:
-        visited = set()
-
-    if id(data) in visited:
-        return {
-            "type": "object",
-            "description": "Circular reference detected and isolated",
-        }
-
-    if isinstance(data, dict):
-        visited.add(id(data))
-        new_data = {}
-        for k, v in data.items():
-            if (
-                k == "$ref"
-                and isinstance(v, str)
-                and v.startswith("#/components/schemas/")
-            ):
-                ref_name = v[len("#/components/schemas/") :]
-                new_data[k] = f"#/components/schemas/{prefix}{ref_name}"
-            else:
-                new_data[k] = rewrite_references(v, prefix, visited)
-        visited.remove(id(data))
-        return new_data
-    if isinstance(data, list):
-        visited.add(id(data))
-        new_list = [rewrite_references(item, prefix, visited) for item in data]
-        visited.remove(id(data))
-        return new_list
-    return data
-
-
-# Helper to locate and extract the YAML spec from SDLC file
-def extract_openapi_yaml(filepath: str) -> str:
-    if not os.path.exists(filepath):
-        raise FileNotFoundError(f"Markdown specification file not found: {filepath}")
-
-    with open(filepath, encoding="utf-8") as f:
-        content = f.read()
-
-    # Find the Section 7 title
-    sec_title = "## 7. Complete OpenAPI 3.0 Contract Specification"
-    idx = content.find(sec_title)
-    if idx == -1:
-        raise ValueError(f"Could not find section title: '{sec_title}'")
-
-    sec_content = content[idx + len(sec_title) :]
-
-    # Locate the first ```yaml block
-    start_fence = "```yaml"
-    start_idx = sec_content.find(start_fence)
-    if start_idx == -1:
-        raise ValueError("Could not find ```yaml code block in Section 7.")
-
-    start_pos = start_idx + len(start_fence)
-    end_pos = sec_content.find("```", start_pos)
-    if end_pos == -1:
-        raise ValueError("Could not find terminating ``` for the yaml block.")
-
-    return sec_content[start_pos:end_pos].strip()
-
-
-def resolve_schema(schema: Any, spec: dict[str, Any], seen: Any = None) -> Any:
-    """Recursively resolve $ref references in the spec dictionary with recursion guard."""
-    if seen is None:
-        seen = set()
-    if isinstance(schema, dict):
-        if "$ref" in schema:
-            ref = schema["$ref"]
-            if ref in seen:
-                return {
-                    "type": "object",
-                    "description": f"Recursive reference to {ref}",
-                }
-            new_seen = set(seen)
-            new_seen.add(ref)
-            ref_path = ref.split("/")
-            # e.g., ["#", "components", "schemas", "ConceptDetail"]
-            resolved = spec
-            for part in ref_path[1:]:
-                resolved = resolved.get(part, {})
-            # Resolve recursively in case the referenced schema contains other references
-            return resolve_schema(resolved, spec, new_seen)
-        return {k: resolve_schema(v, spec, seen) for k, v in schema.items()}
-    if isinstance(schema, list):
-        return [resolve_schema(item, spec, seen) for item in schema]
-    return schema
-
-
-def normalize_type(t: Any) -> Any:
-    """Normalize types and handles nullable union structures."""
-    if isinstance(t, list):
-        # e.g., ["string", "null"]
-        clean_list = [item for item in t if item != "null"]
-        if len(clean_list) == 1:
-            return clean_list[0]
-        return clean_list
-    return t
-
-
-def compare_types(type_spec: Any, type_code: Any) -> bool:
-    """Compare type strings supporting float/number equivalent etc."""
-    type_spec = normalize_type(type_spec)
-    type_code = normalize_type(type_code)
-
-    if type_spec == type_code:
-        return True
-    return {type_spec, type_code} == {"number", "float"}
-
-
-def assert_schema_parity(
-    spec_schema: Any,
-    code_schema: Any,
-    spec_full: dict[str, Any],
-    code_full: dict[str, Any],
-    path_context: str = "",
-    bidirectional_required: bool = True,
-) -> None:
-    """Compare two OpenAPI schemas semantically for complete parity."""
-    # Resolve any references on both sides
-    s_resolved = resolve_schema(spec_schema, spec_full)
-    c_resolved = resolve_schema(code_schema, code_full)
-
-    if not isinstance(s_resolved, dict) or not isinstance(c_resolved, dict):
-        # Leaf level check
-        assert type(s_resolved) is type(c_resolved), (
-            f"Type mismatch at {path_context}: spec={s_resolved}, code={c_resolved}"
-        )
-        if isinstance(s_resolved, (str, int, float, bool)):
-            assert s_resolved == c_resolved, (
-                f"Value mismatch at {path_context}: spec={s_resolved}, code={c_resolved}"
-            )
-        return
-
-    # Handle nullable equivalence in OpenAPI 3.1 vs 3.0
-    # Code uses OpenAPI 3.1 (FastAPI), Spec uses OpenAPI 3.0
-    # Spec might have 'nullable: true', Code might have 'anyOf' with null, or 'type: [string, "null"]'
-    if "anyOf" in c_resolved:
-        # Check if one of anyOf is type: null, and extract the real type
-        non_null_schemas = [x for x in c_resolved["anyOf"] if x.get("type") != "null"]
-        if len(non_null_schemas) == 1:
-            c_resolved = non_null_schemas[0]
-
-    # Compare Type
-    s_type = s_resolved.get("type")
-    c_type = c_resolved.get("type")
-    if s_type and c_type:
-        assert compare_types(s_type, c_type), (
-            f"Mismatched type at {path_context}: spec={s_type}, code={c_type}"
-        )
-
-    # Compare Enum values
-    if "enum" in s_resolved:
-        assert "enum" in c_resolved, (
-            f"Missing enum constraint in codebase schema at {path_context}"
-        )
-        assert set(s_resolved["enum"]) == set(c_resolved["enum"]), (
-            f"Mismatched enum values at {path_context}: spec={s_resolved['enum']}, code={c_resolved['enum']}"
-        )
-
-    # Compare Properties for objects
-    if s_type == "object" or "properties" in s_resolved:
-        s_props = s_resolved.get("properties", {})
-        c_props = c_resolved.get("properties", {})
-
-        # Verify that all properties defined in spec exist in code and match
-        for prop_name, prop_spec in s_props.items():
-            assert prop_name in c_props, (
-                f"Property '{prop_name}' defined in contract specification is missing in codebase at {path_context}"
-            )
-            assert_schema_parity(
-                prop_spec,
-                c_props[prop_name],
-                spec_full,
-                code_full,
-                f"{path_context}.{prop_name}",
-                bidirectional_required=bidirectional_required,
-            )
-
-        # Compare Required fields list
-        s_req = set(s_resolved.get("required", []))
-        c_req = set(c_resolved.get("required", []))
-
-        # Ensure bidirectional parity of required fields if requested
-        missing_in_code = s_req - c_req
-        assert not missing_in_code, (
-            f"Required properties {missing_in_code} in spec contract are not marked required in codebase at {path_context}"
-        )
-        if bidirectional_required:
-            missing_in_spec = c_req - s_req
-            assert not missing_in_spec, (
-                f"Required properties {missing_in_spec} in codebase are not marked required in spec contract at {path_context}"
-            )
-
-    # Compare Items for arrays
-    if s_type == "array" or "items" in s_resolved:
-        assert "items" in c_resolved, (
-            f"Array schema missing 'items' property in codebase at {path_context}"
-        )
-        assert_schema_parity(
-            s_resolved["items"],
-            c_resolved["items"],
-            spec_full,
-            code_full,
-            f"{path_context}[]",
-            bidirectional_required=bidirectional_required,
-        )
-
-
-def find_code_route(spec_path: str, code_routes: dict[str, Any]) -> Any:
-    """Match a specification relative path to its registered codebase route, stripping prefixes like /api/v1."""
-    # Strip prefixes like /api/v1 or leading/trailing slashes for comparison
-    clean_spec = spec_path.replace("/api/v1", "").strip("/")
-
-    for c_path, c_route_info in code_routes.items():
-        norm_path = c_path
-        for pfx in ["/designer", "/execution", "/org", "/eisf", "/econsent"]:
-            if c_path.startswith(pfx):
-                norm_path = c_path[len(pfx) :]
-                break
-        clean_code = norm_path.replace("/api/v1", "").strip("/")
-        if clean_spec == clean_code:
-            return c_route_info
-    return None
+from tests.contract_helpers import (
+    assert_schema_parity,
+    extract_openapi_yaml,
+    find_code_route,
+    find_spec_route,
+    rewrite_references,
+)
 
 
 @pytest.fixture(scope="module")
@@ -245,6 +23,28 @@ def loaded_specs():
     # 1. Load documentation contract spec
     spec_yaml = extract_openapi_yaml("docs/SDLC/03_API_Integration_Specification.md")
     spec_dict = yaml.safe_load(spec_yaml)
+
+    # 1b. Load separate microservice specs and merge them
+    import json
+    for json_path, schema_prefix in [
+        ("docs/openapi/org_openapi.json", "Org_"),
+        ("docs/openapi/econsent_openapi.json", "Econsent_"),
+        ("docs/openapi/eisf_openapi.json", "Eisf_"),
+    ]:
+        if os.path.exists(json_path):
+            with open(json_path, encoding="utf-8") as f:
+                ms_spec = json.load(f)
+                ms_spec_rewritten = rewrite_references(ms_spec, schema_prefix)
+                # Merge paths
+                for path, path_item in ms_spec_rewritten.get("paths", {}).items():
+                    spec_dict["paths"][path] = path_item
+                # Merge schemas
+                for name, val in ms_spec_rewritten.get("components", {}).get("schemas", {}).items():
+                    if "components" not in spec_dict:
+                        spec_dict["components"] = {}
+                    if "schemas" not in spec_dict["components"]:
+                        spec_dict["components"]["schemas"] = {}
+                    spec_dict["components"]["schemas"][f"{schema_prefix}{name}"] = val
 
     # 2. Extract codebase openapi specs statically
     designer_spec = designer_app.openapi()
@@ -694,28 +494,7 @@ WHITELISTED_ROUTES = {
 }
 
 
-def find_spec_route(code_path: str, spec_paths: dict) -> str:
-    norm_path = code_path
-    for pfx in ["/designer", "/execution", "/org", "/eisf", "/econsent"]:
-        if code_path.startswith(pfx):
-            norm_path = code_path[len(pfx) :]
-            break
-    clean_code = norm_path.replace("/api/v1", "").strip("/")
-    for s_path in spec_paths:
-        clean_spec = s_path.replace("/api/v1", "").strip("/")
-        if clean_code == clean_spec:
-            return s_path
-    return None
-
-
 def is_whitelisted(method: str, path: str) -> bool:
-    if (
-        path.startswith("/org")
-        or path.startswith("/eisf")
-        or path.startswith("/econsent")
-    ):
-        return True
-
     norm_path = path
     for pfx in ["/designer", "/execution"]:
         if path.startswith(pfx):
