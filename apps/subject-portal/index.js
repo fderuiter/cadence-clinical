@@ -1554,6 +1554,11 @@ async function renderSyncQueueList() {
         statusLabel = "CONFLICT (Ignored)";
         statusDesc =
           "Conflict resolved: Server data was preserved; local entry archived.";
+      } else if (item.status === "QUARANTINED") {
+        badgeClass = "pending";
+        statusLabel = "QUARANTINED";
+        statusDesc =
+          "Quarantined: Under review by clinical trial managers due to validation errors.";
       }
 
       let answersDetails = `<strong>Local Answers:</strong> <code style="background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 4px;">${JSON.stringify(item.answers)}</code>`;
