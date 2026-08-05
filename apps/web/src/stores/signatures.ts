@@ -57,7 +57,7 @@ export const useSignatureStore = defineStore("signatures", {
           apiClient.post &&
           ((apiClient.post as any)._isMockFunction ||
             typeof (apiClient.post as any).mock === "object");
-        if (authStore.isDemoMode && !isMocked) {
+        if (authStore.isDemoMode && !authStore.token && !isMocked) {
           await new Promise((resolve) => setTimeout(resolve, 300));
           const mockResponse: BatchSignResponse = {
             signature_id:
