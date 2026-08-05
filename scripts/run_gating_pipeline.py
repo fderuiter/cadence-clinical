@@ -44,7 +44,9 @@ def main():
     if not os.environ.get("AUDIT_LOG_SECRET_KEY"):
         os.environ["AUDIT_LOG_SECRET_KEY"] = "test-gxp-audit-secret-key-placeholder-abc"
     if not os.environ.get("INBOUND_EMAIL_HMAC_SECRET"):
-        os.environ["INBOUND_EMAIL_HMAC_SECRET"] = "test-inbound-email-hmac-secret-placeholder-xyz"
+        os.environ["INBOUND_EMAIL_HMAC_SECRET"] = (
+            "test-inbound-email-hmac-secret-placeholder-xyz"
+        )
 
     conflict_outcome = "skipped"
     gxp_validation_outcome = "skipped"
