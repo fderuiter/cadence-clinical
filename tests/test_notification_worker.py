@@ -120,7 +120,7 @@ async def setup_test_databases():
 
     notif_db_name = f"notif_memdb_{uuid.uuid4().hex}"
     notifications_db_manager.init_db(
-        f"sqlite+aiosqlite:///file:{notif_db_name}?mode=memory&cache=shared&uri=true",
+        f"sqlite+aiosqlite:///file:{notif_db_name}?mode=memory&cache=shared&uri=true&timeout=60",
         echo=False,
         poolclass=NullPool,
     )
@@ -132,7 +132,7 @@ async def setup_test_databases():
     # Initialize Org Directory Relational DB
     org_db_name = f"org_memdb_{uuid.uuid4().hex}"
     org_db_manager.init_db(
-        f"sqlite+aiosqlite:///file:{org_db_name}?mode=memory&cache=shared&uri=true",
+        f"sqlite+aiosqlite:///file:{org_db_name}?mode=memory&cache=shared&uri=true&timeout=60",
         echo=False,
         poolclass=NullPool,
     )
