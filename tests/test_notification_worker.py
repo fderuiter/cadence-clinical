@@ -514,12 +514,12 @@ async def test_start_stop_notification_worker_integration():
         timestamp_utc=datetime.now(UTC).isoformat(),
     )
 
+    # Publish an event to the queue first so it's immediately ready for the worker loop
+    await publish_domain_event(event)
+
     # Start the background worker loop
     await start_notification_worker()
-    await asyncio.sleep(0.1)
-
-    # Publish an event to the queue
-    await publish_domain_event(event)
+    await asyncio.sleep(0.2)
 
     # Poll for the notification to be created in the database to prevent flakiness under heavy test runner load
     notifs = []
