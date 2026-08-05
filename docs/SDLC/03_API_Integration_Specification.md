@@ -892,7 +892,7 @@ Standardizes numeric values and verifies scale compatibility between source and 
 **Request Body**:
 <!-- validation-skip -->
 
-```json
+```json skip
 {
   "value": 98.6,
   "source_unit": "[degF]",
@@ -16239,7 +16239,7 @@ Creates a new support ticket.
 
 <!-- validation-skip -->
 
-```json
+```json skip
 {
   "title": "System connection failure on study 102",
   "description": "Database connection timed out during subject randomization.",
@@ -16351,7 +16351,7 @@ Appends an auditable comment to a ticket. Enqueues a notification to other stake
 
 <!-- validation-skip -->
 
-```json
+```json skip
 {
   "body": "This issue is resolved following a database pool resize."
 }

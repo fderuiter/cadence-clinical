@@ -373,7 +373,9 @@ The following Python script (`apps/execution/database/provision_tenant.py`) auto
 
 <!-- validation-skip -->
 
-```python
+<!-- validation-skip -->
+
+```python skip
 import asyncio
 import logging
 from sqlalchemy import text
@@ -638,7 +640,7 @@ The platform utilizes automated migration execution wrapper logic inside `apps/e
 
 <!-- validation-skip -->
 
-```python
+```python skip
 import sys
 import logging
 from sqlalchemy import text
@@ -768,7 +770,7 @@ In the extremely rare case of deployment verification failures (automated checks
 
 <!-- validation-skip -->
 
-```python
+```python skip
 import sys
 import logging
 from sqlalchemy import text

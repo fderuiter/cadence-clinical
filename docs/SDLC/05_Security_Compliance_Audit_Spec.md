@@ -362,7 +362,7 @@ CREATE TABLE IF NOT EXISTS public.audit_ledger_seals (
 
 <!-- validation-skip -->
 
-```python
+```python skip
 import hashlib
 import json
 from sqlalchemy.future import select
@@ -524,7 +524,7 @@ The user must choose from an immutable, system-declared dropdown list matching t
 
 <!-- validation-skip -->
 
-```json
+```json skip
 {
   "signature_manifestation": {
     "signer_username": "dr_john_doe",

@@ -462,7 +462,7 @@ To preserve strict scientific reproducibility, study graphs become **permanently
 The Designer Service executes an assertion check on every mutating transaction.
 <!-- validation-skip -->
 
-```python
+```python skip
 async def assert_graph_mutable(tx: Transaction, study_version_id: str):
     query = """
     MATCH (sv:StudyVersion {id: $id})
@@ -511,7 +511,7 @@ When promoting a protocol amendment, the system needs to compute structural modi
 
 <!-- validation-skip -->
 
-```python
+```python skip
 def compute_graph_diff(tx, old_version_id: str, new_version_id: str) -> dict:
     """
     Traverses study tree levels: StudyVersion -> Epoch -> Visit -> Form -> BiomedicalConcept.
