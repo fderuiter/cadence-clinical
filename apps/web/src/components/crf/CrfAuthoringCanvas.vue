@@ -256,19 +256,34 @@
         <div
           class="space-y-3 bg-slate-50 border border-slate-100 rounded-xl p-4"
         >
-          <div class="flex items-center gap-2">
-            <input
-              id="dismiss-warnings-checkbox"
-              v-model="dismissedWarnings"
-              type="checkbox"
-              class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-            />
-            <label
-              for="dismiss-warnings-checkbox"
-              class="text-xs font-medium text-slate-700"
-            >
-              Dismiss layout warnings
-            </label>
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center gap-2">
+              <input
+                id="dismiss-warnings-checkbox"
+                v-model="dismissedWarnings"
+                type="checkbox"
+                class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <label
+                for="dismiss-warnings-checkbox"
+                class="text-xs font-medium text-slate-700"
+              >
+                Dismiss layout warnings
+              </label>
+            </div>
+
+            <div v-if="dismissedWarnings && layoutWarnings.length > 0" class="layout-justification-box mt-1">
+              <label for="layout-justification-input" class="text-xxs font-bold text-slate-500 uppercase block mb-1">
+                Clinical Justification (Required)
+              </label>
+              <textarea
+                id="layout-justification-input"
+                v-model="layoutJustification"
+                placeholder="Provide a clinical justification for this layout deviation..."
+                class="w-full text-xs p-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 bg-white"
+                rows="2"
+              ></textarea>
+            </div>
           </div>
 
           <button
@@ -450,15 +465,36 @@ const dismissedWarnings = computed({
   get: () => designerStore.dismissedWarnings,
   set: (val) => {
     designerStore.setDismissedWarnings(val);
-    if (compilationStatus.value === "blocked" && val) {
+    if (val) {
+      if (!layoutJustification.value || !layoutJustification.value.trim()) {
+        layoutJustification.value = "Clinical layout deviation authorized by form designer.";
+      }
+    } else {
+      layoutJustification.value = "";
+    }
+    if (compilationStatus.value === "blocked" && val && layoutJustification.value.trim()) {
+      compilationStatus.value = null;
+    }
+  },
+});
+
+const layoutJustification = computed({
+  get: () => designerStore.activeForm?.layoutJustification || "",
+  set: (val) => {
+    designerStore.setLayoutJustification(val);
+    if (compilationStatus.value === "blocked" && val.trim()) {
       compilationStatus.value = null;
     }
   },
 });
 
 function compileForm() {
-  if (layoutWarnings.value.length > 0 && !dismissedWarnings.value) {
-    compilationStatus.value = "blocked";
+  if (layoutWarnings.value.length > 0) {
+    if (!dismissedWarnings.value || !layoutJustification.value || !layoutJustification.value.trim()) {
+      compilationStatus.value = "blocked";
+    } else {
+      compilationStatus.value = "success";
+    }
   } else {
     compilationStatus.value = "success";
   }

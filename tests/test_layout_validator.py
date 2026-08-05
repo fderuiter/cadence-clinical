@@ -291,3 +291,79 @@ async def test_layout_validation_integration():
     openrosa_xml = job["openrosa_payload"]
 
     assert await validate_layout_html(openrosa_xml)
+
+
+@pytest.mark.asyncio
+async def test_layout_gating_missing_justification_rejected():
+    """Verify that backend API rejects study publication if layout warnings exist and no justification is attached."""
+    study_payload = {
+        "study_id": "test_layout_gating_rejected_999",
+        "payload": {
+            "name": "Acme Gated Clinical Trial Test",
+            "layout_warnings": ["Label may clip/overlap: column width is 100px (< 150px)"],
+            "protocol": {
+                "items": [
+                    {"id": "q1", "name": "Question 1", "type": "string"},
+                ]
+            },
+        },
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.post(
+            "/events/study-published", json=study_payload, headers=get_auth_headers()
+        )
+    # The API should reject publication with 400 Bad Request
+    assert response.status_code == 400
+    assert "Layout validation failed" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_layout_gating_approved_and_logged():
+    """Verify that study publication is approved when layout warnings have a justification, and recorded in layout audit trail."""
+    justification_text = "Medically required compact layout for specialized dosage recording."
+    study_id = "test_layout_gating_approved_888"
+    study_payload = {
+        "study_id": study_id,
+        "payload": {
+            "name": "Acme Approved Gated Trial Test",
+            "layout_warnings": ["Label may clip/overlap: column width is 120px (< 150px)"],
+            "layout_justification": justification_text,
+            "protocol": {
+                "items": [
+                    {"id": "q1", "name": "Question 1", "type": "string"},
+                ]
+            },
+        },
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.post(
+            "/events/study-published", json=study_payload, headers=get_auth_headers()
+        )
+    # The API should accept study publication
+    assert response.status_code == 200
+
+    # Query the secure layout audit trail in database to verify the recorded justification
+    from apps.execution.database.models import AuditLog
+
+    async with db_manager.get_session_maker()() as session:
+        result = await session.execute(
+            AuditLog.__table__.select().where(
+                AuditLog.record_id == study_id,
+                AuditLog.table_name == "layout_deviation_audit"
+            )
+        )
+        audit_record = result.mappings().first()
+
+    assert audit_record is not None
+    assert audit_record["action"] == "DEVIATION"
+    assert audit_record["user_id"] is not None
+    assert audit_record["change_reason"] == justification_text
+    assert audit_record["new_values"]["justification"] == justification_text
+    assert audit_record["new_values"]["layout_warnings"] == ["Label may clip/overlap: column width is 120px (< 150px)"]
+
