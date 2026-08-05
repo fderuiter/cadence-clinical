@@ -17,6 +17,41 @@ def get_stable_timestamp():
     return "2026-07-23 22:38:25 UTC"
 
 
+def format_file_with_prettier(filepath):
+    """Format a markdown file using Prettier if available."""
+    import contextlib
+    import subprocess
+
+    # Try pnpm exec prettier --write
+    with contextlib.suppress(Exception):
+        subprocess.run(
+            ["pnpm", "exec", "prettier", "--write", filepath],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        return
+
+    # Fallback to npx prettier --write
+    with contextlib.suppress(Exception):
+        subprocess.run(
+            ["npx", "prettier", "--write", filepath],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        return
+
+    # Fallback to prettier --write if globally installed
+    with contextlib.suppress(Exception):
+        subprocess.run(
+            ["prettier", "--write", filepath],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+
+
 def parse_srs(filepath):
     requirements = {}
     if not os.path.exists(filepath):
@@ -793,6 +828,7 @@ def main():
         draft=args.draft,
     )
     print(f"Requirements Traceability Matrix successfully written to {rtm_out}")
+    format_file_with_prettier(rtm_out)
 
     # 5. Generate Qualification Report
     qual_out = os.path.join(args.output_dir, "IQ_OQ_PQ_Execution_Report.md")
@@ -806,6 +842,7 @@ def main():
         draft=args.draft,
     )
     print(f"Qualification Execution Report successfully written to {qual_out}")
+    format_file_with_prettier(qual_out)
 
     if args.validate:
         unmapped_list = [
