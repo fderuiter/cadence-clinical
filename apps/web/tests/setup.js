@@ -1,5 +1,16 @@
 import { vi, expect } from "vitest";
 import { toBeAccessible } from "ui";
+import { webcrypto } from "node:crypto";
+
+if (!globalThis.crypto) {
+  globalThis.crypto = webcrypto;
+} else if (!globalThis.crypto.subtle) {
+  Object.defineProperty(globalThis.crypto, "subtle", {
+    value: webcrypto.subtle,
+    writable: true,
+    configurable: true,
+  });
+}
 
 expect.extend({
   toBeAccessible,

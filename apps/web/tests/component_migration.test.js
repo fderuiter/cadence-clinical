@@ -1,18 +1,58 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { mount } from "@vue/test-utils";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import CtmsView from "../src/views/CtmsView.vue";
 import MdrView from "../src/views/MdrView.vue";
 import ClinicalSoAMatrix from "../src/components/clinical/ClinicalSoAMatrix.vue";
+import { apiClient } from "../src/api/apiClient";
+
+vi.mock("../src/api/apiClient", () => {
+  return {
+    apiClient: {
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+    },
+  };
+});
 
 describe("CtmsView.vue native list rendering migration", () => {
   beforeEach(() => {
     const pinia = createPinia();
     setActivePinia(pinia);
+
+    vi.mocked(apiClient.get).mockImplementation((url) => {
+      if (url.includes("/site-milestones")) {
+        return Promise.resolve([
+          {
+            id: "m1",
+            milestone_type: "SITE_SELECTION",
+            planned_date: "2026-08-01T00:00:00Z",
+            actual_date: "2026-08-02T00:00:00Z",
+            status: "ACHIEVED",
+          },
+        ]);
+      }
+      if (url.includes("/monitoring-visits")) {
+        return Promise.resolve([
+          {
+            id: "v1",
+            visit_type: "SIV",
+            scheduled_date: "2026-08-05T00:00:00Z",
+            actual_date: "2026-08-06T00:00:00Z",
+            cra_name: "John Doe",
+            status: "SIGNED_OFF",
+          },
+        ]);
+      }
+      return Promise.resolve([]);
+    });
   });
 
-  it("renders milestone and visits tables with correct headers and classes", () => {
+  it("renders milestone and visits tables with correct headers and classes", async () => {
     const wrapper = mount(CtmsView);
+    await flushPromises();
 
     // Assert milestones container and table structure
     const milestonesContainer = wrapper.find("#ctms-milestones-container");
@@ -49,6 +89,7 @@ describe("CtmsView.vue native list rendering migration", () => {
       "Actual Date",
       "CRA Assigned",
       "Status",
+      "Actions",
     ]);
 
     // Assert dynamic visit elements and gxp class application
