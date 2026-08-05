@@ -81,7 +81,7 @@ jobs:
             hadolint apps/gateway/Dockerfile apps/designer/Dockerfile apps/execution/Dockerfile apps/etmf/Dockerfile docker/Dockerfile
           else
             echo "hadolint not found, trying docker container..."
-            docker run --rm -v "$(pwd):/app" -w /app hadolint/hadolint hadolint apps/gateway/Dockerfile apps/designer/Dockerfile apps/execution/Dockerfile apps/etmf/Dockerfile docker/Dockerfile
+            docker run --rm -v "$(pwd):/app" -w /app hadolint/hadolint apps/gateway/Dockerfile apps/designer/Dockerfile apps/execution/Dockerfile apps/etmf/Dockerfile docker/Dockerfile
           fi
 
       - name: Run ADR validation
