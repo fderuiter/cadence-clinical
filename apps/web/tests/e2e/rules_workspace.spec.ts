@@ -29,7 +29,9 @@ test.describe("Rules Workspace and Query Management E2E Tests", () => {
     await rulesPage.verifyXpathPreview("/clinical_data/form_vs/pulse > 100");
 
     // Save rule with 21 CFR Part 11 Electronic Signature reason
-    await rulesPage.saveRule("Added high pulse rate warning/skip logic constraint");
+    await rulesPage.saveRule(
+      "Added high pulse rate warning/skip logic constraint"
+    );
 
     // Verify that the rule is successfully listed on the left panel
     await rulesPage.verifyRuleExists("rule_");

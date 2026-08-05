@@ -15,7 +15,11 @@ test.describe("eConsent and ICF Builder Workspace E2E Tests", () => {
     await consentPage.createNewTemplate();
 
     // Configure metadata
-    await consentPage.setMetadata("study-econsent-101", "Global ICF Waiver", "v1.2");
+    await consentPage.setMetadata(
+      "study-econsent-101",
+      "Global ICF Waiver",
+      "v1.2"
+    );
 
     // Configure clauses (by default 1 empty row exists)
     await consentPage.setClauseValue(0, "clause-benefits");
@@ -32,7 +36,9 @@ test.describe("eConsent and ICF Builder Workspace E2E Tests", () => {
     await consentPage.verifyClauseOrder(["clause-risks", "clause-benefits"]);
 
     // Save template with Part 11 electronic signature justification
-    await consentPage.saveTemplate("Adding clinical risk disclosure sections in display sequence");
+    await consentPage.saveTemplate(
+      "Adding clinical risk disclosure sections in display sequence"
+    );
 
     // Verify it exists in the active registry list
     await consentPage.verifyTemplateExists("Global ICF Waiver");
@@ -46,11 +52,17 @@ test.describe("eConsent and ICF Builder Workspace E2E Tests", () => {
     await consentPage.selectSection("Disclosure and Privacy");
 
     // Verify live glossary term annotations & hover cards
-    await consentPage.insertGlossaryTermViaHTML("Biopsy", "Removal of cells/tissue for clinical examination.");
+    await consentPage.insertGlossaryTermViaHTML(
+      "Biopsy",
+      "Removal of cells/tissue for clinical examination."
+    );
     await consentPage.hoverGlossaryTerm("Biopsy");
 
     // Assert that the hover popup tooltip is visible and renders correct term definition text
-    await consentPage.verifyGlossaryPopover("Biopsy", "Removal of cells/tissue for clinical examination.");
+    await consentPage.verifyGlossaryPopover(
+      "Biopsy",
+      "Removal of cells/tissue for clinical examination."
+    );
 
     // Evaluate target comprehension scores configuration
     await consentPage.selectComprehensionQuizTab();
@@ -65,6 +77,8 @@ test.describe("eConsent and ICF Builder Workspace E2E Tests", () => {
     );
 
     // Publish GxP ICF version with change control signature
-    await consentPage.publishIcf("Finalizing v2.0 clinical consent structure with comprehension checks");
+    await consentPage.publishIcf(
+      "Finalizing v2.0 clinical consent structure with comprehension checks"
+    );
   });
 });

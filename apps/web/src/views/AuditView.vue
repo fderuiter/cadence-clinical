@@ -1369,9 +1369,13 @@ async function verifyExecutionIntegrity() {
     integrity.verified = res.verified;
     integrity.message = res.message;
   } catch (err) {
-    console.warn("Execution ledger integrity API error, using sandbox fallback:", err);
+    console.warn(
+      "Execution ledger integrity API error, using sandbox fallback:",
+      err
+    );
     integrity.verified = true;
-    integrity.message = "GxP clinical execution ledger chain fully verified and structurally intact. (Sandbox Fallback)";
+    integrity.message =
+      "GxP clinical execution ledger chain fully verified and structurally intact. (Sandbox Fallback)";
   } finally {
     integrity.loading = false;
   }
@@ -1487,7 +1491,7 @@ async function fetchDocuments() {
           filename: "form_1572_v1.txt",
           status: "SIGNED",
           version_index: 1,
-        }
+        },
       ];
     }
   } finally {
@@ -1519,7 +1523,8 @@ async function previewDocument(doc) {
     await fetchAuditLogs();
   } catch (err) {
     console.warn("Document preview failure, using sandbox fallback:", err);
-    previewContent.value = "MOCK DOCUMENT SECURE WATERMARKED PREVIEW CONTENT - (Sandbox Fallback)";
+    previewContent.value =
+      "MOCK DOCUMENT SECURE WATERMARKED PREVIEW CONTENT - (Sandbox Fallback)";
     // Trigger log refresh to show read VIEW audit log entry
     await fetchAuditLogs();
   }
@@ -1572,7 +1577,10 @@ async function fetchAuditLogs() {
     auditLogs.value = res.items || [];
     totalLogs.value = res.total_count || 0;
   } catch (err) {
-    console.warn("Failed to load eTMF audit logs, using sandbox fallback:", err);
+    console.warn(
+      "Failed to load eTMF audit logs, using sandbox fallback:",
+      err
+    );
     connectionError.value = true;
     auditLogs.value = [
       {
@@ -1591,12 +1599,20 @@ async function fetchAuditLogs() {
         user_role: "site_investigator",
         action: "INGEST",
         document_id: "doc-123",
-        details: "Ingested artifact type 'FDA Form 1572' for study 'study_001'.",
-      }
-    ].filter(log => {
-      if (filters.user_id && !log.user_id.toLowerCase().includes(filters.user_id.trim().toLowerCase())) return false;
+        details:
+          "Ingested artifact type 'FDA Form 1572' for study 'study_001'.",
+      },
+    ].filter((log) => {
+      if (
+        filters.user_id &&
+        !log.user_id
+          .toLowerCase()
+          .includes(filters.user_id.trim().toLowerCase())
+      )
+        return false;
       if (filters.action && log.action !== filters.action) return false;
-      if (filters.document_id && log.document_id !== filters.document_id.trim()) return false;
+      if (filters.document_id && log.document_id !== filters.document_id.trim())
+        return false;
       return true;
     });
     totalLogs.value = auditLogs.value.length;

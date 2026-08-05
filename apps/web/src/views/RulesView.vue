@@ -1227,7 +1227,7 @@ async function confirmChangeReason(reasonText) {
         };
         // Add to activeRules locally
         if (isEdit) {
-          const idx = activeRules.value.findIndex(r => r.id === saved.id);
+          const idx = activeRules.value.findIndex((r) => r.id === saved.id);
           if (idx !== -1) {
             activeRules.value[idx] = saved;
           }

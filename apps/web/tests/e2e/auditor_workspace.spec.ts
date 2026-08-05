@@ -21,7 +21,9 @@ test.describe("Auditor Portal and Ledger Integrity E2E Tests", () => {
 
     // Verify ledger contains the filtered records
     await auditorPage.verifyLedgerContainsDetails("auditor");
-    await auditorPage.verifyLedgerContainsDetails("Accessed eTMF immutable audit trail logs");
+    await auditorPage.verifyLedgerContainsDetails(
+      "Accessed eTMF immutable audit trail logs"
+    );
 
     // Clear filters
     await auditorPage.clearFilters();
@@ -32,7 +34,10 @@ test.describe("Auditor Portal and Ledger Integrity E2E Tests", () => {
     await auditorPage.previewDocument("form_1572_v1.txt");
 
     // Verify secure watermarked preview panel is displayed with visual repeating watermark overlay and proper definition content
-    await auditorPage.verifySecureWatermarkedPreview("form_1572_v1.txt", "MOCK DOCUMENT");
+    await auditorPage.verifySecureWatermarkedPreview(
+      "form_1572_v1.txt",
+      "MOCK DOCUMENT"
+    );
 
     // Close preview panel
     await auditorPage.closePreview();

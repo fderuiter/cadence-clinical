@@ -39,13 +39,35 @@ export class RulesPage {
     await this.page.click("button[data-action='add-condition']");
   }
 
-  async setCondition(index: number, formId: string, fieldId: string, operator: string, rightType: string, rightValue: string) {
-    await this.page.selectOption(`select.cond-form[data-index='${index}']`, formId);
-    await this.page.selectOption(`select.cond-field[data-index='${index}']`, fieldId);
-    await this.page.selectOption(`select.cond-operator[data-index='${index}']`, operator);
-    await this.page.selectOption(`select.cond-right-type[data-index='${index}']`, rightType);
+  async setCondition(
+    index: number,
+    formId: string,
+    fieldId: string,
+    operator: string,
+    rightType: string,
+    rightValue: string
+  ) {
+    await this.page.selectOption(
+      `select.cond-form[data-index='${index}']`,
+      formId
+    );
+    await this.page.selectOption(
+      `select.cond-field[data-index='${index}']`,
+      fieldId
+    );
+    await this.page.selectOption(
+      `select.cond-operator[data-index='${index}']`,
+      operator
+    );
+    await this.page.selectOption(
+      `select.cond-right-type[data-index='${index}']`,
+      rightType
+    );
     if (rightType === "constant") {
-      await this.page.fill(`input.cond-right-value[data-index='${index}']`, rightValue);
+      await this.page.fill(
+        `input.cond-right-value[data-index='${index}']`,
+        rightValue
+      );
     }
   }
 

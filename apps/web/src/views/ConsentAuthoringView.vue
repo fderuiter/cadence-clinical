@@ -772,7 +772,10 @@ async function fetchTemplates() {
     );
     templates.value = data || [];
   } catch (err) {
-    console.warn("eConsent templates service query degraded, preserving local:", err);
+    console.warn(
+      "eConsent templates service query degraded, preserving local:",
+      err
+    );
     connectionError.value = true;
     if (!templates.value || templates.value.length === 0) {
       templates.value = [];
@@ -941,7 +944,10 @@ async function confirmChangeReason(reasonText) {
           });
         }
       } catch (err) {
-        console.warn("Save template API failed, falling back to local mock save:", err);
+        console.warn(
+          "Save template API failed, falling back to local mock save:",
+          err
+        );
         res = {
           template_id: isEdit.value
             ? activeTemplateId.value
@@ -957,7 +963,9 @@ async function confirmChangeReason(reasonText) {
         };
         // Add to templates locally
         if (isEdit.value) {
-          const idx = templates.value.findIndex(t => t.template_id === res.template_id);
+          const idx = templates.value.findIndex(
+            (t) => t.template_id === res.template_id
+          );
           if (idx !== -1) {
             templates.value[idx] = res;
           }

@@ -28,9 +28,11 @@ test.describe("Clinical Workflows and ePRO Portal Tests", () => {
       await expect(queryPanel).toBeVisible();
 
       // Raise a query
-      await page.locator("#query-message-pulse").fill(
-        "Pulse rate of 72 bpm requires clinical verification of resting state."
-      );
+      await page
+        .locator("#query-message-pulse")
+        .fill(
+          "Pulse rate of 72 bpm requires clinical verification of resting state."
+        );
       await page.locator("button.btn-submit-query").scrollIntoViewIfNeeded();
       await page.locator("button.btn-submit-query").click();
 

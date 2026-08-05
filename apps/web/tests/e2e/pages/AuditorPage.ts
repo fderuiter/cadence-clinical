@@ -40,7 +40,10 @@ export class AuditorPage {
     await row.locator(".btn-preview-doc").click();
   }
 
-  async verifySecureWatermarkedPreview(filename: string, expectedContent: string) {
+  async verifySecureWatermarkedPreview(
+    filename: string,
+    expectedContent: string
+  ) {
     const panel = this.page.locator(".secure-preview-panel");
     await expect(panel).toBeVisible();
     await expect(panel).toContainText(`Secure Preview: ${filename}`);
@@ -58,7 +61,11 @@ export class AuditorPage {
     await this.page.click(".btn-close-preview");
   }
 
-  async filterAuditLogs(actorId: string, actionType: string, documentId: string) {
+  async filterAuditLogs(
+    actorId: string,
+    actionType: string,
+    documentId: string
+  ) {
     if (actorId) {
       await this.page.fill("#filter-user-id-input", actorId);
     }
@@ -80,7 +87,10 @@ export class AuditorPage {
     await expect(table).toContainText(expectedDetails);
   }
 
-  async triggerRegulatoryBinderExport(studyId: string, includeHistory: boolean) {
+  async triggerRegulatoryBinderExport(
+    studyId: string,
+    includeHistory: boolean
+  ) {
     await this.page.fill("input[placeholder*='e.g. study_001']", studyId);
     if (includeHistory) {
       await this.page.check("#chk-history");

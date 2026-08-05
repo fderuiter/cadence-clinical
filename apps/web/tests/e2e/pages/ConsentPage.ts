@@ -16,7 +16,11 @@ export class ConsentPage {
     await this.page.click("#btn-create-template");
   }
 
-  async setMetadata(studyId: string, templateName: string, protocolVersion: string) {
+  async setMetadata(
+    studyId: string,
+    templateName: string,
+    protocolVersion: string
+  ) {
     await this.page.fill("#input-study-id", studyId);
     await this.page.fill("#input-template-name", templateName);
     await this.page.fill("#input-protocol-version", protocolVersion);
@@ -100,19 +104,24 @@ export class ConsentPage {
   }
 
   async selectComprehensionQuizTab() {
-    const item = this.page.locator(".outline-item", { hasText: "Comprehension Quiz" });
+    const item = this.page.locator(".outline-item", {
+      hasText: "Comprehension Quiz",
+    });
     await item.click();
   }
 
   async insertGlossaryTermViaHTML(term: string, definition: string) {
-    await this.page.evaluate(({ term, definition }) => {
-      const el = document.querySelector(".editor-canvas");
-      if (el) {
-        el.innerHTML = `<p>Testing a term annotation for <span class="glossary-term" data-definition="${definition}">${term}</span> right here.</p>`;
-        el.dispatchEvent(new Event("input"));
-        el.dispatchEvent(new Event("blur"));
-      }
-    }, { term, definition });
+    await this.page.evaluate(
+      ({ term, definition }) => {
+        const el = document.querySelector(".editor-canvas");
+        if (el) {
+          el.innerHTML = `<p>Testing a term annotation for <span class="glossary-term" data-definition="${definition}">${term}</span> right here.</p>`;
+          el.dispatchEvent(new Event("input"));
+          el.dispatchEvent(new Event("blur"));
+        }
+      },
+      { term, definition }
+    );
   }
 
   async hoverGlossaryTerm(term: string) {
@@ -131,12 +140,19 @@ export class ConsentPage {
     await this.page.fill("#threshold-select", String(percentage));
   }
 
-  async addQuizQuestion(text: string, options: string[], correctIndex: number, hint: string) {
+  async addQuizQuestion(
+    text: string,
+    options: string[],
+    correctIndex: number,
+    hint: string
+  ) {
     await this.page.click(".btn-add-question");
     const lastQuestion = this.page.locator(".question-item").last();
 
     // Fill Question text
-    await lastQuestion.locator("input[placeholder*='What is the main benefit']").fill(text);
+    await lastQuestion
+      .locator("input[placeholder*='What is the main benefit']")
+      .fill(text);
 
     // Fill Options
     for (let i = 0; i < options.length; i++) {
