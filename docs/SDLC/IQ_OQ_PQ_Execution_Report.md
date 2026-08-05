@@ -1,6 +1,3 @@
-> ⚠️ **DRAFT ONLY — UNVERIFIED GxP COMPLIANCE DOCUMENT** ⚠️
-> *This document was generated in draft mode with missing test results. It is NOT eligible for GxP production release.*
-
 # GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report
 
 *Execution Date:* 2026-07-23 22:38:25 UTC
@@ -12,11 +9,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2136
-- **Passed:** 2131 🟢
+- **Total Automated Test Cases Run:** 2145
+- **Passed:** 2140 🟢
 - **Failed/Errors:** 0 🔴
-- **Skipped:** 0 ⚪
-- **Overall Operational Pass Rate:** 0.00%
+- **Skipped:** 5 ⚪
+- **Overall Operational Pass Rate:** 99.77%
 
 ## 2. Installation Qualification (IQ)
 
@@ -1068,6 +1065,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_api_v2_import_valid_yaml` | `tests.test_full_usdm_v2_phase_2` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_v2_import_validation_failure` | `tests.test_full_usdm_v2_phase_2` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_proxying_v2_studies` | `tests.test_full_usdm_v2_phase_2` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_create_demo_session` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_gateway_site_isolation_propagation` | `tests.test_gateway` | Trace-18 | 🟢 PASSED | < 1s |
 | `test_gateway_bearer_only_subject_routing_and_header_enforcement` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_comprehensive_scope_spoofing_prevention` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1099,6 +1097,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_proxy_requests_terminology_paths` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_proxy_requests_v2_headers` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_proxy_requests_valid_auth` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sandbox_tenant_isolation_gate_violations` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_gated_mutation_enforcement` | `tests.test_gateway` | Trace-17 | 🟢 PASSED | < 1s |
 | `test_signature_gated_mutation_expired_token` | `tests.test_gateway` | Trace-17 | 🟢 PASSED | < 1s |
 | `test_signature_gated_mutation_mismatched_action` | `tests.test_gateway` | Trace-17 | 🟢 PASSED | < 1s |
@@ -1109,6 +1108,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_signature_verification_study_designer_role_allowed` | `tests.test_gateway` | Trace-17 | 🟢 PASSED | < 1s |
 | `test_signature_verification_success` | `tests.test_gateway` | Trace-17 | 🟢 PASSED | < 1s |
 | `test_signature_verification_with_batch_id` | `tests.test_gateway` | Trace-17 | 🟢 PASSED | < 1s |
+| `test_verify_gateway_signed_token` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_token_fetch_failure_fallback` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_token_invalid` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_token_on_demand_success` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1235,6 +1235,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_pre_screen_eligible` | `tests.test_interop_prescreen` | PRD-MDR-007 | 🟢 PASSED | < 1s |
 | `test_pre_screen_indeterminate` | `tests.test_interop_prescreen` | PRD-MDR-007 | 🟢 PASSED | < 1s |
 | `test_pre_screen_ineligible` | `tests.test_interop_prescreen` | PRD-MDR-007 | 🟢 PASSED | < 1s |
+| `test_epro_quarantine_sync_pipeline` | `tests.test_interop_quarantine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_circular_skip_logic_rules_raises_value_error` | `tests.test_inverse_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_inverse_mapping_valid_round_trip` | `tests.test_inverse_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_missing_required_fields_raises_value_error` | `tests.test_inverse_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1325,6 +1326,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_unit_conversion_create_valid` | `tests.test_lab_schemas` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_unit_conversion_record_valid` | `tests.test_lab_schemas` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_unit_conversion_response_valid` | `tests.test_lab_schemas` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_gating_approved_and_logged` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_gating_missing_justification_rejected` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
@@ -1665,6 +1668,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_no_aging_queries` | `tests.test_queries_escalation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_startup_shutdown_and_resilience` | `tests.test_queries_escalation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_threshold_boundaries_and_escalation` | `tests.test_queries_escalation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_driver_session_transaction_wrappers` | `tests.test_query_safety_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_parameter_bypass_validation` | `tests.test_query_safety_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unbounded_wildcards_validation` | `tests.test_query_safety_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_concurrent_randomization_unique_and_monotonic` | `tests.test_randomization_concurrency` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_forced_failure_rolls_back_atomically` | `tests.test_randomization_concurrency` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_subject_demographics_mutation_and_deletion_endpoints` | `tests.test_randomization_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
