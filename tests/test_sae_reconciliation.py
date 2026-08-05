@@ -37,7 +37,7 @@ async def setup_reconciliation_db():
     """
     Setup in-memory Safety database for reconciliation tests.
     """
-    db_uri = f"sqlite+aiosqlite:///file:memdb_sae_{uuid.uuid4().hex}?mode=memory&cache=shared&uri=true"
+    db_uri = f"sqlite+aiosqlite:///file:memdb_sae_{uuid.uuid4().hex}?mode=memory&cache=shared&uri=true&timeout=30"
     db_manager.init_db(db_uri, echo=False)
 
     from sqlalchemy import event as sa_event

@@ -29,7 +29,7 @@ async def setup_db():
     from apps.execution.database.migrate import deploy_database_triggers
 
     # Use a named in-memory SQLite database with shared cache
-    db_uri = f"sqlite+aiosqlite:///file:memdb_rand_{uuid.uuid4().hex}?mode=memory&cache=shared&uri=true"
+    db_uri = f"sqlite+aiosqlite:///file:memdb_rand_{uuid.uuid4().hex}?mode=memory&cache=shared&uri=true&timeout=30"
     db_manager.init_db(db_uri, echo=False)
 
     # Keep one connection open to prevent in-memory database from being closed/wiped

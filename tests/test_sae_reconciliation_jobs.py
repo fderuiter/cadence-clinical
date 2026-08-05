@@ -34,7 +34,7 @@ async def setup_jobs_db():
         "internal-gateway-secret-12345"  # pragma: allowlist secret
     )
 
-    db_uri = f"sqlite+aiosqlite:///file:memdb_sae_jobs_{uuid.uuid4().hex}?mode=memory&cache=shared&uri=true"
+    db_uri = f"sqlite+aiosqlite:///file:memdb_sae_jobs_{uuid.uuid4().hex}?mode=memory&cache=shared&uri=true&timeout=30"
     db_manager.init_db(db_uri, echo=False)
 
     from sqlalchemy import event as sa_event
