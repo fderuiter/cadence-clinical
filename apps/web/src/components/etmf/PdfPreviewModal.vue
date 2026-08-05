@@ -275,10 +275,12 @@
                         Subject Name:
                         <span class="redaction-overlay-block">John Doe</span>
                       </div>
+                      <!-- prettier-ignore -->
                       <div class="redacted-line">
                         Tax Identifier:
                         <span class="redaction-overlay-block">000-12-3456</span> <!-- deid: ignore -->
                       </div>
+                      <!-- prettier-ignore -->
                       <div class="redacted-line">
                         Electronic Mail:
                         <span class="redaction-overlay-block">john.doe@example.com</span> <!-- deid: ignore -->
