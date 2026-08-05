@@ -1,18 +1,77 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import CtmsView from "../src/views/CtmsView.vue";
 import MdrView from "../src/views/MdrView.vue";
 import ClinicalSoAMatrix from "../src/components/clinical/ClinicalSoAMatrix.vue";
+import { apiClient } from "../src/api/apiClient";
+
+vi.mock("../src/api/apiClient", () => {
+  const mockClient = {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+  };
+  return {
+    apiClient: mockClient,
+    default: mockClient,
+  };
+});
 
 describe("CtmsView.vue native list rendering migration", () => {
   beforeEach(() => {
     const pinia = createPinia();
     setActivePinia(pinia);
+
+    // Default mock implementations for apiClient.get
+    vi.mocked(apiClient.get).mockImplementation((url) => {
+      if (url.includes("/site-milestones")) {
+        return Promise.resolve([
+          {
+            id: "1",
+            milestone_type: "SITE_SELECTION",
+            planned_date: "2026-08-01T00:00:00",
+            actual_date: "2026-08-05T00:00:00",
+            status: "ACHIEVED",
+          },
+        ]);
+      }
+      if (url.includes("/monitoring-visits")) {
+        return Promise.resolve([
+          {
+            id: "1",
+            visit_type: "SIV",
+            scheduled_date: "2026-08-01T00:00:00",
+            actual_date: "2026-08-02T00:00:00",
+            cra_id: "cra_fderuiter",
+            status: "SIGNED_OFF",
+          },
+        ]);
+      }
+      if (url.includes("/doa/sites/")) {
+        return Promise.resolve({
+          delegated_staff: [],
+          audit_history: [],
+          pi_name: "Dr. Arthur Pendragon",
+        });
+      }
+      return Promise.resolve([]);
+    });
   });
 
-  it("renders milestone and visits tables with correct headers and classes", () => {
+  it("renders milestone and visits tables with correct headers and classes", async () => {
     const wrapper = mount(CtmsView);
+
+    // Wait for the async loads to resolve
+    let retries = 5;
+    while (vi.mocked(apiClient.get).mock.calls.length === 0 && retries > 0) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      retries--;
+    }
+    await wrapper.vm.$nextTick();
+    await new Promise((resolve) => setTimeout(resolve, 100)); // extra wait for reactivity
+    await wrapper.vm.$nextTick();
 
     // Assert milestones container and table structure
     const milestonesContainer = wrapper.find("#ctms-milestones-container");
@@ -49,6 +108,7 @@ describe("CtmsView.vue native list rendering migration", () => {
       "Actual Date",
       "CRA Assigned",
       "Status",
+      "Actions",
     ]);
 
     // Assert dynamic visit elements and gxp class application
