@@ -579,7 +579,7 @@ async function submitPinUnlock() {
     }
 
     goToLanding();
-  } catch (err) {
+  } catch {
     // Refresh locks/attempts status
     await checkUserLockStatus();
     if (!isUserLocked.value) {
