@@ -89,19 +89,20 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     // Total permitted items for Sponsor Designer:
     // 1. MDR Protocol Designer
     // 2. eConsent Authoring
-    // 3. Notifications
-    // Total = 3
-    expect(items.length).toBe(3);
+    // 3. Rules Designer
+    // 4. Notifications
+    // Total = 4
+    expect(items.length).toBe(4);
 
     const names = items.map((el) => el.find(".command-name").text());
     expect(names).toContain("MDR Protocol Designer");
     expect(names).toContain("eConsent Authoring");
+    expect(names).toContain("Rules Designer");
     expect(names).toContain("Notifications");
 
-    // Restricted routes like CTMS, Cryptographic Ledger, Rules, eTMF, eCRF should be omitted
+    // Restricted routes like CTMS, Cryptographic Ledger, eTMF, eCRF should be omitted
     expect(names).not.toContain("CTMS Dashboard");
     expect(names).not.toContain("Cryptographic Ledger");
-    expect(names).not.toContain("Rules Designer");
     expect(names).not.toContain("eTMF Document Manager");
     expect(names).not.toContain("eCRF Form Engine");
   });

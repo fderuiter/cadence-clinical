@@ -140,7 +140,7 @@ const routes = [
     component: () => import("../views/RulesView.vue"),
     meta: {
       requiresAuth: true,
-      requiresRole: ["data_manager", "sponsor_admin"],
+      requiresRole: ["sponsor_designer", "data_manager", "sponsor_admin"],
     },
   },
   {

@@ -114,6 +114,16 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       await router.push("/rules");
       expect(router.currentRoute.value.path).toBe("/rules");
     });
+
+    it("should allow Study Designer to access /rules view", async () => {
+      const authStore = useAuthStore();
+      authStore.isAuthenticated = true;
+      authStore.isDemoMode = true;
+      authStore.rawRoles = ["Study Designer"]; // maps to sponsor_designer
+
+      await router.push("/rules");
+      expect(router.currentRoute.value.path).toBe("/rules");
+    });
   });
 
   describe("Dynamic Landing Route Redirections on Root (/) Navigation", () => {

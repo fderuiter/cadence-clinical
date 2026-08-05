@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2131
-- **Passed:** 2126 🟢
+- **Total Automated Test Cases Run:** 2132
+- **Passed:** 2127 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
 - **Overall Operational Pass Rate:** 99.77%
@@ -1183,6 +1183,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_api_routers_have_no_direct_db_imports` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_application_isolation` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_domain_isolation` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_designer_core_isolation` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_execution_application_isolation` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_execution_domain_isolation` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_consent_form_record_immutability_domain` | `tests.test_hexagonal_domain` | PRD-SYS-001 | 🟢 PASSED | < 1s |
