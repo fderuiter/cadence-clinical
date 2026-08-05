@@ -166,6 +166,9 @@ const state = reactive({
   unreadCount: 0,
   modalError: "",
   previouslyFocusedElement: null,
+  submissions: [],
+  isSyncDrawerOpen: false,
+  syncStatusText: "Online. All submissions synchronized.",
 });
 
 const MOCK_APPROVED_CONTENT = {
@@ -1580,30 +1583,47 @@ async function renderSyncQueueList() {
     .join("");
 }
 
+async function refreshSubmissionsState() {
+  try {
+    const all = await getAllSubmissions();
+    state.submissions = all;
+  } catch (err) {
+    console.warn("Failed to refresh submissions state:", err);
+  }
+}
+
 async function syncOfflineQueue() {
   const statusTextEl = document.getElementById("sync-queue-status-text");
   const queued = await getQueuedSubmissions();
   const online = checkOnline();
 
   if (!online) {
+    const txt = `Offline Mode. ${queued.length} submission(s) queued locally.`;
     if (statusTextEl) {
-      statusTextEl.textContent = `Offline Mode. ${queued.length} submission(s) queued locally.`;
+      statusTextEl.textContent = txt;
     }
+    state.syncStatusText = txt;
     await renderSyncQueueList();
+    await refreshSubmissionsState();
     return;
   }
 
   if (queued.length === 0) {
+    const txt = "Online. All submissions synchronized.";
     if (statusTextEl) {
-      statusTextEl.textContent = "Online. All submissions synchronized.";
+      statusTextEl.textContent = txt;
     }
+    state.syncStatusText = txt;
     await renderSyncQueueList();
+    await refreshSubmissionsState();
     return;
   }
 
+  const txtSyncing = `Online. Syncing ${queued.length} submission(s)...`;
   if (statusTextEl) {
-    statusTextEl.textContent = `Online. Syncing ${queued.length} submission(s)...`;
+    statusTextEl.textContent = txtSyncing;
   }
+  state.syncStatusText = txtSyncing;
 
   const payload = {
     submissions: queued.map((item) => ({
@@ -1639,17 +1659,22 @@ async function syncOfflineQueue() {
       }
     }
 
+    const txtComplete = "Online. Sync complete.";
     if (statusTextEl) {
-      statusTextEl.textContent = "Online. Sync complete.";
+      statusTextEl.textContent = txtComplete;
     }
+    state.syncStatusText = txtComplete;
   } catch (err) {
     console.error("Sync failed:", err);
+    const txtFailed = `Sync failed. ${queued.length} submission(s) still queued.`;
     if (statusTextEl) {
-      statusTextEl.textContent = `Sync failed. ${queued.length} submission(s) still queued.`;
+      statusTextEl.textContent = txtFailed;
     }
+    state.syncStatusText = txtFailed;
   }
 
   await renderSyncQueueList();
+  await refreshSubmissionsState();
 }
 
 // Bootstrap Initialization
@@ -2273,6 +2298,7 @@ export {
   closeSignatureModal,
   markFieldInvalid,
   logout,
+  refreshSubmissionsState,
 };
 
 function createClinicalInput(
