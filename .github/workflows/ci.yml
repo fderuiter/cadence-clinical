@@ -95,6 +95,11 @@ jobs:
         if: always()
         run: uv run python scripts/validate_path_patterns.py --all
 
+      - name: Run Decoupled Modular Validation Suite
+        id: run_decoupled_suite
+        if: always()
+        run: uv run python scripts/validate_decoupled_suite.py
+
       - name: Compile UI library for markdown checks
         run: pnpm --filter ui build
 

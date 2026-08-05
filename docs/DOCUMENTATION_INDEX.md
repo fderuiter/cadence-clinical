@@ -35,7 +35,7 @@ High-level clinical system contracts, product scope, and functional specificatio
 ## 2. Technical Architecture & Integration Specifications
 Deep technical design specifications, database models, and service boundary definitions.
 
-- **[System Architecture Guide](ARCHITECTURE.md)** (`ARCHITECTURE.md`): High-level system architecture, service communication topology, and database split (Neo4j for MDR, PostgreSQL for EDC).
+- **[System Architecture Guide](../ARCHITECTURE.md)** (`ARCHITECTURE.md`): High-level system architecture, service communication topology, and database split (Neo4j for MDR, PostgreSQL for EDC).
 - **[Technical Design Document (TDD)](SDLC/02_Technical_Design_Document_TDD.md)** (`02_Technical_Design_Document_TDD.md`): Internal micro-architecture, database schemas, cryptographic signature specs, and service isolation boundaries.
 - **[API Integration Specification](SDLC/03_API_Integration_Specification.md)** (`03_API_Integration_Specification.md`): Gateway routes, request/response payload contracts, RFC 7807 error formats, and authentication propagation headers.
 - **[Data Standards & Interoperability Blueprint](SDLC/04_Data_Standards_Interoperability_Blueprint.md)** (`04_Data_Standards_Interoperability_Blueprint.md`): CDISC USDM v3.0/v4.0, CDISC ODM, SDTM/ADaM exports, FHIR/eSource, and MedDRA/WHODrug medical coding integration.
@@ -61,7 +61,7 @@ Guidelines for setting up, building, running, and contributing code to Cadence C
 
 - **[Local Development Environment](LOCAL_DEV_ENVIRONMENT.md)** (`LOCAL_DEV_ENVIRONMENT.md`): Setup instructions, environment variables, Docker services, and database migrations.
 - **[Issue Structure, Work Streams & Project Board Guide](SDLC/ISSUE_STRUCTURE_GUIDE.md)** (`SDLC/ISSUE_STRUCTURE_GUIDE.md`): Standardized issue formatting, 8 parallel work streams, readiness badges, GitHub Project 17 automation, and DoD requirements.
-- **[AI Agent & Development Instructions](AGENTS.md)** (`AGENTS.md`): Architectural guardrails, coding standards, directory targeting rules, and PR verification gates.
+- **[AI Agent & Development Instructions](../AGENTS.md)** (`AGENTS.md`): Architectural guardrails, coding standards, directory targeting rules, and PR verification gates.
 - **[Contributing Guidelines](../CONTRIBUTING.md)** (`CONTRIBUTING.md`): Workspace development standards, code style, formatting tools, and the Issue-to-Doc Sync Workflow.
 - **[Operations & Deployment Guide](SDLC/07_Operations_Deployment_Guide.md)** (`07_Operations_Deployment_Guide.md`): Production deployment topology, Docker orchestration, monitoring, and database backup protocols.
 

@@ -91,6 +91,8 @@ docs/CDISC/
 | **EG** | `ECG_Central_Reading`, `ECG_Local_Reading` | Central and Local ECG readings |
 | **LB** | `Lab_Central`, `Lab_Local` | Central and Local laboratory readings & reference ranges |
 | **IE** | `IE` | Protocol inclusion / exclusion criteria fulfillment |
+| **DS** | `Disposition` | Trial disposition of subjects |
+| **SC** | `Subject_Characteristics` | Subject characteristics and demographic supplements |
 | **DD** | `Death_Details` | Cause of death, autopsy details, and terminal events |
 | **PE** | `Physical_Exam` | System-by-system physical examination findings |
 | **CE** | `Clinical_Events` | Protocol-defined clinical events and endpoints |
@@ -98,7 +100,9 @@ docs/CDISC/
 | **HO** | `Healthcare_Encounters` | Inpatient, outpatient, and emergency room visits |
 | **RS** | `Disease Response` | Tumor assessment and therapeutic response evaluation |
 | **FA** | `Findings` | Supplemental findings related to primary observations |
-| **TIG** | `TIG` | Specialized eCRFs for nicotine dependency (`Med_Used`, `Medical_History`, `Informed_Consent`) |
+| **PR** | `Procedures` | Procedures performed on the subject |
+| **RP** | `Reproductive_System_Findings` | Reproductive system findings and assessments |
+| **TIG** | `TIG` | Specialized eCRFs for nicotine dependency (`Electrocardiogram`, `AEs`, `Medical_History`, `Informed_Consent`, `RecProductsUsed`, `PDs`, `TobaccoProdEventOrMalf`, `SmokingCessation`, `SubjIECriteria`, `TobaccoUseHistory`, `ConMeds`, `Demographics`, `Med_Used`, `SubjChar`, `SubjDisposition`, `VitalSigns`) |
 
 ---
 

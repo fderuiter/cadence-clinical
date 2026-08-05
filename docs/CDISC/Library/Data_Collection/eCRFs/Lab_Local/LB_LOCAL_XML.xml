@@ -1,0 +1,408 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3"
+     FileOID="CDASH IG2.1 CRFs_2"
+     FileType="Snapshot"
+     CreationDateTime="2022-06-03T14:08:32"
+     ODMVersion="1.3.2"
+     SourceSystem="Formedix ryze"
+     SourceSystemVersion="">
+   <Study OID="STD_CDASHIG21">
+      <GlobalVariables>
+         <StudyName>CDASH IG2.1 CRFs</StudyName>
+         <StudyDescription>CDASH IG2.1 CRFs</StudyDescription>
+         <ProtocolName>CDASH IG2.1 CRFs</ProtocolName>
+      </GlobalVariables>
+      <BasicDefinitions/>
+      <MetaDataVersion OID="LB_LOCAL" Name="Data acquisition" Description="LB_LOCAL">
+         <FormDef OID="LB_LOCAL" Name="Form LB - Local Processing" Repeating="No">
+            <Description>
+               <TranslatedText xml:lang="en">LB - Local Processing</TranslatedText>
+            </Description>
+            <ItemGroupRef ItemGroupOID="CDASH_2-1_IG_22" Mandatory="No" OrderNumber="1"/>
+            <ItemGroupRef ItemGroupOID="CDASH_2-1_IG_22_D" Mandatory="No" OrderNumber="2"/>
+            <ItemGroupRef ItemGroupOID="CDASH_2-1_IG_22_D1" Mandatory="No" OrderNumber="3"/>
+         </FormDef>
+         <ItemGroupDef OID="CDASH_2-1_IG_22" Name="LB - Local Processing" Repeating="No">
+            <Description>
+               <TranslatedText xml:lang="en">LB - Labs</TranslatedText>
+            </Description>
+            <ItemRef ItemOID="IT.LBNAM" Mandatory="No" OrderNumber="1"/>
+            <ItemRef ItemOID="IT.LBPERF" Mandatory="No" OrderNumber="2"/>
+            <ItemRef ItemOID="IT.LBDAT" Mandatory="No" OrderNumber="3"/>
+            <ItemRef ItemOID="IT.LBTIM" Mandatory="No" OrderNumber="4"/>
+            <ItemRef ItemOID="IT.LBFAST" Mandatory="No" OrderNumber="5"/>
+         </ItemGroupDef>
+         <ItemGroupDef OID="CDASH_2-1_IG_22_D1"
+                       Name="LB - Local Processing - Details"
+                       Repeating="No">
+            <Description>
+               <TranslatedText xml:lang="en">LB - Labs</TranslatedText>
+            </Description>
+            <ItemRef ItemOID="IT.LBORRES_CA" Mandatory="No" OrderNumber="1"/>
+            <ItemRef ItemOID="IT.LBORRESU_CA" Mandatory="No" OrderNumber="2"/>
+            <ItemRef ItemOID="IT.LBORNRLO_CA" Mandatory="No" OrderNumber="3"/>
+            <ItemRef ItemOID="IT.LBORNRHI_CA" Mandatory="No" OrderNumber="4"/>
+            <ItemRef ItemOID="IT.LBCLSIG_CA" Mandatory="No" OrderNumber="5"/>
+         </ItemGroupDef>
+         <ItemGroupDef OID="CDASH_2-1_IG_22_D"
+                       Name="LB - Local Processing - Details"
+                       Repeating="No">
+            <Description>
+               <TranslatedText xml:lang="en">LB - Labs</TranslatedText>
+            </Description>
+            <ItemRef ItemOID="IT.LBORRES_ALP" Mandatory="No" OrderNumber="1"/>
+            <ItemRef ItemOID="IT.LBORRESU_ALP" Mandatory="No" OrderNumber="2"/>
+            <ItemRef ItemOID="IT.LBORNRLO_ALP" Mandatory="No" OrderNumber="3"/>
+            <ItemRef ItemOID="IT.LBORNRHI_ALP" Mandatory="No" OrderNumber="4"/>
+            <ItemRef ItemOID="IT.LBCLSIG_ALP" Mandatory="No" OrderNumber="5"/>
+         </ItemGroupDef>
+         <ItemDef OID="IT.LBCLSIG_ALP"
+                  Name="ALP_LBCLSIG"
+                  DataType="text"
+                  Length="3">
+            <Description>
+               <TranslatedText xml:lang="en">LBCLSIG</TranslatedText>
+            </Description>
+            <Question>
+               <TranslatedText xml:lang="en">Was this result clinically significant?</TranslatedText>
+            </Question>
+            <CodeListRef CodeListOID="CL.C66742.NY.NY"/>
+            <Alias Name="Record whether laboratory test results were clinically significant."
+                   Context="completionInstructions"/>
+            <Alias Name="LBCLSIG" Context="CDASH"/>
+            <Alias Name="Key data collected in this scenario."
+                   Context="implementationNotes"/>
+            <Alias Name="Clinically Significant" Context="prompt"/>
+            <Alias Name="This does not map directly to an SDTMIG variable. This information could be submitted in a SUPPLB dataset as the value of SUPPLB.QVAL where SUPPLB.QNAM =&#34;LBCLSIG&#34; and SUPPLB.QLABEL=&#34;Clinically Significant&#34;. Refer to the current SDTM and SDTMIG for instructions on placement of non-standard variables in SDTM domains."
+                   Context="mappingInstructions"/>
+         </ItemDef>
+         <ItemDef OID="IT.LBORNRHI_ALP"
+                  Name="ALP_LBORNRHI"
+                  DataType="text"
+                  Length="8">
+            <Description>
+               <TranslatedText xml:lang="en">LBORNRHI</TranslatedText>
+            </Description>
+            <Question>
+               <TranslatedText>What was the high limit of the reference range for this lab
+    test?</TranslatedText>
+               <TranslatedText xml:lang="en">Normal Range Upper Limit</TranslatedText>
+            </Question>
+            <Alias Name="LBORNRLO and LBORNRHI should be populated only for continuous results; LBSTNRC should be populated only for non-continuous results. These data may be obtained from the lab or the electronic equipment. These data could be determined from a site or lab specific set of normal ranges stored in a look up table. See the SDTMIG for details on mapping and selecting the proper variable name."
+                   Context="implementationNotes"/>
+            <Alias Name="Normal Range Upper Limit" Context="prompt"/>
+            <Alias Name="Record the upper limit of the reference range of the lab test."
+                   Context="completionInstructions"/>
+            <Alias Name="Maps directly to the SDTMIG variable listed in the column with the heading SDTMIG Target."
+                   Context="mappingInstructions"/>
+            <Alias Name="LBORNRHI" Context="CDASH"/>
+         </ItemDef>
+         <ItemDef OID="IT.LBORNRLO_ALP"
+                  Name="ALP_LBORNRLO"
+                  DataType="text"
+                  Length="8">
+            <Description>
+               <TranslatedText xml:lang="en">LBORNRLO</TranslatedText>
+            </Description>
+            <Question>
+               <TranslatedText>What was the lower limit of the reference range for this lab test?</TranslatedText>
+               <TranslatedText xml:lang="en">Normal Range Lower Limit</TranslatedText>
+            </Question>
+            <Alias Name="Normal Range Lower Limit" Context="prompt"/>
+            <Alias Name="LBORNRLO and LBORNRHI should be populated only for continuous results; LBSTNRC should be populated only for non-continuous results. These data may be obtained from the lab or the electronic equipment. These data could be determined from a site or lab specific set of normal ranges stored in a look up table. See the SDTMIG for details on mapping and selecting the proper variable name."
+                   Context="implementationNotes"/>
+            <Alias Name="Record the lower limit of the reference range of the lab test."
+                   Context="completionInstructions"/>
+            <Alias Name="LBORNRLO" Context="CDASH"/>
+            <Alias Name="Maps directly to the SDTMIG variable listed in the column with the heading SDTMIG Target."
+                   Context="mappingInstructions"/>
+         </ItemDef>
+         <ItemDef OID="IT.LBORRES_ALP"
+                  Name="ALP_LBORRES"
+                  DataType="text"
+                  Length="24">
+            <Description>
+               <TranslatedText xml:lang="en">LBTEST</TranslatedText>
+            </Description>
+            <Question>
+               <TranslatedText>What was the lab test name?</TranslatedText>
+               <TranslatedText xml:lang="en">Alkaline Phosphatase</TranslatedText>
+            </Question>
+            <Alias Name="Required to identify which test the result is for. It is recommended that the test names be preprinted on the CRF rather than collected in a field that requires the site to enter text. If the form is laid out as a grid, then words such as &#34;Test&#34; can be included as the column header."
+                   Context="implementationNotes"/>
+            <Alias Name="Maps directly to the SDTMIG variable listed in the column with the heading SDTMIG Target. The SDTMIG variable LBTESTCD may be determined from the value collected in LBTEST. The SDTMIG variables LBTESTCD and LBTEST are required in the SDTM submission datasets. Use appropriate CDISC Controlled Terminology for the test and test code."
+                   Context="mappingInstructions"/>
+            <Alias Name="ALP_LBORRES" Context="CDASH"/>
+            <Alias Name="[Laboratory Test Name]" Context="prompt"/>
+            <Alias Name="Record the name of the Lab measurement or finding, if not preprinted on the CRF. If collected on the CRF, the sponsor may provide additional instructions to ensure the data is entered as intended."
+                   Context="completionInstructions"/>
+         </ItemDef>
+         <ItemDef OID="IT.LBORRESU_ALP"
+                  Name="ALP_LBORRESU"
+                  DataType="text"
+                  Length="24">
+            <Description>
+               <TranslatedText xml:lang="en">LBTEST</TranslatedText>
+            </Description>
+            <Question>
+               <TranslatedText>What was the unit of the lab test result?</TranslatedText>
+               <TranslatedText xml:lang="en">Alkaline Phosphatase Units</TranslatedText>
+            </Question>
+            <CodeListRef CodeListOID="LBTEST_ALP"/>
+            <Alias Name="Required to identify which test the result is for. It is recommended that the test names be preprinted on the CRF rather than collected in a field that requires the site to enter text. If the form is laid out as a grid, then words such as &#34;Test&#34; can be included as the column header."
+                   Context="implementationNotes"/>
+            <Alias Name="Maps directly to the SDTMIG variable listed in the column with the heading SDTMIG Target. The SDTMIG variable LBTESTCD may be determined from the value collected in LBTEST. The SDTMIG variables LBTESTCD and LBTEST are required in the SDTM submission datasets. Use appropriate CDISC Controlled Terminology for the test and test code."
+                   Context="mappingInstructions"/>
+            <Alias Name="ALPU_LBORRESU" Context="CDASH"/>
+            <Alias Name="[Laboratory Test Name]" Context="prompt"/>
+            <Alias Name="Record the name of the Lab measurement or finding, if not preprinted on the CRF. If collected on the CRF, the sponsor may provide additional instructions to ensure the data is entered as intended."
+                   Context="completionInstructions"/>
+         </ItemDef>
+         <ItemDef OID="IT.LBCLSIG_CA"
+                  Name="CA_LBCLSIG"
+                  DataType="text"
+                  Length="3">
+            <Description>
+               <TranslatedText xml:lang="en">LBCLSIG</TranslatedText>
+            </Description>
+            <Question>
+               <TranslatedText xml:lang="en">Was this result clinically significant?</TranslatedText>
+            </Question>
+            <CodeListRef CodeListOID="CL.C66742.NY.NY"/>
+            <Alias Name="Record whether laboratory test results were clinically significant."
+                   Context="completionInstructions"/>
+            <Alias Name="LBCLSIG" Context="CDASH"/>
+            <Alias Name="Key data collected in this scenario."
+                   Context="implementationNotes"/>
+            <Alias Name="Clinically Significant" Context="prompt"/>
+            <Alias Name="This does not map directly to an SDTMIG variable. This information could be submitted in a SUPPLB dataset as the value of SUPPLB.QVAL where SUPPLB.QNAM =&#34;LBCLSIG&#34; and SUPPLB.QLABEL=&#34;Clinically Significant&#34;. Refer to the current SDTM and SDTMIG for instructions on placement of non-standard variables in SDTM domains."
+                   Context="mappingInstructions"/>
+         </ItemDef>
+         <ItemDef OID="IT.LBORNRHI_CA"
+                  Name="CA_LBORNRHI"
+                  DataType="text"
+                  Length="8">
+            <Description>
+               <TranslatedText xml:lang="en">LBORNRHI</TranslatedText>
+            </Description>
+            <Question>
+               <TranslatedText>What was the high limit of the reference range for this lab
+    test?</TranslatedText>
+               <TranslatedText xml:lang="en">Normal Range Upper Limit</TranslatedText>
+            </Question>
+            <Alias Name="LBORNRLO and LBORNRHI should be populated only for continuous results; LBSTNRC should be populated only for non-continuous results. These data may be obtained from the lab or the electronic equipment. These data could be determined from a site or lab specific set of normal ranges stored in a look up table. See the SDTMIG for details on mapping and selecting the proper variable name."
+                   Context="implementationNotes"/>
+            <Alias Name="Normal Range Upper Limit" Context="prompt"/>
+            <Alias Name="Record the upper limit of the reference range of the lab test."
+                   Context="completionInstructions"/>
+            <Alias Name="Maps directly to the SDTMIG variable listed in the column with the heading SDTMIG Target."
+                   Context="mappingInstructions"/>
+            <Alias Name="LBORNRHI" Context="CDASH"/>
+         </ItemDef>
+         <ItemDef OID="IT.LBORNRLO_CA"
+                  Name="CA_LBORNRLO"
+                  DataType="text"
+                  Length="8">
+            <Description>
+               <TranslatedText xml:lang="en">LBORNRLO</TranslatedText>
+            </Description>
+            <Question>
+               <TranslatedText>What was the lower limit of the reference range for this lab test?</TranslatedText>
+               <TranslatedText xml:lang="en">Normal Range Lower Limit</TranslatedText>
+            </Question>
+            <Alias Name="Normal Range Lower Limit" Context="prompt"/>
+            <Alias Name="LBORNRLO and LBORNRHI should be populated only for continuous results; LBSTNRC should be populated only for non-continuous results. These data may be obtained from the lab or the electronic equipment. These data could be determined from a site or lab specific set of normal ranges stored in a look up table. See the SDTMIG for details on mapping and selecting the proper variable name."
+                   Context="implementationNotes"/>
+            <Alias Name="Record the lower limit of the reference range of the lab test."
+                   Context="completionInstructions"/>
+            <Alias Name="LBORNRLO" Context="CDASH"/>
+            <Alias Name="Maps directly to the SDTMIG variable listed in the column with the heading SDTMIG Target."
+                   Context="mappingInstructions"/>
+         </ItemDef>
+         <ItemDef OID="IT.LBORRES_CA"
+                  Name="CA_LBORRES"
+                  DataType="text"
+                  Length="24">
+            <Description>
+               <TranslatedText xml:lang="en">LBTEST</TranslatedText>
+            </Description>
+            <Question>
+               <TranslatedText>What was the lab test name?</TranslatedText>
+               <TranslatedText xml:lang="en">Calcium</TranslatedText>
+            </Question>
+            <Alias Name="CA_LBORRES" Context="CDASH"/>
+            <Alias Name="Required to identify which test the result is for. It is recommended that the test names be preprinted on the CRF rather than collected in a field that requires the site to enter text. If the form is laid out as a grid, then words such as &#34;Test&#34; can be included as the column header."
+                   Context="implementationNotes"/>
+            <Alias Name="Maps directly to the SDTMIG variable listed in the column with the heading SDTMIG Target. The SDTMIG variable LBTESTCD may be determined from the value collected in LBTEST. The SDTMIG variables LBTESTCD and LBTEST are required in the SDTM submission datasets. Use appropriate CDISC Controlled Terminology for the test and test code."
+                   Context="mappingInstructions"/>
+            <Alias Name="[Laboratory Test Name]" Context="prompt"/>
+            <Alias Name="Record the name of the Lab measurement or finding, if not preprinted on the CRF. If collected on the CRF, the sponsor may provide additional instructions to ensure the data is entered as intended."
+                   Context="completionInstructions"/>
+         </ItemDef>
+         <ItemDef OID="IT.LBORRESU_CA"
+                  Name="CA_LBORRESU"
+                  DataType="text"
+                  Length="24">
+            <Description>
+               <TranslatedText xml:lang="en">LBTEST</TranslatedText>
+            </Description>
+            <Question>
+               <TranslatedText>What was the unit of the lab test?</TranslatedText>
+               <TranslatedText xml:lang="en">Calcium Units</TranslatedText>
+            </Question>
+            <CodeListRef CodeListOID="LBTEST_CA"/>
+            <Alias Name="CA_LBORRESU" Context="CDASH"/>
+            <Alias Name="Required to identify which test the result is for. It is recommended that the test names be preprinted on the CRF rather than collected in a field that requires the site to enter text. If the form is laid out as a grid, then words such as &#34;Test&#34; can be included as the column header."
+                   Context="implementationNotes"/>
+            <Alias Name="Maps directly to the SDTMIG variable listed in the column with the heading SDTMIG Target. The SDTMIG variable LBTESTCD may be determined from the value collected in LBTEST. The SDTMIG variables LBTESTCD and LBTEST are required in the SDTM submission datasets. Use appropriate CDISC Controlled Terminology for the test and test code."
+                   Context="mappingInstructions"/>
+            <Alias Name="[Laboratory Test Name]" Context="prompt"/>
+            <Alias Name="Record the name of the Lab measurement or finding, if not preprinted on the CRF. If collected on the CRF, the sponsor may provide additional instructions to ensure the data is entered as intended."
+                   Context="completionInstructions"/>
+         </ItemDef>
+         <ItemDef OID="IT.LBDAT" Name="LBDAT" DataType="date">
+            <Description>
+               <TranslatedText xml:lang="en">LBDAT</TranslatedText>
+            </Description>
+            <Question>
+               <TranslatedText>What was the date of the lab specimen collection?</TranslatedText>
+               <TranslatedText xml:lang="en">Collection Date</TranslatedText>
+            </Question>
+            <Alias Name="This does not map directly to an SDTMIG variable. For the SDTM submission dataset, concatenate all collected CDASH DATE and TIME components and populate the SDTMIG variable LBDTC in ISO 8601 format."
+                   Context="mappingInstructions"/>
+            <Alias Name="LBDAT" Context="CDASH"/>
+            <Alias Name="Record the date when specimen collection was done using this format (DD-MON-YYYY)."
+                   Context="completionInstructions"/>
+            <Alias Name="A complete date is expected. The date of collection may be determined from the date of visit (VISDAT) and if so, a separate assessment date field is not required. The SDTMIG LBDTC variable contains either a date/time when a specimen is collected at a point in time or the start date/time, when a specimen is collected over time."
+                   Context="implementationNotes"/>
+            <Alias Name="Collection Date" Context="prompt"/>
+         </ItemDef>
+         <ItemDef OID="IT.LBFAST" Name="LBFAST" DataType="text" Length="3">
+            <Description>
+               <TranslatedText xml:lang="en">LBFAST</TranslatedText>
+            </Description>
+            <Question>
+               <TranslatedText xml:lang="en">Was the subject fasting?</TranslatedText>
+            </Question>
+            <CodeListRef CodeListOID="CL.C66742.NY.NY"/>
+            <Alias Name="LBFAST" Context="CDASH"/>
+            <Alias Name="Record whether the subject was fasting prior to the test being performed."
+                   Context="completionInstructions"/>
+            <Alias Name="Fasting" Context="prompt"/>
+            <Alias Name="Results may be affected by whether the subject was fasting. This may not be relevant for all tests."
+                   Context="implementationNotes"/>
+            <Alias Name="Maps directly to the SDTMIG variable listed in the column with the heading SDTMIG Target."
+                   Context="mappingInstructions"/>
+         </ItemDef>
+         <ItemDef OID="IT.LBNAM" Name="LBNAM" DataType="text" Length="24">
+            <Description>
+               <TranslatedText xml:lang="en">LBNAM</TranslatedText>
+            </Description>
+            <Question>
+               <TranslatedText>What was the name of the laboratory used?</TranslatedText>
+               <TranslatedText xml:lang="en">Laboratory Name</TranslatedText>
+            </Question>
+            <Alias Name="Laboratory Name" Context="prompt"/>
+            <Alias Name="Record the laboratory name." Context="completionInstructions"/>
+            <Alias Name="Recommended to collect on the CRF if lab names was not collected at the site/study level or if multiple labs are used by a site."
+                   Context="implementationNotes"/>
+            <Alias Name="Maps directly to the SDTMIG variable listed in the column with the heading SDTMIG Target."
+                   Context="mappingInstructions"/>
+            <Alias Name="LBNAM" Context="CDASH"/>
+         </ItemDef>
+         <ItemDef OID="IT.LBPERF" Name="LBPERF" DataType="text" Length="3">
+            <Description>
+               <TranslatedText xml:lang="en">LBPERF</TranslatedText>
+            </Description>
+            <Question>
+               <TranslatedText xml:lang="en">Was the sample collected?</TranslatedText>
+            </Question>
+            <CodeListRef CodeListOID="CL.C66742.NY.NY"/>
+            <Alias Name="This does not map directly to an SDTMIG variable. May be used to derive a value into the SDTMIG variable LBSTAT. If the CDASH variable LBPERF = &#34;N&#34;, the value of LBSTAT will be &#34;NOT DONE&#34;. If LBPERF = &#34;Y&#34;, LBSTAT should be null. A combination of SDTMIG variables ( e.g., LBCAT and LBSCAT, LBTPT ) is used to indicate that multiple tests were not done. In this situation, the SDTMIG variable LBTESTCD would be populated as LBALL and an appropriate test name (LBTEST) provided. See SDTMIG v3.2 Section 4.1.5.1.2."
+                   Context="mappingInstructions"/>
+            <Alias Name="LBPERF" Context="CDASH"/>
+            <Alias Name="Lab Performed; Sample Collected" Context="prompt"/>
+            <Alias Name="Indicate whether or not lab specimen was collected or measurement performed."
+                   Context="completionInstructions"/>
+            <Alias Name="This may be implemented for an Lab entire panel, or on a specific lab test basis. General prompt question to be used as a data management tool to verify that missing results are confirmed missing."
+                   Context="implementationNotes"/>
+         </ItemDef>
+         <ItemDef OID="IT.LBTIM" Name="LBTIM" DataType="time">
+            <Description>
+               <TranslatedText xml:lang="en">LBTIM</TranslatedText>
+            </Description>
+            <Question>
+               <TranslatedText>What was the (start) time of the lab specimen collection?</TranslatedText>
+               <TranslatedText xml:lang="en">Collection Time</TranslatedText>
+            </Question>
+            <Alias Name="This does not map directly to an SDTMIG variable. For the SDTM submission dataset, concatenate all collected CDASH DATE and TIME components and populate the SDTMIG variable LBDTC in ISO 8601 format."
+                   Context="mappingInstructions"/>
+            <Alias Name="May be required when multiple assessments are done on 1 day or when the timing in relationship to study treatment is required for analysis or a specimen is collected over an extended time period."
+                   Context="implementationNotes"/>
+            <Alias Name="LBTIM" Context="CDASH"/>
+            <Alias Name="Record time of collection (as complete as possible)."
+                   Context="completionInstructions"/>
+            <Alias Name="[Start] Collection Time" Context="prompt"/>
+         </ItemDef>
+         <CodeList OID="LBTEST_ALP" Name="LBEST_Alkaline Phosphatase" DataType="text">
+            <CodeListItem CodedValue="IU/L" OrderNumber="1">
+               <Decode>
+                  <TranslatedText>IU/L</TranslatedText>
+               </Decode>
+            </CodeListItem>
+            <CodeListItem CodedValue="U/L" OrderNumber="2">
+               <Decode>
+                  <TranslatedText>U/L</TranslatedText>
+               </Decode>
+            </CodeListItem>
+            <CodeListItem CodedValue="ukat/L" OrderNumber="3">
+               <Decode>
+                  <TranslatedText>ukat/L</TranslatedText>
+               </Decode>
+            </CodeListItem>
+            <CodeListItem CodedValue="umol/s/L" OrderNumber="4">
+               <Decode>
+                  <TranslatedText>umol/s/L</TranslatedText>
+               </Decode>
+            </CodeListItem>
+         </CodeList>
+         <CodeList OID="LBTEST_CA" Name="LBEST_Calcium" DataType="text">
+            <CodeListItem CodedValue="mg/dL" OrderNumber="1">
+               <Decode>
+                  <TranslatedText>mg/dL</TranslatedText>
+               </Decode>
+            </CodeListItem>
+            <CodeListItem CodedValue="mEq/L" OrderNumber="2">
+               <Decode>
+                  <TranslatedText>mEq/L</TranslatedText>
+               </Decode>
+            </CodeListItem>
+            <CodeListItem CodedValue="mg/L" OrderNumber="3">
+               <Decode>
+                  <TranslatedText>mg/L</TranslatedText>
+               </Decode>
+            </CodeListItem>
+            <CodeListItem CodedValue="mmol/L" OrderNumber="4">
+               <Decode>
+                  <TranslatedText>mmol/L</TranslatedText>
+               </Decode>
+            </CodeListItem>
+         </CodeList>
+         <CodeList OID="CL.C66742.NY.NY" Name="No Yes Response Only" DataType="text">
+            <Description>
+               <TranslatedText>A term that is used to indicate a question with permissible values of yes/no/unknown/not applicable.</TranslatedText>
+            </Description>
+            <CodeListItem CodedValue="N" OrderNumber="1">
+               <Decode>
+                  <TranslatedText>No</TranslatedText>
+               </Decode>
+            </CodeListItem>
+            <CodeListItem CodedValue="Y" OrderNumber="2">
+               <Decode>
+                  <TranslatedText>Yes</TranslatedText>
+               </Decode>
+            </CodeListItem>
+         </CodeList>
+      </MetaDataVersion>
+   </Study>
+</ODM>

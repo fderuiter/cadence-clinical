@@ -97,6 +97,12 @@ repos:
         language: system
         pass_filenames: true
 
+      - id: validate-decoupled-suite
+        name: Decoupled Modular Validation Suite
+        entry: python3 scripts/validate_decoupled_suite.py
+        language: system
+        pass_filenames: false
+
       - id: validate-vulnerabilities
         name: GxP Dependency Vulnerability Audit
         entry: uv run python scripts/validate_vulnerabilities.py
