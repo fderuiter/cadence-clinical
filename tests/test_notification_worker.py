@@ -114,12 +114,30 @@ async def setup_test_databases():
             break
 
     # Initialize Notifications Relational DB
-    notifications_db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
+    import uuid
+
+    from sqlalchemy.pool import NullPool
+
+    notif_db_name = f"notif_memdb_{uuid.uuid4().hex}"
+    notifications_db_manager.init_db(
+        f"sqlite+aiosqlite:///file:{notif_db_name}?mode=memory&cache=shared&uri=true",
+        echo=False,
+        poolclass=NullPool,
+    )
+    # Open and hold a connection to keep the shared-cache in-memory DB alive
+    notif_keepalive = await notifications_db_manager.engine.connect()
     async with notifications_db_manager.engine.begin() as conn:
         await conn.run_sync(NotificationsBase.metadata.create_all)
 
     # Initialize Org Directory Relational DB
-    org_db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
+    org_db_name = f"org_memdb_{uuid.uuid4().hex}"
+    org_db_manager.init_db(
+        f"sqlite+aiosqlite:///file:{org_db_name}?mode=memory&cache=shared&uri=true",
+        echo=False,
+        poolclass=NullPool,
+    )
+    # Open and hold a connection to keep the shared-cache in-memory DB alive
+    org_keepalive = await org_db_manager.engine.connect()
     async with org_db_manager.engine.begin() as conn:
         await conn.run_sync(OrgBase.metadata.create_all)
 
@@ -143,10 +161,12 @@ async def setup_test_databases():
     # Clean up both DB sessions & engines
     async with notifications_db_manager.engine.begin() as conn:
         await conn.run_sync(NotificationsBase.metadata.drop_all)
+    await notif_keepalive.close()
     await notifications_db_manager.close()
 
     async with org_db_manager.engine.begin() as conn:
         await conn.run_sync(OrgBase.metadata.drop_all)
+    await org_keepalive.close()
     await org_db_manager.close()
 
 
@@ -514,28 +534,37 @@ async def test_start_stop_notification_worker_integration():
         timestamp_utc=datetime.now(UTC).isoformat(),
     )
 
-    # Start the background worker loop
-    await start_notification_worker()
-    await asyncio.sleep(0.1)
+    async def mock_resolve_recipients(*args, **kwargs):
+        return [
+            {"user_id": "designer_john", "email": "designer_john@cadenceclinical.com"}
+        ]
 
-    # Publish an event to the queue
-    await publish_domain_event(event)
-
-    # Poll for the notification to be created in the database to prevent flakiness under heavy test runner load
-    notifs = []
-    for _ in range(100):
-        async with notifications_db_manager.get_session_maker()() as session:
-            stmt = select(Notification).where(
-                Notification.related_entity_id == "evt-integration-99"
-            )
-            res = await session.execute(stmt)
-            notifs = list(res.scalars().all())
-            if len(notifs) >= 1:
-                break
+    with patch(
+        "apps.notifications.workers.notification_worker.NotificationWorker.resolve_recipients",
+        mock_resolve_recipients,
+    ):
+        # Start the background worker loop
+        await start_notification_worker()
         await asyncio.sleep(0.1)
 
-    # Stop the worker cleanly
-    await stop_notification_worker()
+        # Publish an event to the queue
+        await publish_domain_event(event)
+
+        # Poll for the notification to be created in the database to prevent flakiness under heavy test runner load
+        notifs = []
+        for _ in range(150):
+            async with notifications_db_manager.get_session_maker()() as session:
+                stmt = select(Notification).where(
+                    Notification.related_entity_id == "evt-integration-99"
+                )
+                res = await session.execute(stmt)
+                notifs = list(res.scalars().all())
+                if len(notifs) >= 1:
+                    break
+            await asyncio.sleep(0.1)
+
+        # Stop the worker cleanly
+        await stop_notification_worker()
 
     # Check that a notification record was created in the Notifications database
     assert len(notifs) >= 1
