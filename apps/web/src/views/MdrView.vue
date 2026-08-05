@@ -956,6 +956,9 @@
       @confirm="confirmMutation"
       @cancel="cancelMutation"
     />
+
+    <!-- Guided Onboarding Tour -->
+    <OnboardingTour v-model:activeTab="activeTab" />
   </div>
 </template>
 
@@ -968,6 +971,7 @@ import { debounce } from "ui";
 import ReasonModal from "../components/ReasonModal.vue";
 import CrfAuthoringCanvas from "../components/crf/CrfAuthoringCanvas.vue";
 import { useDesignerStore } from "../stores/designer.js";
+import OnboardingTour from "../components/OnboardingTour.vue";
 
 const mdrReasonOptions = [
   { value: "Initial Entry", text: "Initial Study Configuration" },
