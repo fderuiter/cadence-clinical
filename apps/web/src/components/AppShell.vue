@@ -314,6 +314,7 @@ const canViewCtms = computed(() => {
 
 const canViewRules = computed(() => {
   return hasRequiredRole(authStore.normalizedRoles, [
+    "sponsor_designer",
     "data_manager",
     "sponsor_admin",
   ]);
