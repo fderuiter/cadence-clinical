@@ -31,6 +31,12 @@ def main():
     repo = os.environ.get("GITHUB_REPOSITORY")
     pr_number = os.environ.get("PR_NUMBER")
 
+    # Ensure robust default/fallback environment variables are registered for the gating run
+    os.environ["AUDIT_LOG_SECRET_KEY"] = os.environ.get("AUDIT_LOG_SECRET_KEY") or "dummy-audit-secret-key-123456"
+    os.environ["GATEWAY_SECRET"] = os.environ.get("GATEWAY_SECRET") or "dummy-gateway-secret-123456"
+    os.environ["SIGNING_SECRET"] = os.environ.get("SIGNING_SECRET") or "dummy-signing-secret-123456"
+    os.environ["INBOUND_EMAIL_HMAC_SECRET"] = os.environ.get("INBOUND_EMAIL_HMAC_SECRET") or "dummy-email-hmac-secret-123456"
+
     # If running locally, we can set default mock values for display/testing
     if not repo:
         os.environ["GITHUB_REPOSITORY"] = "owner/repo"

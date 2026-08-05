@@ -1845,14 +1845,6 @@ async def replay_quarantined_submission(
             detail=f"Cannot replay entry with active validation errors: {entry.validation_errors}",
         )
 
-    # 4. Check for existing active submission
-    stmt_sub = select(EPROSubmission).where(
-        EPROSubmission.subject_id == entry.subject_id,
-        EPROSubmission.diary_id == entry.diary_id,
-    )
-    res_sub = await session.execute(stmt_sub)
-    res_sub.scalars().first()
-
     # Reconstruct EPROSubmissionPayload representation to pass to reconcile
     payload_obj = EPROSubmissionPayload(
         subject_id=entry.subject_id,
