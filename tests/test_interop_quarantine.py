@@ -188,7 +188,7 @@ async def test_epro_quarantine_sync_pipeline():
     # Try editing quarantined submission with WRONG password
     edit_payload_wrong_pwd = {
         "answers": {"pain_score": 4, "age": 30, "gender": "F"},
-        "password": "wrong_password",
+        "password": "wrong_password",  # pragma: allowlist secret
         "change_reason": "Correcting participant age and pain score",
     }
     manager_headers_mutation = get_auth_headers(
@@ -215,7 +215,7 @@ async def test_epro_quarantine_sync_pipeline():
     # Edit quarantined submission with CORRECT password
     edit_payload_correct = {
         "answers": {"pain_score": 4, "age": 30, "gender": "F"},
-        "password": "valid_password",
+        "password": "valid_password",  # pragma: allowlist secret
         "change_reason": "Correcting participant age and pain score",
     }
     edit_resp = client.post(
@@ -236,7 +236,7 @@ async def test_epro_quarantine_sync_pipeline():
 
     # Try replaying quarantined submission with WRONG password
     replay_payload_wrong_pwd = {
-        "password": "wrong_password",
+        "password": "wrong_password",  # pragma: allowlist secret
         "change_reason": "Replaying corrected diary",
     }
     replay_resp = client.post(
@@ -249,7 +249,7 @@ async def test_epro_quarantine_sync_pipeline():
 
     # Replay with CORRECT password
     replay_payload_correct = {
-        "password": "valid_password",
+        "password": "valid_password",  # pragma: allowlist secret
         "change_reason": "Replaying corrected diary",
     }
     replay_resp = client.post(
