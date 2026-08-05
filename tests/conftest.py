@@ -228,6 +228,9 @@ if os.environ.get("USE_LIVE_DB") == "true":
 
 
 # Patch and create databases
+_initialized_databases = set()
+
+
 def patch_init_db():
     from apps.execution.database.core import DatabaseSessionManager
     from packages.database import RelationalDatabaseManager
@@ -256,6 +259,7 @@ def patch_init_db():
             ("postgres", "postgresql")
         ):
             db_name = f"cadence_edc{worker_suffix}"
+            _initialized_databases.add("cadence_edc")
             new_url = f"{base_postgres_url}{db_name}"
             return original_exec_init_db(self, new_url, **kwargs)
         return original_exec_init_db(self, database_url, **kwargs)
@@ -266,6 +270,7 @@ def patch_init_db():
         ):
             base_name = service_map.get(self.service_name, "cadence_edc")
             db_name = f"{base_name}{worker_suffix}"
+            _initialized_databases.add(base_name)
             new_url = f"{base_postgres_url}{db_name}"
             return original_rel_init_db(self, new_url, **kwargs)
         return original_rel_init_db(self, database_url, **kwargs)
@@ -1004,6 +1009,11 @@ async def clean_postgres_databases():
 
     base_postgres_url = get_postgres_base_config()
     for db_prefix, base in service_bases.items():
+        if (
+            os.environ.get("USE_LIVE_DB") != "true"
+            and db_prefix not in _initialized_databases
+        ):
+            continue
         db_name = f"{db_prefix}{worker_suffix}"
         db_url = f"{base_postgres_url}{db_name}"
         engine = create_async_engine(db_url)
@@ -1012,17 +1022,26 @@ async def clean_postgres_databases():
                 # Disable triggers and foreign keys for safe, trigger-free TRUNCATE of audited/restricted tables
                 await conn.execute(text("SET session_replication_role = 'replica';"))
 
-                # Truncate tables in reverse topological order of sorted tables to avoid cascade issues
-                for table in reversed(base.metadata.sorted_tables):
+                # Truncate all tables in a single statement for extreme speedup, with fallback
+                table_names = [
+                    f'"{table.name}"' for table in base.metadata.sorted_tables
+                ]
+                if table_names:
+                    truncate_query = f"TRUNCATE TABLE {', '.join(table_names)} RESTART IDENTITY CASCADE;"
                     try:
-                        await conn.execute(
-                            text(
-                                f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'
-                            )
-                        )
+                        await conn.execute(text(truncate_query))
                     except Exception:
-                        with contextlib.suppress(Exception):
-                            await conn.execute(table.delete())
+                        # Fallback to per-table truncate/delete if combined fails
+                        for table in reversed(base.metadata.sorted_tables):
+                            try:
+                                await conn.execute(
+                                    text(
+                                        f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'
+                                    )
+                                )
+                            except Exception:
+                                with contextlib.suppress(Exception):
+                                    await conn.execute(table.delete())
 
                 # Also truncate audit schema tables if they exist
                 with contextlib.suppress(Exception):
