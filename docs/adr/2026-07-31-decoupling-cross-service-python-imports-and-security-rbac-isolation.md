@@ -1,9 +1,9 @@
 # ADR-121: Decoupling Cross-Service Python Imports and Security RBAC Isolation
 
-* **Status:** Accepted
-* **Date:** 2026-07-31
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-07-31
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -15,9 +15,9 @@ Additionally, architectural changes made to `packages/security/rbac.py` must hav
 
 ## 2. Decision Drivers & Constraints
 
-* Strict domain boundaries between different eClinical services.
-* Requirement PRD-SYS-001 (clinical platform auditability and site isolation).
-* Maintain runtime capabilities and database integrity of execution and CTMS services without heavy codebase refactoring.
+- Strict domain boundaries between different eClinical services.
+- Requirement PRD-SYS-001 (clinical platform auditability and site isolation).
+- Maintain runtime capabilities and database integrity of execution and CTMS services without heavy codebase refactoring.
 
 ## 3. Options Considered
 
@@ -30,10 +30,10 @@ Chosen option: Option A because it instantly solves the static verification chec
 
 ## 5. Consequences & Trade-offs
 
-* Positive: Avoids compile-time cross-service coupling and maintains strict AST static analysis validation.
-* Negative: Dynamic imports resolve at runtime, slightly reducing static IDE lookup capabilities for directly crossed types.
+- Positive: Avoids compile-time cross-service coupling and maintains strict AST static analysis validation.
+- Negative: Dynamic imports resolve at runtime, slightly reducing static IDE lookup capabilities for directly crossed types.
 
 ## 6. Implementation & Verification
 
-* Target files/packages modified: `apps/etmf/services/eisf_service.py`, `apps/gateway/routers/usdm.py`, `apps/execution/services/econsent_capture_service.py`, `apps/execution/translator.py`, `apps/execution/routers/documents.py`, `apps/notifications/workers/notification_worker.py`, `apps/ctms/main.py`, `apps/ctms/routers/doa.py`, `apps/ctms/services/doa_service.py`.
-* Verification via `python3 scripts/validate_imports.py` and `python3 scripts/validate_adrs.py`.
+- Target files/packages modified: `apps/etmf/services/eisf_service.py`, `apps/gateway/routers/usdm.py`, `apps/execution/services/econsent_capture_service.py`, `apps/execution/translator.py`, `apps/execution/routers/documents.py`, `apps/notifications/workers/notification_worker.py`, `apps/ctms/main.py`, `apps/ctms/routers/doa.py`, `apps/ctms/services/doa_service.py`.
+- Verification via `python3 scripts/validate_imports.py` and `python3 scripts/validate_adrs.py`.

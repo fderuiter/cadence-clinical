@@ -272,8 +272,14 @@
               </label>
             </div>
 
-            <div v-if="dismissedWarnings && layoutWarnings.length > 0" class="layout-justification-box mt-1">
-              <label for="layout-justification-input" class="text-xxs font-bold text-slate-500 uppercase block mb-1">
+            <div
+              v-if="dismissedWarnings && layoutWarnings.length > 0"
+              class="layout-justification-box mt-1"
+            >
+              <label
+                for="layout-justification-input"
+                class="text-xxs font-bold text-slate-500 uppercase block mb-1"
+              >
                 Clinical Justification (Required)
               </label>
               <textarea
@@ -467,12 +473,17 @@ const dismissedWarnings = computed({
     designerStore.setDismissedWarnings(val);
     if (val) {
       if (!layoutJustification.value || !layoutJustification.value.trim()) {
-        layoutJustification.value = "Clinical layout deviation authorized by form designer.";
+        layoutJustification.value =
+          "Clinical layout deviation authorized by form designer.";
       }
     } else {
       layoutJustification.value = "";
     }
-    if (compilationStatus.value === "blocked" && val && layoutJustification.value.trim()) {
+    if (
+      compilationStatus.value === "blocked" &&
+      val &&
+      layoutJustification.value.trim()
+    ) {
       compilationStatus.value = null;
     }
   },
@@ -490,7 +501,11 @@ const layoutJustification = computed({
 
 function compileForm() {
   if (layoutWarnings.value.length > 0) {
-    if (!dismissedWarnings.value || !layoutJustification.value || !layoutJustification.value.trim()) {
+    if (
+      !dismissedWarnings.value ||
+      !layoutJustification.value ||
+      !layoutJustification.value.trim()
+    ) {
       compilationStatus.value = "blocked";
     } else {
       compilationStatus.value = "success";

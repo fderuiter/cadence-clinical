@@ -116,7 +116,7 @@ def test_success_with_draft_flag():
             )
             # Check status and duration are UNVERIFIED and N/A
             assert "⚪ UNVERIFIED" in qual_content
-            assert "| N/A |" in qual_content
+            assert any(part.strip() == "N/A" for part in qual_content.split("|"))
         finally:
             if has_backup:
                 backup_path.rename(report_path)

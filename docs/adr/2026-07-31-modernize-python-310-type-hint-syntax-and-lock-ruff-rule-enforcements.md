@@ -1,9 +1,9 @@
 # ADR-141: Modernize Python 3.10 Type Hint Syntax and Lock Ruff Rule Enforcements
 
-* **Status:** Accepted
-* **Date:** 2026-07-31
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-07-31
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -13,9 +13,9 @@ Legacy Python typing constructs (`typing.List`, `typing.Dict`, `typing.Optional`
 
 ## 2. Decision Drivers & Constraints
 
-* Enforce PEP 585 (`list[...]`, `dict[...]`) and PEP 604 (`T | None`) across `packages/security/` and service modules.
-* Lock UP (pyupgrade) rules in `pyproject.toml` to prevent typing syntax regressions.
-* System requirement compliance: PRD-SYS-001.
+- Enforce PEP 585 (`list[...]`, `dict[...]`) and PEP 604 (`T | None`) across `packages/security/` and service modules.
+- Lock UP (pyupgrade) rules in `pyproject.toml` to prevent typing syntax regressions.
+- System requirement compliance: PRD-SYS-001.
 
 ## 3. Options Considered
 
@@ -28,11 +28,11 @@ Chosen option 1 because built-in generic collections improve readability, reduce
 
 ## 5. Consequences & Trade-offs
 
-* **Positive**: Reduced typing import overhead and consistent code style across all `packages/security/` modules.
-* **Positive**: Enforced via `uv run ruff check .` in CI pipelines.
-* **Negative**: Requires modern Python 3.10+ runtime support.
+- **Positive**: Reduced typing import overhead and consistent code style across all `packages/security/` modules.
+- **Positive**: Enforced via `uv run ruff check .` in CI pipelines.
+- **Negative**: Requires modern Python 3.10+ runtime support.
 
 ## 6. Implementation & Verification
 
-* Refactored `packages/security/`, `apps/gateway/`, and `apps/execution/`.
-* Updated `pyproject.toml` and verified using `uv run ruff check .` and `uv run pytest`.
+- Refactored `packages/security/`, `apps/gateway/`, and `apps/execution/`.
+- Updated `pyproject.toml` and verified using `uv run ruff check .` and `uv run pytest`.

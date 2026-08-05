@@ -9,7 +9,7 @@ repos:
     rev: v0.15.22
     hooks:
       - id: ruff
-        args: [ --fix ]
+        args: [--fix]
       - id: ruff-format
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.7
@@ -22,8 +22,8 @@ repos:
     rev: v1.5.0
     hooks:
       - id: detect-secrets
-        args: ['--baseline', '.secrets.baseline']
-        exclude: 'pnpm-lock.yaml|uv.lock|tests/fixtures/keys/'
+        args: ["--baseline", ".secrets.baseline"]
+        exclude: "pnpm-lock.yaml|uv.lock|tests/fixtures/keys/"
         stages: [pre-commit, pre-push, manual]
 
   - repo: https://github.com/hadolint/hadolint
@@ -33,6 +33,13 @@ repos:
 
   - repo: local
     hooks:
+      - id: prettier-check
+        name: Prettier Formatting & Syntax Check
+        entry: pnpm exec prettier --check
+        language: system
+        files: \.(json|css|md)$
+        pass_filenames: true
+
       - id: clean-secrets-baseline
         name: Clean Secrets Baseline
         entry: python3 scripts/clean_secrets_baseline.py
@@ -107,6 +114,7 @@ repos:
         entry: uv run python scripts/pre_commit_query_linter.py
         language: system
         files: \.py$
+        exclude: ^(tests/|scripts/)
         pass_filenames: true
 
       - id: validate-vulnerabilities
@@ -122,7 +130,6 @@ repos:
         language: system
         files: \.(json|css|md)$
         pass_filenames: true
-
 
       # -----------------------------------------------------------------------
       # GxP RTM Staleness Check (pre-push only)

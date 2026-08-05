@@ -276,10 +276,17 @@ describe("ClinicalLookupInput.vue", () => {
       const id = `concept-${state}`;
       const label = `Concept Code (${state})`;
       const value = "C99";
-      const statusMessage = state === "none" ? "" : `Status: ${state} explanation`;
+      const statusMessage =
+        state === "none" ? "" : `Status: ${state} explanation`;
 
       // 1. Generate vanilla HTML
-      const vanillaHtml = createClinicalLookupInput(id, label, value, state, statusMessage);
+      const vanillaHtml = createClinicalLookupInput(
+        id,
+        label,
+        value,
+        state,
+        statusMessage
+      );
       const vanillaContainer = document.createElement("div");
       vanillaContainer.innerHTML = vanillaHtml.trim();
       const vanillaRoot = vanillaContainer.firstElementChild;
@@ -306,26 +313,38 @@ describe("ClinicalLookupInput.vue", () => {
       // 4. Compare Label Element
       const vanillaLabel = vanillaRoot.querySelector("label");
       const vueLabel = vueRoot.querySelector("label");
-      expect(vueLabel.getAttribute("for")).toBe(vanillaLabel.getAttribute("for"));
+      expect(vueLabel.getAttribute("for")).toBe(
+        vanillaLabel.getAttribute("for")
+      );
       expect(vueLabel.textContent.trim()).toBe(vanillaLabel.textContent.trim());
 
       // 5. Compare Input Element and its forwarded/interactive/ARIA attributes
       const vanillaInput = vanillaRoot.querySelector("input");
       const vueInput = vueRoot.querySelector("input");
       expect(vueInput.id).toBe(vanillaInput.id);
-      expect(vueInput.getAttribute("type")).toBe(vanillaInput.getAttribute("type"));
-      expect(vueInput.getAttribute("name")).toBe(vanillaInput.getAttribute("name"));
+      expect(vueInput.getAttribute("type")).toBe(
+        vanillaInput.getAttribute("type")
+      );
+      expect(vueInput.getAttribute("name")).toBe(
+        vanillaInput.getAttribute("name")
+      );
       expect(vueInput.value).toBe(vanillaInput.value);
-      expect(vueInput.getAttribute("autocomplete")).toBe(vanillaInput.getAttribute("autocomplete"));
+      expect(vueInput.getAttribute("autocomplete")).toBe(
+        vanillaInput.getAttribute("autocomplete")
+      );
 
       // Interactive attributes forwarded to input
-      expect(vueInput.getAttribute("placeholder")).toBe(testAttributes.placeholder);
+      expect(vueInput.getAttribute("placeholder")).toBe(
+        testAttributes.placeholder
+      );
       expect(vueInput.getAttribute("disabled")).toBe("");
       expect(vueInput.getAttribute("title")).toBe(testAttributes.title);
 
       // ARIA describedby and invalid state parity
       if (state !== "none") {
-        expect(vueInput.getAttribute("aria-describedby")).toBe(vanillaInput.getAttribute("aria-describedby"));
+        expect(vueInput.getAttribute("aria-describedby")).toBe(
+          vanillaInput.getAttribute("aria-describedby")
+        );
       } else {
         expect(vueInput.hasAttribute("aria-describedby")).toBe(false);
       }
@@ -337,11 +356,17 @@ describe("ClinicalLookupInput.vue", () => {
       }
 
       // 6. Compare Terminology Status Indicator Parity
-      const vanillaIndicator = vanillaRoot.querySelector(".lookup-status-indicator");
+      const vanillaIndicator = vanillaRoot.querySelector(
+        ".lookup-status-indicator"
+      );
       const vueIndicator = vueRoot.querySelector(".lookup-status-indicator");
       expect(vueIndicator.id).toBe(vanillaIndicator.id);
-      expect(vueIndicator.getAttribute("role")).toBe(vanillaIndicator.getAttribute("role"));
-      expect(vueIndicator.getAttribute("aria-live")).toBe(vanillaIndicator.getAttribute("aria-live"));
+      expect(vueIndicator.getAttribute("role")).toBe(
+        vanillaIndicator.getAttribute("role")
+      );
+      expect(vueIndicator.getAttribute("aria-live")).toBe(
+        vanillaIndicator.getAttribute("aria-live")
+      );
 
       // Check inline styles parity for none state hidden indicator
       if (state === "none") {
@@ -352,12 +377,20 @@ describe("ClinicalLookupInput.vue", () => {
         const stateClass = `lookup-${state}`;
         expect(vueIndicator.className).toContain(stateClass);
         // Icon and text parity
-        const vanillaIcon = vanillaIndicator.querySelector(".lookup-status-icon").textContent.trim();
-        const vueIcon = vueIndicator.querySelector(".lookup-status-icon").textContent.trim();
+        const vanillaIcon = vanillaIndicator
+          .querySelector(".lookup-status-icon")
+          .textContent.trim();
+        const vueIcon = vueIndicator
+          .querySelector(".lookup-status-icon")
+          .textContent.trim();
         expect(vueIcon).toBe(vanillaIcon);
 
-        const vanillaText = vanillaIndicator.querySelector(".lookup-status-text").textContent.trim();
-        const vueText = vueIndicator.querySelector(".lookup-status-text").textContent.trim();
+        const vanillaText = vanillaIndicator
+          .querySelector(".lookup-status-text")
+          .textContent.trim();
+        const vueText = vueIndicator
+          .querySelector(".lookup-status-text")
+          .textContent.trim();
         expect(vueText).toBe(vanillaText);
       }
     }

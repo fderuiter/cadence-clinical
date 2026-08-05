@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   postgres:
@@ -30,7 +30,11 @@ services:
     volumes:
       - neo4j_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider localhost:7474 || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider localhost:7474 || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -49,7 +53,11 @@ services:
       - ./cadence-realm.json:/opt/keycloak/data/import/realm.json
     command: ["start-dev", "--import-realm"]
     healthcheck:
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080 && echo -e \"GET /health HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && cat <&3 | grep \"200 OK\""]
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/127.0.0.1/8080 && echo -e \"GET /health HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && cat <&3 | grep \"200 OK\"",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -59,7 +67,16 @@ services:
       context: ..
       dockerfile: apps/designer/Dockerfile
     container_name: cadence-designer
-    command: ["uvicorn", "apps.designer.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
+    command:
+      [
+        "uvicorn",
+        "apps.designer.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8001",
+        "--reload",
+      ]
     volumes:
       - ..:/app
     environment:
@@ -75,7 +92,12 @@ services:
       context: ..
       dockerfile: apps/execution/Dockerfile
     container_name: cadence-execution
-    command: ["sh", "-c", "python -m apps.execution.database.migrate && uvicorn apps.execution.main:app --host 0.0.0.0 --port 8002 --reload"]
+    command:
+      [
+        "sh",
+        "-c",
+        "python -m apps.execution.database.migrate && uvicorn apps.execution.main:app --host 0.0.0.0 --port 8002 --reload",
+      ]
     volumes:
       - ..:/app
     environment:
@@ -94,7 +116,16 @@ services:
       context: ..
       dockerfile: apps/org/Dockerfile
     container_name: cadence-org
-    command: ["uvicorn", "apps.org.main:app", "--host", "0.0.0.0", "--port", "8012", "--reload"]
+    command:
+      [
+        "uvicorn",
+        "apps.org.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8012",
+        "--reload",
+      ]
     volumes:
       - ..:/app
     environment:
@@ -108,7 +139,12 @@ services:
       context: ..
       dockerfile: apps/eisf/Dockerfile
     container_name: cadence-eisf
-    command: ["sh", "-c", "python -m apps.eisf.database.migrate && uvicorn apps.eisf.main:app --host 0.0.0.0 --port 8010 --reload"]
+    command:
+      [
+        "sh",
+        "-c",
+        "python -m apps.eisf.database.migrate && uvicorn apps.eisf.main:app --host 0.0.0.0 --port 8010 --reload",
+      ]
     volumes:
       - ..:/app
     environment:
@@ -122,7 +158,12 @@ services:
       context: ..
       dockerfile: apps/etmf/Dockerfile
     container_name: cadence-etmf
-    command: ["sh", "-c", "python -m apps.etmf.database.migrate && uvicorn apps.etmf.main:app --host 0.0.0.0 --port 8003 --reload"]
+    command:
+      [
+        "sh",
+        "-c",
+        "python -m apps.etmf.database.migrate && uvicorn apps.etmf.main:app --host 0.0.0.0 --port 8003 --reload",
+      ]
     volumes:
       - ..:/app
     environment:
@@ -139,7 +180,16 @@ services:
       context: ..
       dockerfile: apps/ctms/Dockerfile
     container_name: cadence-ctms
-    command: ["uvicorn", "apps.ctms.main:app", "--host", "0.0.0.0", "--port", "8007", "--reload"]
+    command:
+      [
+        "uvicorn",
+        "apps.ctms.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8007",
+        "--reload",
+      ]
     volumes:
       - ..:/app
     environment:
@@ -153,7 +203,16 @@ services:
       context: ..
       dockerfile: apps/quality/Dockerfile
     container_name: cadence-quality
-    command: ["uvicorn", "apps.quality.main:app", "--host", "0.0.0.0", "--port", "8005", "--reload"]
+    command:
+      [
+        "uvicorn",
+        "apps.quality.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8005",
+        "--reload",
+      ]
     volumes:
       - ..:/app
     environment:
@@ -167,7 +226,16 @@ services:
       context: ..
       dockerfile: apps/interop/Dockerfile
     container_name: cadence-interop
-    command: ["uvicorn", "apps.interop.main:app", "--host", "0.0.0.0", "--port", "8004", "--reload"]
+    command:
+      [
+        "uvicorn",
+        "apps.interop.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8004",
+        "--reload",
+      ]
     volumes:
       - ..:/app
     environment:
@@ -181,7 +249,16 @@ services:
       context: ..
       dockerfile: apps/tickets/Dockerfile
     container_name: cadence-tickets
-    command: ["uvicorn", "apps.tickets.main:app", "--host", "0.0.0.0", "--port", "8009", "--reload"]
+    command:
+      [
+        "uvicorn",
+        "apps.tickets.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8009",
+        "--reload",
+      ]
     volumes:
       - ..:/app
     environment:
@@ -195,7 +272,16 @@ services:
       context: ..
       dockerfile: apps/safety/Dockerfile
     container_name: cadence-safety
-    command: ["uvicorn", "apps.safety.main:app", "--host", "0.0.0.0", "--port", "8008", "--reload"]
+    command:
+      [
+        "uvicorn",
+        "apps.safety.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8008",
+        "--reload",
+      ]
     volumes:
       - ..:/app
     environment:
@@ -210,7 +296,16 @@ services:
       context: ..
       dockerfile: apps/notifications/Dockerfile
     container_name: cadence-notifications
-    command: ["uvicorn", "apps.notifications.main:app", "--host", "0.0.0.0", "--port", "8006", "--reload"]
+    command:
+      [
+        "uvicorn",
+        "apps.notifications.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8006",
+        "--reload",
+      ]
     volumes:
       - ..:/app
     environment:
@@ -234,7 +329,16 @@ services:
       context: ..
       dockerfile: apps/econsent/Dockerfile
     container_name: cadence-econsent
-    command: ["uvicorn", "apps.econsent.main:app", "--host", "0.0.0.0", "--port", "8011", "--reload"]
+    command:
+      [
+        "uvicorn",
+        "apps.econsent.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8011",
+        "--reload",
+      ]
     volumes:
       - ..:/app
     environment:
@@ -249,7 +353,12 @@ services:
     image: node:20-alpine
     container_name: cadence-subject-portal
     working_dir: /app
-    command: ["sh", "-c", "npm install -g pnpm && pnpm install && pnpm --filter subject-portal dev --host 0.0.0.0 --port 5174"]
+    command:
+      [
+        "sh",
+        "-c",
+        "npm install -g pnpm && pnpm install && pnpm --filter subject-portal dev --host 0.0.0.0 --port 5174",
+      ]
     volumes:
       - ..:/app
     ports:
@@ -263,7 +372,16 @@ services:
       context: ..
       dockerfile: apps/gateway/Dockerfile
     container_name: cadence-gateway
-    command: ["uvicorn", "apps.gateway.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command:
+      [
+        "uvicorn",
+        "apps.gateway.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--reload",
+      ]
     volumes:
       - ..:/app
     environment:

@@ -298,7 +298,9 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
 
     // Spies should be called during mount
     expect(addEventListenerSpy).toHaveBeenCalled();
-    const keydownAddedCalls = addEventListenerSpy.mock.calls.filter(call => call[0] === "keydown");
+    const keydownAddedCalls = addEventListenerSpy.mock.calls.filter(
+      (call) => call[0] === "keydown"
+    );
     expect(keydownAddedCalls.length).toBeGreaterThan(0);
 
     // Now unmount
@@ -306,7 +308,9 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
 
     // Spies should be called during unmount
     expect(removeEventListenerSpy).toHaveBeenCalled();
-    const keydownRemovedCalls = removeEventListenerSpy.mock.calls.filter(call => call[0] === "keydown");
+    const keydownRemovedCalls = removeEventListenerSpy.mock.calls.filter(
+      (call) => call[0] === "keydown"
+    );
     expect(keydownRemovedCalls.length).toBeGreaterThan(0);
 
     // Restore spies

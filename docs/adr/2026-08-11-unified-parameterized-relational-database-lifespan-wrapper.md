@@ -25,12 +25,14 @@ This decision implements requirements under Trace-8.
 ## 3. Options Considered
 
 ### Option 1: Manual Context Manager Wrapping
+
 Each service continues to manage its own lifespan context manager, explicitly initializing and closing the `RelationalDatabaseManager`.
 
 - **Pros:** Maximum control inside the microservice.
 - **Cons:** Boilerplate duplication, higher chance of forgetting schema creations or engine cleans.
 
 ### Option 2: Parameterized Lifespan Generator Helper
+
 Expose a core utility function `get_relational_db_lifespan` inside `packages/database` that yields a generic FastAPI lifespan context manager. This generator takes optional schema metadata and lists of asynchronous startup/shutdown hooks.
 
 - **Pros:**

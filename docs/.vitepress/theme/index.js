@@ -1,20 +1,20 @@
-import DefaultTheme from 'vitepress/theme'
-import { onMounted, onUnmounted, watch } from 'vue'
-import { useRoute } from 'vitepress'
-import './custom.css'
+import DefaultTheme from "vitepress/theme";
+import { onMounted, onUnmounted, watch } from "vue";
+import { useRoute } from "vitepress";
+import "./custom.css";
 
 export default {
   extends: DefaultTheme,
   setup() {
-    const route = useRoute()
-    const activeCleanups = new Set()
+    const route = useRoute();
+    const activeCleanups = new Set();
 
     const clearAllActiveDrags = () => {
       activeCleanups.forEach((cleanup) => {
         try {
           cleanup();
         } catch (err) {
-          console.error('Error during drag cleanup:', err);
+          console.error("Error during drag cleanup:", err);
         }
       });
       activeCleanups.clear();
@@ -25,19 +25,19 @@ export default {
     });
 
     const initPanZoom = () => {
-      if (typeof window === 'undefined') return;
+      if (typeof window === "undefined") return;
 
-      const elements = document.querySelectorAll('.mermaid');
+      const elements = document.querySelectorAll(".mermaid");
       elements.forEach((el) => {
         // Check if we already initialized this element
-        if (el.getAttribute('data-enhanced') === 'true') {
+        if (el.getAttribute("data-enhanced") === "true") {
           return;
         }
-        el.setAttribute('data-enhanced', 'true');
+        el.setAttribute("data-enhanced", "true");
 
         // Wait until the SVG is rendered inside the element
         const checkAndEnhance = () => {
-          const svg = el.querySelector('svg');
+          const svg = el.querySelector("svg");
           if (!svg) {
             // Retry in 100ms if SVG is not yet rendered by Mermaid
             setTimeout(checkAndEnhance, 100);
@@ -55,11 +55,11 @@ export default {
       const parent = container.parentNode;
       if (!parent) return;
 
-      const outerContainer = document.createElement('div');
-      outerContainer.className = 'mermaid-container';
+      const outerContainer = document.createElement("div");
+      outerContainer.className = "mermaid-container";
 
-      const wrapper = document.createElement('div');
-      wrapper.className = 'mermaid-wrapper';
+      const wrapper = document.createElement("div");
+      wrapper.className = "mermaid-wrapper";
 
       // Move the container inside the wrapper, and wrap it
       parent.replaceChild(outerContainer, container);
@@ -78,33 +78,33 @@ export default {
       };
 
       // Add toolbar
-      const toolbar = document.createElement('div');
-      toolbar.className = 'mermaid-toolbar';
+      const toolbar = document.createElement("div");
+      toolbar.className = "mermaid-toolbar";
 
-      const btnZoomIn = document.createElement('button');
-      btnZoomIn.className = 'mermaid-btn';
-      btnZoomIn.innerText = '+';
-      btnZoomIn.title = 'Zoom In';
+      const btnZoomIn = document.createElement("button");
+      btnZoomIn.className = "mermaid-btn";
+      btnZoomIn.innerText = "+";
+      btnZoomIn.title = "Zoom In";
       btnZoomIn.onclick = (e) => {
         e.stopPropagation();
         scale = Math.min(scale * 1.2, 5);
         updateTransform();
       };
 
-      const btnZoomOut = document.createElement('button');
-      btnZoomOut.className = 'mermaid-btn';
-      btnZoomOut.innerText = '-';
-      btnZoomOut.title = 'Zoom Out';
+      const btnZoomOut = document.createElement("button");
+      btnZoomOut.className = "mermaid-btn";
+      btnZoomOut.innerText = "-";
+      btnZoomOut.title = "Zoom Out";
       btnZoomOut.onclick = (e) => {
         e.stopPropagation();
         scale = Math.max(scale / 1.2, 0.2);
         updateTransform();
       };
 
-      const btnReset = document.createElement('button');
-      btnReset.className = 'mermaid-btn';
-      btnReset.innerText = '↺';
-      btnReset.title = 'Reset';
+      const btnReset = document.createElement("button");
+      btnReset.className = "mermaid-btn";
+      btnReset.innerText = "↺";
+      btnReset.title = "Reset";
       btnReset.onclick = (e) => {
         e.stopPropagation();
         scale = 1;
@@ -139,7 +139,7 @@ export default {
         panY_start = panY;
         C_start = {
           x: (p1.clientX + p2.clientX) / 2,
-          y: (p1.clientY + p2.clientY) / 2
+          y: (p1.clientY + p2.clientY) / 2,
         };
         isMultiTouch = true;
       };
@@ -167,17 +167,20 @@ export default {
             initMultiTouch();
           }
           const [p1, p2] = Array.from(activePointers.values());
-          const D_new = Math.hypot(p1.clientX - p2.clientX, p1.clientY - p2.clientY);
+          const D_new = Math.hypot(
+            p1.clientX - p2.clientX,
+            p1.clientY - p2.clientY
+          );
           const C_new = {
             x: (p1.clientX + p2.clientX) / 2,
-            y: (p1.clientY + p2.clientY) / 2
+            y: (p1.clientY + p2.clientY) / 2,
           };
 
           if (D_start > 0) {
             const f = D_new / D_start;
             const S_new = Math.min(Math.max(S_start * f, 0.2), 5);
-            panX = C_new.x - S_new * (C_start.x - panX_start) / S_start;
-            panY = C_new.y - S_new * (C_start.y - panY_start) / S_start;
+            panX = C_new.x - (S_new * (C_start.x - panX_start)) / S_start;
+            panY = C_new.y - (S_new * (C_start.y - panY_start)) / S_start;
             scale = S_new;
             updateTransform();
           }
@@ -223,27 +226,27 @@ export default {
         isMultiTouch = false;
         activePointers.clear();
         lastSinglePointerPos = null;
-        wrapper.classList.remove('active');
-        svg.style.transition = ''; // Restore transitions for toolbar buttons
+        wrapper.classList.remove("active");
+        svg.style.transition = ""; // Restore transitions for toolbar buttons
         if (listenersAttached) {
-          window.removeEventListener('pointermove', handlePointerMove);
-          window.removeEventListener('pointerup', handlePointerUp);
-          window.removeEventListener('pointercancel', handlePointerCancel);
+          window.removeEventListener("pointermove", handlePointerMove);
+          window.removeEventListener("pointerup", handlePointerUp);
+          window.removeEventListener("pointercancel", handlePointerCancel);
           listenersAttached = false;
         }
         activeCleanups.delete(cleanupDrag);
       };
 
       // Set touch-action programmatically to prevent scrolling and gesture actions
-      wrapper.style.touchAction = 'none';
+      wrapper.style.touchAction = "none";
 
       // Unified PointerEvents pipeline for interactions
-      wrapper.addEventListener('pointerdown', (e) => {
-        if (e.pointerType === 'mouse' && e.button !== 0) return;
+      wrapper.addEventListener("pointerdown", (e) => {
+        if (e.pointerType === "mouse" && e.button !== 0) return;
 
         isDragging = true;
         activePointers.set(e.pointerId, e);
-        svg.style.transition = 'none'; // Temporarily disable transitions during drag
+        svg.style.transition = "none"; // Temporarily disable transitions during drag
 
         try {
           wrapper.setPointerCapture(e.pointerId);
@@ -251,15 +254,15 @@ export default {
 
         if (activePointers.size === 1) {
           lastSinglePointerPos = { x: e.clientX, y: e.clientY };
-          wrapper.classList.add('active');
+          wrapper.classList.add("active");
         } else if (activePointers.size === 2) {
           initMultiTouch();
         }
 
         if (!listenersAttached) {
-          window.addEventListener('pointermove', handlePointerMove);
-          window.addEventListener('pointerup', handlePointerUp);
-          window.addEventListener('pointercancel', handlePointerCancel);
+          window.addEventListener("pointermove", handlePointerMove);
+          window.addEventListener("pointerup", handlePointerUp);
+          window.addEventListener("pointercancel", handlePointerCancel);
           listenersAttached = true;
           activeCleanups.add(cleanupDrag);
         }
@@ -269,11 +272,14 @@ export default {
     onMounted(() => {
       // Delay initialization slightly to let mermaid finish rendering
       setTimeout(initPanZoom, 200);
-    })
+    });
 
-    watch(() => route.path, () => {
-      clearAllActiveDrags();
-      setTimeout(initPanZoom, 600);
-    })
-  }
-}
+    watch(
+      () => route.path,
+      () => {
+        clearAllActiveDrags();
+        setTimeout(initPanZoom, 600);
+      }
+    );
+  },
+};

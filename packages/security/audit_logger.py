@@ -126,13 +126,13 @@ class AuditLoggerEngine:
         return self._chain[-1].sha256_digest
 
     def log_event(self, payload: AuditLogPayload) -> AuditLogRecord:
-        """Create and append a tamper-evident audit log record to chain.
+        """CREATE and append a tamper-evident audit log record to chain.
 
         Args:
             payload: Validated AuditLogPayload model instance.
 
         Returns:
-            Appended AuditLogRecord with computed SHA-256 digest.
+            Appended AuditLogRecord WITH computed SHA-256 digest.
         """
         event_id = str(uuid.uuid4())
         timestamp = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)

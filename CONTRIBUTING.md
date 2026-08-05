@@ -13,16 +13,16 @@ quality gates, and CI failure recovery procedures.
 
 The most common commands you will reach for day-to-day:
 
-| Task | Command |
-|---|---|
-| Fix all ruff lint + format errors | `make fix` or `pnpm fix` |
-| Run all pre-push quality gates | `make check` or `pnpm check` |
-| Full verification (gates + tests) | `make verify` or `pnpm verify` |
-| Sync GxP compliance docs | `make sync-gxp` or `pnpm sync-gxp` |
-| Run tests only | `uv run pytest -n auto` |
-| Scaffold a new ADR | `make adr` or `python3 scripts/create_adr.py ...` |
-| Reset local database | `make db-reset` |
-| See all make targets | `make help` |
+| Task                              | Command                                           |
+| --------------------------------- | ------------------------------------------------- |
+| Fix all ruff lint + format errors | `make fix` or `pnpm fix`                          |
+| Run all pre-push quality gates    | `make check` or `pnpm check`                      |
+| Full verification (gates + tests) | `make verify` or `pnpm verify`                    |
+| Sync GxP compliance docs          | `make sync-gxp` or `pnpm sync-gxp`                |
+| Run tests only                    | `uv run pytest -n auto`                           |
+| Scaffold a new ADR                | `make adr` or `python3 scripts/create_adr.py ...` |
+| Reset local database              | `make db-reset`                                   |
+| See all make targets              | `make help`                                       |
 
 ---
 
@@ -30,16 +30,16 @@ The most common commands you will reach for day-to-day:
 
 Use this table to resolve CI errors without digging through logs:
 
-| CI Error Message | Root Cause | Fix |
-|---|---|---|
-| `I001 Import block is un-sorted or un-formatted` | New symbol added to an import block without maintaining alphabetical order | `make fix` — ruff auto-sorts all import blocks |
-| `E712 Avoid equality comparisons to True/False` | Used `column == True` instead of SQLAlchemy `.is_(True)` | See [SQLAlchemy Boolean Filter Pattern](#sqlalchemy-boolean-filter-pattern) below |
-| `GxP compliance documentation is out of sync` | RTM docs not regenerated after test changes | `make sync-gxp` — runs tests → generates RTM → stages docs |
-| `Found N errors` (ruff, no `[*]`) | Manual fix needed; error is not auto-fixable | Check error code in ruff docs, fix manually, then `make fix` |
-| `Coverage < 80%` | New code paths not covered by tests | Add tests for the uncovered lines shown in the coverage report |
+| CI Error Message                                           | Root Cause                                                                               | Fix                                                                                                            |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `I001 Import block is un-sorted or un-formatted`           | New symbol added to an import block without maintaining alphabetical order               | `make fix` — ruff auto-sorts all import blocks                                                                 |
+| `E712 Avoid equality comparisons to True/False`            | Used `column == True` instead of SQLAlchemy `.is_(True)`                                 | See [SQLAlchemy Boolean Filter Pattern](#sqlalchemy-boolean-filter-pattern) below                              |
+| `GxP compliance documentation is out of sync`              | RTM docs not regenerated after test changes                                              | `make sync-gxp` — runs tests → generates RTM → stages docs                                                     |
+| `Found N errors` (ruff, no `[*]`)                          | Manual fix needed; error is not auto-fixable                                             | Check error code in ruff docs, fix manually, then `make fix`                                                   |
+| `Coverage < 80%`                                           | New code paths not covered by tests                                                      | Add tests for the uncovered lines shown in the coverage report                                                 |
 | `Schema validation failed or namespace collision detected` | Prefix mismatch, duplicate model definitions, or naming collision in microservice models | Follow the [Schema Validation Failures](#schema-validation-failures) guidelines to prefix or rename your model |
-| `ADR validation failed` | Architectural change without a matching ADR file | `make adr` to scaffold an ADR, then fill in the rationale |
-| `Bandit: high severity issue found` | Security-sensitive code pattern detected | Review the flagged line; add `# nosec B...` with justification if intentional |
+| `ADR validation failed`                                    | Architectural change without a matching ADR file                                         | `make adr` to scaffold an ADR, then fill in the rationale                                                      |
+| `Bandit: high severity issue found`                        | Security-sensitive code pattern detected                                                 | Review the flagged line; add `# nosec B...` with justification if intentional                                  |
 
 ---
 
@@ -56,6 +56,7 @@ make setup
 ```
 
 This single command:
+
 1. Installs Python 3.14 dependencies via `uv sync`
 2. Installs Playwright Chromium for integration tests
 3. Installs all pre-commit Git hooks (`pre-commit install --install-hooks`)
@@ -69,11 +70,11 @@ All development uses short-lived branches off `main`.
 
 ### Branch Naming
 
-| Type | Pattern | Example |
-|---|---|---|
-| Feature | `feature/<ticket>-<description>` | `feature/cad-104-enrollment-validation` |
-| Bug Fix | `bugfix/<ticket>-<description>` | `bugfix/cad-215-signature-overflow` |
-| Docs / Chore | `docs/<description>` or `chore/<description>` | `chore/ci-cd-fixes` |
+| Type         | Pattern                                       | Example                                 |
+| ------------ | --------------------------------------------- | --------------------------------------- |
+| Feature      | `feature/<ticket>-<description>`              | `feature/cad-104-enrollment-validation` |
+| Bug Fix      | `bugfix/<ticket>-<description>`               | `bugfix/cad-215-signature-overflow`     |
+| Docs / Chore | `docs/<description>` or `chore/<description>` | `chore/ci-cd-fixes`                     |
 
 ### Workflow Lifecycle
 
@@ -183,6 +184,7 @@ make sync-gxp
 ```
 
 This runs three steps automatically:
+
 1. `uv run pytest -n auto --junitxml=report.xml`
 2. `uv run python scripts/generate_rtm.py`
 3. `git add docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md`
@@ -234,10 +236,12 @@ When addressing open GitHub issues or modifying system functionality, follow
 the **3-Tier Documentation Cascade**:
 
 ### Tier 1 — Requirements (`PRD` / `SRS`)
+
 Update `docs/SDLC/01_Product_Requirements_Document_PRD.md` or `docs/SRS.md`
 and reference a Requirement ID (`PRD-SYS-xxx` or `Trace-x`).
 
 ### Tier 2 — Architecture Decisions (`ADR`)
+
 If introducing architectural changes, scaffold a domain-indexed ADR:
 
 ```bash
@@ -249,11 +253,13 @@ python3 scripts/create_adr.py --title "Your Title" --domain "core-platform" --re
 ADRs are automatically indexed into `docs/adr/index.md` and validated on commit.
 
 **When an ADR is required:**
+
 - Adding a new third-party library or database engine
 - Modifying inter-service REST contracts
 - Changing global database schemas
 
 ### Tier 3 — Traceability (`RTM`)
+
 After updating tests, run `make sync-gxp` to regenerate and commit the RTM.
 
 ---
@@ -263,14 +269,17 @@ After updating tests, run `make sync-gxp` to regenerate and commit the RTM.
 All PRs must pass three gates before merging.
 
 ### Gate 1 — Docstrings & Documentation
+
 - All public functions and classes: Google-style docstrings.
 - Complex business logic (USDM transformers, state machines): inline comments
-  explaining *why*, not just what.
+  explaining _why_, not just what.
 
 ### Gate 2 — Architecture Decision Records
+
 See [Tier 2](#tier-2--architecture-decisions-adr) above.
 
 ### Gate 3 — Test Coverage
+
 - Tests live in `tests/`.
 - Backend: `pytest` + `pytest-asyncio`. Minimum **80%** coverage enforced.
 - Frontend/packages: `vitest`.
@@ -283,24 +292,26 @@ See [Tier 2](#tier-2--architecture-decisions-adr) above.
 Hooks are installed automatically by `make setup`. They run at two stages:
 
 ### On `git commit`
-| Hook | What it checks | Auto-fix? |
-|---|---|---|
-| `ruff` | Python lint (E, F, I rules) | ✅ Yes (`--fix`) |
-| `ruff-format` | Python formatting | ✅ Yes |
-| `trailing-whitespace` | Trailing whitespace | ✅ Yes |
-| `end-of-file-fixer` | Missing newline at EOF | ✅ Yes |
-| `check-yaml` | YAML syntax | ❌ Manual |
-| `validate-adrs` | ADR index consistency | ❌ Manual (`make adrs:fix`) |
-| `check-markdown-links` | Broken doc links | ❌ Manual |
-| `detect-code-duplication` | High code similarity | ❌ Manual |
-| `deid-compliance-scan` | PII/PHI in source files | ❌ Manual |
+
+| Hook                      | What it checks              | Auto-fix?                   |
+| ------------------------- | --------------------------- | --------------------------- |
+| `ruff`                    | Python lint (E, F, I rules) | ✅ Yes (`--fix`)            |
+| `ruff-format`             | Python formatting           | ✅ Yes                      |
+| `trailing-whitespace`     | Trailing whitespace         | ✅ Yes                      |
+| `end-of-file-fixer`       | Missing newline at EOF      | ✅ Yes                      |
+| `check-yaml`              | YAML syntax                 | ❌ Manual                   |
+| `validate-adrs`           | ADR index consistency       | ❌ Manual (`make adrs:fix`) |
+| `check-markdown-links`    | Broken doc links            | ❌ Manual                   |
+| `detect-code-duplication` | High code similarity        | ❌ Manual                   |
+| `deid-compliance-scan`    | PII/PHI in source files     | ❌ Manual                   |
 
 ### On `git push`
-| Hook | What it checks | Fix |
-|---|---|---|
-| `gxp-rtm-validate` | GxP docs up to date | `make sync-gxp` |
-| `bandit` | Python security issues | Manual (or `# nosec`) |
-| `detect-secrets` | Secrets in source | Remove secret, update baseline |
+
+| Hook               | What it checks         | Fix                            |
+| ------------------ | ---------------------- | ------------------------------ |
+| `gxp-rtm-validate` | GxP docs up to date    | `make sync-gxp`                |
+| `bandit`           | Python security issues | Manual (or `# nosec`)          |
+| `detect-secrets`   | Secrets in source      | Remove secret, update baseline |
 
 ### Running hooks manually
 
@@ -323,6 +334,7 @@ This repository is co-authored by humans and autonomous AI agents. Agents must
 comply with `AGENTS.md`. Human developers use this guide.
 
 Key distinctions:
+
 - **Human developers:** interactive shells, native `git`/`node`/`python`/`uv`, run checks in parallel using `pnpm check`.
 - **AI agents:** strict directory target rules, no interactive prompts, `ruff`/`black` formatting only, must follow the 3-Tier Cascade Protocol on every PR.
 
@@ -338,14 +350,14 @@ Key distinctions:
 
 ## 10. Additional Resources
 
-| Document | Purpose |
-|---|---|
-| [`AGENTS.md`](AGENTS.md) | AI agent rules and directory target constraints |
-| [`docs/LOCAL_DEV_ENVIRONMENT.md`](docs/LOCAL_DEV_ENVIRONMENT.md) | Port allocation map, service directory, Docker setup |
-| [`docs/SDLC/ISSUE_STRUCTURE_GUIDE.md`](docs/SDLC/ISSUE_STRUCTURE_GUIDE.md) | Issue templates, work streams, project board automation |
-| [`docs/adr/index.md`](docs/adr/index.md) | Architecture Decision Record index |
-| [`docs/SDLC/Requirements_Traceability_Matrix.md`](docs/SDLC/Requirements_Traceability_Matrix.md) | Live RTM — test ↔ requirement coverage |
-| [`Makefile`](Makefile) | All developer shortcuts — run `make help` |
+| Document                                                                                         | Purpose                                                 |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
+| [`AGENTS.md`](AGENTS.md)                                                                         | AI agent rules and directory target constraints         |
+| [`docs/LOCAL_DEV_ENVIRONMENT.md`](docs/LOCAL_DEV_ENVIRONMENT.md)                                 | Port allocation map, service directory, Docker setup    |
+| [`docs/SDLC/ISSUE_STRUCTURE_GUIDE.md`](docs/SDLC/ISSUE_STRUCTURE_GUIDE.md)                       | Issue templates, work streams, project board automation |
+| [`docs/adr/index.md`](docs/adr/index.md)                                                         | Architecture Decision Record index                      |
+| [`docs/SDLC/Requirements_Traceability_Matrix.md`](docs/SDLC/Requirements_Traceability_Matrix.md) | Live RTM — test ↔ requirement coverage                  |
+| [`Makefile`](Makefile)                                                                           | All developer shortcuts — run `make help`               |
 
 ---
 
@@ -357,38 +369,44 @@ To prevent namespace collisions in the gateway schema aggregation layer, each do
 
 All data models/schemas defined in downstream microservices must start with their designated prefix rule to ensure clean merging at the Interoperability Gateway level.
 
-| Microservice Name | Target Directory | Prefix Rule | Expected Prefix |
-| :--- | :--- | :--- | :--- |
-| Clinical Trial Management System | `apps/ctms/` | Capitalized name | `Ctms_` |
-| Protocol Designer | `apps/designer/` | Capitalized name | `Designer_` |
-| Electronic Consent | `apps/econsent/` | Capitalized name | `Econsent_` |
-| electronic Investigator Site File | `apps/eisf/` | Capitalized name | `Eisf_` |
-| electronic Trial Master File | `apps/etmf/` | Special Case (All-caps) | `ETMF_` |
-| EDC Execution Engine | `apps/execution/` | Capitalized name | `Execution_` |
-| Interoperability Gateway | `apps/interop/` | Capitalized name | `Interop_` |
-| Notification Service | `apps/notifications/` | Capitalized name | `Notifications_` |
-| Organization Directory | `apps/org/` | Capitalized name | `Org_` |
-| Quality & CAPA Engine | `apps/quality/` | Capitalized name | `Quality_` |
-| Safety & Pharmacovigilance | `apps/safety/` | Capitalized name | `Safety_` |
-| Support Ticketing | `apps/tickets/` | Capitalized name | `Tickets_` |
+| Microservice Name                 | Target Directory      | Prefix Rule             | Expected Prefix  |
+| :-------------------------------- | :-------------------- | :---------------------- | :--------------- |
+| Clinical Trial Management System  | `apps/ctms/`          | Capitalized name        | `Ctms_`          |
+| Protocol Designer                 | `apps/designer/`      | Capitalized name        | `Designer_`      |
+| Electronic Consent                | `apps/econsent/`      | Capitalized name        | `Econsent_`      |
+| electronic Investigator Site File | `apps/eisf/`          | Capitalized name        | `Eisf_`          |
+| electronic Trial Master File      | `apps/etmf/`          | Special Case (All-caps) | `ETMF_`          |
+| EDC Execution Engine              | `apps/execution/`     | Capitalized name        | `Execution_`     |
+| Interoperability Gateway          | `apps/interop/`       | Capitalized name        | `Interop_`       |
+| Notification Service              | `apps/notifications/` | Capitalized name        | `Notifications_` |
+| Organization Directory            | `apps/org/`           | Capitalized name        | `Org_`           |
+| Quality & CAPA Engine             | `apps/quality/`       | Capitalized name        | `Quality_`       |
+| Safety & Pharmacovigilance        | `apps/safety/`        | Capitalized name        | `Safety_`        |
+| Support Ticketing                 | `apps/tickets/`       | Capitalized name        | `Tickets_`       |
 
-*Note: The `apps/gateway` aggregator service, the shared packages under `packages/`, the `apps/compliance` utility library, and frontend single-page web applications (`apps/web`, `apps/subject-portal`) are excluded from prefix enforcement.*
+_Note: The `apps/gateway` aggregator service, the shared packages under `packages/`, the `apps/compliance` utility library, and frontend single-page web applications (`apps/web`, `apps/subject-portal`) are excluded from prefix enforcement._
 
 ### Troubleshooting Schema Validation Issues
 
 #### 1. What are namespace collisions?
+
 A namespace collision occurs when two downstream microservices define a model with the exact same name (e.g. `CommentCreate`). When the gateway merges these schemas into a single aggregated schema dictionary, one definition will overwrite the other, leading to API type definition discrepancies, broken client generation, or run-time failures.
 
 #### 2. How to resolve overlapping models
+
 If you see validation failures indicating a name collision or overlapping model (e.g., `ValidationError` or `ConflictStrategy` is defined in multiple services):
+
 1. **Locate the model definition** in the downstream service (usually under `models.py` or a router file).
 2. **Rename the model** to include the correct prefix. For example, if you are working in `apps/tickets/` and define a `CommentCreate` model, you must rename it to `Tickets_CommentCreate`.
 3. If a model is truly shared/common, do not duplicate it across microservices. Instead, define it in a shared package (e.g., in `packages/core-models/`) or use service-specific prefixed copies if isolated domain boundaries are desired.
 
 #### 3. How to run local validation
+
 You can check schemas locally before pushing:
+
 ```bash
 # Run schema validation offline with required environment variables
 AUDIT_LOG_SECRET_KEY=dummy INBOUND_EMAIL_HMAC_SECRET=dummy uv run python scripts/validate_schemas.py
 ```
+
 This script runs in under 5 seconds and will report any violations, including overlapping model definitions and prefix mismatches.

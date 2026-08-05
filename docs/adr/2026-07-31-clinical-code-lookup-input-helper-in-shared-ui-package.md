@@ -1,9 +1,9 @@
 # ADR-140: Clinical Code Lookup Input Helper in Shared UI Package
 
-* **Status:** Accepted
-* **Date:** 2026-07-31
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-07-31
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -13,9 +13,9 @@ Phase 19 terminology integration and eCRF consolidation require standard accessi
 
 ## 2. Decision Drivers & Constraints
 
-* Ensure accessible `role="status"` and `aria-live="polite"` feedback for screen readers.
-* Consolidate debounced lookup state management across eCRF field components.
-* System requirement compliance: PRD-SYS-001.
+- Ensure accessible `role="status"` and `aria-live="polite"` feedback for screen readers.
+- Consolidate debounced lookup state management across eCRF field components.
+- System requirement compliance: PRD-SYS-001.
 
 ## 3. Options Considered
 
@@ -28,11 +28,11 @@ Chosen option 1 because exporting `createClinicalLookupInput` from `@cadence/ui`
 
 ## 5. Consequences & Trade-offs
 
-* **Positive**: Shared implementation covered by unit tests in `packages/ui/tests/index.test.js`.
-* **Positive**: Consistent status icons (`⏳`, `✅`, `❌`, `⚠️`) and ARIA live regions.
-* **Negative**: Requires export maintenance within `@cadence/ui`.
+- **Positive**: Shared implementation covered by unit tests in `packages/ui/tests/index.test.js`.
+- **Positive**: Consistent status icons (`⏳`, `✅`, `❌`, `⚠️`) and ARIA live regions.
+- **Negative**: Requires export maintenance within `@cadence/ui`.
 
 ## 6. Implementation & Verification
 
-* Modified `packages/ui/index.js` and `packages/ui/tests/index.test.js`.
-* Updated `apps/web/src/views/EcrfView.vue` to leverage shared debouncing and lookup helpers.
+- Modified `packages/ui/index.js` and `packages/ui/tests/index.test.js`.
+- Updated `apps/web/src/views/EcrfView.vue` to leverage shared debouncing and lookup helpers.

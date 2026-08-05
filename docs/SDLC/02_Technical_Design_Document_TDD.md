@@ -1,50 +1,59 @@
 # Technical Design Document (TDD) & Architecture Specification
 
 ## Document Metadata
-* **Document ID:** CAD-TDD-002
-* **Version:** 1.0.0-PROD
-* **Status:** Released / GxP Validated
-* **Target Audience:** Principal Architects, Lead Engineers, GxP Compliance Auditors, Regulatory Officers
-* **Primary System:** Cadence Clinical EDC & Metadata Repository (MDR)
-* **Standards Mapping:** IEC 62304:2006/AMD1:2015 (Class C Compliance), ISO 14971:2019 (Risk Management), FDA 21 CFR Part 11, EU Annex 11
+
+- **Document ID:** CAD-TDD-002
+- **Version:** 1.0.0-PROD
+- **Status:** Released / GxP Validated
+- **Target Audience:** Principal Architects, Lead Engineers, GxP Compliance Auditors, Regulatory Officers
+- **Primary System:** Cadence Clinical EDC & Metadata Repository (MDR)
+- **Standards Mapping:** IEC 62304:2006/AMD1:2015 (Class C Compliance), ISO 14971:2019 (Risk Management), FDA 21 CFR Part 11, EU Annex 11
 
 ---
 
 ## 1. Executive Summary & Regulatory Alignment
 
 ### 1.1 Executive Summary
+
 The Cadence Clinical Platform is a unified, standalone eClinical system that synthesizes upstream Clinical Metadata Management (MDR) with downstream Electronic Data Capture (EDC) into an automated, single-source Digital Data Flow (DDF). This document serves as the master Technical Design Document (TDD) and architectural specification for the platform. It details the modular monolith boundaries, core database schematics, graph-based metadata versioning and immutability engine, custom XForm expression execution trees, and robust offline synchronization algorithms.
 
 By implementing strict decoupling between the study configuration state (housed in Neo4j) and subject clinical transactions (housed in PostgreSQL), Cadence Clinical solves the industry-wide challenge of dynamic clinical protocol updates without risking transactional database corruption or disrupting ongoing patient visits.
 
 ### 1.2 Standards Mapping: IEC 62304 (Software Life Cycle Processes)
+
 Under the IEC 62304 standard, Cadence Clinical is classified as **Class C (potential for serious injury or death)** due to its active role in clinical decision-making systems, unblinding mechanisms, and patient randomization algorithms.
 
 Every design decision in this specification maps directly to the required development processes of IEC 62304:
-* **Section 5.3 (Software Architectural Design):** Fully realized via the microservice boundaries, service topologies, and interface definitions outlined in Section 2.
-* **Section 5.4 (Software Detailed Design):** Documented through precise database schematics (DDL), Neo4j property schemas, AST parse tree structures, and sync conflict resolution pseudo-code in Sections 3, 4, and 5.
-* **Section 5.5 (Software Unit Testing & Integration):** Traced to automated test suites that enforce the software boundaries, database rollback states, and schema migration protocols.
+
+- **Section 5.3 (Software Architectural Design):** Fully realized via the microservice boundaries, service topologies, and interface definitions outlined in Section 2.
+- **Section 5.4 (Software Detailed Design):** Documented through precise database schematics (DDL), Neo4j property schemas, AST parse tree structures, and sync conflict resolution pseudo-code in Sections 3, 4, and 5.
+- **Section 5.5 (Software Unit Testing & Integration):** Traced to automated test suites that enforce the software boundaries, database rollback states, and schema migration protocols.
 
 ### 1.3 Standards Mapping: ISO 14971 (Risk Management for Software Hazards)
+
 Clinical systems present complex operational hazards. Data loss, blinding breaches, or invalid randomization can corrupt entire multi-million dollar trials or endanger patients.
 
 This architecture implements a strict risk-control hierarchy following ISO 14971 principles:
+
 1. **Inherent Safety by Design:** Utilizes Neo4j graph schemas to enforce study metadata immutability natively, preventing accidental or malicious changes to active study protocols.
 2. **Protective Measures in the Software:** Employs database-level triggers to catch out-of-band updates, writing any schema bypass attempts into a secure, isolated shadow schema.
 3. **Information for Safety (Alerting & Monitoring):** Integrates cryptographic ledger checking to flag ledger anomalies or data tampering instantly, initiating automated system-wide quarantines and alert escalations.
 
 ### 1.4 Regulatory Frameworks: 21 CFR Part 11 & EU Annex 11
+
 Compliance with electronic record standards is built directly into the database engine. Every table schema inherits the platform's universal GxP audit fields:
-* `created_at`: High-precision UTC timestamp.
-* `created_by`: Deterministic user identity (OIDC Subject UUID).
-* `reason_for_change`: A mandatory string detailing the business/clinical justification for the action.
-* `version_index`: An auto-incrementing integer providing a strict temporal sequence of records.
+
+- `created_at`: High-precision UTC timestamp.
+- `created_by`: Deterministic user identity (OIDC Subject UUID).
+- `reason_for_change`: A mandatory string detailing the business/clinical justification for the action.
+- `version_index`: An auto-incrementing integer providing a strict temporal sequence of records.
 
 ---
 
 ## 2. Global System Architecture & Infrastructure
 
 ### 2.1 Production-Specific Architecture: Multi-Zone Kubernetes Topology & Secure Blueprint
+
 Cadence Clinical is deployed on a highly secure, resilient, multi-Availability Zone (Multi-AZ) Kubernetes (EKS) infrastructure. The design is structured to satisfy the ISO/IEC 27001:2022 security controls, ensuring confidentiality, integrity, and absolute availability.
 
 ```mermaid
@@ -94,11 +103,12 @@ flowchart TB
 Unlike the Production-Specific Architecture (which utilizes AWS infrastructure, multi-AZ PostgreSQL clusters, Redis distributed caching tiers, and Neo4j graph clusters), the developer-centric local environment runs as a lightweight, single-host orchestration configuration using Docker Compose.
 
 #### Local Configuration Details:
-* **Relational Database:** A single PostgreSQL container (`postgres`) is utilized for the core EDC execution runtime (`execution`) and organization service (`org`).
-* **Graph Database:** A community-edition Neo4j container (`neo4j`) is utilized for the trial designer (`designer`).
-* **Local Identity & Access Management:** Keycloak (`keycloak`) runs locally in a development mode using an in-memory database (`dev-mem`).
-* **SQLite File Databases:** Microservices like Electronic Investigator Site File (`eisf`), Electronic Trial Master File (`etmf`), Clinical Trial Management System (`ctms`), Quality & CAPA Management (`quality`), EHR/ePRO Interoperability Gateway (`interop`), Ticket Tracking (`tickets`), Clinical Safety (`safety`), and Notifications Dispatcher (`notifications`) utilize local independent SQLite databases to maximize performance and isolation during local testing, avoiding the need for complex database migrations.
-* **In-Memory Messaging/Queues:** Local integrations utilize synchronous HTTP loops or lightweight in-memory queues instead of full enterprise brokers (e.g., RabbitMQ, AWS SQS) or caching layers (e.g., Redis clusters) which are reserved exclusively for production environments.
+
+- **Relational Database:** A single PostgreSQL container (`postgres`) is utilized for the core EDC execution runtime (`execution`) and organization service (`org`).
+- **Graph Database:** A community-edition Neo4j container (`neo4j`) is utilized for the trial designer (`designer`).
+- **Local Identity & Access Management:** Keycloak (`keycloak`) runs locally in a development mode using an in-memory database (`dev-mem`).
+- **SQLite File Databases:** Microservices like Electronic Investigator Site File (`eisf`), Electronic Trial Master File (`etmf`), Clinical Trial Management System (`ctms`), Quality & CAPA Management (`quality`), EHR/ePRO Interoperability Gateway (`interop`), Ticket Tracking (`tickets`), Clinical Safety (`safety`), and Notifications Dispatcher (`notifications`) utilize local independent SQLite databases to maximize performance and isolation during local testing, avoiding the need for complex database migrations.
+- **In-Memory Messaging/Queues:** Local integrations utilize synchronous HTTP loops or lightweight in-memory queues instead of full enterprise brokers (e.g., RabbitMQ, AWS SQS) or caching layers (e.g., Redis clusters) which are reserved exclusively for production environments.
 
 The diagram below represents the local development runtime and mapping of all 16 active local services:
 
@@ -176,35 +186,46 @@ flowchart TD
 ```
 
 ### 2.3 Microservices & Modular Boundaries
+
 The application is structured as a modular monolith with strict boundary controls, ensuring that services communicate only over defined REST endpoints, secured with JSON Web Tokens (JWT) propagated via Keycloak.
 
 #### 2.3.1 Gateway Service (`apps/gateway`)
+
 The Gateway serves as the single entry point. It handles:
-* **SSL/TLS Termination:** Enforces TLS 1.3 with secure cipher suites.
-* **Authentication Verification:** Integrates with Keycloak OIDC. Validates JWT signature, expiration, and scope.
-* **Rate Limiting:** Utilizes an in-memory Redis token bucket algorithm limiting endpoints based on IP and user profile.
-* **Audit Logs:** Intercepts and logs all REST mutation requests to the central compliance ledger prior to routing.
+
+- **SSL/TLS Termination:** Enforces TLS 1.3 with secure cipher suites.
+- **Authentication Verification:** Integrates with Keycloak OIDC. Validates JWT signature, expiration, and scope.
+- **Rate Limiting:** Utilizes an in-memory Redis token bucket algorithm limiting endpoints based on IP and user profile.
+- **Audit Logs:** Intercepts and logs all REST mutation requests to the central compliance ledger prior to routing.
 
 #### 2.3.2 Designer Service (`apps/designer`)
+
 The Designer Service manages clinical metadata (MDR) and study definitions. It interacts exclusively with Neo4j.
-* **Responsibility:** Structural configuration of studies, arm creation, visits, eCRF templates, biomedical concepts, and value-level metadata (VLM).
-* **Data Guarantee:** All output is CDISC USDM (v3.0/v4.0) compliant.
-* **Storage:** Neo4j Community/Enterprise Edition. Communicates over the Bolt protocol.
+
+- **Responsibility:** Structural configuration of studies, arm creation, visits, eCRF templates, biomedical concepts, and value-level metadata (VLM).
+- **Data Guarantee:** All output is CDISC USDM (v3.0/v4.0) compliant.
+- **Storage:** Neo4j Community/Enterprise Edition. Communicates over the Bolt protocol.
 
 #### 2.3.3 Execution Service (`apps/execution`)
+
 The Execution Service manages subject data capture (EDC) and clinical transactions. It interacts exclusively with PostgreSQL.
-* **Responsibility:** Subject state transitions, eCRF instance entries, query lifecycles, and randomization allocation.
-* **Data Guarantee:** Compiles to CDISC ODM XML/JSON outputs.
-* **Storage:** PostgreSQL. Communicates via SQLModel / SQLAlchemy async connections.
+
+- **Responsibility:** Subject state transitions, eCRF instance entries, query lifecycles, and randomization allocation.
+- **Data Guarantee:** Compiles to CDISC ODM XML/JSON outputs.
+- **Storage:** PostgreSQL. Communicates via SQLModel / SQLAlchemy async connections.
 
 #### 2.3.4 eTMF & eISF Taxonomy Catalog Integration
+
 The electronic Trial Master File (eTMF) and electronic Investigator Site File (eISF) services leverage a unified and immutable reference taxonomy modeling engine.
-* **Taxonomy Package (`packages/core-models/tmf_reference_model`):** Houses the memory-efficient and frozen Pydantic-typed catalog registry of DIA TMF Reference Model versions.
-* **The Cutover Decision:** The platform has cut over to `v3.2.0-complete` as the active default catalog version to prevent taxonomy drift. Legacy `v3.2.0` is fully retained for backward compatibility and reproducible pre-cutover record interpretation. Extended namespaces register Cadence-specific custom extensions in `v3.2.0-extended` with `is_extension=True`.
-* **Validation & Propagation:** Strict hierarchical integrity checks are performed centrally during ingestion using `resolve_artifact` and `validate_hierarchy`, rejecting invalid classifications with HTTP 422, while supporting automated/manual document redactions signed with symmetrically cryptographed manifests (HMAC-SHA256). The system is fully synchronized and GxP compliant.
+
+- **Taxonomy Package (`packages/core-models/tmf_reference_model`):** Houses the memory-efficient and frozen Pydantic-typed catalog registry of DIA TMF Reference Model versions.
+- **The Cutover Decision:** The platform has cut over to `v3.2.0-complete` as the active default catalog version to prevent taxonomy drift. Legacy `v3.2.0` is fully retained for backward compatibility and reproducible pre-cutover record interpretation. Extended namespaces register Cadence-specific custom extensions in `v3.2.0-extended` with `is_extension=True`.
+- **Validation & Propagation:** Strict hierarchical integrity checks are performed centrally during ingestion using `resolve_artifact` and `validate_hierarchy`, rejecting invalid classifications with HTTP 422, while supporting automated/manual document redactions signed with symmetrically cryptographed manifests (HMAC-SHA256). The system is fully synchronized and GxP compliant.
 
 ### 2.4 Distributed Caching Layer
+
 Redis is deployed as a highly-available clustered setup in the isolated subnet tier. Its primary functions include:
+
 1. **Dynamic Rate-Limiting:** Tracks IP requests using a sliding-window counter.
 2. **OIDC Certificate Caching:** Stores Keycloak's public keys (JWKS) to avoid calling the Keycloak server on every request.
 3. **Form Schema Caching:** Caches compiled XForm XML definitions and AST-parsed trees to optimize dynamic rendering speeds.
@@ -214,6 +235,7 @@ Redis is deployed as a highly-available clustered setup in the isolated subnet t
 ## 3. Database Schematics & Graph Immutability
 
 ### 3.1 Database Schematics: Relational (PostgreSQL) DDL
+
 The transactional EDC database is structured to support relational integrity with an immutable audit layer. Below is the strict DDL mapping of the core PostgreSQL tables, including the shadow schema tables and the database triggers that capture out-of-band updates.
 
 ```sql
@@ -302,6 +324,7 @@ CREATE INDEX idx_ledger_table_record ON shadow_audit.ledger_log(table_name, reco
 ```
 
 ### 3.2 Database Triggers for Direct Schema Tampering Protection
+
 To guarantee the requirements of 21 CFR § 11.10(e), an immutable audit trigger is established. It intercepts any updates or deletions at the database level and forces shadow recording, bypassing the application layer if needed.
 
 ```sql
@@ -376,6 +399,7 @@ CREATE TRIGGER audit_queries_trigger
 ---
 
 ### 3.3 Neo4j Graph Schema & Versioning Blueprint
+
 The Designer Service manages clinical structures in a Neo4j graph. Below is the structural representation of the node configurations and how branching versioning is maintained without duplicate node corruption.
 
 ```mermaid
@@ -430,12 +454,15 @@ classDiagram
 ```
 
 ### 3.4 Graph Immutability Enforcement & Branching Protocol
+
 To preserve strict scientific reproducibility, study graphs become **permanently frozen** once published (`LOCKED` status).
 
 #### 3.4.1 Immutability Enforcement
+
 The Designer Service executes an assertion check on every mutating transaction.
 <!-- validation-skip -->
-```python
+
+```python skip
 async def assert_graph_mutable(tx: Transaction, study_version_id: str):
     query = """
     MATCH (sv:StudyVersion {id: $id})
@@ -450,7 +477,9 @@ async def assert_graph_mutable(tx: Transaction, study_version_id: str):
 ```
 
 #### 3.4.2 Branching Protocol (Protocol Amendments)
+
 When an investigator initiates a protocol amendment, the system executes a deep copy branching transaction.
+
 1. Create a new `StudyVersion` node with `version_index = previous.version_index + 1`.
 2. Generate semantic versioning tag (e.g., `1.0.0` $\rightarrow$ `1.1.0` for clinical amendments; `1.0.0` $\rightarrow$ `2.0.0` for design restructuring).
 3. Clone all structural child nodes linked to the target graph path.
@@ -477,10 +506,12 @@ flowchart LR
 ```
 
 ### 3.5 Graph Tree-Diffing & Reconciliation Algorithm
+
 When promoting a protocol amendment, the system needs to compute structural modifications between the old version $G_{old}$ and the branched version $G_{new}$. The tree-diffing algorithm traverses the hierarchical study structure and generates an execution instruction set.
 
 <!-- validation-skip -->
-```python
+
+```python skip
 def compute_graph_diff(tx, old_version_id: str, new_version_id: str) -> dict:
     """
     Traverses study tree levels: StudyVersion -> Epoch -> Visit -> Form -> BiomedicalConcept.
@@ -538,6 +569,7 @@ def compute_graph_diff(tx, old_version_id: str, new_version_id: str) -> dict:
 ## 4. XForm Rendering & Engine Rules (The Execution Engine)
 
 ### 4.1 Custom XForm AST Engine Specification
+
 The Cadence Execution Engine uses a highly optimized, custom-built Abstract Syntax Tree (AST) evaluator specifically designed to execute dynamic binding expressions, check dynamic conditions, and evaluate complex XPath paths on the client's device.
 
 ```mermaid
@@ -560,6 +592,7 @@ flowchart TD
 ```
 
 ### 4.2 Abstract Syntax Tree (AST) Parser Node Structure
+
 Below is the structural definition of an AST parser node implemented in the execution client runtime (Python/TypeScript).
 
 ```python
@@ -635,22 +668,25 @@ class ASTNode:
 ```
 
 ### 4.3 Bind Node Property Resolution: `relevant`, `readonly`, `required`
+
 Dynamic rendering behavior depends on property binding states checked on every mutation.
 
-| Property | AST Evaluation Trigger | Engine Enforcement State |
-| :--- | :--- | :--- |
-| **`relevant`** | Value change of any path node referenced in dependency tree. | If evaluates to `False`, the engine deletes the target field's captured value from memory to prevent orphaned data. It also transitions UI state to hidden. |
-| **`readonly`** | Triggered by user security role validation or study transition state (e.g., Verified). | If `True`, DOM element disables interaction, and API rejects any incoming payloads carrying updates to this node. |
-| **`required`** | Evaluated upon transition to 'Completed' status or form section traversal. | If `True` and value is `null`/empty, block progress, generate high-visibility validation highlights, and prevent form sign-off. |
+| Property       | AST Evaluation Trigger                                                                 | Engine Enforcement State                                                                                                                                    |
+| :------------- | :------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`relevant`** | Value change of any path node referenced in dependency tree.                           | If evaluates to `False`, the engine deletes the target field's captured value from memory to prevent orphaned data. It also transitions UI state to hidden. |
+| **`readonly`** | Triggered by user security role validation or study transition state (e.g., Verified). | If `True`, DOM element disables interaction, and API rejects any incoming payloads carrying updates to this node.                                           |
+| **`required`** | Evaluated upon transition to 'Completed' status or form section traversal.             | If `True` and value is `null`/empty, block progress, generate high-visibility validation highlights, and prevent form sign-off.                             |
 
 ---
 
 ### 4.4 Advanced Memory & Rendering Optimization for Large Forms
+
 For comprehensive trials containing long, detailed forms (such as 500+ fields on dynamic clinical visit sequences), standard web-based engines will encounter out-of-memory errors and input lag.
 
 Cadence solves this by implementing three strict optimization strategies:
 
 #### 4.4.1 Virtualized DOM Rendering Engine
+
 Instead of rendering the entire XForm document structure, the layout engine calculates precise element heights and maintains a fixed-size rendering container.
 
 $$H_{viewport} = \sum_{i=start}^{end} Height(Element_i)$$
@@ -658,6 +694,7 @@ $$H_{viewport} = \sum_{i=start}^{end} Height(Element_i)$$
 Only components within the visible viewport (plus a 3-element pre-buffer) are rendered into the active DOM. All off-screen fields are replaced by static spacer blocks to keep the active DOM count below 100 elements.
 
 #### 4.4.2 State Batching & Execution Debouncing
+
 To prevent XPath evaluation loops from blocking the single UI render thread, input mutations are routed through a debounced state buffer.
 
 ```
@@ -679,6 +716,7 @@ To prevent XPath evaluation loops from blocking the single UI render thread, inp
 This prevents recalculation of the expression tree on every keystroke, reducing CPU cycles from $O(N)$ (where $N$ is the number of dynamic fields) to an aggregated flat cost.
 
 #### 4.4.3 Lexical Parsing Caching & AST Re-use
+
 The evaluation service compiles all raw XForm expression paths into parsed AST structures upon form initialize.
 
 The compiled trees are kept in an LRU (Least Recently Used) cache with an absolute size of 200 trees. The runtime completely avoids recompiling expression tokens during live data entry sessions.
@@ -688,6 +726,7 @@ The compiled trees are kept in an LRU (Least Recently Used) cache with an absolu
 ## 5. Data Synchronization & Offline Engine
 
 ### 5.1 System Architecture for Disconnected Environments
+
 To support remote site centers with spotty connectivity, the Cadence EDC utilizes a robust offline synchronization engine built on a background service worker running an IndexedDB queue.
 
 ```mermaid
@@ -710,6 +749,7 @@ flowchart TD
 ```
 
 ### 5.2 Conflict Resolution Algorithm (Last-Write-Wins with Atomic Merging)
+
 In a collaborative clinical environment, multiple site users (monitors, investigators, coordinators) may concurrently edit subject records while offline.
 
 Cadence EDC utilizes a deterministic field-level timestamp-based merging algorithm to reconcile concurrent transactions cleanly.
@@ -787,25 +827,29 @@ def resolve_sync_conflict(
 ```
 
 #### 5.2.1 Structural Conflicts & Clinical Query Generation
+
 If a structural conflict is detected—such as user A deleting a row in a repeating adverse event grid while user B modifies a field inside that deleted row:
+
 1. The engine rejects the direct update.
 2. It persists the current state to a temporary review shadow table.
 3. It automatically generates a clinical query with status `OPEN` on the target `field_xpath`:
-   - *Message:* "Sync Conflict: Attempted edit to an adverse event record that was deleted by coordinator 'user_A'. Verify details."
-   - *Audit Context:* The engine assigns `reason_for_change` to "SYSTEM SYNC EXCEPTION TRIGGERED".
+   - _Message:_ "Sync Conflict: Attempted edit to an adverse event record that was deleted by coordinator 'user_A'. Verify details."
+   - _Audit Context:_ The engine assigns `reason_for_change` to "SYSTEM SYNC EXCEPTION TRIGGERED".
 
 ### 5.3 Payload Compression (Brotli vs Gzip Optimization)
+
 Large forms containing extensive arrays, audit trail chains, and embedded telemetry parameters require network optimization.
 
 Cadence enforces dynamic **Brotli** compression for all sync transactions.
 
-| Benchmark Parameter | Gzip (Level 6) | Brotli (Level 11) | Architectural Decision |
-| :--- | :--- | :--- | :--- |
-| **Compression Ratio (JSON)** | 4.8:1 | **7.4:1** | Brotli achieves 35% smaller packets. |
-| **Decompression CPU Cost** | 0.8 ms | 0.9 ms | Negligible difference for client devices. |
-| **Network Transfer Speed (5G)** | 120 ms | 78 ms | Brotli provides 35% reduction in sync latency. |
+| Benchmark Parameter             | Gzip (Level 6) | Brotli (Level 11) | Architectural Decision                         |
+| :------------------------------ | :------------- | :---------------- | :--------------------------------------------- |
+| **Compression Ratio (JSON)**    | 4.8:1          | **7.4:1**         | Brotli achieves 35% smaller packets.           |
+| **Decompression CPU Cost**      | 0.8 ms         | 0.9 ms            | Negligible difference for client devices.      |
+| **Network Transfer Speed (5G)** | 120 ms         | 78 ms             | Brotli provides 35% reduction in sync latency. |
 
 #### Brotli Dynamic Integration Rule
+
 The Gateway Service detects client compression capabilities via the standard `Accept-Encoding: br` header. If present, the service automatically compresses the JSON string output and appends the `Content-Encoding: br` response header.
 
 ---
@@ -813,18 +857,24 @@ The Gateway Service detects client compression capabilities via the standard `Ac
 ## 6. Eligibility Criteria Evaluation Engine & Advisory Pre-screening
 
 ### 6.1 Shared Eligibility Criteria Evaluation Engine
+
 The platform implements a sandboxed, deterministic Abstract Syntax Tree (AST) evaluator for clinical inclusion/exclusion criteria. This architecture guarantees safety by preventing any dynamic code execution (e.g., `eval()` or `exec()`) of user-defined DSL expressions.
-* **Responsibility:** Lexical parsing, syntax validation, AST construction, and Kleene three-valued logic evaluation of clinical criteria.
-* **Storage:** Database-free; operates entirely in-memory at runtime.
-* **Data Guarantee:** Evaluates deterministic logical criteria to a clean True, False, or Indeterminate (Kleene three-valued logic) result with structured explanation traces.
+
+- **Responsibility:** Lexical parsing, syntax validation, AST construction, and Kleene three-valued logic evaluation of clinical criteria.
+- **Storage:** Database-free; operates entirely in-memory at runtime.
+- **Data Guarantee:** Evaluates deterministic logical criteria to a clean True, False, or Indeterminate (Kleene three-valued logic) result with structured explanation traces.
 
 #### 6.1.1 Abstract Syntax Tree (AST) & Lexical Parsing
+
 As governed by **ADR-053**, dynamic expressions such as `eCRF.DM.AGE >= 18` are processed using a recursive-descent parser defined in `packages/core-models/eligibility/parser.py`. The parser decomposes expressions into a structured Pydantic `ExpressionNode` AST defined in `packages/core-models/eligibility/models.py`.
+
 - **Parsing Flow:** Tokenizer parses characters into typed tokens (field references, constants, operators, logical keywords).
 - **AST Generation:** Build recursive comparison or logical nodes. No arbitrary Python execution is permitted, establishing a robust security boundary.
 
 #### 6.1.2 Kleene Three-Valued Logic Evaluator
+
 The runtime evaluation core in `packages/core-models/eligibility/evaluator.py` implements Kleene three-valued logic (`True`, `False`, `None` / Indeterminate).
+
 - **Indeterminate (null/missing) Propagation:** If any referenced eCRF data point is missing or unresolved (e.g., missing lab result or unborn age), the comparison evaluates to `Indeterminate`.
 - **Short-Circuit Logical Rules:**
   - `False AND Indeterminate` evaluates deterministically to `False` (as the criteria can never be fully met).
@@ -835,57 +885,71 @@ The runtime evaluation core in `packages/core-models/eligibility/evaluator.py` i
 ---
 
 ### 6.2 Designer Metadata Storage & Canonical USDM v3 Projection
+
 The Metadata Designer service manages criteria authoring and standards alignment.
-* **Responsibility:** Authoring, validating, versioning, and projecting inclusion/exclusion criteria to canonical formats.
-* **Storage:** Neo4j Graph Database (using the `EligibilityCriterion` and `EligibilityCriterionVersion` node chain).
-* **Data Guarantee:** Flawless round-trip fidelity between legacy flat structures and standard CDISC USDM v3 clinical study representations.
+
+- **Responsibility:** Authoring, validating, versioning, and projecting inclusion/exclusion criteria to canonical formats.
+- **Storage:** Neo4j Graph Database (using the `EligibilityCriterion` and `EligibilityCriterionVersion` node chain).
+- **Data Guarantee:** Flawless round-trip fidelity between legacy flat structures and standard CDISC USDM v3 clinical study representations.
 
 #### 6.2.1 Graph-Based Versioning & Immutability
+
 All authored eligibility rules are stored in Neo4j under `apps/designer/`.
+
 - Once a study version transitions to `LOCKED` or `PUBLISHED`, the associated criteria are made strictly immutable via graph guards.
 - Mid-study amendments trigger graph cloning where new draft versions are linked using the `PREVIOUS_VERSION` relationship, incrementing the `version_index`.
 
 #### 6.2.2 Canonical USDM v3 Mapping & Inverse Mapping
+
 - **USDM Projection (`apps/designer/mapper.py`):** Translates internal flat eligibility schemas to CDISC USDM v3 compatible JSON/YAML outputs. Includes custom tags such as `_original_id` and `_dsl_source` to preserve non-standard metadata attributes.
 - **USDM Ingestion (`apps/designer/inverse_mapper.py`):** Reconstructs the exact, validated internal eligibility graph from canonical files, preserving full round-trip fidelity.
 
 ---
 
 ### 6.3 Clinical Execution Gating (EDC Screen & Randomization Blocks)
+
 The clinical execution service acts as the GxP-regulated enforcement gate during subject screening and treatment randomization.
-* **Responsibility:** Aggregating dynamic clinical observations, evaluating criteria in real-time, executing state transitions, and guarding randomization.
-* **Storage:** PostgreSQL (persisting subject states, observations, and signed screening audit trails).
-* **Data Guarantee:** Complete immutability of signed observations; absolute blocking of un-screened or ineligible subjects from allocation keys.
+
+- **Responsibility:** Aggregating dynamic clinical observations, evaluating criteria in real-time, executing state transitions, and guarding randomization.
+- **Storage:** PostgreSQL (persisting subject states, observations, and signed screening audit trails).
+- **Data Guarantee:** Complete immutability of signed observations; absolute blocking of un-screened or ineligible subjects from allocation keys.
 
 #### 6.3.1 Context Building & Latest Observation Precedence
+
 - Dynamic clinical observations are fetched and parsed in `apps/execution/eligibility_context.py`.
 - Demographics and standard observations map to the `eCRF.<DOMAIN>.<VARIABLE>` namespace.
 - **Precedence Rule:** If a field has multiple observation records, the latest timestamped record takes absolute precedence. Missing values default to Kleene-absent `None`.
 
 #### 6.3.2 Transition Guard State Machine
+
 - When a screening request is POSTed to the screening endpoint, the execution service runs the aggregated eligibility engine.
 - **Pass (Transition to `ENROLLED`):** If all criteria evaluate to `True`, the state machine transitions the subject to `ENROLLED` and issues an auditable GxP certificate.
 - **Fail (Transition to `SCREEN_FAILED`):** If any criteria evaluates to `False`, the subject is transitioned immediately to `SCREEN_FAILED`. This state is locked; subsequent modifications are blocked.
 - **Indeterminate (No Transition):** If any criteria evaluates to `Indeterminate`, the subject remains in the `SCREENING` state. Transition is blocked until all required values are captured.
 
 #### 6.3.3 Randomization Allocation Guard
+
 - The treatment allocation endpoint `/api/v1/execution/rtsm/dispense` enforces a physical verification gate.
 - Any attempt to randomise or allocate kits to a subject who is not in the `ENROLLED` state is strictly rejected with a `PermissionError` and an HTTP 403 Forbidden response.
 
 ---
 
 ### 6.4 Interop FHIR Advisory Pre-screening Boundary
+
 The Interoperability service exposes a secure, advisory endpoint allowing external systems (e.g., EHRs) to evaluate candidate eligibility without modifying state.
-* **Responsibility:** Ingesting external FHIR bundles, projecting them to the canonical context, invoking the evaluation engine, and writing non-PHI compliance audit logs.
-* **Storage:** SQLite/PostgreSQL for advisory pre-screen transaction audit records.
-* **Data Guarantee:** Absolute read-only boundary; guarantee of no state mutation in the execution/EDC databases.
+
+- **Responsibility:** Ingesting external FHIR bundles, projecting them to the canonical context, invoking the evaluation engine, and writing non-PHI compliance audit logs.
+- **Storage:** SQLite/PostgreSQL for advisory pre-screen transaction audit records.
+- **Data Guarantee:** Absolute read-only boundary; guarantee of no state mutation in the execution/EDC databases.
 
 #### 6.4.1 FHIR to Canonical `eCRF.*` Namespace Projection
+
 - In `apps/interop/fhir_adapter.py`, external FHIR Bundles are parsed.
 - Patient demographics, observations, conditions, and medication statements are parsed and projected into the shared `eCRF.<DOMAIN>.<VARIABLE>` namespace.
 - Demographics such as age are derived safely relative to the active pre-screening request timestamp.
 
 #### 6.4.2 Advisory Boundary & Zero-State Isolation
+
 - The pre-screen endpoint `POST /api/v1/interop/fhir/pre-screen` runs in isolation.
 - It pulls active eligibility criteria from the Metadata Designer using gateway V2 signatures, runs the evaluation engine, and returns advisory results.
 - **Zero-State Isolation:** The interop layer is architecturally decoupled from the core EDC databases. It is structurally impossible for a pre-screening request to write, modify, or corrupt subject state in the execution service.
@@ -897,31 +961,33 @@ The Interoperability service exposes a secure, advisory endpoint allowing extern
 
 In compliance with ISO 14971:2019, this section identifies critical software hazards, analyzes their downstream impact, and links them directly to the architectural safety controls implemented in Cadence Clinical.
 
-| Hazard ID | Software Hazard Category | Trigger Event / Vector | Downstream GxP/Clinical Impact | Class (IEC 62304) | Architectural Mitigation & Safety Control | Verification Strategy |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **HAZ-001** | **Data Loss** | Sudden container crash or hardware node failure during form write. | Partial write corrupts transactional records; lost patient records. | Class C | PostgreSQL Write-Ahead Logging (WAL) replicated synchronously. Local IndexedDB saves draft payloads client-side before network transfer. | Run container killing tests during simulated database write cycles. |
-| **HAZ-002** | **Tampering** | Direct administration access or direct SQL execution. | Bypassing audit trail validation on clinical records. | Class C | PostgreSQL Immutable Database Trigger: automatically copies any write delta to the isolated `shadow_audit` schema. | Execute raw update query via direct DB runner; verify write to shadow table is captured. |
-| **HAZ-003** | **Blinding Breach** | API boundary failure exposing randomization allocation vectors. | Unblinding of clinical monitors, introducing bias and destroying study validity. | Class C | Physical/logical separation of treatment allocation tables. Dynamic API masking filters randomized variables from sponsor-role requests. | Role-based authorization tests; attempt payload fetch using coordinator role token. |
-| **HAZ-004** | **Sync Overwrite** | Concurrent offline edits overwriting clinical inputs. | Silent deletion of vital safety markers or incorrect lab results. | Class C | Field-Level Last-Write-Wins (LWW) conflict algorithm. Automatic Query raises on structural deletions. | Simulate concurrent offline edits with varying timestamps; check output state. |
-| **HAZ-005** | **Out-of-Memory** | Complex dynamic eCRFs (500+ fields) crashing target browsers. | Interruption of clinical operations; clinical coordinator unable to enter data. | Class B | Layout Engine Virtualization (releasing hidden components) and State Batching (debouncing thread execution). | Load test using 1000 field forms; monitor memory consumption curve. |
-| **HAZ-006** | **Graph Inconsistency** | Out-of-order schema edits in active multi-site studies. | Active clinical visits mapped to incorrect validation rules. | Class C | Graph Immutability Protocol: StudyVersions are permanently frozen upon lock. Amendments spawn isolated branches. | Attempt direct Cypher mutation query against `LOCKED` StudyVersion. Verify error. |
+| Hazard ID   | Software Hazard Category | Trigger Event / Vector                                             | Downstream GxP/Clinical Impact                                                   | Class (IEC 62304) | Architectural Mitigation & Safety Control                                                                                                | Verification Strategy                                                                    |
+| :---------- | :----------------------- | :----------------------------------------------------------------- | :------------------------------------------------------------------------------- | :---------------- | :--------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------- |
+| **HAZ-001** | **Data Loss**            | Sudden container crash or hardware node failure during form write. | Partial write corrupts transactional records; lost patient records.              | Class C           | PostgreSQL Write-Ahead Logging (WAL) replicated synchronously. Local IndexedDB saves draft payloads client-side before network transfer. | Run container killing tests during simulated database write cycles.                      |
+| **HAZ-002** | **Tampering**            | Direct administration access or direct SQL execution.              | Bypassing audit trail validation on clinical records.                            | Class C           | PostgreSQL Immutable Database Trigger: automatically copies any write delta to the isolated `shadow_audit` schema.                       | Execute raw update query via direct DB runner; verify write to shadow table is captured. |
+| **HAZ-003** | **Blinding Breach**      | API boundary failure exposing randomization allocation vectors.    | Unblinding of clinical monitors, introducing bias and destroying study validity. | Class C           | Physical/logical separation of treatment allocation tables. Dynamic API masking filters randomized variables from sponsor-role requests. | Role-based authorization tests; attempt payload fetch using coordinator role token.      |
+| **HAZ-004** | **Sync Overwrite**       | Concurrent offline edits overwriting clinical inputs.              | Silent deletion of vital safety markers or incorrect lab results.                | Class C           | Field-Level Last-Write-Wins (LWW) conflict algorithm. Automatic Query raises on structural deletions.                                    | Simulate concurrent offline edits with varying timestamps; check output state.           |
+| **HAZ-005** | **Out-of-Memory**        | Complex dynamic eCRFs (500+ fields) crashing target browsers.      | Interruption of clinical operations; clinical coordinator unable to enter data.  | Class B           | Layout Engine Virtualization (releasing hidden components) and State Batching (debouncing thread execution).                             | Load test using 1000 field forms; monitor memory consumption curve.                      |
+| **HAZ-006** | **Graph Inconsistency**  | Out-of-order schema edits in active multi-site studies.            | Active clinical visits mapped to incorrect validation rules.                     | Class C           | Graph Immutability Protocol: StudyVersions are permanently frozen upon lock. Amendments spawn isolated branches.                         | Attempt direct Cypher mutation query against `LOCKED` StudyVersion. Verify error.        |
 
 ---
 
 ## 8. Change Management, GxP Validation & Operations
 
 ### 8.1 GxP Environment Promotion Protocol
+
 In accordance with GxP regulatory requirements, system code and clinical protocol schemas progress through a strictly isolated environment promotion pipeline.
 
 ```
 [Development (Dev)] ──► [Staging (QA)] ──► [Validation (UAT)] ──► [Production (Prod)]
 ```
 
-* **Staging (QA):** Handles automated validation runs and performance testing.
-* **Validation (UAT):** Enforces 100% test coverage check on all GxP pathways. Manual User Acceptance Testing is performed and signed off.
-* **Production (Prod):** Operates on the validated environment. No direct hot-fixes are permitted; every release requires an environment migration script.
+- **Staging (QA):** Handles automated validation runs and performance testing.
+- **Validation (UAT):** Enforces 100% test coverage check on all GxP pathways. Manual User Acceptance Testing is performed and signed off.
+- **Production (Prod):** Operates on the validated environment. No direct hot-fixes are permitted; every release requires an environment migration script.
 
 ### 8.2 Database Migrations & Point-in-Time Recovery
+
 1. **Schema Migrations:** Database migrations are defined using SQL migration files executed sequentially. Each file must define both `UP` and `DOWN` transitions.
 2. **Backups & PITR:** PostgreSQL databases utilize continuous archive logging (WAL-G/PgBackRest). This ensures Point-In-Time Recovery (PITR) to any target second within a 30-day window, mitigating hardware disasters.
 3. **Graph Backups:** Neo4j cluster backups are performed using daily physical dumps, stored in encrypted multi-region AWS S3 buckets.
@@ -930,8 +996,8 @@ In accordance with GxP regulatory requirements, system code and clinical protoco
 
 ## 9. Detailed Architectural Sign-Off & Approval
 
-*This section confirms the technical design meets all regulatory, safety, and performance requirements specified in the Product Requirements Document (PRD).*
+_This section confirms the technical design meets all regulatory, safety, and performance requirements specified in the Product Requirements Document (PRD)._
 
-* **Lead Architect Approval:** *Frederick de Ruiter (Lead Architect)*
-* **Compliance Auditor Sign-off:** *GxP Validation Specialist (Designated Placeholder)*
-* **Safety Officer Approval:** *ISO 14971 Safety Lead (Designated Placeholder)*
+- **Lead Architect Approval:** _Frederick de Ruiter (Lead Architect)_
+- **Compliance Auditor Sign-off:** _GxP Validation Specialist (Designated Placeholder)_
+- **Safety Officer Approval:** _ISO 14971 Safety Lead (Designated Placeholder)_

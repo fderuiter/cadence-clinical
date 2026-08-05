@@ -147,9 +147,9 @@ async def create_or_update_tsdv_config(
     roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
     _study_scope: Principal = Depends(require_study_scope()),
 ) -> TSDVConfig:
-    """Create or update Targeted SDV (TSDV) configuration for a study.
+    """CREATE or UPDATE Targeted SDV (TSDV) configuration for a study.
 
-    Restricts config writes to CRA/Data Manager roles with GxP change justifications.
+    Restricts config writes to CRA/Data Manager roles WITH GxP change justifications.
     """
     async with db_manager.get_session_maker()() as session, session.begin():
         await session.execute(

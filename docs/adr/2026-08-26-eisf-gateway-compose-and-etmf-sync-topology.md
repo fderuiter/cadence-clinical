@@ -13,7 +13,7 @@ The electronic Investigator Site File (eISF) service (`apps/eisf`) has been succ
 
 Additionally, the architectural boundaries and synchronization mechanism between eISF (the site-level archive) and eTMF (the sponsor-level master archive) need clear topological definition, establishing trust boundaries and security controls.
 
-*Scope Note:* This ADR specifically covers gateway/compose topology, network ports, and the service-to-service synchronization topology. [ADR-065](2026-08-09-eisf-maintenance-and-formatting.md) remains the authoritative decision record for eISF-local browse, view, downloads, RBAC, and binder completeness workflows.
+_Scope Note:_ This ADR specifically covers gateway/compose topology, network ports, and the service-to-service synchronization topology. [ADR-065](2026-08-09-eisf-maintenance-and-formatting.md) remains the authoritative decision record for eISF-local browse, view, downloads, RBAC, and binder completeness workflows.
 
 This decision implements requirements under **Trace-16**.
 
@@ -51,6 +51,7 @@ This decision implements requirements under **Trace-16**.
 - **Justification:** Choosing Option 2 preserves network simplicity, keeps sync channels internal, and ensures that sync processes are highly decoupled from public ingress routing.
 
 ### Integrated Port Topology & Host Resolution
+
 - **eISF Service Port:** Bound to container port `8010` and exposed on the host as `"8010:8010"` to ensure direct local accessibility.
 - **Org Service Port:** Shifted on the host and container to `"8012:8012"` to completely eliminate port conflicts on local developer boxes, aligning with the clean port assignments across the orchestration ecosystem.
 - **Gateway SERVICES Entry:** `"eisf": os.getenv("EISF_URL", "http://localhost:8010")`.

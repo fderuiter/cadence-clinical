@@ -1,5 +1,16 @@
+# Dependency and environment directories
 node_modules/
 .venv/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+pnpm-lock.yaml
+uv.lock
+
+# Third-party clinical schemas and metadata (CDISC / NCI)
 docs/CDISC/
 docs/NCI/
+
+# Generated OpenAPI schemas
 docs/openapi/

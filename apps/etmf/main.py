@@ -1445,7 +1445,7 @@ async def create_expectation(
     principal: Principal = Depends(get_principal),
 ) -> ExpectedDocumentResponse:
     """
-    Create a new Expected Document List (EDL) expectation.
+    CREATE a new Expected Document List (EDL) expectation.
     """
     session = repo.session
     user_id = principal.user_id
@@ -1519,7 +1519,7 @@ async def update_expectation(
     principal: Principal = Depends(get_principal),
 ) -> ExpectedDocumentResponse:
     """
-    Update an existing Expected Document List (EDL) expectation.
+    UPDATE an existing Expected Document List (EDL) expectation.
     """
     session = repo.session
     user_id = principal.user_id
@@ -2430,7 +2430,7 @@ async def update_document_expiration_endpoint(
     principal: Principal = Depends(get_principal),
 ) -> DocumentResponse:
     """
-    Update expiration-related metadata for an eTMF document.
+    UPDATE expiration-related metadata for an eTMF document.
     Enforces the etmf_document:manage_expiration permission and checks trial locks.
     """
     session = repo.session
