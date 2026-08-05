@@ -82,7 +82,7 @@ jobs:
             sudo curl -sSfL -o /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-x86_64
             sudo chmod +x /usr/local/bin/hadolint
           fi
-          hadolint apps/gateway/Dockerfile apps/designer/Dockerfile apps/execution/Dockerfile apps/etmf/Dockerfile docker/Dockerfile
+          hadolint --failure-threshold error apps/gateway/Dockerfile apps/designer/Dockerfile apps/execution/Dockerfile apps/etmf/Dockerfile docker/Dockerfile
 
       - name: Run ADR validation
         id: run_adr
