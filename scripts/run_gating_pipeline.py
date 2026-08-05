@@ -38,14 +38,16 @@ def main():
         os.environ["PR_NUMBER"] = "123"
 
     # Set mock defaults for mandatory security environment variables if missing
+    # fmt: off
     if "AUDIT_LOG_SECRET_KEY" not in os.environ:
-        os.environ["AUDIT_LOG_SECRET_KEY"] = "mock-audit-log-secret-key-12345"
+        os.environ["AUDIT_LOG_SECRET_KEY"] = "mock-audit-log-secret-key-12345"  # pragma: allowlist secret
     if "INBOUND_EMAIL_HMAC_SECRET" not in os.environ:
-        os.environ["INBOUND_EMAIL_HMAC_SECRET"] = "mock-email-hmac-secret-12345"
+        os.environ["INBOUND_EMAIL_HMAC_SECRET"] = "mock-email-hmac-secret-12345"  # pragma: allowlist secret
     if "GATEWAY_SECRET" not in os.environ:
-        os.environ["GATEWAY_SECRET"] = "mock-gateway-secret-12345"
+        os.environ["GATEWAY_SECRET"] = "mock-gateway-secret-12345"  # pragma: allowlist secret
     if "SIGNING_SECRET" not in os.environ:
-        os.environ["SIGNING_SECRET"] = "mock-signing-secret-12345"
+        os.environ["SIGNING_SECRET"] = "mock-signing-secret-12345"  # pragma: allowlist secret
+    # fmt: on
 
     conflict_outcome = "skipped"
     gxp_validation_outcome = "skipped"
