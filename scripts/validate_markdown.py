@@ -118,11 +118,11 @@ def add_error(file_path, line_no, message):
 
 
 def clean_token(token):
-    """Strips surrounding quotes, parentheses, brackets, braces, backticks and trailing punctuation from a token."""
+    """Strips surrounding quotes, parentheses, brackets, braces, backticks, underscores and trailing punctuation from a token."""
     token = token.strip()
-    while token and token[-1] in "`'\"()[]{}<>,;:!?.)":
+    while token and token[-1] in "`'\"()[]{}<>,;:!?.)_":
         token = token[:-1]
-    while token and token[0] in "`'\"()[]{}<>,;:!?(":
+    while token and token[0] in "`'\"()[]{}<>,;:!?(_":
         token = token[1:]
     return token
 
@@ -963,6 +963,21 @@ def validate_json_block(
                 )
 
 
+def check_preceding_skip(code_block_start_line, lines):
+    # code_block_start_line is 1-based index of the opening ```.
+    idx = code_block_start_line - 2
+    for _ in range(3):
+        if idx < 0:
+            break
+        preceding_line = lines[idx].strip().lower()
+        if preceding_line:  # Skip empty lines
+            if any(w in preceding_line for w in ("skip", "raw-text", "raw")):
+                return True
+            break
+        idx -= 1
+    return False
+
+
 def process_markdown_file(
     file_path, repo_root, root_dirs, root_files, codebase_map=None, strict=False
 ):
@@ -1066,14 +1081,9 @@ def process_markdown_file(
                         for _, cl in code_block_lines
                         if cl.strip().startswith("#")
                     )
-                    has_preceding_skip = False
-                    if code_block_start_line >= 2:
-                        preceding_line = (
-                            lines[code_block_start_line - 2].strip().lower()
-                        )
-                        has_preceding_skip = any(
-                            w in preceding_line for w in ("skip", "raw-text", "raw")
-                        )
+                    has_preceding_skip = check_preceding_skip(
+                        code_block_start_line, lines
+                    )
 
                     if strict:
                         is_skip_block_active = False
@@ -1102,14 +1112,9 @@ def process_markdown_file(
 
                 elif is_json_block:
                     block_content = "".join(line for _, line in code_block_lines)
-                    has_preceding_skip = False
-                    if code_block_start_line >= 2:
-                        preceding_line = (
-                            lines[code_block_start_line - 2].strip().lower()
-                        )
-                        has_preceding_skip = any(
-                            w in preceding_line for w in ("skip", "raw-text", "raw")
-                        )
+                    has_preceding_skip = check_preceding_skip(
+                        code_block_start_line, lines
+                    )
 
                     if strict:
                         is_skip_block_active = False

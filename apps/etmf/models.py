@@ -355,16 +355,14 @@ CREATE TRIGGER IF NOT EXISTS tmf_document_qc_transitions_no_update
 BEFORE UPDATE ON tmf_document_qc_transitions
 BEGIN
     SELECT RAISE(FAIL, 'IMMUTABILITY_VIOLATION: DocumentQCTransition records are append-only and cannot be updated.');
-END;
-""")
+END;""")
 
 trigger_delete_sqlite = DDL("""
 CREATE TRIGGER IF NOT EXISTS tmf_document_qc_transitions_no_delete
 BEFORE DELETE ON tmf_document_qc_transitions
 BEGIN
     SELECT RAISE(FAIL, 'IMMUTABILITY_VIOLATION: DocumentQCTransition records are append-only and cannot be deleted.');
-END;
-""")
+END;""")
 
 trigger_func_pg = DDL("""
 CREATE OR REPLACE FUNCTION block_qc_transition_mutation()
@@ -372,8 +370,7 @@ RETURNS TRIGGER AS $$
 BEGIN
     RAISE EXCEPTION 'IMMUTABILITY_VIOLATION: DocumentQCTransition records are append-only.';
 END;
-$$ LANGUAGE plpgsql;
-""")
+$$ LANGUAGE plpgsql;""")
 
 trigger_update_pg_drop = DDL("""
 DROP TRIGGER IF EXISTS tmf_document_qc_transitions_no_update ON tmf_document_qc_transitions;
@@ -382,8 +379,7 @@ DROP TRIGGER IF EXISTS tmf_document_qc_transitions_no_update ON tmf_document_qc_
 trigger_update_pg_create = DDL("""
 CREATE TRIGGER tmf_document_qc_transitions_no_update
 BEFORE UPDATE ON tmf_document_qc_transitions
-FOR EACH ROW EXECUTE FUNCTION block_qc_transition_mutation();
-""")
+FOR EACH ROW EXECUTE FUNCTION block_qc_transition_mutation();""")
 
 trigger_delete_pg_drop = DDL("""
 DROP TRIGGER IF EXISTS tmf_document_qc_transitions_no_delete ON tmf_document_qc_transitions;
@@ -392,8 +388,7 @@ DROP TRIGGER IF EXISTS tmf_document_qc_transitions_no_delete ON tmf_document_qc_
 trigger_delete_pg_create = DDL("""
 CREATE TRIGGER tmf_document_qc_transitions_no_delete
 BEFORE DELETE ON tmf_document_qc_transitions
-FOR EACH ROW EXECUTE FUNCTION block_qc_transition_mutation();
-""")
+FOR EACH ROW EXECUTE FUNCTION block_qc_transition_mutation();""")
 
 event.listen(
     DocumentQCTransition.__table__,

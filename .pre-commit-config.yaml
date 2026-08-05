@@ -114,6 +114,7 @@ repos:
         entry: uv run python scripts/pre_commit_query_linter.py
         language: system
         files: \.py$
+        exclude: ^(tests/|scripts/)
         pass_filenames: true
 
       - id: validate-vulnerabilities

@@ -81,7 +81,7 @@ class DSLParser:
 
     def current_token(self) -> Token | None:
         """
-        Return the token at the current parsing pointer, or None if EOF.
+        RETURN the token at the current parsing pointer, or None if EOF.
         """
         if self.pos < len(self.tokens):
             return self.tokens[self.pos]

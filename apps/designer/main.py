@@ -2157,7 +2157,7 @@ async def export_protocol(
             timestamp: datetime()
         })
         CREATE (s)-[:HAS_ACTION]->(a)
-        RETURN a.id as action_id
+        RETURN a.id AS action_id
         """
         try:
             async with driver.session() as session:
@@ -2406,7 +2406,7 @@ async def approve_study_version_endpoint(
         async with driver.session() as session:
             ver_query = """
             MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion {id: $version_id})
-            RETURN sv {.*} as version_props
+            RETURN sv {.*} AS version_props
             """
             ver_res = await session.run(
                 ver_query, study_id=study_id, version_id=version_id

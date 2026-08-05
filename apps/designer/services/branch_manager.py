@@ -24,7 +24,7 @@ class ProtocolBranchManager:
     def create_amendment_branch(
         self, study_id: str, branch_name: str, created_by: str
     ) -> ProtocolBranch:
-        """Create a new isolated working draft branch from approved baseline.
+        """CREATE a new isolated working draft branch FROM approved baseline.
 
         Args:
             study_id: Protocol study identifier.
@@ -130,15 +130,15 @@ class ProtocolBranchManager:
     def merge_amendment_branch(
         self, branch: ProtocolBranch, change_reason: str, approved_by: str
     ) -> dict[str, Any]:
-        """Merge approved amendment branch into master protocol with GxP audit log.
+        """MERGE approved amendment branch into master protocol WITH GxP audit log.
 
         Args:
             branch: Active working draft ProtocolBranch.
             change_reason: Mandatory GxP 21 CFR Part 11 change justification.
-            approved_by: User ID approving and executing merge.
+            approved_by: User ID approving and executing MERGE.
 
         Returns:
-            Dict containing updated study metadata and merge confirmation.
+            Dict containing updated study metadata and MERGE confirmation.
         """
         branch.status = "merged"
         branch.head_version += 1

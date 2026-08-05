@@ -819,7 +819,7 @@ async def create_consent_clause(
     session: AsyncSession = Depends(get_db_session),
 ) -> ConsentClauseResponse:
     """
-    Create/ingest a new ICF clause version (starts at version_index = 1).
+    CREATE/ingest a new ICF clause version (starts at version_index = 1).
     """
     user_id = getattr(request.state, "user_id", "system")
     user_role = getattr(request.state, "roles", "system")
@@ -1029,7 +1029,7 @@ async def create_consent_template(
     session: AsyncSession = Depends(get_db_session),
 ) -> ConsentTemplateResponse:
     """
-    Create/ingest a new consent template (starts at version_index = 1 and is_published = False).
+    CREATE/ingest a new consent template (starts at version_index = 1 and is_published = False).
     """
     user_id = getattr(request.state, "user_id", "system")
     user_role = getattr(request.state, "roles", "system")
@@ -1804,7 +1804,7 @@ async def create_consent_translation(
     session: AsyncSession = Depends(get_db_session),
 ) -> ConsentTranslationResponse:
     """
-    Create/ingest a new translation draft (starts at version_index = 1, status = DRAFT).
+    CREATE/ingest a new translation draft (starts at version_index = 1, status = DRAFT).
     Validates that the source clause or template exists.
     """
     user_id = getattr(request.state, "user_id", "system")

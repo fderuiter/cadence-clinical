@@ -43,7 +43,7 @@ async def assert_study_version_mutable(tx, study_version_id: str):
 
     query = """
     MATCH (sv:StudyVersion {id: $study_version_id})
-    RETURN sv {.*} as version_props
+    RETURN sv {.*} AS version_props
     """
     res = await tx.run(query, study_version_id=study_version_id)
     record = await res.single()
@@ -86,7 +86,7 @@ async def assert_graph_mutable(
         query = """
         MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion)
         WHERE NOT (sv)<-[:PREVIOUS_VERSION]-()
-        RETURN sv {.*} as version_props
+        RETURN sv {.*} AS version_props
         """
         res = await tx.run(query, study_id=study_id)
         record = await res.single()
@@ -140,7 +140,7 @@ async def assert_graph_mutable(
         query = """
         MATCH (old:LibraryObject {id: $object_id})
         WHERE NOT (old)<-[:PREVIOUS_VERSION]-()
-        RETURN old.status as status
+        RETURN old.status AS status
         """
         res = await tx.run(query, object_id=object_id)
         record = await res.single()
@@ -195,9 +195,9 @@ async def assert_library_object_mutable(
     MATCH (s:Study)-[:HAS_LIBRARY_INSTANCE]->(instance:LibraryObjectInstance)-[:INSTANTIATED_FROM]->(lo:LibraryObject {id: $object_id})
     WHERE (lo.version = $version OR $version IS NULL)
     OPTIONAL MATCH (s)-[:HAS_VERSION]->(sv:StudyVersion)
-    WITH s, lo, collect(sv.status) as statuses
+    WITH s, lo, collect(sv.status) AS statuses
     WHERE s.status IN ['Active-Recruiting', 'Active'] OR any(st IN statuses WHERE st IN ['Active-Recruiting', 'Active'])
-    RETURN count(lo) > 0 AS is_in_use, s.id as study_id
+    RETURN count(lo) > 0 AS is_in_use, s.id AS study_id
     """
     if has_session:
         async with driver_or_tx.session() as session:
@@ -221,7 +221,7 @@ async def create_study_root(driver, study_id: str):
     """
     query = """
     MERGE (s:Study {id: $study_id})
-    RETURN s.id as id
+    RETURN s.id AS id
     """
     async with driver.session() as session:
         tx = await session.begin_transaction()
@@ -272,7 +272,7 @@ async def create_study_version(
     WHERE old_ver IS NOT NULL
     CREATE (new_ver)-[:PREVIOUS_VERSION]->(old_ver)
 
-    RETURN new_ver.id as id
+    RETURN new_ver.id AS id
     """
 
     async with driver.session() as session:
@@ -282,7 +282,7 @@ async def create_study_version(
             lock_query = """
             MATCH (s:Study {id: $study_id})
             SET s._lock = true
-            RETURN s.id as id
+            RETURN s.id AS id
             """
             await tx.run(lock_query, study_id=study_id)
 
@@ -290,7 +290,7 @@ async def create_study_version(
             check_ver_query = """
             MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion)
             WHERE sv.version_index = $version_index OR sv.version_tag = $version_tag
-            RETURN sv.id as id
+            RETURN sv.id AS id
             """
             check_ver_res = await tx.run(
                 check_ver_query,
@@ -390,12 +390,12 @@ async def create_library_object_version(
     CREATE (new:LibraryObject {id: $object_id, version: coalesce(old.version, 1) + 1})
     SET new += $props
     CREATE (new)-[:PREVIOUS_VERSION]->(old)
-    RETURN properties(new) as new_props
+    RETURN properties(new) AS new_props
     """
     create_query = """
     MERGE (new:LibraryObject {id: $object_id})
     ON CREATE SET new.version = 1, new += $props
-    RETURN properties(new) as new_props
+    RETURN properties(new) AS new_props
     """
     async with driver.session() as session:
         tx = await session.begin_transaction()
@@ -415,7 +415,7 @@ async def create_library_object_version(
                 MATCH (old:LibraryObject {id: $object_id})
                 WHERE NOT (old)<-[:PREVIOUS_VERSION]-()
                 SET old._lock = true
-                RETURN old.id as id, old.version as version
+                RETURN old.id AS id, old.version AS version
                 """
                 lock_res = await tx.run(lock_query, object_id=object_id)
                 lock_record = await lock_res.single()
@@ -464,7 +464,7 @@ async def get_latest_library_object(
     MATCH (n:LibraryObject {id: $object_id, sponsor_id: $sponsor_id})
     WHERE coalesce(n.tenant_id, 'tenant_default') = $tenant_id
       AND NOT (n)<-[:PREVIOUS_VERSION]-()
-    RETURN properties(n) as props
+    RETURN properties(n) AS props
     """
     async with driver.session() as session:
         res = await session.run(
@@ -506,7 +506,7 @@ async def get_library_object_by_version(
     query = """
     MATCH (n:LibraryObject {id: $object_id, sponsor_id: $sponsor_id, version: $version})
     WHERE coalesce(n.tenant_id, 'tenant_default') = $tenant_id
-    RETURN properties(n) as props
+    RETURN properties(n) AS props
     """
     async with driver.session() as session:
         res = await session.run(
@@ -547,7 +547,7 @@ async def get_library_object_history(
     query = """
     MATCH (n:LibraryObject {id: $object_id, sponsor_id: $sponsor_id})
     WHERE coalesce(n.tenant_id, 'tenant_default') = $tenant_id
-    RETURN properties(n) as props
+    RETURN properties(n) AS props
     ORDER BY n.version ASC
     """
     async with driver.session() as session:
@@ -618,7 +618,7 @@ async def list_library_objects(
     query = f"""
     MATCH (n:LibraryObject)
     WHERE {where_clause}
-    RETURN properties(n) as props
+    RETURN properties(n) AS props
     ORDER BY n.id ASC
     LIMIT $limit
     """
@@ -668,7 +668,7 @@ async def update_study_properties(
     WHERE old_props IS NOT NULL
     CREATE (a)-[:BEFORE]->(old_props)
 
-    RETURN a.id as action_id
+    RETURN a.id AS action_id
     """
     async with driver.session() as session:
         tx = await session.begin_transaction()
@@ -680,7 +680,7 @@ async def update_study_properties(
             lock_query = """
             MATCH (s:Study {id: $study_id})
             SET s._lock = true
-            RETURN s.id as id
+            RETURN s.id AS id
             """
             await tx.run(lock_query, study_id=study_id)
 
@@ -786,7 +786,7 @@ async def create_rule_node(
     CREATE (r)-[:HAS_VERSION]->(rv)
     CREATE (a)-[:AFTER]->(rv)
 
-    RETURN r.id as rule_id
+    RETURN r.id AS rule_id
     """
     async with driver.session() as session:
         tx = await session.begin_transaction()
@@ -872,7 +872,7 @@ async def update_rule_node(
     CREATE (a)-[:BEFORE]->(old_rv)
     CREATE (new_rv)-[:PREVIOUS_VERSION]->(old_rv)
 
-    RETURN new_rv.version_index as version_index
+    RETURN new_rv.version_index AS version_index
     """
     async with driver.session() as session:
         tx = await session.begin_transaction()
@@ -947,7 +947,7 @@ async def delete_rule_node(
     CREATE (a)-[:BEFORE]->(old_rv)
     CREATE (new_rv)-[:PREVIOUS_VERSION]->(old_rv)
 
-    RETURN new_rv.version_index as version_index
+    RETURN new_rv.version_index AS version_index
     """
     async with driver.session() as session:
         tx = await session.begin_transaction()
@@ -979,7 +979,7 @@ async def get_rules_from_graph(driver, study_id: str) -> list[dict[str, Any]]:
     query = """
     MATCH (s:Study {id: $study_id})-[:HAS_RULE]->(r:Rule)-[:HAS_VERSION]->(rv:RuleVersion)
     WHERE NOT (rv)<-[:PREVIOUS_VERSION]-() AND rv.is_deleted = false
-    RETURN rv {.*} as rule_props
+    RETURN rv {.*} AS rule_props
     """
     async with driver.session() as session:
         result = await session.run(query, study_id=study_id)
@@ -1151,7 +1151,7 @@ async def amend_protocol_version(
         async with tx:
             # Pessimistic lock on Study root
             lock_query = (
-                "MATCH (s:Study {id: $study_id}) SET s._lock = true RETURN s.id as id"
+                "MATCH (s:Study {id: $study_id}) SET s._lock = true RETURN s.id AS id"
             )
             lock_res = await tx.run(lock_query, study_id=study_id)
             lock_record = await lock_res.single()
@@ -1162,7 +1162,7 @@ async def amend_protocol_version(
             latest_query = """
             MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion)
             WHERE NOT (sv)<-[:PREVIOUS_VERSION]-()
-            RETURN sv {.*} as version_props
+            RETURN sv {.*} AS version_props
             """
             latest_res = await tx.run(latest_query, study_id=study_id)
             latest_record = await latest_res.single()
@@ -1199,7 +1199,7 @@ async def amend_protocol_version(
             check_query = """
             MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion)
             WHERE sv.version_index = $version_index OR sv.version_tag = $version_tag
-            RETURN sv.id as id
+            RETURN sv.id AS id
             """
             check_res = await tx.run(
                 check_query,
@@ -1253,7 +1253,7 @@ async def amend_protocol_version(
                 change_reason: $change_reason
             })
             CREATE (s)-[:HAS_VERSION]->(new_ver)
-            RETURN new_ver.id as id
+            RETURN new_ver.id AS id
             """
             await tx.run(
                 create_ver_query,
@@ -1442,7 +1442,7 @@ async def create_study_arm(
                 timestamp: datetime()
             })
             CREATE (a)-[:AFTER]->(arm)
-            RETURN arm.id as id
+            RETURN arm.id AS id
             """
             res = await tx.run(
                 query,
@@ -1536,7 +1536,7 @@ async def update_study_arm(
             })
             CREATE (a)-[:AFTER]->(new_arm)
             CREATE (a)-[:BEFORE]->(old_arm)
-            RETURN new_arm.id as id
+            RETURN new_arm.id AS id
             """
             res = await tx.run(
                 query,
@@ -1623,7 +1623,7 @@ async def create_epoch(
                 timestamp: datetime()
             })
             CREATE (a)-[:AFTER]->(ep)
-            RETURN ep.id as id
+            RETURN ep.id AS id
             """
             res = await tx.run(
                 query,
@@ -1710,7 +1710,7 @@ async def update_epoch(
             })
             CREATE (a)-[:AFTER]->(new_ep)
             CREATE (a)-[:BEFORE]->(old_ep)
-            RETURN new_ep.id as id
+            RETURN new_ep.id AS id
             """
             res = await tx.run(
                 query,
@@ -1793,7 +1793,7 @@ async def create_visit(
                 timestamp: datetime()
             })
             CREATE (a)-[:AFTER]->(v)
-            RETURN v.id as id
+            RETURN v.id AS id
             """
             res = await tx.run(
                 query,
@@ -1880,7 +1880,7 @@ async def update_visit(
             })
             CREATE (a)-[:AFTER]->(new_v)
             CREATE (a)-[:BEFORE]->(old_v)
-            RETURN new_v.id as id
+            RETURN new_v.id AS id
             """
             res = await tx.run(
                 query,
@@ -1963,7 +1963,7 @@ async def create_procedure(
                 timestamp: datetime()
             })
             CREATE (a)-[:AFTER]->(p)
-            RETURN p.id as id
+            RETURN p.id AS id
             """
             res = await tx.run(
                 query,
@@ -2050,7 +2050,7 @@ async def update_procedure(
             })
             CREATE (a)-[:AFTER]->(new_p)
             CREATE (a)-[:BEFORE]->(old_p)
-            RETURN new_p.id as id
+            RETURN new_p.id AS id
             """
             res = await tx.run(
                 query,
@@ -2133,7 +2133,7 @@ async def create_timing_window(
                 timestamp: datetime()
             })
             CREATE (a)-[:AFTER]->(t)
-            RETURN t.id as id
+            RETURN t.id AS id
             """
             res = await tx.run(
                 query,
@@ -2225,7 +2225,7 @@ async def update_timing_window(
             })
             CREATE (a)-[:AFTER]->(new_t)
             CREATE (a)-[:BEFORE]->(old_t)
-            RETURN new_t.id as id
+            RETURN new_t.id AS id
             """
             res = await tx.run(
                 query,
@@ -2285,7 +2285,7 @@ async def link_epoch_to_visit(
                 timestamp: datetime()
             })
             CREATE (a)-[:AFTER]->(ep)
-            RETURN true as success
+            RETURN true AS success
             """
             res = await tx.run(
                 query,
@@ -2363,7 +2363,7 @@ async def reorder_arms(
             )
 
             existing_res = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_ARM]->(a:StudyArm) WHERE coalesce(a.is_deleted, false) = false AND coalesce(a.is_retired, false) = false RETURN a.id as id",
+                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_ARM]->(a:StudyArm) WHERE coalesce(a.is_deleted, false) = false AND coalesce(a.is_retired, false) = false RETURN a.id AS id",
                 study_version_id=study_version_id,
             )
             existing_ids = {r["id"] for r in await existing_res.all()}
@@ -2482,7 +2482,7 @@ async def reorder_epochs(
             )
 
             existing_res = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_EPOCH]->(e:Epoch) WHERE coalesce(e.is_deleted, false) = false AND coalesce(e.is_retired, false) = false RETURN e.id as id",
+                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_EPOCH]->(e:Epoch) WHERE coalesce(e.is_deleted, false) = false AND coalesce(e.is_retired, false) = false RETURN e.id AS id",
                 study_version_id=study_version_id,
             )
             existing_ids = {r["id"] for r in await existing_res.all()}
@@ -2601,7 +2601,7 @@ async def reorder_procedures(
             )
 
             existing_res = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_PROCEDURE]->(p:Procedure) WHERE coalesce(p.is_deleted, false) = false AND coalesce(p.is_retired, false) = false RETURN p.id as id",
+                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_PROCEDURE]->(p:Procedure) WHERE coalesce(p.is_deleted, false) = false AND coalesce(p.is_retired, false) = false RETURN p.id AS id",
                 study_version_id=study_version_id,
             )
             existing_ids = {r["id"] for r in await existing_res.all()}
@@ -2750,7 +2750,7 @@ async def assign_visits_to_arm(
             })
             CREATE (a)-[:AFTER]->(new_arm)
             CREATE (a)-[:BEFORE]->(old_arm)
-            RETURN new_arm.id as id
+            RETURN new_arm.id AS id
             """
             await tx.run(
                 arm_query,
@@ -2791,7 +2791,7 @@ async def assign_visits_to_arm(
                 })
                 CREATE (a)-[:AFTER]->(new_v)
                 CREATE (a)-[:BEFORE]->(old_v)
-                RETURN new_v.id as id
+                RETURN new_v.id AS id
                 """
                 await tx.run(
                     visit_query,
@@ -2915,7 +2915,7 @@ async def assign_visits_to_epoch(
             })
             CREATE (a)-[:AFTER]->(new_e)
             CREATE (a)-[:BEFORE]->(old_e)
-            RETURN new_e.id as id
+            RETURN new_e.id AS id
             """
             await tx.run(
                 epoch_query,
@@ -2955,7 +2955,7 @@ async def assign_visits_to_epoch(
                 })
                 CREATE (a)-[:AFTER]->(new_v)
                 CREATE (a)-[:BEFORE]->(old_v)
-                RETURN new_v.id as id
+                RETURN new_v.id AS id
                 """
                 await tx.run(
                     visit_query,
@@ -3026,7 +3026,7 @@ async def get_section_status(
 
     query = """
     MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_SECTION_STATUS]->(ss:SectionStatus {section_id: $section_id})
-    RETURN ss.status as status
+    RETURN ss.status AS status
     """
     async with driver.session() as session:
         res = await session.run(
@@ -3143,7 +3143,7 @@ async def get_section_transitions(
 
     query = """
     MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_SECTION_TRANSITION]->(t:SectionTransition {section_id: $section_id})
-    RETURN properties(t) as props
+    RETURN properties(t) AS props
     ORDER BY t.timestamp ASC
     """
     async with driver.session() as session:
@@ -3277,7 +3277,7 @@ async def get_comment_threads(
     query = """
     MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_COMMENT_THREAD]->(th:CommentThread {section_id: $section_id})
     OPTIONAL MATCH (th)-[:HAS_COMMENT]->(co:Comment)
-    RETURN properties(th) as th_props, collect(properties(co)) as comments_list
+    RETURN properties(th) AS th_props, collect(properties(co)) AS comments_list
     """
     async with driver.session() as session:
         res = await session.run(
@@ -3349,7 +3349,7 @@ async def add_comment_to_thread(
         thread = MOCK_COLLABORATION_DATA["threads"].get(thread_id)
     else:
         query_find = (
-            "MATCH (th:CommentThread {id: $thread_id}) RETURN properties(th) as props"
+            "MATCH (th:CommentThread {id: $thread_id}) RETURN properties(th) AS props"
         )
         async with driver.session() as session:
             res_find = await session.run(query_find, thread_id=thread_id)
@@ -3422,7 +3422,7 @@ async def resolve_comment_thread(
         thread = MOCK_COLLABORATION_DATA["threads"].get(thread_id)
     else:
         query_find = (
-            "MATCH (th:CommentThread {id: $thread_id}) RETURN properties(th) as props"
+            "MATCH (th:CommentThread {id: $thread_id}) RETURN properties(th) AS props"
         )
         async with driver.session() as session:
             res_find = await session.run(query_find, thread_id=thread_id)
@@ -3540,7 +3540,7 @@ async def get_suggestions(
 
     query = """
     MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_SUGGESTION]->(su:Suggestion {block_id: $block_id})
-    RETURN properties(su) as props
+    RETURN properties(su) AS props
     """
     async with driver.session() as session:
         res = await session.run(
@@ -3605,7 +3605,7 @@ async def decide_suggestion(
         suggestion = MOCK_COLLABORATION_DATA["suggestions"].get(suggestion_id)
     else:
         query_find = (
-            "MATCH (su:Suggestion {id: $suggestion_id}) RETURN properties(su) as props"
+            "MATCH (su:Suggestion {id: $suggestion_id}) RETURN properties(su) AS props"
         )
         async with driver.session() as session:
             res_find = await session.run(query_find, suggestion_id=suggestion_id)
@@ -3806,21 +3806,21 @@ async def approve_study_version_delta(
             lock_query = """
             MATCH (s:Study {id: $study_id})
             SET s._lock = true
-            RETURN s.id as id
+            RETURN s.id AS id
             """
             await tx.run(lock_query, study_id=study_id)
 
             lock_ver_query = """
             MATCH (sv:StudyVersion {id: $version_id})
             SET sv._lock = true
-            RETURN sv.id as id
+            RETURN sv.id AS id
             """
             await tx.run(lock_ver_query, version_id=version_id)
 
             # Retrieve StudyVersion properties
             ver_query = """
             MATCH (sv:StudyVersion {id: $version_id})
-            RETURN sv {.*} as version_props
+            RETURN sv {.*} AS version_props
             """
             ver_res = await tx.run(ver_query, version_id=version_id)
             ver_record = await ver_res.single()
@@ -3965,7 +3965,7 @@ async def link_visit_to_procedure(
                 timestamp: datetime()
             })
             CREATE (a)-[:AFTER]->(v)
-            RETURN true as success
+            RETURN true AS success
             """
             res = await tx.run(
                 query,
@@ -4061,7 +4061,7 @@ async def link_visit_or_procedure_to_timing(
                 timestamp: datetime()
             })
             CREATE (a)-[:AFTER]->(src)
-            RETURN true as success
+            RETURN true AS success
             """
             res = await tx.run(
                 query,
@@ -4136,7 +4136,7 @@ async def link_arm_applicability(
                 timestamp: datetime()
             })
             CREATE (a)-[:AFTER]->(arm)
-            RETURN true as success
+            RETURN true AS success
             """
             res = await tx.run(
                 query,
@@ -4258,15 +4258,15 @@ async def get_soa_matrix_projection(driver, study_version_id: str) -> dict[str, 
 
             OPTIONAL MATCH (sa)-[:APPLICABLE_TO]->(tgt)
             RETURN
-                collect(distinct ep {.*}) as epochs,
-                collect(distinct v {.*}) as encounters,
-                collect(distinct p {.*}) as procedures,
-                collect(distinct sa {.*}) as arms,
-                collect(distinct {epoch_id: ep.id, visit_id: v.id}) as epoch_visit_links,
-                collect(distinct {visit_id: v.id, procedure_id: p.id}) as visit_proc_links,
-                collect(distinct {visit_id: v.id, timing_name: tw_v.name, is_retired: tw_v.is_retired, is_deleted: tw_v.is_deleted}) as visit_timing,
-                collect(distinct {procedure_id: p.id, timing_name: tw_p.name, is_retired: tw_p.is_retired, is_deleted: tw_p.is_deleted}) as proc_timing,
-                collect(distinct {arm_id: sa.id, target_id: tgt.id, target_type: labels(tgt)[0]}) as applicability_links
+                collect(distinct ep {.*}) AS epochs,
+                collect(distinct v {.*}) AS encounters,
+                collect(distinct p {.*}) AS procedures,
+                collect(distinct sa {.*}) AS arms,
+                collect(distinct {epoch_id: ep.id, visit_id: v.id}) AS epoch_visit_links,
+                collect(distinct {visit_id: v.id, procedure_id: p.id}) AS visit_proc_links,
+                collect(distinct {visit_id: v.id, timing_name: tw_v.name, is_retired: tw_v.is_retired, is_deleted: tw_v.is_deleted}) AS visit_timing,
+                collect(distinct {procedure_id: p.id, timing_name: tw_p.name, is_retired: tw_p.is_retired, is_deleted: tw_p.is_deleted}) AS proc_timing,
+                collect(distinct {arm_id: sa.id, target_id: tgt.id, target_type: labels(tgt)[0]}) AS applicability_links
             """
             res = await session.run(query, study_version_id=study_version_id)
             record = await res.single()
@@ -4523,7 +4523,7 @@ async def create_block(
                 timestamp: datetime()
             })
             CREATE (a)-[:AFTER]->(b)
-            RETURN b.id as id
+            RETURN b.id AS id
             """
             res = await tx.run(
                 query,
@@ -4622,7 +4622,7 @@ async def update_block(
             })
             CREATE (a)-[:AFTER]->(new_b)
             CREATE (a)-[:BEFORE]->(old_b)
-            RETURN new_b.id as id
+            RETURN new_b.id AS id
             """
             res = await tx.run(
                 query,
@@ -4718,7 +4718,7 @@ async def delete_block(
             })
             CREATE (a)-[:AFTER]->(new_b)
             CREATE (a)-[:BEFORE]->(old_b)
-            RETURN new_b.id as id
+            RETURN new_b.id AS id
             """
             res = await tx.run(
                 query,
@@ -4747,7 +4747,7 @@ async def get_block(
     query = """
     MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_BLOCK]->(b:ProtocolBlock {id: $block_id})
     WHERE b.is_deleted = false
-    RETURN properties(b) as props
+    RETURN properties(b) AS props
     """
     async with driver.session() as session:
         res = await session.run(
@@ -4776,7 +4776,7 @@ async def list_blocks(
     query = """
     MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_BLOCK]->(b:ProtocolBlock)
     WHERE b.is_deleted = false
-    RETURN properties(b) as props
+    RETURN properties(b) AS props
     ORDER BY b.order ASC
     """
     async with driver.session() as session:
@@ -4851,7 +4851,7 @@ async def reorder_blocks(
 
             # Retrieve existing active blocks to validate
             existing_res = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_BLOCK]->(b:ProtocolBlock) WHERE b.is_deleted = false RETURN b.id as id",
+                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_BLOCK]->(b:ProtocolBlock) WHERE b.is_deleted = false RETURN b.id AS id",
                 study_version_id=study_version_id,
             )
             existing_ids = {r["id"] for r in await existing_res.all()}
@@ -4983,7 +4983,7 @@ async def reorder_visits(
 
             # Retrieve existing active visits to validate
             existing_res = await tx.run(
-                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_VISIT]->(v:Visit) WHERE coalesce(v.is_deleted, false) = false AND coalesce(v.is_retired, false) = false RETURN v.id as id",
+                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_VISIT]->(v:Visit) WHERE coalesce(v.is_deleted, false) = false AND coalesce(v.is_retired, false) = false RETURN v.id AS id",
                 study_version_id=study_version_id,
             )
             existing_ids = {r["id"] for r in await existing_res.all()}
@@ -5108,7 +5108,7 @@ async def create_form(
                 timestamp: datetime()
             })
             CREATE (a)-[:AFTER]->(f)
-            RETURN f.id as id
+            RETURN f.id AS id
             """
             res = await tx.run(
                 query,
@@ -5168,7 +5168,7 @@ async def link_visit_to_form(
                 timestamp: datetime()
             })
             CREATE (a)-[:AFTER]->(v)
-            RETURN true as success
+            RETURN true AS success
             """
             res = await tx.run(
                 query,
@@ -5212,7 +5212,7 @@ async def compute_graph_diff(
         async with driver.session() as session:
             # Check if version_id1 exists and belongs to study_id
             res1 = await session.run(
-                "MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion {id: $version_id1}) RETURN sv.id as id",
+                "MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion {id: $version_id1}) RETURN sv.id AS id",
                 study_id=study_id,
                 version_id1=version_id1,
             )
@@ -5223,7 +5223,7 @@ async def compute_graph_diff(
 
             # Check if version_id2 exists and belongs to study_id
             res2 = await session.run(
-                "MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion {id: $version_id2}) RETURN sv.id as id",
+                "MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion {id: $version_id2}) RETURN sv.id AS id",
                 study_id=study_id,
                 version_id2=version_id2,
             )
@@ -5315,7 +5315,7 @@ async def compute_graph_diff(
         async with driver.session() as session:
             query = """
             MATCH (sv:StudyVersion {id: $id})-[:HAS_EPOCH]->(e:Epoch)-[:HAS_VISIT]->(v:Visit)-[:HAS_FORM]->(f:Form)
-            RETURN f.id as id, f.form_key as form_key, f.xform_definition_xml as xform_definition_xml
+            RETURN f.id AS id, f.form_key AS form_key, f.xform_definition_xml AS xform_definition_xml
             """
             res1 = await session.run(query, id=version_id1)
             records1 = await res1.all()
@@ -5412,7 +5412,7 @@ async def check_library_object_exists_any_sponsor(
         query = """
         MATCH (n:LibraryObject {id: $object_id, version: $version})
         WHERE coalesce(n.tenant_id, 'tenant_default') = $tenant_id
-        RETURN properties(n) as props
+        RETURN properties(n) AS props
         """
         async with driver.session() as session:
             res = await session.run(
@@ -5425,7 +5425,7 @@ async def check_library_object_exists_any_sponsor(
         MATCH (n:LibraryObject {id: $object_id})
         WHERE coalesce(n.tenant_id, 'tenant_default') = $tenant_id
           AND NOT (n)<-[:PREVIOUS_VERSION]-()
-        RETURN properties(n) as props
+        RETURN properties(n) AS props
         """
         async with driver.session() as session:
             res = await session.run(query, object_id=object_id, tenant_id=tenant_id)
@@ -5452,7 +5452,7 @@ async def check_study_exists_any_sponsor(
     query = """
     MATCH (s:Study {id: $study_id})
     WHERE coalesce(s.tenant_id, 'tenant_default') = $tenant_id
-    RETURN properties(s) as props
+    RETURN properties(s) AS props
     """
     async with driver.session() as session:
         res = await session.run(query, study_id=study_id, tenant_id=tenant_id)
@@ -5543,7 +5543,7 @@ async def instantiate_library_object_in_study(
                 sponsor_id: lo.sponsor_id,
                 timestamp: datetime()
             }]->(lo)
-            RETURN properties(instance) as instance_props, properties(lo) as source_props
+            RETURN properties(instance) AS instance_props, properties(lo) AS source_props
             """
             res = await tx.run(
                 query,
@@ -5631,7 +5631,7 @@ async def update_library_instance_in_study(
             # Find target instance under study
             find_query = """
             MATCH (s:Study {id: $study_id})-[:HAS_LIBRARY_INSTANCE]->(instance:LibraryObjectInstance {id: $instance_id})
-            RETURN properties(instance) as instance_props
+            RETURN properties(instance) AS instance_props
             """
             res = await tx.run(find_query, study_id=study_id, instance_id=instance_id)
             record = await res.single()
@@ -5649,7 +5649,7 @@ async def update_library_instance_in_study(
 
             WITH instance
             OPTIONAL MATCH (instance)-[:INSTANTIATED_FROM]->(lo:LibraryObject)
-            RETURN properties(instance) as instance_props, properties(lo) as source_props
+            RETURN properties(instance) AS instance_props, properties(lo) AS source_props
             """
             payload_json = json.dumps(payload)
             res_update = await tx.run(
@@ -5742,7 +5742,7 @@ async def get_library_instance_in_study(
         query = """
         MATCH (s:Study {id: $study_id})-[:HAS_LIBRARY_INSTANCE]->(instance:LibraryObjectInstance {id: $instance_id})
         OPTIONAL MATCH (instance)-[:INSTANTIATED_FROM]->(lo:LibraryObject)
-        RETURN properties(instance) as instance_props, properties(lo) as source_props
+        RETURN properties(instance) AS instance_props, properties(lo) AS source_props
         """
         res = await session.run(query, study_id=study_id, instance_id=instance_id)
         record = await res.single()
@@ -5873,7 +5873,7 @@ async def create_eligibility_criterion(
     CREATE (ec)-[:HAS_VERSION]->(ecv)
     CREATE (a)-[:AFTER]->(ecv)
 
-    RETURN ec.id as criterion_id
+    RETURN ec.id AS criterion_id
     """
 
     async with driver.session() as session:
@@ -5888,7 +5888,7 @@ async def create_eligibility_criterion(
                 """
                 MATCH (s:Study {id: $study_id})-[:HAS_CRITERION]->(ec:EligibilityCriterion {id: $criterion_id})-[:HAS_VERSION]->(ecv:EligibilityCriterionVersion)
                 WHERE NOT (ecv)<-[:PREVIOUS_VERSION]-() AND ecv.is_deleted = false
-                RETURN ecv.id as id
+                RETURN ecv.id AS id
                 """,
                 study_id=study_id,
                 criterion_id=criterion_id,
@@ -5992,7 +5992,7 @@ async def update_eligibility_criterion(
     CREATE (a)-[:BEFORE]->(old_ecv)
     CREATE (new_ecv)-[:PREVIOUS_VERSION]->(old_ecv)
 
-    RETURN new_ecv.version_index as version_index
+    RETURN new_ecv.version_index AS version_index
     """
 
     async with driver.session() as session:
@@ -6006,7 +6006,7 @@ async def update_eligibility_criterion(
             check_res = await tx.run(
                 """
                 MATCH (s:Study {id: $study_id})-[:HAS_CRITERION]->(ec:EligibilityCriterion {id: $criterion_id})
-                RETURN ec.id as id
+                RETURN ec.id AS id
                 """,
                 study_id=study_id,
                 criterion_id=criterion_id,
@@ -6051,7 +6051,7 @@ async def get_eligibility_criteria_from_graph(
     query = """
     MATCH (s:Study {id: $study_id})-[:HAS_CRITERION]->(ec:EligibilityCriterion)-[:HAS_VERSION]->(ecv:EligibilityCriterionVersion)
     WHERE NOT (ecv)<-[:PREVIOUS_VERSION]-() AND ecv.is_deleted = false
-    RETURN ecv {.*} as criterion_props
+    RETURN ecv {.*} AS criterion_props
     """
     async with driver.session() as session:
         result = await session.run(query, study_id=study_id)
@@ -6262,7 +6262,7 @@ async def retire_epoch_visit_link(
                 timestamp: datetime()
             })
             CREATE (a)-[:BEFORE]->(ep)
-            RETURN true as success
+            RETURN true AS success
             """
             res = await tx.run(
                 query,
@@ -6326,7 +6326,7 @@ async def retire_visit_procedure_link(
                 timestamp: datetime()
             })
             CREATE (a)-[:BEFORE]->(v)
-            RETURN true as success
+            RETURN true AS success
             """
             res = await tx.run(
                 query,
@@ -6403,7 +6403,7 @@ async def retire_timing_link(
                 timestamp: datetime()
             })
             CREATE (a)-[:BEFORE]->(src)
-            RETURN true as success
+            RETURN true AS success
             """
             res = await tx.run(
                 query,
@@ -6482,7 +6482,7 @@ async def retire_arm_applicability_link(
                 timestamp: datetime()
             })
             CREATE (a)-[:BEFORE]->(arm)
-            RETURN true as success
+            RETURN true AS success
             """
             res = await tx.run(
                 query,
