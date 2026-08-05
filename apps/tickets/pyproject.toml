@@ -17,5 +17,8 @@ dependencies = [
     "packages-security",
 ]
 
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
 [tool.hatch.build.targets.wheel.sources]
 "" = "apps/tickets"

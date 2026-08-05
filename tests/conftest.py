@@ -4,7 +4,14 @@ import uuid
 from typing import Any
 
 import pytest
-from neo4j.exceptions import TransientError
+
+try:
+    from neo4j.exceptions import TransientError
+except ImportError:
+
+    class TransientError(Exception):
+        pass
+
 
 # Ensure offline terminology fallback is active for test isolation and speed
 os.environ.setdefault("TERMINOLOGY_OFFLINE", "true")
