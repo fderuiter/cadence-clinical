@@ -8,9 +8,13 @@ logger = logging.getLogger("packages.security.notifications_client")
 
 
 class NotificationClient(GatewayBaseClient):
-    """
-    Centralized client to publish notifications.
+    """Centralized client to publish notifications.
+
     Subclasses GatewayBaseClient for secure gateways and signature handling.
+
+    Attributes:
+        base_url: The gateway base URL for notifications.
+        timeout: The request timeout in seconds.
     """
 
     def __init__(self, base_url: str | None = None, timeout: float = 2.0) -> None:
