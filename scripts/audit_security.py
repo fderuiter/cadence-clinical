@@ -7,6 +7,8 @@ insecure cryptographic configurations to comply with GxP 21 CFR Part 11 security
 Requirements: PRD-SYS-001, 21 CFR Part 11
 """
 
+import fnmatch
+import json
 import os
 import re
 import sys
@@ -36,8 +38,122 @@ EXCLUDED_PATHS = {
     "report.xml",
 }
 
+_exemptions_cache = None
 
-def scan_file_for_secrets(filepath: str) -> list[str]:
+
+def match_path(filepath: str, pattern: str) -> bool:
+    """Check if the given filepath matches the glob or regex pattern.
+
+    Supports standard wildcard matching (fnmatch) and double star glob matching (e.g. apps/gateway/**/*.py).
+    """
+    # Normalize paths
+    filepath = filepath.replace("\\", "/").lstrip("./")
+    pattern = pattern.replace("\\", "/").lstrip("./")
+
+    if filepath == pattern:
+        return True
+
+    if fnmatch.fnmatch(filepath, pattern):
+        return True
+
+    # Translate glob pattern to regex for double star support
+    regex_pattern = re.escape(pattern)
+    regex_pattern = regex_pattern.replace(r"\*\*/", r"(?:.*/)?")
+    regex_pattern = regex_pattern.replace(r"\*\*", r".*")
+    regex_pattern = regex_pattern.replace(r"\*", r"[^/]*")
+    regex_pattern = regex_pattern.replace(r"\?", r"[^/]")
+
+    regex_str = "^" + regex_pattern + "$"
+    return bool(re.match(regex_str, filepath))
+
+
+def load_exemptions() -> list[dict]:
+    """Load and cache the security exemptions ledger from security_exemptions.json."""
+    global _exemptions_cache
+    if _exemptions_cache is not None:
+        return _exemptions_cache
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    repo_root = os.path.dirname(script_dir)
+    ledger_path = os.path.join(repo_root, "security_exemptions.json")
+
+    if not os.path.exists(ledger_path):
+        ledger_path = "security_exemptions.json"
+
+    if not os.path.exists(ledger_path):
+        _exemptions_cache = []
+        return _exemptions_cache
+
+    try:
+        with open(ledger_path, encoding="utf-8") as f:
+            _exemptions_cache = json.load(f)
+    except Exception as e:
+        print(
+            f"⚠️ Warning: Failed to parse exemptions ledger '{ledger_path}': {e}",
+            file=sys.stderr,
+        )
+        _exemptions_cache = []
+
+    return _exemptions_cache
+
+
+def print_instruction_for_unapproved_bypass(
+    filepath: str, line_no: int, line_content: str
+):
+    print("\n" + "!" * 80)
+    print("❌ UNAPPROVED INLINE BYPASS DETECTED")
+    print(f"  File: {filepath}")
+    print(f"  Line: {line_no}")
+    print(f"  Code: {line_content.strip()}")
+    print("-" * 80)
+    print(
+        "An inline bypass comment (such as '# "
+        + "nosec' or 'pragma: "
+        + "allowlist') was found,"
+    )
+    print(
+        "but there is no matching approved entry in the central 'security_exemptions.json' ledger."
+    )
+    print(
+        "\nTo resolve this issue, please register the exemption by following these steps:"
+    )
+    print("1. Open 'security_exemptions.json' in the root directory.")
+    print("2. Add a new entry to the JSON array with the following format:")
+    print("   {")
+    print(f'     "file": "{filepath}",')
+    print(f'     "pattern": "{re.escape(line_content.strip())}",')
+    print('     "justification": "<detailed compliance/justification explanation>"')
+    print("   }")
+    print("3. Ensure the 'justification' field is a non-empty, detailed explanation.")
+    print("4. Commit both the code changes and 'security_exemptions.json'.")
+    print("!" * 80 + "\n")
+
+
+def print_instruction_for_invalid_justification(
+    filepath: str, line_no: int, line_content: str, entry: dict
+):
+    print("\n" + "!" * 80)
+    print("❌ INVALID EXEMPTION JUSTIFICATION")
+    print(f"  File: {filepath}")
+    print(f"  Line: {line_no}")
+    print(f"  Code: {line_content.strip()}")
+    print("-" * 80)
+    print(
+        "A matching entry was found in 'security_exemptions.json', but the 'justification'"
+    )
+    print("field is empty or missing. A robust compliance justification is required.")
+    print("\nTo resolve this issue:")
+    print("1. Open 'security_exemptions.json' in the root directory.")
+    print("2. Find the entry matching this file and pattern:")
+    print(f"   Pattern: {entry.get('pattern')}")
+    print(
+        "3. Provide a clear, non-empty, robust compliance justification in the 'justification' field."
+    )
+    print("4. Save and commit 'security_exemptions.json'.")
+    print("!" * 80 + "\n")
+
+
+def scan_file_for_secrets(filepath: str, exemptions: list[dict] = None) -> list[str]:
     """Scan a single source file for potential hardcoded secret patterns.
 
     Args:
@@ -48,8 +164,8 @@ def scan_file_for_secrets(filepath: str) -> list[str]:
     """
     findings: list[str] = []
 
-    # Skip binary files or excluded file extensions
-    if any(
+    # Skip binary files or excluded file extensions, or the exemptions ledger itself
+    if filepath.endswith("security_exemptions.json") or any(
         filepath.endswith(ext)
         for ext in [".png", ".jpg", ".pyc", ".db", ".sqlite", ".xml"]
     ):
@@ -59,13 +175,70 @@ def scan_file_for_secrets(filepath: str) -> list[str]:
         with open(filepath, encoding="utf-8", errors="ignore") as f:
             lines = f.readlines()
 
+        exemptions_list = load_exemptions() if exemptions is None else exemptions
+
         for idx, line in enumerate(lines, start=1):
-            # Skip explicit inline developer bypass annotations
-            if (
-                "# nosec" in line
-                or "mock" in line.lower()
-                or "pragma: allowlist" in line.lower()
-            ):
+            # Check for inline bypass comment tags (excluding pure 'mock' strings)
+            is_bypass_tag = (
+                "# " + "nosec" in line
+                or "#" + "nosec" in line
+                or "pragma: " + "allowlist" in line.lower()
+            )
+
+            if is_bypass_tag:
+                matched_entry = None
+                has_valid_justification = False
+
+                for entry in exemptions_list:
+                    file_pattern = entry.get("file")
+                    pattern = entry.get("pattern")
+
+                    if not file_pattern or not pattern:
+                        continue
+
+                    if match_path(filepath, file_pattern):
+                        pattern_matches = False
+                        try:
+                            if re.search(pattern, line):
+                                pattern_matches = True
+                        except re.error:
+                            pass
+
+                        if not pattern_matches and pattern in line:
+                            pattern_matches = True
+
+                        if pattern_matches:
+                            matched_entry = entry
+                            justification = entry.get("justification")
+                            if (
+                                justification
+                                and isinstance(justification, str)
+                                and justification.strip()
+                            ):
+                                has_valid_justification = True
+                            break
+
+                if matched_entry:
+                    if has_valid_justification:
+                        # Bypass is approved! We skip scanning this line.
+                        continue
+                    # Matched entry but justification is missing or empty!
+                    findings.append(
+                        f"{filepath}:{idx} - [Invalid Justification] Inline bypass '{line.strip()[:60]}' matches ledger entry but lacks a valid justification."
+                    )
+                    print_instruction_for_invalid_justification(
+                        filepath, idx, line, matched_entry
+                    )
+                    continue
+                # No matching entry in the ledger!
+                findings.append(
+                    f"{filepath}:{idx} - [Unapproved Bypass] Inline bypass comment detected but has no matching approved entry in 'security_exemptions.json'."
+                )
+                print_instruction_for_unapproved_bypass(filepath, idx, line)
+                continue
+
+            # If not a bypass tag, we can still skip if 'mock' is in the line (standard test fallback)
+            if "mock" in line.lower():
                 continue
 
             for pattern_name, regex in SECRET_PATTERNS:

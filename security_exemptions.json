@@ -1,0 +1,92 @@
+[
+  {
+    "file": "tests/**/*",
+    "pattern": "(pragma: allowlist|# nosec|aws_secret_access_key)",
+    "justification": "Test suite mock credentials and signing keys."
+  },
+  {
+    "file": "apps/web/tests/**/*",
+    "pattern": "pragma: allowlist",
+    "justification": "Frontend test suite mock credentials."
+  },
+  {
+    "file": "packages/ui/tests/**/*",
+    "pattern": "pragma: allowlist",
+    "justification": "UI packages test suite mock credentials."
+  },
+  {
+    "file": "docs/**/*",
+    "pattern": "pragma: allowlist",
+    "justification": "Documentation architectural examples."
+  },
+  {
+    "file": "scripts/**/*.py",
+    "pattern": "(pragma: allowlist|# nosec|aws_secret_access_key|DATABASE_URL|GATEWAY_SECRET)",
+    "justification": "Repository utility and deployment helper scripts."
+  },
+  {
+    "file": "packages/deid/cli.py",
+    "pattern": "(pragma: allowlist|# nosec)",
+    "justification": "Standard local fallback and IP boundaries for de-identification CLI."
+  },
+  {
+    "file": "packages/security/**/*.py",
+    "pattern": "(pragma: allowlist|# nosec)",
+    "justification": "Fallback signatures and test verification payloads in security libraries."
+  },
+  {
+    "file": "apps/interop/main.py",
+    "pattern": "pragma: allowlist",
+    "justification": "Bypassing intentional local/unauthorized testing wrong_password string matches."
+  },
+  {
+    "file": "apps/designer/main.py",
+    "pattern": "pragma: allowlist",
+    "justification": "Local fallback connection credentials and mock database values."
+  },
+  {
+    "file": "apps/execution/services/change_request_service.py",
+    "pattern": "pragma: allowlist",
+    "justification": "System compliance attributes (e.g. password expiration thresholds) and test policies."
+  },
+  {
+    "file": "apps/execution/routers/doa.py",
+    "pattern": "pragma: allowlist",
+    "justification": "Bypassing intentional local/unauthorized testing wrong_password string matches."
+  },
+  {
+    "file": "apps/execution/services/econsent_capture_service.py",
+    "pattern": "# nosec",
+    "justification": "Standard temporary consent PDFs directory creation."
+  },
+  {
+    "file": "apps/execution/services/e2b_parser.py",
+    "pattern": "# nosec",
+    "justification": "XML Parsing from trusted source in e2b parser."
+  },
+  {
+    "file": "apps/gateway/main.py",
+    "pattern": "pragma: allowlist",
+    "justification": "Bypassing intentional local/unauthorized testing wrong_password string matches."
+  },
+  {
+    "file": "apps/quality/alembic/versions/*.py",
+    "pattern": "pragma: allowlist",
+    "justification": "Alembic revision identifiers which resemble secret keys."
+  },
+  {
+    "file": "apps/etmf/alembic/versions/*.py",
+    "pattern": "pragma: allowlist",
+    "justification": "Alembic revision identifiers which resemble secret keys."
+  },
+  {
+    "file": "packages/ui/signing.js",
+    "pattern": "pragma: allowlist",
+    "justification": "Utility function typing for mock and dev signature keys."
+  },
+  {
+    "file": "**/*.md",
+    "pattern": "(pragma: allowlist|# nosec)",
+    "justification": "Documentation files explaining the security scan exemptions and procedures."
+  }
+]

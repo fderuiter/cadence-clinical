@@ -254,10 +254,93 @@ def test_security_audit_scanner_detection_and_bypass():
         )
         f.flush()
         try:
-            findings = scan_file_for_secrets(f.name)
+            # Pass a mock exemptions list that matches this temporary file!
+            mock_exemptions = [
+                {
+                    "file": f.name,
+                    "pattern": "pragma: allowlist",
+                    "justification": "Approved test credential fallback justification.",
+                }
+            ]
+            findings = scan_file_for_secrets(f.name, exemptions=mock_exemptions)
             assert len(findings) == 0
         finally:
             os.unlink(f.name)
+
+
+def test_security_audit_unapproved_bypass():
+    """Verify that the security scanner rejects inline bypass comments without approved ledger entries."""
+    import os
+    import tempfile
+
+    from scripts.audit_security import scan_file_for_secrets
+
+    with tempfile.NamedTemporaryFile(suffix=".py", mode="w+", delete=False) as f:
+        f.write("password = 'my_test_password'  # pragma: allowlist secret\n")
+        f.flush()
+        try:
+            # With no exemptions, it should fail
+            findings = scan_file_for_secrets(f.name, exemptions=[])
+            assert len(findings) == 1
+            assert "Unapproved Bypass" in findings[0]
+        finally:
+            os.unlink(f.name)
+
+
+def test_security_audit_invalid_justification():
+    """Verify that the security scanner rejects ledger entries lacking a proper compliance justification."""
+    import os
+    import tempfile
+
+    from scripts.audit_security import scan_file_for_secrets
+
+    with tempfile.NamedTemporaryFile(suffix=".py", mode="w+", delete=False) as f:
+        f.write("password = 'my_test_password'  # pragma: allowlist secret\n")
+        f.flush()
+        try:
+            # Exemptions entry exists but has empty/missing justification
+            mock_exemptions = [
+                {
+                    "file": f.name,
+                    "pattern": "password",
+                    "justification": "   ",  # whitespace-only is invalid
+                }
+            ]
+            findings = scan_file_for_secrets(f.name, exemptions=mock_exemptions)
+            assert len(findings) == 1
+            assert "Invalid Justification" in findings[0]
+        finally:
+            os.unlink(f.name)
+
+
+def test_security_audit_glob_pattern_matching():
+    """Verify that path patterns (globs/wildcards) correctly match across directories."""
+    import os
+    import shutil
+
+    from scripts.audit_security import scan_file_for_secrets
+
+    # Simulated path matching gateways/**/*.py
+    fake_path = "gateways/dev/env_config.py"
+    mock_exemptions = [
+        {
+            "file": "gateways/**/*.py",
+            "pattern": "pragma: allowlist",
+            "justification": "Approved multi-environment gateway configuration fallback.",
+        }
+    ]
+
+    # Create directories and file
+    os.makedirs("gateways/dev", exist_ok=True)
+    with open(fake_path, "w", encoding="utf-8") as f:
+        f.write("GATEWAY_SECRET = 'my-gateway-secret'  # pragma: allowlist\n")
+
+    try:
+        findings = scan_file_for_secrets(fake_path, exemptions=mock_exemptions)
+        assert len(findings) == 0
+    finally:
+        if os.path.exists("gateways"):
+            shutil.rmtree("gateways")
 
 
 def test_audit_logger_raises_runtime_error_if_secret_missing(monkeypatch):
