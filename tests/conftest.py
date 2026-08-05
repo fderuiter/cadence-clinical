@@ -558,12 +558,12 @@ def pytest_sessionfinish(session, exitstatus):
         worker_suffix = f"_{worker_id}" if worker_id else "_test"
         try:
             # Dispose cached postgres engines first
+            import contextlib
+
             global _postgres_engines_cache
             for engine in list(_postgres_engines_cache.values()):
-                try:
+                with contextlib.suppress(Exception):
                     run_sync(engine.dispose())
-                except Exception:
-                    pass
             _postgres_engines_cache.clear()
 
             run_sync(drop_databases_async(worker_suffix))

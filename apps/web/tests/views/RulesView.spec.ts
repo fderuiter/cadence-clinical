@@ -159,6 +159,9 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
       retries--;
     }
 
+    // Flush promises again to ensure the API response resolves, updates activeRules state, and Vue DOM re-renders completely
+    await flushPromises();
+
     // Authorized role should NOT see the gating banner
     expect(wrapper.find(".rules-gating-banner").exists()).toBe(false);
 
