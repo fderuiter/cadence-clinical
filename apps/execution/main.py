@@ -520,18 +520,27 @@ async def study_published(
     change_reason = current_change_reason.get()
 
     payload = event.payload or {}
-    
+
     # Viewport and layout warning metadata validation to prevent API bypasses
     layout_warnings = payload.get("layout_warnings") or payload.get("layoutWarnings")
-    if not layout_warnings and "protocol" in payload and isinstance(payload["protocol"], dict):
-        layout_warnings = payload["protocol"].get("layout_warnings") or payload["protocol"].get("layoutWarnings")
-    
+    if (
+        not layout_warnings
+        and "protocol" in payload
+        and isinstance(payload["protocol"], dict)
+    ):
+        layout_warnings = payload["protocol"].get("layout_warnings") or payload[
+            "protocol"
+        ].get("layoutWarnings")
+
     has_warnings = False
-    if isinstance(layout_warnings, list) and len(layout_warnings) > 0:
-        has_warnings = True
-    elif isinstance(layout_warnings, bool) and layout_warnings:
-        has_warnings = True
-    elif isinstance(layout_warnings, (int, float)) and layout_warnings > 0:
+    if (
+        isinstance(layout_warnings, list)
+        and len(layout_warnings) > 0
+        or isinstance(layout_warnings, bool)
+        and layout_warnings
+        or isinstance(layout_warnings, (int, float))
+        and layout_warnings > 0
+    ):
         has_warnings = True
 
     justification = (
@@ -539,7 +548,11 @@ async def study_published(
         or payload.get("layoutJustification")
         or payload.get("justification")
     )
-    if not justification and "protocol" in payload and isinstance(payload["protocol"], dict):
+    if (
+        not justification
+        and "protocol" in payload
+        and isinstance(payload["protocol"], dict)
+    ):
         justification = (
             payload["protocol"].get("layout_justification")
             or payload["protocol"].get("layoutJustification")
@@ -547,12 +560,16 @@ async def study_published(
         )
 
     if has_warnings:
-        if not justification or not isinstance(justification, str) or not justification.strip():
+        if (
+            not justification
+            or not isinstance(justification, str)
+            or not justification.strip()
+        ):
             raise HTTPException(
                 status_code=400,
-                detail="Layout validation failed: unresolved layout warnings exist, but no clinical justification was provided."
+                detail="Layout validation failed: unresolved layout warnings exist, but no clinical justification was provided.",
             )
-        
+
         # Save layout deviation logs, designer identity, and justification to AuditLog
         u_id = user_id or "system"
         with audit_context(u_id, justification):

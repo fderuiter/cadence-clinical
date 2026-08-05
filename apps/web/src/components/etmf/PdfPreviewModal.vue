@@ -121,33 +121,59 @@
           </div>
 
           <!-- Redaction / Compliance Manifest -->
-          <div v-if="document.is_redacted" class="meta-section border-top redaction-manifest-section">
+          <div
+            v-if="document.is_redacted"
+            class="meta-section border-top redaction-manifest-section"
+          >
             <h4>Redaction Manifest</h4>
             <div class="manifest-card redacted">
               <p class="redact-status">🛡️ HIPAA/GDPR COMPLIANT</p>
-              <p class="redact-meta" v-if="document.redaction_manifest_json?.operator_name">
-                Operator: <strong>{{ document.redaction_manifest_json.operator_name }}</strong>
+              <p
+                class="redact-meta"
+                v-if="document.redaction_manifest_json?.operator_name"
+              >
+                Operator:
+                <strong>{{
+                  document.redaction_manifest_json.operator_name
+                }}</strong>
               </p>
               <p class="redact-meta" v-else-if="document.created_by">
                 Operator: <strong>{{ document.created_by }}</strong>
               </p>
-              <p class="redact-meta" v-if="document.redaction_manifest_json?.reason">
-                Reason: <strong>{{ document.redaction_manifest_json.reason }}</strong>
+              <p
+                class="redact-meta"
+                v-if="document.redaction_manifest_json?.reason"
+              >
+                Reason:
+                <strong>{{ document.redaction_manifest_json.reason }}</strong>
               </p>
               <p class="redact-meta" v-else-if="document.reason_for_change">
                 Reason: <strong>{{ document.reason_for_change }}</strong>
               </p>
-              <div v-if="document.redaction_manifest_json?.redacted_items_count" class="redacted-items-list">
+              <div
+                v-if="document.redaction_manifest_json?.redacted_items_count"
+                class="redacted-items-list"
+              >
                 <span class="meta-label-items">Redacted Items:</span>
                 <ul class="redact-ul">
-                  <li v-for="(count, category) in document.redaction_manifest_json.redacted_items_count" :key="category">
+                  <li
+                    v-for="(count, category) in document.redaction_manifest_json
+                      .redacted_items_count"
+                    :key="category"
+                  >
                     {{ category }}: <strong>{{ count }}</strong>
                   </li>
                 </ul>
               </div>
-              <div v-if="document.redaction_manifest_json?.signature" class="signature-block">
+              <div
+                v-if="document.redaction_manifest_json?.signature"
+                class="signature-block"
+              >
                 <span class="meta-label-items">HMAC Signature:</span>
-                <code class="signature-text-code" :title="document.redaction_manifest_json.signature">
+                <code
+                  class="signature-text-code"
+                  :title="document.redaction_manifest_json.signature"
+                >
                   {{ document.redaction_manifest_json.signature }}
                 </code>
               </div>
@@ -174,7 +200,8 @@
 
               <div class="page-content">
                 <div v-if="document.is_redacted" class="redaction-badge-banner">
-                  🛡️ COMPLIANT DERIVATIVE - SENSITIVE PII MASKED BY AUTOMATED NER SCANS
+                  🛡️ COMPLIANT DERIVATIVE - SENSITIVE PII MASKED BY AUTOMATED
+                  NER SCANS
                 </div>
 
                 <h1 class="doc-title">
@@ -210,7 +237,12 @@
                     <strong>MIME Category:</strong> {{ document.mime_type
                     }}<br />
                     <strong>Author Identity:</strong>
-                    <span v-if="document.is_redacted" class="redaction-overlay-block" title="Redacted: Author Identity">[REDACTED_NAME]</span>
+                    <span
+                      v-if="document.is_redacted"
+                      class="redaction-overlay-block"
+                      title="Redacted: Author Identity"
+                      >[REDACTED_NAME]</span
+                    >
                     <span v-else>{{ document.created_by }}</span>
                   </p>
                 </section>
@@ -226,22 +258,32 @@
                   </p>
                 </section>
 
-                <section class="doc-section-content" v-if="document.is_redacted">
+                <section
+                  class="doc-section-content"
+                  v-if="document.is_redacted"
+                >
                   <h3>4. SERVER-SIDE REDACTION SUMMARY</h3>
                   <div class="redaction-summary-box">
                     <p>
-                      This document was safely processed using the server-side Named Entity Recognition (NER) pipeline. 
-                      All standard HIPAA 18 and GDPR identifiers have been successfully scrubbed and mapped.
+                      This document was safely processed using the server-side
+                      Named Entity Recognition (NER) pipeline. All standard
+                      HIPAA 18 and GDPR identifiers have been successfully
+                      scrubbed and mapped.
                     </p>
                     <div class="visual-redaction-preview">
                       <div class="redacted-line">
-                        Subject Name: <span class="redaction-overlay-block">John Doe</span>
+                        Subject Name:
+                        <span class="redaction-overlay-block">John Doe</span>
                       </div>
                       <div class="redacted-line">
-                        Tax Identifier: <span class="redaction-overlay-block">000-12-3456</span>
+                        Tax Identifier:
+                        <span class="redaction-overlay-block">000-12-3456</span>
                       </div>
                       <div class="redacted-line">
-                        Electronic Mail: <span class="redaction-overlay-block">john.doe@example.com</span>
+                        Electronic Mail:
+                        <span class="redaction-overlay-block"
+                          >john.doe@example.com</span
+                        >
                       </div>
                     </div>
                   </div>

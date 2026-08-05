@@ -1,9 +1,5 @@
 <template>
-  <div
-    ref="elRef"
-    :style="wrapperStyle"
-    class="clinical-form-field-wrapper"
-  >
+  <div ref="elRef" :style="wrapperStyle" class="clinical-form-field-wrapper">
     <template v-if="shouldRender">
       <ClinicalRadioGroup
         v-if="field.type === 'radio' || field.type === 'choice_single'"

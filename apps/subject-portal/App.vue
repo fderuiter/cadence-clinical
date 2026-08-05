@@ -10,7 +10,7 @@
         <span class="badge badge-epro">ePRO Companion</span>
         <span class="badge badge-gxp">21 CFR Part 11</span>
         <span class="badge badge-gamp">GAMP 5</span>
-        
+
         <!-- Persistent dynamic sync status button -->
         <button
           id="btn-global-sync-drawer"
@@ -18,7 +18,7 @@
           class="btn-sync-status"
           :class="{
             'has-queued': queuedSubmissionsCount > 0,
-            'sync-failed': isSyncFailed
+            'sync-failed': isSyncFailed,
           }"
           aria-label="Toggle sync status drawer"
           @click="toggleSyncDrawer"
@@ -61,12 +61,14 @@
 
       <div class="drawer-body">
         <div class="sync-status-section">
-          <p class="status-text">{{ state.syncStatusText || 'Checking sync status...' }}</p>
+          <p class="status-text">
+            {{ state.syncStatusText || "Checking sync status..." }}
+          </p>
           <button
             id="btn-drawer-sync-now"
             type="button"
             class="btn btn-primary btn-sync-trigger"
-            style="width: 100%; margin-top: 8px;"
+            style="width: 100%; margin-top: 8px"
             @click="triggerManualSync"
           >
             Sync Now
@@ -75,7 +77,10 @@
 
         <div class="submissions-list-wrapper">
           <h4 class="submissions-heading">Submissions Status</h4>
-          <div v-if="!state.submissions || state.submissions.length === 0" class="empty-state">
+          <div
+            v-if="!state.submissions || state.submissions.length === 0"
+            class="empty-state"
+          >
             No submission history in queue.
           </div>
           <div v-else class="submissions-items-list">
@@ -86,23 +91,33 @@
               :class="getSubmissionClass(item)"
             >
               <div class="item-header-row">
-                <span class="item-name">{{ getInstrumentName(item.diary_id) }}</span>
+                <span class="item-name">{{
+                  getInstrumentName(item.diary_id)
+                }}</span>
                 <span class="status-pill" :class="getBadgeClass(item)">
                   {{ getStatusLabel(item) }}
                 </span>
               </div>
               <div class="item-time">
-                Seq: #{{ item.sequence_number }} | Device Time: {{ formatTime(item.device_timestamp) }}
+                Seq: #{{ item.sequence_number }} | Device Time:
+                {{ formatTime(item.device_timestamp) }}
               </div>
               <div class="item-details">
                 <p class="item-desc">{{ getStatusDescription(item) }}</p>
                 <div class="item-data">
                   <strong>Local Answers:</strong>
-                  <code class="data-code">{{ JSON.stringify(item.answers) }}</code>
+                  <code class="data-code">{{
+                    JSON.stringify(item.answers)
+                  }}</code>
                 </div>
-                <div v-if="item.resolved_answers && item.status === 'MERGED'" class="item-data merged-data">
+                <div
+                  v-if="item.resolved_answers && item.status === 'MERGED'"
+                  class="item-data merged-data"
+                >
                   <strong>Merged Result:</strong>
-                  <code class="data-code">{{ JSON.stringify(item.resolved_answers) }}</code>
+                  <code class="data-code">{{
+                    JSON.stringify(item.resolved_answers)
+                  }}</code>
                 </div>
               </div>
             </div>
@@ -846,15 +861,22 @@ const queuedSubmissionsCount = computed(() => {
 });
 
 const isSyncFailed = computed(() => {
-  return state.syncStatusText && state.syncStatusText.toLowerCase().includes("failed");
+  return (
+    state.syncStatusText &&
+    state.syncStatusText.toLowerCase().includes("failed")
+  );
 });
 
 function getInstrumentName(diaryId) {
   const fallback = {
     inst_daily_diary: "Daily Health & Vital Diary",
-    inst_weekly_symptoms: "Weekly Symptoms & eCOA Checklist"
+    inst_weekly_symptoms: "Weekly Symptoms & eCOA Checklist",
   };
-  return (state.instruments && state.instruments[diaryId]?.name) || fallback[diaryId] || diaryId;
+  return (
+    (state.instruments && state.instruments[diaryId]?.name) ||
+    fallback[diaryId] ||
+    diaryId
+  );
 }
 
 function formatTime(isoString) {
@@ -864,24 +886,35 @@ function formatTime(isoString) {
 
 function getSubmissionClass(item) {
   return {
-    'submission-queued': item.status === 'QUEUED',
-    'submission-synced': item.status === 'CREATED' || item.status === 'UPDATED_CLIENT_WINS',
-    'submission-merged': item.status === 'MERGED',
-    'submission-ignored': item.status === 'IGNORED_SERVER_WINS',
-    'submission-error': item.status === 'DECRYPTION_ERROR'
+    "submission-queued": item.status === "QUEUED",
+    "submission-synced":
+      item.status === "CREATED" || item.status === "UPDATED_CLIENT_WINS",
+    "submission-merged": item.status === "MERGED",
+    "submission-ignored": item.status === "IGNORED_SERVER_WINS",
+    "submission-error": item.status === "DECRYPTION_ERROR",
   };
 }
 
 function getBadgeClass(item) {
   if (item.status === "QUEUED") return "pending";
-  if (item.status === "CREATED" || item.status === "UPDATED_CLIENT_WINS" || item.status === "MERGED") return "completed";
-  if (item.status === "IGNORED_SERVER_WINS" || item.status === "DECRYPTION_ERROR") return "overdue";
+  if (
+    item.status === "CREATED" ||
+    item.status === "UPDATED_CLIENT_WINS" ||
+    item.status === "MERGED"
+  )
+    return "completed";
+  if (
+    item.status === "IGNORED_SERVER_WINS" ||
+    item.status === "DECRYPTION_ERROR"
+  )
+    return "overdue";
   return "pending";
 }
 
 function getStatusLabel(item) {
   if (item.status === "QUEUED") return "QUEUED";
-  if (item.status === "CREATED" || item.status === "UPDATED_CLIENT_WINS") return "SYNCED";
+  if (item.status === "CREATED" || item.status === "UPDATED_CLIENT_WINS")
+    return "SYNCED";
   if (item.status === "MERGED") return "MERGED";
   if (item.status === "IGNORED_SERVER_WINS") return "CONFLICT (Ignored)";
   return item.status;
@@ -890,7 +923,10 @@ function getStatusLabel(item) {
 function getStatusDescription(item) {
   if (item.status === "QUEUED") {
     return "Waiting for network connection...";
-  } else if (item.status === "CREATED" || item.status === "UPDATED_CLIENT_WINS") {
+  } else if (
+    item.status === "CREATED" ||
+    item.status === "UPDATED_CLIENT_WINS"
+  ) {
     return "Successfully synchronized with clinical database.";
   } else if (item.status === "MERGED") {
     return "Conflict resolved: Local and server entries were combined.";

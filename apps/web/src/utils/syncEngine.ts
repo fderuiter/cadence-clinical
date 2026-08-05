@@ -181,9 +181,14 @@ export class ClientSyncEngine {
         syncStore.setStatus("ERROR");
         this.isSyncing = false;
         if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("pin-challenge-required", {
-            detail: { message: "An active offline session is required to process the queue." }
-          }));
+          window.dispatchEvent(
+            new CustomEvent("pin-challenge-required", {
+              detail: {
+                message:
+                  "An active offline session is required to process the queue.",
+              },
+            })
+          );
         }
         return;
       }
