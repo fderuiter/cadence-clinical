@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-04: Metadata-driven Additional Properties JSON column for ClinicalObservation](2026-08-04-metadata-driven-additional-properties-json-column-for-clinicalobservation.md)
 - [2026-08-04: Implement Hexagonal Domain Repository Separation](2026-08-04-implement-hexagonal-domain-repository-separation.md)
 - [2026-08-04: System-Wide Hexagonal Architecture and Pytest-Archon Enforcement](2026-08-04-system-wide-hexagonal-architecture-and-pytest-archon-enforcement.md)
 - [2026-08-04: Decoupled Hexagonal Storage Architecture for Study Designer](2026-08-04-decoupled-hexagonal-storage-architecture-for-study-designer.md)
