@@ -19,26 +19,26 @@ exclude = [
 ]
 
 [tool.uv.sources]
-packages-security = { workspace = true }
-packages-database = { workspace = true }
-packages-deid = { workspace = true }
-packages-storage = { workspace = true }
+packages-security = { workspace = true, editable = false }
+packages-database = { workspace = true, editable = false }
+packages-deid = { workspace = true, editable = false }
+packages-storage = { workspace = true, editable = false }
 packages-core-models = { workspace = true }
-packages-hexagonal = { workspace = true }
-apps-compliance = { workspace = true }
-apps-ctms = { workspace = true }
-apps-designer = { workspace = true }
-apps-econsent = { workspace = true }
-apps-eisf = { workspace = true }
-apps-etmf = { workspace = true }
-apps-execution = { workspace = true }
-apps-gateway = { workspace = true }
-apps-interop = { workspace = true }
-apps-notifications = { workspace = true }
-apps-org = { workspace = true }
-apps-quality = { workspace = true }
-apps-safety = { workspace = true }
-apps-tickets = { workspace = true }
+packages-hexagonal = { workspace = true, editable = false }
+apps-compliance = { workspace = true, editable = false }
+apps-ctms = { workspace = true, editable = false }
+apps-designer = { workspace = true, editable = false }
+apps-econsent = { workspace = true, editable = false }
+apps-eisf = { workspace = true, editable = false }
+apps-etmf = { workspace = true, editable = false }
+apps-execution = { workspace = true, editable = false }
+apps-gateway = { workspace = true, editable = false }
+apps-interop = { workspace = true, editable = false }
+apps-notifications = { workspace = true, editable = false }
+apps-org = { workspace = true, editable = false }
+apps-quality = { workspace = true, editable = false }
+apps-safety = { workspace = true, editable = false }
+apps-tickets = { workspace = true, editable = false }
 
 [tool.ruff.format]
 quote-style = "double"
