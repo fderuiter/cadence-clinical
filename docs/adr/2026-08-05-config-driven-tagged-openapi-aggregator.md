@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-To support regulatory compliance, standard GxP documentation, and API integrations across the monorepo, we need a unified API specification. Previously, our API contract validation and synchronization only covered `designer` and `execution` services, omitting `ctms`, `etmf`, and `quality`. Fragmented API specifications pose compliance and verification risks. 
+To support regulatory compliance, standard GxP documentation, and API integrations across the monorepo, we need a unified API specification. Previously, our API contract validation and synchronization only covered `designer` and `execution` services, omitting `ctms`, `etmf`, and `quality`. Fragmented API specifications pose compliance and verification risks.
 
 In addition, running synchronization locally shouldn't break developer workflows if certain environment configurations or local database setups are missing. Hence, we need a declarative, offline-resilient OpenAPI schema aggregator that safely unifies schemas from all monorepo services without local compilation failures.
 

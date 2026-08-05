@@ -1,9 +1,9 @@
 # ADR-2159: Config-Driven Tagged OpenAPI Aggregator for Monorepo Services
 
-* **Status:** Accepted
-* **Date:** 2026-08-05
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-05
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -15,9 +15,9 @@ This ADR describes the introduction of a config-driven tagged OpenAPI aggregator
 
 ## 2. Decision Drivers & Constraints
 
-* **API Consistency:** Need a single source of truth for downstream clinical operations and client applications.
-* **Developer Velocity:** Automatic verification of OpenAPI compatibility across services on pre-commit and CI stages.
-* **GxP Compliance & Security (PRD-SYS-001):** Ensure strict separation and filtering of public vs. internal system schemas via tagged route endpoints.
+- **API Consistency:** Need a single source of truth for downstream clinical operations and client applications.
+- **Developer Velocity:** Automatic verification of OpenAPI compatibility across services on pre-commit and CI stages.
+- **GxP Compliance & Security (PRD-SYS-001):** Ensure strict separation and filtering of public vs. internal system schemas via tagged route endpoints.
 
 ## 3. Options Considered
 
@@ -25,20 +25,20 @@ This ADR describes the introduction of a config-driven tagged OpenAPI aggregator
 
 Manual execution of fastapi export command inside each app directory.
 
-* **Pros:**
-  * ✅ Simple to implement.
-* **Cons:**
-  * ❌ Susceptible to human error, out-of-sync API contracts, and slow developer workflows.
+- **Pros:**
+  - ✅ Simple to implement.
+- **Cons:**
+  - ❌ Susceptible to human error, out-of-sync API contracts, and slow developer workflows.
 
 ### Option 2: Config-Driven Automated Aggregator (Selected)
 
 An automated script `scripts/sync_openapi_spec.py` that utilizes a YAML or pythonic config mapping of all monorepo microservices, exports their OpenAPI specs via programmatic lifespan hooks, and aggregates them under designated OpenAPI tag namespace filters.
 
-* **Pros:**
-  * ✅ Fully automated, repeatable, and easily verified in CI/CD pipeline tests.
-  * ✅ Enables declarative tagging and filtering of routing paths.
-* **Cons:**
-  * ❌ Requires maintaining aggregation/synchronization scripts and registering new microservice gateways in the master config.
+- **Pros:**
+  - ✅ Fully automated, repeatable, and easily verified in CI/CD pipeline tests.
+  - ✅ Enables declarative tagging and filtering of routing paths.
+- **Cons:**
+  - ❌ Requires maintaining aggregation/synchronization scripts and registering new microservice gateways in the master config.
 
 ## 4. Decision Outcome
 
@@ -46,13 +46,13 @@ An automated script `scripts/sync_openapi_spec.py` that utilizes a YAML or pytho
 
 ## 5. Consequences & Trade-offs
 
-* **Positive Impact:** Auto-generation and synchronization of unified api spec contracts are seamless; schema drifts are caught immediately during linter/test execution.
-* **Negative Impact:** Adding a new service requires updating the aggregator configuration and register block in `conftest.py`.
-* **Mitigation Strategy:** Provide detailed developer instructions and ensure tests under `tests/test_sync_openapi_spec.py` fail fast with descriptive guidance.
+- **Positive Impact:** Auto-generation and synchronization of unified api spec contracts are seamless; schema drifts are caught immediately during linter/test execution.
+- **Negative Impact:** Adding a new service requires updating the aggregator configuration and register block in `conftest.py`.
+- **Mitigation Strategy:** Provide detailed developer instructions and ensure tests under `tests/test_sync_openapi_spec.py` fail fast with descriptive guidance.
 
 ## 6. Implementation & Verification
 
-* **Affected Repositories / Services:** API Gateway (`apps/gateway/`), and monorepo services (`apps/ctms/`, `apps/execution/`, etc.)
-* **Verification Plan:**
-  * Validate using programmatic contract validation tests (`tests/test_api_contract_validation.py`).
-  * Run automated local verify command: `uv run pytest tests/test_sync_openapi_spec.py`.
+- **Affected Repositories / Services:** API Gateway (`apps/gateway/`), and monorepo services (`apps/ctms/`, `apps/execution/`, etc.)
+- **Verification Plan:**
+  - Validate using programmatic contract validation tests (`tests/test_api_contract_validation.py`).
+  - Run automated local verify command: `uv run pytest tests/test_sync_openapi_spec.py`.
