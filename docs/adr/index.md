@@ -172,6 +172,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-17: Unified De-identification Compliance Scan CLI, Pre-commit Hook, and Blocking CI Gate](2026-08-17-unified-deid-compliance-scan-cli.md)
 - [2026-08-18: Document Redaction Architecture, Regulatory Data-Handling, and Compliance Profiles](2026-08-18-document-redaction-architecture.md)
 - [2026-08-03: Native Interval Filtering and Custom Name Matching](2026-08-03-native-interval-filtering-and-custom-name-matching.md)
+- [2026-08-05: Implement Git-checked static exemption ledger & bypass validation](2026-08-05-git-checked-static-exemption-ledger-bypass-validation.md)
 
 ### 6. Frontend & Design System
 
