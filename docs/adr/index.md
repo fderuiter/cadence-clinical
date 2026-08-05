@@ -47,6 +47,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 2. API Gateway, Security & Identity
 
+- [2026-08-05: Centralize Duplicate API Clients into Shared Package](2026-08-05-centralize-duplicate-api-clients-into-shared-package.md)
+
 - [2026-08-04: Fail-Fast Environment Validation for Cryptographic Secrets](2026-08-04-fail-fast-environment-validation-for-cryptographic-secrets.md)
 - [2026-08-04: Transition to PSS Padding for RSA Signatures and Verifications](2026-08-04-transition-to-pss-padding-for-rsa-signatures-and-verifications.md)
 - [2026-08-04: Multi-Node Signature Replay Prevention with Redis Fallback](2026-08-04-multi-node-signature-replay-prevention-with-redis-fallback.md)
