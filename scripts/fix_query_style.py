@@ -63,7 +63,17 @@ def is_query_string(val: str) -> bool:
     if start_kw not in query_start_keywords:
         return False
 
-    if start_kw in {"with", "update", "create", "delete", "select", "optional", "return", "match", "merge"}:
+    if start_kw in {
+        "with",
+        "update",
+        "create",
+        "delete",
+        "select",
+        "optional",
+        "return",
+        "match",
+        "merge",
+    }:
         has_query_punc = any(c in val_stripped for c in "()[]{}$:,;*=><")
         if not has_query_punc:
             return False
@@ -113,9 +123,7 @@ def fix_file(filepath: Path) -> bool:
 
             if comment_char:
                 code_part, comment_part = line.split(comment_char, 1)
-                new_code_part = KEYWORDS_RE.sub(
-                    lambda m: m.group(1).upper(), code_part
-                )
+                new_code_part = KEYWORDS_RE.sub(lambda m: m.group(1).upper(), code_part)
                 fixed_lines.append(new_code_part + comment_char + comment_part)
             else:
                 new_code = KEYWORDS_RE.sub(lambda m: m.group(1).upper(), line)
