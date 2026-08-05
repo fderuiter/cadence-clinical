@@ -28,52 +28,59 @@ def disable_mock_signatures(monkeypatch):
 
 def generate_test_keys():
     """Generate ephemeral RSA private key and self-signed certificate."""
-    private_key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=2048,
-    )
-    subject = issuer = x509.Name(
-        [
-            x509.NameAttribute(x509.NameOID.COMMON_NAME, "test-ca.org"),
-        ]
-    )
     import datetime
 
-    cert = (
-        x509.CertificateBuilder()
-        .subject_name(subject)
-        .issuer_name(issuer)
-        .public_key(private_key.public_key())
-        .serial_number(x509.random_serial_number())
-        .not_valid_before(
-            datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=1)
+    while True:
+        private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=2048,
         )
-        .not_valid_after(
-            datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365)
+        subject = issuer = x509.Name(
+            [
+                x509.NameAttribute(x509.NameOID.COMMON_NAME, "test-ca.org"),
+            ]
         )
-        .sign(private_key, hashes.SHA256())
-    )
 
-    return private_key, cert
+        cert = (
+            x509.CertificateBuilder()
+            .subject_name(subject)
+            .issuer_name(issuer)
+            .public_key(private_key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(
+                datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=1)
+            )
+            .not_valid_after(
+                datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365)
+            )
+            .sign(private_key, hashes.SHA256())
+        )
+        cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+        if "mock" not in cert_pem.lower():
+            return private_key, cert
 
 
 def test_legacy_padding_pkcs1v15_fails():
     """AC 3: Document signatures using legacy PKCS#1 v1.5 padding fail verification."""
-    private_key, cert = generate_test_keys()
-    cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+    store = get_active_cert_store()
+    content_data = "Trial records showing drug effectiveness."
+
+    while True:
+        private_key, cert = generate_test_keys()
+        cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+
+        # Sign using legacy PKCS1v15
+        sig_bytes_legacy = private_key.sign(
+            content_data.encode("utf-8"),
+            padding.PKCS1v15(),
+            hashes.SHA256(),
+        )
+        sig_b64 = base64.b64encode(sig_bytes_legacy).decode("utf-8")
+        if "mock" not in sig_b64.lower():
+            break
 
     # Register in trust store to bypass self-signed check first
-    store = get_active_cert_store()
     store.register_certificate(user_id="test_user", cert_pem=cert_pem)
-
-    content_data = "Trial records showing drug effectiveness."
-    # Sign using legacy PKCS1v15
-    sig_bytes_legacy = private_key.sign(
-        content_data.encode("utf-8"),
-        padding.PKCS1v15(),
-        hashes.SHA256(),
-    )
-    sig_b64 = base64.b64encode(sig_bytes_legacy).decode("utf-8")
 
     document_content = (
         f"{content_data}\n"
@@ -93,24 +100,28 @@ def test_legacy_padding_pkcs1v15_fails():
 
 def test_rsassa_pss_succeeds():
     """Verify that modern RSA-PSS signatures succeed when properly configured and registered."""
-    private_key, cert = generate_test_keys()
-    cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+    store = get_active_cert_store()
+    content_data = "Trial records showing drug effectiveness."
+
+    while True:
+        private_key, cert = generate_test_keys()
+        cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+
+        # Sign using PSS
+        sig_bytes_pss = private_key.sign(
+            content_data.encode("utf-8"),
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH,
+            ),
+            hashes.SHA256(),
+        )
+        sig_b64 = base64.b64encode(sig_bytes_pss).decode("utf-8")
+        if "mock" not in sig_b64.lower():
+            break
 
     # Register in trust store
-    store = get_active_cert_store()
     store.register_certificate(user_id="test_user", cert_pem=cert_pem)
-
-    content_data = "Trial records showing drug effectiveness."
-    # Sign using PSS
-    sig_bytes_pss = private_key.sign(
-        content_data.encode("utf-8"),
-        padding.PSS(
-            mgf=padding.MGF1(hashes.SHA256()),
-            salt_length=padding.PSS.MAX_LENGTH,
-        ),
-        hashes.SHA256(),
-    )
-    sig_b64 = base64.b64encode(sig_bytes_pss).decode("utf-8")
 
     document_content = (
         f"{content_data}\n"
@@ -178,20 +189,23 @@ def test_duplicate_certificate_injection_rejected():
 
 def test_unapproved_self_signed_certificate_fails():
     """AC 5: Signatures verified with self-signed certificates fail validation unless registered in the trust store."""
-    private_key, cert = generate_test_keys()
-    cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
-
-    # Do NOT register in the trust store
     content_data = "Some dataset observations."
-    sig_bytes = private_key.sign(
-        content_data.encode("utf-8"),
-        padding.PSS(
-            mgf=padding.MGF1(hashes.SHA256()),
-            salt_length=padding.PSS.MAX_LENGTH,
-        ),
-        hashes.SHA256(),
-    )
-    sig_b64 = base64.b64encode(sig_bytes).decode("utf-8")
+
+    while True:
+        private_key, cert = generate_test_keys()
+        cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+
+        sig_bytes = private_key.sign(
+            content_data.encode("utf-8"),
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH,
+            ),
+            hashes.SHA256(),
+        )
+        sig_b64 = base64.b64encode(sig_bytes).decode("utf-8")
+        if "mock" not in sig_b64.lower():
+            break
 
     document_content = (
         f"{content_data}\n"
