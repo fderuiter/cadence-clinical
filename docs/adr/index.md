@@ -266,3 +266,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-04: Centralized Redis eSignature Token Replay Prevention](2026-08-04-centralized-redis-esignature-token-replay-prevention.md)
 - [2026-08-04: RSA-PSS Cryptographic Padding for Electronic Signatures](2026-08-04-rsa-pss-cryptographic-padding-for-electronic-signatures.md)
 - [2026-09-09: RSA Signature Verification Fallback to PKCS1v15](2026-09-09-rsa-signature-verification-fallback-pkcs1v15.md)
+- [2026-08-04: Fail-Closed E-Signature Validation and UI Component Alignment](2026-08-04-fail-closed-esignature-validation-ui-alignment.md)
