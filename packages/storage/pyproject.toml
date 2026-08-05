@@ -13,5 +13,8 @@ dependencies = [
     "aioboto3>=13.0.0",
 ]
 
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
 [tool.hatch.build.targets.wheel.sources]
 "" = "packages/storage"
