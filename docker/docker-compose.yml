@@ -19,6 +19,60 @@ services:
       timeout: 5s
       retries: 5
 
+  postgres-etmf:
+    image: postgres:15-alpine
+    container_name: cadence-postgres-etmf
+    command: postgres -c fsync=off -c synchronous_commit=off -c full_page_writes=off -c max_connections=300
+    environment:
+      POSTGRES_USER: cadence
+      POSTGRES_PASSWORD: cadence_password
+      POSTGRES_DB: cadence_etmf
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./postgres-etmf-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cadence -d cadence_etmf"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-ctms:
+    image: postgres:15-alpine
+    container_name: cadence-postgres-ctms
+    command: postgres -c fsync=off -c synchronous_commit=off -c full_page_writes=off -c max_connections=300
+    environment:
+      POSTGRES_USER: cadence
+      POSTGRES_PASSWORD: cadence_password
+      POSTGRES_DB: cadence_ctms
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./postgres-ctms-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cadence -d cadence_ctms"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-quality:
+    image: postgres:15-alpine
+    container_name: cadence-postgres-quality
+    command: postgres -c fsync=off -c synchronous_commit=off -c full_page_writes=off -c max_connections=300
+    environment:
+      POSTGRES_USER: cadence
+      POSTGRES_PASSWORD: cadence_password
+      POSTGRES_DB: cadence_quality
+    ports:
+      - "5435:5432"
+    volumes:
+      - ./postgres-quality-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cadence -d cadence_quality"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   neo4j:
     image: neo4j:5-community
     container_name: cadence-neo4j
@@ -167,12 +221,12 @@ services:
     volumes:
       - ..:/app
     environment:
-      - ETMF_DATABASE_URL=sqlite+aiosqlite:////app/tmf.db
+      - ETMF_DATABASE_URL=postgresql+asyncpg://cadence:cadence_password@postgres-etmf:5432/cadence_etmf
       - INBOUND_EMAIL_HMAC_SECRET=dev-secret-inbound-email-hmac-secure-placeholder
       - INBOUND_EMAIL_MAX_SIZE_BYTES=10485760
       - NOTIFICATIONS_URL=http://notifications:8006
     depends_on:
-      postgres:
+      postgres-etmf:
         condition: service_healthy
 
   ctms:
@@ -182,20 +236,16 @@ services:
     container_name: cadence-ctms
     command:
       [
-        "uvicorn",
-        "apps.ctms.main:app",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "8007",
-        "--reload",
+        "sh",
+        "-c",
+        "python -m apps.ctms.migrate && uvicorn apps.ctms.main:app --host 0.0.0.0 --port 8007 --reload",
       ]
     volumes:
       - ..:/app
     environment:
-      - CTMS_DATABASE_URL=sqlite+aiosqlite:////app/ctms.db
+      - CTMS_DATABASE_URL=postgresql+asyncpg://cadence:cadence_password@postgres-ctms:5432/cadence_ctms
     depends_on:
-      postgres:
+      postgres-ctms:
         condition: service_healthy
 
   quality:
@@ -205,20 +255,16 @@ services:
     container_name: cadence-quality
     command:
       [
-        "uvicorn",
-        "apps.quality.main:app",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "8005",
-        "--reload",
+        "sh",
+        "-c",
+        "python -m apps.quality.migrate && uvicorn apps.quality.main:app --host 0.0.0.0 --port 8005 --reload",
       ]
     volumes:
       - ..:/app
     environment:
-      - QUALITY_DATABASE_URL=sqlite+aiosqlite:////app/quality.db
+      - QUALITY_DATABASE_URL=postgresql+asyncpg://cadence:cadence_password@postgres-quality:5432/cadence_quality
     depends_on:
-      postgres:
+      postgres-quality:
         condition: service_healthy
 
   interop:

@@ -258,14 +258,56 @@ async def reset_sqlite_db(
     name: str, url: str, metadata: Any, allow_offline: bool
 ) -> None:
     """
-    Drops all tables inside an SQLite database and re-applies metadata structure.
+    Drops all tables inside an SQLite or PostgreSQL database and re-applies metadata structure or migrations.
 
     Args:
         name: Logical microservice name.
-        url: SQLite database connection string.
+        url: Database connection string.
         metadata: SQLAlchemy metadata containing tables to re-create.
         allow_offline: If True, warnings will be printed instead of crashing if database is unreachable.
     """
+    if url.startswith(("postgres", "postgresql")):
+        print(
+            f"Wiping and migrating PostgreSQL database for {name} using connection: {url}..."
+        )
+        try:
+            engine = create_async_engine(url, echo=False)
+            async with engine.begin() as conn:
+                await conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE;"))
+                await conn.execute(text("CREATE SCHEMA public;"))
+                await conn.execute(text("DROP SCHEMA IF EXISTS audit_schema CASCADE;"))
+            await engine.dispose()
+
+            if name == "eTMF":
+                await run_etmf_migrations(url)
+            elif name == "CTMS":
+                await run_ctms_migrations(url)
+            elif name == "Quality":
+                await run_quality_migrations(url)
+            elif name == "eISF":
+                await run_eisf_migrations(url)
+            elif (
+                name not in ("eTMF", "CTMS", "Quality", "eISF") and metadata is not None
+            ):
+                engine2 = create_async_engine(url, echo=False)
+                async with engine2.begin() as conn:
+                    await conn.run_sync(metadata.create_all)
+                await engine2.dispose()
+
+            print(f"PostgreSQL database for {name} purged and migrated successfully.")
+        except Exception as e:
+            if allow_offline:
+                print(
+                    f"WARNING: PostgreSQL database {name} could not be reset: {e}. Skipping."
+                )
+            else:
+                print(
+                    f"ERROR: PostgreSQL database reset failed for {name}: {e}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+        return
+
     print(f"Wiping and migrating SQLite database for {name} using connection: {url}...")
     try:
         engine = create_async_engine(url, echo=False)
