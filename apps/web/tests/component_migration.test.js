@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { mount } from "@vue/test-utils";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import CtmsView from "../src/views/CtmsView.vue";
 import MdrView from "../src/views/MdrView.vue";
 import ClinicalSoAMatrix from "../src/components/clinical/ClinicalSoAMatrix.vue";
+import apiClient from "../src/services/api";
 
 describe("CtmsView.vue native list rendering migration", () => {
   beforeEach(() => {
@@ -11,8 +12,41 @@ describe("CtmsView.vue native list rendering migration", () => {
     setActivePinia(pinia);
   });
 
-  it("renders milestone and visits tables with correct headers and classes", () => {
+  it("renders milestone and visits tables with correct headers and classes", async () => {
+    // Mock API requests made by loadOperationsData on CtmsView mount
+    const mockGet = vi.spyOn(apiClient, "get").mockImplementation((url) => {
+      if (url.includes("site-milestones")) {
+        return Promise.resolve([
+          {
+            milestone_type: "SITE_SELECTION",
+            planned_date: "2026-08-01",
+            actual_date: "2026-08-02",
+            status: "ACHIEVED",
+          },
+        ]);
+      }
+      if (url.includes("monitoring-visits")) {
+        return Promise.resolve([
+          {
+            visit_type: "SIV",
+            scheduled_date: "2026-08-03",
+            actual_date: "2026-08-04",
+            cra_assigned: "John Doe",
+            status: "SIGNED_OFF",
+          },
+        ]);
+      }
+      if (url.includes("workload")) {
+        return Promise.resolve([]);
+      }
+      if (url.includes("recruitment")) {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve([]);
+    });
+
     const wrapper = mount(CtmsView);
+    await flushPromises();
 
     // Assert milestones container and table structure
     const milestonesContainer = wrapper.find("#ctms-milestones-container");
@@ -49,6 +83,7 @@ describe("CtmsView.vue native list rendering migration", () => {
       "Actual Date",
       "CRA Assigned",
       "Status",
+      "Actions",
     ]);
 
     // Assert dynamic visit elements and gxp class application
@@ -56,6 +91,8 @@ describe("CtmsView.vue native list rendering migration", () => {
     const visitBadges = visitsContainer.findAll(".badge");
     const signedOffBadge = visitBadges.find((el) => el.text() === "SIGNED_OFF");
     expect(signedOffBadge.classes()).toContain("gxp");
+
+    mockGet.mockRestore();
   });
 });
 
