@@ -315,7 +315,7 @@ async def test_doa_endpoints_require_change_reason_header():
         await session.commit()
 
     # Generate valid gateway signature headers but omit the X-Change-Reason header
-    gateway_secret = "internal-gateway-secret-12345"
+    gateway_secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
     timestamp = str(time.time())
 
     header_payload = {
