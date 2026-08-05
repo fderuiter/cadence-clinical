@@ -25,7 +25,24 @@ def is_strict_compliance_active() -> bool:
     return True
 
 
+def is_protected_environment() -> bool:
+    """Determine if the current environment is a protected environment (production or staging).
+
+    Relies strictly on system-level environment variables (APP_ENV).
+    """
+    app_env = os.getenv("APP_ENV", "").strip().lower()
+    if not app_env:
+        return False
+    return app_env in ("production", "prod", "staging", "stage") or app_env not in (
+        "development",
+        "dev",
+        "test",
+    )
+
+
 def is_mock_allowed() -> bool:
+    if is_protected_environment():
+        return False
     return os.getenv("ALLOW_MOCK_SIGNATURES") == "1"
 
 
@@ -44,7 +61,7 @@ def is_bypass_requested(metadata_json: dict[str, Any] | None) -> bool:
         return True
     for k, v in metadata_json.items():
         k_lower = k.lower()
-        if "bypass" in k_lower or "skip" in k_lower:
+        if "bypass" in k_lower or "skip" in k_lower or "override" in k_lower:
             if v is True or (isinstance(v, str) and v.lower() in ("true", "1", "yes")):
                 return True
     return False
@@ -67,7 +84,7 @@ def requires_signature(
         "protocol_signoff",
     )
     if is_mandatory:
-        if is_strict_compliance_active():
+        if is_strict_compliance_active() or is_protected_environment():
             return True
         if is_mock_allowed() and metadata_json is not None:
             if "requires_signature" in metadata_json:
@@ -324,7 +341,18 @@ def validate_document_signature(
         "financial_disclosure",
         "protocol_signoff",
     )
-    is_strict = is_strict_compliance or is_strict_compliance_active()
+    if is_protected_environment():
+        if is_bypass_requested(metadata_json):
+            return (
+                False,
+                "Signature bypass or metadata override is prohibited in production and staging environments.",
+            )
+
+    is_strict = (
+        is_strict_compliance
+        or is_strict_compliance_active()
+        or is_protected_environment()
+    )
     if (
         is_strict
         and is_mandatory
@@ -386,6 +414,7 @@ def validate_document_signature(
     # 4. Handle Mock/Test cases cleanly if allowed
     if (
         (not is_strict or is_mock_allowed())
+        and not is_protected_environment()
         and cert_pem
         and (
             "MOCK_SIGNATURE" in cert_pem

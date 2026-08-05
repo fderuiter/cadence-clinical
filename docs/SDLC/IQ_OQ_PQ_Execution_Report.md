@@ -9,11 +9,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2126
-- **Passed:** 2121 🟢
+- **Total Automated Test Cases Run:** 2130
+- **Passed:** 2125 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
-- **Overall Operational Pass Rate:** 99.76%
+- **Overall Operational Pass Rate:** 99.77%
 
 ## 2. Installation Qualification (IQ)
 
@@ -1048,6 +1048,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_screening_endpoint_eligible_and_transition` | `tests.test_execution_eligibility` | PRD-ELIGIBILITY-012, PRD-MDR-007 | 🟢 PASSED | < 1s |
 | `test_screening_endpoint_indeterminate_behavior` | `tests.test_execution_eligibility` | PRD-ELIGIBILITY-014, PRD-MDR-007 | 🟢 PASSED | < 1s |
 | `test_screening_endpoint_ineligible_transition_and_audit` | `tests.test_execution_eligibility` | PRD-ELIGIBILITY-013, PRD-MDR-007 | 🟢 PASSED | < 1s |
+| `test_local_environment_allows_bypass_and_mock` | `tests.test_fail_closed_sig_validation` | PRD-FAIL-CLOSED-001, PRD-FAIL-CLOSED-004 | 🟢 PASSED | < 1s |
+| `test_production_closed_bypass_rejection` | `tests.test_fail_closed_sig_validation` | PRD-FAIL-CLOSED-001, PRD-FAIL-CLOSED-002 | 🟢 PASSED | < 1s |
+| `test_production_closed_mock_signature_rejection` | `tests.test_fail_closed_sig_validation` | PRD-FAIL-CLOSED-001, PRD-FAIL-CLOSED-003 | 🟢 PASSED | < 1s |
+| `test_production_enforces_valid_cryptographic_signatures` | `tests.test_fail_closed_sig_validation` | PRD-FAIL-CLOSED-001, PRD-FAIL-CLOSED-005 | 🟢 PASSED | < 1s |
 | `test_form_submission_approval_audit_manifestation` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_form_submission_audit_logging` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_form_submission_invalid_transitions` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
