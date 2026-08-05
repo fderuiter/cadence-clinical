@@ -1,4 +1,5 @@
 import { useSyncStore } from "../stores/sync";
+import { offlineAuthManager } from "./offlineAuth";
 
 export interface PendingDelta {
   deltaId: string;
@@ -171,6 +172,19 @@ export class ClientSyncEngine {
         syncStore.setPendingCount(0);
         this.isSyncing = false;
         this.resetBackoff();
+        return;
+      }
+
+      // Check for active offline session
+      const activeSession = offlineAuthManager.getActiveSession();
+      if (!activeSession) {
+        syncStore.setStatus("ERROR");
+        this.isSyncing = false;
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("pin-challenge-required", {
+            detail: { message: "An active offline session is required to process the queue." }
+          }));
+        }
         return;
       }
 

@@ -607,7 +607,7 @@ export const useEtmfStore = defineStore("etmf", {
           etmfService.getDocuments &&
           (etmfService.getDocuments._isMockFunction ||
             typeof etmfService.getDocuments.mock === "object");
-        if (authStore.isDemoMode && !isMocked) {
+        if (authStore.isDemoMode && !authStore.token && !isMocked) {
           let allDocs = [];
           if (typeof window !== "undefined" && window.localStorage) {
             const stored = window.localStorage.getItem("demo_documents");
@@ -665,7 +665,7 @@ export const useEtmfStore = defineStore("etmf", {
           etmfService.ingestDocument &&
           (etmfService.ingestDocument._isMockFunction ||
             typeof etmfService.ingestDocument.mock === "object");
-        if (authStore.isDemoMode && !isMocked) {
+        if (authStore.isDemoMode && !authStore.token && !isMocked) {
           await new Promise((resolve) => setTimeout(resolve, 300));
           let body = {};
           let changeReason = "Initial upload";

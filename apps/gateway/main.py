@@ -242,6 +242,17 @@ async def verify_token(token: str) -> dict[str, Any]:
         HTTPException: If the token is invalid, signature verification fails,
                        or JWKS is unavailable.
     """
+    if GATEWAY_SECRET:
+        try:
+            return jwt.decode(
+                token,
+                GATEWAY_SECRET,
+                algorithms=["HS256"],
+                options={"verify_aud": False},
+            )
+        except JWTError:
+            pass
+
     test_secret = os.getenv("JWT_TEST_SECRET")
     if test_secret:
         try:
@@ -937,6 +948,51 @@ class ReplayPreventionCache:
 replay_cache = ReplayPreventionCache()
 
 
+class DemoSessionRequest(BaseModel):
+    username: str | None = None
+    roles: list[str] | None = None
+    tenant_id: str | None = None
+
+
+@app.post("/api/v1/auth/demo")
+@app.post("/api/v1/auth/demo-session")
+async def create_demo_session(body: DemoSessionRequest | None = None) -> dict[str, Any]:
+    username = (body.username if body else None) or "demo-user"
+    roles = (body.roles if body else None) or [
+        "site investigator",
+        "cra",
+        "admin",
+        "auditor",
+    ]
+    tenant_id = (body.tenant_id if body else None) or "sandbox-tenant-default"
+
+    if not tenant_id.lower().startswith("sandbox"):
+        tenant_id = f"sandbox-{tenant_id}"
+
+    now = time.time()
+    payload = {
+        "sub": f"demo-sub-{uuid.uuid4()}",
+        "preferred_username": username,
+        "username": username,
+        "tenant_id": tenant_id,
+        "roles": roles,
+        "realm_access": {"roles": roles},
+        "custom_attributes": {"tenant_id": tenant_id},
+        "iat": now,
+        "exp": now + 86400.0,  # 24 hours
+        "jti": str(uuid.uuid4()),
+    }
+    token = jwt.encode(payload, GATEWAY_SECRET, algorithm="HS256")
+    return {
+        "access_token": token,
+        "token_type": "Bearer",
+        "expires_in": 86400,
+        "tenant_id": tenant_id,
+        "username": username,
+        "roles": roles,
+    }
+
+
 @app.api_route(
     "/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"]
 )
@@ -1273,6 +1329,41 @@ async def proxy_requests(request: Request, path: str) -> Response:
         tenant_id_val = "tenant_default"
     else:
         tenant_id_val = str(tenant_id_val).strip()
+
+    # Tenant Isolation Gate
+    token_tenant_id = (
+        payload.get("tenant_id")
+        or (payload.get("custom_attributes") or {}).get("tenant_id")
+        if isinstance(payload.get("custom_attributes"), dict)
+        else None
+    )
+    if token_tenant_id and str(token_tenant_id).strip().lower().startswith("sandbox"):
+        if not tenant_id_val or not tenant_id_val.lower().startswith("sandbox"):
+            logger = logging.getLogger("gateway")
+            logger.error(
+                f"ACCESS VIOLATION: Sandbox token attempted to access non-sandbox tenant resource scope: {tenant_id_val}"
+            )
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "detail": "Access denied: Sandbox token cannot access non-sandbox resources"
+                },
+            )
+
+        req_tenant = request.query_params.get("tenant_id") or request.query_params.get(
+            "tenant"
+        )
+        if req_tenant and not str(req_tenant).strip().lower().startswith("sandbox"):
+            logger = logging.getLogger("gateway")
+            logger.error(
+                f"ACCESS VIOLATION: Sandbox token attempted to access non-sandbox tenant: {req_tenant}"
+            )
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "detail": "Access denied: Sandbox token cannot access non-sandbox resources"
+                },
+            )
 
     timestamp = str(time.time())
     signature = generate_signature(

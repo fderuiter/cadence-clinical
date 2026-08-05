@@ -578,6 +578,199 @@
           }
         }
       }
+    },
+    "/api/v1/interop/epro/quarantine": {
+      "get": {
+        "summary": "List Quarantined Submissions",
+        "description": "Retrieve all quarantined ePRO submissions for clinical trial managers.",
+        "operationId": "list_quarantined_submissions_api_v1_interop_epro_quarantine_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuarantinedSubmissionResponse"
+                  },
+                  "title": "Response List Quarantined Submissions Api V1 Interop Epro Quarantine Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/epro/quarantine/{id}": {
+      "get": {
+        "summary": "Get Quarantined Submission",
+        "description": "Retrieve a single quarantined ePRO submission by ID.",
+        "operationId": "get_quarantined_submission_api_v1_interop_epro_quarantine__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuarantinedSubmissionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/epro/quarantine/{id}/edit": {
+      "post": {
+        "summary": "Edit Quarantined Submission",
+        "description": "Edit a quarantined ePRO submission payload. Requires an e-signature password verification.",
+        "operationId": "edit_quarantined_submission_api_v1_interop_epro_quarantine__id__edit_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditQuarantinedSubmissionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuarantinedSubmissionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/epro/quarantine/{id}/replay": {
+      "post": {
+        "summary": "Replay Quarantined Submission",
+        "description": "Replay a corrected quarantined ePRO submission back into the active database.\nRequires password verification for e-signature, and writes an audit log.",
+        "operationId": "replay_quarantined_submission_api_v1_interop_epro_quarantine__id__replay_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplayQuarantinedSubmissionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Replay Quarantined Submission Api V1 Interop Epro Quarantine  Id  Replay Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -760,6 +953,33 @@
         ],
         "title": "EPROSubmissionPayload",
         "description": "A single participant ePRO/eCOA diary submission."
+      },
+      "EditQuarantinedSubmissionRequest": {
+        "properties": {
+          "answers": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Answers",
+            "description": "The edited ePRO/eCOA answers"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password",
+            "description": "The password for 21 CFR Part 11 compliant digital signature verification"
+          },
+          "change_reason": {
+            "type": "string",
+            "title": "Change Reason",
+            "description": "Standard 21 CFR Part 11 compliant reason for the edit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "answers",
+          "password",
+          "change_reason"
+        ],
+        "title": "EditQuarantinedSubmissionRequest"
       },
       "FHIRPreScreenRequest": {
         "properties": {
@@ -1041,6 +1261,107 @@
         ],
         "title": "OfflineSyncMarkers",
         "description": "Offline queue reconciliation and conflict resolution parameters."
+      },
+      "QuarantinedSubmissionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "diary_id": {
+            "type": "string",
+            "title": "Diary Id"
+          },
+          "device_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Device Timestamp"
+          },
+          "answers": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Answers"
+          },
+          "original_answers": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Original Answers"
+          },
+          "offline_sync_markers": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Offline Sync Markers"
+          },
+          "validation_errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Validation Errors"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "triage_history": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Triage History"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "subject_id",
+          "diary_id",
+          "device_timestamp",
+          "answers",
+          "original_answers",
+          "offline_sync_markers",
+          "validation_errors",
+          "status",
+          "triage_history",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "QuarantinedSubmissionResponse"
+      },
+      "ReplayQuarantinedSubmissionRequest": {
+        "properties": {
+          "password": {
+            "type": "string",
+            "title": "Password",
+            "description": "The password for 21 CFR Part 11 compliant digital signature verification"
+          },
+          "change_reason": {
+            "type": "string",
+            "title": "Change Reason",
+            "description": "Standard 21 CFR Part 11 compliant reason for the replay"
+          }
+        },
+        "type": "object",
+        "required": [
+          "password",
+          "change_reason"
+        ],
+        "title": "ReplayQuarantinedSubmissionRequest"
       },
       "SubjectAssignmentCreate": {
         "properties": {
