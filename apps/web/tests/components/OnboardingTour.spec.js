@@ -47,7 +47,9 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       expect(store.events[0].details).toBe("test_details");
       expect(store.events[0].timestamp).toBeDefined();
 
-      const savedEvents = JSON.parse(window.localStorage.getItem("onboarding_events"));
+      const savedEvents = JSON.parse(
+        window.localStorage.getItem("onboarding_events")
+      );
       expect(savedEvents.length).toBe(1);
       expect(savedEvents[0].type).toBe("test_type");
     });
@@ -70,16 +72,20 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       const store = useOnboardingStore();
       store.dismissTour();
       expect(store.isActive).toBe(false);
-      expect(store.events.find(e => e.type === "tour_dismissed")).toBeDefined();
+      expect(
+        store.events.find((e) => e.type === "tour_dismissed")
+      ).toBeDefined();
 
       store.resumeTour();
       expect(store.isActive).toBe(true);
-      expect(store.events.find(e => e.type === "tour_resumed")).toBeDefined();
+      expect(store.events.find((e) => e.type === "tour_resumed")).toBeDefined();
 
       store.disableTour();
       expect(store.disabled).toBe(true);
       expect(store.isActive).toBe(false);
-      expect(store.events.find(e => e.type === "tour_disabled")).toBeDefined();
+      expect(
+        store.events.find((e) => e.type === "tour_disabled")
+      ).toBeDefined();
     });
   });
 
@@ -92,14 +98,16 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
 
       const wrapper = mount(OnboardingTour, {
         props: {
-          activeTab: "soa"
-        }
+          activeTab: "soa",
+        },
       });
 
       // Step 1 Welcome popover
       expect(wrapper.find(".onboarding-popover-card").exists()).toBe(true);
       expect(wrapper.text()).toContain("Welcome to the Sandbox");
-      expect(wrapper.text()).toContain("Welcome, Designer! Ready to architect clinical protocols and CDISC USDM data structures with maximum accuracy?");
+      expect(wrapper.text()).toContain(
+        "Welcome, Designer! Ready to architect clinical protocols and CDISC USDM data structures with maximum accuracy?"
+      );
 
       // Click Next
       await wrapper.find(".btn-tour-next").trigger("click");
@@ -109,30 +117,28 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
     });
 
     it("displays appropriate prompts for Data Manager", () => {
-      const store = useOnboardingStore();
       const authStore = useAuthStore();
       authStore.isDemoMode = false;
       authStore.rawRoles = ["Data Manager"]; // maps to data_manager
 
       const wrapper = mount(OnboardingTour, {
         props: {
-          activeTab: "soa"
-        }
+          activeTab: "soa",
+        },
       });
 
       expect(wrapper.text()).toContain("Welcome, Data Manager!");
     });
 
     it("displays appropriate prompts for Sponsor Admin", () => {
-      const store = useOnboardingStore();
       const authStore = useAuthStore();
       authStore.isDemoMode = false;
       authStore.rawRoles = ["Sponsor Admin"]; // maps to sponsor_admin
 
       const wrapper = mount(OnboardingTour, {
         props: {
-          activeTab: "soa"
-        }
+          activeTab: "soa",
+        },
       });
 
       expect(wrapper.text()).toContain("Welcome, Administrator!");
@@ -142,8 +148,8 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       const store = useOnboardingStore();
       const wrapper = mount(OnboardingTour, {
         props: {
-          activeTab: "soa"
-        }
+          activeTab: "soa",
+        },
       });
 
       await wrapper.find(".btn-tour-dismiss").trigger("click");
@@ -166,8 +172,8 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
 
       const wrapper = mount(AppShell, {
         global: {
-          plugins: [router]
-        }
+          plugins: [router],
+        },
       });
 
       // Verify the toggle button is present in the footer
@@ -184,7 +190,9 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       store.addEvent("test_click", "MDR Tab Button");
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find(".diagnostic-panel").text()).toContain("MDR Tab Button");
+      expect(wrapper.find(".diagnostic-panel").text()).toContain(
+        "MDR Tab Button"
+      );
 
       // Verify reset tour button calls resetTour
       const resetSpy = vi.spyOn(store, "resetTour");
