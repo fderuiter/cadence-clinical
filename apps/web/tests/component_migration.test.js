@@ -49,6 +49,7 @@ describe("CtmsView.vue native list rendering migration", () => {
       "Actual Date",
       "CRA Assigned",
       "Status",
+      "Actions",
     ]);
 
     // Assert dynamic visit elements and gxp class application
