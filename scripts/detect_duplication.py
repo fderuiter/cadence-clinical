@@ -118,6 +118,7 @@ def main() -> None:
                         "__pycache__",
                         "dist",
                         "build",
+                        "coverage",
                     ]
                 )
             ):
@@ -146,6 +147,7 @@ def main() -> None:
                     ".git",
                     "dist",
                     "build",
+                    "coverage",
                 ]
             ):
                 continue

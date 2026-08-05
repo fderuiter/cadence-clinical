@@ -66,6 +66,7 @@ report_*.xml
 *.cover
 *.pyo
 htmlcov/
+coverage/
 .tox/
 .nox/
 
