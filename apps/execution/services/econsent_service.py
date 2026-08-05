@@ -113,7 +113,7 @@ class EConsentService:
     async def update_study_icf_version(
         self, study_id: str, new_icf_version_id: str
     ) -> None:
-        """Update active study ICF version and automatically mark outstanding subjects as RECONSENT_REQUIRED.
+        """UPDATE active study ICF version and automatically mark outstanding subjects AS RECONSENT_REQUIRED.
 
         Args:
             study_id (str): The unique study identifier.

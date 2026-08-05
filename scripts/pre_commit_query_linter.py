@@ -13,6 +13,27 @@ KEYWORDS_RE = re.compile(
 )
 
 
+def strip_comments(val: str) -> str:
+    """Strips SQL and Cypher comments from a query string to avoid false positives in comments."""
+    lines = val.splitlines()
+    cleaned_lines = []
+    for line in lines:
+        line_stripped = line.strip()
+        if (
+            line_stripped.startswith("//")
+            or line_stripped.startswith("#")
+            or line_stripped.startswith("--")
+        ):
+            continue
+        # Also remove inline comment suffix
+        if "//" in line:
+            line = line.split("//", 1)[0]
+        if "--" in line:
+            line = line.split("--", 1)[0]
+        cleaned_lines.append(line)
+    return "\n".join(cleaned_lines)
+
+
 def is_query_string(val: str) -> bool:
     """Determine if a string literal is a database query.
 
@@ -54,6 +75,14 @@ def is_query_string(val: str) -> bool:
     if not cleaned_lines:
         return False
 
+    # A query must contain at least some common query/database characters or multiple lines
+    # or have query-specific constructs.
+    # If the string is just plain english words with no punctuation, it's not a query.
+    text_only = re.sub(r"[a-zA-Z0-9\s]", "", val_stripped)
+    if not text_only and len(cleaned_lines) == 1:
+        # Single line with only alphanumeric and spaces, e.g. "create arm" - not a query
+        return False
+
     first_line = cleaned_lines[0].lower()
     query_start_keywords = {
         "match",
@@ -70,9 +99,33 @@ def is_query_string(val: str) -> bool:
     }
     # Check if the first word matches any query start keyword
     first_word = re.match(r"^[a-z]+", first_line)
-    if first_word:
-        return first_word.group(0) in query_start_keywords
-    return False
+    if not first_word:
+        return False
+
+    start_kw = first_word.group(0)
+    if start_kw not in query_start_keywords:
+        return False
+
+    # Extra heuristic: if the first word is with/update/create/delete/select/optional/return,
+    # it must look like a query (e.g., have parameters like $, colons, parenthesis, operators, or multiple SQL keywords)
+    # to avoid false positives on user-facing messages or labels.
+    if start_kw in {
+        "with",
+        "update",
+        "create",
+        "delete",
+        "select",
+        "optional",
+        "return",
+        "match",
+        "merge",
+    }:
+        # Check if it has any query punctuation
+        has_query_punc = any(c in val_stripped for c in "()[]{}$:,;*=><")
+        if not has_query_punc:
+            return False
+
+    return True
 
 
 class QueryStyleVisitor(ast.NodeVisitor):
@@ -96,12 +149,16 @@ class QueryStyleVisitor(ast.NodeVisitor):
             if not is_query_string(val):
                 return
 
+            val_clean = strip_comments(val)
+
             # Look for lowercase/mixed-case keywords or alias operators in the query string
-            for match in KEYWORDS_RE.finditer(val):
+            for match in KEYWORDS_RE.finditer(val_clean):
                 word = match.group(1)
                 if word != word.upper():
                     # Calculate precise line number of the match
-                    string_offset = match.start()
+                    string_offset = val.find(match.group(0))
+                    if string_offset == -1:
+                        string_offset = match.start()
                     lines_before = val[:string_offset].count("\n")
                     precise_lineno = node.lineno + lines_before
 
@@ -122,7 +179,7 @@ def check_file(filename: str) -> bool:
         bool: True if no violations are found, False otherwise.
     """
     try:
-        with open(filename, "r", encoding="utf-8") as f:
+        with open(filename, encoding="utf-8") as f:
             content = f.read()
     except Exception:
         # If we cannot read the file (e.g. deleted or binary), skip it.

@@ -258,13 +258,19 @@ class EPROSubmissionQuarantine(Base):
     )
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     diary_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    device_timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    device_timestamp: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, index=True
+    )
     answers: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     original_answers: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     offline_sync_markers: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     validation_errors: Mapped[list[str]] = mapped_column(JSON, nullable=False)
-    status: Mapped[str] = mapped_column(String(50), default="QUARANTINED", nullable=False)
-    triage_history: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(50), default="QUARANTINED", nullable=False
+    )
+    triage_history: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSON, default=list, nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )

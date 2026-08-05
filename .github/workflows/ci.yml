@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, release/* ]
+    branches: [main, release/*]
   pull_request:
-    branches: [ main, release/* ]
+    branches: [main, release/*]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request && github.event.pull_request.number || github.ref }}
@@ -41,8 +41,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: "20"
+          cache: "pnpm"
 
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
@@ -63,7 +63,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: "3.14"
 
       - name: Install dependencies
         run: uv sync --locked --all-extras
@@ -77,12 +77,12 @@ jobs:
 
       - name: Run Hadolint on Dockerfiles
         run: |
-          if command -v hadolint >/dev/null 2>&1; then
-            hadolint apps/gateway/Dockerfile apps/designer/Dockerfile apps/execution/Dockerfile apps/etmf/Dockerfile docker/Dockerfile
-          else
-            echo "hadolint not found, trying docker container..."
-            docker run --rm -v "$(pwd):/app" -w /app hadolint/hadolint hadolint apps/gateway/Dockerfile apps/designer/Dockerfile apps/execution/Dockerfile apps/etmf/Dockerfile docker/Dockerfile
+          if ! command -v hadolint >/dev/null 2>&1; then
+            echo "Installing hadolint..."
+            sudo curl -sSfL -o /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-x86_64
+            sudo chmod +x /usr/local/bin/hadolint
           fi
+          hadolint --failure-threshold error apps/gateway/Dockerfile apps/designer/Dockerfile apps/execution/Dockerfile apps/etmf/Dockerfile docker/Dockerfile
 
       - name: Run ADR validation
         id: run_adr
@@ -121,7 +121,6 @@ jobs:
         id: run_architecture
         if: always()
         run: uv run python scripts/validate_architecture_drift.py
-
 
       - name: Run documentation compilation
         id: run_docs_build
@@ -190,7 +189,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: "3.14"
 
       - name: Sync dependencies from lockfile
         run: uv sync --locked --no-install-project --no-install-workspace --all-extras
@@ -211,8 +210,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: "20"
+          cache: "pnpm"
 
       - name: Run static analysis
         id: run_static
@@ -286,8 +285,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: "20"
+          cache: "pnpm"
 
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
@@ -300,7 +299,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: "3.14"
 
       - name: Install dependencies
         run: uv sync --locked --all-extras
@@ -386,7 +385,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: "3.14"
 
       - name: Install dependencies
         run: uv sync --locked --all-extras
@@ -399,8 +398,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: "20"
+          cache: "pnpm"
 
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
@@ -480,7 +479,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: "3.14"
 
       - name: Install dependencies
         run: uv sync --locked --all-extras
@@ -521,7 +520,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: "3.14"
 
       - name: Install dependencies
         run: uv sync --locked --all-extras
@@ -659,7 +658,8 @@ jobs:
 
   automerge:
     name: Approve and Automerge
-    needs: [classify, style, security, unit-tests, integration-tests, compliance]
+    needs:
+      [classify, style, security, unit-tests, integration-tests, compliance]
     if: github.event_name == 'pull_request' && needs.classify.outputs.is_safe == 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -704,7 +704,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: "3.14"
 
       - name: Install dependencies
         run: uv sync --locked --all-extras

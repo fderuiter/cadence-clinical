@@ -1,9 +1,9 @@
 # ADR-252: Decommission legacy rendering and v1 signatures
 
-* **Status:** Accepted
-* **Date:** 2026-09-08
-* **Authors:** @google-labs-jules[bot]
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-09-08
+- **Authors:** @google-labs-jules[bot]
+- **Deciders:** @fderuiter
 
 ---
 
@@ -13,10 +13,10 @@ The platform is transitioning to a modern, unified architectural approach for cl
 
 ## 2. Decision Drivers & Constraints
 
-* Achieve global enforcement of GxP-compliant canonical V2 cryptographic signatures without legacy V1 fallbacks.
-* Consolidate web form evaluation logic into a single modern module (`evaluator.js`) to reduce code duplication and formatting conflicts.
-* Retain full compatibility for downstream Playwright UI tests by preserving legacy DOM selectors like `#soa-matrix-container`.
-* Ensure that the centralized role-permission mapping defined in `packages/security/rbac.py` remains correct, clean, and properly formatted without syntax or duplication errors.
+- Achieve global enforcement of GxP-compliant canonical V2 cryptographic signatures without legacy V1 fallbacks.
+- Consolidate web form evaluation logic into a single modern module (`evaluator.js`) to reduce code duplication and formatting conflicts.
+- Retain full compatibility for downstream Playwright UI tests by preserving legacy DOM selectors like `#soa-matrix-container`.
+- Ensure that the centralized role-permission mapping defined in `packages/security/rbac.py` remains correct, clean, and properly formatted without syntax or duplication errors.
 
 ## 3. Options Considered
 
@@ -29,13 +29,13 @@ Chosen option: **Option A** because it is the only way to satisfy regulatory GxP
 
 ## 5. Consequences & Trade-offs
 
-* **Positive**: 100% enforcement of key-sorted canonical V2 payloads; elimination of legacy JS dependencies and duplicated render routines; clean unified linter state for RBAC matrices.
-* **Negative**: Requires careful preservation of E2E-critical DOM selectors (such as `#soa-matrix-container`) to avoid disrupting automated testing suites.
+- **Positive**: 100% enforcement of key-sorted canonical V2 payloads; elimination of legacy JS dependencies and duplicated render routines; clean unified linter state for RBAC matrices.
+- **Negative**: Requires careful preservation of E2E-critical DOM selectors (such as `#soa-matrix-container`) to avoid disrupting automated testing suites.
 
 ## 6. Implementation & Verification
 
-* Excised V1 signature routines across backend gateways.
-* Removed the standalone legacy rendering engine `index.js` under `apps/web/` and consolidated active form helpers into `apps/web/src/evaluator.js`.
-* Retained `#soa-matrix-container` in `apps/web/src/views/MdrView.vue`.
-* Cleaned up duplicated keys in role-permission maps in `packages/security/rbac.py`.
-* Validated successfully against the entire 2,050-case automated unit/integration test suite.
+- Excised V1 signature routines across backend gateways.
+- Removed the standalone legacy rendering engine `index.js` under `apps/web/` and consolidated active form helpers into `apps/web/src/evaluator.js`.
+- Retained `#soa-matrix-container` in `apps/web/src/views/MdrView.vue`.
+- Cleaned up duplicated keys in role-permission maps in `packages/security/rbac.py`.
+- Validated successfully against the entire 2,050-case automated unit/integration test suite.

@@ -12,7 +12,7 @@ export default [
       "**/venv/**",
       "**/.pytest_cache/**",
       "**/playwright-report/**",
-      "**/test-results/**"
+      "**/test-results/**",
     ],
   },
   js.configs.recommended,
@@ -24,7 +24,10 @@ export default [
       sourceType: "module",
     },
     rules: {
-      "no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+      "no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
       "no-undef": "off",
       "vue/multi-word-component-names": "off",
       "vuejs-accessibility/label-has-for": "warn",
@@ -32,7 +35,12 @@ export default [
       "vuejs-accessibility/no-static-element-interactions": "warn",
       "vuejs-accessibility/form-control-has-label": "warn",
     },
-    files: ["apps/**/*.js", "packages/**/*.js", "apps/**/*.vue", "packages/**/*.vue"],
+    files: [
+      "apps/**/*.js",
+      "packages/**/*.js",
+      "apps/**/*.vue",
+      "packages/**/*.vue",
+    ],
   },
   {
     languageOptions: {
@@ -40,24 +48,30 @@ export default [
       sourceType: "module",
     },
     rules: {
-      "vuejs-accessibility/label-has-for": ["error", {
-        "required": {
-          "some": ["nesting", "id"]
-        }
-      }],
+      "vuejs-accessibility/label-has-for": [
+        "error",
+        {
+          required: {
+            some: ["nesting", "id"],
+          },
+        },
+      ],
       "vuejs-accessibility/click-events-have-key-events": "error",
       "vuejs-accessibility/no-static-element-interactions": "error",
       "vuejs-accessibility/form-control-has-label": "error",
-      "vue/html-self-closing": ["error", {
-        "html": {
-          "void": "always",
-          "normal": "never",
-          "component": "always"
+      "vue/html-self-closing": [
+        "error",
+        {
+          html: {
+            void: "always",
+            normal: "never",
+            component: "always",
+          },
+          svg: "always",
+          math: "always",
         },
-        "svg": "always",
-        "math": "always"
-      }],
+      ],
     },
     files: ["packages/ui/**/*.js", "packages/ui/**/*.vue"],
-  }
+  },
 ];

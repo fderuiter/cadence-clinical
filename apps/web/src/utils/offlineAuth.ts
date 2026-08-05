@@ -145,9 +145,12 @@ export class OfflineAuthManager {
    * Unlocks the offline session payload from IndexedDB by decrypting it using the user PIN.
    * Asserts the session age is within maxOfflineHours (or falls back to 72 hours).
    */
-  async unlockOfflineSession(pin: string, userId?: string): Promise<OfflineSession> {
+  async unlockOfflineSession(
+    pin: string,
+    userId?: string
+  ): Promise<OfflineSession> {
     const db = await openDatabase();
-    
+
     let recordId = userId ? `session_${userId}` : "session";
 
     if (!userId) {
@@ -160,7 +163,9 @@ export class OfflineAuthManager {
         request.onerror = () => reject(request.error);
       });
 
-      const sessionKey = keys.find(k => typeof k === "string" && k.startsWith("session_")) || keys[0];
+      const sessionKey =
+        keys.find((k) => typeof k === "string" && k.startsWith("session_")) ||
+        keys[0];
       if (sessionKey) {
         recordId = sessionKey;
       }
@@ -182,7 +187,10 @@ export class OfflineAuthManager {
       throw new Error("No offline session found");
     }
 
-    if (record.locked === true || (record.failedAttempts !== undefined && record.failedAttempts >= 5)) {
+    if (
+      record.locked === true ||
+      (record.failedAttempts !== undefined && record.failedAttempts >= 5)
+    ) {
       throw new Error("Key recovery locked. Too many failed attempts.");
     }
 
@@ -190,7 +198,11 @@ export class OfflineAuthManager {
 
     try {
       const key = await deriveKey(pin, salt);
-      const session = (await decryptData(ciphertext, key, iv)) as OfflineSession;
+      const session = (await decryptData(
+        ciphertext,
+        key,
+        iv
+      )) as OfflineSession;
 
       // Reset failed attempts on successful decryption
       record.failedAttempts = 0;
@@ -274,13 +286,17 @@ export class OfflineAuthManager {
    */
   async clearOfflineSession(userId?: string): Promise<void> {
     const db = await openDatabase();
-    const idToDelete = userId || (this.activeSession?.userId ? `session_${this.activeSession.userId}` : "session");
+    const idToDelete =
+      userId ||
+      (this.activeSession?.userId
+        ? `session_${this.activeSession.userId}`
+        : "session");
     return new Promise<void>((resolve, reject) => {
       const tx = db.transaction("offline_auth_keys", "readwrite");
       const store = tx.objectStore("offline_auth_keys");
-      
+
       store.delete(idToDelete);
-      
+
       tx.oncomplete = () => {
         this.activeSession = null;
         resolve();
@@ -322,10 +338,10 @@ export class OfflineAuthManager {
       request.onsuccess = () => resolve(request.result || []);
       request.onerror = () => reject(request.error);
     });
-    
+
     return keys
       .filter((k): k is string => typeof k === "string")
-      .map(k => {
+      .map((k) => {
         if (k.startsWith("session_")) {
           return k.slice("session_".length);
         }
@@ -336,9 +352,14 @@ export class OfflineAuthManager {
   /**
    * Retrieves lock and attempt state for a user session.
    */
-  async getSessionMetadata(userId: string): Promise<{ failedAttempts: number; locked: boolean } | null> {
+  async getSessionMetadata(
+    userId: string
+  ): Promise<{ failedAttempts: number; locked: boolean } | null> {
     const db = await openDatabase();
-    const recordId = userId.startsWith("session_") || userId === "session" ? userId : `session_${userId}`;
+    const recordId =
+      userId.startsWith("session_") || userId === "session"
+        ? userId
+        : `session_${userId}`;
     return new Promise<any>((resolve, reject) => {
       const tx = db.transaction("offline_auth_keys", "readonly");
       const store = tx.objectStore("offline_auth_keys");

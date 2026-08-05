@@ -578,7 +578,7 @@ async def is_library_object_referenced_by_active_recruiting_study(
     MATCH (s:Study)-[:HAS_LIBRARY_INSTANCE]->(instance:LibraryObjectInstance)-[:INSTANTIATED_FROM]->(lo:LibraryObject {id: $object_id})
     WHERE (lo.version = $version OR $version IS NULL)
     OPTIONAL MATCH (s)-[:HAS_VERSION]->(sv:StudyVersion)
-    WITH s, lo, collect(sv.status) as statuses
+    WITH s, lo, collect(sv.status) AS statuses
     WHERE s.status = 'Active-Recruiting' OR any(st IN statuses WHERE st = 'Active-Recruiting')
     RETURN count(lo) > 0 AS is_in_use
     """

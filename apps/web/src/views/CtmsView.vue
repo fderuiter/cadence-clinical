@@ -10,13 +10,34 @@
     </div>
 
     <!-- Reactive Tabs Header -->
-    <div class="tabs-container" style="display: flex; gap: 16px; margin-bottom: 24px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
+    <div
+      class="tabs-container"
+      style="
+        display: flex;
+        gap: 16px;
+        margin-bottom: 24px;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 8px;
+      "
+    >
       <button
         id="tab-operations"
         class="tab-btn"
         :class="{ active: activeTab === 'operations' }"
-        style="padding: 8px 16px; border: none; background: none; font-weight: 600; cursor: pointer; font-size: 16px; border-bottom: 3px solid transparent;"
-        :style="activeTab === 'operations' ? { borderBottomColor: '#0f4c81', color: '#0f4c81' } : { color: '#64748b' }"
+        style="
+          padding: 8px 16px;
+          border: none;
+          background: none;
+          font-weight: 600;
+          cursor: pointer;
+          font-size: 16px;
+          border-bottom: 3px solid transparent;
+        "
+        :style="
+          activeTab === 'operations'
+            ? { borderBottomColor: '#0f4c81', color: '#0f4c81' }
+            : { color: '#64748b' }
+        "
         @click="activeTab = 'operations'"
       >
         Core Operations
@@ -25,8 +46,20 @@
         id="tab-delegation"
         class="tab-btn"
         :class="{ active: activeTab === 'delegation' }"
-        style="padding: 8px 16px; border: none; background: none; font-weight: 600; cursor: pointer; font-size: 16px; border-bottom: 3px solid transparent;"
-        :style="activeTab === 'delegation' ? { borderBottomColor: '#0f4c81', color: '#0f4c81' } : { color: '#64748b' }"
+        style="
+          padding: 8px 16px;
+          border: none;
+          background: none;
+          font-weight: 600;
+          cursor: pointer;
+          font-size: 16px;
+          border-bottom: 3px solid transparent;
+        "
+        :style="
+          activeTab === 'delegation'
+            ? { borderBottomColor: '#0f4c81', color: '#0f4c81' }
+            : { color: '#64748b' }
+        "
         @click="activeTab = 'delegation'"
       >
         Delegation Matrix
@@ -34,7 +67,19 @@
     </div>
 
     <!-- Active Filter/Scope Info -->
-    <div class="scope-info-bar" style="background: #f1f5f9; padding: 10px 16px; border-radius: 6px; margin-bottom: 20px; display: flex; gap: 24px; font-size: 14px; color: #334155;">
+    <div
+      class="scope-info-bar"
+      style="
+        background: #f1f5f9;
+        padding: 10px 16px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        display: flex;
+        gap: 24px;
+        font-size: 14px;
+        color: #334155;
+      "
+    >
       <div><strong>Study ID:</strong> {{ studyId }}</div>
       <div><strong>Site ID:</strong> {{ siteId }}</div>
     </div>
@@ -60,8 +105,12 @@
                   <td>
                     <strong>{{ m.milestone_type }}</strong>
                   </td>
-                  <td>{{ m.planned_date ? m.planned_date.slice(0, 10) : "N/A" }}</td>
-                  <td>{{ m.actual_date ? m.actual_date.slice(0, 10) : "Pending" }}</td>
+                  <td>
+                    {{ m.planned_date ? m.planned_date.slice(0, 10) : "N/A" }}
+                  </td>
+                  <td>
+                    {{ m.actual_date ? m.actual_date.slice(0, 10) : "Pending" }}
+                  </td>
                   <td>
                     <span
                       class="badge"
@@ -71,7 +120,12 @@
                   </td>
                 </tr>
                 <tr v-if="milestones.length === 0">
-                  <td colspan="4" style="text-align: center; color: #64748b; padding: 12px;">No milestones found. Create one to begin tracking.</td>
+                  <td
+                    colspan="4"
+                    style="text-align: center; color: #64748b; padding: 12px"
+                  >
+                    No milestones found. Create one to begin tracking.
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -114,8 +168,14 @@
                   <td>
                     <strong>{{ v.visit_type }}</strong>
                   </td>
-                  <td>{{ v.scheduled_date ? v.scheduled_date.slice(0, 10) : "N/A" }}</td>
-                  <td>{{ v.actual_date ? v.actual_date.slice(0, 10) : "Pending" }}</td>
+                  <td>
+                    {{
+                      v.scheduled_date ? v.scheduled_date.slice(0, 10) : "N/A"
+                    }}
+                  </td>
+                  <td>
+                    {{ v.actual_date ? v.actual_date.slice(0, 10) : "Pending" }}
+                  </td>
                   <td>{{ v.cra_id || "N/A" }}</td>
                   <td>
                     <span
@@ -128,7 +188,7 @@
                     <button
                       v-if="v.status === 'COMPLETED'"
                       class="btn btn-primary btn-sm"
-                      style="padding: 2px 6px; font-size: 11px;"
+                      style="padding: 2px 6px; font-size: 11px"
                       @click="signOffVisit(v)"
                     >
                       Sign-off
@@ -136,7 +196,12 @@
                   </td>
                 </tr>
                 <tr v-if="visits.length === 0">
-                  <td colspan="6" style="text-align: center; color: #64748b; padding: 12px;">No monitoring visits scheduled.</td>
+                  <td
+                    colspan="6"
+                    style="text-align: center; color: #64748b; padding: 12px"
+                  >
+                    No monitoring visits scheduled.
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -149,11 +214,7 @@
             >
               Schedule New Visit
             </button>
-            <button
-              id="btn-complete-visit"
-              class="btn"
-              @click="completeVisit"
-            >
+            <button id="btn-complete-visit" class="btn" @click="completeVisit">
               Complete Current Visit
             </button>
           </div>
@@ -184,7 +245,12 @@
                   <td>{{ (a.allocated_studies || []).join(", ") }}</td>
                 </tr>
                 <tr v-if="allocations.length === 0">
-                  <td colspan="4" style="text-align: center; color: #64748b; padding: 12px;">No CRA allocations recorded.</td>
+                  <td
+                    colspan="4"
+                    style="text-align: center; color: #64748b; padding: 12px"
+                  >
+                    No CRA allocations recorded.
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -222,10 +288,21 @@
                   <td>{{ r.screened_count }}</td>
                   <td>{{ r.enrolled_count }}</td>
                   <td>{{ r.target_count }}</td>
-                  <td>{{ r.target_count > 0 ? Math.round((r.enrolled_count / r.target_count) * 100) : 0 }}%</td>
+                  <td>
+                    {{
+                      r.target_count > 0
+                        ? Math.round((r.enrolled_count / r.target_count) * 100)
+                        : 0
+                    }}%
+                  </td>
                 </tr>
                 <tr v-if="recruitment.length === 0">
-                  <td colspan="5" style="text-align: center; color: #64748b; padding: 12px;">No recruitment records logged.</td>
+                  <td
+                    colspan="5"
+                    style="text-align: center; color: #64748b; padding: 12px"
+                  >
+                    No recruitment records logged.
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -246,20 +323,37 @@
     <!-- Tab 2: Delegation Matrix -->
     <div v-if="activeTab === 'delegation'">
       <div class="card">
-        <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+        <div
+          class="card-title"
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          "
+        >
           <span>Delegation of Authority (DOA) Matrix</span>
           <button
             id="btn-export-pdf"
             class="btn btn-primary"
-            style="background: #0f4c81; color: white;"
+            style="background: #0f4c81; color: white"
             @click="exportDoaPdf"
           >
             🖨️ Export GxP PDF
           </button>
         </div>
 
-        <div style="margin-bottom: 16px; font-size: 14px; background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-          <strong>Principal Investigator (PI):</strong> {{ piName || "Dr. Arthur Pendragon" }}
+        <div
+          style="
+            margin-bottom: 16px;
+            font-size: 14px;
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+          "
+        >
+          <strong>Principal Investigator (PI):</strong>
+          {{ piName || "Dr. Arthur Pendragon" }}
         </div>
 
         <div id="ctms-delegation-container">
@@ -284,24 +378,20 @@
                 <td>{{ d.start_date }}</td>
                 <td>{{ d.end_date || "—" }}</td>
                 <td>
-                  <span
-                    class="badge"
-                    :class="{ gxp: d.is_active }"
-                    >{{ d.is_active ? "ACTIVE" : "INACTIVE" }}</span
-                  >
+                  <span class="badge" :class="{ gxp: d.is_active }">{{
+                    d.is_active ? "ACTIVE" : "INACTIVE"
+                  }}</span>
                 </td>
                 <td>
-                  <span
-                    class="badge"
-                    :class="{ gxp: d.signed_off }"
-                    >{{ d.signed_off ? "YES" : "PENDING PI" }}</span
-                  >
+                  <span class="badge" :class="{ gxp: d.signed_off }">{{
+                    d.signed_off ? "YES" : "PENDING PI"
+                  }}</span>
                 </td>
-                <td style="display: flex; gap: 6px;">
+                <td style="display: flex; gap: 6px">
                   <button
                     v-if="!d.signed_off"
                     class="btn btn-primary btn-sm"
-                    style="padding: 2px 8px; font-size: 11px;"
+                    style="padding: 2px 8px; font-size: 11px"
                     @click="signDelegation(d)"
                   >
                     PI Sign-off
@@ -309,7 +399,12 @@
                   <button
                     v-if="d.is_active"
                     class="btn btn-cancel btn-sm"
-                    style="padding: 2px 8px; font-size: 11px; border-color: #ef4444; color: #ef4444;"
+                    style="
+                      padding: 2px 8px;
+                      font-size: 11px;
+                      border-color: #ef4444;
+                      color: #ef4444;
+                    "
                     @click="revokeDelegation(d)"
                   >
                     Revoke
@@ -317,13 +412,18 @@
                 </td>
               </tr>
               <tr v-if="delegatedStaff.length === 0">
-                <td colspan="7" style="text-align: center; color: #64748b; padding: 12px;">No delegation assignments logged for this site.</td>
+                <td
+                  colspan="7"
+                  style="text-align: center; color: #64748b; padding: 12px"
+                >
+                  No delegation assignments logged for this site.
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <div style="margin-top: 16px;">
+        <div style="margin-top: 16px">
           <button
             id="btn-delegate-task"
             class="btn btn-primary"
@@ -350,16 +450,27 @@
             </thead>
             <tbody>
               <tr v-for="audit in auditHistory" :key="audit.id">
-                <td style="white-space: nowrap; font-size: 12px;">{{ new Date(audit.timestamp).toLocaleString() }}</td>
+                <td style="white-space: nowrap; font-size: 12px">
+                  {{ new Date(audit.timestamp).toLocaleString() }}
+                </td>
                 <td>{{ audit.user_id }}</td>
                 <td>{{ audit.user_role }}</td>
                 <td>
-                  <span class="badge" style="background: #e2e8f0; color: #334155;">{{ audit.action }}</span>
+                  <span
+                    class="badge"
+                    style="background: #e2e8f0; color: #334155"
+                    >{{ audit.action }}</span
+                  >
                 </td>
-                <td style="font-size: 12px;">{{ audit.details }}</td>
+                <td style="font-size: 12px">{{ audit.details }}</td>
               </tr>
               <tr v-if="auditHistory.length === 0">
-                <td colspan="5" style="text-align: center; color: #64748b; padding: 12px;">No audit trail events recorded.</td>
+                <td
+                  colspan="5"
+                  style="text-align: center; color: #64748b; padding: 12px"
+                >
+                  No audit trail events recorded.
+                </td>
               </tr>
             </tbody>
           </table>
@@ -374,11 +485,21 @@
           {{ justificationTitle }}
         </div>
         <div class="modal-body">
-          <p style="font-size: 13px; color: #475569; margin-bottom: 12px; line-height: 1.4;">
-            To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>, you must document a valid GxP justification reason for this action.
+          <p
+            style="
+              font-size: 13px;
+              color: #475569;
+              margin-bottom: 12px;
+              line-height: 1.4;
+            "
+          >
+            To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>,
+            you must document a valid GxP justification reason for this action.
           </p>
           <div class="form-group">
-            <label for="modal-justification-reason">Change Justification Reason</label>
+            <label for="modal-justification-reason"
+              >Change Justification Reason</label
+            >
             <textarea
               id="modal-justification-reason"
               v-model="justificationReason"
@@ -390,8 +511,15 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-cancel" @click="showJustificationModal = false">Cancel</button>
-          <button class="btn btn-primary" @click="confirmJustification">Confirm Change</button>
+          <button
+            class="btn btn-cancel"
+            @click="showJustificationModal = false"
+          >
+            Cancel
+          </button>
+          <button class="btn btn-primary" @click="confirmJustification">
+            Confirm Change
+          </button>
         </div>
       </div>
     </div>
@@ -403,8 +531,17 @@
           Electronic Signature & Identity Verification (Part 11)
         </div>
         <div class="modal-body">
-          <p style="font-size: 13px; color: #475569; margin-bottom: 16px; line-height: 1.4;">
-            Please re-authenticate your identity and verify your endorsement of this delegation. All signings are permanently logged to the audit ledger.
+          <p
+            style="
+              font-size: 13px;
+              color: #475569;
+              margin-bottom: 16px;
+              line-height: 1.4;
+            "
+          >
+            Please re-authenticate your identity and verify your endorsement of
+            this delegation. All signings are permanently logged to the audit
+            ledger.
           </p>
 
           <div class="form-group">
@@ -442,15 +579,23 @@
 
           <div class="form-group">
             <label for="sig-signing-reason">Signing Reason</label>
-            <select id="sig-signing-reason" v-model="sigSigningReason" :disabled="sigBusy">
-              <option value="INVESTIGATOR_SIGNATURE">INVESTIGATOR_SIGNATURE (PI Endorsement)</option>
+            <select
+              id="sig-signing-reason"
+              v-model="sigSigningReason"
+              :disabled="sigBusy"
+            >
+              <option value="INVESTIGATOR_SIGNATURE">
+                INVESTIGATOR_SIGNATURE (PI Endorsement)
+              </option>
               <option value="APPROVAL">APPROVAL (Supervisory Approval)</option>
               <option value="TECHNICAL_QC">TECHNICAL_QC</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label for="sig-reason-for-change">Reason for Change / Justification</label>
+            <label for="sig-reason-for-change"
+              >Reason for Change / Justification</label
+            >
             <textarea
               id="sig-reason-for-change"
               v-model="sigReasonForChange"
@@ -459,13 +604,21 @@
             ></textarea>
           </div>
 
-          <div v-if="sigError" class="error-msg">
-            ⚠️ {{ sigError }}
-          </div>
+          <div v-if="sigError" class="error-msg">⚠️ {{ sigError }}</div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-cancel" :disabled="sigBusy" @click="showSignatureModal = false">Cancel</button>
-          <button class="btn btn-primary" :disabled="sigBusy" @click="confirmSignature">
+          <button
+            class="btn btn-cancel"
+            :disabled="sigBusy"
+            @click="showSignatureModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            class="btn btn-primary"
+            :disabled="sigBusy"
+            @click="confirmSignature"
+          >
             {{ sigBusy ? "Verifying..." : "Verify & Digital Sign" }}
           </button>
         </div>
@@ -475,9 +628,7 @@
     <!-- Modal 3: Schedule Monitoring Visit -->
     <div v-if="showScheduleVisitModal" class="modal-overlay">
       <div class="modal">
-        <div class="modal-header">
-          Schedule Clinical Monitoring Visit
-        </div>
+        <div class="modal-header">Schedule Clinical Monitoring Visit</div>
         <div class="modal-body">
           <div class="form-group">
             <label for="sched-visit-type">Visit Type</label>
@@ -490,16 +641,27 @@
 
           <div class="form-group">
             <label for="sched-visit-date">Scheduled Date</label>
-            <input id="sched-visit-date" v-model="newVisitScheduledDate" type="date" />
+            <input
+              id="sched-visit-date"
+              v-model="newVisitScheduledDate"
+              type="date"
+            />
           </div>
 
           <div class="form-group">
             <label for="sched-visit-cra">Assigned CRA</label>
-            <input id="sched-visit-cra" v-model="newVisitCra" type="text" placeholder="e.g. cra_fderuiter" />
+            <input
+              id="sched-visit-cra"
+              v-model="newVisitCra"
+              type="text"
+              placeholder="e.g. cra_fderuiter"
+            />
           </div>
 
           <div class="form-group">
-            <label for="sched-visit-reason">Reason for Change / Setup Justification</label>
+            <label for="sched-visit-reason"
+              >Reason for Change / Setup Justification</label
+            >
             <textarea
               id="sched-visit-reason"
               v-model="newVisitReason"
@@ -512,8 +674,15 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-cancel" @click="showScheduleVisitModal = false">Cancel</button>
-          <button class="btn btn-primary" @click="confirmScheduleVisit">Schedule & Issue confirmation</button>
+          <button
+            class="btn btn-cancel"
+            @click="showScheduleVisitModal = false"
+          >
+            Cancel
+          </button>
+          <button class="btn btn-primary" @click="confirmScheduleVisit">
+            Schedule & Issue confirmation
+          </button>
         </div>
       </div>
     </div>
@@ -521,13 +690,16 @@
     <!-- Modal 4: Reallocate CRA Workload -->
     <div v-if="showReallocateModal" class="modal-overlay">
       <div class="modal">
-        <div class="modal-header">
-          Allocate CRA to Site
-        </div>
+        <div class="modal-header">Allocate CRA to Site</div>
         <div class="modal-body">
           <div class="form-group">
             <label for="alloc-cra-id">CRA ID</label>
-            <input id="alloc-cra-id" v-model="allocCraId" type="text" placeholder="e.g. cra_alice" />
+            <input
+              id="alloc-cra-id"
+              v-model="allocCraId"
+              type="text"
+              placeholder="e.g. cra_alice"
+            />
           </div>
 
           <div class="form-group">
@@ -539,7 +711,9 @@
           </div>
 
           <div class="form-group">
-            <label for="alloc-reason">Reason for Change / Allocation Justification</label>
+            <label for="alloc-reason"
+              >Reason for Change / Allocation Justification</label
+            >
             <textarea
               id="alloc-reason"
               v-model="allocReason"
@@ -547,13 +721,15 @@
             ></textarea>
           </div>
 
-          <div v-if="allocError" class="error-msg">
-            ⚠️ {{ allocError }}
-          </div>
+          <div v-if="allocError" class="error-msg">⚠️ {{ allocError }}</div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-cancel" @click="showReallocateModal = false">Cancel</button>
-          <button class="btn btn-primary" @click="confirmReallocate">Save Allocation</button>
+          <button class="btn btn-cancel" @click="showReallocateModal = false">
+            Cancel
+          </button>
+          <button class="btn btn-primary" @click="confirmReallocate">
+            Save Allocation
+          </button>
         </div>
       </div>
     </div>
@@ -561,9 +737,7 @@
     <!-- Modal 5: Recruitment Metrics Update -->
     <div v-if="showRecruitmentModal" class="modal-overlay">
       <div class="modal">
-        <div class="modal-header">
-          Log Site Recruitment Metrics Update
-        </div>
+        <div class="modal-header">Log Site Recruitment Metrics Update</div>
         <div class="modal-body">
           <div class="form-group">
             <label for="rec-screened">Screened Subject Count</label>
@@ -581,7 +755,9 @@
           </div>
 
           <div class="form-group">
-            <label for="rec-reason">Reason for Change / Update Justification</label>
+            <label for="rec-reason"
+              >Reason for Change / Update Justification</label
+            >
             <textarea
               id="rec-reason"
               v-model="recReason"
@@ -589,13 +765,15 @@
             ></textarea>
           </div>
 
-          <div v-if="recError" class="error-msg">
-            ⚠️ {{ recError }}
-          </div>
+          <div v-if="recError" class="error-msg">⚠️ {{ recError }}</div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-cancel" @click="showRecruitmentModal = false">Cancel</button>
-          <button class="btn btn-primary" @click="confirmRecruitment">Submit Metrics</button>
+          <button class="btn btn-cancel" @click="showRecruitmentModal = false">
+            Cancel
+          </button>
+          <button class="btn btn-primary" @click="confirmRecruitment">
+            Submit Metrics
+          </button>
         </div>
       </div>
     </div>
@@ -603,13 +781,16 @@
     <!-- Modal 6: Delegate New Authority Task -->
     <div v-if="showDelegateModal" class="modal-overlay">
       <div class="modal">
-        <div class="modal-header">
-          Delegate Site Trial Task
-        </div>
+        <div class="modal-header">Delegate Site Trial Task</div>
         <div class="modal-body">
           <div class="form-group">
             <label for="del-staff-id">Staff User ID</label>
-            <input id="del-staff-id" v-model="delStaffId" type="text" placeholder="e.g. kc-crc-001" />
+            <input
+              id="del-staff-id"
+              v-model="delStaffId"
+              type="text"
+              placeholder="e.g. kc-crc-001"
+            />
           </div>
 
           <div class="form-group">
@@ -619,21 +800,41 @@
 
           <div class="form-group">
             <label>Delegated Duty Task Codes</label>
-            <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px;">
-              <label v-for="task in availableTasks" :key="task.value" style="display: flex; gap: 8px; font-weight: normal; align-items: center; cursor: pointer;">
+            <div
+              style="
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                margin-top: 4px;
+              "
+            >
+              <label
+                v-for="task in availableTasks"
+                :key="task.value"
+                style="
+                  display: flex;
+                  gap: 8px;
+                  font-weight: normal;
+                  align-items: center;
+                  cursor: pointer;
+                "
+              >
                 <input
                   type="checkbox"
                   :value="task.value"
                   v-model="delTaskCodes"
-                  style="width: auto; margin: 0;"
+                  style="width: auto; margin: 0"
                 />
-                {{ task.text }} (<code>{{ task.value }}</code>)
+                {{ task.text }} (<code>{{ task.value }}</code
+                >)
               </label>
             </div>
           </div>
 
           <div class="form-group">
-            <label for="del-reason">Reason for Change / Delegation Justification</label>
+            <label for="del-reason"
+              >Reason for Change / Delegation Justification</label
+            >
             <textarea
               id="del-reason"
               v-model="delReason"
@@ -641,13 +842,15 @@
             ></textarea>
           </div>
 
-          <div v-if="delError" class="error-msg">
-            ⚠️ {{ delError }}
-          </div>
+          <div v-if="delError" class="error-msg">⚠️ {{ delError }}</div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-cancel" @click="showDelegateModal = false">Cancel</button>
-          <button class="btn btn-primary" @click="confirmDelegate">Submit Delegation</button>
+          <button class="btn btn-cancel" @click="showDelegateModal = false">
+            Cancel
+          </button>
+          <button class="btn btn-primary" @click="confirmDelegate">
+            Submit Delegation
+          </button>
         </div>
       </div>
     </div>
@@ -655,9 +858,7 @@
     <!-- Modal 7: Create Site Milestone -->
     <div v-if="showCreateMilestoneModal" class="modal-overlay">
       <div class="modal">
-        <div class="modal-header">
-          Add Site Milestone
-        </div>
+        <div class="modal-header">Add Site Milestone</div>
         <div class="modal-body">
           <div class="form-group">
             <label for="ms-type">Milestone Type</label>
@@ -665,14 +866,20 @@
               <option value="SITE_SELECTION">SITE_SELECTION</option>
               <option value="INITIATION_VISIT">INITIATION_VISIT</option>
               <option value="SITE_ACTIVATION">SITE_ACTIVATION</option>
-              <option value="FIRST_SUBJECT_ENROLLED">FIRST_SUBJECT_ENROLLED</option>
+              <option value="FIRST_SUBJECT_ENROLLED">
+                FIRST_SUBJECT_ENROLLED
+              </option>
               <option value="DB_LOCK">DB_LOCK</option>
             </select>
           </div>
 
           <div class="form-group">
             <label for="ms-planned-date">Planned Date</label>
-            <input id="ms-planned-date" v-model="newMsPlannedDate" type="date" />
+            <input
+              id="ms-planned-date"
+              v-model="newMsPlannedDate"
+              type="date"
+            />
           </div>
 
           <div class="form-group">
@@ -692,17 +899,21 @@
             ></textarea>
           </div>
 
-          <div v-if="msError" class="error-msg">
-            ⚠️ {{ msError }}
-          </div>
+          <div v-if="msError" class="error-msg">⚠️ {{ msError }}</div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-cancel" @click="showCreateMilestoneModal = false">Cancel</button>
-          <button class="btn btn-primary" @click="confirmCreateMilestone">Add Milestone</button>
+          <button
+            class="btn btn-cancel"
+            @click="showCreateMilestoneModal = false"
+          >
+            Cancel
+          </button>
+          <button class="btn btn-primary" @click="confirmCreateMilestone">
+            Add Milestone
+          </button>
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -793,47 +1004,66 @@ const availableTasks = [
   { value: "CRF_DATA_ENTRY", text: "CRF Data Entry" },
   { value: "SUBJECT_SCREENING", text: "Subject Screening" },
   { value: "SAE_REPORTING", text: "SAE Reporting" },
-  { value: "PRINCIPAL_INVESTIGATOR", text: "Principal Investigator Oversight" }
+  { value: "PRINCIPAL_INVESTIGATOR", text: "Principal Investigator Oversight" },
 ];
 
 // Load Operations Data from Real-time Backend
 async function loadOperationsData() {
   try {
-    const [milestonesRes, visitsRes, workloadRes, recruitmentRes] = await Promise.all([
-      apiClient.get(`/api/v1/ctms/site-milestones?site_id=${siteId.value}&study_id=${studyId.value}`),
-      apiClient.get(`/api/v1/ctms/monitoring-visits?site_id=${siteId.value}&study_id=${studyId.value}`),
-      apiClient.get(`/api/v1/ctms/cra-allocations/workload`),
-      apiClient.get(`/api/v1/ctms/recruitment?site_id=${siteId.value}&study_id=${studyId.value}`)
-    ]);
+    const [milestonesRes, visitsRes, workloadRes, recruitmentRes] =
+      await Promise.all([
+        apiClient.get(
+          `/api/v1/ctms/site-milestones?site_id=${siteId.value}&study_id=${studyId.value}`
+        ),
+        apiClient.get(
+          `/api/v1/ctms/monitoring-visits?site_id=${siteId.value}&study_id=${studyId.value}`
+        ),
+        apiClient.get(`/api/v1/ctms/cra-allocations/workload`),
+        apiClient.get(
+          `/api/v1/ctms/recruitment?site_id=${siteId.value}&study_id=${studyId.value}`
+        ),
+      ]);
     milestones.value = milestonesRes || [];
     visits.value = visitsRes || [];
     allocations.value = workloadRes || [];
     recruitment.value = recruitmentRes || [];
   } catch (err) {
-    console.error("Failed to load operations data from backend microservice:", err);
+    console.error(
+      "Failed to load operations data from backend microservice:",
+      err
+    );
   }
 }
 
 // Load Delegation logs from Real-time Backend DoA endpoints
 async function loadDelegationData() {
   try {
-    const res = await apiClient.get(`/api/v1/ctms/doa/sites/${siteId.value}/log`);
+    const res = await apiClient.get(
+      `/api/v1/ctms/doa/sites/${siteId.value}/log`
+    );
     delegatedStaff.value = res.delegated_staff || [];
     auditHistory.value = res.audit_history || [];
     piName.value = res.pi_name || "Dr. Arthur Pendragon";
   } catch (err) {
-    console.error("Failed to load delegation log from DoA backend endpoint:", err);
+    console.error(
+      "Failed to load delegation log from DoA backend endpoint:",
+      err
+    );
   }
 }
 
 // Watchers for refetch on scope or tab change
-watch([siteId, studyId, activeTab], () => {
-  if (activeTab.value === "operations") {
-    loadOperationsData();
-  } else {
-    loadDelegationData();
-  }
-}, { immediate: true });
+watch(
+  [siteId, studyId, activeTab],
+  () => {
+    if (activeTab.value === "operations") {
+      loadOperationsData();
+    } else {
+      loadDelegationData();
+    }
+  },
+  { immediate: true }
+);
 
 onMounted(() => {
   if (route && route.query) {
@@ -857,7 +1087,8 @@ function promptJustification(title, placeholder, callback) {
 function confirmJustification() {
   const reason = justificationReason.value.trim();
   if (!reason) {
-    justificationError.value = "A non-empty reason for change is strictly required.";
+    justificationError.value =
+      "A non-empty reason for change is strictly required.";
     return;
   }
   showJustificationModal.value = false;
@@ -895,12 +1126,15 @@ async function confirmSignature() {
   sigError.value = "";
 
   try {
-    const reauthRes = await apiClient.post("/api/v1/auth/signature-verification", {
-      username: sigUsername.value,
-      password: sigPassword.value,
-      totp: sigTotp.value || null,
-      action: "/api/v1/ctms/doa/sign-off"
-    });
+    const reauthRes = await apiClient.post(
+      "/api/v1/auth/signature-verification",
+      {
+        username: sigUsername.value,
+        password: sigPassword.value,
+        totp: sigTotp.value || null,
+        action: "/api/v1/ctms/doa/sign-off",
+      }
+    );
 
     const sigToken = reauthRes.sig_token;
 
@@ -919,7 +1153,7 @@ async function confirmSignature() {
 
 // 1. Achieve Milestone
 function achieveMilestone() {
-  const nextM = milestones.value.find(m => m.status === "PLANNED");
+  const nextM = milestones.value.find((m) => m.status === "PLANNED");
   if (!nextM) {
     alert("All milestones have already been achieved!");
     return;
@@ -930,12 +1164,16 @@ function achieveMilestone() {
     "Describe the confirmation/clinical evidence of achieving this milestone...",
     async (reason) => {
       try {
-        await apiClient.put(`/api/v1/ctms/site-milestones/${nextM.id}`, {
-          status: "ACHIEVED",
-          actual_date: new Date().toISOString()
-        }, {
-          changeReason: reason
-        });
+        await apiClient.put(
+          `/api/v1/ctms/site-milestones/${nextM.id}`,
+          {
+            status: "ACHIEVED",
+            actual_date: new Date().toISOString(),
+          },
+          {
+            changeReason: reason,
+          }
+        );
         await loadOperationsData();
       } catch (err) {
         alert("Failed to achieve milestone: " + err.message);
@@ -947,7 +1185,9 @@ function achieveMilestone() {
 // Create Custom Milestone
 function openCreateMilestone() {
   newMsType.value = "SITE_ACTIVATION";
-  newMsPlannedDate.value = new Date(Date.now() + 10 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+  newMsPlannedDate.value = new Date(Date.now() + 10 * 24 * 3600 * 1000)
+    .toISOString()
+    .slice(0, 10);
   newMsStatus.value = "PLANNED";
   newMsReason.value = "";
   msError.value = "";
@@ -964,11 +1204,13 @@ async function confirmCreateMilestone() {
       site_id: siteId.value,
       study_id: studyId.value,
       milestone_type: newMsType.value,
-      planned_date: newMsPlannedDate.value ? new Date(newMsPlannedDate.value).toISOString() : null,
-      status: newMsStatus.value
+      planned_date: newMsPlannedDate.value
+        ? new Date(newMsPlannedDate.value).toISOString()
+        : null,
+      status: newMsStatus.value,
     };
     await apiClient.post("/api/v1/ctms/site-milestones", payload, {
-      changeReason: newMsReason.value
+      changeReason: newMsReason.value,
     });
     showCreateMilestoneModal.value = false;
     await loadOperationsData();
@@ -980,8 +1222,12 @@ async function confirmCreateMilestone() {
 // 2. Schedule Monitoring Visit
 function openScheduleVisit() {
   newVisitType.value = "IMV";
-  newVisitScheduledDate.value = new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-  newVisitCra.value = store.user?.username ? `cra_${store.user.username}` : "cra_fderuiter";
+  newVisitScheduledDate.value = new Date(Date.now() + 5 * 24 * 3600 * 1000)
+    .toISOString()
+    .slice(0, 10);
+  newVisitCra.value = store.user?.username
+    ? `cra_${store.user.username}`
+    : "cra_fderuiter";
   newVisitReason.value = "";
   scheduleError.value = "";
   showScheduleVisitModal.value = true;
@@ -1002,10 +1248,10 @@ async function confirmScheduleVisit() {
       site_id: siteId.value,
       cra_id: newVisitCra.value,
       visit_type: newVisitType.value,
-      scheduled_date: new Date(newVisitScheduledDate.value).toISOString()
+      scheduled_date: new Date(newVisitScheduledDate.value).toISOString(),
     };
     await apiClient.post("/api/v1/ctms/monitoring-visits", payload, {
-      changeReason: newVisitReason.value
+      changeReason: newVisitReason.value,
     });
     showScheduleVisitModal.value = false;
     await loadOperationsData();
@@ -1016,7 +1262,7 @@ async function confirmScheduleVisit() {
 
 // 3. Complete Monitoring Visit
 function completeVisit() {
-  const scheduledVisit = visits.value.find(v => v.status === "SCHEDULED");
+  const scheduledVisit = visits.value.find((v) => v.status === "SCHEDULED");
   if (!scheduledVisit) {
     alert("No scheduled visits to complete!");
     return;
@@ -1027,12 +1273,16 @@ function completeVisit() {
     "Enter the completion details or reason for closure...",
     async (reason) => {
       try {
-        await apiClient.post(`/api/v1/ctms/monitoring-visits/${scheduledVisit.id}/complete`, {
-          actual_date: new Date().toISOString(),
-          findings: []
-        }, {
-          changeReason: reason
-        });
+        await apiClient.post(
+          `/api/v1/ctms/monitoring-visits/${scheduledVisit.id}/complete`,
+          {
+            actual_date: new Date().toISOString(),
+            findings: [],
+          },
+          {
+            changeReason: reason,
+          }
+        );
         await loadOperationsData();
       } catch (err) {
         alert("Failed to complete monitoring visit: " + err.message);
@@ -1048,9 +1298,13 @@ function signOffVisit(visit) {
     "Enter the review endorsement statement for signing off this completed visit...",
     async (reason) => {
       try {
-        await apiClient.post(`/api/v1/ctms/monitoring-visits/${visit.id}/sign-off`, {}, {
-          changeReason: reason
-        });
+        await apiClient.post(
+          `/api/v1/ctms/monitoring-visits/${visit.id}/sign-off`,
+          {},
+          {
+            changeReason: reason,
+          }
+        );
         await loadOperationsData();
       } catch (err) {
         alert("Failed to sign off monitoring visit: " + err.message);
@@ -1079,10 +1333,10 @@ async function confirmReallocate() {
       site_id: siteId.value,
       study_id: studyId.value,
       status: allocStatus.value,
-      effective_start_date: new Date().toISOString()
+      effective_start_date: new Date().toISOString(),
     };
     await apiClient.post("/api/v1/ctms/cra-allocations", payload, {
-      changeReason: allocReason.value
+      changeReason: allocReason.value,
     });
     showReallocateModal.value = false;
     await loadOperationsData();
@@ -1120,10 +1374,10 @@ async function confirmRecruitment() {
       screened_count: parseInt(recScreened.value, 10),
       enrolled_count: parseInt(recEnrolled.value, 10),
       target_count: parseInt(recTarget.value, 10),
-      as_of_date: new Date().toISOString()
+      as_of_date: new Date().toISOString(),
     };
     await apiClient.post("/api/v1/ctms/recruitment", payload, {
-      changeReason: recReason.value
+      changeReason: recReason.value,
     });
     showRecruitmentModal.value = false;
     await loadOperationsData();
@@ -1163,10 +1417,10 @@ async function confirmDelegate() {
       staff_user_id: delStaffId.value,
       task_codes: delTaskCodes.value,
       start_date: delStartDate.value,
-      reason_for_change: delReason.value
+      reason_for_change: delReason.value,
     };
     await apiClient.post("/api/v1/ctms/doa/delegate", payload, {
-      changeReason: delReason.value
+      changeReason: delReason.value,
     });
     showDelegateModal.value = false;
     await loadDelegationData();
@@ -1179,15 +1433,19 @@ async function confirmDelegate() {
 function signDelegation(record) {
   promptSignature(async (sigToken, reason) => {
     try {
-      await apiClient.post("/api/v1/ctms/doa/sign-off", {
-        record_id: record.record_id,
-        reason_for_change: reason
-      }, {
-        headers: {
-          "X-Sig-Token": sigToken
+      await apiClient.post(
+        "/api/v1/ctms/doa/sign-off",
+        {
+          record_id: record.record_id,
+          reason_for_change: reason,
         },
-        changeReason: reason
-      });
+        {
+          headers: {
+            "X-Sig-Token": sigToken,
+          },
+          changeReason: reason,
+        }
+      );
       await loadDelegationData();
     } catch (err) {
       alert("Sign-off execution failed: " + err.message);
@@ -1202,12 +1460,16 @@ function revokeDelegation(record) {
     "Enter the compliance justification reason for revoking this clinical task assignment...",
     async (reason) => {
       try {
-        await apiClient.post("/api/v1/ctms/doa/revoke", {
-          record_id: record.record_id,
-          reason_for_change: reason
-        }, {
-          changeReason: reason
-        });
+        await apiClient.post(
+          "/api/v1/ctms/doa/revoke",
+          {
+            record_id: record.record_id,
+            reason_for_change: reason,
+          },
+          {
+            changeReason: reason,
+          }
+        );
         await loadDelegationData();
       } catch (err) {
         alert("Revocation failed: " + err.message);

@@ -253,7 +253,7 @@ describe("ClientSyncEngine and Conflict Resolution Sync Queue", () => {
 
     // Call flushQueue - it should stop and throw pin-challenge-required event, keeping items intact
     const dispatchSpy = vi.spyOn(window, "dispatchEvent");
-    
+
     await syncEngine.flushQueue();
 
     expect(syncStore.status).toBe("ERROR");
@@ -262,7 +262,9 @@ describe("ClientSyncEngine and Conflict Resolution Sync Queue", () => {
 
     // Check that we dispatched the interactive PIN challenge event
     expect(dispatchSpy).toHaveBeenCalled();
-    const event = dispatchSpy.mock.calls.find(call => call[0] && call[0].type === "pin-challenge-required")?.[0] as CustomEvent;
+    const event = dispatchSpy.mock.calls.find(
+      (call) => call[0] && call[0].type === "pin-challenge-required"
+    )?.[0] as CustomEvent;
     expect(event).toBeDefined();
     expect(event.type).toBe("pin-challenge-required");
 

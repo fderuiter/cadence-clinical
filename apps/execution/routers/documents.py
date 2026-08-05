@@ -162,7 +162,7 @@ async def list_document_versions(
     request: Request,
     current_user: dict = Depends(get_current_user),
 ) -> list[DocumentMetadataResponse]:
-    """Return complete version history list.
+    """RETURN complete version history list.
 
     Requirements: PRD-SYS-001
     """

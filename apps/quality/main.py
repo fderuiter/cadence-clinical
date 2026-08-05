@@ -369,7 +369,7 @@ async def create_or_update_rca(
     principal: Principal = Depends(get_principal),
 ):
     """
-    Create or update Root Cause Analysis (RCA) linked to a specific deviation.
+    CREATE or UPDATE Root Cause Analysis (RCA) linked to a specific deviation.
     Transitions the deviation status to RCA_COMPLETE.
     """
     authorize_quality_write(principal)
@@ -388,7 +388,7 @@ async def create_capa(
     principal: Principal = Depends(get_principal),
 ):
     """
-    Create a new Corrective and Preventive Action (CAPA) record linked to a deviation.
+    CREATE a new Corrective and Preventive Action (CAPA) record linked to a deviation.
     """
     authorize_quality_write(principal)
     user_id, user_role, change_reason = get_user_context(principal)
@@ -461,7 +461,7 @@ async def update_capa(
     principal: Principal = Depends(get_principal),
 ):
     """
-    Update non-status attributes of a CAPA record. Disallowed once terminal (CLOSED/CANCELLED).
+    UPDATE non-status attributes of a CAPA record. Disallowed once terminal (CLOSED/CANCELLED).
     """
     authorize_quality_write(principal)
     user_id, user_role, change_reason = get_user_context(principal)

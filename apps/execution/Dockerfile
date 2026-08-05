@@ -30,6 +30,6 @@ RUN chown -R 1000:1000 /app
 ENV PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000
 
-USER appuser
+USER 1000
 
 CMD ["uvicorn", "apps.execution.main:app", "--host", "0.0.0.0", "--port", "8000"]

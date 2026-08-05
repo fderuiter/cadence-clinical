@@ -26,6 +26,10 @@ os.environ.setdefault(
     "INBOUND_EMAIL_HMAC_SECRET",
     "test-email-hmac-secret-placeholder-xyz",  # pragma: allowlist secret
 )
+os.environ.setdefault(
+    "GATEWAY_SECRET",
+    "test-gateway-secret-placeholder-123",  # pragma: allowlist secret
+)
 
 # Set up python path for local imports and package paths to ensure absolute isolation
 app_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -220,5 +224,21 @@ if __name__ == "__main__":
                 json.dump(schema, f, indent=2)
                 f.write("\n")
             print(f"  - Exported {out_file}")
+
+        # Also export the gateway app's openapi schema as cdisc_openapi.json
+        try:
+            from apps.gateway.main import app as gateway_app
+
+            gateway_schema = gateway_app.openapi()
+            gateway_out_file = os.path.join(export_dir, "cdisc_openapi.json")
+            with open(gateway_out_file, "w") as f:
+                json.dump(gateway_schema, f, indent=2)
+                f.write("\n")
+            print(f"  - Exported {gateway_out_file}")
+        except Exception as e:
+            print(
+                f"Warning: Failed to export gateway schema (cdisc_openapi.json): {e}",
+                file=sys.stderr,
+            )
 
     sys.exit(0)

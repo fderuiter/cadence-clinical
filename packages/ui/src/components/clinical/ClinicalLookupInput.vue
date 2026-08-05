@@ -16,7 +16,9 @@
         :value="modelValue"
         autocomplete="off"
         v-bind="attributes"
-        :aria-describedby="status !== 'none' ? `lookup-status-${id}` : undefined"
+        :aria-describedby="
+          status !== 'none' ? `lookup-status-${id}` : undefined
+        "
         :aria-invalid="status === 'invalid' ? 'true' : undefined"
         @input="
           $emit('update:modelValue', $event.target.value);
@@ -36,10 +38,7 @@
         role="status"
         aria-live="polite"
       >
-        <span
-          class="lookup-status-icon"
-          aria-hidden="true"
-        >{{
+        <span class="lookup-status-icon" aria-hidden="true">{{
           statusIcon
         }}</span>
         <span class="lookup-status-text">{{ ariaLiveMessage }}</span>

@@ -66,7 +66,12 @@
               <span class="filename" :title="doc.filename">{{
                 doc.filename
               }}</span>
-              <span v-if="doc.is_redacted" class="compliance-badge-pill" title="HIPAA/GDPR Compliant Redacted Copy">🛡️ Compliant</span>
+              <span
+                v-if="doc.is_redacted"
+                class="compliance-badge-pill"
+                title="HIPAA/GDPR Compliant Redacted Copy"
+                >🛡️ Compliant</span
+              >
             </td>
             <td
               :tabindex="

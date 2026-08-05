@@ -1,9 +1,9 @@
 # ADR-121: On-Demand Consent Status Validation and Audit Hooks
 
-* **Status:** Accepted
-* **Date:** 2026-07-31
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-07-31
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -13,9 +13,9 @@ The clinical execution service previously relied on a deprecated write endpoint 
 
 ## 2. Decision Drivers & Constraints
 
-* Guarantee real-time consent verification during transaction execution without relying on client-side compliance headers.
-* 21 CFR Part 11 compliance requiring auditable write-blocking if consent is missing or subject requires re-consent.
-* Avoid heavy message queue or push-based webhook architectures that introduce transactional race conditions.
+- Guarantee real-time consent verification during transaction execution without relying on client-side compliance headers.
+- 21 CFR Part 11 compliance requiring auditable write-blocking if consent is missing or subject requires re-consent.
+- Avoid heavy message queue or push-based webhook architectures that introduce transactional race conditions.
 
 ## 3. Options Considered
 
@@ -28,10 +28,10 @@ Chosen option: Option 1. Implemented a `before_flush` SQLAlchemy listener in `ap
 
 ## 5. Consequences & Trade-offs
 
-* Positive: Guarantees transactional safety and prevents invalid clinical observation commits.
-* Negative: Introduces a synchronous network/cache lookup within database session flush cycles.
+- Positive: Guarantees transactional safety and prevents invalid clinical observation commits.
+- Negative: Introduces a synchronous network/cache lookup within database session flush cycles.
 
 ## 6. Implementation & Verification
 
-* Modified `apps/execution/database/audit.py` and `apps/econsent/main.py`.
-* Verification via `tests/test_reconsent_blocking.py`.
+- Modified `apps/execution/database/audit.py` and `apps/econsent/main.py`.
+- Verification via `tests/test_reconsent_blocking.py`.

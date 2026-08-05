@@ -520,18 +520,27 @@ async def study_published(
     change_reason = current_change_reason.get()
 
     payload = event.payload or {}
-    
+
     # Viewport and layout warning metadata validation to prevent API bypasses
     layout_warnings = payload.get("layout_warnings") or payload.get("layoutWarnings")
-    if not layout_warnings and "protocol" in payload and isinstance(payload["protocol"], dict):
-        layout_warnings = payload["protocol"].get("layout_warnings") or payload["protocol"].get("layoutWarnings")
-    
+    if (
+        not layout_warnings
+        and "protocol" in payload
+        and isinstance(payload["protocol"], dict)
+    ):
+        layout_warnings = payload["protocol"].get("layout_warnings") or payload[
+            "protocol"
+        ].get("layoutWarnings")
+
     has_warnings = False
-    if isinstance(layout_warnings, list) and len(layout_warnings) > 0:
-        has_warnings = True
-    elif isinstance(layout_warnings, bool) and layout_warnings:
-        has_warnings = True
-    elif isinstance(layout_warnings, (int, float)) and layout_warnings > 0:
+    if (
+        isinstance(layout_warnings, list)
+        and len(layout_warnings) > 0
+        or isinstance(layout_warnings, bool)
+        and layout_warnings
+        or isinstance(layout_warnings, (int, float))
+        and layout_warnings > 0
+    ):
         has_warnings = True
 
     justification = (
@@ -539,7 +548,11 @@ async def study_published(
         or payload.get("layoutJustification")
         or payload.get("justification")
     )
-    if not justification and "protocol" in payload and isinstance(payload["protocol"], dict):
+    if (
+        not justification
+        and "protocol" in payload
+        and isinstance(payload["protocol"], dict)
+    ):
         justification = (
             payload["protocol"].get("layout_justification")
             or payload["protocol"].get("layoutJustification")
@@ -547,12 +560,16 @@ async def study_published(
         )
 
     if has_warnings:
-        if not justification or not isinstance(justification, str) or not justification.strip():
+        if (
+            not justification
+            or not isinstance(justification, str)
+            or not justification.strip()
+        ):
             raise HTTPException(
                 status_code=400,
-                detail="Layout validation failed: unresolved layout warnings exist, but no clinical justification was provided."
+                detail="Layout validation failed: unresolved layout warnings exist, but no clinical justification was provided.",
             )
-        
+
         # Save layout deviation logs, designer identity, and justification to AuditLog
         u_id = user_id or "system"
         with audit_context(u_id, justification):
@@ -1905,7 +1922,7 @@ async def create_observation(
     background_tasks: BackgroundTasks,
     roles: list[str] = Depends(verify_not_auditor),
 ) -> ObservationResponse:
-    """Create a new clinical observation, performing unit normalization and outlier checks."""
+    """CREATE a new clinical observation, performing unit normalization and outlier checks."""
     norm_val, norm_unit = get_normalized_representation(payload.value, payload.unit)
 
     async with db_manager.get_session_maker()() as session:
@@ -2575,7 +2592,7 @@ async def create_lab_range(
     roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
     _justification: None = Depends(verify_change_justification),
 ) -> LabReferenceRangeResponse:
-    """Create a new lab reference range, validating all range invariants."""
+    """CREATE a new lab reference range, validating all range invariants."""
     from apps.execution.database.models import LabReferenceRange
 
     data = payload.model_dump()
@@ -2731,7 +2748,7 @@ async def update_lab_range(
     roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
     _justification: None = Depends(verify_change_justification),
 ) -> LabReferenceRangeResponse:
-    """Update an existing lab reference range, validating all range invariants on the merged state."""
+    """UPDATE an existing lab reference range, validating all range invariants on the merged state."""
     from apps.execution.database.models import LabReferenceRange
 
     async with db_manager.get_session_maker()() as session:

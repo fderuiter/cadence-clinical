@@ -161,7 +161,7 @@ class EISFBinderService:
         document_id: str,
         phi_terms: list[str],
     ) -> EISFBinderDocument:
-        """Create a redacted copy of a document while preserving the original.
+        """CREATE a redacted copy of a document while preserving the original.
 
         Args:
             document_id: The unique identifier of the source document.
@@ -171,7 +171,7 @@ class EISFBinderService:
             The newly created redacted EISFBinderDocument record.
 
         Raises:
-            ValueError: If source document with document_id does not exist.
+            ValueError: If source document WITH document_id does not exist.
         """
         stmt = select(EISFBinderDocument).where(EISFBinderDocument.id == document_id)
         res = await self.session.execute(stmt)

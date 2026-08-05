@@ -1,9 +1,9 @@
 # ADR-121: Resolve Vitest Peer Dependency Conflict in Shared UI Package
 
-* **Status:** Accepted
-* **Date:** 2026-07-31
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-07-31
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -13,9 +13,9 @@ The shared UI package (`packages/ui`) lacked explicit devDependencies for the Vi
 
 ## 2. Decision Drivers & Constraints
 
-* Ensure consistent development and CI/CD environments across the entire monorepo.
-* Comply with the performance budget (running tests in under 5 seconds) and standard SDLC testing procedures.
-* Ensure GxP system verification traces are preserved (PRD-SYS-001).
+- Ensure consistent development and CI/CD environments across the entire monorepo.
+- Comply with the performance budget (running tests in under 5 seconds) and standard SDLC testing procedures.
+- Ensure GxP system verification traces are preserved (PRD-SYS-001).
 
 ## 3. Options Considered
 
@@ -28,11 +28,11 @@ Chosen option: Option A because it directly resolves the package runner's depend
 
 ## 5. Consequences & Trade-offs
 
-* Positive: Restores clean, error-free execution of the frontend unit test suite locally and in GHA.
-* Positive: Avoids hoisting or peer dependency conflicts.
-* Negative: Requires maintaining identical version specifications across multiple package configurations within the workspace.
+- Positive: Restores clean, error-free execution of the frontend unit test suite locally and in GHA.
+- Positive: Avoids hoisting or peer dependency conflicts.
+- Negative: Requires maintaining identical version specifications across multiple package configurations within the workspace.
 
 ## 6. Implementation & Verification
 
-* Target files/packages modified: `packages/ui/package.json`.
-* Verification: Ran `pnpm install` and executed workspace tests via `pnpm -r test` successfully with all tests passing.
+- Target files/packages modified: `packages/ui/package.json`.
+- Verification: Ran `pnpm install` and executed workspace tests via `pnpm -r test` successfully with all tests passing.

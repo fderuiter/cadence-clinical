@@ -125,6 +125,7 @@ ALLOWED_ROOT_FILES = {
     ".gitignore",
     ".gitattributes",
     ".pre-commit-config.yaml",
+    ".prettierignore",
     ".secrets.baseline",
     ".prettierrc",
     "eslint.config.mjs",

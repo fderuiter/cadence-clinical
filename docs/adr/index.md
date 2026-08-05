@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+
 - [2026-08-04: Metadata-driven Additional Properties JSON column for ClinicalObservation](2026-08-04-metadata-driven-additional-properties-json-column-for-clinicalobservation.md)
 - [2026-08-04: Implement Hexagonal Domain Repository Separation](2026-08-04-implement-hexagonal-domain-repository-separation.md)
 - [2026-08-04: System-Wide Hexagonal Architecture and Pytest-Archon Enforcement](2026-08-04-system-wide-hexagonal-architecture-and-pytest-archon-enforcement.md)
@@ -45,6 +46,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
 
 ### 2. API Gateway, Security & Identity
+
 - [2026-08-04: Fail-Fast Environment Validation for Cryptographic Secrets](2026-08-04-fail-fast-environment-validation-for-cryptographic-secrets.md)
 - [2026-08-04: Transition to PSS Padding for RSA Signatures and Verifications](2026-08-04-transition-to-pss-padding-for-rsa-signatures-and-verifications.md)
 - [2026-08-04: Multi-Node Signature Replay Prevention with Redis Fallback](2026-08-04-multi-node-signature-replay-prevention-with-redis-fallback.md)
@@ -92,6 +94,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-01: Cryptographic Signature Verification Engine for Part 11 eSignatures](2026-08-01-cryptographic-signature-verification-engine-for-esignatures.md)
 
 ### 3. Clinical Data Interoperability & Standards
+
 - [2026-08-04: Thread-Safe In-Memory Terminology Search Cache](2026-08-04-in-memory-terminology-search-cache.md)
 - [2026-09-01: SAE Reconciliation & Safety Gateway (E2B)](2026-09-01-sae-reconciliation-safety-gateway-e2b.md)
 - [2026-08-26: SAE Reconciliation Architecture](2026-08-26-sae-reconciliation-architecture.md)
@@ -117,6 +120,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
+
 - [2026-07-31: Expose CRA Monitoring SDV Transport Models and Shared Sign-Off Logic](2026-07-31-expose-cra-monitoring-sdv-transport-models-and-shared-sign-off-logic.md)
 - [2026-08-03: ADR-147: Task-Driven CRA Workspace Routing & Multi-Select Batch SDV](2026-08-03-task-driven-cra-workspace-and-batch-sdv-verification.md)
 - [2026-07-31: Informed Consent Multi-Language Translation Management](2026-07-31-informed-consent-multi-language-translation-management.md)
@@ -149,6 +153,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-31: Randomization and Trial Supply Management](2026-08-31-randomization-and-trial-supply-management.md)
 
 ### 5. Compliance, Audit & Governance
+
 - [2026-08-04: Enforce Fail-Fast Environment Validation for GxP Compliance](2026-08-04-enforce-fail-fast-environment-validation-for-gxp-compliance.md)
 - [2026-08-03: Fail-Safe GxP Document Generation and Draft Warning Banners](2026-08-03-fail-safe-gxp-document-generation-and-draft-warning-banners.md)
 - [2026-07-31: GxP 21 CFR Part 11 eConsent Audit Trails](2026-07-31-gxp-21-cfr-part-11-econsent-audit-trails.md)
@@ -169,6 +174,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-03: Native Interval Filtering and Custom Name Matching](2026-08-03-native-interval-filtering-and-custom-name-matching.md)
 
 ### 6. Frontend & Design System
+
 - [2026-08-04: Viewport-Driven DOM Recycler for Large eCRFs](2026-08-04-viewport-driven-dom-recycler-for-large-ecrfs.md)
 - [2026-08-04: Scope CSS hover to can hover and add touch tap fallbacks](2026-08-04-scope-css-hover-to-can-hover-and-add-touch-tap-fallbacks.md)
 - [2026-08-28: Dynamic Hover Pointer Capability Detection and Touch-Safe Glossary Fallbacks](2026-08-28-dynamic-hover-detection-and-touch-safe-glossary-fallbacks.md)
@@ -196,6 +202,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-17: Interactive Mermaid Diagrams and Responsive Layout Controls](2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md)
 
 ### 7. DevOps, Tooling & CI/CD
+
 - [2026-08-03: Implement native uv workspaces with service-specific Dockerfiles](2026-08-03-implement-native-uv-workspaces-with-service-specific-dockerfiles.md)
 - [2026-08-03: Lightweight Path Pattern Boundary Linter](2026-08-03-lightweight-path-pattern-boundary-linter.md)
 - [2026-08-02: Dual-Mode Secret Scanner for Pre-Commit and CI Validation](2026-08-02-dual-mode-secret-scanner-for-pre-commit-and-ci-validation.md)
@@ -266,3 +273,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-04: Centralized Redis eSignature Token Replay Prevention](2026-08-04-centralized-redis-esignature-token-replay-prevention.md)
 - [2026-08-04: RSA-PSS Cryptographic Padding for Electronic Signatures](2026-08-04-rsa-pss-cryptographic-padding-for-electronic-signatures.md)
 - [2026-09-09: RSA Signature Verification Fallback to PKCS1v15](2026-09-09-rsa-signature-verification-fallback-pkcs1v15.md)
+- [2026-08-05: ADR-2026-08-05: Global Prettier Formatting and Pre-commit Checks](2026-08-05-global-prettier-formatting-and-pre-commit-checks.md)
