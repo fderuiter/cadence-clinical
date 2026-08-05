@@ -1007,10 +1007,14 @@ async def clean_postgres_databases():
         "cadence_eisf": EISFBase,
     }
 
+    import unittest.mock
+
     base_postgres_url = get_postgres_base_config()
+    is_mocked = isinstance(create_async_engine, unittest.mock.Mock)
     for db_prefix, base in service_bases.items():
         if (
             os.environ.get("USE_LIVE_DB") != "true"
+            and not is_mocked
             and db_prefix not in _initialized_databases
         ):
             continue
