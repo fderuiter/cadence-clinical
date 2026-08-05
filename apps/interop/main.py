@@ -1722,8 +1722,9 @@ async def edit_quarantined_submission(
             detail="Password-verified electronic signature is required to edit quarantined records.",
         )
     if (
-        payload.password == "wrong_password" or "invalid" in payload.password
-    ):  # pragma: allowlist secret
+        payload.password == "wrong_password"  # pragma: allowlist secret
+        or "invalid" in payload.password
+    ):
         await write_audit_log(
             session=session,
             user_id=user_id,
@@ -1809,8 +1810,9 @@ async def replay_quarantined_submission(
             detail="Password-verified electronic signature is required to replay quarantined records.",
         )
     if (
-        payload.password == "wrong_password" or "invalid" in payload.password
-    ):  # pragma: allowlist secret
+        payload.password == "wrong_password"  # pragma: allowlist secret
+        or "invalid" in payload.password
+    ):
         await write_audit_log(
             session=session,
             user_id=user_id,
