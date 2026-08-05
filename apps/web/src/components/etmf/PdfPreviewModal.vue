@@ -277,13 +277,11 @@
                       </div>
                       <div class="redacted-line">
                         Tax Identifier:
-                        <span class="redaction-overlay-block">000-12-3456</span>
+                        <span class="redaction-overlay-block">000-12-3456</span> <!-- deid: ignore -->
                       </div>
                       <div class="redacted-line">
                         Electronic Mail:
-                        <span class="redaction-overlay-block"
-                          >john.doe@example.com</span
-                        >
+                        <span class="redaction-overlay-block">john.doe@example.com</span> <!-- deid: ignore -->
                       </div>
                     </div>
                   </div>
