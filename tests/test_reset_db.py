@@ -58,8 +58,8 @@ def test_reset_db_success_offline():
         "postgresql+asyncpg://cadence:cadence_password@localhost:5999/cadence_edc"  # pragma: allowlist secret
     )
     env["NEO4J_URI"] = "bolt://localhost:7687"
-    env["AUDIT_LOG_SECRET_KEY"] = "test-gxp-audit-secret-key-placeholder-abc"
-    env["INBOUND_EMAIL_HMAC_SECRET"] = "dummy"
+    env["AUDIT_LOG_SECRET_KEY"] = "test-gxp-audit-secret-key-placeholder-abc"  # pragma: allowlist secret
+    env["INBOUND_EMAIL_HMAC_SECRET"] = "dummy"  # pragma: allowlist secret
     env["ETMF_DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
     env["CTMS_DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
     env["QUALITY_DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
