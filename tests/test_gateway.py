@@ -2320,3 +2320,71 @@ async def test_gateway_startup_offline_idp_recovery(
     payload = await gateway_main.verify_token(token)
     assert payload["sub"] == "user_123"
     assert gateway_main.jwks_cache == jwks
+
+
+def test_create_demo_session() -> None:
+    """
+    Test creating an ephemeral demo session and validating standard claims.
+    """
+    with TestClient(app) as client:
+        # Test default POST /api/v1/auth/demo
+        response = client.post("/api/v1/auth/demo")
+        assert response.status_code == 200
+        data = response.json()
+        assert "access_token" in data
+        assert data["token_type"] == "Bearer"
+        assert data["tenant_id"] == "sandbox-tenant-default"
+        assert "site investigator" in data["roles"]
+
+        # Test POST /api/v1/auth/demo-session with custom values
+        custom_payload = {
+            "username": "custom-tester",
+            "roles": ["cra", "admin"],
+            "tenant_id": "test-sandbox",
+        }
+        response = client.post("/api/v1/auth/demo-session", json=custom_payload)
+        assert response.status_code == 200
+        data2 = response.json()
+        assert data2["username"] == "custom-tester"
+        assert "cra" in data2["roles"]
+        assert data2["tenant_id"] == "sandbox-test-sandbox"
+
+
+@pytest.mark.asyncio
+async def test_verify_gateway_signed_token() -> None:
+    """
+    Verify that verify_token correctly decodes a token minted by the gateway.
+    """
+    from apps.gateway.main import verify_token
+    with TestClient(app) as client:
+        response = client.post("/api/v1/auth/demo-session", json={"username": "verification-tester"})
+        assert response.status_code == 200
+        token = response.json()["access_token"]
+
+        # Call verify_token
+        payload = await verify_token(token)
+        assert payload["username"] == "verification-tester"
+        assert payload["tenant_id"] == "sandbox-tenant-default"
+
+
+def test_sandbox_tenant_isolation_gate_violations() -> None:
+    """
+    Test that the sandbox tenant isolation gate correctly drops connections when a sandbox token
+    attempts to access a non-sandbox/production resource scope or query parameter.
+    """
+    with TestClient(app) as client:
+        # Create a sandbox token
+        response = client.post("/api/v1/auth/demo")
+        assert response.status_code == 200
+        token = response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # Case 1: Sandbox token accessing a sandbox resource scope -> Allowed (returns 502/500 proxy error instead of 403 isolation block)
+        res_allowed = client.get("/api/v1/studies/study_1", headers=headers)
+        assert res_allowed.status_code in [200, 502, 500, 404]
+
+        # Case 2: Sandbox token attempting to access a non-sandbox query parameter -> Forbidden (403)
+        res_blocked_query = client.get("/api/v1/studies/study_1?tenant_id=production-tenant", headers=headers)
+        assert res_blocked_query.status_code == 403
+        assert "Sandbox token cannot access non-sandbox resources" in res_blocked_query.json()["detail"]
+

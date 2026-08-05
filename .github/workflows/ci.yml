@@ -75,6 +75,15 @@ jobs:
           uv run ruff check . --exclude apps/execution/database/models.py
           uv run ruff format --check . --exclude apps/execution/database/models.py
 
+      - name: Run Hadolint on Dockerfiles
+        run: |
+          if command -v hadolint >/dev/null 2>&1; then
+            hadolint apps/gateway/Dockerfile apps/designer/Dockerfile apps/execution/Dockerfile apps/etmf/Dockerfile docker/Dockerfile
+          else
+            echo "hadolint not found, trying docker container..."
+            docker run --rm -v "$(pwd):/app" -w /app hadolint/hadolint hadolint apps/gateway/Dockerfile apps/designer/Dockerfile apps/execution/Dockerfile apps/etmf/Dockerfile docker/Dockerfile
+          fi
+
       - name: Run ADR validation
         id: run_adr
         if: always()
@@ -94,6 +103,11 @@ jobs:
         id: run_path_patterns
         if: always()
         run: uv run python scripts/validate_path_patterns.py --all
+
+      - name: Run CODEOWNERS Coverage and Validation
+        id: run_codeowners
+        if: always()
+        run: uv run python scripts/validate_codeowners.py
 
       - name: Compile UI library for markdown checks
         run: pnpm --filter ui build

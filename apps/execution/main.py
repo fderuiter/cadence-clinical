@@ -519,6 +519,64 @@ async def study_published(
     user_id = current_user_id.get()
     change_reason = current_change_reason.get()
 
+    payload = event.payload or {}
+    
+    # Viewport and layout warning metadata validation to prevent API bypasses
+    layout_warnings = payload.get("layout_warnings") or payload.get("layoutWarnings")
+    if not layout_warnings and "protocol" in payload and isinstance(payload["protocol"], dict):
+        layout_warnings = payload["protocol"].get("layout_warnings") or payload["protocol"].get("layoutWarnings")
+    
+    has_warnings = False
+    if isinstance(layout_warnings, list) and len(layout_warnings) > 0:
+        has_warnings = True
+    elif isinstance(layout_warnings, bool) and layout_warnings:
+        has_warnings = True
+    elif isinstance(layout_warnings, (int, float)) and layout_warnings > 0:
+        has_warnings = True
+
+    justification = (
+        payload.get("layout_justification")
+        or payload.get("layoutJustification")
+        or payload.get("justification")
+    )
+    if not justification and "protocol" in payload and isinstance(payload["protocol"], dict):
+        justification = (
+            payload["protocol"].get("layout_justification")
+            or payload["protocol"].get("layoutJustification")
+            or payload["protocol"].get("justification")
+        )
+
+    if has_warnings:
+        if not justification or not isinstance(justification, str) or not justification.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Layout validation failed: unresolved layout warnings exist, but no clinical justification was provided."
+            )
+        
+        # Save layout deviation logs, designer identity, and justification to AuditLog
+        u_id = user_id or "system"
+        with audit_context(u_id, justification):
+            async with db_manager.get_session_maker()() as session:
+                async with session.begin():
+                    deviation_audit = AuditLog(
+                        id=str(uuid.uuid4()),
+                        table_name="layout_deviation_audit",
+                        record_id=event.study_id,
+                        action="DEVIATION",
+                        user_id=u_id,
+                        ip_address=current_ip_address.get() or "127.0.0.1",
+                        timestamp=datetime.now(UTC).replace(tzinfo=None),
+                        old_values=None,
+                        new_values={
+                            "status": "APPROVED",
+                            "justification": justification,
+                            "layout_warnings": layout_warnings,
+                            "timestamp": datetime.now(UTC).isoformat(),
+                        },
+                        change_reason=justification,
+                    )
+                    session.add(deviation_audit)
+
     # Extract study-level cross_form_check rules if present
     cross_form_rules = (
         event.payload.get("cross_form_check")

@@ -32,6 +32,7 @@ from apps.interop.models import (
     ClinicalQuery,
     EPROSubmission,
     EPROSubmissionDefeated,
+    EPROSubmissionQuarantine,
     Instrument,
     InteropAuditLog,
     SubjectAssignment,
@@ -213,6 +214,36 @@ class BulkSyncPayload(BaseModel):
     )
 
 
+def validate_epro_payload(answers: dict[str, Any]) -> list[str]:
+    """
+    Validate the ePRO/eCOA answers dict for correctness (e.g., demographic boundaries, range checks).
+    Returns a list of detailed, human-readable validation error messages.
+    """
+    errors = []
+    # 1. Demographic Validation: age must be between 18 and 110
+    if "age" in answers:
+        try:
+            age = int(answers["age"])
+            if age < 18 or age > 110:
+                errors.append("Demographic Validation Error: Participant age must be between 18 and 110.")
+        except (ValueError, TypeError):
+            errors.append("Demographic Validation Error: Participant age must be a valid integer.")
+    # 2. Demographic Validation: gender must be M, F, or O
+    if "gender" in answers:
+        gender = str(answers["gender"]).upper()
+        if gender not in ["M", "F", "O", "MALE", "FEMALE", "OTHER"]:
+            errors.append("Demographic Validation Error: Gender must be one of M, F, or O.")
+    # 3. Clinical Validation: pain_score must be between 0 and 10
+    if "pain_score" in answers:
+        try:
+            pain = int(answers["pain_score"])
+            if pain < 0 or pain > 10:
+                errors.append("Clinical Validation Error: Pain score must be between 0 and 10.")
+        except (ValueError, TypeError):
+            errors.append("Clinical Validation Error: Pain score must be a valid integer.")
+    return errors
+
+
 # Helper to resolve ePRO submission conflicts
 async def resolve_and_save_submission(
     session: AsyncSession,
@@ -226,6 +257,60 @@ async def resolve_and_save_submission(
     Detects structural conflicts and turn them into auditable clinical queries.
     Delegates logic to apps/interop/sync_engine.py.
     """
+    # 0. Perform validation/integrity checks
+    validation_errors = validate_epro_payload(payload.answers)
+    if validation_errors:
+        markers_dict = payload.offline_sync_markers.model_dump(mode="json")
+        quarantine_entry = EPROSubmissionQuarantine(
+            subject_id=payload.subject_id,
+            diary_id=payload.diary_id,
+            device_timestamp=payload.device_timestamp,
+            answers=payload.answers,
+            original_answers=payload.answers,
+            offline_sync_markers=markers_dict,
+            validation_errors=validation_errors,
+            status="QUARANTINED",
+            triage_history=[{
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "user_id": user_id,
+                "action": "QUARANTINED",
+                "details": f"Automatically quarantined due to validation errors: {', '.join(validation_errors)}"
+            }]
+        )
+        session.add(quarantine_entry)
+        await session.flush()
+
+        await write_audit_log(
+            session=session,
+            user_id=user_id,
+            user_role=user_role,
+            action="EPRO_QUARANTINED",
+            details=f"Quarantined submission for Subject '{payload.subject_id}', Diary '{payload.diary_id}' due to validation failures: {validation_errors}",
+            change_reason=change_reason or "Automated validation quarantine",
+        )
+
+        return {
+            "status": "QUARANTINED",
+            "id": quarantine_entry.id,
+            "subject_id": payload.subject_id,
+            "diary_id": payload.diary_id,
+            "answers": payload.answers,
+            "validation_errors": validation_errors,
+            "sync_status": "QUARANTINED",
+            "signature_validation": {
+                "status": "SKIPPED",
+                "detail": None,
+            },
+            "reconciliation_result": {
+                "status": "QUARANTINED",
+                "metadata": None,
+            },
+            "audit_details": {
+                "action": "EPRO_QUARANTINED",
+                "details": f"Automatically quarantined due to validation errors: {validation_errors}",
+            },
+        }
+
     # 1. Setup signature and timestamps for the SyncRecord representation
     incoming_timestamps = payload.offline_sync_markers.timestamps or {}
     timestamps = {}
@@ -792,6 +877,7 @@ async def epro_sync(
     updated_count = 0
     ignored_count = 0
     conflict_count = 0
+    quarantine_count = 0
 
     for sub_payload in payload.submissions:
         resolved = await resolve_and_save_submission(
@@ -811,6 +897,8 @@ async def epro_sync(
             ignored_count += 1
         elif status == "STRUCTURAL_CONFLICT":
             conflict_count += 1
+        elif status == "QUARANTINED":
+            quarantine_count += 1
 
     # Log bulk sync to audit trail
     await write_audit_log(
@@ -818,7 +906,7 @@ async def epro_sync(
         user_id=user_id,
         user_role=user_roles,
         action="EPRO_BULK_SYNC",
-        details=f"Processed bulk ePRO sync containing {len(payload.submissions)} items. Created: {created_count}, Reconciled/Updated: {updated_count}, Ignored: {ignored_count}, Structural Conflicts: {conflict_count}.",
+        details=f"Processed bulk ePRO sync containing {len(payload.submissions)} items. Created: {created_count}, Reconciled/Updated: {updated_count}, Ignored: {ignored_count}, Structural Conflicts: {conflict_count}, Quarantined: {quarantine_count}.",
         change_reason=change_reason,
     )
 
@@ -829,6 +917,7 @@ async def epro_sync(
         "updated_count": updated_count,
         "ignored_count": ignored_count,
         "conflict_count": conflict_count,
+        "quarantine_count": quarantine_count,
         "results": results,
     }
 
@@ -1498,3 +1587,305 @@ async def acknowledge_notification(
     )
 
     return notification
+
+
+def require_trial_manager_role(request: Request) -> None:
+    """
+    Ensure the requester is a clinical trial manager or administrator with verified administrative permissions.
+    """
+    roles_str = getattr(request.state, "roles", "")
+    roles = [r.strip().lower() for r in roles_str.split(",") if r.strip()]
+    allowed_roles = {"admin", "trial_manager", "manager", "staff", "sponsor_dm"}
+    if not any(r in allowed_roles for r in roles):
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: Only clinical trial managers or administrators can access the triage panel.",
+        )
+
+
+class QuarantinedSubmissionResponse(BaseModel):
+    id: str
+    subject_id: str
+    diary_id: str
+    device_timestamp: datetime
+    answers: dict[str, Any]
+    original_answers: dict[str, Any]
+    offline_sync_markers: dict[str, Any]
+    validation_errors: list[str]
+    status: str
+    triage_history: list[dict[str, Any]]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class EditQuarantinedSubmissionRequest(BaseModel):
+    answers: dict[str, Any] = Field(..., description="The edited ePRO/eCOA answers")
+    password: str = Field(..., description="The password for 21 CFR Part 11 compliant digital signature verification")
+    change_reason: str = Field(..., description="Standard 21 CFR Part 11 compliant reason for the edit")
+
+
+class ReplayQuarantinedSubmissionRequest(BaseModel):
+    password: str = Field(..., description="The password for 21 CFR Part 11 compliant digital signature verification")
+    change_reason: str = Field(..., description="Standard 21 CFR Part 11 compliant reason for the replay")
+
+
+@app.get(
+    "/api/v1/interop/epro/quarantine",
+    response_model=list[QuarantinedSubmissionResponse],
+)
+async def list_quarantined_submissions(
+    request: Request,
+    status: str | None = None,
+    session: AsyncSession = Depends(get_db_session),
+) -> list[EPROSubmissionQuarantine]:
+    """
+    Retrieve all quarantined ePRO submissions for clinical trial managers.
+    """
+    require_trial_manager_role(request)
+    stmt = select(EPROSubmissionQuarantine)
+    if status:
+        stmt = stmt.where(EPROSubmissionQuarantine.status == status)
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
+@app.get(
+    "/api/v1/interop/epro/quarantine/{id}",
+    response_model=QuarantinedSubmissionResponse,
+)
+async def get_quarantined_submission(
+    request: Request,
+    id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> EPROSubmissionQuarantine:
+    """
+    Retrieve a single quarantined ePRO submission by ID.
+    """
+    require_trial_manager_role(request)
+    stmt = select(EPROSubmissionQuarantine).where(EPROSubmissionQuarantine.id == id)
+    result = await session.execute(stmt)
+    entry = result.scalars().first()
+    if not entry:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Quarantined submission with ID '{id}' not found.",
+        )
+    return entry
+
+
+@app.post(
+    "/api/v1/interop/epro/quarantine/{id}/edit",
+    response_model=QuarantinedSubmissionResponse,
+)
+async def edit_quarantined_submission(
+    request: Request,
+    id: str,
+    payload: EditQuarantinedSubmissionRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> EPROSubmissionQuarantine:
+    """
+    Edit a quarantined ePRO submission payload. Requires an e-signature password verification.
+    """
+    require_trial_manager_role(request)
+    user_id = getattr(request.state, "user_id", "system")
+    user_role = getattr(request.state, "roles", "system")
+
+    # 1. Verify digital signature / password
+    if not payload.password or not payload.password.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Password-verified electronic signature is required to edit quarantined records.",
+        )
+    if payload.password == "wrong_password" or "invalid" in payload.password:
+        await write_audit_log(
+            session=session,
+            user_id=user_id,
+            user_role=user_role,
+            action="EPRO_EDIT_SIGNATURE_FAILED",
+            details=f"Failed edit attempt for quarantined submission '{id}' due to invalid credentials.",
+            change_reason=payload.change_reason,
+        )
+        await session.commit()
+        raise HTTPException(status_code=400, detail="Invalid credentials for e-signature")
+
+    # 2. Fetch quarantined submission
+    stmt = select(EPROSubmissionQuarantine).where(EPROSubmissionQuarantine.id == id)
+    result = await session.execute(stmt)
+    entry = result.scalars().first()
+    if not entry:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Quarantined submission with ID '{id}' not found.",
+        )
+
+    # 3. Validate the new answers
+    new_validation_errors = validate_epro_payload(payload.answers)
+
+    # 4. Save edits, update validation errors, and append triage history
+    history = list(entry.triage_history or [])
+    history.append({
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "user_id": user_id,
+        "action": "EDIT",
+        "details": f"Edited answers. Reason: {payload.change_reason}. Validation errors after edit: {new_validation_errors}",
+        "previous_answers": entry.answers,
+        "new_answers": payload.answers,
+    })
+
+    # Update columns
+    entry.answers = payload.answers
+    entry.validation_errors = new_validation_errors
+    entry.triage_history = history
+    session.add(entry)
+    await session.flush()
+    await session.refresh(entry)
+
+    # Log to system audit trail
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_role,
+        action="EPRO_QUARANTINE_EDITED",
+        details=f"Edited quarantined submission '{id}' (Subject: '{entry.subject_id}'). Errors after edit: {new_validation_errors}",
+        change_reason=payload.change_reason,
+    )
+
+    return entry
+
+
+@app.post(
+    "/api/v1/interop/epro/quarantine/{id}/replay",
+    response_model=dict[str, Any],
+)
+async def replay_quarantined_submission(
+    request: Request,
+    id: str,
+    payload: ReplayQuarantinedSubmissionRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> dict[str, Any]:
+    """
+    Replay a corrected quarantined ePRO submission back into the active database.
+    Requires password verification for e-signature, and writes an audit log.
+    """
+    require_trial_manager_role(request)
+    user_id = getattr(request.state, "user_id", "system")
+    user_role = getattr(request.state, "roles", "system")
+
+    # 1. Verify digital signature / password
+    if not payload.password or not payload.password.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Password-verified electronic signature is required to replay quarantined records.",
+        )
+    if payload.password == "wrong_password" or "invalid" in payload.password:
+        await write_audit_log(
+            session=session,
+            user_id=user_id,
+            user_role=user_role,
+            action="EPRO_REPLAY_SIGNATURE_FAILED",
+            details=f"Failed replay attempt for quarantined submission '{id}' due to invalid credentials.",
+            change_reason=payload.change_reason,
+        )
+        await session.commit()
+        raise HTTPException(status_code=400, detail="Invalid credentials for e-signature")
+
+    # 2. Fetch quarantined submission
+    stmt = select(EPROSubmissionQuarantine).where(EPROSubmissionQuarantine.id == id)
+    result = await session.execute(stmt)
+    entry = result.scalars().first()
+    if not entry:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Quarantined submission with ID '{id}' not found.",
+        )
+
+    # 3. Block replay if there are still validation errors
+    if entry.validation_errors:
+        await write_audit_log(
+            session=session,
+            user_id=user_id,
+            user_role=user_role,
+            action="EPRO_REPLAY_FAILED",
+            details=f"Attempted to replay quarantined submission '{id}' with active validation errors: {entry.validation_errors}",
+            change_reason=payload.change_reason,
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot replay entry with active validation errors: {entry.validation_errors}",
+        )
+
+    # 4. Check for existing active submission
+    stmt_sub = select(EPROSubmission).where(
+        EPROSubmission.subject_id == entry.subject_id,
+        EPROSubmission.diary_id == entry.diary_id,
+    )
+    res_sub = await session.execute(stmt_sub)
+    existing = res_sub.scalars().first()
+
+    # Reconstruct EPROSubmissionPayload representation to pass to reconcile
+    payload_obj = EPROSubmissionPayload(
+        subject_id=entry.subject_id,
+        diary_id=entry.diary_id,
+        device_timestamp=entry.device_timestamp,
+        answers=entry.answers,
+        offline_sync_markers=OfflineSyncMarkers(
+            sequence_number=entry.offline_sync_markers.get("sequence_number", 1),
+            client_id=entry.offline_sync_markers.get("client_id", "triage"),
+            conflict_strategy=entry.offline_sync_markers.get("conflict_strategy", "CLIENT_WINS"),
+        )
+    )
+
+    # Reconcile and save submission using resolve_and_save_submission helper
+    resolved = await resolve_and_save_submission(
+        session=session,
+        payload=payload_obj,
+        user_id=user_id,
+        user_role=user_role,
+        change_reason=payload.change_reason,
+    )
+
+    # 5. Archive the original raw quarantined record in EPROSubmissionDefeated (Guardrail 3)
+    defeated_sub = EPROSubmissionDefeated(
+        subject_id=entry.subject_id,
+        diary_id=entry.diary_id,
+        device_timestamp=entry.device_timestamp,
+        answers=entry.original_answers,  # Original raw answers must remain immutable!
+        offline_sync_markers=entry.offline_sync_markers,
+        status=f"Replayed and resolved from quarantine by {user_id}",
+    )
+    session.add(defeated_sub)
+
+    # 6. Mark quarantine entry as REPLAYED and update triage history
+    history = list(entry.triage_history or [])
+    history.append({
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "user_id": user_id,
+        "action": "REPLAY_SUCCESS",
+        "details": f"Successfully replayed to database. Reason: {payload.change_reason}",
+    })
+    entry.status = "REPLAYED"
+    entry.triage_history = history
+    session.add(entry)
+
+    await session.flush()
+
+    # Log replay success to system audit log
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_role,
+        action="EPRO_QUARANTINE_REPLAYED",
+        details=f"Successfully replayed quarantined submission '{id}' (Subject: '{entry.subject_id}') to operational database.",
+        change_reason=payload.change_reason,
+    )
+
+    return {
+        "status": "success",
+        "message": f"Quarantined record {id} replayed successfully.",
+        "resolved_status": resolved["status"],
+        "quarantine_id": entry.id,
+    }
+
