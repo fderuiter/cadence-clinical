@@ -174,6 +174,7 @@ def verify_live_db_connections():
 async def create_all_schemas_async(worker_suffix: str):
     from sqlalchemy.ext.asyncio import create_async_engine
 
+    from apps.ctms.migrate import run_migrations as run_ctms_migrations
     from apps.ctms.models import Base as CTMSBase
     from apps.econsent.models import Base as EConsentBase
     from apps.eisf.database.migrate import run_migrations as run_eisf_migrations
@@ -183,6 +184,7 @@ async def create_all_schemas_async(worker_suffix: str):
 
     # Migrations
     from apps.execution.database.migrate import run_migrations as run_exec_migrations
+    from apps.quality.migrate import run_migrations as run_quality_migrations
 
     # Import bases
     from apps.execution.database.models import Base as ExecBase
@@ -196,8 +198,8 @@ async def create_all_schemas_async(worker_suffix: str):
     service_bases = {
         "cadence_edc": (ExecBase, run_exec_migrations),
         "cadence_etmf": (ETMFBase, run_etmf_migrations),
-        "cadence_ctms": (CTMSBase, None),
-        "cadence_quality": (QualityBase, None),
+        "cadence_ctms": (CTMSBase, run_ctms_migrations),
+        "cadence_quality": (QualityBase, run_quality_migrations),
         "cadence_interop": (InteropBase, None),
         "cadence_tickets": (TicketsBase, None),
         "cadence_notifications": (NotificationsBase, None),
