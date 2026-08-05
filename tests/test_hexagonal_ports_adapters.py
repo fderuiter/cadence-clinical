@@ -48,9 +48,12 @@ def test_domain_models_contain_zero_database_imports():
 
     @req:PRD-SYS-001
     """
+    from pathlib import Path
+
+    project_root = Path(__file__).resolve().parent.parent
     domain_paths = [
-        "/app/apps/execution/domain/models.py",
-        "/app/apps/ctms/domain/models.py",
+        str(project_root / "apps/execution/domain/models.py"),
+        str(project_root / "apps/ctms/domain/models.py"),
     ]
     forbidden_imports = {
         "sqlalchemy",
@@ -153,9 +156,12 @@ def test_api_routers_contain_no_direct_db_calls():
 
     @req:PRD-SYS-001
     """
+    from pathlib import Path
+
+    project_root = Path(__file__).resolve().parent.parent
     router_paths = [
-        "/app/apps/execution/routers/doa.py",
-        "/app/apps/ctms/routers/doa.py",
+        str(project_root / "apps/execution/routers/doa.py"),
+        str(project_root / "apps/ctms/routers/doa.py"),
     ]
 
     for path in router_paths:
