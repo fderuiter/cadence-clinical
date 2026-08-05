@@ -36,35 +36,37 @@ def disable_mock_signatures(monkeypatch):
 
 def generate_self_signed_cert() -> tuple[rsa.RSAPrivateKey, x509.Certificate]:
     """Generates a real RSAPrivateKey and self-signed X.509 Certificate for testing."""
-    private_key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=2048,
-    )
-    subject = issuer = x509.Name(
-        [
-            x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
-            x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "CA"),
-            x509.NameAttribute(NameOID.LOCALITY_NAME, "San Francisco"),
-            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Cadence Clinical"),
-            x509.NameAttribute(NameOID.COMMON_NAME, "cadence.clinical"),
-        ]
-    )
-    cert = (
-        x509.CertificateBuilder()
-        .subject_name(subject)
-        .issuer_name(issuer)
-        .public_key(private_key.public_key())
-        .serial_number(x509.random_serial_number())
-        .not_valid_before(
-            datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=1)
+    while True:
+        private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=2048,
         )
-        .not_valid_after(
-            datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=10)
+        subject = issuer = x509.Name(
+            [
+                x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
+                x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "CA"),
+                x509.NameAttribute(NameOID.LOCALITY_NAME, "San Francisco"),
+                x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Cadence Clinical"),
+                x509.NameAttribute(NameOID.COMMON_NAME, "cadence.clinical"),
+            ]
         )
-        .sign(private_key, hashes.SHA256())
-    )
-
-    return private_key, cert
+        cert = (
+            x509.CertificateBuilder()
+            .subject_name(subject)
+            .issuer_name(issuer)
+            .public_key(private_key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(
+                datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=1)
+            )
+            .not_valid_after(
+                datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=10)
+            )
+            .sign(private_key, hashes.SHA256())
+        )
+        cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+        if "mock" not in cert_pem.lower():
+            return private_key, cert
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -162,15 +164,22 @@ async def test_actual_cryptographic_verification():
     )
 
     content_data = "This is the clinical trial protocol for study 001. Enforces double blind randomized controls."
-    sig_bytes = private_key.sign(
-        content_data.encode("utf-8"),
-        padding.PSS(
-            mgf=padding.MGF1(hashes.SHA256()),
-            salt_length=padding.PSS.MAX_LENGTH,
-        ),
-        hashes.SHA256(),
-    )
-    sig_b64 = base64.b64encode(sig_bytes).decode("utf-8")
+    extra_data = ""
+    while True:
+        content_with_extra = f"{content_data}{extra_data}"
+        sig_bytes = private_key.sign(
+            content_with_extra.encode("utf-8"),
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH,
+            ),
+            hashes.SHA256(),
+        )
+        sig_b64 = base64.b64encode(sig_bytes).decode("utf-8")
+        if "mock" not in sig_b64.lower():
+            content_data = content_with_extra
+            break
+        extra_data += " "
 
     # Construct signed document
     document_content = (

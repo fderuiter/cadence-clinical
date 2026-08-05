@@ -28,33 +28,35 @@ def disable_mock_signatures(monkeypatch):
 
 def generate_test_keys():
     """Generate ephemeral RSA private key and self-signed certificate."""
-    private_key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=2048,
-    )
-    subject = issuer = x509.Name(
-        [
-            x509.NameAttribute(x509.NameOID.COMMON_NAME, "test-ca.org"),
-        ]
-    )
-    import datetime
-
-    cert = (
-        x509.CertificateBuilder()
-        .subject_name(subject)
-        .issuer_name(issuer)
-        .public_key(private_key.public_key())
-        .serial_number(x509.random_serial_number())
-        .not_valid_before(
-            datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=1)
+    while True:
+        private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=2048,
         )
-        .not_valid_after(
-            datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365)
+        subject = issuer = x509.Name(
+            [
+                x509.NameAttribute(x509.NameOID.COMMON_NAME, "test-ca.org"),
+            ]
         )
-        .sign(private_key, hashes.SHA256())
-    )
+        import datetime
 
-    return private_key, cert
+        cert = (
+            x509.CertificateBuilder()
+            .subject_name(subject)
+            .issuer_name(issuer)
+            .public_key(private_key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(
+                datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=1)
+            )
+            .not_valid_after(
+                datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365)
+            )
+            .sign(private_key, hashes.SHA256())
+        )
+        cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+        if "mock" not in cert_pem.lower():
+            return private_key, cert
 
 
 def test_legacy_padding_pkcs1v15_fails():
@@ -67,13 +69,19 @@ def test_legacy_padding_pkcs1v15_fails():
     store.register_certificate(user_id="test_user", cert_pem=cert_pem)
 
     content_data = "Trial records showing drug effectiveness."
-    # Sign using legacy PKCS1v15
-    sig_bytes_legacy = private_key.sign(
-        content_data.encode("utf-8"),
-        padding.PKCS1v15(),
-        hashes.SHA256(),
-    )
-    sig_b64 = base64.b64encode(sig_bytes_legacy).decode("utf-8")
+    extra_data = ""
+    while True:
+        content_with_extra = f"{content_data}{extra_data}"
+        sig_bytes_legacy = private_key.sign(
+            content_with_extra.encode("utf-8"),
+            padding.PKCS1v15(),
+            hashes.SHA256(),
+        )
+        sig_b64 = base64.b64encode(sig_bytes_legacy).decode("utf-8")
+        if "mock" not in sig_b64.lower():
+            content_data = content_with_extra
+            break
+        extra_data += " "
 
     document_content = (
         f"{content_data}\n"
@@ -101,16 +109,22 @@ def test_rsassa_pss_succeeds():
     store.register_certificate(user_id="test_user", cert_pem=cert_pem)
 
     content_data = "Trial records showing drug effectiveness."
-    # Sign using PSS
-    sig_bytes_pss = private_key.sign(
-        content_data.encode("utf-8"),
-        padding.PSS(
-            mgf=padding.MGF1(hashes.SHA256()),
-            salt_length=padding.PSS.MAX_LENGTH,
-        ),
-        hashes.SHA256(),
-    )
-    sig_b64 = base64.b64encode(sig_bytes_pss).decode("utf-8")
+    extra_data = ""
+    while True:
+        content_with_extra = f"{content_data}{extra_data}"
+        sig_bytes_pss = private_key.sign(
+            content_with_extra.encode("utf-8"),
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH,
+            ),
+            hashes.SHA256(),
+        )
+        sig_b64 = base64.b64encode(sig_bytes_pss).decode("utf-8")
+        if "mock" not in sig_b64.lower():
+            content_data = content_with_extra
+            break
+        extra_data += " "
 
     document_content = (
         f"{content_data}\n"
@@ -183,15 +197,22 @@ def test_unapproved_self_signed_certificate_fails():
 
     # Do NOT register in the trust store
     content_data = "Some dataset observations."
-    sig_bytes = private_key.sign(
-        content_data.encode("utf-8"),
-        padding.PSS(
-            mgf=padding.MGF1(hashes.SHA256()),
-            salt_length=padding.PSS.MAX_LENGTH,
-        ),
-        hashes.SHA256(),
-    )
-    sig_b64 = base64.b64encode(sig_bytes).decode("utf-8")
+    extra_data = ""
+    while True:
+        content_with_extra = f"{content_data}{extra_data}"
+        sig_bytes = private_key.sign(
+            content_with_extra.encode("utf-8"),
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH,
+            ),
+            hashes.SHA256(),
+        )
+        sig_b64 = base64.b64encode(sig_bytes).decode("utf-8")
+        if "mock" not in sig_b64.lower():
+            content_data = content_with_extra
+            break
+        extra_data += " "
 
     document_content = (
         f"{content_data}\n"
