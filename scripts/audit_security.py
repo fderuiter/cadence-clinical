@@ -36,6 +36,11 @@ EXCLUDED_PATHS = {
     ".pytest_cache",
     "node_modules",
     "report.xml",
+    "dist",
+    "build",
+    "env",
+    ".ruff_cache",
+    ".github",
 }
 
 _exemptions_cache = None
