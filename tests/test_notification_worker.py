@@ -101,7 +101,7 @@ async def setup_test_databases():
     nw._should_run = False
     if nw._worker_task:
         nw._worker_task.cancel()
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(asyncio.CancelledError, Exception):
             await nw._worker_task
         nw._worker_task = None
 
@@ -147,7 +147,7 @@ async def setup_test_databases():
     nw._should_run = False
     if nw._worker_task:
         nw._worker_task.cancel()
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(asyncio.CancelledError, Exception):
             await nw._worker_task
         nw._worker_task = None
 
