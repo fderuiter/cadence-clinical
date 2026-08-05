@@ -225,22 +225,32 @@ def validate_epro_payload(answers: dict[str, Any]) -> list[str]:
         try:
             age = int(answers["age"])
             if age < 18 or age > 110:
-                errors.append("Demographic Validation Error: Participant age must be between 18 and 110.")
-        except (ValueError, TypeError):
-            errors.append("Demographic Validation Error: Participant age must be a valid integer.")
+                errors.append(
+                    "Demographic Validation Error: Participant age must be between 18 and 110."
+                )
+        except ValueError, TypeError:
+            errors.append(
+                "Demographic Validation Error: Participant age must be a valid integer."
+            )
     # 2. Demographic Validation: gender must be M, F, or O
     if "gender" in answers:
         gender = str(answers["gender"]).upper()
         if gender not in ["M", "F", "O", "MALE", "FEMALE", "OTHER"]:
-            errors.append("Demographic Validation Error: Gender must be one of M, F, or O.")
+            errors.append(
+                "Demographic Validation Error: Gender must be one of M, F, or O."
+            )
     # 3. Clinical Validation: pain_score must be between 0 and 10
     if "pain_score" in answers:
         try:
             pain = int(answers["pain_score"])
             if pain < 0 or pain > 10:
-                errors.append("Clinical Validation Error: Pain score must be between 0 and 10.")
-        except (ValueError, TypeError):
-            errors.append("Clinical Validation Error: Pain score must be a valid integer.")
+                errors.append(
+                    "Clinical Validation Error: Pain score must be between 0 and 10."
+                )
+        except ValueError, TypeError:
+            errors.append(
+                "Clinical Validation Error: Pain score must be a valid integer."
+            )
     return errors
 
 
@@ -270,12 +280,14 @@ async def resolve_and_save_submission(
             offline_sync_markers=markers_dict,
             validation_errors=validation_errors,
             status="QUARANTINED",
-            triage_history=[{
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "user_id": user_id,
-                "action": "QUARANTINED",
-                "details": f"Automatically quarantined due to validation errors: {', '.join(validation_errors)}"
-            }]
+            triage_history=[
+                {
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "user_id": user_id,
+                    "action": "QUARANTINED",
+                    "details": f"Automatically quarantined due to validation errors: {', '.join(validation_errors)}",
+                }
+            ],
         )
         session.add(quarantine_entry)
         await session.flush()
@@ -1623,13 +1635,23 @@ class QuarantinedSubmissionResponse(BaseModel):
 
 class EditQuarantinedSubmissionRequest(BaseModel):
     answers: dict[str, Any] = Field(..., description="The edited ePRO/eCOA answers")
-    password: str = Field(..., description="The password for 21 CFR Part 11 compliant digital signature verification")
-    change_reason: str = Field(..., description="Standard 21 CFR Part 11 compliant reason for the edit")
+    password: str = Field(
+        ...,
+        description="The password for 21 CFR Part 11 compliant digital signature verification",
+    )
+    change_reason: str = Field(
+        ..., description="Standard 21 CFR Part 11 compliant reason for the edit"
+    )
 
 
 class ReplayQuarantinedSubmissionRequest(BaseModel):
-    password: str = Field(..., description="The password for 21 CFR Part 11 compliant digital signature verification")
-    change_reason: str = Field(..., description="Standard 21 CFR Part 11 compliant reason for the replay")
+    password: str = Field(
+        ...,
+        description="The password for 21 CFR Part 11 compliant digital signature verification",
+    )
+    change_reason: str = Field(
+        ..., description="Standard 21 CFR Part 11 compliant reason for the replay"
+    )
 
 
 @app.get(
@@ -1709,7 +1731,9 @@ async def edit_quarantined_submission(
             change_reason=payload.change_reason,
         )
         await session.commit()
-        raise HTTPException(status_code=400, detail="Invalid credentials for e-signature")
+        raise HTTPException(
+            status_code=400, detail="Invalid credentials for e-signature"
+        )
 
     # 2. Fetch quarantined submission
     stmt = select(EPROSubmissionQuarantine).where(EPROSubmissionQuarantine.id == id)
@@ -1726,14 +1750,16 @@ async def edit_quarantined_submission(
 
     # 4. Save edits, update validation errors, and append triage history
     history = list(entry.triage_history or [])
-    history.append({
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "user_id": user_id,
-        "action": "EDIT",
-        "details": f"Edited answers. Reason: {payload.change_reason}. Validation errors after edit: {new_validation_errors}",
-        "previous_answers": entry.answers,
-        "new_answers": payload.answers,
-    })
+    history.append(
+        {
+            "timestamp": datetime.now(UTC).isoformat(),
+            "user_id": user_id,
+            "action": "EDIT",
+            "details": f"Edited answers. Reason: {payload.change_reason}. Validation errors after edit: {new_validation_errors}",
+            "previous_answers": entry.answers,
+            "new_answers": payload.answers,
+        }
+    )
 
     # Update columns
     entry.answers = payload.answers
@@ -1790,7 +1816,9 @@ async def replay_quarantined_submission(
             change_reason=payload.change_reason,
         )
         await session.commit()
-        raise HTTPException(status_code=400, detail="Invalid credentials for e-signature")
+        raise HTTPException(
+            status_code=400, detail="Invalid credentials for e-signature"
+        )
 
     # 2. Fetch quarantined submission
     stmt = select(EPROSubmissionQuarantine).where(EPROSubmissionQuarantine.id == id)
@@ -1823,7 +1851,7 @@ async def replay_quarantined_submission(
         EPROSubmission.diary_id == entry.diary_id,
     )
     res_sub = await session.execute(stmt_sub)
-    existing = res_sub.scalars().first()
+    _existing = res_sub.scalars().first()
 
     # Reconstruct EPROSubmissionPayload representation to pass to reconcile
     payload_obj = EPROSubmissionPayload(
@@ -1834,8 +1862,10 @@ async def replay_quarantined_submission(
         offline_sync_markers=OfflineSyncMarkers(
             sequence_number=entry.offline_sync_markers.get("sequence_number", 1),
             client_id=entry.offline_sync_markers.get("client_id", "triage"),
-            conflict_strategy=entry.offline_sync_markers.get("conflict_strategy", "CLIENT_WINS"),
-        )
+            conflict_strategy=entry.offline_sync_markers.get(
+                "conflict_strategy", "CLIENT_WINS"
+            ),
+        ),
     )
 
     # Reconcile and save submission using resolve_and_save_submission helper
@@ -1860,12 +1890,14 @@ async def replay_quarantined_submission(
 
     # 6. Mark quarantine entry as REPLAYED and update triage history
     history = list(entry.triage_history or [])
-    history.append({
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "user_id": user_id,
-        "action": "REPLAY_SUCCESS",
-        "details": f"Successfully replayed to database. Reason: {payload.change_reason}",
-    })
+    history.append(
+        {
+            "timestamp": datetime.now(UTC).isoformat(),
+            "user_id": user_id,
+            "action": "REPLAY_SUCCESS",
+            "details": f"Successfully replayed to database. Reason: {payload.change_reason}",
+        }
+    )
     entry.status = "REPLAYED"
     entry.triage_history = history
     session.add(entry)
@@ -1888,4 +1920,3 @@ async def replay_quarantined_submission(
         "resolved_status": resolved["status"],
         "quarantine_id": entry.id,
     }
-

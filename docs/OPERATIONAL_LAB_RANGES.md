@@ -22,22 +22,22 @@ Laboratory reference ranges are structured rules matched against a subject's dem
 
 A `LabReferenceRange` consists of the following parameters:
 
-| Field | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| `study_id` | String | Yes | Unique clinical trial study identifier (e.g., `STUDY-123`). |
-| `test_code` | String | Yes | Standard laboratory parameter code (e.g., `WBC`, `HEMOGLOBIN`, `ALT`). |
-| `test_name` | String | Yes | Descriptive parameter name (e.g., `White Blood Cell Count`). |
-| `source` | Enum | Yes | Reference range source: `CENTRAL` or `LOCAL`. |
-| `site_id` | String | No | Target local site identifier. Must be `None` when `source = CENTRAL`. |
-| `unit` | String | Yes | Original reporting unit (e.g., `10^9/L`, `g/dL`). |
-| `normalized_unit` | String | Yes | Unified standard unit of measurement mapped under UCUM. |
-| `sex_applicability`| Enum | Yes | Sex applicability constraint: `M`, `F`, `ALL`, or `U`. |
-| `age_low` | Float | No | Inclusive minimum age bound in completed years. Null signifies no lower limit. |
-| `age_high` | Float | No | Inclusive maximum age bound in completed years. Null signifies no upper limit. |
-| `low_bound` | Float | No | Inclusive lower limit of normal. |
-| `high_bound` | Float | No | Inclusive upper limit of normal. |
-| `critical_low` | Float | No | Exclusive critical low alert boundary. |
-| `critical_high` | Float | No | Exclusive critical high alert boundary. |
+| Field               | Type   | Required | Description                                                                    |
+| :------------------ | :----- | :------- | :----------------------------------------------------------------------------- |
+| `study_id`          | String | Yes      | Unique clinical trial study identifier (e.g., `STUDY-123`).                    |
+| `test_code`         | String | Yes      | Standard laboratory parameter code (e.g., `WBC`, `HEMOGLOBIN`, `ALT`).         |
+| `test_name`         | String | Yes      | Descriptive parameter name (e.g., `White Blood Cell Count`).                   |
+| `source`            | Enum   | Yes      | Reference range source: `CENTRAL` or `LOCAL`.                                  |
+| `site_id`           | String | No       | Target local site identifier. Must be `None` when `source = CENTRAL`.          |
+| `unit`              | String | Yes      | Original reporting unit (e.g., `10^9/L`, `g/dL`).                              |
+| `normalized_unit`   | String | Yes      | Unified standard unit of measurement mapped under UCUM.                        |
+| `sex_applicability` | Enum   | Yes      | Sex applicability constraint: `M`, `F`, `ALL`, or `U`.                         |
+| `age_low`           | Float  | No       | Inclusive minimum age bound in completed years. Null signifies no lower limit. |
+| `age_high`          | Float  | No       | Inclusive maximum age bound in completed years. Null signifies no upper limit. |
+| `low_bound`         | Float  | No       | Inclusive lower limit of normal.                                               |
+| `high_bound`        | Float  | No       | Inclusive upper limit of normal.                                               |
+| `critical_low`      | Float  | No       | Exclusive critical low alert boundary.                                         |
+| `critical_high`     | Float  | No       | Exclusive critical high alert boundary.                                        |
 
 ### 2.2 Logical Constraint Enforcements
 
@@ -69,17 +69,20 @@ When a new laboratory observation is captured, the platform's selection engine m
 A candidate rule is assigned scores along three dimensions. If any dimension scores $0$, the candidate is incompatible and discarded.
 
 #### 1. Site Specificity Score
+
 - **Score 3 (Exact Site Match):** Observation's `lab_source` is `LOCAL`, candidate range is `LOCAL` and candidate `site_id` matches the observation's `site_id` exactly.
 - **Score 2 (Generic Local Match):** Observation's `lab_source` is `LOCAL`, candidate range is `LOCAL` but has no specific `site_id` (applies to all sites utilizing local labs).
 - **Score 1 (Central Fallback):** Candidate range is `CENTRAL` (applies globally).
 - **Score 0 (Incompatible):** In any other condition (e.g., LOCAL ranges never match CENTRAL observations).
 
 #### 2. Sex Specificity Score
+
 - **Score 2 (Exact Sex Match):** Subject's biological sex matches the range's `sex_applicability` exactly (e.g., subject is Male, range is Male).
 - **Score 1 (Generic Fallback):** Candidate `sex_applicability` is `ALL`, `U`, `None`, or empty.
 - **Score 0 (Incompatible):** Range is for `F` but subject is `M`, or vice-versa.
 
 #### 3. Age Specificity Score
+
 - **Score 3 (Both Bounds Matched):** Subject age is inclusive of both `age_low` and `age_high`.
 - **Score 2 (Single Bound Matched):** Subject age matches single-bounded range (e.g., only `age_low` is defined, and subject age $\ge$ `age_low`).
 - **Score 1 (No Bounds Matched):** Candidate has no age bounds defined (`age_low = None`, `age_high = None`).
@@ -99,6 +102,7 @@ If multiple candidate ranges obtain identical scores across all three dimensions
 ## 4. Laboratory Value Evaluation & Range Indicators
 
 Laboratory values are evaluated against the resolved reference range boundaries using the following inclusion policy:
+
 - **Normal Boundaries (`low_bound`, `high_bound`):** Inclusive.
 - **Critical Boundaries (`critical_low`, `critical_high`):** Exclusive.
 
@@ -159,22 +163,26 @@ X-Change-Reason: Manual revision of Hemoglobin bounds for STUDY-123
 ### 5.2 API Operations
 
 #### 1. Create a Reference Range
+
 - **Endpoint:** `POST /api/v1/execution/lab-ranges`
 - **Request Body:** Standard `LabReferenceRange` JSON.
 - **Response Status:** `201 Created`
 
 #### 2. Update an Existing Range
+
 - **Endpoint:** `PUT /api/v1/execution/lab-ranges/{id}`
 - **Request Body:** Partial update payload (e.g. `{"low_bound": 4.2}`).
 - **Response Status:** `200 OK`
 - **Audit Behavior:** Increment range version index. Writes an `UPDATE` record into the relational audit ledger.
 
 #### 3. Soft-Delete a Range
+
 - **Endpoint:** `DELETE /api/v1/execution/lab-ranges/{id}`
 - **Response Status:** `200 OK`
 - **Internal Action:** Sets `is_deleted = True`. This range is immediately excluded from subsequent active selection matching. Hard deletion is blocked at the database trigger layer.
 
 #### 4. Cohort Recalculation
+
 - **Endpoint:** `POST /api/v1/execution/lab-ranges/recalculate`
 - **Authorized Roles:** `CRA` or `Data Manager` (consistent with §5.1)
 - **Change Reasons:** Since this is a mutating write action that updates active clinical observation records, it strictly requires a non-empty `X-Change-Reason` header.
@@ -193,10 +201,12 @@ X-Change-Reason: Manual revision of Hemoglobin bounds for STUDY-123
 ## 6. Coexistence with Statistical Outliers
 
 The platform maintains two distinct classification layers on `ClinicalObservation` records:
+
 1. **Lab Indicators:** Clinical flags indicating out-of-range status relative to physiological/demographic norms (`lab_indicator`, `lab_out_of_range`).
 2. **Statistical Outlier Flags (`is_outlier`):** Statistical flags indicating that the value lies outside of standard statistical boundaries relative to the cohort's statistical distribution.
 
 These flags **coexist independently**:
+
 - An observation may be physiologically out of range (e.g. `lab_indicator = HIGH`) but not classified as a statistical outlier if the cohort's variance is wide.
 - Conversely, an observation may be within normal physiological ranges but still flagged as a statistical outlier if it lies far from the mean of that specific cohort.
 - Updates or recalculations of physiological reference ranges **never** interfere with or overwrite `is_outlier` flags, which are managed independently by statistical cohort recalculation endpoints.
@@ -256,11 +266,13 @@ uv run pytest tests/test_lab_reference_range_persistence.py -k test_schema_evolu
 Several policy constraints require local operational guidance or are configured as follow-up requirements:
 
 ### 8.1 Biological Sex Mapping & Code Normalization
+
 - **Current Behavior:** The engine maps biological sex string variations (such as `MALE`, `BOY`, `MAN`, `M`) to `"M"`, and (`FEMALE`, `GIRL`, `WOMAN`, `F`) to `"F"`.
 - **Policy Decision/Risk:** Intersex, non-binary, or transgender subjects may not align cleanly with traditional binary biological reference ranges.
 - **Operator Guideline:** For transgender or gender-diverse patients, operators must consult clinical monitoring protocols and register biological sex matching the physiological target values or configure specific gender-neutral (`ALL`) ranges.
 
 ### 8.2 Ambiguous Overlapping Ranges
+
 - **Current Behavior:** The selection engine resolves overlapping ranges of equal specificity using deterministic tie-breakers (e.g., narrowest age span, lowest `low_bound`).
 - **Policy Decision/Risk:** Overlapping configurations are usually data entry errors. The platform does not reject overlapping rules but warns the data manager.
 - **Operator Guideline:** Avoid uploading overlapping range ranges for the same study-site-age-sex cohort. Audit range lists regularly to ensure unique matches are intended.

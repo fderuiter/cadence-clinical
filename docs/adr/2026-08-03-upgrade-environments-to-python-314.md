@@ -1,9 +1,9 @@
 # ADR-253: Upgrade Environments to Python 3.14
 
-* **Status:** Accepted
-* **Date:** 2026-08-03
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-03
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -17,9 +17,9 @@ This traces to requirement **PRD-SYS-001** (GxP Environment Consistency and Syst
 
 ## 2. Decision Drivers & Constraints
 
-* **Zero Environment Drift:** Ensure perfect, 100% functional alignment between local dev boxes, CI pipelines, and live containers.
-* **GxP Compliance & Automated Tracing:** Ensure that regulatory reports (such as IQ/OQ/PQ Qualification Report) capture a statically locked runtime signature (`Python 3.14`).
-* **Future-Proof Standard Library & Type Tooling:** Gain access to modern Python 3.14 syntax capabilities, modern type-checking annotations, and optimized runtime execution features.
+- **Zero Environment Drift:** Ensure perfect, 100% functional alignment between local dev boxes, CI pipelines, and live containers.
+- **GxP Compliance & Automated Tracing:** Ensure that regulatory reports (such as IQ/OQ/PQ Qualification Report) capture a statically locked runtime signature (`Python 3.14`).
+- **Future-Proof Standard Library & Type Tooling:** Gain access to modern Python 3.14 syntax capabilities, modern type-checking annotations, and optimized runtime execution features.
 
 ## 3. Options Considered
 
@@ -32,19 +32,19 @@ Chosen option: **Option A** because it enforces strict, predictable GxP environm
 
 ## 5. Consequences & Trade-offs
 
-* **Positive:** Absolute consistency across testing and production targets.
-* **Positive:** Strict style configurations (e.g. automatic UP037 and UP043 type-annotation upgrades) automatically enforced by Ruff under the Python 3.14 runtime target.
-* **Positive:** IQ/OQ/PQ validation logs statically assert and qualify on Python 3.14.5.
-* **Negative:** Workspace dependencies must be locked and compatible with the Python 3.14 baseline.
+- **Positive:** Absolute consistency across testing and production targets.
+- **Positive:** Strict style configurations (e.g. automatic UP037 and UP043 type-annotation upgrades) automatically enforced by Ruff under the Python 3.14 runtime target.
+- **Positive:** IQ/OQ/PQ validation logs statically assert and qualify on Python 3.14.5.
+- **Negative:** Workspace dependencies must be locked and compatible with the Python 3.14 baseline.
 
 ## 6. Implementation & Verification
 
-* **Target files/packages modified:**
-  * Docker deployment configuration: `docker/Dockerfile`
-  * Workflow actions: `.github/workflows/ci.yml`, `.github/workflows/production-pipeline.yml`, `.github/workflows/project-automation.yml`
-  * Packaging and workspace manifests: `pyproject.toml`, `package.json`, `uv.lock`
-  * Runtime specification: `.python-version`, `Makefile`
-  * Developer and system guidelines: `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `docs/LOCAL_DEV_ENVIRONMENT.md`, `docs/SDLC/07_Operations_Deployment_Guide.md`
-* **Verification tests:**
-  * System-level environment asserts under `tests/validation/environment_integrity_suite.py` updated to verify a minimum Python runtime version of `>= (3, 14)`.
-  * Style and lint validation: All codebase files formatted and lint-checked cleanly using target runtime syntax.
+- **Target files/packages modified:**
+  - Docker deployment configuration: `docker/Dockerfile`
+  - Workflow actions: `.github/workflows/ci.yml`, `.github/workflows/production-pipeline.yml`, `.github/workflows/project-automation.yml`
+  - Packaging and workspace manifests: `pyproject.toml`, `package.json`, `uv.lock`
+  - Runtime specification: `.python-version`, `Makefile`
+  - Developer and system guidelines: `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `docs/LOCAL_DEV_ENVIRONMENT.md`, `docs/SDLC/07_Operations_Deployment_Guide.md`
+- **Verification tests:**
+  - System-level environment asserts under `tests/validation/environment_integrity_suite.py` updated to verify a minimum Python runtime version of `>= (3, 14)`.
+  - Style and lint validation: All codebase files formatted and lint-checked cleanly using target runtime syntax.

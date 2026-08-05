@@ -1,9 +1,9 @@
 # ADR-108: Consolidated eClinical Services and Compliance Enhancements
 
-* **Status:** Accepted
-* **Date:** 2026-07-29
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-07-29
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -13,10 +13,10 @@ Fifteen distinct feature branches (PRs #782 through #796) introduced enhancement
 
 ## 2. Decision Drivers & Constraints
 
-* Unified security & tenant isolation across Global Library and study instances.
-* Deprecation of legacy browser-side header signing in favor of gateway-exclusive Bearer token authentication.
-* Strict multi-site isolation for eTMF documents and clinical audit trails.
-* Full requirements traceability and qualification report verification under GxP protocol.
+- Unified security & tenant isolation across Global Library and study instances.
+- Deprecation of legacy browser-side header signing in favor of gateway-exclusive Bearer token authentication.
+- Strict multi-site isolation for eTMF documents and clinical audit trails.
+- Full requirements traceability and qualification report verification under GxP protocol.
 
 ## 3. Options Considered
 
@@ -29,10 +29,10 @@ Chosen option: Option A. Sequential topological integration ensures security fou
 
 ## 5. Consequences & Trade-offs
 
-* Positive: Single audit point for 15 PRs with 100% test pass rate, updated RTM traceability, and clean frontend/backend compilation.
-* Negative: Multi-stage conflict resolution required for shared service modules.
+- Positive: Single audit point for 15 PRs with 100% test pass rate, updated RTM traceability, and clean frontend/backend compilation.
+- Negative: Multi-stage conflict resolution required for shared service modules.
 
 ## 6. Implementation & Verification
 
-* Target files modified across `apps/`, `packages/`, `docs/`, and `tests/`.
-* Verified using `pnpm run lint`, `pnpm run build`, `uv run ruff check .`, `uv run pytest`, and `uv run python scripts/sync_gxp.py`.
+- Target files modified across `apps/`, `packages/`, `docs/`, and `tests/`.
+- Verified using `pnpm run lint`, `pnpm run build`, `uv run ruff check .`, `uv run pytest`, and `uv run python scripts/sync_gxp.py`.

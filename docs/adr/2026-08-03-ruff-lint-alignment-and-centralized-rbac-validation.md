@@ -1,9 +1,9 @@
 # ADR-255: Ruff Lint Alignment and Centralized RBAC Validation
 
-* **Status:** Accepted
-* **Date:** 2026-08-03
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-03
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -15,28 +15,30 @@ To satisfy the system requirement **PRD-SYS-001** and ensure strict adherence to
 
 ## 2. Decision Drivers & Constraints
 
-* **Driver 1 (Quality Gate Compliance):** Ensure all Python modules successfully pass automated CI formatting and linting (Ruff checks).
-* **Driver 2 (RBAC Transparency):** Keep permission matrices simple, clean, and free from redundant or conflict-prone entries.
-* **Driver 3 (GxP Traceability):** Satisfy **PRD-SYS-001** for centralized user privilege validation and secure system execution.
+- **Driver 1 (Quality Gate Compliance):** Ensure all Python modules successfully pass automated CI formatting and linting (Ruff checks).
+- **Driver 2 (RBAC Transparency):** Keep permission matrices simple, clean, and free from redundant or conflict-prone entries.
+- **Driver 3 (GxP Traceability):** Satisfy **PRD-SYS-001** for centralized user privilege validation and secure system execution.
 
 ## 3. Options Considered
 
 ### Option 1: Manually ignore the dictionary key duplication and import order violations using inline `# noqa` comments
-* **Overview:** Disable specific linter rules on a line-by-line basis to allow duplicates to persist.
-* **Pros:**
-  * ✅ Leaves legacy code untouched.
-* **Cons:**
-  * ❌ Increases technical debt and ignores potential configuration bugs.
-  * ❌ Violates strict GxP static check enforcements.
+
+- **Overview:** Disable specific linter rules on a line-by-line basis to allow duplicates to persist.
+- **Pros:**
+  - ✅ Leaves legacy code untouched.
+- **Cons:**
+  - ❌ Increases technical debt and ignores potential configuration bugs.
+  - ❌ Violates strict GxP static check enforcements.
 
 ### Option 2: Clean up configuration, consolidate keys, and run global formatting alignment (Selected)
-* **Overview:** Remove duplicate dictionary keys from `rbac.py` and run automatic import sorting and code format alignment.
-* **Pros:**
-  * ✅ Completely resolves Ruff rule `F601` violations.
-  * ✅ Enhances clarity of role definitions in our security layer.
-  * ✅ Satisfies all CI quality gate criteria.
-* **Cons:**
-  * ❌ Modifying central security files requires verification and architectural check approvals.
+
+- **Overview:** Remove duplicate dictionary keys from `rbac.py` and run automatic import sorting and code format alignment.
+- **Pros:**
+  - ✅ Completely resolves Ruff rule `F601` violations.
+  - ✅ Enhances clarity of role definitions in our security layer.
+  - ✅ Satisfies all CI quality gate criteria.
+- **Cons:**
+  - ❌ Modifying central security files requires verification and architectural check approvals.
 
 ## 4. Decision Outcome
 
@@ -44,11 +46,11 @@ To satisfy the system requirement **PRD-SYS-001** and ensure strict adherence to
 
 ## 5. Consequences & Trade-offs
 
-* **Positive Impact:** Safer role evaluations and 100% clean linter status.
-* **Negative Impact / Technical Debt:** Requires a new ADR to satisfy branch architectural validation constraints.
-* **Mitigation Strategy:** Automated script enforcements in CI/CD prevent regressions.
+- **Positive Impact:** Safer role evaluations and 100% clean linter status.
+- **Negative Impact / Technical Debt:** Requires a new ADR to satisfy branch architectural validation constraints.
+- **Mitigation Strategy:** Automated script enforcements in CI/CD prevent regressions.
 
 ## 6. Implementation & Verification
 
-* **Affected Repositories / Services:** `packages/security/rbac.py`, `apps/designer/main.py`, `apps/designer/soa_models.py`, `tests/test_rbac.py`, `tests/test_sdv_item_level_rbac.py`.
-* **Verification Plan:** Validated via `uv run ruff check .` and unit tests in `tests/test_rbac.py`.
+- **Affected Repositories / Services:** `packages/security/rbac.py`, `apps/designer/main.py`, `apps/designer/soa_models.py`, `tests/test_rbac.py`, `tests/test_sdv_item_level_rbac.py`.
+- **Verification Plan:** Validated via `uv run ruff check .` and unit tests in `tests/test_rbac.py`.

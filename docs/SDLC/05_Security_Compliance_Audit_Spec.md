@@ -3,6 +3,7 @@
 ---
 
 ## Document Control & Executive Summary
+
 - **Document Identifier:** CAD-SDLC-SEC-005
 - **Version:** 1.0.0
 - **Effective Date:** July 24, 2026
@@ -15,6 +16,7 @@
   - GDPR (General Data Protection Regulation - Regulation (EU) 2016/679)
 
 ### Executive Summary
+
 The Cadence Clinical platform represents a unified eClinical framework synthesizing upstream Clinical Metadata Management (MDR) with downstream Electronic Data Capture (EDC) into an automated, digital data flow (DDF) system. Within a GxP (Good Practice) regulated clinical trial context, the integrity, traceability, and confidentiality of metadata and clinical trial transactional data are of paramount importance.
 
 This technical specification details the security controls, regulatory compliance architectures, role-based access control (RBAC) frameworks, and immutable audit logging mechanisms engineered to ensure that Cadence Clinical is fully validated for Phase I–IV clinical trials globally. Specifically, this document provides the architectural designs, database schemas, cryptographic algorithms, and authentication workflows that guarantee non-repudiation, support strict data blinding protocols, and maintain a tamper-proof audit ledger of all system mutations.
@@ -46,9 +48,10 @@ Cadence Clinical utilizes a decentralized, identity-first architecture centered 
 ```
 
 ### 1.1 Keycloak-Based OIDC Integration
+
 All user authentications are redirected to Keycloak via OAuth 2.0 Authorization Code Flow with PKCE (Proof Key for Code Exchange). Upon successful authentication, Keycloak issues a cryptographically signed RS256 JWT containing user identity metadata, realm-level roles, client-level roles, and group memberships.
 
-* **Token Payload Claims:**
+- **Token Payload Claims:**
   - `sub`: Unique OIDC identifier of the user (mapped to `user_id` in audit records).
   - `preferred_username`: Human-readable user login name.
   - `email`: Verified electronic mail address.
@@ -58,7 +61,9 @@ All user authentications are redirected to Keycloak via OAuth 2.0 Authorization 
   - `custom_attributes.unblinded_access`: Boolean flag indicating if the user is authorized to bypass clinical data blinding boundaries.
 
 ### 1.2 Multi-Factor Authentication (MFA) Policies
+
 Multi-Factor Authentication (MFA) is strictly enforced for all system administrative, sponsor, and clinical investigator roles.
+
 - **MFA Methods Allowed:**
   - **TOTP (Time-Based One-Time Password):** Utilizing RFC 6238 compliant authenticators (e.g., Google Authenticator, Microsoft Authenticator) with SHA-1, SHA-256, or SHA-512 and a 30-second rotation step.
   - **WebAuthn / FIDO2:** Recommended for investigator and administrator roles, leveraging hardware security keys (e.g., YubiKey) or biometric local authenticators (Windows Hello, TouchID).
@@ -68,19 +73,20 @@ Multi-Factor Authentication (MFA) is strictly enforced for all system administra
   - MFA session caches expire every 12 hours, requiring a fresh multi-factor challenge upon daily login.
 
 ### 1.3 Enterprise Password Complexity & Lockout Policies
+
 To meet FDA 21 CFR § 11.10(g) and ISO/IEC 27001:2022 Control A.8.20 requirements, the password policies are enforced natively at the identity provider level:
 
-| Policy Parameter | Value / Constraint | Technical Implementation |
-| :--- | :--- | :--- |
-| **Minimum Length** | 14 Characters | Enforced via Keycloak custom password policy regex |
-| **Character Composition** | Upper, Lower, Numbers, Special | Minimum 1 of each category required |
-| **Password History** | 24 Versions | Prevents recycling of the last 24 passwords |
-| **Maximum Password Age** | 90 Days | Mandatory password expiration and rotation trigger |
-| **Minimum Password Age** | 1 Day | Prevents immediate password recycling through repeated changes |
-| **Temporary Passwords** | 24 Hours | System-generated setup passwords expire in 24 hours |
-| **Brute-Force Lockout** | 5 Failed Attempts | Account locked after 5 consecutive failed login attempts |
-| **Lockout Duration** | 15 Minutes | Exponentially scales up to 24 hours on subsequent lockouts |
-| **Inactivity Session Timeout**| 15 Minutes | Session terminated, client memory cleared, redirect to re-auth |
+| Policy Parameter               | Value / Constraint             | Technical Implementation                                       |
+| :----------------------------- | :----------------------------- | :------------------------------------------------------------- |
+| **Minimum Length**             | 14 Characters                  | Enforced via Keycloak custom password policy regex             |
+| **Character Composition**      | Upper, Lower, Numbers, Special | Minimum 1 of each category required                            |
+| **Password History**           | 24 Versions                    | Prevents recycling of the last 24 passwords                    |
+| **Maximum Password Age**       | 90 Days                        | Mandatory password expiration and rotation trigger             |
+| **Minimum Password Age**       | 1 Day                          | Prevents immediate password recycling through repeated changes |
+| **Temporary Passwords**        | 24 Hours                       | System-generated setup passwords expire in 24 hours            |
+| **Brute-Force Lockout**        | 5 Failed Attempts              | Account locked after 5 consecutive failed login attempts       |
+| **Lockout Duration**           | 15 Minutes                     | Exponentially scales up to 24 hours on subsequent lockouts     |
+| **Inactivity Session Timeout** | 15 Minutes                     | Session terminated, client memory cleared, redirect to re-auth |
 
 ---
 
@@ -89,6 +95,7 @@ To meet FDA 21 CFR § 11.10(g) and ISO/IEC 27001:2022 Control A.8.20 requirement
 The Cadence Clinical platform enforces a highly granular Role-Based Access Control (RBAC) scheme designed to guarantee clear separation of duties between the trial **Sponsor**, the clinical **Site**, and the automated **System Administrator** roles. These boundaries prevent unauthorized clinical mutations, guarantee patient privacy, and strictly enforce the protocol-specified **Blinding Plan** (preventing unblinded study details from leaking to investigators or sponsor monitors).
 
 ### 2.1 Clinical & System Roles Defined
+
 1. **System Administrator (SysAdmin):** Responsible for infrastructure, Keycloak configuration, system updates, and database maintenance. Under no circumstances does the SysAdmin have access to unblinded clinical trial results or patient demographic mapping, except in system-recovery maintenance workflows which are fully audited.
 2. **Sponsor Study Designer:** Authors the clinical protocol, defines visits, arms, epochs, and designs the eCRF templates within the Designer service (Neo4j). Operates prior to trial execution.
 3. **Sponsor Data Manager (DM):** Oversees overall trial data quality, creates complex edit checks, manages query lifecycles, and initiates data freeze/lock operations.
@@ -103,36 +110,38 @@ The Cadence Clinical platform enforces a highly granular Role-Based Access Contr
 ### 2.2 System Resource & Feature Permission Matrix
 
 The following matrix defines the granular operations allowed for each role across system modules.
+
 - **`C`**: Create
 - **`R`**: Read (View Only)
 - **`U`**: Update/Edit
 - **`D`**: Soft-Delete / Inactivate
 - **`N`**: No Access
 
-| Clinical Role | Study Design (USDM) | Subject Enrollment | eCRF Data Entry | Query Lifecycle | Source Doc Verification (SDV) | System Audit Logs | Export Unmasked | Export Masked |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **SysAdmin** | R | N | N | N | N | R | N | N | R |
-| **Sponsor Designer**| C/R/U/D | N | N | N | N | R | N | N | N |
-| **Sponsor DM** | R | R | R | C/R/U/D | N | R | N | R | C/R/U |
-| **Sponsor MM** | R | R | R | C/R/U | N | R | N | R | R |
-| **Sponsor Statistician**| R | N | N | N | N | R | N | N | C/R/U |
-| **Site Investigator (PI)**| R | C/R/U | C/R/U | R/U (Ans) | R | R (Site) | N | N | N |
-| **Site Coordinator (CRC)**| R | C/R/U | C/R/U (Draft) | R/U (Ans) | N | R (Site) | N | N | N |
-| **Site Monitor (CRA)** | R | R | R | C/R/U/D | C/R/U/D | R (Site) | N | N | R (Site) |
-| **Patient (ePRO)** | N | N | C/U (Diary) | N | N | N | N | N | N |
-| **External Monitor (CRO)** | R | N | N | N | N | R | N | N | R |
+| Clinical Role              | Study Design (USDM) | Subject Enrollment | eCRF Data Entry | Query Lifecycle | Source Doc Verification (SDV) | System Audit Logs | Export Unmasked | Export Masked |
+| :------------------------- | :-----------------: | :----------------: | :-------------: | :-------------: | :---------------------------: | :---------------: | :-------------: | :-----------: |
+| **SysAdmin**               |          R          |         N          |        N        |        N        |               N               |         R         |        N        |       N       | R        |
+| **Sponsor Designer**       |       C/R/U/D       |         N          |        N        |        N        |               N               |         R         |        N        |       N       | N        |
+| **Sponsor DM**             |          R          |         R          |        R        |     C/R/U/D     |               N               |         R         |        N        |       R       | C/R/U    |
+| **Sponsor MM**             |          R          |         R          |        R        |      C/R/U      |               N               |         R         |        N        |       R       | R        |
+| **Sponsor Statistician**   |          R          |         N          |        N        |        N        |               N               |         R         |        N        |       N       | C/R/U    |
+| **Site Investigator (PI)** |          R          |       C/R/U        |      C/R/U      |    R/U (Ans)    |               R               |     R (Site)      |        N        |       N       | N        |
+| **Site Coordinator (CRC)** |          R          |       C/R/U        |  C/R/U (Draft)  |    R/U (Ans)    |               N               |     R (Site)      |        N        |       N       | N        |
+| **Site Monitor (CRA)**     |          R          |         R          |        R        |     C/R/U/D     |            C/R/U/D            |     R (Site)      |        N        |       N       | R (Site) |
+| **Patient (ePRO)**         |          N          |         N          |   C/U (Diary)   |        N        |               N               |         N         |        N        |       N       | N        |
+| **External Monitor (CRO)** |          R          |         N          |        N        |        N        |               N               |         R         |        N        |       N       | R        |
 
 ### 2.3 Field-Level Visibility & Blinding Matrix
+
 To guarantee compliance with blinding regulations, several parameters must be completely hidden or obfuscated from blinded roles. Blinded roles include CRCs, PIs, CRAs, and general Sponsor Data Managers during active trial phases. Unblinded roles include designated unblinded statisticians, unblinded pharmacists, and specific safety monitoring boards (DSMB).
 
-| Database Table / Entity | Field/Attribute | Blinded Roles (PI, CRC, CRA, DM, MM, External Monitor) | Unblinded Roles (Unblinded Pharmacist, DSMB) | Technical Enforcement Mechanism |
-| :--- | :--- | :--- | :--- | :--- |
-| `subject_demographics` | Patient Initials, SSN, DOB | Masked / Hashed (No Read) | Read Only (PI/CRC Site Only) | API-layer field stripping in Gateway based on OIDC token attributes. |
-| `subject_demographics` | Country, Gender, Age | Read Only | Read Only | Exposed globally across all clinical site roles. |
-| `randomization_allocation` | Treatment Arm ID / Active vs Placebo | Masked ("Blinded") | Full Read/Write | Gateway dynamic payload replacement. If role is blinded, Treatment Arm is replaced with string `"BLINDED"`. |
-| `randomization_allocation` | Stratification Factors (e.g., biomarker) | Read Only | Read/Write | Exposed to investigator to confirm randomization baseline without showing medication assignment. |
-| `form_submissions` | Administered Drug Code | Obfuscated ("Kit Number XYZ") | Full Read | Trial drug labels are randomized. Blinded user sees only package kit ID. Database resolves package to drug on unblinded layer. |
-| `audit_logs` | Changed Reason for Blinded Field | Obfuscated | Full Read | Logs associated with unblinding changes are stripped of direct value assignments in standard audit API. |
+| Database Table / Entity    | Field/Attribute                          | Blinded Roles (PI, CRC, CRA, DM, MM, External Monitor) | Unblinded Roles (Unblinded Pharmacist, DSMB) | Technical Enforcement Mechanism                                                                                                |
+| :------------------------- | :--------------------------------------- | :----------------------------------------------------- | :------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------- |
+| `subject_demographics`     | Patient Initials, SSN, DOB               | Masked / Hashed (No Read)                              | Read Only (PI/CRC Site Only)                 | API-layer field stripping in Gateway based on OIDC token attributes.                                                           |
+| `subject_demographics`     | Country, Gender, Age                     | Read Only                                              | Read Only                                    | Exposed globally across all clinical site roles.                                                                               |
+| `randomization_allocation` | Treatment Arm ID / Active vs Placebo     | Masked ("Blinded")                                     | Full Read/Write                              | Gateway dynamic payload replacement. If role is blinded, Treatment Arm is replaced with string `"BLINDED"`.                    |
+| `randomization_allocation` | Stratification Factors (e.g., biomarker) | Read Only                                              | Read/Write                                   | Exposed to investigator to confirm randomization baseline without showing medication assignment.                               |
+| `form_submissions`         | Administered Drug Code                   | Obfuscated ("Kit Number XYZ")                          | Full Read                                    | Trial drug labels are randomized. Blinded user sees only package kit ID. Database resolves package to drug on unblinded layer. |
+| `audit_logs`               | Changed Reason for Blinded Field         | Obfuscated                                             | Full Read                                    | Logs associated with unblinding changes are stripped of direct value assignments in standard audit API.                        |
 
 ---
 
@@ -141,9 +150,11 @@ To guarantee compliance with blinding regulations, several parameters must be co
 Cadence Clinical implements a defense-in-depth auditing strategy to ensure non-repudiation, GxP validation compliance, and long-term immutability of the clinical record. This is achieved through three integrated layers: **Application-Layer Event Tracking**, **Database-Level Auditing Triggers**, and a **Cryptographic Ledger Workflow**.
 
 ### 3.1 PostgreSQL Database Schema & Trigger Specification
+
 As a fail-safe mechanism against direct administrative queries, database script execution, or system-level interventions, the PostgreSQL database enforces immutable logging using native database-level triggers on a dedicated shadow schema.
 
 #### Audit Log Table Schema Definition
+
 ```sql
 CREATE TABLE IF NOT EXISTS public.audit_logs (
     id VARCHAR(36) PRIMARY KEY,
@@ -166,6 +177,7 @@ CREATE INDEX idx_audit_seal ON public.audit_logs (cryptographic_seal);
 ```
 
 #### PL/pgSQL Trigger Function for Mutation Capture
+
 To guarantee that any mutation—even if initiated via a standard database client—is recorded chronologically, the following trigger is declared in PostgreSQL. It automatically blocks direct manual updates to the `audit_logs` table itself, establishing complete database-level immutability.
 
 ```sql
@@ -262,6 +274,7 @@ $$ LANGUAGE plpgsql;
 ```
 
 #### Mapping Table Triggers
+
 Every transactional entity (e.g., `subjects`, `form_submissions`, `queries`, `randomization_allocation`) must bind this trigger:
 
 ```sql
@@ -272,6 +285,7 @@ FOR EACH ROW EXECUTE FUNCTION public.capture_model_mutation();
 ```
 
 ### 3.2 Application-Layer Event Tracking & Context Propagation
+
 While database triggers provide absolute safety, the FastAPI application layer coordinates OIDC sessions with database operations using **SQLAlchemy Async Session Context Listeners**.
 
 To pass HTTP authentication credentials down to the PostgreSQL trigger context, the API Gateway propagates the `X-User-ID` and `X-Change-Reason` headers. The FastAPI Execution Service uses Python `contextvars` to store this context thread-safely across asynchronous bounds, executing an initialization script on every SQL transaction:
@@ -305,9 +319,11 @@ async def propagate_db_session_context(db_session: AsyncSession):
 ```
 
 ### 3.3 Cryptographic Ledger Workflow (Sealing Architecture)
+
 To achieve mathematical proof of non-repudiation, Cadence Clinical utilizes a structured cryptographic hashing routine that "seals" audit records into sequential blocks. This makes it impossible to modify a database backup retroactively without breaking the validation chain.
 
 #### Cryptographic Sealing Hashing Algorithm
+
 Every 60 seconds (or upon accumulating 100 raw audit logs), an asynchronous background process selects the chronological batch of unsealed audit logs. It compiles them into a structured ledger payload and hashes them using SHA-256.
 
 $$\text{Block\_Hash}_N = \text{SHA-256}\left( \text{Block\_Hash}_{N-1} \parallel \sum_{i=1}^{M} \text{Record\_Hash}_i \right)$$
@@ -330,6 +346,7 @@ $$\text{Record\_Hash} = \text{SHA-256}\left( \text{id} \parallel \text{table\_na
 ```
 
 #### Sealing Ledger Schema Design
+
 ```sql
 CREATE TABLE IF NOT EXISTS public.audit_ledger_seals (
     block_index BIGSERIAL PRIMARY KEY,
@@ -342,7 +359,9 @@ CREATE TABLE IF NOT EXISTS public.audit_ledger_seals (
 ```
 
 #### Background Sealer Implementation Core
+
 <!-- validation-skip -->
+
 ```python
 import hashlib
 import json
@@ -427,7 +446,9 @@ async def execute_audit_sealing_cycle(db: AsyncSession):
 ```
 
 #### Integrity Verification Routine
+
 A validation job runs as a daily cron. It scans the `audit_logs` and `audit_ledger_seals` tables, rebuilding the block hashes sequentially.
+
 - **Verification Rule:** If any block hash deviates from the calculated value, or if a single audit record has been updated, deleted, or inserted outside the seal timeline:
   1. The validator terminates the validation loop.
   2. The platform raises an emergency **GxP Core Data Integrity Breach** alert to the system security dashboard.
@@ -462,16 +483,17 @@ The platform guarantees that Electronic Records are equivalent to paper records,
 ```
 
 ### 4.1 Re-Authentication Gates
+
 A simple web session cookie or standard API token is insufficient for executing critical clinical actions. Pursuant to **21 CFR Part 11.50** (Signature Manifestation) and **Part 11.200** (Signature requirements), Cadence Clinical enforces double-keying re-authentication.
 
-* **Trigger Actions:**
+- **Trigger Actions:**
   - Subject randomization initiation.
   - Final eCRF form approval/sign-off.
   - Query manual deletion or override.
   - Verification of critical source documents (SDV).
   - Study design lock/unlock transitions.
   - Manual unblinding actions.
-* **Technical Re-Authentication Protocol:**
+- **Technical Re-Authentication Protocol:**
   1. Upon selecting a trigger action in the UI, a modal blocks the screen.
   2. The user must explicitly supply their **Username** and **Password** again.
   3. If MFA is configured, a temporary single-use **MFA Token** (TOTP) is challenged.
@@ -481,12 +503,15 @@ A simple web session cookie or standard API token is insufficient for executing 
   7. The application-layer execution engine receives this `sig_token` alongside the payload. If missing or expired, the clinical change is rejected with an `HTTP 401 Unauthorized` exception.
 
 ### 4.2 Electronic Signature Manifestation & Declaration
+
 To satisfy 21 CFR § 11.50 requirements, the electronic signature is stored as a specialized metadata block that manifests in both UI screens and data extracts. It must explicitly include three elements:
+
 1. **The printed name of the signer.**
 2. **The precise date and time when the signature was executed (UTC).**
 3. **The specific meaning (signing reason) associated with the signature.**
 
 #### Enforced Signing Reason Declarations
+
 The user must choose from an immutable, system-declared dropdown list matching their role permissions:
 
 - **"I author this data" (Data Entry - CRC):** Confirms that the electronic record accurately represents the source observations collected at the site.
@@ -496,7 +521,9 @@ The user must choose from an immutable, system-declared dropdown list matching t
 - **"I authorize unblinding" (Unblinding Approval - PI/Sponsor):** Declares that the medical emergency unblinding has been vetted and approved.
 
 #### Signature Manifestation Record Schema
+
 <!-- validation-skip -->
+
 ```json
 {
   "signature_manifestation": {
@@ -515,15 +542,17 @@ The user must choose from an immutable, system-declared dropdown list matching t
 This manifest block is combined with the current operational form state as an immutable JSON chunk, cryptographically signed using the server's private key, and permanently archived alongside the database row.
 
 ### 4.3 Batch PI Electronic Sign-Off (Trace-14 & Trace-15)
+
 To support high-throughput clinical operations while strictly adhering to 21 CFR Part 11, the system supports server-side atomic batch electronic sign-offs for the Principal Investigator (PI) persona.
-* **Role Enforcement:** Limited strictly to roles `pi` or `principal investigator` (mapped downstream to `ROLE_PI` or `ROLE_INVESTIGATOR`).
-* **Target Semantics:** Supports bulk target query resolution for `FormSubmission` records. It accepts `target_type` parameters of `FORM` (specific UUIDs), `VISIT` (visit codes like `VISIT-001`), or `SUBJECT` (subject pseudonyms).
-* **Token Action & Batch Binding:** The client captures a single re-authentication credential set and requests a JWT `X-Sig-Token` carrying a custom `batch_id` claim. The `batch_id` is computed as a SHA-256 hash of the canonical serial block:
+
+- **Role Enforcement:** Limited strictly to roles `pi` or `principal investigator` (mapped downstream to `ROLE_PI` or `ROLE_INVESTIGATOR`).
+- **Target Semantics:** Supports bulk target query resolution for `FormSubmission` records. It accepts `target_type` parameters of `FORM` (specific UUIDs), `VISIT` (visit codes like `VISIT-001`), or `SUBJECT` (subject pseudonyms).
+- **Token Action & Batch Binding:** The client captures a single re-authentication credential set and requests a JWT `X-Sig-Token` carrying a custom `batch_id` claim. The `batch_id` is computed as a SHA-256 hash of the canonical serial block:
   `{study_id}:{target_type}:{sorted_target_ids_comma_separated}:{signing_reason}`
   The downstream Execution service recalculates this hash to verify that the request body matches the signature's binding. Any payload variation fails verification (rejection with HTTP 401), executing **no database mutations**.
-* **Single-Use Replay Protection:** Enforces `jti` tracking in active replay caches at both the Gateway and Execution levels to block token replay attacks.
-* **Individual Manifest Manifestation:** Every approved form submission receives its own independent, distinct signature manifestation block in the `signature_manifest` JSON column. The manifestation details the printed signer name, UTC timestamp (ending in `Z`), reason code `PI_APPROVAL`, reason text, unique record ID, and the newly incremented `record_version` (e.g., from 1 to 2).
-* **Locking & Atomicity Guarantees:** A pre-requisite check scans for any trial, site, visit, subject, or form level locks. If any targets are locked, a `PermissionError` is raised. The entire batch updates inside a nested database transaction (`session.begin_nested()`), ensuring that any lock breach or exception rolls back the entire batch atomically, leaving all records unchanged (no partial approvals on error).
+- **Single-Use Replay Protection:** Enforces `jti` tracking in active replay caches at both the Gateway and Execution levels to block token replay attacks.
+- **Individual Manifest Manifestation:** Every approved form submission receives its own independent, distinct signature manifestation block in the `signature_manifest` JSON column. The manifestation details the printed signer name, UTC timestamp (ending in `Z`), reason code `PI_APPROVAL`, reason text, unique record ID, and the newly incremented `record_version` (e.g., from 1 to 2).
+- **Locking & Atomicity Guarantees:** A pre-requisite check scans for any trial, site, visit, subject, or form level locks. If any targets are locked, a `PermissionError` is raised. The entire batch updates inside a nested database transaction (`session.begin_nested()`), ensuring that any lock breach or exception rolls back the entire batch atomically, leaving all records unchanged (no partial approvals on error).
 
 ---
 
@@ -532,13 +561,14 @@ To support high-throughput clinical operations while strictly adhering to 21 CFR
 The Cadence Clinical platform strictly enforces data privacy principles globally, complying with HIPAA, GDPR, and country-specific personal data protection regulations. Personal Health Information (PHI) is isolated and systematically protected from unauthorized access.
 
 ### 5.1 Encryption Standards (In Transit & At Rest)
+
 - **Encryption-in-Transit:**
   - All communication interfaces (internal microservice endpoints and external user connections) mandate **TLS 1.3** (Transport Layer Security). TLS 1.2 is supported only as a legacy fallback with a secure, constrained cipher suite list.
   - Non-secure HTTP (Port 80) connections are redirected automatically to HTTPS (Port 443) using HTTP Strict Transport Security (HSTS) headers: `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`.
   - **Permitted Cipher Suites:**
-    * `TLS_AES_256_GCM_SHA384` (Enforced default)
-    * `TLS_CHACHA20_POLY1305_SHA256`
-    * `ECDHE-ECDSA-AES256-GCM-SHA384` (For TLS 1.2 compatibility)
+    - `TLS_AES_256_GCM_SHA384` (Enforced default)
+    - `TLS_CHACHA20_POLY1305_SHA256`
+    - `ECDHE-ECDSA-AES256-GCM-SHA384` (For TLS 1.2 compatibility)
 - **Encryption-at-Rest:**
   - All filesystems, block storage containers, and databases (PostgreSQL & Neo4j) are encrypted natively at rest using **AES-256-GCM** (Advanced Encryption Standard in Galois/Counter Mode).
   - AWS Key Management Service (KMS) or local HashiCorp Vault manages encryption keys.
@@ -546,6 +576,7 @@ The Cadence Clinical platform strictly enforces data privacy principles globally
   - Backup sets are fully encrypted using separate envelope encryption keys managed under a distinct IAM permission boundary.
 
 ### 5.2 Envelope Encryption Architecture
+
 To protect sensitive databases and object storage files, Cadence Clinical uses a master-key envelope encryption paradigm.
 
 ```
@@ -578,9 +609,11 @@ To protect sensitive databases and object storage files, Cadence Clinical uses a
 3. The DEK is encrypted using the KEK and stored in database headers. When the service starts, the encrypted DEK is dispatched to KMS for decryption, returning the plaintext DEK into memory context.
 
 ### 5.3 Data Obfuscation & De-Identification Rules
+
 To satisfy regulatory standards during external reviews, audit exports, or scientific publication stages, the platform utilizes strict de-identification rules. This complies with both the **HIPAA Safe Harbor** method and the **GDPR Principle of Pseudonymisation** (Article 4(5)).
 
 #### Masking and Hashing Core Implementation Logic
+
 When export datasets (e.g., CSV, ODM XML, SAS datasets) are requested by users, the platform applies a structural masking routine on demographic attributes:
 
 - **Patient Names / Initials:** Totally redacted or replaced with a deterministic code.
@@ -589,6 +622,7 @@ When export datasets (e.g., CSV, ODM XML, SAS datasets) are requested by users, 
 - **Identifier Hashing:** Direct user and subject identifiers are replaced with deterministic salted hashes, allowing cross-table referencing without leaking identity.
 
 #### Deterministic Salt Hashing Algorithm
+
 The system constructs a secure subject pseudonym by combining the raw value with a trial-specific cryptographic salt:
 
 $$\text{Pseudonym} = \text{SHA-256}(\text{Raw\_ID} \parallel \text{Trial\_Salt})$$
@@ -621,18 +655,18 @@ def generate_subject_pseudonym(raw_subject_id: str, trial_salt: str) -> str:
 
 The technical controls, identity boundaries, audit workflows, and data protection designs detailed in this specification map directly to the standardized controls of the **ISO/IEC 27001:2022** security framework.
 
-| ISO 27001 Control | Control Name | Cadence Clinical Implementation Technical Alignment |
-| :--- | :--- | :--- |
-| **A.5.15** | Access Control | RBAC role checks mapped at Gateway layer; enforce URL/entity-level policies on study resources. |
-| **A.5.18** | Access Rights | Automated role expiration; regular user access audits; separation of blinded/unblinded access. |
-| **A.8.20** | Network Security | TLS 1.3 encryption-in-transit; automated HSTS enforcement; IP firewalls restricting microservice calls. |
-| **A.8.24** | Use of Cryptography | AES-256-GCM database encryption; Master envelope encryption (KEK/DEK); SHA-256 ledger chaining. |
-| **A.8.10** | Information De-identification | Salted deterministic SHA-256 hashing; dates shifting; PII masking on external CSV/ODM outputs. |
-| **A.8.12** | Data Leakage Prevention | Network microsegmentation; REST Gateway strips hidden/blinded parameters automatically. |
-| **A.8.15** | Logging | Database PL/pgSQL triggers capture all insertions, updates, and soft deletions. |
-| **A.8.17** | Clock Synchronization | NTP (Network Time Protocol) servers synchronize UTC clocks across Kubernetes nodes and database engines. |
-| **A.8.18** | Use of Privileged Utilities| Isolation of database administrative credentials; MFA required for SysAdmin Keycloak access. |
-| **A.8.21** | Security of Development Lifecycle | Automated GxP validation pipelines; SAST/DAST testing; strict pre-commit checks before master merges. |
+| ISO 27001 Control | Control Name                      | Cadence Clinical Implementation Technical Alignment                                                      |
+| :---------------- | :-------------------------------- | :------------------------------------------------------------------------------------------------------- |
+| **A.5.15**        | Access Control                    | RBAC role checks mapped at Gateway layer; enforce URL/entity-level policies on study resources.          |
+| **A.5.18**        | Access Rights                     | Automated role expiration; regular user access audits; separation of blinded/unblinded access.           |
+| **A.8.20**        | Network Security                  | TLS 1.3 encryption-in-transit; automated HSTS enforcement; IP firewalls restricting microservice calls.  |
+| **A.8.24**        | Use of Cryptography               | AES-256-GCM database encryption; Master envelope encryption (KEK/DEK); SHA-256 ledger chaining.          |
+| **A.8.10**        | Information De-identification     | Salted deterministic SHA-256 hashing; dates shifting; PII masking on external CSV/ODM outputs.           |
+| **A.8.12**        | Data Leakage Prevention           | Network microsegmentation; REST Gateway strips hidden/blinded parameters automatically.                  |
+| **A.8.15**        | Logging                           | Database PL/pgSQL triggers capture all insertions, updates, and soft deletions.                          |
+| **A.8.17**        | Clock Synchronization             | NTP (Network Time Protocol) servers synchronize UTC clocks across Kubernetes nodes and database engines. |
+| **A.8.18**        | Use of Privileged Utilities       | Isolation of database administrative credentials; MFA required for SysAdmin Keycloak access.             |
+| **A.8.21**        | Security of Development Lifecycle | Automated GxP validation pipelines; SAST/DAST testing; strict pre-commit checks before master merges.    |
 
 ---
 
@@ -641,6 +675,7 @@ The technical controls, identity boundaries, audit workflows, and data protectio
 To facilitate software validation (Software Installation Qualification/Operational Qualification - IQ/OQ/PQ), this section defines the execution and verification protocols for common compliance-critical scenarios.
 
 ### 7.1 Scenario 1: CRC Submits a Data Value, and Later DM Corrects It
+
 This scenario verifies standard audit logging and version indexing.
 
 1. **Initial State (Form Data Entry):**
@@ -648,28 +683,29 @@ This scenario verifies standard audit logging and version indexing.
    - Action: `INSERT` transaction executed.
    - Database State: `form_submissions` row created with `version = 1`.
    - Shadow Trigger: Detects `INSERT`, records a new `audit_logs` record containing:
-     * `action = 'INSERT'`
-     * `user_id = 'crc_john'`
-     * `new_values = {"sbp": 120}`
-     * `version_index = 1`
-     * `change_reason = 'Initial Entry'`
+     - `action = 'INSERT'`
+     - `user_id = 'crc_john'`
+     - `new_values = {"sbp": 120}`
+     - `version_index = 1`
+     - `change_reason = 'Initial Entry'`
 2. **Mutation State (Data Correction):**
    - DM Alice reviews the record and finds a discrepancy against source documents. She raises a query.
    - CRC John updates the value to `125` with the correction reason.
    - Action: `UPDATE` transaction executed.
    - Database State: `form_submissions` row updated with `sbp = 125`, `version = 2`.
    - Shadow Trigger: Detects `UPDATE`, checks `NEW.version` (increments to `2`), records a new `audit_logs` record containing:
-     * `action = 'UPDATE'`
-     * `user_id = 'crc_john'`
-     * `old_values = {"sbp": 120}`
-     * `new_values = {"sbp": 125}`
-     * `version_index = 2`
-     * `change_reason = 'Correction of typo as requested by DM Alice'`
+     - `action = 'UPDATE'`
+     - `user_id = 'crc_john'`
+     - `old_values = {"sbp": 120}`
+     - `new_values = {"sbp": 125}`
+     - `version_index = 2`
+     - `change_reason = 'Correction of typo as requested by DM Alice'`
 3. **Verification Check:**
    - Auditor queries the database for `record_id` of the form.
    - Database displays exactly two historical versions. Since the `audit_logs` table has an update prevention trigger, these logs cannot be altered.
 
 ### 7.2 Scenario 2: Site Investigator Signs Off/Approves a Form
+
 This scenario verifies the electronic signature and re-authentication manifestation.
 
 1. **Initial State:** Form state is marked as `COMPLETED`. PI Dr. Robert logs in.
@@ -683,21 +719,22 @@ This scenario verifies the electronic signature and re-authentication manifestat
    - System aggregates form field values, hashes the payload, and binds the signature manifest block.
 5. **Database Transaction:**
    - Record in `form_submissions` is updated:
-     * `status` updated to `APPROVED`.
-     * `signature_manifest` JSON block written to the table column.
-     * `version` incremented.
+     - `status` updated to `APPROVED`.
+     - `signature_manifest` JSON block written to the table column.
+     - `version` incremented.
 6. **Shadow Audit Log Entry:**
    - Triggers generate an audit log capturing the `signature_manifest` as part of `new_values`.
    - Result: High-fidelity, legally binding, 21 CFR Part 11 compliant digital signature established.
 
 ### 7.3 Scenario 3: Unauthorized DB Admin Attempts Direct Subject Record Mutation
+
 This scenario verifies the cryptographic sealer detection capabilities.
 
 1. **Initial State:** A series of valid subjects and form records have been entered. The background sealer has sealed block `N` with `current_block_hash = "abc123xyz"`.
 2. **Unauthorized Mutation Attempt:**
    - A DB Administrator accesses the database directly via pgAdmin or SSH, bypasses the application layer, and executes an update query: `UPDATE public.subjects SET dob = '1970-01-01' WHERE id = 'subject_007';`.
    - Native trigger `trg_audit_subjects` fires because it is database-enforced. It creates a new unsealed `audit_logs` record indicating a modification.
-   - *Alternative scenario:* The DB Admin tries to bypass triggers, disables triggers, and alters the record, OR manually alters an existing `audit_logs` record to cover their tracks.
+   - _Alternative scenario:_ The DB Admin tries to bypass triggers, disables triggers, and alters the record, OR manually alters an existing `audit_logs` record to cover their tracks.
 3. **Sealer Detection:**
    - The daily integrity cron runs, loading block `N` and recalculating the hashes.
    - If the DB Admin altered an audited record, the computed hash of the records in block `N` will not match the Merkle root in the ledger seal.
@@ -711,20 +748,22 @@ This scenario verifies the cryptographic sealer detection capabilities.
 ## 8. Document Approval & Lifecycle Governance
 
 ### 8.1 Document Reviewers & Signatures
+
 This specification has been thoroughly reviewed and authorized by the following GxP Validation team representatives:
 
 - **Authorized System Security Officer:**
-  - *Signature:* `/S/ Jonathan Security, CISSP, CISA`
-  - *Date:* July 24, 2026
-  - *Reason:* Approved as security baseline for Cadence Clinical.
+  - _Signature:_ `/S/ Jonathan Security, CISSP, CISA`
+  - _Date:_ July 24, 2026
+  - _Reason:_ Approved as security baseline for Cadence Clinical.
 - **Lead Clinical GxP Validation Consultant:**
-  - *Signature:* `/S/ Sarah Compliance, Ph.D.`
-  - *Date:* July 24, 2026
-  - *Reason:* Verified 21 CFR Part 11 / EU Annex 11 alignment.
+  - _Signature:_ `/S/ Sarah Compliance, Ph.D.`
+  - _Date:_ July 24, 2026
+  - _Reason:_ Verified 21 CFR Part 11 / EU Annex 11 alignment.
 - **VP of Clinical Quality Assurance:**
-  - *Signature:* `/S/ Arthur Quality, QA Director`
-  - *Date:* July 24, 2026
-  - *Reason:* Confirmed standard alignment with ISO/IEC 27001:2022.
+  - _Signature:_ `/S/ Arthur Quality, QA Director`
+  - _Date:_ July 24, 2026
+  - _Reason:_ Confirmed standard alignment with ISO/IEC 27001:2022.
 
 ### 8.2 Document Maintenance and Review Cycle
+
 This technical specification is a living document maintained within the GxP Validation Repository of the Cadence Clinical monorepo. It undergoes a mandatory annual review to ensure continuous alignment with emerging regulatory updates (such as ICH E6(R3) drafts) and newly integrated platform capabilities. Any updates to this specification must follow the standard change-control branching protocol, require architectural review (ADR generation if infrastructure changes), and receive signature approval from the Security Officer and QA VP.

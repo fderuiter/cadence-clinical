@@ -1,9 +1,9 @@
 # ADR-251: Enforce Ruff Style and Formatting on API Gateway Routers
 
-* **Status:** Accepted
-* **Date:** 2026-08-02
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-02
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -13,9 +13,9 @@ To maintain code quality and prevent technical debt across the platform services
 
 ## 2. Decision Drivers & Constraints
 
-* Ensure all imports inside the API gateway routers are correctly ordered and formatted.
-* Ensure unused imports are removed from critical gateway routes to minimize bundle size and security footprint.
-* Adhere to PRD-SYS-001 requirements for clean, maintainable systems.
+- Ensure all imports inside the API gateway routers are correctly ordered and formatted.
+- Ensure unused imports are removed from critical gateway routes to minimize bundle size and security footprint.
+- Adhere to PRD-SYS-001 requirements for clean, maintainable systems.
 
 ## 3. Options Considered
 
@@ -28,10 +28,10 @@ Chosen option: Option 1, because automatically formatting and fixing imports usi
 
 ## 5. Consequences & Trade-offs
 
-* Positive: The code is consistently styled and easy to read. Unused variables and imports are kept clean.
-* Negative: Import ordering is strictly enforced by the Ruff utility, which requires format runs to maintain compliance.
+- Positive: The code is consistently styled and easy to read. Unused variables and imports are kept clean.
+- Negative: Import ordering is strictly enforced by the Ruff utility, which requires format runs to maintain compliance.
 
 ## 6. Implementation & Verification
 
-* Corrected import styles and unused imports inside `apps/gateway/main.py` and `apps/gateway/routers/ecoa.py`.
-* Validated that `pnpm check` and `pnpm lint` pass successfully locally.
+- Corrected import styles and unused imports inside `apps/gateway/main.py` and `apps/gateway/routers/ecoa.py`.
+- Validated that `pnpm check` and `pnpm lint` pass successfully locally.

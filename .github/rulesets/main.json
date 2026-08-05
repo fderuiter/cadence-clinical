@@ -11,9 +11,7 @@
   ],
   "conditions": {
     "ref_name": {
-      "include": [
-        "refs/heads/main"
-      ],
+      "include": ["refs/heads/main"],
       "exclude": []
     }
   },

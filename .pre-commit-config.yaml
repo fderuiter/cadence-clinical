@@ -33,6 +33,13 @@ repos:
 
   - repo: local
     hooks:
+      - id: prettier-check
+        name: Prettier Formatting & Syntax Check
+        entry: pnpm exec prettier --check
+        language: system
+        files: \.(json|css|md)$
+        pass_filenames: true
+
       - id: clean-secrets-baseline
         name: Clean Secrets Baseline
         entry: python3 scripts/clean_secrets_baseline.py
