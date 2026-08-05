@@ -55,9 +55,11 @@ def test_reset_db_success_offline():
     env = os.environ.copy()
     # Set all connection strings to local/in-memory to ensure safety and speed
     env["DATABASE_URL"] = (
-        "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"  # pragma: allowlist secret
+        "postgresql+asyncpg://cadence:cadence_password@localhost:5999/cadence_edc"  # pragma: allowlist secret
     )
     env["NEO4J_URI"] = "bolt://localhost:7687"
+    env["AUDIT_LOG_SECRET_KEY"] = "test-gxp-audit-secret-key-placeholder-abc"
+    env["INBOUND_EMAIL_HMAC_SECRET"] = "dummy"
     env["ETMF_DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
     env["CTMS_DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
     env["QUALITY_DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
