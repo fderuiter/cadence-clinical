@@ -188,7 +188,7 @@ async def test_epro_quarantine_sync_pipeline():
     # Try editing quarantined submission with WRONG password
     edit_payload_wrong_pwd = {
         "answers": {"pain_score": 4, "age": 30, "gender": "F"},
-        "password": "wrong_password",  # pragma: allowlist secret
+        "password": "invalid_password",  # pragma: allowlist secret
         "change_reason": "Correcting participant age and pain score",
     }
     manager_headers_mutation = get_auth_headers(
@@ -236,7 +236,7 @@ async def test_epro_quarantine_sync_pipeline():
 
     # Try replaying quarantined submission with WRONG password
     replay_payload_wrong_pwd = {
-        "password": "wrong_password",  # pragma: allowlist secret
+        "password": "invalid_password",  # pragma: allowlist secret
         "change_reason": "Replaying corrected diary",
     }
     replay_resp = client.post(
