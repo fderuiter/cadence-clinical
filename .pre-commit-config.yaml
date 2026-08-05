@@ -102,6 +102,13 @@ repos:
         language: system
         pass_filenames: true
 
+      - id: query-style-linter
+        name: Pre-Commit Query Style Linter
+        entry: uv run python scripts/pre_commit_query_linter.py
+        language: system
+        files: \.py$
+        pass_filenames: true
+
       - id: validate-vulnerabilities
         name: GxP Dependency Vulnerability Audit
         entry: uv run python scripts/validate_vulnerabilities.py

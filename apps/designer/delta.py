@@ -164,9 +164,12 @@ def with_transaction_retry(
                 try:
                     return await func(*args, **kwargs)
                 except Exception as e:
+                    err_name = e.__class__.__name__
+                    err_msg = str(e).lower()
                     is_transient = (
-                        e.__class__.__name__ == "TransientError"
-                        and "neo4j" in getattr(e.__class__, "__module__", "")
+                        (err_name == "TransientError" and "neo4j" in getattr(e.__class__, "__module__", ""))
+                        or (err_name in ("TransientError", "OperationalError", "LockError"))
+                        or "lock" in err_msg
                     )
                     if is_transient:
                         if retries >= max_retries:
