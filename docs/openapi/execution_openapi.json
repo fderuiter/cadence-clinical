@@ -1224,7 +1224,7 @@
           "Documents"
         ],
         "summary": "List Document Versions",
-        "description": "Return complete version history list.\n\nRequirements: PRD-SYS-001",
+        "description": "RETURN complete version history list.\n\nRequirements: PRD-SYS-001",
         "operationId": "list_document_versions_api_v1_documents__doc_id__versions_get",
         "parameters": [
           {
@@ -1271,7 +1271,7 @@
           "SDV/TSDV"
         ],
         "summary": "Create Or Update Tsdv Config",
-        "description": "Create or update Targeted SDV (TSDV) configuration for a study.\n\nRestricts config writes to CRA/Data Manager roles with GxP change justifications.",
+        "description": "CREATE or UPDATE Targeted SDV (TSDV) configuration for a study.\n\nRestricts config writes to CRA/Data Manager roles WITH GxP change justifications.",
         "operationId": "create_or_update_tsdv_config_api_v1_execution_tsdv_config_post",
         "requestBody": {
           "content": {
@@ -2367,7 +2367,7 @@
     "/api/v1/execution/observations": {
       "post": {
         "summary": "Create Observation",
-        "description": "Create a new clinical observation, performing unit normalization and outlier checks.",
+        "description": "CREATE a new clinical observation, performing unit normalization and outlier checks.",
         "operationId": "create_observation_api_v1_execution_observations_post",
         "requestBody": {
           "content": {
@@ -2635,7 +2635,7 @@
     "/api/v1/execution/lab-ranges": {
       "post": {
         "summary": "Create Lab Range",
-        "description": "Create a new lab reference range, validating all range invariants.",
+        "description": "CREATE a new lab reference range, validating all range invariants.",
         "operationId": "create_lab_range_api_v1_execution_lab_ranges_post",
         "requestBody": {
           "required": true,
@@ -2819,7 +2819,7 @@
       },
       "put": {
         "summary": "Update Lab Range",
-        "description": "Update an existing lab reference range, validating all range invariants on the merged state.",
+        "description": "UPDATE an existing lab reference range, validating all range invariants on the merged state.",
         "operationId": "update_lab_range_api_v1_execution_lab_ranges__range_id__put",
         "parameters": [
           {

@@ -110,7 +110,7 @@
     "/api/v1/econsent/clauses": {
       "post": {
         "summary": "Create Consent Clause",
-        "description": "Create/ingest a new ICF clause version (starts at version_index = 1).",
+        "description": "CREATE/ingest a new ICF clause version (starts at version_index = 1).",
         "operationId": "create_consent_clause_api_v1_econsent_clauses_post",
         "requestBody": {
           "required": true,
@@ -328,7 +328,7 @@
     "/api/v1/econsent/templates": {
       "post": {
         "summary": "Create Consent Template",
-        "description": "Create/ingest a new consent template (starts at version_index = 1 and is_published = False).",
+        "description": "CREATE/ingest a new consent template (starts at version_index = 1 and is_published = False).",
         "operationId": "create_consent_template_api_v1_econsent_templates_post",
         "requestBody": {
           "required": true,
@@ -916,7 +916,7 @@
     "/api/v1/econsent/translations": {
       "post": {
         "summary": "Create Consent Translation",
-        "description": "Create/ingest a new translation draft (starts at version_index = 1, status = DRAFT).\nValidates that the source clause or template exists.",
+        "description": "CREATE/ingest a new translation draft (starts at version_index = 1, status = DRAFT).\nValidates that the source clause or template exists.",
         "operationId": "create_consent_translation_api_v1_econsent_translations_post",
         "requestBody": {
           "required": true,

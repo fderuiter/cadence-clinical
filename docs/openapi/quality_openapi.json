@@ -197,7 +197,7 @@
     "/api/v1/quality/deviations/{id}/rca": {
       "put": {
         "summary": "Create Or Update Rca",
-        "description": "Create or update Root Cause Analysis (RCA) linked to a specific deviation.\nTransitions the deviation status to RCA_COMPLETE.",
+        "description": "CREATE or UPDATE Root Cause Analysis (RCA) linked to a specific deviation.\nTransitions the deviation status to RCA_COMPLETE.",
         "operationId": "create_or_update_rca_api_v1_quality_deviations__id__rca_put",
         "parameters": [
           {
@@ -245,7 +245,7 @@
       },
       "post": {
         "summary": "Create Or Update Rca",
-        "description": "Create or update Root Cause Analysis (RCA) linked to a specific deviation.\nTransitions the deviation status to RCA_COMPLETE.",
+        "description": "CREATE or UPDATE Root Cause Analysis (RCA) linked to a specific deviation.\nTransitions the deviation status to RCA_COMPLETE.",
         "operationId": "create_or_update_rca_api_v1_quality_deviations__id__rca_post",
         "parameters": [
           {
@@ -295,7 +295,7 @@
     "/api/v1/quality/capas": {
       "post": {
         "summary": "Create Capa",
-        "description": "Create a new Corrective and Preventive Action (CAPA) record linked to a deviation.",
+        "description": "CREATE a new Corrective and Preventive Action (CAPA) record linked to a deviation.",
         "operationId": "create_capa_api_v1_quality_capas_post",
         "requestBody": {
           "content": {
@@ -384,7 +384,7 @@
     "/api/v1/quality/capas/{id}": {
       "put": {
         "summary": "Update Capa",
-        "description": "Update non-status attributes of a CAPA record. Disallowed once terminal (CLOSED/CANCELLED).",
+        "description": "UPDATE non-status attributes of a CAPA record. Disallowed once terminal (CLOSED/CANCELLED).",
         "operationId": "update_capa_api_v1_quality_capas__id__put",
         "parameters": [
           {

@@ -923,7 +923,7 @@
       },
       "post": {
         "summary": "Create Expectation",
-        "description": "Create a new Expected Document List (EDL) expectation.",
+        "description": "CREATE a new Expected Document List (EDL) expectation.",
         "operationId": "create_expectation_api_v1_etmf_edl_post",
         "requestBody": {
           "required": true,
@@ -962,7 +962,7 @@
     "/api/v1/etmf/edl/{edl_id}": {
       "put": {
         "summary": "Update Expectation",
-        "description": "Update an existing Expected Document List (EDL) expectation.",
+        "description": "UPDATE an existing Expected Document List (EDL) expectation.",
         "operationId": "update_expectation_api_v1_etmf_edl__edl_id__put",
         "parameters": [
           {
@@ -1302,7 +1302,7 @@
     "/api/v1/etmf/documents/{document_id}/expiration": {
       "put": {
         "summary": "Update Document Expiration Endpoint",
-        "description": "Update expiration-related metadata for an eTMF document.\nEnforces the etmf_document:manage_expiration permission and checks trial locks.",
+        "description": "UPDATE expiration-related metadata for an eTMF document.\nEnforces the etmf_document:manage_expiration permission and checks trial locks.",
         "operationId": "update_document_expiration_endpoint_api_v1_etmf_documents__document_id__expiration_put",
         "parameters": [
           {
