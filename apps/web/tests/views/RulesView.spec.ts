@@ -151,16 +151,13 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
 
     await flushPromises();
 
-    // Wait for the mock API call to have occurred (handles async crypto signature delay under CPU load)
+    // Wait for the mock API call and DOM updates to have fully resolved (handles async crypto signature delay under CPU load)
     let retries = 200;
-    while (vi.mocked(apiClient.get).mock.calls.length === 0 && retries > 0) {
+    while ((vi.mocked(apiClient.get).mock.calls.length === 0 || !wrapper.text().includes("rule_1")) && retries > 0) {
       await flushPromises();
       await new Promise((resolve) => setTimeout(resolve, 10));
       retries--;
     }
-
-    // Flush promises again to ensure the API response resolves, updates activeRules state, and Vue DOM re-renders completely
-    await flushPromises();
 
     // Authorized role should NOT see the gating banner
     expect(wrapper.find(".rules-gating-banner").exists()).toBe(false);

@@ -603,12 +603,14 @@ def test_sys_path_append():
     from pathlib import Path
 
     repo_root = Path(__file__).resolve().parent.parent
+    resolved_sys_paths = [Path(x).resolve() for x in sys.path if x]
+
     for p in (repo_root / "packages").glob("*"):
         if p.is_dir():
-            path_str = str(p)
-            assert path_str in sys.path
+            resolved_p = p.resolve()
+            assert resolved_p in resolved_sys_paths
             # Since they were appended, they should not be at index 0
-            assert sys.path.index(path_str) > 0
+            assert resolved_sys_paths.index(resolved_p) > 0
 
 
 def test_mock_environment_variables():
