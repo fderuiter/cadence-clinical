@@ -1,9 +1,9 @@
 # ADR-117: GxP 21 CFR Part 11 eConsent Audit Trails
 
-* **Status:** Accepted
-* **Date:** 2026-07-31
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-07-31
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -15,9 +15,9 @@ Traced requirement: PRD-SYS-001.
 
 ## 2. Decision Drivers & Constraints
 
-* Strict GxP and 21 CFR Part 11 regulatory compliance.
-* Absolute immutability of signature records and consent audits once finalized.
-* Seamless automatic transition of subject status when a protocol or ICF version is amended.
+- Strict GxP and 21 CFR Part 11 regulatory compliance.
+- Absolute immutability of signature records and consent audits once finalized.
+- Seamless automatic transition of subject status when a protocol or ICF version is amended.
 
 ## 3. Options Considered
 
@@ -30,13 +30,13 @@ Chosen option: Option 1. Immutability is enforced directly at the SQLAlchemy ORM
 
 ## 5. Consequences & Trade-offs
 
-* **Positive**: Absolute protection of clinical data and metadata. Meets the highest regulatory qualification standards.
-* **Positive**: Automatic and atomic status updates to `RECONSENT_REQUIRED` for affected subjects when ICF versions are updated.
-* **Negative**: Requires careful mock setups in tests to satisfy the strict state machine sequence transitions.
+- **Positive**: Absolute protection of clinical data and metadata. Meets the highest regulatory qualification standards.
+- **Positive**: Automatic and atomic status updates to `RECONSENT_REQUIRED` for affected subjects when ICF versions are updated.
+- **Negative**: Requires careful mock setups in tests to satisfy the strict state machine sequence transitions.
 
 ## 6. Implementation & Verification
 
-* **Models Modified**: `ConsentFormRecord` and `ConsentSignature` defined in `apps/execution/database/models.py`.
-* **Services Added**: `EConsentService` implemented in `apps/execution/services/econsent_service.py`.
-* **State Machine Modified**: `SubjectState` updated to support `RECONSENT_REQUIRED` in `apps/execution/subject_lifecycle.py`.
-* **Verification Tests**: Automated tests added under `tests/test_econsent_workflow.py` validating successful signing, protocol amendment gating, and immutability violations.
+- **Models Modified**: `ConsentFormRecord` and `ConsentSignature` defined in `apps/execution/database/models.py`.
+- **Services Added**: `EConsentService` implemented in `apps/execution/services/econsent_service.py`.
+- **State Machine Modified**: `SubjectState` updated to support `RECONSENT_REQUIRED` in `apps/execution/subject_lifecycle.py`.
+- **Verification Tests**: Automated tests added under `tests/test_econsent_workflow.py` validating successful signing, protocol amendment gating, and immutability violations.

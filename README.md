@@ -1,7 +1,7 @@
 # Cadence Clinical
 
 > **The Metadata-Driven Clinical Execution Platform.**
-> *Unifying Clinical Study Design (MDR/SDR) and Electronic Data Capture (EDC) into a single, automated digital data flow.*
+> _Unifying Clinical Study Design (MDR/SDR) and Electronic Data Capture (EDC) into a single, automated digital data flow._
 
 [![CI](https://github.com/fderuiter/cadence-clinical/actions/workflows/ci.yml/badge.svg)](https://github.com/fderuiter/cadence-clinical/actions/workflows/ci.yml)
 
@@ -18,10 +18,12 @@
 **Cadence Clinical** is a next-generation, open-source eClinical platform designed to eliminate manual study builds, expensive handoffs, and data silos in clinical research. By integrating the concepts of an upstream Clinical Metadata Repository (MDR/SDR) with a downstream Electronic Data Capture (EDC) engine, Cadence Clinical automates the digital data flow to turn static, narrative protocol documents into executable, machine-readable digital trials.
 
 The core architecture synthesizes two complementary clinical trial paradigms:
+
 1. **MDR/Designer (Neo4j)**: Upstream study design, CDISC Unified Study Definitions Model (USDM), and graph-based metadata modeling based on references like `openstudybuilder-ref`.
 2. **EDC/Execution (PostgreSQL)**: Downstream EDC execution, subject enrollment state machines, eCRF form rendering (OpenRosa/Enketo XForms), clinical query workflows, and GxP-compliant audit trails based on references like `openclinica-ref`.
 
 These core execution paths are bridged seamlessly via CDISC USDM data transfers and automated transform pipelines. The scope of Cadence Clinical has expanded to provide unified, compliant domain coverage across the entire clinical trial lifecycle, including:
+
 - **Safety / Pharmacovigilance (PV)**: Processing E2B(R3) Individual Case Safety Reports (ICSR).
 - **eConsent**: Secure, Part 11 compliant digital informed consent execution.
 - **eISF (electronic Investigator Site File)**: Site-specific binder-scoped document filing and completeness tracking.
@@ -65,13 +67,16 @@ Cadence Clinical is organized as a reverse-proxy fronted microservices topology 
 ```
 
 ### Identity and Access Control (RBAC)
+
 Authentication and Authorization are centralized at the API Gateway (`apps/gateway/`) using **Keycloak OpenID Connect (OIDC)**. Incoming JWT tokens are parsed to extract user roles, site scopes, and unblinded access attributes. The gateway strips incoming client-side claims headers and propagates securely signed gateway headers (`X-User-Id`, `X-User-Roles`, etc.) signed with a shared HMAC-SHA256 signature version 2 format to downstream services.
 
 ### Notifications Service Integration & Deployment Configurations
+
 The multi-channel **Notifications Service** (`apps/notifications`) is fully integrated into the API Gateway and Docker Compose network.
 Requests to `/notifications/` and `/api/v1/notifications/` are securely routed through the central gateway, which enforces identity verification, rate limiting, and HMAC-SHA256 signature verification.
 
 For deployment, the Notifications Service depends on several environment variables that can be configured in your deployment settings:
+
 - **`NOTIFICATIONS_DATABASE_URL`**: Relational database connection string (defaults to a local SQLite database `/app/notifications.db` or standard PostgreSQL URL).
 - **`SMTP_HOST`**: Host address for the SMTP server (defaults to `smtp.mailhog.local` in development).
 - **`SMTP_PORT`**: Port number for SMTP transmission (defaults to `1025`).
@@ -89,7 +94,9 @@ For deployment, the Notifications Service depends on several environment variabl
 - **Gateway Step-Up Re-Authentication** is enforced on signature-gated mutations (e.g., PI batch sign-offs, subject randomization). A short-lived (60-second) `sig_token` must be requested with re-supplied password credentials and TOTP to satisfy 21 CFR Part 11 electronic signature mandates.
 
 ### Data Transformation Flow
+
 The pipeline automates clinical workflows through three major translation stages:
+
 1. **Design Formulation**: Protocol definitions, arms, epochs, visits, and procedures are authored in the Designer service and stored as version-chained Neo4j graph schemas mapped to the CDISC USDM standard.
 2. **Delivery & Compilation**: Upon study publication, the USDM metadata is fetched by the Execution engine's transformation pipeline which compiles clinical concepts into CDISC ODM XML files and interactive OpenRosa/Enketo-compliant XForm structures.
 3. **Runtime Execution**: Ingested layouts automatically configure electronic Case Report Forms (eCRFs) in PostgreSQL, defining the data entry rules, real-time edit-checks, and subject compliance matrices. Any structural anomalies or offline-sync reconciliation failures automatically trigger clinical queries to prevent silent data loss.
@@ -104,33 +111,35 @@ This monorepo leverages `pnpm` workspace management for the frontend and `uv` wo
 
 ### Platform Components & Status
 
-| Path | Component Title / Standard Reference | Description / Purpose | Status |
-| :--- | :--- | :--- | :--- |
-| **`apps/designer`** | Cadence Clinical - Designer (MDR/SDR) | Study design, metadata authoring, and CDISC USDM graph modeling. Persisted in Neo4j. | **Supported** |
-| **`apps/execution`** | Cadence Clinical - EDC Execution Engine | Downstream EDC runtime managing subjects, eCRF schedules, real-time edit checks, medical coding, lab ranges, and SDTM/ADaM exports. | **Supported** |
-| **`apps/gateway`** | Cadence Clinical - API Gateway | Gateway-fronted microservices proxy. Handles OIDC token checks, step-up re-auth tokens, rate limiting, and OpenAPI docs aggregation. | **Supported** |
-| **`apps/etmf`** | Cadence Clinical - Event-Driven eTMF Module | Ingests, classifies, and tracks clinical document archives against DIA TMF Reference Model v3.2.0. Enforces data-driven expected document lists. | **Supported** |
-| **`apps/ctms`** | Cadence Clinical - CTMS | Tracks trial/site milestones, monitor visits, budget allocations, and CRA workloads. Fully audited append-only ledger. | **Supported** |
-| **`apps/quality`** | Cadence Clinical - Quality & CAPA | Manages protocol deviations, root cause analysis (RCA) attachments, and corrective/preventive action (CAPA) workflow transitions. | **Supported** |
-| **`apps/interop`** | Cadence Clinical - FHIR / eSource & eCOA Sync Gateway | Processes FHIR bundles and reconciles bulk offline ePRO submissions with durable conflict resolution and clinical query automation. | **Supported** |
-| **`apps/notifications`** | Cadence Clinical - Notifications Service | Dynamic multi-channel reminder dispatcher supporting SMS, Email, Webhooks, and In-App notifications. | **Supported** |
-| **`apps/safety`** | Cadence Clinical - Safety & Pharmacovigilance Gateway | Implements E2B(R3) Individual Case Safety Report (ICSR) XML compilation and rendering, with immutable audits. | **Supported** |
-| **`apps/org`** | Cadence Clinical - Organization Directory | Directory for Organizations, Sites, Personnel, and Delegations of Authority. *No business logic routes are currently routed; exposes health check only.* | **In Progress** |
-| **`apps/econsent`** | Cadence Clinical - eConsent | Template compilation, digital signatures, and consent audit ledgers. *Not yet routed through the central gateway proxy.* | **In Progress** |
-| **`apps/eisf`** | Cadence Clinical - eISF Service | Site-scoped investigator site files and binder section browser. *Not yet routed through the central gateway proxy.* | **In Progress** |
-| **`apps/web`** | Vue 3 SPA Sandbox & Legacy Engine | Primary frontend SPA with Keycloak authentication. *Features a legacy vanilla-JS layout parser (index.js) coexisting during migration to Vue 3 (src/App.vue) per ADR-052.* | **In Progress** |
-| **`apps/subject-portal`** | Offline-First eCOA/ePRO PWA | Mobile-optimized Progressive Web App (PWA) running on port 5174. Includes IndexedDB offline queues and sync exception panels. | **Supported** |
-| **`packages/security`** | Cryptography & Security Library | Shared libraries for HMAC signature generation, security context variables, and Keycloak auth validation helpers. | **Supported** |
-| **`packages/ui`** | Shared UI & Signing Library | UI component framework and browser signing helpers. Exported via pnpm. | **Supported** |
-| **`packages/core-models`** | Standardized Domain Models | Cross-service Pydantic payload models (TMF taxonomy, SDTM, Org, Part 11 GxP audit fields). | **Supported** |
-| **`packages/database`** | Database Connection Manager | SQLAlchemy async relational session management. | **Supported** |
-| **`packages/deid`** | PII/PHI Redaction Engine | High-performance de-identification and masking engine running inside eTMF and Interop. | **Supported** |
-| **`docs/`** | System Documentation | Narrative specs, regulatory compliance guides, ADR registries, and feature mappings. | **Supported** |
-| **`scripts/`** | Operational Scripts | Internal scripts for CI, link checks, ADR schema validations, and database migrations. | **Supported** |
-| **`verification/`** | Verification & Integration Reports | Playwright automation, regression logs, and system validation reports. | **Supported** |
+| Path                       | Component Title / Standard Reference                  | Description / Purpose                                                                                                                                                      | Status          |
+| :------------------------- | :---------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------- |
+| **`apps/designer`**        | Cadence Clinical - Designer (MDR/SDR)                 | Study design, metadata authoring, and CDISC USDM graph modeling. Persisted in Neo4j.                                                                                       | **Supported**   |
+| **`apps/execution`**       | Cadence Clinical - EDC Execution Engine               | Downstream EDC runtime managing subjects, eCRF schedules, real-time edit checks, medical coding, lab ranges, and SDTM/ADaM exports.                                        | **Supported**   |
+| **`apps/gateway`**         | Cadence Clinical - API Gateway                        | Gateway-fronted microservices proxy. Handles OIDC token checks, step-up re-auth tokens, rate limiting, and OpenAPI docs aggregation.                                       | **Supported**   |
+| **`apps/etmf`**            | Cadence Clinical - Event-Driven eTMF Module           | Ingests, classifies, and tracks clinical document archives against DIA TMF Reference Model v3.2.0. Enforces data-driven expected document lists.                           | **Supported**   |
+| **`apps/ctms`**            | Cadence Clinical - CTMS                               | Tracks trial/site milestones, monitor visits, budget allocations, and CRA workloads. Fully audited append-only ledger.                                                     | **Supported**   |
+| **`apps/quality`**         | Cadence Clinical - Quality & CAPA                     | Manages protocol deviations, root cause analysis (RCA) attachments, and corrective/preventive action (CAPA) workflow transitions.                                          | **Supported**   |
+| **`apps/interop`**         | Cadence Clinical - FHIR / eSource & eCOA Sync Gateway | Processes FHIR bundles and reconciles bulk offline ePRO submissions with durable conflict resolution and clinical query automation.                                        | **Supported**   |
+| **`apps/notifications`**   | Cadence Clinical - Notifications Service              | Dynamic multi-channel reminder dispatcher supporting SMS, Email, Webhooks, and In-App notifications.                                                                       | **Supported**   |
+| **`apps/safety`**          | Cadence Clinical - Safety & Pharmacovigilance Gateway | Implements E2B(R3) Individual Case Safety Report (ICSR) XML compilation and rendering, with immutable audits.                                                              | **Supported**   |
+| **`apps/org`**             | Cadence Clinical - Organization Directory             | Directory for Organizations, Sites, Personnel, and Delegations of Authority. _No business logic routes are currently routed; exposes health check only._                   | **In Progress** |
+| **`apps/econsent`**        | Cadence Clinical - eConsent                           | Template compilation, digital signatures, and consent audit ledgers. _Not yet routed through the central gateway proxy._                                                   | **In Progress** |
+| **`apps/eisf`**            | Cadence Clinical - eISF Service                       | Site-scoped investigator site files and binder section browser. _Not yet routed through the central gateway proxy._                                                        | **In Progress** |
+| **`apps/web`**             | Vue 3 SPA Sandbox & Legacy Engine                     | Primary frontend SPA with Keycloak authentication. _Features a legacy vanilla-JS layout parser (index.js) coexisting during migration to Vue 3 (src/App.vue) per ADR-052._ | **In Progress** |
+| **`apps/subject-portal`**  | Offline-First eCOA/ePRO PWA                           | Mobile-optimized Progressive Web App (PWA) running on port 5174. Includes IndexedDB offline queues and sync exception panels.                                              | **Supported**   |
+| **`packages/security`**    | Cryptography & Security Library                       | Shared libraries for HMAC signature generation, security context variables, and Keycloak auth validation helpers.                                                          | **Supported**   |
+| **`packages/ui`**          | Shared UI & Signing Library                           | UI component framework and browser signing helpers. Exported via pnpm.                                                                                                     | **Supported**   |
+| **`packages/core-models`** | Standardized Domain Models                            | Cross-service Pydantic payload models (TMF taxonomy, SDTM, Org, Part 11 GxP audit fields).                                                                                 | **Supported**   |
+| **`packages/database`**    | Database Connection Manager                           | SQLAlchemy async relational session management.                                                                                                                            | **Supported**   |
+| **`packages/deid`**        | PII/PHI Redaction Engine                              | High-performance de-identification and masking engine running inside eTMF and Interop.                                                                                     | **Supported**   |
+| **`docs/`**                | System Documentation                                  | Narrative specs, regulatory compliance guides, ADR registries, and feature mappings.                                                                                       | **Supported**   |
+| **`scripts/`**             | Operational Scripts                                   | Internal scripts for CI, link checks, ADR schema validations, and database migrations.                                                                                     | **Supported**   |
+| **`verification/`**        | Verification & Integration Reports                    | Playwright automation, regression logs, and system validation reports.                                                                                                     | **Supported**   |
 
 ### Known Integration Gaps & Technical Debt
+
 During the current active development phase, several known discrepancies exist within the repository:
+
 1. **Gateway Proxy Exclusions:** The `org`, `econsent`, and `eisf` services operate independently on their local database backends but are not yet registered in the gateway `SERVICES` map inside `apps/gateway/main.py`. This means direct API requests to these routes bypass central authorization proxies.
 2. **Organization Service Routing:** The Organization Directory service (`apps/org`) maintains a complete relational GxP database schema (with Organizations, Sites, Staff, DoA), but its `main.py` currently exposes only a standard `/health` check without operational CRUD endpoints.
 3. **Web Frontend Migration:** Per **ADR-052**, `apps/web` is undergoing an active migration. Standard web client operations rely on a modern Vue 3 SPA architecture (`src/App.vue`), but legacy vanilla-JS layout and sign-off rendering engines (`index.js`) still coexist inside the workspace, occasionally leading to mixed validation patterns.
@@ -154,20 +163,27 @@ Cadence Clinical is built using high-performance, compliance-ready frameworks:
 ## 🚀 Quickstart
 
 ### 1. Launch All Containerized Dependencies
+
 The entire database and authentication ecosystem runs inside Docker containers. Start the full infrastructure sandbox (Neo4j, PostgreSQL, and Keycloak) in a single command:
+
 ```bash
 docker compose -f docker/docker-compose.yml up -d --build
 ```
+
 For credentials, port configurations, and detailed key mappings, refer to the [Local Development Environment Guide](docs/LOCAL_DEV_ENVIRONMENT.md).
 
 ### 2. Synchronize Python Backend Workspace
+
 Initialize a unified Python environment and lock all python package dependencies across all monorepo apps and packages:
+
 ```bash
 uv sync --all-extras
 ```
 
 ### 3. Install Frontend Dependencies
+
 Configure frontend packages using workspace-aware Node scripts:
+
 ```bash
 pnpm install
 ```
@@ -179,6 +195,7 @@ pnpm install
 Contributors must adhere to clean development patterns and verify formatting and testing locally prior to committing changes.
 
 ### Python Backend Workspace
+
 ```bash
 # Run the entire backend test suite
 uv run pytest --no-cov
@@ -189,7 +206,8 @@ uv run ruff format .
 ```
 
 ### Frontend JS/TS Workspace
-```bash
+
+````bash
 # Execute lint, formatting, and unit tests across all web apps and packages
 pnpm -r lint
 pnpm -r format
@@ -202,7 +220,7 @@ uv run python scripts/validate_schemas.py --export-dir docs/openapi
 
 # Regenerate and stage GxP RTM compliance docs
 uv run python scripts/sync_gxp.py
-```
+````
 
 ---
 
@@ -237,6 +255,7 @@ Detailed structural specifications, compliance designs, and operational instruct
 We track our live feature backlog and feature requests via the live [GitHub Issues](https://github.com/fderuiter/cadence-clinical/issues) and milestones pages.
 
 Strategic backlog priorities and technical debt resolutions currently planned (TBD) include:
+
 - [ ] Route the Organization Directory (`apps/org`), eConsent (`apps/econsent`), and eISF (`apps/eisf`) microservices through the API Gateway `SERVICES` mapping.
 - [ ] Implement full operational CRUD routes for Site personnel and Delegations of Authority within `apps/org`.
 - [ ] Complete the migration of legacy vanilla-JS layout scripts (`apps/web/src/lib/legacy_helpers.js`) into native Vue 3 components (`src/views/`).

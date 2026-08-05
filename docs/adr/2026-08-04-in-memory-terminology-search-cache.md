@@ -1,9 +1,9 @@
 # ADR-2155: In Memory Terminology Search Cache
 
-* **Status:** Accepted
-* **Date:** 2026-08-04
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-04
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -15,27 +15,28 @@ To solve this, we are introducing a thread-safe, in-memory cache layer (`Termino
 
 ## 2. Decision Drivers & Constraints
 
-* **Performance SLAs:** Drop autocomplete latency to sub-50ms for repeated queries.
-* **Operational Overhead:** Avoid introducing heavy third-party caching middleware or additional containerized storage services (e.g., Redis) unless absolutely necessary.
-* **Concurrency:** Ensure thread safety during concurrent lookups and updates since multiple clinical designers use the platform concurrently.
-* **Memory Limits:** Prevent memory exhaustion/leaks on the designer microservice host.
-* **Data Freshness:** Allow client components to force bypass or force refresh caches to fetch upstream terminology updates.
+- **Performance SLAs:** Drop autocomplete latency to sub-50ms for repeated queries.
+- **Operational Overhead:** Avoid introducing heavy third-party caching middleware or additional containerized storage services (e.g., Redis) unless absolutely necessary.
+- **Concurrency:** Ensure thread safety during concurrent lookups and updates since multiple clinical designers use the platform concurrently.
+- **Memory Limits:** Prevent memory exhaustion/leaks on the designer microservice host.
+- **Data Freshness:** Allow client components to force bypass or force refresh caches to fetch upstream terminology updates.
 
 ## 3. Options Considered
 
 1. **Option A (Selected): In-Memory Cache with Python's Thread-Safe `threading.Lock`, Compound Keys, FIFO Eviction, and TTL**
-   * Implements custom, lightweight class `TerminologySearchCache` in `apps/designer/db.py`.
-   * Enforces a hard boundary of 1,000 cached records using a First-In-First-Out (FIFO) eviction strategy.
-   * Leverages compound keys mapping query parameters (`term`, `from_record`, `page_size`) to prevent pagination collisons.
+   - Implements custom, lightweight class `TerminologySearchCache` in `apps/designer/db.py`.
+   - Enforces a hard boundary of 1,000 cached records using a First-In-First-Out (FIFO) eviction strategy.
+   - Leverages compound keys mapping query parameters (`term`, `from_record`, `page_size`) to prevent pagination collisons.
 2. **Option B: Heavy Redis-based Caching Layer**
-   * Integrates an external Redis container.
-   * While scalable, it adds substantial architectural complexity, networking overhead, and deployment boundaries that are not required for our immediate memory footprint.
+   - Integrates an external Redis container.
+   - While scalable, it adds substantial architectural complexity, networking overhead, and deployment boundaries that are not required for our immediate memory footprint.
 
 ## 4. Decision Outcome
 
 Chosen option: **Option A** because it is lightweight, requires zero additional external dependencies, ensures optimal memory bounds, and fully satisfies the sub-50ms query requirements under **PRD-MDR-007** while keeping the architecture elegant and maintainable.
 
 ### Key Decisions:
+
 1. **Thread-Safe Memory Bound (`threading.Lock`):** Used to prevent race conditions during read/write cycles.
 2. **Strict Limit of 1,000 Entries & FIFO Eviction:** Caps memory usage under heavy load.
 3. **Compound Cache Keys:** Built dynamically using search queries and pagination parameters.
@@ -44,13 +45,13 @@ Chosen option: **Option A** because it is lightweight, requires zero additional 
 
 ## 5. Consequences & Trade-offs
 
-* **Positive:** Sub-50ms lookup times, high throughput, zero additional infrastructure dependencies, and robust concurrent safety.
-* **Negative:** Cache is transient and cleared on microservice restarts (perfectly acceptable for search autocomplete lookup data).
+- **Positive:** Sub-50ms lookup times, high throughput, zero additional infrastructure dependencies, and robust concurrent safety.
+- **Negative:** Cache is transient and cleared on microservice restarts (perfectly acceptable for search autocomplete lookup data).
 
 ## 6. Implementation & Verification
 
-* **Target files/packages modified:**
-  * `apps/designer/db.py`: Implemented `TerminologySearchCache` and initialized a global `terminology_search_cache` instance.
-  * `apps/designer/main.py`: Integrated the caching interceptor inside `/api/v1/terminology/search`.
-* **Verification tests added under `tests/`:**
-  * `tests/test_terminology_validation.py` -> `test_terminology_search_cache_direct`, `test_search_terminology_endpoint_cache_behavior`, and `test_search_terminology_endpoint_bypass_and_refresh`.
+- **Target files/packages modified:**
+  - `apps/designer/db.py`: Implemented `TerminologySearchCache` and initialized a global `terminology_search_cache` instance.
+  - `apps/designer/main.py`: Integrated the caching interceptor inside `/api/v1/terminology/search`.
+- **Verification tests added under `tests/`:**
+  - `tests/test_terminology_validation.py` -> `test_terminology_search_cache_direct`, `test_search_terminology_endpoint_cache_behavior`, and `test_search_terminology_endpoint_bypass_and_refresh`.

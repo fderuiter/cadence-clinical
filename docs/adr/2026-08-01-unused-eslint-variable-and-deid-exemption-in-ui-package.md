@@ -1,9 +1,9 @@
 # ADR-145: Unused ESLint Variable and DEID Exemption in UI Package
 
-* **Status:** Accepted
-* **Date:** 2026-08-01
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-01
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -13,9 +13,9 @@ To satisfy PRD-SYS-001, we modified the shared frontend ui package in `packages/
 
 ## 2. Decision Drivers & Constraints
 
-* **Linting Parity:** The frontend shared package must maintain strict ESLint compliance.
-* **DEID False Positives:** Hex code attributes (e.g. style properties) in HTML can occasionally trigger geographic zip code patterns in the automated DEID scanner, requiring structured bypass comments.
-* **Compliance:** Align with PRD-SYS-001.
+- **Linting Parity:** The frontend shared package must maintain strict ESLint compliance.
+- **DEID False Positives:** Hex code attributes (e.g. style properties) in HTML can occasionally trigger geographic zip code patterns in the automated DEID scanner, requiring structured bypass comments.
+- **Compliance:** Align with PRD-SYS-001.
 
 ## 3. Options Considered
 
@@ -28,10 +28,10 @@ Chosen option: Option 1 because it allows us to bypass both linting and DEID fal
 
 ## 5. Consequences & Trade-offs
 
-* **Positive**: All style, lint, and security checks on CI pass successfully.
-* **Negative**: None.
+- **Positive**: All style, lint, and security checks on CI pass successfully.
+- **Negative**: None.
 
 ## 6. Implementation & Verification
 
-* Modified `packages/ui/index.js` with inline `// eslint-disable-next-line` comment and `data-deid-ignore="deid-ignore"` attribute.
-* Verified successfully using local and remote linting, formatting, and deid scanning checks.
+- Modified `packages/ui/index.js` with inline `// eslint-disable-next-line` comment and `data-deid-ignore="deid-ignore"` attribute.
+- Verified successfully using local and remote linting, formatting, and deid scanning checks.

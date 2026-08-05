@@ -60,12 +60,8 @@
       "clientId": "cadence-web",
       "enabled": true,
       "publicClient": true,
-      "redirectUris": [
-        "http://localhost:3000/*"
-      ],
-      "webOrigins": [
-        "*"
-      ]
+      "redirectUris": ["http://localhost:3000/*"],
+      "webOrigins": ["*"]
     }
   ],
   "users": [
@@ -82,9 +78,7 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "Sponsor Designer"
-      ]
+      "realmRoles": ["Sponsor Designer"]
     }
   ]
 }

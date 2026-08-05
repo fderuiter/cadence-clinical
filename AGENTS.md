@@ -10,33 +10,33 @@ Capture (EDC) into an automated Digital Data Flow (DDF) platform.
 
 ## Technical Stack & Standards
 
-| Concern | Technology |
-|---|---|
-| Language & Runtime | Python 3.14+ |
-| Web Framework | FastAPI |
-| Data Validation | Pydantic v2 (strict typing required — no `Any` shortcuts) |
-| Async HTTP | HTTPX |
-| Code Style | **Ruff** (lint + format); replaces Black. Run `uv run ruff format .` |
-| Designer DB | Async Neo4j Python Driver (`apps/designer/`) |
-| Execution DB | Async SQLAlchemy + SQLModel for PostgreSQL (`apps/execution/`) |
-| Clinical Standards | CDISC USDM v3.0/v4.0, CDISC ODM XML/JSON |
-| GxP Audit Fields | `created_at`, `created_by`, `reason_for_change`, `version_index` (21 CFR Part 11) |
+| Concern            | Technology                                                                        |
+| ------------------ | --------------------------------------------------------------------------------- |
+| Language & Runtime | Python 3.14+                                                                      |
+| Web Framework      | FastAPI                                                                           |
+| Data Validation    | Pydantic v2 (strict typing required — no `Any` shortcuts)                         |
+| Async HTTP         | HTTPX                                                                             |
+| Code Style         | **Ruff** (lint + format); replaces Black. Run `uv run ruff format .`              |
+| Designer DB        | Async Neo4j Python Driver (`apps/designer/`)                                      |
+| Execution DB       | Async SQLAlchemy + SQLModel for PostgreSQL (`apps/execution/`)                    |
+| Clinical Standards | CDISC USDM v3.0/v4.0, CDISC ODM XML/JSON                                          |
+| GxP Audit Fields   | `created_at`, `created_by`, `reason_for_change`, `version_index` (21 CFR Part 11) |
 
 ---
 
 ## Directory Target Rules for Generated Code
 
-| Code type | Target directory |
-|---|---|
-| Data models & CDISC schemas | `apps/designer/` **and** `apps/execution/` |
-| Study authoring / MDR logic | `apps/designer/` |
-| Data capture / eCRF logic | `apps/execution/` |
-| OIDC Auth & API routers | `apps/gateway/` |
-| Stack orchestration | `docker/` |
-| Automation & helper scripts | `scripts/` |
-| Unit & integration tests | `tests/` |
-| Architecture Decision Records | `docs/adr/` |
-| GxP compliance docs | `docs/SDLC/` (never edit manually — always via `scripts/sync_gxp.py`) |
+| Code type                     | Target directory                                                      |
+| ----------------------------- | --------------------------------------------------------------------- |
+| Data models & CDISC schemas   | `apps/designer/` **and** `apps/execution/`                            |
+| Study authoring / MDR logic   | `apps/designer/`                                                      |
+| Data capture / eCRF logic     | `apps/execution/`                                                     |
+| OIDC Auth & API routers       | `apps/gateway/`                                                       |
+| Stack orchestration           | `docker/`                                                             |
+| Automation & helper scripts   | `scripts/`                                                            |
+| Unit & integration tests      | `tests/`                                                              |
+| Architecture Decision Records | `docs/adr/`                                                           |
+| GxP compliance docs           | `docs/SDLC/` (never edit manually — always via `scripts/sync_gxp.py`) |
 
 ---
 
@@ -118,6 +118,7 @@ To ensure proper GxP boundaries and architectural decoupling across the Cadence 
 4. **SLA Enforcements:** High-performance, low-latency asynchronous connection pooling via `httpx.AsyncClient` must be maintained to adhere to our strict **100ms internal SLA.**
 
 ---
+
 ## GxP Compliance Sync Protocol
 
 The CI `compliance` job regenerates the RTM docs and diffs them against the
@@ -130,6 +131,7 @@ GxP compliance documentation is out of sync with the current system state!
 ### When agents must run the sync
 
 Agents **must** run the GxP sync after any of the following:
+
 - Adding, renaming, or removing test functions.
 - Adding or changing requirement IDs in test docstrings.
 - Any change that alters test pass/fail counts.
@@ -142,11 +144,11 @@ uv run python scripts/sync_gxp.py
 
 This script automates the full three-step workflow:
 
-| Step | Action |
-|---|---|
-| 1 | `uv run pytest -n auto --junitxml=report.xml` |
-| 2 | `uv run python scripts/generate_rtm.py` |
-| 3 | `git add docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md` |
+| Step | Action                                                                                         |
+| ---- | ---------------------------------------------------------------------------------------------- |
+| 1    | `uv run pytest -n auto --junitxml=report.xml`                                                  |
+| 2    | `uv run python scripts/generate_rtm.py`                                                        |
+| 3    | `git add docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md` |
 
 Then commit the staged files:
 
@@ -156,11 +158,11 @@ git commit -m "docs(rtm): sync GxP compliance docs with current test state"
 
 ### Script flags
 
-| Flag | Behaviour |
-|---|---|
-| *(none)* | Full sync — runs tests, generates RTM, stages docs |
-| `--dry-run` | Validate only — no test run, no file changes, exits 1 if stale |
-| `--commit` | Full sync + auto-commit (do not use in interactive agent sessions) |
+| Flag        | Behaviour                                                          |
+| ----------- | ------------------------------------------------------------------ |
+| _(none)_    | Full sync — runs tests, generates RTM, stages docs                 |
+| `--dry-run` | Validate only — no test run, no file changes, exits 1 if stale     |
+| `--commit`  | Full sync + auto-commit (do not use in interactive agent sessions) |
 
 ### Deprecated approach — do not use
 
@@ -200,6 +202,7 @@ This creates a dated ADR file under `docs/adr/` (e.g. `2026-07-29-short-title.md
 auto-indexes it in `docs/adr/index.md`.
 
 **An ADR is required when:**
+
 - Adding a new third-party dependency or database engine.
 - Modifying inter-service data contracts or introducing new API gateways.
 - Changing data storage models (Neo4j graph nodes or PostgreSQL schema migrations).
@@ -226,18 +229,18 @@ and commit the RTM (see [GxP Compliance Sync Protocol](#gxp-compliance-sync-prot
 
 When CI fails, use this table to identify the root cause and exact fix:
 
-| CI Error | Root Cause | Agent Action |
-|---|---|---|
-| `I001 Import block is un-sorted or un-formatted` | New symbol inserted at wrong position in import block | `uv run ruff check . --fix` then verify the block is alphabetical |
-| `E712 Avoid equality comparisons to True/False` | Used `col == True` in SQLAlchemy `.where()` | Replace with `col.is_(True)` / `col.is_(False)` — see [pattern above](#sqlalchemy-boolean-filter-pattern-e712) |
-| `GxP compliance documentation is out of sync` | RTM docs not regenerated after test changes | `uv run python scripts/sync_gxp.py` then commit `docs/SDLC/` |
-| `Would reformat: <file>` (ruff format check) | Code not formatted | `uv run ruff format .` |
-| `Coverage < 80%` | New code paths not covered | Add tests for the uncovered lines in the coverage report |
-| `ADR validation failed` | Architectural change without a matching ADR | `python3 scripts/create_adr.py ...` — fill in rationale |
-| `Bandit: high severity issue` | Security-sensitive pattern in code | Fix the flagged pattern; if intentional add `# nosec B<code>: <justification>` |
-| `Secret detected` | Credential or token in source | Remove the secret; update `.secrets.baseline` with `detect-secrets scan` |
-| `DEID compliance scan failure` | Sensitive PII/PHI (SSN, Email, Date) flagged in files | Apply inline bypass (e.g., `# deid-ignore`) in mock/test files; remove actual sensitive data |
-| `Code Duplication Detected Above Threshold` | A consecutive block of 15 or more normalized lines of code is duplicated across different files. | Run `python3 scripts/detect_duplication.py` to identify, refactor to share logic, or add to the inline list of ignored sets inside `scripts/detect_duplication.py` if exempt. |
+| CI Error                                         | Root Cause                                                                                       | Agent Action                                                                                                                                                                  |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `I001 Import block is un-sorted or un-formatted` | New symbol inserted at wrong position in import block                                            | `uv run ruff check . --fix` then verify the block is alphabetical                                                                                                             |
+| `E712 Avoid equality comparisons to True/False`  | Used `col == True` in SQLAlchemy `.where()`                                                      | Replace with `col.is_(True)` / `col.is_(False)` — see [pattern above](#sqlalchemy-boolean-filter-pattern-e712)                                                                |
+| `GxP compliance documentation is out of sync`    | RTM docs not regenerated after test changes                                                      | `uv run python scripts/sync_gxp.py` then commit `docs/SDLC/`                                                                                                                  |
+| `Would reformat: <file>` (ruff format check)     | Code not formatted                                                                               | `uv run ruff format .`                                                                                                                                                        |
+| `Coverage < 80%`                                 | New code paths not covered                                                                       | Add tests for the uncovered lines in the coverage report                                                                                                                      |
+| `ADR validation failed`                          | Architectural change without a matching ADR                                                      | `python3 scripts/create_adr.py ...` — fill in rationale                                                                                                                       |
+| `Bandit: high severity issue`                    | Security-sensitive pattern in code                                                               | Fix the flagged pattern; if intentional add `# nosec B<code>: <justification>`                                                                                                |
+| `Secret detected`                                | Credential or token in source                                                                    | Remove the secret; update `.secrets.baseline` with `detect-secrets scan`                                                                                                      |
+| `DEID compliance scan failure`                   | Sensitive PII/PHI (SSN, Email, Date) flagged in files                                            | Apply inline bypass (e.g., `# deid-ignore`) in mock/test files; remove actual sensitive data                                                                                  |
+| `Code Duplication Detected Above Threshold`      | A consecutive block of 15 or more normalized lines of code is duplicated across different files. | Run `python3 scripts/detect_duplication.py` to identify, refactor to share logic, or add to the inline list of ignored sets inside `scripts/detect_duplication.py` if exempt. |
 
 ---
 
@@ -248,10 +251,10 @@ Every PR must satisfy **three mandatory gates** before merging into `main`.
 ### Gate 1 — Comprehensive Documentation & Docstrings
 
 - All public functions, classes, and API endpoints: Google-style docstrings.
-- Docstrings must state *what* the callable does, *args*, *returns*, and
-  *raises*.
+- Docstrings must state _what_ the callable does, _args_, _returns_, and
+  _raises_.
 - Complex business logic (USDM-to-ODM transformers, state machines): inline
-  comments explaining *why* a transformation is structured as it is.
+  comments explaining _why_ a transformation is structured as it is.
 - If the PR introduces a new service boundary or changes an existing data flow,
   update the corresponding `docs/SDLC/` Markdown documents.
 
@@ -294,7 +297,7 @@ python3 scripts/regenerate_templates.py
 
 ### 3. RTM Synchronization (updated)
 
-The legacy `pnpm rtm` command only *validates* the RTM (read-only). To
+The legacy `pnpm rtm` command only _validates_ the RTM (read-only). To
 **regenerate** and **commit** updated docs, always use:
 
 ```bash
@@ -340,11 +343,14 @@ When executing `uv run` commands in sandboxed terminal environments, ensure Pyth
 To prevent pipeline failures caused by unexpected code duplication, agents must understand the mechanics of the workspace's automated Code Duplication Scanner and how to manage logical similarity.
 
 #### Duplication Thresholds & Targets
+
 - **15-Line Sliding Window:** The detection engine uses a sliding-window threshold of **15 consecutive identical normalized lines**. Any contiguous block of logic meeting or exceeding this threshold across different files will trigger a pipeline blockage.
 - **Target File Formats:** The scanner targets only the following extension formats: `.py`, `.js`, `.vue`, and `.css`.
 
 #### Line Normalization Mechanics
+
 The scanner is highly robust against surface-level styling differences. To prevent false positives, each line of code is normalized through the following steps before comparison:
+
 1. **URL Masking:** Standard URLs are mapped to a generic placeholder to prevent differences in URL endpoints from masking duplicated structures.
 2. **Comment Stripping:**
    - Single-line comments starting with `#` or `//` are completely stripped.
@@ -354,7 +360,9 @@ The scanner is highly robust against surface-level styling differences. To preve
 4. **String Format Standardization:** Single quotes `'` and backticks `` ` `` are replaced with standard double quotes `"` to treat functionally equivalent strings identically.
 
 #### Running the Scanner Locally
+
 Agents must run the duplication scanner locally to verify changes before pushing them:
+
 - **Workspace-wide Scan:**
   ```bash
   python3 scripts/detect_duplication.py
@@ -370,7 +378,9 @@ Agents must run the duplication scanner locally to verify changes before pushing
   ```
 
 #### How to Whitelist Legitimate Duplications (Inline Exemptions)
+
 In scenarios where refactoring to shared helpers is highly impractical or technically impossible due to strict microservice/module boundaries, you may exempt specific file pairs from the scanner.
+
 1. Open the scanner script at `/app/scripts/detect_duplication.py`.
 2. Locate the hardcoded inline list of `ignored` sets in the loop that evaluates duplicates (around line 223).
 3. Append a new set containing the relative repo paths of the files to exempt. For example:
@@ -391,10 +401,13 @@ ignored_pair = {
 To accelerate release velocity, prevent accidental PII/PHI leakage, and resolve false positives in mock clinical data without manual intervention, follow the compliance scan protocol below. These guidelines ensure 100% alignment between local pre-commit verification and central CI security jobs.
 
 ### 1. Compliance Scanning & Security Tools
+
 Local security sweeps and compliance checks run using the workspace runner (`uv run`).
 
 #### De-identification (DEID) Scan Tool
+
 Scans files for PII/PHI leakage (emails, SSNs, IP addresses, dates, and geographic information).
+
 - **Package Path:** `packages/deid/`
 - **CLI Entry Point:** `packages.deid.cli`
 - **Local Run Command:**
@@ -403,7 +416,9 @@ Scans files for PII/PHI leakage (emails, SSNs, IP addresses, dates, and geograph
   ```
 
 #### Security Audit Tool
+
 Scans code and configurations for hardcoded secrets, unencrypted tokens, private keys, and insecure configurations to comply with GxP 21 CFR Part 11 security guidelines.
+
 - **Script Path:** `scripts/audit_security.py`
 - **Local Run Command:**
   ```bash
@@ -413,6 +428,7 @@ Scans code and configurations for hardcoded secrets, unencrypted tokens, private
 ---
 
 ### 2. Scanning Profiles
+
 The DEID compliance scan supports specific regional scanning standards using the `--profile` flag:
 
 - **`HIPAA` (Default):** Enables all standard clinical detectors (including emails, dates, SSNs, geographic details, IP addresses, URLs, MRN/accounts, and age-related fields).
@@ -420,6 +436,7 @@ The DEID compliance scan supports specific regional scanning standards using the
 - **`EU_CTR`:** Enables a subset focused specifically on clinical trials: `DATES`, `MEDICAL_RECORD_ACCOUNT`, and `AGE`.
 
 Example running a GDPR scan on specific directories:
+
 ```bash
 uv run python -m packages.deid.cli apps/designer/ --profile GDPR
 ```
@@ -427,12 +444,15 @@ uv run python -m packages.deid.cli apps/designer/ --profile GDPR
 ---
 
 ### 3. Verification Patterns & Branch Filters (CI Alignment)
+
 Local execution patterns must match the exact verification patterns and branch filters configured in central CI jobs (`.github/workflows/ci.yml`). In CI, the de-identification checks target specific file extensions: `.py`, `.js`, `.ts`, `.tsx`, `.jsx`, `.json`, `.md`, `.log`, and `.txt`.
 
 To simulate CI checks locally before pushing, use the appropriate branch filtering command below:
 
 #### Simulating Pull Request Verification (Local Branch vs. Main)
+
 Runs the scanner only on changed files in your branch compared to the common ancestor branch (`origin/main`):
+
 ```bash
 # Fetch origin/main to find the correct ancestor ref
 git fetch origin main --depth=1 || true
@@ -442,7 +462,9 @@ uv run python -m packages.deid.cli $(git diff --name-only origin/main...HEAD 2>/
 ```
 
 #### Simulating Push/Commit-by-Commit Verification (Incremental Commit checks)
+
 Runs the scanner on changes introduced in the last commit:
+
 ```bash
 uv run python -m packages.deid.cli $(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '\.(py|js|ts|tsx|jsx|json|md|log|txt)$' || true)
 ```
@@ -450,18 +472,22 @@ uv run python -m packages.deid.cli $(git diff --name-only HEAD~1..HEAD 2>/dev/nu
 ---
 
 ### 4. Multi-Language Comment Bypass Pragmas
+
 To resolve false positives in testing and mock clinical data, use inline developer comment bypass pragmas.
-* **Strict Security Guardrail:** Inline bypass pragmas are strictly restricted to non-production code, mock data structures, and tests. They must **never** be applied to production codebase paths or production configuration files to ensure core security scans are never bypassed.
+
+- **Strict Security Guardrail:** Inline bypass pragmas are strictly restricted to non-production code, mock data structures, and tests. They must **never** be applied to production codebase paths or production configuration files to ensure core security scans are never bypassed.
 
 There are three case-sensitive inline comment pragmas supported globally by the scanners:
+
 1. `deid-ignore`
 2. `pragma: allowlist`
 3. `deid: ignore`
-*Note: For the security audit script (`scripts/audit_security.py`), the `nosec` comment is used to bypass credential warnings (e.g., `# nosec B<code>: <justification>`).*
+   _Note: For the security audit script (`scripts/audit_security.py`), the `nosec` comment is used to bypass credential warnings (e.g., `# nosec B<code>: <justification>`)._
 
 #### Language-Specific Syntax Examples
 
 ##### Python (`#` comment syntax)
+
 ```python
 mock_ssn = "000-12-3456"  # deid-ignore
 mock_email = "test-patient@example.com"  # pragma: allowlist
@@ -469,6 +495,7 @@ mock_birth_date = "1960-01-01"  # deid: ignore
 ```
 
 ##### Frontend / Scripting (`//` or `/* */` comments in JS, TS, JSX, TSX, CSS)
+
 ```typescript
 const mockSsn = "000-12-3456"; // deid-ignore
 const mockEmail = "test-patient@example.com"; // pragma: allowlist
@@ -476,6 +503,7 @@ const mockBirthDate = "1960-01-01"; // deid: ignore
 ```
 
 ##### Configuration & Markup (YAML & Markdown / HTML)
+
 - **YAML:**
   ```yaml
   mock_ssn: "000-12-3456" # deid-ignore
@@ -490,17 +518,22 @@ const mockBirthDate = "1960-01-01"; // deid: ignore
 ---
 
 ### 5. Nested Exclusion Rules Hierarchy & Automated Heuristics
+
 The compliance parser resolves scanning constraints through a multi-tiered filtering hierarchy to prevent blocking developers with harmless mock/test records.
 
 #### Tier 1: Directory & File-Level Exclusions (Configured in Scanner)
+
 The scanner automatically skips directories and files typically containing non-production data, tests, dependencies, or configuration:
+
 - **Test Directories:** `tests/`, `test/`, and files starting/ending with test names (e.g., `test_*.py`, `*.test.js`).
 - **Dependencies & Build Assets:** `node_modules/`, `.git/`, `.venv/`, `env/`, `build/`, `dist/`.
 - **Caches & GitHub Configurations:** `.github/`, `.ruff_cache/`, `.pytest_cache/`.
 - **Gitignored Files:** Automatically ignored using standard `.gitignore` rules (validated via `git check-ignore`).
 
 #### Tier 2: Built-in Automated Value-Level Heuristics
+
 Certain values are globally excluded or bypassed by the parser heuristics automatically:
+
 - **IP Addresses & URLs:** Bypasses localhost/loopback addresses (`127.0.0.1`, `0.0.0.0`, `::1`) and test-infrastructure or registry domains (e.g., `github.com`, `pypi.org`, `npmjs.com`, `nih.gov`, `cadence-clinical.com`, `transmit-mock`).
 - **Emails:** Any email address containing the substring `"cadence"` or `"clinical"`.
 - **Dates:** Common testing default dates (e.g., `"2024-09-27"`, `"1960-01-01"`, `"2026-07-30"`, `"02-aug-2026"`, `"2026-08-04"`) or any lines containing standard config/version fields such as `"version"`, `"package"`, `"release"`, `"epoch"`, or `"default"`.
@@ -560,24 +593,24 @@ make db-reset-offline
 
 Agents may invoke these tools directly when needed:
 
-| Command | Purpose |
-|---|---|
-| `make ports` | Check that all 13 microservice, database, and frontend ports are free and available |
-| `make db-reset` | Concurrently wipe, migrate, and seed all SQL/NoSQL/graph databases in under 15 seconds |
-| `make db-reset-offline` | Execute database resets offline, generating warnings instead of crashing if databases are unreachable |
-| `uv run ruff check . --fix` | Auto-fix all fixable lint errors (I001, F-strings, etc.) |
-| `uv run ruff format .` | Auto-format all Python files |
-| `uv run python scripts/sync_gxp.py` | Full GxP compliance sync (tests → RTM → stage) |
-| `uv run python scripts/sync_gxp.py --dry-run` | Validate GxP docs without modifying files |
-| `python3 scripts/create_adr.py --title "..." --domain "..." --req "PRD-SYS-xxx"` | Scaffold ADR |
-| `python3 scripts/validate_adrs.py --fix-index` | Rebuild the ADR index |
-| `python3 scripts/validate_markdown.py` | Check all Markdown link integrity |
-| `uv run pytest -n auto --cov=apps --cov=packages` | Run full test suite with coverage |
-| `uv run bandit -c pyproject.toml -ll -ii -r apps packages` | Static security analysis |
-| `uv run python -m packages.deid.cli [paths...]` | Local de-identification (DEID) scanner to check specific files/directories for PII/PHI leakage |
-| `uv run python scripts/audit_security.py` | Execute standard repository-wide security and credentials sweep |
-| `python3 scripts/detect_duplication.py` | Run workspace-wide code duplication scanner |
-| `python3 scripts/detect_duplication.py <files>` | Run duplication scanner in target changed-files mode |
+| Command                                                                          | Purpose                                                                                               |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `make ports`                                                                     | Check that all 13 microservice, database, and frontend ports are free and available                   |
+| `make db-reset`                                                                  | Concurrently wipe, migrate, and seed all SQL/NoSQL/graph databases in under 15 seconds                |
+| `make db-reset-offline`                                                          | Execute database resets offline, generating warnings instead of crashing if databases are unreachable |
+| `uv run ruff check . --fix`                                                      | Auto-fix all fixable lint errors (I001, F-strings, etc.)                                              |
+| `uv run ruff format .`                                                           | Auto-format all Python files                                                                          |
+| `uv run python scripts/sync_gxp.py`                                              | Full GxP compliance sync (tests → RTM → stage)                                                        |
+| `uv run python scripts/sync_gxp.py --dry-run`                                    | Validate GxP docs without modifying files                                                             |
+| `python3 scripts/create_adr.py --title "..." --domain "..." --req "PRD-SYS-xxx"` | Scaffold ADR                                                                                          |
+| `python3 scripts/validate_adrs.py --fix-index`                                   | Rebuild the ADR index                                                                                 |
+| `python3 scripts/validate_markdown.py`                                           | Check all Markdown link integrity                                                                     |
+| `uv run pytest -n auto --cov=apps --cov=packages`                                | Run full test suite with coverage                                                                     |
+| `uv run bandit -c pyproject.toml -ll -ii -r apps packages`                       | Static security analysis                                                                              |
+| `uv run python -m packages.deid.cli [paths...]`                                  | Local de-identification (DEID) scanner to check specific files/directories for PII/PHI leakage        |
+| `uv run python scripts/audit_security.py`                                        | Execute standard repository-wide security and credentials sweep                                       |
+| `python3 scripts/detect_duplication.py`                                          | Run workspace-wide code duplication scanner                                                           |
+| `python3 scripts/detect_duplication.py <files>`                                  | Run duplication scanner in target changed-files mode                                                  |
 
 ---
 
@@ -585,15 +618,15 @@ Agents may invoke these tools directly when needed:
 
 Before submitting a PR, verify all items:
 
-* [ ] All Python code is fully typed with strict type hints — no bare `Any`.
-* [ ] All public functions and classes have Google-style docstrings.
-* [ ] Imports are alphabetically ordered within each group (run `uv run ruff check . --fix`).
-* [ ] SQLAlchemy boolean filters use `.is_(True)` / `.is_(False)` — not `== True` / `== False`.
-* [ ] Unit and/or integration tests added under `tests/` with requirement IDs in docstrings.
-* [ ] An ADR added to `docs/adr/` if the PR introduces a significant architectural change.
-* [ ] All local checks pass: `uv run ruff check .` and `uv run ruff format --check .`
-* [ ] GxP compliance docs are up to date: `uv run python scripts/sync_gxp.py` run and committed.
-* [ ] `docs/SDLC/` Markdown docs updated if a service boundary or data flow changed.
-* [ ] Local compliance and security sweeps run and pass, with any false positives bypassed using standard comment pragmas (restricted to mock/test files).
-* [ ] No code duplication failures (run `python3 scripts/detect_duplication.py` locally to verify, or whitelist if exempt).
-* [ ] No binary `.docx` files, `report.xml`, or secrets are staged.
+- [ ] All Python code is fully typed with strict type hints — no bare `Any`.
+- [ ] All public functions and classes have Google-style docstrings.
+- [ ] Imports are alphabetically ordered within each group (run `uv run ruff check . --fix`).
+- [ ] SQLAlchemy boolean filters use `.is_(True)` / `.is_(False)` — not `== True` / `== False`.
+- [ ] Unit and/or integration tests added under `tests/` with requirement IDs in docstrings.
+- [ ] An ADR added to `docs/adr/` if the PR introduces a significant architectural change.
+- [ ] All local checks pass: `uv run ruff check .` and `uv run ruff format --check .`
+- [ ] GxP compliance docs are up to date: `uv run python scripts/sync_gxp.py` run and committed.
+- [ ] `docs/SDLC/` Markdown docs updated if a service boundary or data flow changed.
+- [ ] Local compliance and security sweeps run and pass, with any false positives bypassed using standard comment pragmas (restricted to mock/test files).
+- [ ] No code duplication failures (run `python3 scripts/detect_duplication.py` locally to verify, or whitelist if exempt).
+- [ ] No binary `.docx` files, `report.xml`, or secrets are staged.

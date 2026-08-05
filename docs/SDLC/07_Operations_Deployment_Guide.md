@@ -12,15 +12,18 @@
 ## Document Control & Approvals
 
 ### Revision History
-| Version | Date | Description | Author | Reviewed By | Approved By |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| 1.0.0 | Oct 2026 | Initial Release of Production Playbook for Cadence Clinical Platform. | J. Doe (SRE) | A. Smith (QA) | E. Executive (VP Eng) |
+
+| Version | Date     | Description                                                           | Author       | Reviewed By   | Approved By           |
+| :------ | :------- | :-------------------------------------------------------------------- | :----------- | :------------ | :-------------------- |
+| 1.0.0   | Oct 2026 | Initial Release of Production Playbook for Cadence Clinical Platform. | J. Doe (SRE) | A. Smith (QA) | E. Executive (VP Eng) |
 
 ### Standards Alignment Matrix
+
 The Cadence Clinical platform operations and deployment workflows conform strictly to the following standards:
-* **ISO/IEC 27001 (Section A.12.1.2 Change Management, A.12.4 Logging & Monitoring):** Governs change control, audit ledgers, operational logging, and environment separation.
-* **IEC 62304 Section 8 (Software Configuration & Release Management):** Governs the configuration status of software items, software release verification, and patch/rollback control for medical/clinical devices.
-* **FDA 21 CFR Part 11 / EU Annex 11:** Enforces electronic records compliance, multi-factor electronic signatures, and computerized system validation (CSV) gates.
+
+- **ISO/IEC 27001 (Section A.12.1.2 Change Management, A.12.4 Logging & Monitoring):** Governs change control, audit ledgers, operational logging, and environment separation.
+- **IEC 62304 Section 8 (Software Configuration & Release Management):** Governs the configuration status of software items, software release verification, and patch/rollback control for medical/clinical devices.
+- **FDA 21 CFR Part 11 / EU Annex 11:** Enforces electronic records compliance, multi-factor electronic signatures, and computerized system validation (CSV) gates.
 
 ---
 
@@ -29,6 +32,7 @@ The Cadence Clinical platform operations and deployment workflows conform strict
 This guide provides step-by-step instructions, automated scripts, pipeline designs, and disaster recovery playbooks for promoting, configuration, migration, and monitoring of the Cadence Clinical monorepo architecture.
 
 The Cadence Clinical microservices topology consists of:
+
 1. **API Gateway & Auth Service (`apps/gateway`)**: Central access point utilizing Keycloak for OpenID Connect (OIDC) identity federation and JWT propagation.
 2. **Designer Service (`apps/designer`)**: Metadata-driven Study Design Repository (MDR) leveraging CDISC USDM v3.0/v4.0 modeled inside Neo4j.
 3. **Execution Service (`apps/execution`)**: Downstream Electronic Data Capture (EDC) engine storing clinical subjects, forms, and audit trails in PostgreSQL.
@@ -39,6 +43,7 @@ The Cadence Clinical microservices topology consists of:
 # SECTION 1: Environment Promotion & Infrastructure
 
 ## 1.1 Environment Topology & Separation
+
 To satisfy GxP validation and ISO 27001 requirements, Cadence Clinical maintains four strictly isolated environments. Cross-environment database sharing or credential leakage is strictly forbidden. Network segmentation is enforced via Kubernetes NetworkPolicies.
 
 ```
@@ -51,21 +56,21 @@ To satisfy GxP validation and ISO 27001 requirements, Cadence Clinical maintains
 ```
 
 1. **Development (DEV)**
-   * **Purpose:** Sandbox for active developer feature testing, branch validation, and automated CI tests.
-   * **Database:** Isolated containerized Neo4j & PostgreSQL. Sanitized mock dictionaries.
-   * **Access:** Developers have read/write access. No patient or true sponsor data.
+   - **Purpose:** Sandbox for active developer feature testing, branch validation, and automated CI tests.
+   - **Database:** Isolated containerized Neo4j & PostgreSQL. Sanitized mock dictionaries.
+   - **Access:** Developers have read/write access. No patient or true sponsor data.
 2. **Staging (STG)**
-   * **Purpose:** Multi-tenant integration testing, performance benchmarking, external API gateway testing.
-   * **Database:** Multi-tenant PostgreSQL schemas and Neo4j cluster partitions.
-   * **Access:** Limited developer access, full automated access via pipelines.
+   - **Purpose:** Multi-tenant integration testing, performance benchmarking, external API gateway testing.
+   - **Database:** Multi-tenant PostgreSQL schemas and Neo4j cluster partitions.
+   - **Access:** Limited developer access, full automated access via pipelines.
 3. **Validation (VAL / UAT)**
-   * **Purpose:** **GxP User Acceptance Testing and Computerized System Validation (CSV).** Must be identical to production in topology and configuration, with a frozen codebase.
-   * **Database:** Production-like encryption-at-rest. No real patient data; synthetic validation profiles.
-   * **Access:** Frozen access controls. Changes require QA Approval and Change Control Board (CCB) authorization.
+   - **Purpose:** **GxP User Acceptance Testing and Computerized System Validation (CSV).** Must be identical to production in topology and configuration, with a frozen codebase.
+   - **Database:** Production-like encryption-at-rest. No real patient data; synthetic validation profiles.
+   - **Access:** Frozen access controls. Changes require QA Approval and Change Control Board (CCB) authorization.
 4. **Production (PROD)**
-   * **Purpose:** Hosting live clinical studies with actual subject data. Fully GxP compliant, audited, and locked.
-   * **Database:** Dedicated high-availability Neo4j Enterprise cluster and PostgreSQL multi-region databases with WAL-G/Point-in-Time Recovery enabled.
-   * **Access:** No developer access. Read-only breakglass emergency access strictly monitored and audited.
+   - **Purpose:** Hosting live clinical studies with actual subject data. Fully GxP compliant, audited, and locked.
+   - **Database:** Dedicated high-availability Neo4j Enterprise cluster and PostgreSQL multi-region databases with WAL-G/Point-in-Time Recovery enabled.
+   - **Access:** No developer access. Read-only breakglass emergency access strictly monitored and audited.
 
 ---
 
@@ -74,6 +79,7 @@ To satisfy GxP validation and ISO 27001 requirements, Cadence Clinical maintains
 Promotion of software packages must proceed sequentially. Skipped environments are strictly forbidden.
 
 ### Step 1: Promote Dev to Staging
+
 Upon successful merge to the `main` branch, the CI/CD pipeline compiles docker images and releases them with a staging build tag (`vMAJOR.MINOR.PATCH-rcX`).
 
 ```bash
@@ -94,6 +100,7 @@ kubectl rollout status deployment/cadence-execution -n cadence-stg
 ```
 
 ### Step 2: Promote Staging to Validation (UAT)
+
 After QA and automated end-to-end regression test suites pass in Staging, a Release Candidate is selected for Promotion to the Validation cluster.
 
 ```bash
@@ -117,6 +124,7 @@ pytest tests/test_ledger_and_triggers.py tests/test_audit.py tests/test_trial_lo
 ```
 
 ### Step 3: Promote Validation to Production
+
 Promoting to production requires **Manual Sign-off Gates** (detailed in Section 1.3), complete verification test reports, and an approved change control ticket.
 
 ```bash
@@ -147,6 +155,7 @@ curl -f https://blue.cadence.clinical/health
 Under **IEC 62304 Section 8.1.1** (Software configuration management) and **8.2** (Software release verification), a software release must meet rigorous criteria before entering live validation or production environments.
 
 ### Sign-off Checklist Criteria
+
 1. **Traceability Matrix Approved (QA-VAL-01):** Every feature requirement, bug fix, and architectural shift must be traceably mapped to corresponding tests. View the active, automatically generated **[Requirements Traceability Matrix](Requirements_Traceability_Matrix.md)**.
 2. **Zero Known Critical Vulnerabilities:** Security scan must report 0 CVEs (Critical/High) in production container layers.
 3. **90% Unit Test & Integration Coverage:** Code coverage in python apps (`gateway`, `designer`, `execution`) must not drop below 80% (Cadence enforces 80% minimum, target is 90% for clinical calculations). See the latest **[Qualification Execution Report](IQ_OQ_PQ_Execution_Report.md)** for detailed test outcomes.
@@ -182,7 +191,7 @@ Under **IEC 62304 Section 8.1.1** (Software configuration management) and **8.2*
                   └───────────────────────────────┘
 ```
 
-* **Electronic Signature:** Release Approval must be digitally signed utilizing the RSA-2048 private key of the QA Director and Clinical Platform Architect, logging the cryptographic audit trail into the immutable ledger database.
+- **Electronic Signature:** Release Approval must be digitally signed utilizing the RSA-2048 private key of the QA Director and Clinical Platform Architect, logging the cryptographic audit trail into the immutable ledger database.
 
 ---
 
@@ -195,9 +204,9 @@ name: Cadence Clinical CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, release/* ]
+    branches: [main, release/*]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   static-analysis:
@@ -210,8 +219,8 @@ jobs:
       - name: Set up Python 3.14
         uses: actions/setup-python@v4
         with:
-          python-with-architecture: 'x64'
-          python-version: '3.14'
+          python-with-architecture: "x64"
+          python-version: "3.14"
 
       - name: Install UV Package Manager
         run: |
@@ -248,7 +257,7 @@ jobs:
       - name: Set up Python 3.14
         uses: actions/setup-python@v4
         with:
-          python-version: '3.14'
+          python-version: "3.14"
 
       - name: Install UV and Sync
         run: |
@@ -279,11 +288,11 @@ jobs:
       - name: Run Trivy Security Scan on Gateway
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'cadence-gateway:latest'
-          format: 'table'
-          exit-code: '1'
+          image-ref: "cadence-gateway:latest"
+          format: "table"
+          exit-code: "1"
           ignore-unfixed: true
-          severity: 'CRITICAL,HIGH'
+          severity: "CRITICAL,HIGH"
 
   deploy-staging:
     name: Deploy Release Candidate to Staging
@@ -322,14 +331,16 @@ jobs:
 # SECTION 2: Configuration & Multi-Tenancy Management
 
 ## 2.1 Multi-Tenant Separation Architecture
+
 Cadence Clinical enforces a **Hybrid Multi-Tenant Isolation Pattern** to ensure strict data security between different clinical research sponsors (e.g., Pfizer, Novartis, Roche) and to comply with HIPAA, GDPR, and ISO 27001 data privacy boundaries.
 
 ### Isolation Strategy Matrix
-| Layer | Isolation Type | Enforcement Mechanism | Performance Overhead | Compliance Level |
-| :--- | :--- | :--- | :--- | :--- |
-| **MDR Graph (Neo4j)** | Logical / Relationship Separation | Cypher Study Node Anchors (`SPONSOR` and `TRIAL` context tags) | Minimal | High |
-| **Transactional EDC (PostgreSQL)** | Schema-Level Separation | Separate Postgres Schemas per Tenant (`sponsor_a`, `sponsor_b`) | Moderate | Maximum GxP Isolation |
-| **Identity / Auth (Keycloak)** | Realm-Level Isolation | Dedicated Keycloak Realms with Tenant-Specific Sign-In/MFA | Minimal | High |
+
+| Layer                              | Isolation Type                    | Enforcement Mechanism                                           | Performance Overhead | Compliance Level      |
+| :--------------------------------- | :-------------------------------- | :-------------------------------------------------------------- | :------------------- | :-------------------- |
+| **MDR Graph (Neo4j)**              | Logical / Relationship Separation | Cypher Study Node Anchors (`SPONSOR` and `TRIAL` context tags)  | Minimal              | High                  |
+| **Transactional EDC (PostgreSQL)** | Schema-Level Separation           | Separate Postgres Schemas per Tenant (`sponsor_a`, `sponsor_b`) | Moderate             | Maximum GxP Isolation |
+| **Identity / Auth (Keycloak)**     | Realm-Level Isolation             | Dedicated Keycloak Realms with Tenant-Specific Sign-In/MFA      | Minimal              | High                  |
 
 ```
                        ┌────────────────────────────┐
@@ -353,6 +364,7 @@ Cadence Clinical enforces a **Hybrid Multi-Tenant Isolation Pattern** to ensure 
 ## 2.2 Provisioning Script for New Sponsors/Tenants
 
 Adding a new sponsor involves setting up:
+
 1. A tenant-specific database schema with standard audit ledgers, event trigger mappings, and base structural models.
 2. An isolated realm/client inside Keycloak for tenant identity management.
 3. Logical study design anchors in Neo4j.
@@ -360,6 +372,7 @@ Adding a new sponsor involves setting up:
 The following Python script (`apps/execution/database/provision_tenant.py`) automates this process:
 
 <!-- validation-skip -->
+
 ```python
 import asyncio
 import logging
@@ -499,11 +512,13 @@ Clinical trials frequently require custom dictionary translation layers. CDISC d
 Instead of relying on rigid, manual CLI utilities, the platform uses an active, in-memory **Terminology Override and Cache System** integrated directly within the **Designer Service (`apps/designer`)**.
 
 ### Directory Mapping & Active Utilities
-* Active mapping utilities reside in `apps/designer/mapper.py`.
-* Controlled terminology lookups and custom localization translations utilize the active `TerminologyCache` defined in `apps/designer/db.py`.
-* In-memory bidirectional transformation adapters flatten and process these mappings dynamically during active USDM exports.
+
+- Active mapping utilities reside in `apps/designer/mapper.py`.
+- Controlled terminology lookups and custom localization translations utilize the active `TerminologyCache` defined in `apps/designer/db.py`.
+- In-memory bidirectional transformation adapters flatten and process these mappings dynamically during active USDM exports.
 
 ### Local Study Translation Management Process
+
 To load and apply a localization dictionary without requiring a service restart, system operators and administrators must follow the standard cache-refresh workflow:
 
 1. **Load/Update Terminology Mappings:** Update translation dictionaries or configure localized terminology overrides in the Neo4j database utilizing the platform's localization schema relations:
@@ -529,13 +544,15 @@ To load and apply a localization dictionary without requiring a service restart,
 The in-app Tickets and Query Escalation service manages operational issues, support tickets, and system queries. SREs and system operators must follow these deployment and monitoring specifications to guarantee GxP and ISO 27001 compliance.
 
 ### Directory Mapping & Active Utilities
-* Active ticket service routes and controllers reside in `apps/tickets/main.py`.
-* Relational database tables and Alembic configuration reside in `apps/tickets/database.py` and `apps/tickets/models/__init__.py`.
-* Dynamic notification generation logic resides in `apps/tickets/notification_events.py`.
-* Gate-signed internal service notification dispatch resides in `apps/tickets/notifications_client.py`.
-* Automated background priority escalation loops reside in `apps/tickets/escalation.py`.
+
+- Active ticket service routes and controllers reside in `apps/tickets/main.py`.
+- Relational database tables and Alembic configuration reside in `apps/tickets/database.py` and `apps/tickets/models/__init__.py`.
+- Dynamic notification generation logic resides in `apps/tickets/notification_events.py`.
+- Gate-signed internal service notification dispatch resides in `apps/tickets/notifications_client.py`.
+- Automated background priority escalation loops reside in `apps/tickets/escalation.py`.
 
 ### Environment Variables & CI Configuration
+
 Using the CI env: block convention, SREs must inject these keys into deployment templates:
 
 ```yaml
@@ -547,34 +564,40 @@ env:
 ```
 
 ### SLA Priority & MTTR Metrics Matrix
+
 Under the §4.3 Severity/SLA/MTTR format, tickets are escalated stepwise up to CRITICAL based on these targets:
 
-| Priority Level | Definition | Target Resolution (SLA) | Target MTTR | Notification Chain |
-| :--- | :--- | :--- | :--- | :--- |
-| **CRITICAL** | Critical clinical roadblock, randomization freeze, or data corruption. | **1 Hour** | **2 Hours** | Immediate SMS/Pager alert to SRE Lead, QA Director, and System Admin. |
-| **HIGH** | Form submission block, single site query backlog, or major API latency. | **4 Hours** | **8 Hours** | High-priority email/Slack alert to SRE Team and Developer Lead. |
-| **MEDIUM** | Standard operational query, minor eCRF glitch, or localization discrepancy. | **24 Hours** | **48 Hours** | Support Desk ticket queue automated routing. |
-| **LOW** | Enhancement request, minor documentation update, or cosmetic portal issue. | **72 Hours** | **120 Hours** | Bi-weekly backlog review and release planning. |
+| Priority Level | Definition                                                                  | Target Resolution (SLA) | Target MTTR   | Notification Chain                                                    |
+| :------------- | :-------------------------------------------------------------------------- | :---------------------- | :------------ | :-------------------------------------------------------------------- |
+| **CRITICAL**   | Critical clinical roadblock, randomization freeze, or data corruption.      | **1 Hour**              | **2 Hours**   | Immediate SMS/Pager alert to SRE Lead, QA Director, and System Admin. |
+| **HIGH**       | Form submission block, single site query backlog, or major API latency.     | **4 Hours**             | **8 Hours**   | High-priority email/Slack alert to SRE Team and Developer Lead.       |
+| **MEDIUM**     | Standard operational query, minor eCRF glitch, or localization discrepancy. | **24 Hours**            | **48 Hours**  | Support Desk ticket queue automated routing.                          |
+| **LOW**        | Enhancement request, minor documentation update, or cosmetic portal issue.  | **72 Hours**            | **120 Hours** | Bi-weekly backlog review and release planning.                        |
 
 ### Escalation Worker & Background Runner Specifications
+
 Following the §3.1.0 background-runner style, the escalation worker operates as follows:
-* **Module Path:** `apps/tickets/escalation.py`
-* **Poll & Cooldown Vars:** Configured via `TICKETS_ESCALATION_POLL_INTERVAL_SECONDS` (sleep interval between scans, e.g. 60s) and `TICKETS_ESCALATION_INTERVAL_SECONDS` (cooldown window between escalation steps, e.g. 86400s / 1 day).
-* **Eligibility & Idempotency Rules:**
+
+- **Module Path:** `apps/tickets/escalation.py`
+- **Poll & Cooldown Vars:** Configured via `TICKETS_ESCALATION_POLL_INTERVAL_SECONDS` (sleep interval between scans, e.g. 60s) and `TICKETS_ESCALATION_INTERVAL_SECONDS` (cooldown window between escalation steps, e.g. 86400s / 1 day).
+- **Eligibility & Idempotency Rules:**
   - Overdue tickets (`due_date` in the past), non-terminal (not in `CLOSED` or `CANCELLED`), non-deleted, and below `CRITICAL` priority are eligible.
   - Priority advances stepwise (`LOW` -> `MEDIUM` -> `HIGH` -> `CRITICAL`). Once at `CRITICAL`, it is capped and does not advance.
   - No `due_date` or terminal tickets are skipped.
-* **Notification-Owed Retry Invariant:**
+- **Notification-Owed Retry Invariant:**
   - To prevent duplicate or lost notifications across worker restarts, the loop executes a strict transactional order: (1) Escalation commits priority mutation and writes a `TICKET_ESCALATE` audit log. (2) Outbound notification is dispatched via `notifications_client.py` using HMAC-SHA256 signatures. (3) On notification success, `last_escalation_notified_at` is stamped.
   - If notification fails, the timestamp remains `None` (stale). In the next cycle, the cooldown check blocks re-escalation but identifies that a notification is still owed, safely retrying the dispatch.
 
 ### Observability & Health Checks
-* **Endpoint:** `GET /health` on port `8009` returns `{"status": "ok", "service": "tickets"}`.
-* **Prometheus metrics:** Exposes `http_requests_total`, `http_request_duration_seconds`, and active/idle database pool size.
+
+- **Endpoint:** `GET /health` on port `8009` returns `{"status": "ok", "service": "tickets"}`.
+- **Prometheus metrics:** Exposes `http_requests_total`, `http_request_duration_seconds`, and active/idle database pool size.
 
 ### Rollback & Operational Guidance
-* **Pytest Test Bypass:** To allow unit testing, the escalation worker automatically detects standard pytest execution contexts (`"pytest" in sys.modules` or the `PYTEST_CURRENT_TEST` env var) and bypasses the background loop auto-execution.
-* **Optimistic & Pessimistic Lock Safety:** Concurrency is eliminated during escalation by acquiring a pessimistic write lock via `.with_for_update()` on target rows. If a rollback is needed, the `version_index` protects historical lines from conflicting database writes.
+
+- **Pytest Test Bypass:** To allow unit testing, the escalation worker automatically detects standard pytest execution contexts (`"pytest" in sys.modules` or the `PYTEST_CURRENT_TEST` env var) and bypasses the background loop auto-execution.
+- **Optimistic & Pessimistic Lock Safety:** Concurrency is eliminated during escalation by acquiring a pessimistic write lock via `.with_for_update()` on target rows. If a rollback is needed, the `version_index` protects historical lines from conflicting database writes.
+
 ---
 
 # SECTION 3: Database Migration, Schema Evolution, and Version Rollbacks
@@ -584,10 +607,12 @@ Clinical data migrations must guarantee **zero data loss** (GxP GAMP 5 Class 5 s
 ## 3.1 PostgreSQL Migration Strategy
 
 Alembic-style, migration scripts must employ a **Expand-and-Contract (Two-Phase)** pattern to eliminate locks and ensure rolling updates:
+
 1. **Expand Phase (Pre-boot):** Add columns, create shadow tables, execute non-blocking writes. Database changes are completely backward compatible with older codebase versions currently running in production.
 2. **Contract Phase (Post-rollout):** Deprecate and drop older attributes only after all microservice instances are updated.
 
 ### 3.1.0 eTMF & eISF Pre-boot Migration Runners
+
 Following the platform-wide zero-downtime execution pattern, both the event-driven eTMF and eISF services manage their database schema migrations through dedicated pre-boot migration runners (`apps.etmf.database.migrate` and `apps.eisf.database.migrate`).
 
 These runners execute base DDL declarations (e.g. adding nullable `issue_date`, `expiration_date`, and `document_owner_id` columns, alongside corresponding indexing structures) idempotently before starting up web servers. This ensures safe backward-compatibility across all active and legacy document management nodes during platform upgrades.
@@ -612,6 +637,7 @@ These runners execute base DDL declarations (e.g. adding nullable `issue_date`, 
 The platform utilizes automated migration execution wrapper logic inside `apps/execution/database/migrate.py`. Here is a production-hardened automated schema update script with backward-compatibility checks:
 
 <!-- validation-skip -->
+
 ```python
 import sys
 import logging
@@ -741,6 +767,7 @@ In the extremely rare case of deployment verification failures (automated checks
 #### PostgreSQL Safe Rollback Execution Script (`apps/execution/database/rollback.py`)
 
 <!-- validation-skip -->
+
 ```python
 import sys
 import logging
@@ -837,19 +864,20 @@ if __name__ == "__main__":
 ```
 
 ### 3.1.3 Tickets SLA Escalation Background Runner
+
 The Tickets SLA Escalation background worker runs as a persistent service inside the Tickets microservice process lifespan.
 
-* **Module Path:** `apps/tickets/escalation.py`
-* **Configuration:**
+- **Module Path:** `apps/tickets/escalation.py`
+- **Configuration:**
   - `TICKETS_ESCALATION_POLL_INTERVAL_SECONDS`: Defines how frequently the worker sweeps the database (e.g. `60.0`).
   - `TICKETS_ESCALATION_INTERVAL_SECONDS`: Cooldown window gating re-escalation of a single ticket (e.g., `86400.0` or 24 hours).
-* **Eligibility & Idempotency Behavior:**
+- **Eligibility & Idempotency Behavior:**
   - Candidates are active, overdue, non-deleted, and non-terminal tickets (i.e. not `CLOSED` or `CANCELLED`).
   - The worker uses pessimism write-locking (`with_for_update()`) during re-fetch to ensure concurrent safe state transitions.
-* **Notification-Owed Retry Invariant:**
+- **Notification-Owed Retry Invariant:**
   - If a priority advancement succeeds but the async notification dispatch fails (network/transport error), the `last_escalation_notified_at` field remains stale (`None`).
   - During subsequent cycles, the worker retries dispatching the missed notification without re-escalating the ticket (cooldown gating), updating `last_escalation_notified_at` only upon a successful notification dispatch.
-* **Operational & Rollback Guidance:**
+- **Operational & Rollback Guidance:**
   - The worker is automatically toggled off in test environments to isolate unit behaviors.
   - To rollback or disable the worker during production incidents, set `TICKETS_ESCALATION_POLL_INTERVAL_SECONDS` to `-1` or set the worker toggle in config variables.
   - Due to pessimistic lock gating, `version_index` increments are fully transactional and safe to roll back at any point without causing database-level race conditions.
@@ -859,12 +887,14 @@ The Tickets SLA Escalation background worker runs as a persistent service inside
 ## 3.2 Neo4j Graph Schema Evolution & Migrations
 
 Neo4j contains highly structured nodes enforcing USDM models. Immutability constraints require modifications to follow strict branching rules:
-* Mutating a node in a **Locked** study is physically blocked.
-* The system instead establishes an updated version clone (`:StudyVersion`), routing connections via `PREVIOUS_VERSION` edges.
+
+- Mutating a node in a **Locked** study is physically blocked.
+- The system instead establishes an updated version clone (`:StudyVersion`), routing connections via `PREVIOUS_VERSION` edges.
 
 ### 3.2.1 Neo4j Migration Script
 
 <!-- validation-skip -->
+
 ```python
 from neo4j import GraphDatabase
 import logging
@@ -934,6 +964,7 @@ if __name__ == "__main__":
 Continuous monitoring is essential for keeping systems secure and compliant with GxP and ISO 27001 requirements.
 
 ## 4.1 Logging Aggregation Topology
+
 To ensure audit logs are tamper-proof and accessible, all logs from Cadence Clinical services must follow a structured logging pipeline.
 
 ```
@@ -953,6 +984,7 @@ To ensure audit logs are tamper-proof and accessible, all logs from Cadence Clin
 ```
 
 ### Logging Configuration Best Practices (Ruff & Black Compliant JSON formatting)
+
 Microservices must write standard, trace-contextualized JSON messages:
 
 ```json
@@ -977,6 +1009,7 @@ Microservices must write standard, trace-contextualized JSON messages:
 Each microservice implements an open `/health` endpoint and exports Prometheus `/metrics` metrics.
 
 ### Prometheus Alert Rules Definition
+
 Below is the production Prometheus alert definitions mapping critical operational threshold flags:
 
 ```yaml
@@ -1022,6 +1055,7 @@ groups:
 ---
 
 ## 4.3 Incident Response Escalation Matrix
+
 In the event of automated Prometheus alert triggers, SREs must action incidents strictly based on severity classes:
 
 ```
@@ -1036,31 +1070,34 @@ In the event of automated Prometheus alert triggers, SREs must action incidents 
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-| Severity Level | Definition | Target Response (SLA) | Target Resolution Time (MTTR) | Notification Chain |
-| :--- | :--- | :--- | :--- | :--- |
-| **P1 - Critical** | Platform entirely unreachable; database replication failure; security/data breach detected. | **15 Minutes** | **1 Hour** | SMS/PagerDuty to SRE Lead, QA Director, Security Officer, VP Engineering. |
-| **P2 - Major** | Single tenant inaccessible; random audit logs failing to write; performance degradation > 1000ms latency. | **30 Minutes** | **4 Hours** | Level 1 SRE, Engineering Lead, Database Admin. |
-| **P3 - Minor** | Localized form design translation override glitches; non-blocking API anomalies; telemetry device pairing latency. | **12 Hours** | **48 Hours** | Support Desk, System Engineer. |
+| Severity Level    | Definition                                                                                                         | Target Response (SLA) | Target Resolution Time (MTTR) | Notification Chain                                                        |
+| :---------------- | :----------------------------------------------------------------------------------------------------------------- | :-------------------- | :---------------------------- | :------------------------------------------------------------------------ |
+| **P1 - Critical** | Platform entirely unreachable; database replication failure; security/data breach detected.                        | **15 Minutes**        | **1 Hour**                    | SMS/PagerDuty to SRE Lead, QA Director, Security Officer, VP Engineering. |
+| **P2 - Major**    | Single tenant inaccessible; random audit logs failing to write; performance degradation > 1000ms latency.          | **30 Minutes**        | **4 Hours**                   | Level 1 SRE, Engineering Lead, Database Admin.                            |
+| **P3 - Minor**    | Localized form design translation override glitches; non-blocking API anomalies; telemetry device pairing latency. | **12 Hours**          | **48 Hours**                  | Support Desk, System Engineer.                                            |
 
 ### 4.3.1 Support Ticket SLA/Escalation Timers
+
 Support tickets logged inside the system follow standard GxP SLA, MTTR, and escalation triggers:
 
-| Ticket Priority | Definition | Target Response (SLA) | Target Resolution Time (MTTR) | Notification Chain |
-| :--- | :--- | :--- | :--- | :--- |
-| **CRITICAL** | System-wide failure blocking active patient randomization or form submissions. | **15 Minutes** | **1 Hour** | SMS/PagerDuty to Lead Unblinded Statistician, Principal Investigator, Sponsor Medical Monitor. |
-| **HIGH** | Single site/visit form lock issues; non-blocking telemetry device latency. | **1 Hour** | **4 Hours** | Email to assigned CTA/CRA and Clinical Study Manager. |
-| **MEDIUM** | Minor data correction queries; terminology lookup or localization discrepancies. | **4 Hours** | **12 Hours** | In-App alert to assigned Study Coordinator and Site Staff. |
-| **LOW** | General platform questions; enhancement requests; minor formatting feedback. | **24 Hours** | **72 Hours** | Standard Support Helpdesk Ticket queue. |
+| Ticket Priority | Definition                                                                       | Target Response (SLA) | Target Resolution Time (MTTR) | Notification Chain                                                                             |
+| :-------------- | :------------------------------------------------------------------------------- | :-------------------- | :---------------------------- | :--------------------------------------------------------------------------------------------- |
+| **CRITICAL**    | System-wide failure blocking active patient randomization or form submissions.   | **15 Minutes**        | **1 Hour**                    | SMS/PagerDuty to Lead Unblinded Statistician, Principal Investigator, Sponsor Medical Monitor. |
+| **HIGH**        | Single site/visit form lock issues; non-blocking telemetry device latency.       | **1 Hour**            | **4 Hours**                   | Email to assigned CTA/CRA and Clinical Study Manager.                                          |
+| **MEDIUM**      | Minor data correction queries; terminology lookup or localization discrepancies. | **4 Hours**           | **12 Hours**                  | In-App alert to assigned Study Coordinator and Site Staff.                                     |
+| **LOW**         | General platform questions; enhancement requests; minor formatting feedback.     | **24 Hours**          | **72 Hours**                  | Standard Support Helpdesk Ticket queue.                                                        |
 
 ---
 
 ## 4.4 Disaster Recovery & Backup Playbook
 
 ### 4.4.1 Recovery Objectives
-* **Recovery Time Objective (RTO):** $< 30$ Minutes.
-* **Recovery Point Objective (RPO):** $< 5$ Minutes (Supported via Postgres WAL Continuous Archiving).
+
+- **Recovery Time Objective (RTO):** $< 30$ Minutes.
+- **Recovery Point Objective (RPO):** $< 5$ Minutes (Supported via Postgres WAL Continuous Archiving).
 
 ### 4.4.2 Point-in-Time Recovery (PITR) Execution Workflow
+
 In the event of a catastrophic database failure, SREs must immediately run these Point-in-Time Recovery procedures:
 
 ```bash
@@ -1097,6 +1134,7 @@ tail -f /var/log/postgresql/postgresql-15-main.log
 Neo4j Graph Database backups must be executed daily and stored in an encrypted offline S3 storage bucket.
 
 #### Automated Daily Backup Execution Script
+
 ```bash
 #!/usr/bin/env bash
 set -eo pipefail
@@ -1122,6 +1160,7 @@ echo "Neo4j dump successfully uploaded."
 ```
 
 #### Verification and Recovery Execution (Restore)
+
 ```bash
 # 1. Stop active Neo4j service
 neo4j stop

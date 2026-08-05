@@ -1,9 +1,9 @@
 # ADR-2156: System-Wide Hexagonal Architecture and Pytest-Archon Enforcement
 
-* **Status:** Accepted
-* **Date:** 2026-08-04
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-04
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -13,9 +13,9 @@ Historically, our core microservices (specifically the Clinical Trial Metadata S
 
 ## 2. Decision Drivers & Constraints
 
-* **Decoupled System Boundaries:** Domain business logic must remain independent of external technologies (e.g., SQLAlchemy/SQLModel or FastAPI).
-* **Prevention of Architectural Regression:** We require an automated, build-time mechanism to prevent accidental import of framework or adapter libraries into core domain/application packages.
-* **Standardized Exception Translation:** Database-specific exceptions must be caught and cleanly mapped to standard domain errors before crossing boundaries, satisfying PRD-SYS-001.
+- **Decoupled System Boundaries:** Domain business logic must remain independent of external technologies (e.g., SQLAlchemy/SQLModel or FastAPI).
+- **Prevention of Architectural Regression:** We require an automated, build-time mechanism to prevent accidental import of framework or adapter libraries into core domain/application packages.
+- **Standardized Exception Translation:** Database-specific exceptions must be caught and cleanly mapped to standard domain errors before crossing boundaries, satisfying PRD-SYS-001.
 
 ## 3. Options Considered
 
@@ -27,16 +27,17 @@ Historically, our core microservices (specifically the Clinical Trial Metadata S
 Chosen option: **Option A** because it formally separates the clinical engine's pure logic (**Domain**) from orchestration workflow logic (**Application**) and infrastructure technologies (**Adapter**), which complies with the operational verification rules of PRD-SYS-001.
 
 Key implementations:
-* Establishment of `packages/hexagonal` containing foundational types (e.g., `RepositoryPort`, `UseCasePort`), domain exceptions, and a `@map_database_exceptions` translator.
-* Separation of `apps/ctms/` and `apps/execution/` into explicit `domain/`, `application/`, and `adapter/` packages.
-* Enforcement of import rules using `pytest-archon` to programmatically assert boundary logic during unit tests, ensuring violations fail the build automatically.
+
+- Establishment of `packages/hexagonal` containing foundational types (e.g., `RepositoryPort`, `UseCasePort`), domain exceptions, and a `@map_database_exceptions` translator.
+- Separation of `apps/ctms/` and `apps/execution/` into explicit `domain/`, `application/`, and `adapter/` packages.
+- Enforcement of import rules using `pytest-archon` to programmatically assert boundary logic during unit tests, ensuring violations fail the build automatically.
 
 ## 5. Consequences & Trade-offs
 
-* **Positive:** Clear operational boundaries, simplified testing with isolated unit mocks, and complete protection against framework lock-in or future regression under PRD-SYS-001.
-* **Negative:** Introduces additional interface/abstraction layers (ports and adapters) which slightly increases the number of files and initial boilerplate code.
+- **Positive:** Clear operational boundaries, simplified testing with isolated unit mocks, and complete protection against framework lock-in or future regression under PRD-SYS-001.
+- **Negative:** Introduces additional interface/abstraction layers (ports and adapters) which slightly increases the number of files and initial boilerplate code.
 
 ## 6. Implementation & Verification
 
-* Target packages and files created and modified: `packages/hexagonal`, `apps/ctms/`, `apps/execution/`.
-* Validation and Verification: `tests/test_hexagonal_architecture.py` enforces isolation constraints. GxP synchronization executed and confirmed via `uv run python scripts/sync_gxp.py` showing all tests successfully passing.
+- Target packages and files created and modified: `packages/hexagonal`, `apps/ctms/`, `apps/execution/`.
+- Validation and Verification: `tests/test_hexagonal_architecture.py` enforces isolation constraints. GxP synchronization executed and confirmed via `uv run python scripts/sync_gxp.py` showing all tests successfully passing.

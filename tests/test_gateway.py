@@ -2356,8 +2356,11 @@ async def test_verify_gateway_signed_token() -> None:
     Verify that verify_token correctly decodes a token minted by the gateway.
     """
     from apps.gateway.main import verify_token
+
     with TestClient(app) as client:
-        response = client.post("/api/v1/auth/demo-session", json={"username": "verification-tester"})
+        response = client.post(
+            "/api/v1/auth/demo-session", json={"username": "verification-tester"}
+        )
         assert response.status_code == 200
         token = response.json()["access_token"]
 
@@ -2384,7 +2387,11 @@ def test_sandbox_tenant_isolation_gate_violations() -> None:
         assert res_allowed.status_code in [200, 502, 500, 404]
 
         # Case 2: Sandbox token attempting to access a non-sandbox query parameter -> Forbidden (403)
-        res_blocked_query = client.get("/api/v1/studies/study_1?tenant_id=production-tenant", headers=headers)
+        res_blocked_query = client.get(
+            "/api/v1/studies/study_1?tenant_id=production-tenant", headers=headers
+        )
         assert res_blocked_query.status_code == 403
-        assert "Sandbox token cannot access non-sandbox resources" in res_blocked_query.json()["detail"]
-
+        assert (
+            "Sandbox token cannot access non-sandbox resources"
+            in res_blocked_query.json()["detail"]
+        )

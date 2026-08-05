@@ -1,9 +1,9 @@
 # ADR-139: Expose CRA Monitoring SDV Transport Models and Shared Sign-Off Logic
 
-* **Status:** Accepted
-* **Date:** 2026-07-31
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-07-31
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -13,9 +13,9 @@ Clinical Research Associate (CRA) monitoring requires unified Source Data Verifi
 
 ## 2. Decision Drivers & Constraints
 
-* Ensure strict alignment with GxP 21 CFR Part 11 audit trails (`verified_by`, `verified_at`, `signing_reason`).
-* Maintain backward compatibility with existing SDV request/response DTOs while supporting multi-scope verification.
-* System requirement compliance: PRD-SYS-001.
+- Ensure strict alignment with GxP 21 CFR Part 11 audit trails (`verified_by`, `verified_at`, `signing_reason`).
+- Maintain backward compatibility with existing SDV request/response DTOs while supporting multi-scope verification.
+- System requirement compliance: PRD-SYS-001.
 
 ## 3. Options Considered
 
@@ -28,11 +28,11 @@ Chosen option 1 because reusable helper methods in `apps/execution/sdv_helper.py
 
 ## 5. Consequences & Trade-offs
 
-* **Positive**: Shared sign-off logic prevents duplication between individual and bulk SDV endpoints.
-* **Positive**: Preserves backward compatibility via optional legacy fields in `BulkSdvSignOffResponse`.
-* **Negative**: Requires maintaining helper functions alongside ORM model mappings.
+- **Positive**: Shared sign-off logic prevents duplication between individual and bulk SDV endpoints.
+- **Positive**: Preserves backward compatibility via optional legacy fields in `BulkSdvSignOffResponse`.
+- **Negative**: Requires maintaining helper functions alongside ORM model mappings.
 
 ## 6. Implementation & Verification
 
-* Modified `packages/core-models/execution/sdv_transport_models.py` and `apps/execution/sdv_helper.py`.
-* Verified with existing and expanded SDV test suites in `tests/`.
+- Modified `packages/core-models/execution/sdv_transport_models.py` and `apps/execution/sdv_helper.py`.
+- Verified with existing and expanded SDV test suites in `tests/`.

@@ -1,9 +1,9 @@
 # ADR-189: Cryptographic Signature Verification Engine and Multi-Format Support
 
-* **Status:** Accepted
-* **Date:** 2026-08-01
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-01
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -13,10 +13,10 @@ To satisfy FDA 21 CFR Part 11 and clinical compliance requirements (PRD-SYS-001)
 
 ## 2. Decision Drivers & Constraints
 
-* **Compliance (PRD-SYS-001):** Electronic signatures must be programmatically verified, bound to the signer, and tamper-resistant under 21 CFR Part 11.
-* **Algorithm Support:** Support both symmetric (HMAC-SHA256) and asymmetric (RSA-SHA256, ECDSA-SHA256) algorithms.
-* **Format Flexibility:** Safely extract and verify signatures embedded within PEM blocks, XML tags (e.g., `<SignatureValue>`), JSON metadata (e.g., `signature_bytes_b64`), hex strings, and direct base64.
-* **Tamper Prevention:** Support clean stripping of signatures and JSON key canonicalization to verify payload content hashes without including the signature itself in the hashed payload.
+- **Compliance (PRD-SYS-001):** Electronic signatures must be programmatically verified, bound to the signer, and tamper-resistant under 21 CFR Part 11.
+- **Algorithm Support:** Support both symmetric (HMAC-SHA256) and asymmetric (RSA-SHA256, ECDSA-SHA256) algorithms.
+- **Format Flexibility:** Safely extract and verify signatures embedded within PEM blocks, XML tags (e.g., `<SignatureValue>`), JSON metadata (e.g., `signature_bytes_b64`), hex strings, and direct base64.
+- **Tamper Prevention:** Support clean stripping of signatures and JSON key canonicalization to verify payload content hashes without including the signature itself in the hashed payload.
 
 ## 3. Options Considered
 
@@ -29,17 +29,17 @@ To satisfy FDA 21 CFR Part 11 and clinical compliance requirements (PRD-SYS-001)
 
 ## 5. Consequences & Trade-offs
 
-* **Positive:**
-  * Complete, centralized support for 21 CFR Part 11 compliant e-signatures inside `packages/security/`.
-  * Support for standard industry formats like PEM, XML, and JSON metadata.
-  * Native ECDSA and RSA signature verification using the `cryptography` library.
-* **Negative:**
-  * Requires robust unit testing to handle various malformed or edge-case payloads.
-  * Increased codebase complexity due to manual regex-based signature extraction and JSON/XML key parsing.
+- **Positive:**
+  - Complete, centralized support for 21 CFR Part 11 compliant e-signatures inside `packages/security/`.
+  - Support for standard industry formats like PEM, XML, and JSON metadata.
+  - Native ECDSA and RSA signature verification using the `cryptography` library.
+- **Negative:**
+  - Requires robust unit testing to handle various malformed or edge-case payloads.
+  - Increased codebase complexity due to manual regex-based signature extraction and JSON/XML key parsing.
 
 ## 6. Implementation & Verification
 
-* **Target files/packages modified:**
-  * `packages/security/crypto_verifier.py`: Added support for RSA/ECDSA verification, signature extraction, stripping, and JSON key canonicalization.
-* **Verification tests added under `tests/`:**
-  * `tests/test_clinical_validation_engines.py`: Contains tests verifying the clinical validation engine and cryptographic signatures.
+- **Target files/packages modified:**
+  - `packages/security/crypto_verifier.py`: Added support for RSA/ECDSA verification, signature extraction, stripping, and JSON key canonicalization.
+- **Verification tests added under `tests/`:**
+  - `tests/test_clinical_validation_engines.py`: Contains tests verifying the clinical validation engine and cryptographic signatures.

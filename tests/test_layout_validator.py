@@ -300,7 +300,9 @@ async def test_layout_gating_missing_justification_rejected():
         "study_id": "test_layout_gating_rejected_999",
         "payload": {
             "name": "Acme Gated Clinical Trial Test",
-            "layout_warnings": ["Label may clip/overlap: column width is 100px (< 150px)"],
+            "layout_warnings": [
+                "Label may clip/overlap: column width is 100px (< 150px)"
+            ],
             "protocol": {
                 "items": [
                     {"id": "q1", "name": "Question 1", "type": "string"},
@@ -323,13 +325,17 @@ async def test_layout_gating_missing_justification_rejected():
 @pytest.mark.asyncio
 async def test_layout_gating_approved_and_logged():
     """Verify that study publication is approved when layout warnings have a justification, and recorded in layout audit trail."""
-    justification_text = "Medically required compact layout for specialized dosage recording."
+    justification_text = (
+        "Medically required compact layout for specialized dosage recording."
+    )
     study_id = "test_layout_gating_approved_888"
     study_payload = {
         "study_id": study_id,
         "payload": {
             "name": "Acme Approved Gated Trial Test",
-            "layout_warnings": ["Label may clip/overlap: column width is 120px (< 150px)"],
+            "layout_warnings": [
+                "Label may clip/overlap: column width is 120px (< 150px)"
+            ],
             "layout_justification": justification_text,
             "protocol": {
                 "items": [
@@ -355,7 +361,7 @@ async def test_layout_gating_approved_and_logged():
         result = await session.execute(
             AuditLog.__table__.select().where(
                 AuditLog.record_id == study_id,
-                AuditLog.table_name == "layout_deviation_audit"
+                AuditLog.table_name == "layout_deviation_audit",
             )
         )
         audit_record = result.mappings().first()
@@ -365,5 +371,6 @@ async def test_layout_gating_approved_and_logged():
     assert audit_record["user_id"] is not None
     assert audit_record["change_reason"] == justification_text
     assert audit_record["new_values"]["justification"] == justification_text
-    assert audit_record["new_values"]["layout_warnings"] == ["Label may clip/overlap: column width is 120px (< 150px)"]
-
+    assert audit_record["new_values"]["layout_warnings"] == [
+        "Label may clip/overlap: column width is 120px (< 150px)"
+    ]
