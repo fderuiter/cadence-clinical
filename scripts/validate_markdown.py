@@ -38,14 +38,15 @@ for k, v in MOCK_ENV_VARS.items():
         os.environ[k] = v
 
 # Add packages subfolders and apps to sys.path to resolve imports within modules
-for p in Path("/app/packages").glob("*"):
+REPO_ROOT = Path(__file__).resolve().parent.parent
+for p in (REPO_ROOT / "packages").glob("*"):
     if p.is_dir() and str(p) not in sys.path:
         sys.path.append(str(p))
-for p in Path("/app/apps").glob("*"):
+for p in (REPO_ROOT / "apps").glob("*"):
     if p.is_dir() and str(p) not in sys.path:
         sys.path.append(str(p))
-if "/app" not in sys.path:
-    sys.path.append("/app")
+if str(REPO_ROOT) not in sys.path:
+    sys.path.append(str(REPO_ROOT))
 
 # Common developer tools/executables we whitelist even if not natively installed
 ALLOWED_COMMON_TOOLS = {
