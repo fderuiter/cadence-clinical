@@ -1,7 +1,7 @@
 """Unit and integration test suite for Compliance and Security Hub.
 
 Validates 21 CFR Part 11 AuditLoggerEngine, SHA-256 digest chain tamper-resistance,
-and cryptographic signature verification helper functions.
+cryptographic signature verification helper functions, and static exemption ledger bypass validation.
 
 Requirements: PRD-SYS-001, 21 CFR Part 11
 """
