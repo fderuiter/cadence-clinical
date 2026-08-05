@@ -234,6 +234,32 @@ if os.environ.get("USE_LIVE_DB") == "true":
     verify_live_db_connections()
 
 
+dirty_databases = set()
+
+
+def register_engine_listener(engine, db_prefix):
+    from sqlalchemy import event
+
+    @event.listens_for(engine.sync_engine, "before_cursor_execute")
+    def receive_before_cursor_execute(
+        conn, cursor, statement, parameters, context, executemany
+    ):
+        stmt = statement.strip().upper()
+        if any(
+            keyword in stmt
+            for keyword in (
+                "INSERT",
+                "UPDATE",
+                "DELETE",
+                "TRUNCATE",
+                "DROP",
+                "CREATE",
+                "ALTER",
+            )
+        ):
+            dirty_databases.add(db_prefix)
+
+
 # Patch and create databases
 def patch_init_db():
     from apps.execution.database.core import DatabaseSessionManager
@@ -264,7 +290,10 @@ def patch_init_db():
         ):
             db_name = f"cadence_edc{worker_suffix}"
             new_url = f"{base_postgres_url}{db_name}"
-            return original_exec_init_db(self, new_url, **kwargs)
+            res = original_exec_init_db(self, new_url, **kwargs)
+            if self.engine is not None:
+                register_engine_listener(self.engine, "cadence_edc")
+            return res
         return original_exec_init_db(self, database_url, **kwargs)
 
     def patched_rel_init_db(self, database_url: str, **kwargs):
@@ -274,7 +303,10 @@ def patch_init_db():
             base_name = service_map.get(self.service_name, "cadence_edc")
             db_name = f"{base_name}{worker_suffix}"
             new_url = f"{base_postgres_url}{db_name}"
-            return original_rel_init_db(self, new_url, **kwargs)
+            res = original_rel_init_db(self, new_url, **kwargs)
+            if self.engine is not None:
+                register_engine_listener(self.engine, base_name)
+            return res
         return original_rel_init_db(self, database_url, **kwargs)
 
     DatabaseSessionManager.init_db = patched_exec_init_db
@@ -977,7 +1009,7 @@ async def clean_neo4j_graph():
         print(f"[conftest] Error clearing live Neo4j graph database: {e}")
 
 
-async def clean_postgres_databases():
+async def clean_postgres_databases(prefixes_to_clean=None):
     from sqlalchemy import text
     from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -1011,6 +1043,8 @@ async def clean_postgres_databases():
 
     base_postgres_url = get_postgres_base_config()
     for db_prefix, base in service_bases.items():
+        if prefixes_to_clean is not None and db_prefix not in prefixes_to_clean:
+            continue
         db_name = f"{db_prefix}{worker_suffix}"
         db_url = f"{base_postgres_url}{db_name}"
         engine = create_async_engine(db_url)
@@ -1069,14 +1103,18 @@ async def cleanup_databases_fixture():
         yield
         return
 
-    if is_live_db or is_postgres:
-        await clean_postgres_databases()
-    if is_live_db:
-        await clean_neo4j_graph()
+    # Clear dirty databases at start of test
+    dirty_databases.clear()
 
     yield
 
     if is_live_db or is_postgres:
-        await clean_postgres_databases()
+        if is_live_db:
+            # Under live DB mode, always clean everything to be safe
+            await clean_postgres_databases()
+        elif dirty_databases:
+            to_clean = list(dirty_databases)
+            dirty_databases.clear()
+            await clean_postgres_databases(to_clean)
     if is_live_db:
         await clean_neo4j_graph()
