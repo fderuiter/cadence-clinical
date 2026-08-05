@@ -28,6 +28,9 @@ def run_command(args: list[str]) -> tuple[int, str, str]:
 
 
 def main():
+    from pathlib import Path
+
+    repo_root = Path(__file__).parent.parent.resolve()
     repo = os.environ.get("GITHUB_REPOSITORY")
     pr_number = os.environ.get("PR_NUMBER")
 
@@ -63,7 +66,7 @@ def main():
             "git",
             "config",
             "merge.custom-metadata-driver.driver",
-            "python3 /app/scripts/git_merge_driver.py %O %A %B %P",
+            f"python3 {repo_root}/scripts/git_merge_driver.py %O %A %B %P",
         ]
     )
 
@@ -144,7 +147,7 @@ def main():
         "Step 3: Running Database Migration Rollback and Reverse Schema Integrity Validation"
     )
     mig_rc, mig_out, mig_err = run_command(
-        ["uv", "run", "python3", "/app/apps/execution/database/rollback.py"]
+        ["uv", "run", "python3", str(repo_root / "apps/execution/database/rollback.py")]
     )
     if mig_rc == 0:
         print(
@@ -215,7 +218,7 @@ def main():
 
     # Run post_pr_comment.py
     comment_rc, comment_out, comment_err = run_command(
-        ["python3", "/app/scripts/post_pr_comment.py"]
+        ["python3", str(repo_root / "scripts/post_pr_comment.py")]
     )
     if comment_rc == 0:
         print(

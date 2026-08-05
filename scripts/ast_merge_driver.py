@@ -139,7 +139,7 @@ def parse_js_blocks(
     num_lines = len(lines)
 
     # Run Node script to get AST ranges
-    node_script = "/app/scripts/parse_js_blocks.js"
+    node_script = os.path.join(os.path.dirname(__file__), "parse_js_blocks.js")
     if not os.path.exists(node_script):
         return None
 
