@@ -121,6 +121,7 @@ ALLOWED_ROOT_FILES = {
     "pnpm-workspace.yaml",
     "pnpm-lock.yaml",
     "pyproject.toml",
+    "security_exemptions.json",
     "uv.lock",
     ".gitignore",
     ".gitattributes",
