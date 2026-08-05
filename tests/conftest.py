@@ -184,13 +184,13 @@ async def create_all_schemas_async(worker_suffix: str):
 
     # Migrations
     from apps.execution.database.migrate import run_migrations as run_exec_migrations
-    from apps.quality.migrate import run_migrations as run_quality_migrations
 
     # Import bases
     from apps.execution.database.models import Base as ExecBase
     from apps.interop.models import Base as InteropBase
     from apps.notifications.models import Base as NotificationsBase
     from apps.org.models import Base as OrgBase
+    from apps.quality.migrate import run_migrations as run_quality_migrations
     from apps.quality.models import Base as QualityBase
     from apps.safety.models import Base as SafetyBase
     from apps.tickets.models import Base as TicketsBase
