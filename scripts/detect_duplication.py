@@ -301,6 +301,7 @@ def main() -> None:
                                 {
                                     "apps/web/src/components/SignatureCaptureModal.vue",
                                     "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+                                    "apps/web/src/views/CtmsView.vue",
                                 },
                                 {
                                     "apps/web/src/views/CtmsView.vue",
