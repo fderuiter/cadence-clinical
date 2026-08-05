@@ -333,7 +333,9 @@ def test_security_audit_glob_pattern_matching():
     # Create directories and file
     os.makedirs("gateways/dev", exist_ok=True)
     with open(fake_path, "w", encoding="utf-8") as f:
-        f.write("GATEWAY_SECRET = 'my-gateway-secret'  # pragma: allowlist\n")  # pragma: allowlist secret
+        f.write(
+            "GATEWAY_SECRET = 'my-gateway-secret'  # pragma: allowlist\n"  # pragma: allowlist secret
+        )
 
     try:
         findings = scan_file_for_secrets(fake_path, exemptions=mock_exemptions)
