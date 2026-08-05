@@ -147,7 +147,7 @@ const searchableDestinations = [
   {
     name: "Rules Designer",
     path: "/rules",
-    roles: ["data_manager", "sponsor_admin"],
+    roles: ["sponsor_designer", "data_manager", "sponsor_admin"],
     description: "Configure dynamic skip logic and validation edit checks",
     icon: "⚙️",
   },

@@ -121,6 +121,27 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
     expect(wrapper.find(".tab-btn-rules").exists()).toBe(false);
   });
 
+  it("allows STUDY_DESIGNER (Sponsor Designer) to access the workspace", async () => {
+    authStore.isAuthenticated = true;
+    authStore.isDemoMode = false;
+    authStore.rawRoles = ["Sponsor Designer"];
+
+    const wrapper = mount(RulesView, {
+      global: {
+        plugins: [pinia, router],
+      },
+    });
+
+    await flushPromises();
+
+    // Should NOT see the gating banner
+    expect(wrapper.find(".rules-gating-banner").exists()).toBe(false);
+
+    // Header and tab options should render
+    expect(wrapper.text()).toContain("Interactive Rules Designer");
+    expect(wrapper.find(".tab-btn-rules").exists()).toBe(true);
+  });
+
   it("renders ruleset list and opens visual editor workspace for authorized roles", async () => {
     const wrapper = mount(RulesView, {
       global: {

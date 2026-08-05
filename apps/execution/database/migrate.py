@@ -375,15 +375,7 @@ async def upgrade_existing_tables(conn) -> None:
     if obs_cols:
         # Phase 11: Schema migration touchpoint to upgrade clinical_observations with SDV/TSDV columns
         new_obs_cols = [
-            ("lab_source", "VARCHAR(50)"),
-            ("lab_site_id", "VARCHAR(255)"),
-            ("lab_indicator", "VARCHAR(50)"),
-            ("lab_out_of_range", "BOOLEAN"),
-            ("matched_normal_bounds", "VARCHAR(255)"),
-            ("range_indicator", "VARCHAR(50)"),
-            ("is_out_of_range", "BOOLEAN"),
-            ("reference_range_low", "FLOAT"),
-            ("reference_range_high", "FLOAT"),
+            ("additional_properties", "JSON"),
             ("site_id", "VARCHAR(255)"),
             ("is_sdv_verified", "BOOLEAN NOT NULL DEFAULT FALSE"),
             ("sdv_verified_by", "VARCHAR(255)"),

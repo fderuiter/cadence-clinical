@@ -9,11 +9,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2129
-- **Passed:** 2124 🟢
+- **Total Automated Test Cases Run:** 2126
+- **Passed:** 2121 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
-- **Overall Operational Pass Rate:** 99.77%
+- **Overall Operational Pass Rate:** 99.76%
 
 ## 2. Installation Qualification (IQ)
 
@@ -552,8 +552,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_serialized_clinical_outputs_trailing_z` | `tests.test_datetime_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_in_memory_eligibility_rejection` | `tests.test_decoupled_services_in_memory` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_in_memory_eligibility_success` | `tests.test_decoupled_services_in_memory` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_in_memory_execution_doa` | `tests.test_decoupled_services_in_memory` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_in_memory_tsdv_verification` | `tests.test_decoupled_services_in_memory` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_process_coding_action_accept_in_memory` | `tests.test_decoupled_services_in_memory` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_process_coding_action_invalid_code_in_memory` | `tests.test_decoupled_services_in_memory` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_basic_detection_results` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -724,7 +722,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_doa_delegation_record_validation` | `tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_doa_lifecycle_flow` | `tests.test_doa_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_doa_rbac_violations` | `tests.test_doa_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_doa_endpoints_require_change_reason_header` | `tests.test_doa_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_manager_service_class_interface` | `tests.test_doa_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_task_delegation_and_esignature_lifecycle` | `tests.test_doa_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_complete_doa_workflow_lifecycle` | `tests.test_doa_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1186,6 +1183,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_api_routers_have_no_direct_db_imports` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_application_isolation` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_domain_isolation` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_designer_core_isolation` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_execution_application_isolation` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_execution_domain_isolation` | `tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_consent_form_record_immutability_domain` | `tests.test_hexagonal_domain` | PRD-SYS-001 | 🟢 PASSED | < 1s |
@@ -1867,7 +1865,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_bulk_sdv_signoff_batch_binding_mismatch` | `tests.test_sdv` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_bulk_sdv_signoff_happy_path` | `tests.test_sdv` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_bulk_sdv_signoff_input_validation` | `tests.test_sdv` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_bulk_sdv_signoff_locks` | `tests.test_sdv` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_bulk_sdv_signoff_rbac_and_idempotency` | `tests.test_sdv` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_sdv_automatic_verification_drop_compliance` | `tests.test_sdv` | PRD-QRY-006 | 🟢 PASSED | < 1s |
 | `test_sdv_signoff_endpoints_rbac_and_target_validation` | `tests.test_sdv` | PRD-QRY-005 | 🟢 PASSED | < 1s |

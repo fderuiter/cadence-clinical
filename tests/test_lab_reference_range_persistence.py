@@ -403,6 +403,14 @@ async def test_schema_evolution_migration_upgrade():
         updated_cols = await conn.run_sync(get_columns)
 
         expected_added_cols = [
+            "additional_properties",
+            "site_id",
+            "is_sdv_verified",
+            "sdv_verified_by",
+            "sdv_verified_at",
+            "page_id",
+        ]
+        removed_cols = [
             "lab_source",
             "lab_site_id",
             "lab_indicator",
@@ -412,19 +420,14 @@ async def test_schema_evolution_migration_upgrade():
             "is_out_of_range",
             "reference_range_low",
             "reference_range_high",
-            "site_id",
-            "is_sdv_verified",
-            "sdv_verified_by",
-            "sdv_verified_at",
-            "page_id",
-            "range_indicator",
-            "is_out_of_range",
-            "reference_range_low",
-            "reference_range_high",
         ]
         for col in expected_added_cols:
             assert col in updated_cols, (
                 f"Column {col} should have been added by migration."
+            )
+        for col in removed_cols:
+            assert col not in updated_cols, (
+                f"Physical column {col} should NOT exist in metadata-driven schema."
             )
 
         # Assert backfilled default values on the seeded row
