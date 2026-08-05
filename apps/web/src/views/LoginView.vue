@@ -392,6 +392,7 @@ async function submitPinUnlock() {
 
     goToLanding();
   } catch (err) {
+    console.warn("PIN verification failed:", err);
     // Refresh locks/attempts status
     await checkUserLockStatus();
     if (!isUserLocked.value) {
