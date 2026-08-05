@@ -167,8 +167,14 @@ def with_transaction_retry(
                     err_name = e.__class__.__name__
                     err_msg = str(e).lower()
                     is_transient = (
-                        (err_name == "TransientError" and "neo4j" in getattr(e.__class__, "__module__", ""))
-                        or (err_name in ("TransientError", "OperationalError", "LockError"))
+                        (
+                            err_name == "TransientError"
+                            and "neo4j" in getattr(e.__class__, "__module__", "")
+                        )
+                        or (
+                            err_name
+                            in ("TransientError", "OperationalError", "LockError")
+                        )
                         or "lock" in err_msg
                     )
                     if is_transient:

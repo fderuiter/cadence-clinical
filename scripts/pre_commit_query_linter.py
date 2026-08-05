@@ -122,7 +122,7 @@ def check_file(filename: str) -> bool:
         bool: True if no violations are found, False otherwise.
     """
     try:
-        with open(filename, "r", encoding="utf-8") as f:
+        with open(filename, encoding="utf-8") as f:
             content = f.read()
     except Exception:
         # If we cannot read the file (e.g. deleted or binary), skip it.
