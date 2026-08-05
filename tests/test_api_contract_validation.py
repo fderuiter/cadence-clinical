@@ -4,11 +4,14 @@ from typing import Any
 import pytest
 import yaml
 
+from apps.ctms.main import app as ctms_app
 from apps.designer.main import app as designer_app
 from apps.econsent.main import app as econsent_app
 from apps.eisf.main import app as eisf_app
+from apps.etmf.main import app as etmf_app
 from apps.execution.main import app as execution_app
 from apps.org.main import app as org_app
+from apps.quality.main import app as quality_app
 
 
 def rewrite_references(data: Any, prefix: str, visited: set | None = None) -> Any:
@@ -222,14 +225,68 @@ def assert_schema_parity(
         )
 
 
-def find_code_route(spec_path: str, code_routes: dict[str, Any]) -> Any:
+def find_code_route(
+    spec_path: str, code_routes: dict[str, Any], tags: list[str] | None = None
+) -> Any:
     """Match a specification relative path to its registered codebase route, stripping prefixes like /api/v1."""
+    if tags is None:
+        tags = []
+
+    # Determine likely prefix from tags
+    pfx_match = None
+    for pfx in [
+        "designer",
+        "execution",
+        "org",
+        "eisf",
+        "econsent",
+        "ctms",
+        "etmf",
+        "quality",
+    ]:
+        if pfx in tags or pfx.upper() in tags or pfx.capitalize() in tags:
+            pfx_match = "/" + pfx
+            break
+
     # Strip prefixes like /api/v1 or leading/trailing slashes for comparison
     clean_spec = spec_path.replace("/api/v1", "").strip("/")
 
+    # Try matching prioritizing pfx_match first
+    if pfx_match:
+        for c_path, c_route_info in code_routes.items():
+            if not c_path.startswith(pfx_match):
+                continue
+            norm_path = c_path
+            for pfx in [
+                "/designer",
+                "/execution",
+                "/org",
+                "/eisf",
+                "/econsent",
+                "/ctms",
+                "/etmf",
+                "/quality",
+            ]:
+                if c_path.startswith(pfx):
+                    norm_path = c_path[len(pfx) :]
+                    break
+            clean_code = norm_path.replace("/api/v1", "").strip("/")
+            if clean_spec == clean_code:
+                return c_route_info
+
+    # Fallback to any match if no prioritized match found
     for c_path, c_route_info in code_routes.items():
         norm_path = c_path
-        for pfx in ["/designer", "/execution", "/org", "/eisf", "/econsent"]:
+        for pfx in [
+            "/designer",
+            "/execution",
+            "/org",
+            "/eisf",
+            "/econsent",
+            "/ctms",
+            "/etmf",
+            "/quality",
+        ]:
             if c_path.startswith(pfx):
                 norm_path = c_path[len(pfx) :]
                 break
@@ -252,6 +309,9 @@ def loaded_specs():
     org_spec = org_app.openapi()
     eisf_spec = eisf_app.openapi()
     econsent_spec = econsent_app.openapi()
+    ctms_spec = ctms_app.openapi()
+    etmf_spec = etmf_app.openapi()
+    quality_spec = quality_app.openapi()
 
     # 3. Aggregate all codebase routes applying gateway prefix mappings
     # Paths are stored as: path_str -> { method_str -> operation_dict }
@@ -264,6 +324,9 @@ def loaded_specs():
         (org_spec, "/org", "Org_"),
         (eisf_spec, "/eisf", "Eisf_"),
         (econsent_spec, "/econsent", "Econsent_"),
+        (ctms_spec, "/ctms", "Ctms_"),
+        (etmf_spec, "/etmf", "ETMF_"),
+        (quality_spec, "/quality", "Quality_"),
     ]:
         app_spec_rewritten = rewrite_references(app_spec, schema_prefix)
         for path, path_item in app_spec_rewritten.get("paths", {}).items():
@@ -696,7 +759,16 @@ WHITELISTED_ROUTES = {
 
 def find_spec_route(code_path: str, spec_paths: dict) -> str:
     norm_path = code_path
-    for pfx in ["/designer", "/execution", "/org", "/eisf", "/econsent"]:
+    for pfx in [
+        "/designer",
+        "/execution",
+        "/org",
+        "/eisf",
+        "/econsent",
+        "/ctms",
+        "/etmf",
+        "/quality",
+    ]:
         if code_path.startswith(pfx):
             norm_path = code_path[len(pfx) :]
             break
@@ -717,7 +789,7 @@ def is_whitelisted(method: str, path: str) -> bool:
         return True
 
     norm_path = path
-    for pfx in ["/designer", "/execution"]:
+    for pfx in ["/designer", "/execution", "/ctms", "/etmf", "/quality"]:
         if path.startswith(pfx):
             norm_path = path[len(pfx) :]
             break
@@ -827,7 +899,12 @@ def test_api_paths_and_methods_parity(loaded_specs):
     # 1. Unidirectional: Spec -> Codebase
     for spec_path, path_item in spec_paths.items():
         # Find matching route in the codebase
-        code_route_info = find_code_route(spec_path, code_routes)
+        tags = []
+        if isinstance(path_item, dict):
+            for method, op in path_item.items():
+                if isinstance(op, dict) and "tags" in op:
+                    tags.extend(op.get("tags", []))
+        code_route_info = find_code_route(spec_path, code_routes, tags)
         assert code_route_info is not None, (
             f"API contract path '{spec_path}' defined in documentation is missing in codebase"
         )
@@ -880,7 +957,12 @@ def test_api_parameters_parity(loaded_specs):
 
     # 1. Unidirectional: Spec -> Codebase
     for spec_path, path_item in spec_paths.items():
-        code_route_info = find_code_route(spec_path, code_routes)
+        tags = []
+        if isinstance(path_item, dict):
+            for method, op in path_item.items():
+                if isinstance(op, dict) and "tags" in op:
+                    tags.extend(op.get("tags", []))
+        code_route_info = find_code_route(spec_path, code_routes, tags)
         if not code_route_info:
             continue
 
@@ -972,7 +1054,12 @@ def test_api_request_bodies_parity(loaded_specs):
     code_full = loaded_specs["code_full"]
 
     for spec_path, path_item in spec_dict.get("paths", {}).items():
-        code_route_info = find_code_route(spec_path, code_routes)
+        tags = []
+        if isinstance(path_item, dict):
+            for method, op in path_item.items():
+                if isinstance(op, dict) and "tags" in op:
+                    tags.extend(op.get("tags", []))
+        code_route_info = find_code_route(spec_path, code_routes, tags)
         if not code_route_info:
             continue
 
@@ -1023,7 +1110,12 @@ def test_api_responses_parity(loaded_specs):
     code_full = loaded_specs["code_full"]
 
     for spec_path, path_item in spec_dict.get("paths", {}).items():
-        code_route_info = find_code_route(spec_path, code_routes)
+        tags = []
+        if isinstance(path_item, dict):
+            for method, op in path_item.items():
+                if isinstance(op, dict) and "tags" in op:
+                    tags.extend(op.get("tags", []))
+        code_route_info = find_code_route(spec_path, code_routes, tags)
         if not code_route_info:
             continue
 
@@ -1088,7 +1180,12 @@ def test_validation_fails_on_route_path_mismatch(loaded_specs):
 
     found_mismatch = False
     for spec_path, path_item in spec_dict.get("paths", {}).items():
-        code_route_info = find_code_route(spec_path, mock_code_routes)
+        tags = []
+        if isinstance(path_item, dict):
+            for method, op in path_item.items():
+                if isinstance(op, dict) and "tags" in op:
+                    tags.extend(op.get("tags", []))
+        code_route_info = find_code_route(spec_path, mock_code_routes, tags)
         if code_route_info is None:
             found_mismatch = True
             break
