@@ -50,4 +50,3 @@ In the Cadence Clinical platform, digital signatures must comply with strict GxP
 
 * **Affected Repositories / Services:** `packages/security/signing.py`
 * **Verification Plan:** Validated via automated tests under `tests/test_part11_compliance_engine.py` and `tests/test_etmf_compliance.py`, adhering to the rules of **PRD-SYS-003**.
-

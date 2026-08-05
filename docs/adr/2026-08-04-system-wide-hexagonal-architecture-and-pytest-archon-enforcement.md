@@ -24,7 +24,7 @@ Historically, our core microservices (specifically the Clinical Trial Metadata S
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A** because it formally separates the clinical engine's pure logic (**Domain**) from orchestration workflow logic (**Application**) and infrastructure technologies (**Adapter**), which complies with the operational verification rules of PRD-SYS-001. 
+Chosen option: **Option A** because it formally separates the clinical engine's pure logic (**Domain**) from orchestration workflow logic (**Application**) and infrastructure technologies (**Adapter**), which complies with the operational verification rules of PRD-SYS-001.
 
 Key implementations:
 * Establishment of `packages/hexagonal` containing foundational types (e.g., `RepositoryPort`, `UseCasePort`), domain exceptions, and a `@map_database_exceptions` translator.

@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-Our clinical state validation and GxP compliance rules (such as 21 CFR Part 11 consent protections and safety audit trails) were previously coupled tightly to SQLAlchemy database models. This dependency forced unit tests to initialize database engines or rely on fragile emulation wrappers, severely slowing down test feedback loops. 
+Our clinical state validation and GxP compliance rules (such as 21 CFR Part 11 consent protections and safety audit trails) were previously coupled tightly to SQLAlchemy database models. This dependency forced unit tests to initialize database engines or rely on fragile emulation wrappers, severely slowing down test feedback loops.
 
 Additionally, because compliance workflows were obscured by database-level triggers, listeners, and custom session-flush hooks, it was difficult for auditors to quickly verify the integrity of clinical workflows.
 
