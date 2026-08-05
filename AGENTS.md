@@ -450,7 +450,7 @@ uv run python -m packages.deid.cli $(git diff --name-only HEAD~1..HEAD 2>/dev/nu
 ---
 
 ### 4. Multi-Language Comment Bypass Pragmas
-To resolve false positives in testing and mock clinical data, use inline developer comment bypass pragmas. 
+To resolve false positives in testing and mock clinical data, use inline developer comment bypass pragmas.
 * **Strict Security Guardrail:** Inline bypass pragmas are strictly restricted to non-production code, mock data structures, and tests. They must **never** be applied to production codebase paths or production configuration files to ensure core security scans are never bypassed.
 
 There are three case-sensitive inline comment pragmas supported globally by the scanners:

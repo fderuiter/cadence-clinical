@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-To meet the rigorous compliance standards of FDA 21 CFR Part 11 and ensure absolute authenticity and non-repudiation of clinical records, the Cadence Clinical Platform enforces asymmetric digital signing on critical regulatory operations. Previously, our signature verification engine used PKCS#1 v1.5 deterministic padding for RSA keys. 
+To meet the rigorous compliance standards of FDA 21 CFR Part 11 and ensure absolute authenticity and non-repudiation of clinical records, the Cadence Clinical Platform enforces asymmetric digital signing on critical regulatory operations. Previously, our signature verification engine used PKCS#1 v1.5 deterministic padding for RSA keys.
 
 Deterministic padding schemes are susceptible to certain classes of cryptographic attacks (such as Bleichenbacher-style padding oracle attacks). To harden our electronic signature infrastructure against key extraction and signature forgery, we must transition all asymmetric RSA operations to use the Probabilistic Signature Scheme (PSS) padding, tracing directly to system requirement **PRD-SYS-001** (Cryptographic Integrity & GxP Compliance).
 
