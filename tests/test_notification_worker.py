@@ -553,14 +553,17 @@ async def test_start_stop_notification_worker_integration():
         # Poll for the notification to be created in the database to prevent flakiness under heavy test runner load
         notifs = []
         for _ in range(150):
-            async with notifications_db_manager.get_session_maker()() as session:
-                stmt = select(Notification).where(
-                    Notification.related_entity_id == "evt-integration-99"
-                )
-                res = await session.execute(stmt)
-                notifs = list(res.scalars().all())
-                if len(notifs) >= 1:
-                    break
+            try:
+                async with notifications_db_manager.get_session_maker()() as session:
+                    stmt = select(Notification).where(
+                        Notification.related_entity_id == "evt-integration-99"
+                    )
+                    res = await session.execute(stmt)
+                    notifs = list(res.scalars().all())
+                    if len(notifs) >= 1:
+                        break
+            except Exception:
+                pass
             await asyncio.sleep(0.1)
 
         # Stop the worker cleanly
