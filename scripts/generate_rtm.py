@@ -22,6 +22,14 @@ def format_file_with_prettier(filepath):
     import contextlib
     import subprocess
 
+    # Skip formatting very large markdown files to prevent Prettier from hanging/timing out on massive tables.
+    try:
+        if os.path.exists(filepath) and os.path.getsize(filepath) > 50 * 1024:
+            print(f"Skipping Prettier formatting for large file: {filepath}")
+            return
+    except Exception:
+        pass
+
     # Try pnpm exec prettier --write
     with contextlib.suppress(Exception):
         subprocess.run(
