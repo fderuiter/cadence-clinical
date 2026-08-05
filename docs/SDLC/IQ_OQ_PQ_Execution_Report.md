@@ -11,8 +11,6 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 2145
 - **Passed:** 2140 🟢
-- **Total Automated Test Cases Run:** 2141
-- **Passed:** 2136 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
 - **Overall Operational Pass Rate:** 99.77%
