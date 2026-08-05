@@ -20,14 +20,20 @@ export const ROLE_ALIASES = {
 export const useAuthStore = defineStore("auth", {
   state: () => {
     let saved = {};
-    if (typeof window !== "undefined" && window.sessionStorage) {
+    if (typeof window !== "undefined") {
       try {
-        const stored = window.sessionStorage.getItem("cadence_auth");
+        let stored = null;
+        if (window.sessionStorage) {
+          stored = window.sessionStorage.getItem("cadence_auth");
+        }
+        if (!stored && window.localStorage) {
+          stored = window.localStorage.getItem("cadence_auth");
+        }
         if (stored) {
           saved = JSON.parse(stored);
         }
       } catch (e) {
-        console.error("Failed to parse auth from sessionStorage", e);
+        console.error("Failed to parse auth from storage", e);
       }
     }
     return {

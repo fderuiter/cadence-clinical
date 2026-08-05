@@ -7,6 +7,10 @@
     :error="error"
     :attributes="attributes"
     tag="div"
+    @create-query="$emit('create-query', $event)"
+    @respond-query="$emit('respond-query', $event)"
+    @close-query="$emit('close-query')"
+    @reopen-query="$emit('reopen-query')"
   >
     <template #default="{ id: slotId }">
       <input
@@ -55,5 +59,12 @@ defineProps({
   },
 });
 
-defineEmits(["update:modelValue", "change"]);
+defineEmits([
+  "update:modelValue",
+  "change",
+  "create-query",
+  "respond-query",
+  "close-query",
+  "reopen-query",
+]);
 </script>

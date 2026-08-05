@@ -170,6 +170,7 @@
           <template v-for="field in store.ecrfFields" :key="field.id">
             <div
               v-show="store.fieldVisibility[field.id] !== false"
+              :id="'field-wrapper-' + field.id"
               :style="`grid-column: span ${field.gridSpan || 12}; display: flex; flex-direction: column; gap: 8px;`"
               style="margin-bottom: 8px"
             >

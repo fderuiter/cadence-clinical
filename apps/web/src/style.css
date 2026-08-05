@@ -486,6 +486,8 @@ main {
 }
 
 .query-panel {
+  position: relative;
+  z-index: 50;
   margin-top: 12px;
   border: 1px solid var(--border);
   border-radius: 8px;

@@ -15,6 +15,9 @@ test.describe("Clinical Workflows and ePRO Portal Tests", () => {
         "Subject eCRF Data Entry Form"
       );
 
+      // Scroll the pulse field container into view to trigger lazy-rendering
+      await page.locator("#field-wrapper-pulse").scrollIntoViewIfNeeded();
+
       // Locate the query flag button next to pulse input
       const queryFlag = page.locator("#query-flag-pulse");
       await expect(queryFlag).toBeVisible();
@@ -25,11 +28,11 @@ test.describe("Clinical Workflows and ePRO Portal Tests", () => {
       await expect(queryPanel).toBeVisible();
 
       // Raise a query
-      await page.fill(
-        "#query-message-pulse",
+      await page.locator("#query-message-pulse").fill(
         "Pulse rate of 72 bpm requires clinical verification of resting state."
       );
-      await page.click("button:has-text('Submit Query')");
+      await page.locator("button.btn-submit-query").scrollIntoViewIfNeeded();
+      await page.locator("button.btn-submit-query").click();
 
       // Verify the query flag status class is updated to open
       await expect(queryFlag).toHaveClass(/query-status-open/);
@@ -43,16 +46,18 @@ test.describe("Clinical Workflows and ePRO Portal Tests", () => {
       await responseArea.fill(
         "Confirmed: subject was in resting state for 15 minutes prior to measurement."
       );
-      await page.click("button:has-text('Submit Response')");
+      await page.locator("button.btn-respond-query").scrollIntoViewIfNeeded();
+      await page.locator("button.btn-respond-query").click();
 
       // Verify query flag status is updated to answered
       await expect(queryFlag).toHaveClass(/query-status-answered/);
 
       // Verify we can close/resolve the query
-      if (!(await page.locator("button:has-text('Close Query')").isVisible())) {
+      if (!(await page.locator("button.btn-close-query").isVisible())) {
         await queryFlag.click();
       }
-      await page.click("button:has-text('Close Query')");
+      await page.locator("button.btn-close-query").scrollIntoViewIfNeeded();
+      await page.locator("button.btn-close-query").click();
 
       // Handle Re-authentication step-up PIN signature modal
       const reauthModal = page.locator("#reauth-modal");

@@ -7,6 +7,10 @@
     :error="error"
     tag="div"
     extra-class="clinical-lookup-container"
+    @create-query="$emit('create-query', $event)"
+    @respond-query="$emit('respond-query', $event)"
+    @close-query="$emit('close-query')"
+    @reopen-query="$emit('reopen-query')"
   >
     <template #default="{ id: slotId }">
       <input
@@ -107,7 +111,15 @@ const props = defineProps({
   },
 });
 
-defineEmits(["update:modelValue", "input", "change"]);
+defineEmits([
+  "update:modelValue",
+  "input",
+  "change",
+  "create-query",
+  "respond-query",
+  "close-query",
+  "reopen-query",
+]);
 
 const stateClass = computed(() => {
   if (props.status === "loading") return "lookup-loading";

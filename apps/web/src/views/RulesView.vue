@@ -931,11 +931,13 @@ async function fetchRules() {
     activeRules.value = response;
   } catch (err) {
     console.warn(
-      "Failed to fetch active rules from REST backend, falling back to empty:",
+      "Failed to fetch active rules from REST backend, falling back to preservation:",
       err
     );
     connectionError.value = true;
-    activeRules.value = [];
+    if (!activeRules.value || activeRules.value.length === 0) {
+      activeRules.value = [];
+    }
   } finally {
     loadingRules.value = false;
   }
@@ -1223,6 +1225,15 @@ async function confirmChangeReason(reasonText) {
           condition: action.payload.condition,
           compiled_xpath: previewXpath.value || "(Local fallback compiled)",
         };
+        // Add to activeRules locally
+        if (isEdit) {
+          const idx = activeRules.value.findIndex(r => r.id === saved.id);
+          if (idx !== -1) {
+            activeRules.value[idx] = saved;
+          }
+        } else {
+          activeRules.value.push(saved);
+        }
       }
 
       const canonicalSig = await generateCanonicalSignature(
