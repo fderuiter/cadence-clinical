@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-05: Decouple GxP Audit and Clinical Transaction Architecture](2026-08-05-decouple-gxp-audit-and-clinical-transaction-architecture.md)
 - [2026-08-04: Metadata-driven Additional Properties JSON column for ClinicalObservation](2026-08-04-metadata-driven-additional-properties-json-column-for-clinicalobservation.md)
 - [2026-08-04: Implement Hexagonal Domain Repository Separation](2026-08-04-implement-hexagonal-domain-repository-separation.md)
 - [2026-08-04: System-Wide Hexagonal Architecture and Pytest-Archon Enforcement](2026-08-04-system-wide-hexagonal-architecture-and-pytest-archon-enforcement.md)
