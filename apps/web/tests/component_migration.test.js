@@ -6,26 +6,13 @@ import MdrView from "../src/views/MdrView.vue";
 import ClinicalSoAMatrix from "../src/components/clinical/ClinicalSoAMatrix.vue";
 import { apiClient } from "../src/api/apiClient";
 
-vi.mock("../src/api/apiClient", () => {
-  const mockClient = {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    delete: vi.fn(),
-  };
-  return {
-    apiClient: mockClient,
-    default: mockClient,
-  };
-});
-
 describe("CtmsView.vue native list rendering migration", () => {
   beforeEach(() => {
     const pinia = createPinia();
     setActivePinia(pinia);
 
-    // Default mock implementations for apiClient.get
-    vi.mocked(apiClient.get).mockImplementation((url) => {
+    // Default mock implementations for apiClient.get using spyOn to prevent global registry pollution
+    vi.spyOn(apiClient, "get").mockImplementation((url) => {
       if (url.includes("/site-milestones")) {
         return Promise.resolve([
           {
@@ -58,6 +45,10 @@ describe("CtmsView.vue native list rendering migration", () => {
       }
       return Promise.resolve([]);
     });
+
+    vi.spyOn(apiClient, "post").mockResolvedValue({});
+    vi.spyOn(apiClient, "put").mockResolvedValue({});
+    vi.spyOn(apiClient, "delete").mockResolvedValue({});
   });
 
   it("renders milestone and visits tables with correct headers and classes", async () => {
@@ -65,7 +56,7 @@ describe("CtmsView.vue native list rendering migration", () => {
 
     // Wait for the async loads to resolve
     let retries = 5;
-    while (vi.mocked(apiClient.get).mock.calls.length === 0 && retries > 0) {
+    while (apiClient.get.mock.calls.length === 0 && retries > 0) {
       await new Promise((resolve) => setTimeout(resolve, 50));
       retries--;
     }
