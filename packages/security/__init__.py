@@ -28,6 +28,12 @@ from packages.security.delegation import (
     validate_request_staff_roles,
     verify_delegation_scope,
 )
+from packages.security.designer_client import (
+    DesignerCriteriaClient,
+    DesignerCriteriaClientError,
+    fetch_eligibility_criteria,
+    fetch_study_criteria,
+)
 from packages.security.gateway_client import (
     GatewayBaseClient,
     run_async,
@@ -35,6 +41,11 @@ from packages.security.gateway_client import (
 from packages.security.middleware import (
     GatewayAuthMiddleware,
     require_gateway_permission,
+)
+from packages.security.notifications_client import (
+    NotificationClient,
+    publish_expiration_notification,
+    publish_notification,
 )
 from packages.security.permissions import (
     PermissionEnum,
@@ -106,6 +117,13 @@ __all__ = [
     "check_trial_role",
     "enforce_site_isolation",
     "GatewayBaseClient",
+    "DesignerCriteriaClient",
+    "DesignerCriteriaClientError",
+    "fetch_study_criteria",
+    "fetch_eligibility_criteria",
+    "NotificationClient",
+    "publish_notification",
+    "publish_expiration_notification",
     "run_async",
     "current_user_id",
     "current_change_reason",

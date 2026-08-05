@@ -125,6 +125,7 @@ class GatewayBaseClient:
         unblinded_access: bool = False,
         tenant_id: str | None = None,
         headers: dict[str, str] | None = None,
+        client: httpx.AsyncClient | None = None,
         **kwargs,
     ) -> httpx.Response:
         """
@@ -159,7 +160,7 @@ class GatewayBaseClient:
             kwargs["timeout"] = self.timeout
 
         try:
-            async with httpx.AsyncClient() as client:
+            if client is not None:
                 method_lower = method.lower()
                 if method_lower == "get":
                     response = await client.get(url, headers=gw_headers, **kwargs)
@@ -175,6 +176,23 @@ class GatewayBaseClient:
                     response = await client.request(
                         method, url, headers=gw_headers, **kwargs
                     )
+            else:
+                async with httpx.AsyncClient() as cli:
+                    method_lower = method.lower()
+                    if method_lower == "get":
+                        response = await cli.get(url, headers=gw_headers, **kwargs)
+                    elif method_lower == "post":
+                        response = await cli.post(url, headers=gw_headers, **kwargs)
+                    elif method_lower == "put":
+                        response = await cli.put(url, headers=gw_headers, **kwargs)
+                    elif method_lower == "delete":
+                        response = await cli.delete(url, headers=gw_headers, **kwargs)
+                    elif method_lower == "patch":
+                        response = await cli.patch(url, headers=gw_headers, **kwargs)
+                    else:
+                        response = await cli.request(
+                            method, url, headers=gw_headers, **kwargs
+                        )
 
                 # Check if the response is a failure (not 2xx)
                 if response.status_code < 200 or response.status_code >= 300:
