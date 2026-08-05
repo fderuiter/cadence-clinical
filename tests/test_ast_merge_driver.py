@@ -19,6 +19,7 @@ def run_merge_driver(
     try:
         # Run driver
         start_time = time.time()
+        # Dynamically resolve workspace root relative to this test file to support running in non-standard CI/CD runner paths where '/app' absolute prefix is absent.
         script_path = (
             Path(__file__).resolve().parent.parent / "scripts" / "ast_merge_driver.py"
         )
