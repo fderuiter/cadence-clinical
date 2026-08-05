@@ -39,14 +39,18 @@ for k, v in MOCK_ENV_VARS.items():
 
 # Add packages subfolders and apps to sys.path to resolve imports within modules
 REPO_ROOT_DIR = Path(__file__).resolve().parent.parent
-for p in (REPO_ROOT_DIR / "packages").glob("*"):
-    if p.is_dir() and str(p) not in sys.path:
-        sys.path.append(str(p))
-for p in (REPO_ROOT_DIR / "apps").glob("*"):
-    if p.is_dir() and str(p) not in sys.path:
-        sys.path.append(str(p))
-if str(REPO_ROOT_DIR) not in sys.path:
-    sys.path.append(str(REPO_ROOT_DIR))
+
+def setup_sys_path():
+    for p in (REPO_ROOT_DIR / "packages").glob("*"):
+        if p.is_dir() and p.name != "__pycache__" and not p.name.startswith(".") and str(p) not in sys.path:
+            sys.path.append(str(p))
+    for p in (REPO_ROOT_DIR / "apps").glob("*"):
+        if p.is_dir() and p.name != "__pycache__" and not p.name.startswith(".") and str(p) not in sys.path:
+            sys.path.append(str(p))
+    if str(REPO_ROOT_DIR) not in sys.path:
+        sys.path.append(str(REPO_ROOT_DIR))
+
+setup_sys_path()
 
 # Common developer tools/executables we whitelist even if not natively installed
 ALLOWED_COMMON_TOOLS = {

@@ -601,15 +601,28 @@ def test_sys_path_append():
     """Verifies that packages and apps subdirectories are appended to sys.path, not prepended."""
     import sys
     from pathlib import Path
+    import scripts.validate_markdown as vm
+
+    # Re-run path registration to make sure the current process's sys.path is fully populated
+    vm.setup_sys_path()
 
     repo_root = Path(__file__).resolve().parent.parent
     resolved_sys_paths = [Path(x).resolve() for x in sys.path if x]
 
+    # Verify packages subfolders are registered
     for p in (repo_root / "packages").glob("*"):
-        if p.is_dir():
+        if p.is_dir() and p.name != "__pycache__" and not p.name.startswith("."):
             resolved_p = p.resolve()
             assert resolved_p in resolved_sys_paths
-            # Since they were appended, they should not be at index 0
+            # Exempt core-models as packages/__init__.py purposefully prepends it to index 0
+            if p.name != "core-models":
+                assert resolved_sys_paths.index(resolved_p) > 0
+
+    # Verify apps subfolders are registered
+    for p in (repo_root / "apps").glob("*"):
+        if p.is_dir() and p.name != "__pycache__" and not p.name.startswith("."):
+            resolved_p = p.resolve()
+            assert resolved_p in resolved_sys_paths
             assert resolved_sys_paths.index(resolved_p) > 0
 
 
