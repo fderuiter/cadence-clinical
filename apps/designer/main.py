@@ -45,12 +45,12 @@ from fastapi import (
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from neo4j import AsyncGraphDatabase
-from apps.designer.adapter.safety_gateway import QuerySafetyError  # noqa: F401
 from protocol_render import SoAMatrixView
 from pydantic import BaseModel, Field, TypeAdapter
 from signature import SigningReason
 
 import apps.designer.adapter.repositories  # noqa: F401
+from apps.designer.adapter.safety_gateway import QuerySafetyError  # noqa: F401
 from apps.designer.db import (
     assert_mock_study_mutable,
     create_mock_rule,
