@@ -1,9 +1,9 @@
 # ADR-2159: PostgreSQL Migration for Regulatory Services
 
-* **Status:** Accepted
-* **Date:** 2026-08-05
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-05
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -15,10 +15,10 @@ This decision implements requirements under PRD-SYS-001.
 
 ## 2. Decision Drivers & Constraints
 
-* Secure sensitive clinical, compliance, and PII data at rest using operating system-level encrypted disks/volumes.
-* Prevent unauthorized host access to relational data inside running containers.
-* Enforce native, transaction-linked identity auditing at the database level.
-* Standardize on production-grade PostgreSQL with active connection pooling.
+- Secure sensitive clinical, compliance, and PII data at rest using operating system-level encrypted disks/volumes.
+- Prevent unauthorized host access to relational data inside running containers.
+- Enforce native, transaction-linked identity auditing at the database level.
+- Standardize on production-grade PostgreSQL with active connection pooling.
 
 ## 3. Options Considered
 
@@ -31,16 +31,16 @@ Chosen option: Option A because it fully satisfies GxP and regulatory audit requ
 
 ## 5. Consequences & Trade-offs
 
-* **Positive:**
+- **Positive:**
   - 100% data isolation for eTMF, CTMS, and Quality databases.
   - Native, untamperable audit logs with database-session user contexts.
   - Active connection pooling (size 10, overflow 20) prevents concurrent transaction blockages.
-* **Negative:**
+- **Negative:**
   - Slightly higher container/infra overhead compared to SQLite files.
 
 ## 6. Implementation & Verification
 
-* Docker Compose updated with dedicated PostgreSQL container definitions.
-* `packages/database/__init__.py` updated to propagate user credentials directly to database session context on every transactional write route.
-* `scripts/reset_db.py` updated to handle PostgreSQL resets and migrations concurrently.
-* Verified using existing and updated test suites.
+- Docker Compose updated with dedicated PostgreSQL container definitions.
+- `packages/database/__init__.py` updated to propagate user credentials directly to database session context on every transactional write route.
+- `scripts/reset_db.py` updated to handle PostgreSQL resets and migrations concurrently.
+- Verified using existing and updated test suites.
