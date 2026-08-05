@@ -119,3 +119,32 @@ async def test_gateway_base_client_request_exception_logging():
         mock_logger.assert_called()
         log_arg = mock_logger.call_args[0][0]
         assert "Exception occurred" in log_arg
+
+
+@pytest.mark.asyncio
+async def test_gateway_base_client_request_with_external_client():
+    """Verify that GatewayBaseClient accepts an external AsyncClient and returns a valid response."""
+    client = GatewayBaseClient(base_url="http://localhost:1234", timeout=3.0)
+    external_client = httpx.AsyncClient()
+
+    with patch.object(external_client, "get", new_callable=AsyncMock) as mock_get:
+        from unittest.mock import MagicMock
+
+        mock_response = MagicMock(spec=httpx.Response)
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"status": "ok_external"}
+        mock_get.return_value = mock_response
+
+        response = await client.request(
+            method="GET",
+            path="/external-endpoint",
+            user_id="test-user",
+            roles="admin",
+            change_reason="External client test",
+            client=external_client,
+        )
+
+        assert response is not None
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok_external"}
+        mock_get.assert_called_once()

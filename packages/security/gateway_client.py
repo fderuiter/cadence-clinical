@@ -194,15 +194,15 @@ class GatewayBaseClient:
                             method, url, headers=gw_headers, **kwargs
                         )
 
-                # Check if the response is a failure (not 2xx)
-                if response.status_code < 200 or response.status_code >= 300:
-                    logger.error(
-                        "Failed request to %s: HTTP status code %s. Response content: %s",
-                        url,
-                        response.status_code,
-                        response.text,
-                    )
-                return response
+            # Check if the response is a failure (not 2xx)
+            if response.status_code < 200 or response.status_code >= 300:
+                logger.error(
+                    "Failed request to %s: HTTP status code %s. Response content: %s",
+                    url,
+                    response.status_code,
+                    response.text,
+                )
+            return response
         except Exception as e:
             logger.error(
                 "Exception occurred during request to %s: %s",

@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2141
-- **Passed:** 2136 🟢
+- **Total Automated Test Cases Run:** 2142
+- **Passed:** 2137 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
 - **Overall Operational Pass Rate:** 99.77%
@@ -1118,6 +1118,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_gateway_base_client_request_exception_logging`                               | `tests.test_gateway_base_client`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_gateway_base_client_request_failure_logging`                                 | `tests.test_gateway_base_client`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_gateway_base_client_request_success`                                         | `tests.test_gateway_base_client`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_gateway_base_client_request_with_external_client`                            | `tests.test_gateway_base_client`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_run_async_basic`                                                             | `tests.test_gateway_base_client`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_run_async_in_running_loop`                                                   | `tests.test_gateway_base_client`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_gateway_cdisc_cdash_domain_authenticated`                                    | `tests.test_gateway_cdisc`                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
