@@ -95,6 +95,11 @@ jobs:
         if: always()
         run: uv run python scripts/validate_path_patterns.py --all
 
+      - name: Run CODEOWNERS Coverage and Validation
+        id: run_codeowners
+        if: always()
+        run: uv run python scripts/validate_codeowners.py
+
       - name: Compile UI library for markdown checks
         run: pnpm --filter ui build
 
