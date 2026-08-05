@@ -1510,7 +1510,7 @@ paths:
   /api/v1/terminology/search:
     get:
       summary: Search Terminology
-      description: "Search or autocomplete terminology concepts by text query.\n\nArgs:\n    term (str): Search term.\n    from_record (int, optional): Record offset.\n    page_size (int, optional): Page size.\n\nReturns:\n    TerminologySearchResponse: Search results and status."
+      description: "Search or autocomplete terminology concepts by text query.\n\nArgs:\n    term (str): Search term.\n    from_record (int, optional): Record offset.\n    page_size (int, optional): Page size.\n    bypass_cache (bool, optional): Whether to bypass reading from cache. Defaults to False.\n    refresh (bool, optional): Whether to refresh the cache. Defaults to False.\n\nReturns:\n    TerminologySearchResponse: Search results and status."
       operationId: search_terminology_api_v1_terminology_search_get
       parameters:
       - name: term
@@ -1535,6 +1535,20 @@ paths:
           - type: integer
           - type: 'null'
           title: Page Size
+      - name: bypass_cache
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Bypass Cache
+      - name: refresh
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Refresh
       responses:
         '200':
           description: Successful Response
@@ -2345,7 +2359,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/apps__designer__soa_models__UpdateVisitRequest'
+              $ref: '#/components/schemas/protocol_authoring__soa__UpdateVisitRequest'
       responses:
         '200':
           description: Successful Response
@@ -4374,7 +4388,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/apps__designer__soa_models__CreateVisitRequest'
+              $ref: '#/components/schemas/protocol_authoring__soa__CreateVisitRequest'
       responses:
         '201':
           description: Successful Response
@@ -4580,6 +4594,272 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SoAMatrixView'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/studies/{study_id}/versions/{version_id}/arms/reorder:
+    post:
+      summary: Reorder Arms Endpoint
+      operationId: reorder_arms_endpoint_api_v1_studies__study_id__versions__version_id__arms_reorder_post
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArmReorderRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Reorder Arms Endpoint Api V1 Studies  Study Id  Versions  Version Id  Arms Reorder Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/studies/{study_id}/versions/{version_id}/epochs/reorder:
+    post:
+      summary: Reorder Epochs Endpoint
+      operationId: reorder_epochs_endpoint_api_v1_studies__study_id__versions__version_id__epochs_reorder_post
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EpochReorderRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Reorder Epochs Endpoint Api V1 Studies  Study Id  Versions  Version Id  Epochs Reorder Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/studies/{study_id}/versions/{version_id}/visits/reorder:
+    post:
+      summary: Reorder Visits Endpoint
+      operationId: reorder_visits_endpoint_api_v1_studies__study_id__versions__version_id__visits_reorder_post
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisitReorderRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Reorder Visits Endpoint Api V1 Studies  Study Id  Versions  Version Id  Visits Reorder Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/studies/{study_id}/versions/{version_id}/procedures/reorder:
+    post:
+      summary: Reorder Procedures Endpoint
+      operationId: reorder_procedures_endpoint_api_v1_studies__study_id__versions__version_id__procedures_reorder_post
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcedureReorderRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Reorder Procedures Endpoint Api V1 Studies  Study Id  Versions  Version Id  Procedures Reorder Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/studies/{study_id}/versions/{version_id}/assignments/activities:
+    post:
+      summary: Assign Activities To Visit Endpoint
+      operationId: assign_activities_to_visit_endpoint_api_v1_studies__study_id__versions__version_id__assignments_activities_post
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityAssignmentRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Assign Activities To Visit Endpoint Api V1 Studies  Study Id  Versions  Version Id  Assignments Activities Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/studies/{study_id}/versions/{version_id}/assignments/arms:
+    post:
+      summary: Assign Visits To Arm Endpoint
+      operationId: assign_visits_to_arm_endpoint_api_v1_studies__study_id__versions__version_id__assignments_arms_post
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisitToArmAssignmentRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Assign Visits To Arm Endpoint Api V1 Studies  Study Id  Versions  Version Id  Assignments Arms Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/studies/{study_id}/versions/{version_id}/assignments/epochs:
+    post:
+      summary: Assign Visits To Epoch Endpoint
+      operationId: assign_visits_to_epoch_endpoint_api_v1_studies__study_id__versions__version_id__assignments_epochs_post
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisitToEpochAssignmentRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Assign Visits To Epoch Endpoint Api V1 Studies  Study Id  Versions  Version Id  Assignments Epochs Post
         '422':
           description: Validation Error
           content:
@@ -8179,6 +8459,30 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
 components:
   schemas:
+    ActivityAssignmentRequest:
+      properties:
+        visit_id:
+          type: string
+          minLength: 1
+          title: Visit Id
+          description: The visit identifier.
+        procedure_ids:
+          items:
+            type: string
+          type: array
+          title: Procedure Ids
+          description: One or more procedure identifiers (non-empty).
+        activity_ids:
+          items:
+            type: string
+          type: array
+          title: Activity Ids
+          description: One or more activity/procedure identifiers (non-empty).
+      type: object
+      required:
+      - visit_id
+      title: ActivityAssignmentRequest
+      description: Request contract carrying a visit id and one or more procedure/activity ids.
     ActivityReport:
       properties:
         epoch_id:
@@ -8406,6 +8710,32 @@ components:
       - attributes
       title: ArmPayload
       description: Arm-specific payload validation containing arm attributes.
+    ArmReorderItem:
+      properties:
+        arm_id:
+          type: string
+          minLength: 1
+          title: Arm Id
+        sequence:
+          type: integer
+          minimum: 1.0
+          title: Sequence
+      type: object
+      required:
+      - arm_id
+      - sequence
+      title: ArmReorderItem
+    ArmReorderRequest:
+      properties:
+        arms:
+          items:
+            $ref: '#/components/schemas/ArmReorderItem'
+          type: array
+          title: Arms
+      type: object
+      required:
+      - arms
+      title: ArmReorderRequest
     AttritionStep:
       properties:
         criterion_id:
@@ -9544,6 +9874,32 @@ components:
       - sequence
       title: EpochProperties
       description: Properties specific to a Study Epoch.
+    EpochReorderItem:
+      properties:
+        epoch_id:
+          type: string
+          minLength: 1
+          title: Epoch Id
+        sequence:
+          type: integer
+          minimum: 1.0
+          title: Sequence
+      type: object
+      required:
+      - epoch_id
+      - sequence
+      title: EpochReorderItem
+    EpochReorderRequest:
+      properties:
+        epochs:
+          items:
+            $ref: '#/components/schemas/EpochReorderItem'
+          type: array
+          title: Epochs
+      type: object
+      required:
+      - epochs
+      title: EpochReorderRequest
     ExpressionNode-Input:
       properties:
         type:
@@ -10213,6 +10569,32 @@ components:
       type: object
       title: ProcedureProperties
       description: Properties specific to a clinical Procedure / Activity.
+    ProcedureReorderItem:
+      properties:
+        procedure_id:
+          type: string
+          minLength: 1
+          title: Procedure Id
+        sequence:
+          type: integer
+          minimum: 1.0
+          title: Sequence
+      type: object
+      required:
+      - procedure_id
+      - sequence
+      title: ProcedureReorderItem
+    ProcedureReorderRequest:
+      properties:
+        procedures:
+          items:
+            $ref: '#/components/schemas/ProcedureReorderItem'
+          type: array
+          title: Procedures
+      type: object
+      required:
+      - procedures
+      title: ProcedureReorderRequest
     PromoteRequest:
       properties:
         change_reason:
@@ -11098,6 +11480,30 @@ components:
           minLength: 1
           title: Name
           description: Label or duration specification of the timing window.
+        anchor_reference:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Anchor Reference
+          description: Anchor reference, e.g. a visit name.
+        target_day:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Target Day
+          description: Target scheduled day.
+        min_offset:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Min Offset
+          description: Minimum day offset.
+        max_offset:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Max Offset
+          description: Maximum day offset.
         conditional:
           anyOf:
           - type: boolean
@@ -11520,6 +11926,71 @@ components:
       - sequence
       title: VisitProperties
       description: Properties specific to a Visit / Encounter.
+    VisitReorderItem:
+      properties:
+        visit_id:
+          type: string
+          minLength: 1
+          title: Visit Id
+          description: Unique identifier for the visit.
+        sequence:
+          type: integer
+          minimum: 1.0
+          title: Sequence
+          description: New sequential order rank of the visit.
+      type: object
+      required:
+      - visit_id
+      - sequence
+      title: VisitReorderItem
+      description: Represents a visit id and its new sequence value.
+    VisitReorderRequest:
+      properties:
+        visits:
+          items:
+            $ref: '#/components/schemas/VisitReorderItem'
+          type: array
+          title: Visits
+          description: Ordered list of visit sequence updates.
+      type: object
+      required:
+      - visits
+      title: VisitReorderRequest
+      description: Request contract carrying an ordered list of visit ID and sequence value pairs.
+    VisitToArmAssignmentRequest:
+      properties:
+        arm_id:
+          type: string
+          minLength: 1
+          title: Arm Id
+        visit_ids:
+          items:
+            type: string
+          type: array
+          minItems: 1
+          title: Visit Ids
+      type: object
+      required:
+      - arm_id
+      - visit_ids
+      title: VisitToArmAssignmentRequest
+    VisitToEpochAssignmentRequest:
+      properties:
+        epoch_id:
+          type: string
+          minLength: 1
+          title: Epoch Id
+        visit_ids:
+          items:
+            type: string
+          type: array
+          minItems: 1
+          title: Visit Ids
+      type: object
+      required:
+      - epoch_id
+      - visit_ids
+      title: VisitToEpochAssignmentRequest
     apps__designer__library__CreateVisitRequest:
       properties:
         id:
@@ -11577,7 +12048,7 @@ components:
       - payload
       title: UpdateVisitRequest
       description: Request model for updating a Visit library object.
-    apps__designer__soa_models__CreateVisitRequest:
+    protocol_authoring__soa__CreateVisitRequest:
       properties:
         id:
           type: string
@@ -11596,7 +12067,7 @@ components:
       - id
       - properties
       title: CreateVisitRequest
-    apps__designer__soa_models__UpdateVisitRequest:
+    protocol_authoring__soa__UpdateVisitRequest:
       properties:
         properties:
           $ref: '#/components/schemas/VisitProperties'
@@ -15636,6 +16107,29 @@ components:
             format: date-time
           - type: 'null'
           title: Visit Date
+        planned_date:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Planned Date
+        window_start:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Window Start
+        window_end:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Window End
+        window_status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Window Status
       type: object
       required:
       - subject_id
@@ -15676,6 +16170,29 @@ components:
           - type: string
           - type: 'null'
           title: Investigational Product Id
+        planned_date:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Planned Date
+        window_start:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Window Start
+        window_end:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Window End
+        window_status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Window Status
       type: object
       required:
       - id
@@ -15712,6 +16229,29 @@ components:
           - type: integer
           - type: 'null'
           title: Protocol Version Index
+        planned_date:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Planned Date
+        window_start:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Window Start
+        window_end:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Window End
+        window_status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Window Status
       type: object
       required:
       - id
