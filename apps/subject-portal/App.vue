@@ -4,9 +4,7 @@
     <header class="portal-header">
       <div class="header-branding">
         <h1>My <span>Cadence</span></h1>
-        <p class="role-badge">
-          Participant Companion Portal
-        </p>
+        <p class="role-badge">Participant Companion Portal</p>
       </div>
       <div class="compliance-badges">
         <span class="badge badge-epro">ePRO Companion</span>
@@ -116,10 +114,7 @@
     <!-- Main Layout -->
     <div class="portal-container">
       <!-- Patient Navigation Tabs -->
-      <nav
-        class="portal-navigation"
-        aria-label="Participant navigation"
-      >
+      <nav class="portal-navigation" aria-label="Participant navigation">
         <ul
           class="nav-tabs"
           role="tablist"
@@ -163,15 +158,10 @@
 
         <!-- Active Participant Card -->
         <div class="participant-info-card">
-          <div class="info-title">
-            Participant Session
-          </div>
+          <div class="info-title">Participant Session</div>
           <div class="info-row">
             <span class="info-lbl">ID:</span>
-            <span
-              id="session-subject-id"
-              class="info-val"
-            >{{
+            <span id="session-subject-id" class="info-val">{{
               state.session.userId || "Loading..."
             }}</span>
           </div>
@@ -179,10 +169,7 @@
             <span class="info-lbl">Status:</span>
             <span class="info-val text-success">Active</span>
           </div>
-          <div
-            class="info-row"
-            style="margin-top: 12px"
-          >
+          <div class="info-row" style="margin-top: 12px">
             <button
               id="btn-logout"
               type="button"
@@ -216,11 +203,7 @@
           </div>
 
           <!-- Tasks Loading Placeholder -->
-          <div
-            id="tasks-loading"
-            class="loading-state"
-            style="display: none"
-          >
+          <div id="tasks-loading" class="loading-state" style="display: none">
             Loading your assigned tasks...
           </div>
 
@@ -245,23 +228,14 @@
             >
               Unknown error
             </p>
-            <button
-              id="btn-retry-tasks"
-              type="button"
-              class="btn btn-primary"
-            >
+            <button id="btn-retry-tasks" type="button" class="btn btn-primary">
               Retry
             </button>
           </div>
 
           <!-- List of tasks -->
-          <div
-            id="tasks-list-container"
-            class="tasks-list"
-          >
-            <div class="loading-state">
-              Loading your assigned tasks...
-            </div>
+          <div id="tasks-list-container" class="tasks-list">
+            <div class="loading-state">Loading your assigned tasks...</div>
           </div>
 
           <!-- Offline Sync Status Panel -->
@@ -318,16 +292,10 @@
           :class="{ active: state.currentView === 'view-questionnaire' }"
         >
           <div class="view-header">
-            <button
-              id="btn-back-to-tasks"
-              type="button"
-              class="btn-back"
-            >
+            <button id="btn-back-to-tasks" type="button" class="btn-back">
               ← Back to My Tasks
             </button>
-            <h2 id="questionnaire-title">
-              Questionnaire
-            </h2>
+            <h2 id="questionnaire-title">Questionnaire</h2>
             <p id="questionnaire-desc">
               Please answer all questions accurately.
             </p>
@@ -416,15 +384,8 @@
             <!-- Compliance Score Card -->
             <div class="card compliance-score-card">
               <div class="score-radial">
-                <div
-                  id="compliance-rate-pct"
-                  class="score-value"
-                >
-                  0%
-                </div>
-                <div class="score-lbl">
-                  Compliance Rate
-                </div>
+                <div id="compliance-rate-pct" class="score-value">0%</div>
+                <div class="score-lbl">Compliance Rate</div>
               </div>
               <div class="score-breakdown">
                 <div class="breakdown-item">
@@ -432,21 +393,20 @@
                   <strong
                     id="compliance-completed-count"
                     class="val text-success"
-                  >0</strong>
+                    >0</strong
+                  >
                 </div>
                 <div class="breakdown-item">
                   <span class="lbl">Pending:</span>
-                  <strong
-                    id="compliance-pending-count"
-                    class="val text-warning"
-                  >0</strong>
+                  <strong id="compliance-pending-count" class="val text-warning"
+                    >0</strong
+                  >
                 </div>
                 <div class="breakdown-item">
                   <span class="lbl">Overdue:</span>
-                  <strong
-                    id="compliance-overdue-count"
-                    class="val text-danger"
-                  >0</strong>
+                  <strong id="compliance-overdue-count" class="val text-danger"
+                    >0</strong
+                  >
                 </div>
               </div>
             </div>
@@ -466,12 +426,7 @@
                   </thead>
                   <tbody id="compliance-history-tbody">
                     <tr>
-                      <td
-                        colspan="4"
-                        class="no-data"
-                      >
-                        No history found.
-                      </td>
+                      <td colspan="4" class="no-data">No history found.</td>
                     </tr>
                   </tbody>
                 </table>
@@ -498,11 +453,7 @@
           </div>
 
           <!-- Inbox Loading Placeholder -->
-          <div
-            id="inbox-loading"
-            class="loading-state"
-            style="display: none"
-          >
+          <div id="inbox-loading" class="loading-state" style="display: none">
             Loading notifications...
           </div>
 
@@ -527,22 +478,13 @@
             >
               Unknown error
             </p>
-            <button
-              id="btn-retry-inbox"
-              type="button"
-              class="btn btn-primary"
-            >
+            <button id="btn-retry-inbox" type="button" class="btn btn-primary">
               Retry
             </button>
           </div>
 
-          <div
-            id="inbox-container"
-            class="inbox-list"
-          >
-            <div class="loading-state">
-              Loading notifications...
-            </div>
+          <div id="inbox-container" class="inbox-list">
+            <div class="loading-state">Loading notifications...</div>
           </div>
         </section>
 
@@ -579,7 +521,8 @@
               <label
                 for="consent-lang-selector"
                 style="font-weight: bold; margin-right: 8px"
-              >Select Language:</label>
+                >Select Language:</label
+              >
               <select
                 id="consent-lang-selector"
                 style="
@@ -590,32 +533,19 @@
                   color: var(--text-color);
                 "
               >
-                <option value="en">
-                  English (en)
-                </option>
-                <option value="es">
-                  Español (es)
-                </option>
-                <option value="nl">
-                  Nederlands (nl)
-                </option>
-                <option value="fr">
-                  Français (fr)
-                </option>
+                <option value="en">English (en)</option>
+                <option value="es">Español (es)</option>
+                <option value="nl">Nederlands (nl)</option>
+                <option value="fr">Français (fr)</option>
               </select>
             </div>
-            <span
-              id="consent-status-badge"
-              class="status-pill pending"
-            >Pending Check</span>
+            <span id="consent-status-badge" class="status-pill pending"
+              >Pending Check</span
+            >
           </div>
 
           <!-- Loading indicator -->
-          <div
-            id="consent-loading"
-            class="loading-state"
-            style="display: none"
-          >
+          <div id="consent-loading" class="loading-state" style="display: none">
             Loading informed consent details...
           </div>
 
@@ -650,15 +580,9 @@
           </div>
 
           <!-- Consent Document Content & Visual Renderer -->
-          <div
-            id="consent-content-wrapper"
-            style="display: none"
-          >
+          <div id="consent-content-wrapper" style="display: none">
             <!-- Metadata and Clauses -->
-            <div
-              class="card"
-              style="margin-bottom: 24px"
-            >
+            <div class="card" style="margin-bottom: 24px">
               <h3
                 id="consent-template-title"
                 style="margin-top: 0; color: var(--primary-color)"
@@ -738,10 +662,7 @@
                 <!-- Dynamically rendered questions using radio grids -->
               </div>
 
-              <div
-                class="form-actions"
-                style="margin-top: 20px"
-              >
+              <div class="form-actions" style="margin-top: 20px">
                 <button
                   id="btn-submit-consent-answers"
                   type="button"
@@ -808,10 +729,7 @@
       @keydown="handleModalKeyDown"
     >
       <div class="modal">
-        <div
-          id="portal-modal-title"
-          class="modal-header"
-        >
+        <div id="portal-modal-title" class="modal-header">
           Electronic Signature Required
         </div>
         <div class="modal-body">
@@ -852,13 +770,13 @@
               <option value="Acknowledge important reminder">
                 Acknowledge important reminder
               </option>
-              <option value="Other">
-                Other (specify below)
-              </option>
+              <option value="Other">Other (specify below)</option>
             </select>
           </div>
           <div class="form-group mb-12">
-            <label for="sign-reason-custom">Custom Reason Detail (Optional)</label>
+            <label for="sign-reason-custom"
+              >Custom Reason Detail (Optional)</label
+            >
             <textarea
               id="sign-reason-custom"
               placeholder="Provide extra detail if 'Other' selected..."
@@ -884,18 +802,10 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button
-            id="btn-modal-cancel"
-            type="button"
-            class="btn btn-secondary"
-          >
+          <button id="btn-modal-cancel" type="button" class="btn btn-secondary">
             Cancel
           </button>
-          <button
-            id="btn-modal-sign"
-            type="button"
-            class="btn btn-primary"
-          >
+          <button id="btn-modal-sign" type="button" class="btn btn-primary">
             Sign and Confirm
           </button>
         </div>
@@ -907,10 +817,7 @@
       <div class="footer-title">
         My Digital Activity Audit Log (21 CFR Part 11 Compliant)
       </div>
-      <div
-        id="portal-ledger-timeline"
-        class="ledger-timeline"
-      >
+      <div id="portal-ledger-timeline" class="ledger-timeline">
         <!-- Ledger records shown here -->
       </div>
     </footer>

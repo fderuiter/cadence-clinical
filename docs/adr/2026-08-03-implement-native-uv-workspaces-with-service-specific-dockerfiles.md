@@ -1,9 +1,9 @@
 # ADR-255: Implement native uv workspaces with service-specific Dockerfiles
 
-* **Status:** Accepted
-* **Date:** 2026-08-03
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-03
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -13,9 +13,9 @@ We need to transition the monorepo architecture of our Python services to use na
 
 ## 2. Decision Drivers & Constraints
 
-* Ensure fast, deterministic, and isolated builds for each microservice.
-* Reduce Docker image sizes by leveraging multi-stage builds and `uv`'s workspace-aware caching mechanisms.
-* Guarantee strict GxP boundary verification (PRD-SYS-001) by ensuring correct dependency mapping.
+- Ensure fast, deterministic, and isolated builds for each microservice.
+- Reduce Docker image sizes by leveraging multi-stage builds and `uv`'s workspace-aware caching mechanisms.
+- Guarantee strict GxP boundary verification (PRD-SYS-001) by ensuring correct dependency mapping.
 
 ## 3. Options Considered
 
@@ -28,11 +28,11 @@ Chosen option: **Option A** because it allows each service (e.g. apps/designer, 
 
 ## 5. Consequences & Trade-offs
 
-* Positive: Extremely fast development environment setup with `uv sync --all-extras`.
-* Positive: Tiny, optimized service Docker containers.
-* Negative: Slightly more verbose configuration across `pyproject.toml` files in workspaces.
+- Positive: Extremely fast development environment setup with `uv sync --all-extras`.
+- Positive: Tiny, optimized service Docker containers.
+- Negative: Slightly more verbose configuration across `pyproject.toml` files in workspaces.
 
 ## 6. Implementation & Verification
 
-* Target files/packages modified: `pyproject.toml`, individual app/package `pyproject.toml` files, Dockerfiles, and security configurations.
-* Verification: Validated with full workspace tests and ADR/RTM schema validation runs.
+- Target files/packages modified: `pyproject.toml`, individual app/package `pyproject.toml` files, Dockerfiles, and security configurations.
+- Verification: Validated with full workspace tests and ADR/RTM schema validation runs.

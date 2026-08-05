@@ -1,9 +1,9 @@
 # ADR-255: Clean up duplicate security entries in rbac configuration
 
-* **Status:** Accepted
-* **Date:** 2026-08-03
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-03
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -13,9 +13,9 @@ In previous development iterations, the RBAC configuration map `ROLE_PERMISSIONS
 
 ## 2. Decision Drivers & Constraints
 
-* Ensure clean static analysis and zero linter warnings.
-* Maintain complete backward compatibility of the centralized permission system.
-* Business/GxP requirement (PRD-SYS-001)
+- Ensure clean static analysis and zero linter warnings.
+- Maintain complete backward compatibility of the centralized permission system.
+- Business/GxP requirement (PRD-SYS-001)
 
 ## 3. Options Considered
 
@@ -28,10 +28,10 @@ Chosen option: Option 1 because it removes redundant duplicate entries directly 
 
 ## 5. Consequences & Trade-offs
 
-* Positive: Clear operational boundaries, simplified audits, and error-free static analysis.
-* Negative: Requires updating the codebase's permission dictionary structure.
+- Positive: Clear operational boundaries, simplified audits, and error-free static analysis.
+- Negative: Requires updating the codebase's permission dictionary structure.
 
 ## 6. Implementation & Verification
 
-* Target files/packages modified: `packages/security/rbac.py`.
-* Verification: Verified that all unit tests and permission checks pass without issue.
+- Target files/packages modified: `packages/security/rbac.py`.
+- Verification: Verified that all unit tests and permission checks pass without issue.

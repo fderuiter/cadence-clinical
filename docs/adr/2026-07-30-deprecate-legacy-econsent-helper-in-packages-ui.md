@@ -1,9 +1,9 @@
 # ADR-114: Deprecate legacy econsent helper in packages ui
 
-* **Status:** Accepted
-* **Date:** 2026-07-30
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-07-30
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -13,9 +13,9 @@ The platform is moving towards a standardized Vue 3 single page application (SPA
 
 ## 2. Decision Drivers & Constraints
 
-* Maintain a single source of truth for eConsent client-side normalization logic in Vue 3/Pinia store structures rather than duplicate vanilla JS helpers.
-* Align with regulatory and GxP guidelines (PRD-SYS-001) for strict validation of capture and consent payloads.
-* Minimize technical debt during the active Vue 3 SPA views refactoring process.
+- Maintain a single source of truth for eConsent client-side normalization logic in Vue 3/Pinia store structures rather than duplicate vanilla JS helpers.
+- Align with regulatory and GxP guidelines (PRD-SYS-001) for strict validation of capture and consent payloads.
+- Minimize technical debt during the active Vue 3 SPA views refactoring process.
 
 ## 3. Options Considered
 
@@ -28,11 +28,11 @@ Chosen option: **Option A** because it completely removes duplicate code pathway
 
 ## 5. Consequences & Trade-offs
 
-* **Positive**: Reduced bundle size, cleaner dependency tree, and a single source of truth for eConsent presentation mapping.
-* **Negative**: Requires clean-up of any legacy vanilla JS import references in the main workspace.
+- **Positive**: Reduced bundle size, cleaner dependency tree, and a single source of truth for eConsent presentation mapping.
+- **Negative**: Requires clean-up of any legacy vanilla JS import references in the main workspace.
 
 ## 6. Implementation & Verification
 
-* Removed `packages/ui/econsent.js`.
-* Consolidated client-side integration and API contracts in `apps/web/src/api/econsent.js`.
-* Verified by running all unit, integration, and UI tests (e.g. `tests/test_econsent_capture.py` and front-end vitest specs) successfully.
+- Removed `packages/ui/econsent.js`.
+- Consolidated client-side integration and API contracts in `apps/web/src/api/econsent.js`.
+- Verified by running all unit, integration, and UI tests (e.g. `tests/test_econsent_capture.py` and front-end vitest specs) successfully.

@@ -1,6 +1,7 @@
 # Data Standards & Interoperability Blueprint
 
 ## Document Metadata
+
 - **Document Version:** 1.0.0-PROD
 - **Status:** APPROVED / GxP-BASELINE
 - **Target Audience:** Clinical Data Managers, Biostatisticians, System Integration Architects, Medical Directors
@@ -9,6 +10,7 @@
 ---
 
 ## Table of Contents
+
 1. **Executive Summary & Scope of Interoperability**
 2. **CDISC Data Mapping Governance & Transformations**
    - 2.1 CDASH Form Generation Rules and Metadata Mapping
@@ -79,66 +81,66 @@ SDTM datasets are generated using a graph-based extractor engine that traverses 
 
 The following table provides variable-level mappings from CDASH verbatim inputs to SDTM domain variables across five core clinical domains: Demographics (DM), Adverse Events (AE), Vital Signs (VS), Laboratory Findings (LB), and Medical History (MH).
 
-| SDTM Domain | SDTM Variable | CDASH Source Field | Data Type | Transformation / Mapping Rule |
-| :--- | :--- | :--- | :--- | :--- |
-| **DM** | `STUDYID` | `Metadata.StudyID` | Char | Direct copy of the unique protocol identifier. |
-| **DM** | `USUBJID` | `Subject.UID` | Char | Concatenation of `STUDYID`, Site ID (`SITEID`), and Subject ID (`SUBJID`): `STUDYID-SITEID-SUBJID`. |
-| **DM** | `SUBJID` | `Subject.ID` | Char | Direct copy of the site-specific subject number. |
-| **DM** | `RFSTDTC` | `EX.EXSTDTC` | Char | Date/Time of first study treatment exposure. Imputed as ISO 8601 string. |
-| **DM** | `RFENDTC` | `DS.DSSTDTC` | Char | Date/Time of last study exposure or study completion/withdrawal. |
-| **DM** | `BRTHDTC` | `DM.BRTHDTC` | Char | Date of birth in ISO 8601 format (`YYYY-MM-DD`). Partial dates allowed. |
-| **DM** | `AGE` | Computed | Num | Computed as `floor((RFSTDTC - BRTHDTC) / 365.25)`. |
-| **DM** | `AGEU` | Fixed Value | Char | Static value set to `"YEARS"`. |
-| **DM** | `SEX` | `DM.SEX` | Char | Checked against CDISC Controlled Terminology (`"M"`, `"F"`, `"U"`). |
-| **DM** | `RACE` | `DM.RACE` | Char | Checked against CDISC Controlled Terminology. If multiple checked, set to `"MULTIPLE"`. |
-| **DM** | `ARM` | `Randomization.Arm` | Char | Set to the randomized trial arm description. Defaults to `"SCREEN FAILURE"` if not randomized. |
-| **AE** | `STUDYID` | `Metadata.StudyID` | Char | Direct copy of the unique protocol identifier. |
-| **AE** | `USUBJID` | `Subject.UID` | Char | Derived unique subject identifier. |
-| **AE** | `AESEQ` | System Generated | Num | Monotonically increasing sequence integer per subject, sorted by `AESTDTC`. |
-| **AE** | `AETERM` | `AE.AETERM` | Char | Verbatim term of the adverse event as entered by investigator. |
-| **AE** | `AELOC` | `AE.AELOC` | Char | Anatomical location, if applicable. Maps to custom qualifiers if non-standard. |
-| **AE** | `AELDTC` | Computed | Char | Date/Time of local adverse event onset (captured on device). |
-| **AE** | `AESTDTC` | `AE.AESTDTC` | Char | Start date/time of adverse event in ISO 8601 format. Partial dates allowed. |
-| **AE** | `AEENDTC` | `AE.AEENDTC` | Char | End date/time of adverse event. If ongoing, set to null and flag `AEENGRY` as `"ONGOING"`. |
-| **AE** | `AESEV` | `AE.AESEV` | Char | Mapped to CDISC CT: `"MILD"`, `"MODERATE"`, `"SEVERE"`. |
-| **AE** | `AESER` | `AE.AESER` | Char | Serious Adverse Event flag: `"Y"` or `"N"`. |
-| **AE** | `AEREL` | `AE.AEREL` | Char | Relationship to treatment: `"RELATED"`, `"NOT RELATED"`, `"POSSIBLY RELATED"`. |
-| **AE** | `AEOUT` | `AE.AEOUT` | Char | Outcome: `"RECOVERED/RESOLVED"`, `"RECOVERING/RESOLVING"`, `"FATAL"`, etc. |
-| **VS** | `STUDYID` | `Metadata.StudyID` | Char | Direct copy of unique protocol identifier. |
-| **VS** | `USUBJID` | `Subject.UID` | Char | Derived unique subject identifier. |
-| **VS** | `VSSEQ` | System Generated | Num | Monotonically increasing sequence integer per subject, sorted by `VSDTC`. |
-| **VS** | `VSTESTCD` | `VS.VSTESTCD` | Char | Short test code (e.g., `"SYSBP"`, `"DIABP"`, `"PULSE"`, `"TEMP"`, `"HEIGHT"`, `"WEIGHT"`). |
-| **VS** | `VSTEST` | `VS.VSTEST` | Char | Full test name (e.g., `"Systolic Blood Pressure"`, `"Pulse Rate"`). |
-| **VS** | `VSORRES` | `VS.VSORRES` | Num | Original verbatim result captured in eCRF. |
-| **VS** | `VSORRESU` | `VS.VSORRESU` | Char | Original unit (e.g., `"mmHg"`, `"beats/min"`, `"[degF]"`). |
-| **VS** | `VSSTRESC` | Computed | Char | Standardized result represented as a character string. |
-| **VS** | `VSSTRESN` | Computed | Num | Standardized numeric result. Converted to UCUM standards (see Section 4.3). |
-| **VS** | `VSSTRESU` | Computed | Char | Standardized unit derived from UCUM target standards (e.g., `"mmHg"`, `"Cel"`). |
-| **VS** | `VSPOS` | `VS.VSPOS` | Char | Subject position during measurement: `"SUPINE"`, `"SITTING"`, `"STANDING"`. |
-| **VS** | `VSDTC` | `VS.VSDTC` | Char | Date/Time of vital signs measurement in ISO 8601 format. |
-| **VS** | `VSBLFL` | Computed | Char | Vital signs Baseline Flag: Set to `"Y"` if baseline record, otherwise null. |
-| **LB** | `STUDYID` | `Metadata.StudyID` | Char | Direct copy of unique protocol identifier. |
-| **LB** | `USUBJID` | `Subject.UID` | Char | Derived unique subject identifier. |
-| **LB** | `LBSEQ` | System Generated | Num | Monotonically increasing sequence integer, sorted by `LBDTC` and `LBSPEC`. |
-| **LB** | `LBTESTCD` | `LB.LBTESTCD` | Char | Lab test short code (e.g., `"ALT"`, `"AST"`, `"CREAT"`, `"GLUC"`, `"HEMOG"`). |
-| **LB** | `LBTEST` | `LB.LBTEST` | Char | Full lab test name (e.g., `"Alanine Aminotransferase"`, `"Glucose"`). |
-| **LB** | `LBORRES` | `LB.LBORRES` | Char | Original verbatim result (alphanumeric). |
-| **LB** | `LBORRESU` | `LB.LBORRESU` | Char | Original result unit. |
-| **LB** | `LBSTRESC` | Computed | Char | Standardized character result. |
-| **LB** | `LBSTRESN` | Computed | Num | Standardized numeric result. Standardized using UCUM matrices. |
-| **LB** | `LBSTRESU` | Computed | Char | Standardized unit (e.g., `"g/L"`, `"umol/L"`). |
-| **LB** | `LBNRIND` | Computed | Char | Normal range reference indicator: `"LOW"`, `"NORMAL"`, `"HIGH"`. |
-| **LB** | `LBDTC` | `LB.LBDTC` | Char | Date/Time of specimen collection in ISO 8601 format. |
-| **LB** | `LBLOINC` | `LB.LBLOINC` | Char | LOINC code mapped to the lab test. |
-| **MH** | `STUDYID` | `Metadata.StudyID` | Char | Direct copy of unique protocol identifier. |
-| **MH** | `USUBJID` | `Subject.UID` | Char | Derived unique subject identifier. |
-| **MH** | `MHSEQ` | System Generated | Num | Monotonically increasing sequence integer, sorted by `MHDTC`. |
-| **MH** | `MHTERM` | `MH.MHTERM` | Char | Medical history verbatim term. |
-| **MH** | `MHDECOD` | Computed | Char | MedDRA Preferred Term (PT) code derived from dictionary coding (Section 3). |
-| **MH** | `MHBODSYS` | Computed | Char | MedDRA System Organ Class (SOC) description. |
-| **MH** | `MHSTDTC` | `MH.MHSTDTC` | Char | Onset date of medical history condition in ISO 8601 format. Partial dates common. |
-| **MH** | `MHENDTC` | `MH.MHENDTC` | Char | End date of medical history condition. Null if ongoing. |
-| **MH** | `MHENRTP` | `MH.MHENRTP` | Char | Relationship to study start: `"BEFORE"`, `"ONGOING"`. |
+| SDTM Domain | SDTM Variable | CDASH Source Field  | Data Type | Transformation / Mapping Rule                                                                       |
+| :---------- | :------------ | :------------------ | :-------- | :-------------------------------------------------------------------------------------------------- |
+| **DM**      | `STUDYID`     | `Metadata.StudyID`  | Char      | Direct copy of the unique protocol identifier.                                                      |
+| **DM**      | `USUBJID`     | `Subject.UID`       | Char      | Concatenation of `STUDYID`, Site ID (`SITEID`), and Subject ID (`SUBJID`): `STUDYID-SITEID-SUBJID`. |
+| **DM**      | `SUBJID`      | `Subject.ID`        | Char      | Direct copy of the site-specific subject number.                                                    |
+| **DM**      | `RFSTDTC`     | `EX.EXSTDTC`        | Char      | Date/Time of first study treatment exposure. Imputed as ISO 8601 string.                            |
+| **DM**      | `RFENDTC`     | `DS.DSSTDTC`        | Char      | Date/Time of last study exposure or study completion/withdrawal.                                    |
+| **DM**      | `BRTHDTC`     | `DM.BRTHDTC`        | Char      | Date of birth in ISO 8601 format (`YYYY-MM-DD`). Partial dates allowed.                             |
+| **DM**      | `AGE`         | Computed            | Num       | Computed as `floor((RFSTDTC - BRTHDTC) / 365.25)`.                                                  |
+| **DM**      | `AGEU`        | Fixed Value         | Char      | Static value set to `"YEARS"`.                                                                      |
+| **DM**      | `SEX`         | `DM.SEX`            | Char      | Checked against CDISC Controlled Terminology (`"M"`, `"F"`, `"U"`).                                 |
+| **DM**      | `RACE`        | `DM.RACE`           | Char      | Checked against CDISC Controlled Terminology. If multiple checked, set to `"MULTIPLE"`.             |
+| **DM**      | `ARM`         | `Randomization.Arm` | Char      | Set to the randomized trial arm description. Defaults to `"SCREEN FAILURE"` if not randomized.      |
+| **AE**      | `STUDYID`     | `Metadata.StudyID`  | Char      | Direct copy of the unique protocol identifier.                                                      |
+| **AE**      | `USUBJID`     | `Subject.UID`       | Char      | Derived unique subject identifier.                                                                  |
+| **AE**      | `AESEQ`       | System Generated    | Num       | Monotonically increasing sequence integer per subject, sorted by `AESTDTC`.                         |
+| **AE**      | `AETERM`      | `AE.AETERM`         | Char      | Verbatim term of the adverse event as entered by investigator.                                      |
+| **AE**      | `AELOC`       | `AE.AELOC`          | Char      | Anatomical location, if applicable. Maps to custom qualifiers if non-standard.                      |
+| **AE**      | `AELDTC`      | Computed            | Char      | Date/Time of local adverse event onset (captured on device).                                        |
+| **AE**      | `AESTDTC`     | `AE.AESTDTC`        | Char      | Start date/time of adverse event in ISO 8601 format. Partial dates allowed.                         |
+| **AE**      | `AEENDTC`     | `AE.AEENDTC`        | Char      | End date/time of adverse event. If ongoing, set to null and flag `AEENGRY` as `"ONGOING"`.          |
+| **AE**      | `AESEV`       | `AE.AESEV`          | Char      | Mapped to CDISC CT: `"MILD"`, `"MODERATE"`, `"SEVERE"`.                                             |
+| **AE**      | `AESER`       | `AE.AESER`          | Char      | Serious Adverse Event flag: `"Y"` or `"N"`.                                                         |
+| **AE**      | `AEREL`       | `AE.AEREL`          | Char      | Relationship to treatment: `"RELATED"`, `"NOT RELATED"`, `"POSSIBLY RELATED"`.                      |
+| **AE**      | `AEOUT`       | `AE.AEOUT`          | Char      | Outcome: `"RECOVERED/RESOLVED"`, `"RECOVERING/RESOLVING"`, `"FATAL"`, etc.                          |
+| **VS**      | `STUDYID`     | `Metadata.StudyID`  | Char      | Direct copy of unique protocol identifier.                                                          |
+| **VS**      | `USUBJID`     | `Subject.UID`       | Char      | Derived unique subject identifier.                                                                  |
+| **VS**      | `VSSEQ`       | System Generated    | Num       | Monotonically increasing sequence integer per subject, sorted by `VSDTC`.                           |
+| **VS**      | `VSTESTCD`    | `VS.VSTESTCD`       | Char      | Short test code (e.g., `"SYSBP"`, `"DIABP"`, `"PULSE"`, `"TEMP"`, `"HEIGHT"`, `"WEIGHT"`).          |
+| **VS**      | `VSTEST`      | `VS.VSTEST`         | Char      | Full test name (e.g., `"Systolic Blood Pressure"`, `"Pulse Rate"`).                                 |
+| **VS**      | `VSORRES`     | `VS.VSORRES`        | Num       | Original verbatim result captured in eCRF.                                                          |
+| **VS**      | `VSORRESU`    | `VS.VSORRESU`       | Char      | Original unit (e.g., `"mmHg"`, `"beats/min"`, `"[degF]"`).                                          |
+| **VS**      | `VSSTRESC`    | Computed            | Char      | Standardized result represented as a character string.                                              |
+| **VS**      | `VSSTRESN`    | Computed            | Num       | Standardized numeric result. Converted to UCUM standards (see Section 4.3).                         |
+| **VS**      | `VSSTRESU`    | Computed            | Char      | Standardized unit derived from UCUM target standards (e.g., `"mmHg"`, `"Cel"`).                     |
+| **VS**      | `VSPOS`       | `VS.VSPOS`          | Char      | Subject position during measurement: `"SUPINE"`, `"SITTING"`, `"STANDING"`.                         |
+| **VS**      | `VSDTC`       | `VS.VSDTC`          | Char      | Date/Time of vital signs measurement in ISO 8601 format.                                            |
+| **VS**      | `VSBLFL`      | Computed            | Char      | Vital signs Baseline Flag: Set to `"Y"` if baseline record, otherwise null.                         |
+| **LB**      | `STUDYID`     | `Metadata.StudyID`  | Char      | Direct copy of unique protocol identifier.                                                          |
+| **LB**      | `USUBJID`     | `Subject.UID`       | Char      | Derived unique subject identifier.                                                                  |
+| **LB**      | `LBSEQ`       | System Generated    | Num       | Monotonically increasing sequence integer, sorted by `LBDTC` and `LBSPEC`.                          |
+| **LB**      | `LBTESTCD`    | `LB.LBTESTCD`       | Char      | Lab test short code (e.g., `"ALT"`, `"AST"`, `"CREAT"`, `"GLUC"`, `"HEMOG"`).                       |
+| **LB**      | `LBTEST`      | `LB.LBTEST`         | Char      | Full lab test name (e.g., `"Alanine Aminotransferase"`, `"Glucose"`).                               |
+| **LB**      | `LBORRES`     | `LB.LBORRES`        | Char      | Original verbatim result (alphanumeric).                                                            |
+| **LB**      | `LBORRESU`    | `LB.LBORRESU`       | Char      | Original result unit.                                                                               |
+| **LB**      | `LBSTRESC`    | Computed            | Char      | Standardized character result.                                                                      |
+| **LB**      | `LBSTRESN`    | Computed            | Num       | Standardized numeric result. Standardized using UCUM matrices.                                      |
+| **LB**      | `LBSTRESU`    | Computed            | Char      | Standardized unit (e.g., `"g/L"`, `"umol/L"`).                                                      |
+| **LB**      | `LBNRIND`     | Computed            | Char      | Normal range reference indicator: `"LOW"`, `"NORMAL"`, `"HIGH"`.                                    |
+| **LB**      | `LBDTC`       | `LB.LBDTC`          | Char      | Date/Time of specimen collection in ISO 8601 format.                                                |
+| **LB**      | `LBLOINC`     | `LB.LBLOINC`        | Char      | LOINC code mapped to the lab test.                                                                  |
+| **MH**      | `STUDYID`     | `Metadata.StudyID`  | Char      | Direct copy of unique protocol identifier.                                                          |
+| **MH**      | `USUBJID`     | `Subject.UID`       | Char      | Derived unique subject identifier.                                                                  |
+| **MH**      | `MHSEQ`       | System Generated    | Num       | Monotonically increasing sequence integer, sorted by `MHDTC`.                                       |
+| **MH**      | `MHTERM`      | `MH.MHTERM`         | Char      | Medical history verbatim term.                                                                      |
+| **MH**      | `MHDECOD`     | Computed            | Char      | MedDRA Preferred Term (PT) code derived from dictionary coding (Section 3).                         |
+| **MH**      | `MHBODSYS`    | Computed            | Char      | MedDRA System Organ Class (SOC) description.                                                        |
+| **MH**      | `MHSTDTC`     | `MH.MHSTDTC`        | Char      | Onset date of medical history condition in ISO 8601 format. Partial dates common.                   |
+| **MH**      | `MHENDTC`     | `MH.MHENDTC`        | Char      | End date of medical history condition. Null if ongoing.                                             |
+| **MH**      | `MHENRTP`     | `MH.MHENRTP`        | Char      | Relationship to study start: `"BEFORE"`, `"ONGOING"`.                                               |
 
 ---
 
@@ -149,6 +151,7 @@ ADaM datasets contain the analytical representation of clinical data, structured
 We define below the core derivation guidelines and mapping matrices for three fundamental ADaM datasets: Subject-Level Analysis Dataset (ADSL), Adverse Events Analysis Dataset (ADAE), and Vital Signs Analysis Dataset (ADVS).
 
 #### 2.3.1 Subject-Level Analysis Dataset (ADSL) Derivations
+
 ADSL is unique as it contains exactly one record per randomized subject, consolidating foundational trial milestones, demographics, and stratification parameters.
 
 ```
@@ -163,25 +166,26 @@ ADSL is unique as it contains exactly one record per randomized subject, consoli
        └───────────────┘
 ```
 
-| ADaM Dataset | ADaM Variable | Source SDTM Variable(s) | Derivation Algorithm & Business Rules |
-| :--- | :--- | :--- | :--- |
-| **ADSL** | `STUDYID` | `DM.STUDYID` | Direct copy from SDTM DM. |
-| **ADSL** | `USUBJID` | `DM.USUBJID` | Direct copy from SDTM DM. |
-| **ADSL** | `SUBJID` | `DM.SUBJID` | Direct copy from SDTM DM. |
-| **ADSL** | `SITEID` | `DM.SITEID` | Direct copy from SDTM DM. |
-| **ADSL** | `ARM` | `DM.ARM` | Direct copy from SDTM DM. |
-| **ADSL** | `ACTARM` | `EX.EXTRT` | Actual Treatment Arm. Determined by evaluating actual study drug exposure records in SDTM EX. If treatment deviated, set to actual treatment received. |
-| **ADSL** | `TRT01P` | `DM.ARM` | Planned Treatment for Period 01. Direct copy of randomized treatment arm (`ARM`). |
-| **ADSL** | `TRT01A` | Computed | Actual Treatment for Period 01. Map to `ACTARM`. |
-| **ADSL** | `TRTSDT` | `EX.EXSTDTC` | Treatment Start Date (Numeric). Converted to SAS/numeric date. Represents the earliest exposure date across all study drugs. |
-| **ADSL** | `TRTEDT` | `EX.EXENDTC` | Treatment End Date (Numeric). Converted to SAS/numeric date. Represents the latest exposure date across all study drugs. |
-| **ADSL** | `RANDT` | `DS.DSSTDTC` | Randomization Date (Numeric). Extracted from SDTM DS where `DSDECOD = 'RANDOMIZED'`. Converted to numeric date. |
-| **ADSL** | `DTHDT` | `DM.DTHDTC` | Death Date (Numeric). Converted to numeric date if `DTHDTC` is populated in DM. |
-| **ADSL** | `EOSDT` | `DS.DSSTDTC` | End of Study Date (Numeric). Extracted from SDTM DS where `DSCAT = 'DISPOSITION EVENT'` and `DSSCAT = 'STUDY COMPLETION/WITHDRAWAL'`. |
-| **ADSL** | `SAFFL` | `EX.EXSTDTC` | Safety Population Flag. Set to `"Y"` if subject took at least one dose of study medication (i.e., `TRTSDT` is not null), otherwise `"N"`. |
-| **ADSL** | `ITTFL` | `DS.DSDECOD` | Intent-To-Treat Population Flag. Set to `"Y"` if subject was randomized (i.e., `RANDT` is not null), otherwise `"N"`. |
+| ADaM Dataset | ADaM Variable | Source SDTM Variable(s) | Derivation Algorithm & Business Rules                                                                                                                  |
+| :----------- | :------------ | :---------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ADSL**     | `STUDYID`     | `DM.STUDYID`            | Direct copy from SDTM DM.                                                                                                                              |
+| **ADSL**     | `USUBJID`     | `DM.USUBJID`            | Direct copy from SDTM DM.                                                                                                                              |
+| **ADSL**     | `SUBJID`      | `DM.SUBJID`             | Direct copy from SDTM DM.                                                                                                                              |
+| **ADSL**     | `SITEID`      | `DM.SITEID`             | Direct copy from SDTM DM.                                                                                                                              |
+| **ADSL**     | `ARM`         | `DM.ARM`                | Direct copy from SDTM DM.                                                                                                                              |
+| **ADSL**     | `ACTARM`      | `EX.EXTRT`              | Actual Treatment Arm. Determined by evaluating actual study drug exposure records in SDTM EX. If treatment deviated, set to actual treatment received. |
+| **ADSL**     | `TRT01P`      | `DM.ARM`                | Planned Treatment for Period 01. Direct copy of randomized treatment arm (`ARM`).                                                                      |
+| **ADSL**     | `TRT01A`      | Computed                | Actual Treatment for Period 01. Map to `ACTARM`.                                                                                                       |
+| **ADSL**     | `TRTSDT`      | `EX.EXSTDTC`            | Treatment Start Date (Numeric). Converted to SAS/numeric date. Represents the earliest exposure date across all study drugs.                           |
+| **ADSL**     | `TRTEDT`      | `EX.EXENDTC`            | Treatment End Date (Numeric). Converted to SAS/numeric date. Represents the latest exposure date across all study drugs.                               |
+| **ADSL**     | `RANDT`       | `DS.DSSTDTC`            | Randomization Date (Numeric). Extracted from SDTM DS where `DSDECOD = 'RANDOMIZED'`. Converted to numeric date.                                        |
+| **ADSL**     | `DTHDT`       | `DM.DTHDTC`             | Death Date (Numeric). Converted to numeric date if `DTHDTC` is populated in DM.                                                                        |
+| **ADSL**     | `EOSDT`       | `DS.DSSTDTC`            | End of Study Date (Numeric). Extracted from SDTM DS where `DSCAT = 'DISPOSITION EVENT'` and `DSSCAT = 'STUDY COMPLETION/WITHDRAWAL'`.                  |
+| **ADSL**     | `SAFFL`       | `EX.EXSTDTC`            | Safety Population Flag. Set to `"Y"` if subject took at least one dose of study medication (i.e., `TRTSDT` is not null), otherwise `"N"`.              |
+| **ADSL**     | `ITTFL`       | `DS.DSDECOD`            | Intent-To-Treat Population Flag. Set to `"Y"` if subject was randomized (i.e., `RANDT` is not null), otherwise `"N"`.                                  |
 
 #### 2.3.2 Occurrence Data Structure: Adverse Events Analysis Dataset (ADAE)
+
 ADAE is modeled using the ADaM Occurrence Data Structure (OCCDS). It supports the analysis of adverse event rates, severity, and relation to study drug.
 
 ```
@@ -193,20 +197,21 @@ ADAE is modeled using the ADaM Occurrence Data Structure (OCCDS). It supports th
        └───────────────┘          treatment emergent flags)
 ```
 
-| ADaM Dataset | ADaM Variable | Source SDTM / ADaM Variable | Derivation Algorithm & Business Rules |
-| :--- | :--- | :--- | :--- |
-| **ADAE** | `USUBJID` | `AE.USUBJID` | Direct copy from SDTM AE. |
-| **ADAE** | `ASTDT` | `AE.AESTDTC` | Analysis Start Date (Numeric). Converted from SDTM ISO 8601 string `AESTDTC`. If date is partial, apply partial date imputation rules (Section 4.4). |
-| **ADAE** | `AENDT` | `AE.AEENDTC` | Analysis End Date (Numeric). Converted from SDTM ISO 8601 string `AEENDTC`. If partial, apply imputation rules. |
-| **ADAE** | `ASTDY` | `ASTDT`, `ADSL.TRTSDT` | Analysis Start Relative Day. Computed as: <br> If `ASTDT >= TRTSDT` then `ASTDT - TRTSDT + 1`. <br> If `ASTDT < TRTSDT` then `ASTDT - TRTSDT`. |
-| **ADAE** | `AENDY` | `AENDT`, `ADSL.TRTSDT` | Analysis End Relative Day. Computed using the same relative day logic as `ASTDY`. |
-| **ADAE** | `TRTEMFL` | `ASTDT`, `ADSL.TRTSDT` | Treatment Emergent Adverse Event Flag. Set to `"Y"` if `ASTDT >= TRTSDT` and `ASTDT <= ADSL.TRTEDT + 30` (30-day safety window). Otherwise `"N"`. |
-| **ADAE** | `AEDECOD` | `AE.AEDECOD` | Preferred Term (PT) dictionary code. Direct copy from SDTM AE. |
-| **ADAE** | `AEBODSYS` | `AE.AEBODSYS` | System Organ Class (SOC) dictionary term. Direct copy from SDTM AE. |
-| **ADAE** | `AESEV` | `AE.AESEV` | Verbatim Severity. Direct copy from SDTM AE. |
-| **ADAE** | `AESEVN` | `AE.AESEV` | Severity Numeric Grade. Map `"MILD"` to `1`, `"MODERATE"` to `2`, `"SEVERE"` to `3`. |
+| ADaM Dataset | ADaM Variable | Source SDTM / ADaM Variable | Derivation Algorithm & Business Rules                                                                                                                |
+| :----------- | :------------ | :-------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ADAE**     | `USUBJID`     | `AE.USUBJID`                | Direct copy from SDTM AE.                                                                                                                            |
+| **ADAE**     | `ASTDT`       | `AE.AESTDTC`                | Analysis Start Date (Numeric). Converted from SDTM ISO 8601 string `AESTDTC`. If date is partial, apply partial date imputation rules (Section 4.4). |
+| **ADAE**     | `AENDT`       | `AE.AEENDTC`                | Analysis End Date (Numeric). Converted from SDTM ISO 8601 string `AEENDTC`. If partial, apply imputation rules.                                      |
+| **ADAE**     | `ASTDY`       | `ASTDT`, `ADSL.TRTSDT`      | Analysis Start Relative Day. Computed as: <br> If `ASTDT >= TRTSDT` then `ASTDT - TRTSDT + 1`. <br> If `ASTDT < TRTSDT` then `ASTDT - TRTSDT`.       |
+| **ADAE**     | `AENDY`       | `AENDT`, `ADSL.TRTSDT`      | Analysis End Relative Day. Computed using the same relative day logic as `ASTDY`.                                                                    |
+| **ADAE**     | `TRTEMFL`     | `ASTDT`, `ADSL.TRTSDT`      | Treatment Emergent Adverse Event Flag. Set to `"Y"` if `ASTDT >= TRTSDT` and `ASTDT <= ADSL.TRTEDT + 30` (30-day safety window). Otherwise `"N"`.    |
+| **ADAE**     | `AEDECOD`     | `AE.AEDECOD`                | Preferred Term (PT) dictionary code. Direct copy from SDTM AE.                                                                                       |
+| **ADAE**     | `AEBODSYS`    | `AE.AEBODSYS`               | System Organ Class (SOC) dictionary term. Direct copy from SDTM AE.                                                                                  |
+| **ADAE**     | `AESEV`       | `AE.AESEV`                  | Verbatim Severity. Direct copy from SDTM AE.                                                                                                         |
+| **ADAE**     | `AESEVN`      | `AE.AESEV`                  | Severity Numeric Grade. Map `"MILD"` to `1`, `"MODERATE"` to `2`, `"SEVERE"` to `3`.                                                                 |
 
 #### 2.3.3 Basic Data Structure: Vital Signs Analysis Dataset (ADVS)
+
 ADVS uses the ADaM Basic Data Structure (BDS), where records represent individual parameter observations at specific time points, including baseline comparisons and changes from baseline.
 
 ```
@@ -218,20 +223,20 @@ ADVS uses the ADaM Basic Data Structure (BDS), where records represent individua
        └────────────────┘          and visits)
 ```
 
-| ADaM Dataset | ADaM Variable | Source SDTM / ADaM Variable | Derivation Algorithm & Business Rules |
-| :--- | :--- | :--- | :--- |
-| **ADVS** | `USUBJID` | `VS.USUBJID` | Direct copy from SDTM VS. |
-| **ADVS** | `PARAMCD` | `VS.VSTESTCD` | Parameter Code. Direct copy of standard vital sign test code. |
-| **ADVS** | `PARAM` | `VS.VSTEST` | Parameter Description. Converted to a standard descriptive string containing test name and standard unit, e.g., `"Systolic Blood Pressure (mmHg)"`. |
-| **ADVS** | `AVAL` | `VS.VSSTRESN` | Analysis Value (Numeric). Standardized numeric value copied directly from standard results. |
-| **ADVS** | `AVALC` | `VS.VSSTRESC` | Analysis Value (Character). Copied for qualitative parameters if needed. |
-| **ADVS** | `ADY` | `VS.VSDTC`, `ADSL.TRTSDT` | Analysis Relative Day. Computed as distance to treatment start date using BDS rules. |
-| **ADVS** | `AVISIT` | `VS.VISIT` | Analysis Visit. Set to standard visit name corresponding to `VS.VISIT` (e.g., `"Screening"`, `"Week 2"`, `"Unscheduled 01"`). |
-| **ADVS** | `AVISITN` | `VS.VISITNUM` | Analysis Visit Number (Numeric). Map to visit number for chronological sorting. |
-| **ADVS** | `BASE` | Computed | Baseline Value (Numeric). Extracted from `AVAL` of the record where `VSBLFL = 'Y'` for the same subject and parameter. |
-| **ADVS** | `CHG` | `AVAL`, `BASE` | Change from Baseline. Computed as `AVAL - BASE`. Only calculated for post-baseline visits (`AVISITN > 1`). |
-| **ADVS** | `PCHG` | `AVAL`, `BASE` | Percentage Change from Baseline. Computed as `((AVAL - BASE) / BASE) * 100`. |
-| **ADVS** | `ABLFL` | `VS.VSBLFL` | Analysis Baseline Flag. Set to `"Y"` if record is baseline, otherwise null. |
+| ADaM Dataset | ADaM Variable | Source SDTM / ADaM Variable | Derivation Algorithm & Business Rules                                                                                                               |
+| :----------- | :------------ | :-------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ADVS**     | `USUBJID`     | `VS.USUBJID`                | Direct copy from SDTM VS.                                                                                                                           |
+| **ADVS**     | `PARAMCD`     | `VS.VSTESTCD`               | Parameter Code. Direct copy of standard vital sign test code.                                                                                       |
+| **ADVS**     | `PARAM`       | `VS.VSTEST`                 | Parameter Description. Converted to a standard descriptive string containing test name and standard unit, e.g., `"Systolic Blood Pressure (mmHg)"`. |
+| **ADVS**     | `AVAL`        | `VS.VSSTRESN`               | Analysis Value (Numeric). Standardized numeric value copied directly from standard results.                                                         |
+| **ADVS**     | `AVALC`       | `VS.VSSTRESC`               | Analysis Value (Character). Copied for qualitative parameters if needed.                                                                            |
+| **ADVS**     | `ADY`         | `VS.VSDTC`, `ADSL.TRTSDT`   | Analysis Relative Day. Computed as distance to treatment start date using BDS rules.                                                                |
+| **ADVS**     | `AVISIT`      | `VS.VISIT`                  | Analysis Visit. Set to standard visit name corresponding to `VS.VISIT` (e.g., `"Screening"`, `"Week 2"`, `"Unscheduled 01"`).                       |
+| **ADVS**     | `AVISITN`     | `VS.VISITNUM`               | Analysis Visit Number (Numeric). Map to visit number for chronological sorting.                                                                     |
+| **ADVS**     | `BASE`        | Computed                    | Baseline Value (Numeric). Extracted from `AVAL` of the record where `VSBLFL = 'Y'` for the same subject and parameter.                              |
+| **ADVS**     | `CHG`         | `AVAL`, `BASE`              | Change from Baseline. Computed as `AVAL - BASE`. Only calculated for post-baseline visits (`AVISITN > 1`).                                          |
+| **ADVS**     | `PCHG`        | `AVAL`, `BASE`              | Percentage Change from Baseline. Computed as `((AVAL - BASE) / BASE) * 100`.                                                                        |
+| **ADVS**     | `ABLFL`       | `VS.VSBLFL`                 | Analysis Baseline Flag. Set to `"Y"` if record is baseline, otherwise null.                                                                         |
 
 ---
 
@@ -398,7 +403,7 @@ Let $T_{old}$ represent the set of coded terms (with active verbatim mappings) i
 
 #### 3.3.2 Version Control Schema & Historical Retention
 
-To prevent historical trial disruption, Cadence Clinical uses a multi-version schema. The relational storage engine maintains an immutable record of the *historical transaction* separate from the *current mapping layer*.
+To prevent historical trial disruption, Cadence Clinical uses a multi-version schema. The relational storage engine maintains an immutable record of the _historical transaction_ separate from the _current mapping layer_.
 
 Below is the SQL representation of the coding audit schema used to ensure historical database traceability:
 
@@ -421,7 +426,7 @@ CREATE TABLE clinical_coding_ledger (
 );
 ```
 
-This ensures that running a statistical query on the study data can retrieve *either* the original clinical terms as they existed at the time of patient enrollment *or* the standardized terms harmonized to the latest dictionary version, satisfying FDA and EMA inspection demands for longitudinal data consistency.
+This ensures that running a statistical query on the study data can retrieve _either_ the original clinical terms as they existed at the time of patient enrollment _or_ the standardized terms harmonized to the latest dictionary version, satisfying FDA and EMA inspection demands for longitudinal data consistency.
 
 ---
 
@@ -454,19 +459,21 @@ A Biomedical Concept (BC) in Cadence Clinical is a reusable, semantically struct
 
 ### 4.2 Null Flavor Rules and Missing Data Logic
 
-When clinical data is missing, it is insufficient to simply leave the database field empty. Regulatory guidance requires indicating *why* the data was not captured. Cadence Clinical integrates standard HL7/CDISC "Null Flavors" into the data pipeline.
+When clinical data is missing, it is insufficient to simply leave the database field empty. Regulatory guidance requires indicating _why_ the data was not captured. Cadence Clinical integrates standard HL7/CDISC "Null Flavors" into the data pipeline.
 
 #### 4.2.1 Standardized Null Flavor Hierarchy
+
 The platform supports six standard Null Flavors:
 
-* **NI (No Information):** The value is missing, and no explanation is available.
-* **NA (Not Applicable):** The data element cannot be collected under current circumstances (e.g., pregnancy test for male subjects).
-* **UNK (Unknown):** The value is known to exist, but cannot be retrieved (e.g., history of a childhood surgery with forgotten exact date).
-* **ASKU (Asked but Unknown):** The investigator explicitly asked the subject, but the subject did not know the answer.
-* **NASK (Not Asked):** The question was not presented to the subject or investigator.
-* **MSNG (Missing):** General system missing state. Typically used when a paper form was lost or an entry skipped.
+- **NI (No Information):** The value is missing, and no explanation is available.
+- **NA (Not Applicable):** The data element cannot be collected under current circumstances (e.g., pregnancy test for male subjects).
+- **UNK (Unknown):** The value is known to exist, but cannot be retrieved (e.g., history of a childhood surgery with forgotten exact date).
+- **ASKU (Asked but Unknown):** The investigator explicitly asked the subject, but the subject did not know the answer.
+- **NASK (Not Asked):** The question was not presented to the subject or investigator.
+- **MSNG (Missing):** General system missing state. Typically used when a paper form was lost or an entry skipped.
 
 #### 4.2.2 Mapping to SDTM and ADaM Datasets
+
 When a Null Flavor is selected in an eCRF (represented as a dropdown or radio option adjacent to the question), the mapping engine translates it to CDISC compliant formats:
 
 1. **SDTM Representation:**
@@ -508,17 +515,17 @@ $$V_{\text{target}} = (V_{\text{original}} \times \text{Multiplier}) + \text{Off
 
 The conversion parameters are maintained in a secure system matrix:
 
-| Clinical Domain | Source Unit ($U_o$) | Target Unit ($U_t$) | Multiplier ($M$) | Offset ($O$) | Precision | Standard Formula / Conversion Equation |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Temperature** | `[degF]` (Fahrenheit) | `Cel` (Celsius) | $0.55555556$ | $-17.777778$ | $2$ | $V_{\text{target}} = (V_{\text{original}} - 32) \times \frac{5}{9}$ |
-| **Temperature** | `Cel` (Celsius) | `Cel` (Celsius) | $1.0$ | $0.0$ | $2$ | Direct standard mapping. |
-| **Weight** | `[lb_av]` (Pounds) | `kg` (Kilograms) | $0.45359237$ | $0.0$ | $3$ | $V_{\text{target}} = V_{\text{original}} \times 0.45359237$ |
-| **Weight** | `g` (Grams) | `kg` (Kilograms) | $0.001$ | $0.0$ | $3$ | $V_{\text{target}} = V_{\text{original}} \times 0.001$ |
-| **Height** | `[in_i]` (Inches) | `cm` (Centimeters) | $2.54$ | $0.0$ | $1$ | $V_{\text{target}} = V_{\text{original}} \times 2.54$ |
-| **Lab (Glucose)** | `mg/dL` | `mmol/L` | $0.0555$ | $0.0$ | $2$ | $V_{\text{target}} = V_{\text{original}} \times 0.0555$ |
-| **Lab (Glucose)** | `mmol/L` | `mmol/L` | $1.0$ | $0.0$ | $2$ | Direct standard mapping. |
-| **Lab (Creatinine)** | `mg/dL` | `umol/L` | $88.4$ | $0.0$ | $1$ | $V_{\text{target}} = V_{\text{original}} \times 88.4$ |
-| **Lab (Bilirubin)** | `mg/dL` | `umol/L` | $17.1$ | $0.0$ | $1$ | $V_{\text{target}} = V_{\text{original}} \times 17.1$ |
+| Clinical Domain      | Source Unit ($U_o$)   | Target Unit ($U_t$) | Multiplier ($M$) | Offset ($O$) | Precision | Standard Formula / Conversion Equation                              |
+| :------------------- | :-------------------- | :------------------ | :--------------- | :----------- | :-------- | :------------------------------------------------------------------ |
+| **Temperature**      | `[degF]` (Fahrenheit) | `Cel` (Celsius)     | $0.55555556$     | $-17.777778$ | $2$       | $V_{\text{target}} = (V_{\text{original}} - 32) \times \frac{5}{9}$ |
+| **Temperature**      | `Cel` (Celsius)       | `Cel` (Celsius)     | $1.0$            | $0.0$        | $2$       | Direct standard mapping.                                            |
+| **Weight**           | `[lb_av]` (Pounds)    | `kg` (Kilograms)    | $0.45359237$     | $0.0$        | $3$       | $V_{\text{target}} = V_{\text{original}} \times 0.45359237$         |
+| **Weight**           | `g` (Grams)           | `kg` (Kilograms)    | $0.001$          | $0.0$        | $3$       | $V_{\text{target}} = V_{\text{original}} \times 0.001$              |
+| **Height**           | `[in_i]` (Inches)     | `cm` (Centimeters)  | $2.54$           | $0.0$        | $1$       | $V_{\text{target}} = V_{\text{original}} \times 2.54$               |
+| **Lab (Glucose)**    | `mg/dL`               | `mmol/L`            | $0.0555$         | $0.0$        | $2$       | $V_{\text{target}} = V_{\text{original}} \times 0.0555$             |
+| **Lab (Glucose)**    | `mmol/L`              | `mmol/L`            | $1.0$            | $0.0$        | $2$       | Direct standard mapping.                                            |
+| **Lab (Creatinine)** | `mg/dL`               | `umol/L`            | $88.4$           | $0.0$        | $1$       | $V_{\text{target}} = V_{\text{original}} \times 88.4$               |
+| **Lab (Bilirubin)**  | `mg/dL`               | `umol/L`            | $17.1$           | $0.0$        | $1$       | $V_{\text{target}} = V_{\text{original}} \times 17.1$               |
 
 This engine is triggered automatically during SDTM dataset compilation, filling out standard numeric fields (e.g., `VSSTRESN`, `LBSTRESN`) while preserving the original investigator entries in original result fields (`VSORRES`, `LBORRES`).
 
@@ -529,11 +536,13 @@ This engine is triggered automatically during SDTM dataset compilation, filling 
 In statistical analyses, missing date parts or missing observation data must be resolved deterministically. The Cadence Clinical platform supports both date/time imputation and clinical value imputation algorithms.
 
 #### 4.4.1 Date and Time Imputation Logic
+
 Clinical events (like adverse event onset dates or study drug start dates) are frequently captured with missing day or month details. The imputation rules differ strictly depending on the event type to ensure a conservative safety calculation (e.g., under-estimating drug exposure or over-estimating adverse event windows).
 
 Let $D_{\text{partial}}$ represent the partial date entered, and $D_{\text{imputed}}$ represent the output.
 
 ##### Adverse Event Onset Date (`AESTDTC`) Imputation:
+
 ```python
 def impute_ae_start_date(ae_partial_date, treatment_start_date):
     """
@@ -577,7 +586,9 @@ def impute_ae_start_date(ae_partial_date, treatment_start_date):
 ```
 
 ##### Concomitant Medication / Adverse Event End Date (`AEENDTC`) Imputation:
-To calculate maximum duration of an adverse event, missing end dates are imputed to the *latest possible date* in the corresponding month or year.
+
+To calculate maximum duration of an adverse event, missing end dates are imputed to the _latest possible date_ in the corresponding month or year.
+
 - If only **Year** is known: set to **December 31st** of that year (or the subject's end of study date, whichever is earlier).
 - If only **Year and Month** are known: set to the **last day** of that month (e.g., June 30th).
 
@@ -624,6 +635,7 @@ The Cadence Clinical platform features an automated outlier detection engine. Du
 The system evaluates data using three separate statistical techniques:
 
 #### 1. Standard Z-Score
+
 Evaluates how many standard deviations ($S$) an individual value ($X_i$) is away from the study population mean ($\bar{X}$). This is appropriate for normally distributed data.
 
 $$Z_i = \frac{X_i - \bar{X}}{S}$$
@@ -632,25 +644,29 @@ Where:
 
 $$\bar{X} = \frac{1}{n}\sum_{i=1}^{n} X_i \quad \text{and} \quad S = \sqrt{\frac{1}{n-1}\sum_{i=1}^{n}(X_i - \bar{X})^2}$$
 
-* **System Action:** If $|Z_i| > 3.0$, the system flags the entry and displays a warning to the clinical data reviewer.
+- **System Action:** If $|Z_i| > 3.0$, the system flags the entry and displays a warning to the clinical data reviewer.
 
 #### 2. Modified Z-Score (Robust Outlier Detection)
+
 Standard mean and standard deviation are highly sensitive to extreme outliers. For skewed distributions or data with large errors, the system employs the Modified Z-Score ($M_i$), which utilizes the **Median Absolute Deviation (MAD)**.
 
 $$M_i = \frac{0.6745 \times (X_i - \tilde{X})}{\text{MAD}}$$
 
 Where:
+
 - $\tilde{X}$ is the population median.
 - $\text{MAD} = \text{median}(|X_i - \tilde{X}|)$.
 
 * **System Action:** If $|M_i| > 3.5$, the observation is flagged as an outlier.
 
 #### 3. Tukey's Fences (Non-parametric Outlier Detection)
+
 Tukey's Fences does not assume a specific distribution and uses percentiles to create upper and lower boundaries.
 
 $$\text{Interquartile Range (IQR)} = Q_3 - Q_1$$
 
 Where:
+
 - $Q_1$ is the 25th percentile (first quartile).
 - $Q_3$ is the 75th percentile (third quartile).
 
@@ -658,7 +674,7 @@ $$\text{Lower Fence} = Q_1 - k \times \text{IQR}$$
 
 $$\text{Upper Fence} = Q_3 + k \times \text{IQR}$$
 
-* **System Action:**
+- **System Action:**
   - **Mild Outliers ($k = 1.5$):** If the value falls outside $[Q_1 - 1.5 \times \text{IQR}, Q_3 + 1.5 \times \text{IQR}]$, the record is highlighted in yellow on the data monitoring dashboard.
   - **Extreme Outliers ($k = 3.0$):** If the value falls outside $[Q_1 - 3.0 \times \text{IQR}, Q_3 + 3.0 \times \text{IQR}]$, the engine automatically generates an active query (e.g., "The entered weight of 700 kg falls outside normal ranges for this population. Please verify and confirm accuracy.").
 
@@ -669,6 +685,7 @@ $$\text{Upper Fence} = Q_3 + k \times \text{IQR}$$
 Prior to transmitting datasets to sponsors, regulatory authorities, or open-access research repositories, the data must be fully anonymized to protect patient privacy in compliance with **HIPAA Safe Harbor** guidelines and **GDPR Recital 26**.
 
 #### 4.6.1 Direct Identifier Hashing (HMAC-SHA256)
+
 Direct identifiers (e.g., subject name, national identification number, physical address, email, telephone number, device MAC addresses) must never be written to CDISC export files.
 
 The system utilizes a secure key derivation function to map direct identifiers to deterministic, irreversible cryptographic hashes:
@@ -680,6 +697,7 @@ $$\text{HashedID} = \text{HMAC-SHA256}(\text{DirectIdentifier}, \text{SecretSalt
 This process guarantees that even if a database export is compromised, the original identity cannot be decrypted, while preserving relational linkages across systems.
 
 #### 4.6.2 Quasi-Identifier Obfuscation and Generalization
+
 Quasi-identifiers are variables that do not directly identify a person but can be combined (e.g., Age + Zip Code + Race) to re-identify an individual with high probability. The system applies the following strict rules:
 
 1. **Age Generalization & Capping:**
@@ -699,6 +717,6 @@ Quasi-identifiers are variables that do not directly identify a person but can b
 
 The signatures below verify that this Data Standards & Interoperability Blueprint has been reviewed, approved, and established as the GxP-compliant baseline for the Cadence Clinical platform data flows.
 
-* **Clinical Operations & Standards Lead:** *Dr. Victoria Vance, MD, PhD*
-* **Chief Biostatistician:** *Robert "Bob" Sterling, PhD*
-* **Security & Regulatory Compliance Director:** *Sarah Connor, CISA*
+- **Clinical Operations & Standards Lead:** _Dr. Victoria Vance, MD, PhD_
+- **Chief Biostatistician:** _Robert "Bob" Sterling, PhD_
+- **Security & Regulatory Compliance Director:** _Sarah Connor, CISA_

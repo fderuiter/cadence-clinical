@@ -1,9 +1,9 @@
 # ADR-250: Extend Centralized Permission Matrix for eCOA and ePRO
 
-* **Status:** Accepted
-* **Date:** 2026-09-05
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-09-05
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -15,8 +15,8 @@ Requirements: PRD-SYS-001
 
 ## 2. Decision Drivers & Constraints
 
-* PRD-SYS-001 (21 CFR Part 11 & GxP Role Authorization Controls)
-* Least-privilege access: Subject role must not be allowed to create schedules or diaries, while clinical/staff roles (sysadmin, sponsor_dm, investigator, crc, cra) must be permitted to manage/review them.
+- PRD-SYS-001 (21 CFR Part 11 & GxP Role Authorization Controls)
+- Least-privilege access: Subject role must not be allowed to create schedules or diaries, while clinical/staff roles (sysadmin, sponsor_dm, investigator, crc, cra) must be permitted to manage/review them.
 
 ## 3. Options Considered
 
@@ -29,10 +29,10 @@ Chosen option: Option A because extending `ROLE_PERMISSIONS` centralizes auditab
 
 ## 5. Consequences & Trade-offs
 
-* Positive: Centralized, auditable permission map for all eCOA and ePRO operations.
-* Negative: Matrix needs to be maintained if new roles are introduced.
+- Positive: Centralized, auditable permission map for all eCOA and ePRO operations.
+- Negative: Matrix needs to be maintained if new roles are introduced.
 
 ## 6. Implementation & Verification
 
-* Modified `packages/security/rbac.py` to map `ecoa_schedule`, `ecoa_diary`, and `ecoa_submission` capabilities across staff roles and subject roles.
-* Added comprehensive automated verification tests in `tests/test_interop.py` and `tests/test_ecoa_coverage.py`.
+- Modified `packages/security/rbac.py` to map `ecoa_schedule`, `ecoa_diary`, and `ecoa_submission` capabilities across staff roles and subject roles.
+- Added comprehensive automated verification tests in `tests/test_interop.py` and `tests/test_ecoa_coverage.py`.

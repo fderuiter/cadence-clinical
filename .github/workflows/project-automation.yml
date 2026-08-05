@@ -6,7 +6,7 @@ on:
   pull_request:
     types: [opened, closed, reopened, synchronize]
   schedule:
-    - cron: '0 0 * * *'
+    - cron: "0 0 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -28,7 +28,7 @@ jobs:
       - name: Set up Python 3.14
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: "3.14"
 
       - name: Run Project & Issue Sync
         env:
