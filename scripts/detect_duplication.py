@@ -146,6 +146,7 @@ def main() -> None:
                     ".git",
                     "dist",
                     "build",
+                    "coverage",
                 ]
             ):
                 continue
