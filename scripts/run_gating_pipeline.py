@@ -42,10 +42,12 @@ def main():
 
     # Set default mock cryptographic secrets for validation subprocesses
     if not os.environ.get("AUDIT_LOG_SECRET_KEY"):
-        os.environ["AUDIT_LOG_SECRET_KEY"] = "test-gxp-audit-secret-key-placeholder-abc"
+        os.environ["AUDIT_LOG_SECRET_KEY"] = (
+            "test-gxp-audit-secret-key-placeholder-abc"  # pragma: allowlist secret
+        )
     if not os.environ.get("INBOUND_EMAIL_HMAC_SECRET"):
         os.environ["INBOUND_EMAIL_HMAC_SECRET"] = (
-            "test-inbound-email-hmac-secret-placeholder-xyz"
+            "test-inbound-email-hmac-secret-placeholder-xyz"  # pragma: allowlist secret
         )
 
     conflict_outcome = "skipped"
