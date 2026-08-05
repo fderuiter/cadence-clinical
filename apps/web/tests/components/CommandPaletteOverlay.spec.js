@@ -244,4 +244,73 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     expect(wrapper3.emitted("close")).toBeTruthy();
     wrapper3.unmount();
   });
+
+  it("restores focus to the previously active element on unmount", async () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Admin"];
+
+    // Create a dummy element to focus beforehand
+    const previousFocusElement = document.createElement("input");
+    document.body.appendChild(previousFocusElement);
+    previousFocusElement.focus();
+    expect(document.activeElement).toBe(previousFocusElement);
+
+    const wrapper = mount(CommandPaletteOverlay, {
+      props: {
+        isOpen: true,
+      },
+      global: {
+        plugins: [router],
+      },
+      attachTo: document.body,
+    });
+
+    await nextTick();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    // The palette input should now have focus
+    const input = wrapper.find(".command-palette-input").element;
+    expect(document.activeElement).toBe(input);
+
+    // Unmount the component (simulating parent conditional unmount)
+    wrapper.unmount();
+
+    // Focus should be restored back to the previous element
+    expect(document.activeElement).toBe(previousFocusElement);
+
+    // Cleanup DOM
+    document.body.removeChild(previousFocusElement);
+  });
+
+  it("only registers document keydown listeners when mounted (active) and removes them on unmount", () => {
+    const addEventListenerSpy = vi.spyOn(document, "addEventListener");
+    const removeEventListenerSpy = vi.spyOn(document, "removeEventListener");
+
+    const wrapper = mount(CommandPaletteOverlay, {
+      props: {
+        isOpen: true,
+      },
+      global: {
+        plugins: [router],
+      },
+    });
+
+    // Spies should be called during mount
+    expect(addEventListenerSpy).toHaveBeenCalled();
+    const keydownAddedCalls = addEventListenerSpy.mock.calls.filter(call => call[0] === "keydown");
+    expect(keydownAddedCalls.length).toBeGreaterThan(0);
+
+    // Now unmount
+    wrapper.unmount();
+
+    // Spies should be called during unmount
+    expect(removeEventListenerSpy).toHaveBeenCalled();
+    const keydownRemovedCalls = removeEventListenerSpy.mock.calls.filter(call => call[0] === "keydown");
+    expect(keydownRemovedCalls.length).toBeGreaterThan(0);
+
+    // Restore spies
+    addEventListenerSpy.mockRestore();
+    removeEventListenerSpy.mockRestore();
+  });
 });

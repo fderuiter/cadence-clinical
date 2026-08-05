@@ -218,6 +218,7 @@
 
     <!-- Global Searchable Command Palette Overlay -->
     <CommandPaletteOverlay
+      v-if="isCommandPaletteOpen"
       :is-open="isCommandPaletteOpen"
       @close="isCommandPaletteOpen = false"
     />
