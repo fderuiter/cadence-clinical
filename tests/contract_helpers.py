@@ -66,7 +66,9 @@ def extract_openapi_yaml(filepath: str) -> str:
     return sec_content[start_pos:end_pos].strip()
 
 
-def resolve_ref(schema: Any, spec: dict[str, Any], seen: set[str] | None = None) -> tuple[Any, str | None]:
+def resolve_ref(
+    schema: Any, spec: dict[str, Any], seen: set[str] | None = None
+) -> tuple[Any, str | None]:
     """Recursively resolve $ref references in the spec dictionary with recursion guard."""
     if seen is None:
         seen = set()
@@ -77,12 +79,12 @@ def resolve_ref(schema: Any, spec: dict[str, Any], seen: set[str] | None = None)
                 "type": "object",
                 "description": f"Recursive reference to {ref}",
             }, ref
-        
+
         ref_path = ref.split("/")
         resolved = spec
         for part in ref_path[1:]:
             resolved = resolved.get(part, {}) if isinstance(resolved, dict) else {}
-        
+
         new_seen = seen | {ref}
         inner_resolved, inner_ref = resolve_ref(resolved, spec, new_seen)
         return inner_resolved, (inner_ref or ref)
@@ -131,7 +133,10 @@ def compare_types(type_spec: Any, type_code: Any) -> bool:
 
     if type_spec == type_code:
         return True
-    return {type_spec, type_code} == {"number", "float"} or {type_spec, type_code} == {"number", "integer"}
+    return {type_spec, type_code} == {"number", "float"} or {type_spec, type_code} == {
+        "number",
+        "integer",
+    }
 
 
 def normalize_schema(schema: Any, spec: dict[str, Any], seen: set | None = None) -> Any:
@@ -152,11 +157,14 @@ def normalize_schema(schema: Any, spec: dict[str, Any], seen: set | None = None)
             non_null_schemas = []
             for sub in union_list:
                 sub_resolved, _ = resolve_ref(sub, spec)
-                if isinstance(sub_resolved, dict) and sub_resolved.get("type") == "null":
+                if (
+                    isinstance(sub_resolved, dict)
+                    and sub_resolved.get("type") == "null"
+                ):
                     has_null = True
                 else:
                     non_null_schemas.append(sub)
-            
+
             if has_null:
                 schema["nullable"] = True
                 if len(non_null_schemas) == 1:
@@ -218,10 +226,14 @@ def _compare_schemas_internal(
 
     if not isinstance(s_norm, dict) or not isinstance(c_norm, dict):
         if type(s_norm) is not type(c_norm):
-            diffs.append(f"Type mismatch at {path_context}: spec={type(s_norm).__name__}, code={type(c_norm).__name__}")
+            diffs.append(
+                f"Type mismatch at {path_context}: spec={type(s_norm).__name__}, code={type(c_norm).__name__}"
+            )
             return
         if s_norm != c_norm:
-            diffs.append(f"Value mismatch at {path_context}: spec={s_norm}, code={c_norm}")
+            diffs.append(
+                f"Value mismatch at {path_context}: spec={s_norm}, code={c_norm}"
+            )
             return
         return
 
@@ -229,24 +241,32 @@ def _compare_schemas_internal(
     s_nullable = s_norm.get("nullable", False)
     c_nullable = c_norm.get("nullable", False)
     if s_nullable != c_nullable:
-        diffs.append(f"Nullable flag mismatch at {path_context}: spec={s_nullable}, code={c_nullable}")
+        diffs.append(
+            f"Nullable flag mismatch at {path_context}: spec={s_nullable}, code={c_nullable}"
+        )
 
     # Compare type
     s_type = s_norm.get("type")
     c_type = c_norm.get("type")
     if s_type or c_type:
         if not compare_types(s_type, c_type):
-            diffs.append(f"Mismatched type at {path_context}: spec={s_type}, code={c_type}")
+            diffs.append(
+                f"Mismatched type at {path_context}: spec={s_type}, code={c_type}"
+            )
 
     # Compare Enum values
     if "enum" in s_norm:
         if "enum" not in c_norm:
-            diffs.append(f"Missing enum constraint in codebase schema at {path_context}")
+            diffs.append(
+                f"Missing enum constraint in codebase schema at {path_context}"
+            )
         else:
             s_enum = set(s_norm["enum"])
             c_enum = set(c_norm["enum"])
             if s_enum != c_enum:
-                diffs.append(f"Mismatched enum values at {path_context}: spec={sorted(list(s_enum))}, code={sorted(list(c_enum))}")
+                diffs.append(
+                    f"Mismatched enum values at {path_context}: spec={sorted(list(s_enum))}, code={sorted(list(c_enum))}"
+                )
 
     # Compare Properties for objects
     if s_type == "object" or "properties" in s_norm:
@@ -256,14 +276,18 @@ def _compare_schemas_internal(
         # Verify that all properties defined in spec exist in code and match
         for prop_name, prop_spec in s_props.items():
             if prop_name not in c_props:
-                diffs.append(f"Property '{prop_name}' defined in contract specification is missing in codebase at {path_context}")
+                diffs.append(
+                    f"Property '{prop_name}' defined in contract specification is missing in codebase at {path_context}"
+                )
             else:
                 _compare_schemas_internal(
                     spec_schema=prop_spec,
                     code_schema=c_props[prop_name],
                     spec_full=spec_full,
                     code_full=code_full,
-                    path_context=f"{path_context}.{prop_name}" if path_context else prop_name,
+                    path_context=f"{path_context}.{prop_name}"
+                    if path_context
+                    else prop_name,
                     bidirectional_required=bidirectional_required,
                     seen_pairs=seen_pairs,
                     diffs=diffs,
@@ -276,17 +300,23 @@ def _compare_schemas_internal(
         # Ensure bidirectional parity of required fields if requested
         missing_in_code = s_req - c_req
         if missing_in_code:
-            diffs.append(f"Required properties {sorted(list(missing_in_code))} in spec contract are not marked required in codebase at {path_context}")
-        
+            diffs.append(
+                f"Required properties {sorted(list(missing_in_code))} in spec contract are not marked required in codebase at {path_context}"
+            )
+
         if bidirectional_required:
             missing_in_spec = c_req - s_req
             if missing_in_spec:
-                diffs.append(f"Required properties {sorted(list(missing_in_spec))} in codebase are not marked required in spec contract at {path_context}")
+                diffs.append(
+                    f"Required properties {sorted(list(missing_in_spec))} in codebase are not marked required in spec contract at {path_context}"
+                )
 
     # Compare Items for arrays
     if s_type == "array" or "items" in s_norm:
         if "items" not in c_norm:
-            diffs.append(f"Array schema missing 'items' property in codebase at {path_context}")
+            diffs.append(
+                f"Array schema missing 'items' property in codebase at {path_context}"
+            )
         else:
             _compare_schemas_internal(
                 spec_schema=s_norm["items"],
