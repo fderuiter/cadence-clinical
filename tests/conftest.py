@@ -557,6 +557,15 @@ def pytest_sessionfinish(session, exitstatus):
         worker_id = os.environ.get("PYTEST_XDIST_WORKER")
         worker_suffix = f"_{worker_id}" if worker_id else "_test"
         try:
+            # Dispose cached postgres engines first
+            global _postgres_engines_cache
+            for engine in list(_postgres_engines_cache.values()):
+                try:
+                    run_sync(engine.dispose())
+                except Exception:
+                    pass
+            _postgres_engines_cache.clear()
+
             run_sync(drop_databases_async(worker_suffix))
         except Exception as e:
             print(f"[conftest] Error tearing down databases: {e}")
@@ -968,6 +977,9 @@ async def clean_neo4j_graph():
         print(f"[conftest] Error clearing live Neo4j graph database: {e}")
 
 
+_postgres_engines_cache = {}
+
+
 async def clean_postgres_databases():
     from sqlalchemy import text
     from sqlalchemy.ext.asyncio import create_async_engine
@@ -1001,10 +1013,13 @@ async def clean_postgres_databases():
     }
 
     base_postgres_url = get_postgres_base_config()
+    global _postgres_engines_cache
     for db_prefix, base in service_bases.items():
         db_name = f"{db_prefix}{worker_suffix}"
         db_url = f"{base_postgres_url}{db_name}"
-        engine = create_async_engine(db_url)
+        if db_url not in _postgres_engines_cache:
+            _postgres_engines_cache[db_url] = create_async_engine(db_url)
+        engine = _postgres_engines_cache[db_url]
         try:
             async with engine.begin() as conn:
                 # Disable triggers and foreign keys for safe, trigger-free TRUNCATE of audited/restricted tables
@@ -1041,8 +1056,6 @@ async def clean_postgres_databases():
             print(f"[conftest] PostgreSQL database {db_name} cleaned successfully.")
         except Exception as e:
             print(f"[conftest] Error cleaning database {db_name}: {e}")
-        finally:
-            await engine.dispose()
 
 
 @pytest_asyncio.fixture(autouse=True)
