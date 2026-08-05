@@ -31,6 +31,16 @@ def main():
     repo = os.environ.get("GITHUB_REPOSITORY")
     pr_number = os.environ.get("PR_NUMBER")
 
+    # Set default fallback values for GxP security environment variables to prevent RuntimeError
+    os.environ.setdefault(
+        "AUDIT_LOG_SECRET_KEY", "test-gxp-audit-secret-key-placeholder-abc"
+    )
+    os.environ.setdefault("GATEWAY_SECRET", "internal-gateway-secret-12345")
+    os.environ.setdefault("SIGNING_SECRET", "designer-amendment-secure-key-12345")
+    os.environ.setdefault(
+        "INBOUND_EMAIL_HMAC_SECRET", "test-email-hmac-secret-placeholder-xyz"
+    )
+
     # If running locally, we can set default mock values for display/testing
     if not repo:
         os.environ["GITHUB_REPOSITORY"] = "owner/repo"
