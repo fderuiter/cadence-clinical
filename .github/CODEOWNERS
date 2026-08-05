@@ -1,3 +1,29 @@
-# Global owner for the entire repository
-* @fderuiter
-/scripts/ @fderuiter
+# Global Fallback Owner
+* @clinical-platform/global-reviewers
+
+# Clinical Domains under apps/
+/apps/compliance/        @clinical-platform/compliance-and-safety
+/apps/ctms/              @clinical-platform/clinical-operations
+/apps/designer/          @clinical-platform/integration-and-routing
+/apps/econsent/          @clinical-platform/patient-engagement
+/apps/eisf/              @clinical-platform/document-management
+/apps/etmf/              @clinical-platform/document-management
+/apps/execution/         @clinical-platform/clinical-operations
+/apps/gateway/           @clinical-platform/integration-and-routing
+/apps/interop/           @clinical-platform/integration-and-routing
+/apps/notifications/     @clinical-platform/patient-engagement
+/apps/org/               @clinical-platform/clinical-operations
+/apps/quality/           @clinical-platform/document-management
+/apps/safety/            @clinical-platform/compliance-and-safety
+/apps/subject-portal/    @clinical-platform/client-ux
+/apps/tickets/           @clinical-platform/clinical-operations
+/apps/web/               @clinical-platform/client-ux
+
+# Clinical Domains under packages/
+/packages/core-models/   @clinical-platform/clinical-operations
+/packages/database/      @clinical-platform/clinical-operations
+/packages/deid/          @clinical-platform/security-and-privacy
+/packages/hexagonal/     @clinical-platform/clinical-operations
+/packages/security/      @clinical-platform/security-and-privacy
+/packages/storage/       @clinical-platform/document-management
+/packages/ui/            @clinical-platform/client-ux
