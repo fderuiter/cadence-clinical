@@ -602,7 +602,8 @@ def test_sys_path_append():
     import sys
     from pathlib import Path
 
-    for p in Path("/app/packages").glob("*"):
+    repo_root = Path(__file__).resolve().parents[1]
+    for p in (repo_root / "packages").glob("*"):
         if p.is_dir():
             path_str = str(p)
             assert path_str in sys.path
