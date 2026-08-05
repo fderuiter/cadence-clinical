@@ -31,6 +31,10 @@ function getBabelParser() {
     if (fs.existsSync(webNodeModules)) {
       return require(webNodeModules);
     }
+    const webNodeModulesLocal = path.resolve(__dirname, "..", "apps/web/node_modules/@babel/parser/lib/index.js");
+    if (fs.existsSync(webNodeModulesLocal)) {
+      return require(webNodeModulesLocal);
+    }
     throw new Error("Could not find @babel/parser");
   }
 }
