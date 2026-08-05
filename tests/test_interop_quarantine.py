@@ -1,5 +1,6 @@
 import time
 from datetime import UTC, datetime, timedelta
+
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
@@ -11,8 +12,8 @@ from apps.interop.main import app
 from apps.interop.models import (
     Base,
     EPROSubmission,
-    EPROSubmissionQuarantine,
     EPROSubmissionDefeated,
+    EPROSubmissionQuarantine,
     Instrument,
     InteropAuditLog,
     SubjectAssignment,
@@ -112,7 +113,11 @@ async def test_epro_quarantine_sync_pipeline():
                 "subject_id": "sub_alice",
                 "diary_id": "daily_diary",
                 "device_timestamp": "2026-08-04T12:05:00Z",
-                "answers": {"pain_score": 12, "age": 15, "gender": "X"}, # fails pain_score (12), age (15), and gender (X)
+                "answers": {
+                    "pain_score": 12,
+                    "age": 15,
+                    "gender": "X",
+                },  # fails pain_score (12), age (15), and gender (X)
                 "offline_sync_markers": {
                     "sequence_number": 2,
                     "device_timestamp": "2026-08-04T12:05:00Z",
@@ -124,7 +129,9 @@ async def test_epro_quarantine_sync_pipeline():
     }
 
     # Post sync request
-    headers = get_auth_headers(roles="staff", change_reason="Bulk offline sync", user_id="sub_alice")
+    headers = get_auth_headers(
+        roles="staff", change_reason="Bulk offline sync", user_id="sub_alice"
+    )
     resp = client.post("/api/v1/interop/epro/sync", json=bulk_payload, headers=headers)
     assert resp.status_code == 200
     data = resp.json()
@@ -140,17 +147,23 @@ async def test_epro_quarantine_sync_pipeline():
 
     # Verify that the database has one EPROSubmission and one EPROSubmissionQuarantine entry
     async with async_session() as session:
-        sub_stmt = select(EPROSubmission).where(EPROSubmission.subject_id == "sub_alice")
+        sub_stmt = select(EPROSubmission).where(
+            EPROSubmission.subject_id == "sub_alice"
+        )
         subs = (await session.execute(sub_stmt)).scalars().all()
         assert len(subs) == 1
         assert subs[0].answers["age"] == 25
 
-        quar_stmt = select(EPROSubmissionQuarantine).where(EPROSubmissionQuarantine.subject_id == "sub_alice")
+        quar_stmt = select(EPROSubmissionQuarantine).where(
+            EPROSubmissionQuarantine.subject_id == "sub_alice"
+        )
         quars = (await session.execute(quar_stmt)).scalars().all()
         assert len(quars) == 1
         quar_id = quars[0].id
         assert quars[0].status == "QUARANTINED"
-        assert len(quars[0].validation_errors) == 3 # pain_score, age, and gender errors
+        assert (
+            len(quars[0].validation_errors) == 3
+        )  # pain_score, age, and gender errors
 
     # Check administrative permission guardrail: Subjects cannot access quarantine endpoints
     subject_headers = get_auth_headers(roles="subject", user_id="sub_alice")
@@ -166,7 +179,9 @@ async def test_epro_quarantine_sync_pipeline():
     assert q_data[0]["id"] == quar_id
 
     # Retrieve single record by ID
-    single_resp = client.get(f"/api/v1/interop/epro/quarantine/{quar_id}", headers=manager_headers)
+    single_resp = client.get(
+        f"/api/v1/interop/epro/quarantine/{quar_id}", headers=manager_headers
+    )
     assert single_resp.status_code == 200
     assert single_resp.json()["subject_id"] == "sub_alice"
 
@@ -177,7 +192,9 @@ async def test_epro_quarantine_sync_pipeline():
         "change_reason": "Correcting participant age and pain score",
     }
     manager_headers_mutation = get_auth_headers(
-        roles="trial_manager", change_reason="Triage quarantined submission", user_id="manager_bob"
+        roles="trial_manager",
+        change_reason="Triage quarantined submission",
+        user_id="manager_bob",
     )
     edit_resp = client.post(
         f"/api/v1/interop/epro/quarantine/{quar_id}/edit",
@@ -189,7 +206,9 @@ async def test_epro_quarantine_sync_pipeline():
 
     # Verify that a failed edit logs a signature failure audit entry
     async with async_session() as session:
-        audit_stmt = select(InteropAuditLog).where(InteropAuditLog.action == "EPRO_EDIT_SIGNATURE_FAILED")
+        audit_stmt = select(InteropAuditLog).where(
+            InteropAuditLog.action == "EPRO_EDIT_SIGNATURE_FAILED"
+        )
         audit_logs = (await session.execute(audit_stmt)).scalars().all()
         assert len(audit_logs) >= 1
 
@@ -207,7 +226,9 @@ async def test_epro_quarantine_sync_pipeline():
     assert edit_resp.status_code == 200
     edited_data = edit_resp.json()
     assert edited_data["answers"]["age"] == 30
-    assert len(edited_data["validation_errors"]) == 0  # Should be cleared since values are now valid!
+    assert (
+        len(edited_data["validation_errors"]) == 0
+    )  # Should be cleared since values are now valid!
 
     # Verify triage history update
     assert len(edited_data["triage_history"]) == 2  # QUARANTINED + EDIT
@@ -243,20 +264,60 @@ async def test_epro_quarantine_sync_pipeline():
     # Verify that the record is now REPLAYED and original raw remains preserved and archived
     async with async_session() as session:
         # Check quarantine status is updated
-        q_record = (await session.execute(select(EPROSubmissionQuarantine).where(EPROSubmissionQuarantine.id == quar_id))).scalars().first()
+        q_record = (
+            (
+                await session.execute(
+                    select(EPROSubmissionQuarantine).where(
+                        EPROSubmissionQuarantine.id == quar_id
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
         assert q_record.status == "REPLAYED"
         assert q_record.original_answers["age"] == 15  # Original raw remains immutable!
 
         # Check raw archive in EPROSubmissionDefeated
-        defeated = (await session.execute(select(EPROSubmissionDefeated).where(EPROSubmissionDefeated.subject_id == "sub_alice"))).scalars().all()
+        defeated = (
+            (
+                await session.execute(
+                    select(EPROSubmissionDefeated).where(
+                        EPROSubmissionDefeated.subject_id == "sub_alice"
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
         assert len(defeated) == 2
         # One of them has original raw answers with age 15
         assert any(d.answers["age"] == 15 for d in defeated)
 
         # Check newly active EPROSubmission contains replayed/corrected answers
-        subs_active = (await session.execute(select(EPROSubmission).where(EPROSubmission.subject_id == "sub_alice"))).scalars().all()
+        subs_active = (
+            (
+                await session.execute(
+                    select(EPROSubmission).where(
+                        EPROSubmission.subject_id == "sub_alice"
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
         assert len(subs_active) >= 1
 
         # Check interop audit logs for EPRO_QUARANTINE_REPLAYED
-        replay_audit = (await session.execute(select(InteropAuditLog).where(InteropAuditLog.action == "EPRO_QUARANTINE_REPLAYED"))).scalars().first()
+        replay_audit = (
+            (
+                await session.execute(
+                    select(InteropAuditLog).where(
+                        InteropAuditLog.action == "EPRO_QUARANTINE_REPLAYED"
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
         assert replay_audit is not None

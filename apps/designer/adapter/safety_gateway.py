@@ -2,11 +2,15 @@ import asyncio
 import re
 import time
 from typing import Any
+
 from neo4j import AsyncGraphDatabase
+
 
 class QuerySafetyError(ValueError):
     """Custom error raised when a database query violates safety policies."""
+
     pass
+
 
 # Compiled regular expressions for safety analysis
 exact_pattern = re.compile(r"^\*\d+$")
@@ -32,8 +36,7 @@ def is_bounded_wildcard(wildcard_part: str) -> bool:
         bool: True if bounded, False otherwise.
     """
     return bool(
-        exact_pattern.match(wildcard_part)
-        or bounded_range_pattern.match(wildcard_part)
+        exact_pattern.match(wildcard_part) or bounded_range_pattern.match(wildcard_part)
     )
 
 
@@ -99,7 +102,7 @@ class SafeTransaction:
     async def rollback(self, *args: Any, **kwargs: Any) -> Any:
         return await self._tx.rollback(*args, **kwargs)
 
-    async def __aenter__(self) -> "SafeTransaction":
+    async def __aenter__(self) -> SafeTransaction:
         await self._tx.__aenter__()
         return self
 
@@ -138,7 +141,7 @@ class SafeSession:
 
         return await self._session.execute_read(wrapped_func, *args, **kwargs)
 
-    async def __aenter__(self) -> "SafeSession":
+    async def __aenter__(self) -> SafeSession:
         await self._session.__aenter__()
         return self
 
@@ -166,6 +169,7 @@ class SafeDriver:
             if asyncio.iscoroutine(res):
                 return await res
             return res
+        return None
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._driver, name)

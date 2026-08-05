@@ -1,11 +1,11 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
 from apps.designer.adapter.safety_gateway import (
-    validate_query_safety,
     QuerySafetyError,
     SafeDriver,
-    SafeSession,
-    SafeTransaction,
+    validate_query_safety,
 )
 
 
@@ -35,7 +35,9 @@ def test_parameter_bypass_validation() -> None:
     validate_query_safety("MATCH (s:Study {id: $study_id})")
     validate_query_safety("MATCH (s:Study) WHERE s.name = $name")
     validate_query_safety("MATCH (s:Study) SET s.status = 'APPROVED'")
-    validate_query_safety("MATCH (th:CommentThread {id: $id}) SET th.status = 'resolved'")
+    validate_query_safety(
+        "MATCH (th:CommentThread {id: $id}) SET th.status = 'resolved'"
+    )
     validate_query_safety("WHERE s.status IN ['Active', 'Active-Recruiting']")
 
     # Unsafe Bypasses
@@ -44,13 +46,13 @@ def test_parameter_bypass_validation() -> None:
     assert "Potential parameter bypass" in str(exc_info.value)
 
     with pytest.raises(QuerySafetyError):
-        validate_query_safety("MATCH (s:Study {id: \"some-uuid\"})")
+        validate_query_safety('MATCH (s:Study {id: "some-uuid"})')
 
     with pytest.raises(QuerySafetyError):
         validate_query_safety("MATCH (s:Study) WHERE s.name = 'some-name'")
 
     with pytest.raises(QuerySafetyError):
-        validate_query_safety("MATCH (s:Study) WHERE s.name == \"some-name\"")
+        validate_query_safety('MATCH (s:Study) WHERE s.name == "some-name"')
 
 
 @pytest.mark.asyncio
@@ -75,7 +77,9 @@ async def test_driver_session_transaction_wrappers() -> None:
     # Safe query should proceed
     res = await safe_session.run("MATCH (n:Study {id: $id}) RETURN n", id="123")
     assert res == "session_result"
-    mock_session.run.assert_called_once_with("MATCH (n:Study {id: $id}) RETURN n", id="123")
+    mock_session.run.assert_called_once_with(
+        "MATCH (n:Study {id: $id}) RETURN n", id="123"
+    )
 
     # Unsafe query should be blocked
     with pytest.raises(QuerySafetyError):
