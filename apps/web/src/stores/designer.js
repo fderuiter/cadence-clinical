@@ -39,6 +39,7 @@ export const useDesignerStore = defineStore("designer", {
           ],
         },
       ],
+      layoutJustification: "",
     },
     selectedFieldId: null,
     // Manage simulated eCRF designer canvas viewports (desktop, tablet, mobile)
@@ -52,6 +53,11 @@ export const useDesignerStore = defineStore("designer", {
     },
     setDismissedWarnings(dismissed) {
       this.dismissedWarnings = dismissed;
+    },
+    setLayoutJustification(justification) {
+      if (this.activeForm) {
+        this.activeForm.layoutJustification = justification;
+      }
     },
     setSelectedFieldId(id) {
       this.selectedFieldId = id;
