@@ -183,19 +183,22 @@ describe("OfflineAuthManager and Crypto Store", () => {
     const validPin4 = "1234";
     const validPin6 = "123456";
 
-    await expect(manager.storeEncryptedSession(invalidPinShort, validSession)).rejects.toThrow(
-      "PIN must be between 4 and 6 digits"
-    );
-    await expect(manager.storeEncryptedSession(invalidPinLong, validSession)).rejects.toThrow(
-      "PIN must be between 4 and 6 digits"
-    );
-    await expect(manager.storeEncryptedSession(invalidPinLetters, validSession)).rejects.toThrow(
-      "PIN must be between 4 and 6 digits"
-    );
+    await expect(
+      manager.storeEncryptedSession(invalidPinShort, validSession)
+    ).rejects.toThrow("PIN must be between 4 and 6 digits");
+    await expect(
+      manager.storeEncryptedSession(invalidPinLong, validSession)
+    ).rejects.toThrow("PIN must be between 4 and 6 digits");
+    await expect(
+      manager.storeEncryptedSession(invalidPinLetters, validSession)
+    ).rejects.toThrow("PIN must be between 4 and 6 digits");
 
     // Should succeed with valid PINs
     await manager.storeEncryptedSession(validPin4, validSession);
-    await manager.storeEncryptedSession(validPin6, { ...validSession, userId: "user-456" });
+    await manager.storeEncryptedSession(validPin6, {
+      ...validSession,
+      userId: "user-456",
+    });
   });
 
   it("should map keys directly to user IDs and preserve consecutive users' keys", async () => {
@@ -237,22 +240,27 @@ describe("OfflineAuthManager and Crypto Store", () => {
 
     // 1st, 2nd, 3rd, 4th failed attempts
     for (let i = 0; i < 4; i++) {
-      await expect(manager.unlockOfflineSession(incorrectPin, validSession.userId)).rejects.toThrow();
+      await expect(
+        manager.unlockOfflineSession(incorrectPin, validSession.userId)
+      ).rejects.toThrow();
     }
 
     // 5th failed attempt - should lock and throw error
-    await expect(manager.unlockOfflineSession(incorrectPin, validSession.userId)).rejects.toThrow(
-      "Key recovery locked. Too many failed attempts."
-    );
+    await expect(
+      manager.unlockOfflineSession(incorrectPin, validSession.userId)
+    ).rejects.toThrow("Key recovery locked. Too many failed attempts.");
 
     // 6th attempt (even with correct PIN) should immediately throw lock error
-    await expect(manager.unlockOfflineSession(pin, validSession.userId)).rejects.toThrow(
-      "Key recovery locked. Too many failed attempts."
-    );
+    await expect(
+      manager.unlockOfflineSession(pin, validSession.userId)
+    ).rejects.toThrow("Key recovery locked. Too many failed attempts.");
 
     // Resetting failed attempts should allow successful unlock
     await manager.resetFailedAttempts(validSession.userId);
-    const unlocked = await manager.unlockOfflineSession(pin, validSession.userId);
+    const unlocked = await manager.unlockOfflineSession(
+      pin,
+      validSession.userId
+    );
     expect(unlocked.offlineToken).toBe(validSession.offlineToken);
   });
 });

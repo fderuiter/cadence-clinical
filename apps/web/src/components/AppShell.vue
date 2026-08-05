@@ -239,7 +239,9 @@
     >
       <div>
         <span>System Status: </span>
-        <span style="color: var(--accent-light); font-weight: 600;">Active Sandbox Mode</span>
+        <span style="color: var(--accent-light); font-weight: 600"
+          >Active Sandbox Mode</span
+        >
       </div>
       <div>
         <button
@@ -257,7 +259,12 @@
           "
           @click="showDiagnosticPanel = !showDiagnosticPanel"
         >
-          🔍 {{ showDiagnosticPanel ? 'Hide Onboarding Telemetry' : 'Show Onboarding Telemetry' }}
+          🔍
+          {{
+            showDiagnosticPanel
+              ? "Hide Onboarding Telemetry"
+              : "Show Onboarding Telemetry"
+          }}
         </button>
       </div>
     </footer>
@@ -275,7 +282,7 @@
         background-color: white;
         border-left: 2px solid var(--border);
         border-top: 2px solid var(--border);
-        box-shadow: -4px 0 12px rgba(0,0,0,0.15);
+        box-shadow: -4px 0 12px rgba(0, 0, 0, 0.15);
         display: flex;
         flex-direction: column;
         z-index: 999;
@@ -298,23 +305,44 @@
         "
       >
         <span>Telemetry Diagnostic Log</span>
-        <div style="display: flex; gap: 8px;">
+        <div style="display: flex; gap: 8px">
           <button
             class="btn btn-clear-events"
-            style="padding: 2px 6px; font-size: 0.7rem; background-color: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;"
+            style="
+              padding: 2px 6px;
+              font-size: 0.7rem;
+              background-color: #ef4444;
+              color: white;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+            "
             @click="onboardingStore.clearEvents()"
           >
             Clear
           </button>
           <button
             class="btn btn-reset-tour"
-            style="padding: 2px 6px; font-size: 0.7rem; background-color: var(--accent); color: white; border: none; border-radius: 4px; cursor: pointer;"
+            style="
+              padding: 2px 6px;
+              font-size: 0.7rem;
+              background-color: var(--accent);
+              color: white;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+            "
             @click="onboardingStore.resetTour()"
           >
             Reset Tour
           </button>
           <button
-            style="background: none; border: none; cursor: pointer; font-size: 1rem;"
+            style="
+              background: none;
+              border: none;
+              cursor: pointer;
+              font-size: 1rem;
+            "
             @click="showDiagnosticPanel = false"
           >
             ✕
@@ -334,7 +362,13 @@
       >
         <div
           v-if="onboardingStore.events.length === 0"
-          style="color: #64748b; font-size: 0.8rem; font-style: italic; text-align: center; margin-top: 20px;"
+          style="
+            color: #64748b;
+            font-size: 0.8rem;
+            font-style: italic;
+            text-align: center;
+            margin-top: 20px;
+          "
         >
           No telemetry events recorded yet.
         </div>
@@ -348,12 +382,26 @@
             font-size: 0.75rem;
           "
         >
-          <div style="display: flex; justify-content: space-between; color: #64748b; font-size: 0.7rem;">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              color: #64748b;
+              font-size: 0.7rem;
+            "
+          >
             <span>{{ ev.type.toUpperCase() }}</span>
             <span>{{ new Date(ev.timestamp).toLocaleTimeString() }}</span>
           </div>
-          <div class="telemetry-target" style="font-weight: 600; margin-top: 2px;">{{ ev.target }}</div>
-          <div v-if="ev.details" style="color: #475569; font-size: 0.7rem;">{{ ev.details }}</div>
+          <div
+            class="telemetry-target"
+            style="font-weight: 600; margin-top: 2px"
+          >
+            {{ ev.target }}
+          </div>
+          <div v-if="ev.details" style="color: #475569; font-size: 0.7rem">
+            {{ ev.details }}
+          </div>
         </div>
       </div>
     </div>

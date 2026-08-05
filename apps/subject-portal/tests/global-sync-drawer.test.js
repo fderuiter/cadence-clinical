@@ -2,17 +2,18 @@ import "fake-indexeddb/auto";
 import { describe, it, expect, beforeEach } from "vitest";
 import { createApp, nextTick } from "vue";
 import App from "../App.vue";
+import { state, refreshSubmissionsState } from "../index.js";
 import {
-  state,
-  refreshSubmissionsState,
-} from "../index.js";
-import { initSessionKey, queueSubmission, clearAllSubmissions } from "../sync-queue.js";
+  initSessionKey,
+  queueSubmission,
+  clearAllSubmissions,
+} from "../sync-queue.js";
 
 describe("Global Floating Drawer and Vue-Reactive State Sync", () => {
   beforeEach(async () => {
     window.__MOCK_TEST_ENV__ = true;
     document.body.innerHTML = `<div id="app"></div>`;
-    
+
     // Clear state
     state.isSyncDrawerOpen = false;
     state.submissions = [];
@@ -32,7 +33,9 @@ describe("Global Floating Drawer and Vue-Reactive State Sync", () => {
     const syncBtn = document.getElementById("btn-global-sync-drawer");
     expect(syncBtn).not.toBeNull();
     expect(syncBtn.querySelector(".sync-icon").textContent).toBe("🔄");
-    expect(syncBtn.querySelector(".sync-btn-label").textContent).toBe("Sync Status");
+    expect(syncBtn.querySelector(".sync-btn-label").textContent).toBe(
+      "Sync Status"
+    );
   });
 
   it("should toggle the floating drawer open and closed when clicking the status button", async () => {
@@ -87,12 +90,16 @@ describe("Global Floating Drawer and Vue-Reactive State Sync", () => {
     // Verify reactive list updates inside Vue template
     const itemsList = document.querySelector(".submissions-items-list");
     expect(itemsList).not.toBeNull();
-    
+
     const submissionItem = itemsList.querySelector(".drawer-submission-item");
     expect(submissionItem).not.toBeNull();
     expect(submissionItem.classList.contains("submission-queued")).toBe(true);
-    expect(submissionItem.querySelector(".item-name").textContent).toBe("Daily Health & Vital Diary");
-    expect(submissionItem.querySelector(".data-code").textContent).toContain("vssbp");
+    expect(submissionItem.querySelector(".item-name").textContent).toBe(
+      "Daily Health & Vital Diary"
+    );
+    expect(submissionItem.querySelector(".data-code").textContent).toContain(
+      "vssbp"
+    );
   });
 
   it("should trigger manual sync process within the floating drawer", async () => {
