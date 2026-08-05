@@ -4,15 +4,13 @@
     <header class="portal-header">
       <div class="header-branding">
         <h1>My <span>Cadence</span></h1>
-        <p class="role-badge">
-          Participant Companion Portal
-        </p>
+        <p class="role-badge">Participant Companion Portal</p>
       </div>
       <div class="compliance-badges">
         <span class="badge badge-epro">ePRO Companion</span>
         <span class="badge badge-gxp">21 CFR Part 11</span>
         <span class="badge badge-gamp">GAMP 5</span>
-        
+
         <!-- Persistent dynamic sync status button -->
         <button
           id="btn-global-sync-drawer"
@@ -20,7 +18,7 @@
           class="btn-sync-status"
           :class="{
             'has-queued': queuedSubmissionsCount > 0,
-            'sync-failed': isSyncFailed
+            'sync-failed': isSyncFailed,
           }"
           aria-label="Toggle sync status drawer"
           @click="toggleSyncDrawer"
@@ -63,12 +61,14 @@
 
       <div class="drawer-body">
         <div class="sync-status-section">
-          <p class="status-text">{{ state.syncStatusText || 'Checking sync status...' }}</p>
+          <p class="status-text">
+            {{ state.syncStatusText || "Checking sync status..." }}
+          </p>
           <button
             id="btn-drawer-sync-now"
             type="button"
             class="btn btn-primary btn-sync-trigger"
-            style="width: 100%; margin-top: 8px;"
+            style="width: 100%; margin-top: 8px"
             @click="triggerManualSync"
           >
             Sync Now
@@ -77,7 +77,10 @@
 
         <div class="submissions-list-wrapper">
           <h4 class="submissions-heading">Submissions Status</h4>
-          <div v-if="!state.submissions || state.submissions.length === 0" class="empty-state">
+          <div
+            v-if="!state.submissions || state.submissions.length === 0"
+            class="empty-state"
+          >
             No submission history in queue.
           </div>
           <div v-else class="submissions-items-list">
@@ -88,23 +91,33 @@
               :class="getSubmissionClass(item)"
             >
               <div class="item-header-row">
-                <span class="item-name">{{ getInstrumentName(item.diary_id) }}</span>
+                <span class="item-name">{{
+                  getInstrumentName(item.diary_id)
+                }}</span>
                 <span class="status-pill" :class="getBadgeClass(item)">
                   {{ getStatusLabel(item) }}
                 </span>
               </div>
               <div class="item-time">
-                Seq: #{{ item.sequence_number }} | Device Time: {{ formatTime(item.device_timestamp) }}
+                Seq: #{{ item.sequence_number }} | Device Time:
+                {{ formatTime(item.device_timestamp) }}
               </div>
               <div class="item-details">
                 <p class="item-desc">{{ getStatusDescription(item) }}</p>
                 <div class="item-data">
                   <strong>Local Answers:</strong>
-                  <code class="data-code">{{ JSON.stringify(item.answers) }}</code>
+                  <code class="data-code">{{
+                    JSON.stringify(item.answers)
+                  }}</code>
                 </div>
-                <div v-if="item.resolved_answers && item.status === 'MERGED'" class="item-data merged-data">
+                <div
+                  v-if="item.resolved_answers && item.status === 'MERGED'"
+                  class="item-data merged-data"
+                >
                   <strong>Merged Result:</strong>
-                  <code class="data-code">{{ JSON.stringify(item.resolved_answers) }}</code>
+                  <code class="data-code">{{
+                    JSON.stringify(item.resolved_answers)
+                  }}</code>
                 </div>
               </div>
             </div>
@@ -116,10 +129,7 @@
     <!-- Main Layout -->
     <div class="portal-container">
       <!-- Patient Navigation Tabs -->
-      <nav
-        class="portal-navigation"
-        aria-label="Participant navigation"
-      >
+      <nav class="portal-navigation" aria-label="Participant navigation">
         <ul
           class="nav-tabs"
           role="tablist"
@@ -163,15 +173,10 @@
 
         <!-- Active Participant Card -->
         <div class="participant-info-card">
-          <div class="info-title">
-            Participant Session
-          </div>
+          <div class="info-title">Participant Session</div>
           <div class="info-row">
             <span class="info-lbl">ID:</span>
-            <span
-              id="session-subject-id"
-              class="info-val"
-            >{{
+            <span id="session-subject-id" class="info-val">{{
               state.session.userId || "Loading..."
             }}</span>
           </div>
@@ -179,10 +184,7 @@
             <span class="info-lbl">Status:</span>
             <span class="info-val text-success">Active</span>
           </div>
-          <div
-            class="info-row"
-            style="margin-top: 12px"
-          >
+          <div class="info-row" style="margin-top: 12px">
             <button
               id="btn-logout"
               type="button"
@@ -216,11 +218,7 @@
           </div>
 
           <!-- Tasks Loading Placeholder -->
-          <div
-            id="tasks-loading"
-            class="loading-state"
-            style="display: none"
-          >
+          <div id="tasks-loading" class="loading-state" style="display: none">
             Loading your assigned tasks...
           </div>
 
@@ -245,23 +243,14 @@
             >
               Unknown error
             </p>
-            <button
-              id="btn-retry-tasks"
-              type="button"
-              class="btn btn-primary"
-            >
+            <button id="btn-retry-tasks" type="button" class="btn btn-primary">
               Retry
             </button>
           </div>
 
           <!-- List of tasks -->
-          <div
-            id="tasks-list-container"
-            class="tasks-list"
-          >
-            <div class="loading-state">
-              Loading your assigned tasks...
-            </div>
+          <div id="tasks-list-container" class="tasks-list">
+            <div class="loading-state">Loading your assigned tasks...</div>
           </div>
 
           <!-- Offline Sync Status Panel -->
@@ -318,16 +307,10 @@
           :class="{ active: state.currentView === 'view-questionnaire' }"
         >
           <div class="view-header">
-            <button
-              id="btn-back-to-tasks"
-              type="button"
-              class="btn-back"
-            >
+            <button id="btn-back-to-tasks" type="button" class="btn-back">
               ← Back to My Tasks
             </button>
-            <h2 id="questionnaire-title">
-              Questionnaire
-            </h2>
+            <h2 id="questionnaire-title">Questionnaire</h2>
             <p id="questionnaire-desc">
               Please answer all questions accurately.
             </p>
@@ -416,15 +399,8 @@
             <!-- Compliance Score Card -->
             <div class="card compliance-score-card">
               <div class="score-radial">
-                <div
-                  id="compliance-rate-pct"
-                  class="score-value"
-                >
-                  0%
-                </div>
-                <div class="score-lbl">
-                  Compliance Rate
-                </div>
+                <div id="compliance-rate-pct" class="score-value">0%</div>
+                <div class="score-lbl">Compliance Rate</div>
               </div>
               <div class="score-breakdown">
                 <div class="breakdown-item">
@@ -432,21 +408,20 @@
                   <strong
                     id="compliance-completed-count"
                     class="val text-success"
-                  >0</strong>
+                    >0</strong
+                  >
                 </div>
                 <div class="breakdown-item">
                   <span class="lbl">Pending:</span>
-                  <strong
-                    id="compliance-pending-count"
-                    class="val text-warning"
-                  >0</strong>
+                  <strong id="compliance-pending-count" class="val text-warning"
+                    >0</strong
+                  >
                 </div>
                 <div class="breakdown-item">
                   <span class="lbl">Overdue:</span>
-                  <strong
-                    id="compliance-overdue-count"
-                    class="val text-danger"
-                  >0</strong>
+                  <strong id="compliance-overdue-count" class="val text-danger"
+                    >0</strong
+                  >
                 </div>
               </div>
             </div>
@@ -466,12 +441,7 @@
                   </thead>
                   <tbody id="compliance-history-tbody">
                     <tr>
-                      <td
-                        colspan="4"
-                        class="no-data"
-                      >
-                        No history found.
-                      </td>
+                      <td colspan="4" class="no-data">No history found.</td>
                     </tr>
                   </tbody>
                 </table>
@@ -498,11 +468,7 @@
           </div>
 
           <!-- Inbox Loading Placeholder -->
-          <div
-            id="inbox-loading"
-            class="loading-state"
-            style="display: none"
-          >
+          <div id="inbox-loading" class="loading-state" style="display: none">
             Loading notifications...
           </div>
 
@@ -527,22 +493,13 @@
             >
               Unknown error
             </p>
-            <button
-              id="btn-retry-inbox"
-              type="button"
-              class="btn btn-primary"
-            >
+            <button id="btn-retry-inbox" type="button" class="btn btn-primary">
               Retry
             </button>
           </div>
 
-          <div
-            id="inbox-container"
-            class="inbox-list"
-          >
-            <div class="loading-state">
-              Loading notifications...
-            </div>
+          <div id="inbox-container" class="inbox-list">
+            <div class="loading-state">Loading notifications...</div>
           </div>
         </section>
 
@@ -579,7 +536,8 @@
               <label
                 for="consent-lang-selector"
                 style="font-weight: bold; margin-right: 8px"
-              >Select Language:</label>
+                >Select Language:</label
+              >
               <select
                 id="consent-lang-selector"
                 style="
@@ -590,32 +548,19 @@
                   color: var(--text-color);
                 "
               >
-                <option value="en">
-                  English (en)
-                </option>
-                <option value="es">
-                  Español (es)
-                </option>
-                <option value="nl">
-                  Nederlands (nl)
-                </option>
-                <option value="fr">
-                  Français (fr)
-                </option>
+                <option value="en">English (en)</option>
+                <option value="es">Español (es)</option>
+                <option value="nl">Nederlands (nl)</option>
+                <option value="fr">Français (fr)</option>
               </select>
             </div>
-            <span
-              id="consent-status-badge"
-              class="status-pill pending"
-            >Pending Check</span>
+            <span id="consent-status-badge" class="status-pill pending"
+              >Pending Check</span
+            >
           </div>
 
           <!-- Loading indicator -->
-          <div
-            id="consent-loading"
-            class="loading-state"
-            style="display: none"
-          >
+          <div id="consent-loading" class="loading-state" style="display: none">
             Loading informed consent details...
           </div>
 
@@ -650,15 +595,9 @@
           </div>
 
           <!-- Consent Document Content & Visual Renderer -->
-          <div
-            id="consent-content-wrapper"
-            style="display: none"
-          >
+          <div id="consent-content-wrapper" style="display: none">
             <!-- Metadata and Clauses -->
-            <div
-              class="card"
-              style="margin-bottom: 24px"
-            >
+            <div class="card" style="margin-bottom: 24px">
               <h3
                 id="consent-template-title"
                 style="margin-top: 0; color: var(--primary-color)"
@@ -738,10 +677,7 @@
                 <!-- Dynamically rendered questions using radio grids -->
               </div>
 
-              <div
-                class="form-actions"
-                style="margin-top: 20px"
-              >
+              <div class="form-actions" style="margin-top: 20px">
                 <button
                   id="btn-submit-consent-answers"
                   type="button"
@@ -808,10 +744,7 @@
       @keydown="handleModalKeyDown"
     >
       <div class="modal">
-        <div
-          id="portal-modal-title"
-          class="modal-header"
-        >
+        <div id="portal-modal-title" class="modal-header">
           Electronic Signature Required
         </div>
         <div class="modal-body">
@@ -852,13 +785,13 @@
               <option value="Acknowledge important reminder">
                 Acknowledge important reminder
               </option>
-              <option value="Other">
-                Other (specify below)
-              </option>
+              <option value="Other">Other (specify below)</option>
             </select>
           </div>
           <div class="form-group mb-12">
-            <label for="sign-reason-custom">Custom Reason Detail (Optional)</label>
+            <label for="sign-reason-custom"
+              >Custom Reason Detail (Optional)</label
+            >
             <textarea
               id="sign-reason-custom"
               placeholder="Provide extra detail if 'Other' selected..."
@@ -884,18 +817,10 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button
-            id="btn-modal-cancel"
-            type="button"
-            class="btn btn-secondary"
-          >
+          <button id="btn-modal-cancel" type="button" class="btn btn-secondary">
             Cancel
           </button>
-          <button
-            id="btn-modal-sign"
-            type="button"
-            class="btn btn-primary"
-          >
+          <button id="btn-modal-sign" type="button" class="btn btn-primary">
             Sign and Confirm
           </button>
         </div>
@@ -907,10 +832,7 @@
       <div class="footer-title">
         My Digital Activity Audit Log (21 CFR Part 11 Compliant)
       </div>
-      <div
-        id="portal-ledger-timeline"
-        class="ledger-timeline"
-      >
+      <div id="portal-ledger-timeline" class="ledger-timeline">
         <!-- Ledger records shown here -->
       </div>
     </footer>
@@ -939,15 +861,22 @@ const queuedSubmissionsCount = computed(() => {
 });
 
 const isSyncFailed = computed(() => {
-  return state.syncStatusText && state.syncStatusText.toLowerCase().includes("failed");
+  return (
+    state.syncStatusText &&
+    state.syncStatusText.toLowerCase().includes("failed")
+  );
 });
 
 function getInstrumentName(diaryId) {
   const fallback = {
     inst_daily_diary: "Daily Health & Vital Diary",
-    inst_weekly_symptoms: "Weekly Symptoms & eCOA Checklist"
+    inst_weekly_symptoms: "Weekly Symptoms & eCOA Checklist",
   };
-  return (state.instruments && state.instruments[diaryId]?.name) || fallback[diaryId] || diaryId;
+  return (
+    (state.instruments && state.instruments[diaryId]?.name) ||
+    fallback[diaryId] ||
+    diaryId
+  );
 }
 
 function formatTime(isoString) {
@@ -957,24 +886,35 @@ function formatTime(isoString) {
 
 function getSubmissionClass(item) {
   return {
-    'submission-queued': item.status === 'QUEUED',
-    'submission-synced': item.status === 'CREATED' || item.status === 'UPDATED_CLIENT_WINS',
-    'submission-merged': item.status === 'MERGED',
-    'submission-ignored': item.status === 'IGNORED_SERVER_WINS',
-    'submission-error': item.status === 'DECRYPTION_ERROR'
+    "submission-queued": item.status === "QUEUED",
+    "submission-synced":
+      item.status === "CREATED" || item.status === "UPDATED_CLIENT_WINS",
+    "submission-merged": item.status === "MERGED",
+    "submission-ignored": item.status === "IGNORED_SERVER_WINS",
+    "submission-error": item.status === "DECRYPTION_ERROR",
   };
 }
 
 function getBadgeClass(item) {
   if (item.status === "QUEUED") return "pending";
-  if (item.status === "CREATED" || item.status === "UPDATED_CLIENT_WINS" || item.status === "MERGED") return "completed";
-  if (item.status === "IGNORED_SERVER_WINS" || item.status === "DECRYPTION_ERROR") return "overdue";
+  if (
+    item.status === "CREATED" ||
+    item.status === "UPDATED_CLIENT_WINS" ||
+    item.status === "MERGED"
+  )
+    return "completed";
+  if (
+    item.status === "IGNORED_SERVER_WINS" ||
+    item.status === "DECRYPTION_ERROR"
+  )
+    return "overdue";
   return "pending";
 }
 
 function getStatusLabel(item) {
   if (item.status === "QUEUED") return "QUEUED";
-  if (item.status === "CREATED" || item.status === "UPDATED_CLIENT_WINS") return "SYNCED";
+  if (item.status === "CREATED" || item.status === "UPDATED_CLIENT_WINS")
+    return "SYNCED";
   if (item.status === "MERGED") return "MERGED";
   if (item.status === "IGNORED_SERVER_WINS") return "CONFLICT (Ignored)";
   return item.status;
@@ -983,7 +923,10 @@ function getStatusLabel(item) {
 function getStatusDescription(item) {
   if (item.status === "QUEUED") {
     return "Waiting for network connection...";
-  } else if (item.status === "CREATED" || item.status === "UPDATED_CLIENT_WINS") {
+  } else if (
+    item.status === "CREATED" ||
+    item.status === "UPDATED_CLIENT_WINS"
+  ) {
     return "Successfully synchronized with clinical database.";
   } else if (item.status === "MERGED") {
     return "Conflict resolved: Local and server entries were combined.";

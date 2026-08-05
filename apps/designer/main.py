@@ -45,12 +45,12 @@ from fastapi import (
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from neo4j import AsyncGraphDatabase
-from apps.designer.adapter.safety_gateway import QuerySafetyError  # noqa: F401
 from protocol_render import SoAMatrixView
 from pydantic import BaseModel, Field, TypeAdapter
 from signature import SigningReason
 
 import apps.designer.adapter.repositories  # noqa: F401
+from apps.designer.adapter.safety_gateway import QuerySafetyError  # noqa: F401
 from apps.designer.db import (
     assert_mock_study_mutable,
     create_mock_rule,
@@ -2157,7 +2157,7 @@ async def export_protocol(
             timestamp: datetime()
         })
         CREATE (s)-[:HAS_ACTION]->(a)
-        RETURN a.id as action_id
+        RETURN a.id AS action_id
         """
         try:
             async with driver.session() as session:
@@ -2406,7 +2406,7 @@ async def approve_study_version_endpoint(
         async with driver.session() as session:
             ver_query = """
             MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion {id: $version_id})
-            RETURN sv {.*} as version_props
+            RETURN sv {.*} AS version_props
             """
             ver_res = await session.run(
                 ver_query, study_id=study_id, version_id=version_id
@@ -2725,7 +2725,7 @@ async def create_eligibility_criterion_endpoint(
     change_reason = (
         payload.change_reason
         or getattr(request.state, "change_reason", None)
-        or request.headers.get("X-Change-Reason", "Create eligibility criterion")
+        or request.headers.get("X-Change-Reason", "Creating eligibility criterion")
     )
     if not change_reason or not change_reason.strip():
         raise HTTPException(
@@ -2806,7 +2806,7 @@ async def update_eligibility_criterion_endpoint(
     change_reason = (
         payload.change_reason
         or getattr(request.state, "change_reason", None)
-        or request.headers.get("X-Change-Reason", "Update eligibility criterion")
+        or request.headers.get("X-Change-Reason", "Updating eligibility criterion")
     )
     if not change_reason or not change_reason.strip():
         raise HTTPException(
