@@ -1,32 +1,1160 @@
 {
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Cadence Clinical - API Gateway",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/cdisc/products": {
+      "get": {
+        "tags": [
+          "CDISC Standards"
+        ],
+        "summary": "List Cdisc Products",
+        "description": "List available CDISC products and standards catalogs.\n\nRequirements: PRD-SYS-001",
+        "operationId": "list_cdisc_products_api_v1_cdisc_products_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CdiscProductSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Cdisc Products Api V1 Cdisc Products Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cdisc/cdash/{domain_code}": {
+      "get": {
+        "tags": [
+          "CDISC Standards"
+        ],
+        "summary": "Get Cdash Domain Definition",
+        "description": "Retrieve CDASH domain specification definition.\n\nRequirements: PRD-SYS-001",
+        "operationId": "get_cdash_domain_definition_api_v1_cdisc_cdash__domain_code__get",
+        "parameters": [
+          {
+            "name": "domain_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Domain Code"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "CDASHIG version",
+              "default": "2.3",
+              "title": "Version"
+            },
+            "description": "CDASHIG version"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CdashDomainDefinition"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cdisc/sdtm/{domain_code}": {
+      "get": {
+        "tags": [
+          "CDISC Standards"
+        ],
+        "summary": "Get Sdtm Domain Definition",
+        "description": "Retrieve SDTM domain specification definition.\n\nRequirements: PRD-SYS-001",
+        "operationId": "get_sdtm_domain_definition_api_v1_cdisc_sdtm__domain_code__get",
+        "parameters": [
+          {
+            "name": "domain_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Domain Code"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "SDTMIG version",
+              "default": "3.4",
+              "title": "Version"
+            },
+            "description": "SDTMIG version"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SdtmDomainDefinition"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cdisc/codelists/{codelist_code}": {
+      "get": {
+        "tags": [
+          "CDISC Standards"
+        ],
+        "summary": "Get Controlled Terminology Codelist",
+        "description": "Retrieve controlled terminology codelist definition with local cache check.\n\nRequirements: PRD-SYS-001",
+        "operationId": "get_controlled_terminology_codelist_api_v1_cdisc_codelists__codelist_code__get",
+        "parameters": [
+          {
+            "name": "codelist_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Codelist Code"
+            }
+          },
+          {
+            "name": "package",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "CT package name",
+              "default": "cdashct-2024-09-27",
+              "title": "Package"
+            },
+            "description": "CT package name"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodelistDefinition"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/usdm/import": {
+      "post": {
+        "tags": [
+          "USDM Data Flow"
+        ],
+        "summary": "Import Usdm Protocol Spec",
+        "description": "Import CDISC USDM JSON protocol specification into Study Designer.\n\nRequirements: PRD-SYS-001",
+        "operationId": "import_usdm_protocol_spec_api_v1_usdm_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsdmImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsdmImportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/usdm/export/{study_id}": {
+      "get": {
+        "tags": [
+          "USDM Data Flow"
+        ],
+        "summary": "Export Usdm Protocol Spec",
+        "description": "Export study protocol graph specification as CDISC USDM JSON.\n\nRequirements: PRD-SYS-001",
+        "operationId": "export_usdm_protocol_spec_api_v1_usdm_export__study_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsdmExportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ecoa/epro/submit": {
+      "post": {
+        "tags": [
+          "eCOA"
+        ],
+        "summary": "Submit Epro Entry",
+        "description": "Submit a single participant ePRO/eCOA diary submission.\n\nRequirements: PRD-SYS-001",
+        "operationId": "submit_epro_entry_api_v1_ecoa_epro_submit_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EPROOfflineEntry"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EPROSubmitResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ecoa/epro/sync": {
+      "post": {
+        "tags": [
+          "eCOA"
+        ],
+        "summary": "Sync Epro Entries",
+        "description": "Bulk sync offline participant ePRO submissions.\n\nRequirements: PRD-SYS-001",
+        "operationId": "sync_epro_entries_api_v1_ecoa_epro_sync_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EPROBulkSyncRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EPROBulkSyncResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ecoa/instruments/{id}": {
+      "get": {
+        "tags": [
+          "eCOA"
+        ],
+        "summary": "Get Instrument",
+        "description": "Retrieve an eCOA instrument definition by ID.\n\nRequirements: PRD-SYS-001",
+        "operationId": "get_instrument_api_v1_ecoa_instruments__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstrumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ecoa/assignments/subject/{subject_id}": {
+      "get": {
+        "tags": [
+          "eCOA"
+        ],
+        "summary": "Get Subject Assignments",
+        "description": "Retrieve all assignments for a given subject.\n\nRequirements: PRD-SYS-001",
+        "operationId": "get_subject_assignments_api_v1_ecoa_assignments_subject__subject_id__get",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SubjectAssignmentResponse"
+                  },
+                  "title": "Response Get Subject Assignments Api V1 Ecoa Assignments Subject  Subject Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ecoa/subjects/{subject_id}/compliance": {
+      "get": {
+        "tags": [
+          "eCOA"
+        ],
+        "summary": "Get Subject Compliance",
+        "description": "Retrieve/compute eCOA compliance status metrics for a subject.\n\nRequirements: PRD-SYS-001",
+        "operationId": "get_subject_compliance_api_v1_ecoa_subjects__subject_id__compliance_get",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectComplianceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ecoa/subjects/{subject_id}/instruments": {
+      "get": {
+        "tags": [
+          "eCOA"
+        ],
+        "summary": "Get Subject Instruments",
+        "description": "Retrieve all unique assigned instruments for a given subject.\n\nRequirements: PRD-SYS-001",
+        "operationId": "get_subject_instruments_api_v1_ecoa_subjects__subject_id__instruments_get",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InstrumentResponse"
+                  },
+                  "title": "Response Get Subject Instruments Api V1 Ecoa Subjects  Subject Id  Instruments Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ecoa/subjects/{subject_id}/notifications": {
+      "get": {
+        "tags": [
+          "eCOA"
+        ],
+        "summary": "Get Subject Notifications",
+        "description": "Retrieve all notifications for a given subject.\n\nRequirements: PRD-SYS-001",
+        "operationId": "get_subject_notifications_api_v1_ecoa_subjects__subject_id__notifications_get",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SubjectNotificationResponse"
+                  },
+                  "title": "Response Get Subject Notifications Api V1 Ecoa Subjects  Subject Id  Notifications Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ecoa/notifications/{notification_id}/acknowledge": {
+      "post": {
+        "tags": [
+          "eCOA"
+        ],
+        "summary": "Acknowledge Notification",
+        "description": "Acknowledge/read a notification.\n\nRequirements: PRD-SYS-001",
+        "operationId": "acknowledge_notification_api_v1_ecoa_notifications__notification_id__acknowledge_post",
+        "parameters": [
+          {
+            "name": "notification_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Notification Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcknowledgeNotificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectNotificationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ecoa/instruments": {
+      "post": {
+        "tags": [
+          "eCOA"
+        ],
+        "summary": "Create Instrument",
+        "description": "Author a new eCOA questionnaire/diary definition.\n\nRequirements: PRD-SYS-001",
+        "operationId": "create_instrument_api_v1_ecoa_instruments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstrumentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstrumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ecoa/assignments": {
+      "post": {
+        "tags": [
+          "eCOA"
+        ],
+        "summary": "Create Subject Assignment",
+        "description": "Assign an eCOA instrument to a subject with due/recurrence window data.\n\nRequirements: PRD-SYS-001",
+        "operationId": "create_subject_assignment_api_v1_ecoa_assignments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubjectAssignmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectAssignmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/signature-verification": {
+      "post": {
+        "summary": "Signature Verification",
+        "description": "POST /api/v1/auth/signature-verification\nVerifies re-supplied credentials (and MFA/TOTP when enabled) against Keycloak.\nEnforces step-up authentication using ACR (Authentication Context Class Reference),\nmax_age bounds, and direct password re-verification.\nIssues a short-lived (60-second) sig_token bound to user and action.",
+        "operationId": "signature_verification_api_v1_auth_signature_verification_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignatureVerificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/demo-session": {
+      "post": {
+        "summary": "Create Demo Session",
+        "operationId": "create_demo_session_api_v1_auth_demo_session_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DemoSessionRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Create Demo Session Api V1 Auth Demo Session Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/demo": {
+      "post": {
+        "summary": "Create Demo Session",
+        "operationId": "create_demo_session_api_v1_auth_demo_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DemoSessionRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Create Demo Session Api V1 Auth Demo Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/{path}": {
+      "post": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__post",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__post",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__post",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__post",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__post",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__post",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__post",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
   "components": {
     "schemas": {
       "AcknowledgeNotificationRequest": {
-        "description": "Request schema for acknowledging a notification.\n\nRequirements: PRD-SYS-001",
         "properties": {
           "reason_for_change": {
-            "description": "21 CFR Part 11 compliant reason for change",
+            "type": "string",
             "title": "Reason For Change",
-            "type": "string"
+            "description": "21 CFR Part 11 compliant reason for change"
           }
         },
+        "type": "object",
         "required": [
           "reason_for_change"
         ],
         "title": "AcknowledgeNotificationRequest",
-        "type": "object"
+        "description": "Request schema for acknowledging a notification.\n\nRequirements: PRD-SYS-001"
       },
       "AssignmentComplianceDetail": {
         "properties": {
           "assignment_id": {
-            "title": "Assignment Id",
-            "type": "string"
+            "type": "string",
+            "title": "Assignment Id"
+          },
+          "instrument_id": {
+            "type": "string",
+            "title": "Instrument Id"
+          },
+          "instrument_name": {
+            "type": "string",
+            "title": "Instrument Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
           },
           "due_at": {
             "anyOf": [
               {
-                "format": "date-time",
-                "type": "string"
+                "type": "string",
+                "format": "date-time"
               },
               {
                 "type": "null"
@@ -35,27 +1163,15 @@
             "title": "Due At"
           },
           "end_date": {
+            "type": "string",
             "format": "date-time",
-            "title": "End Date",
-            "type": "string"
-          },
-          "instrument_id": {
-            "title": "Instrument Id",
-            "type": "string"
-          },
-          "instrument_name": {
-            "title": "Instrument Name",
-            "type": "string"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
+            "title": "End Date"
           },
           "submitted_at": {
             "anyOf": [
               {
-                "format": "date-time",
-                "type": "string"
+                "type": "string",
+                "format": "date-time"
               },
               {
                 "type": "null"
@@ -64,6 +1180,7 @@
             "title": "Submitted At"
           }
         },
+        "type": "object",
         "required": [
           "assignment_id",
           "instrument_id",
@@ -72,12 +1189,18 @@
           "due_at",
           "end_date"
         ],
-        "title": "AssignmentComplianceDetail",
-        "type": "object"
+        "title": "AssignmentComplianceDetail"
       },
       "CdashDomainDefinition": {
-        "description": "CDASH domain specification definition.",
         "properties": {
+          "domain_code": {
+            "type": "string",
+            "title": "Domain Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
           "description": {
             "anyOf": [
               {
@@ -89,48 +1212,37 @@
             ],
             "title": "Description"
           },
-          "domain_code": {
-            "title": "Domain Code",
-            "type": "string"
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "default": "2.3"
           },
           "fields": {
             "items": {
               "additionalProperties": true,
               "type": "object"
             },
-            "title": "Fields",
-            "type": "array"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "version": {
-            "default": "2.3",
-            "title": "Version",
-            "type": "string"
+            "type": "array",
+            "title": "Fields"
           }
         },
+        "type": "object",
         "required": [
           "domain_code",
           "name"
         ],
         "title": "CdashDomainDefinition",
-        "type": "object"
+        "description": "CDASH domain specification definition."
       },
       "CdiscProductSummary": {
-        "description": "Summary metadata of a CDISC product catalog entry.",
         "properties": {
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
           },
           "href": {
             "anyOf": [
@@ -143,59 +1255,70 @@
             ],
             "title": "Href"
           },
-          "title": {
-            "title": "Title",
-            "type": "string"
-          },
-          "version": {
-            "title": "Version",
-            "type": "string"
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
           }
         },
+        "type": "object",
         "required": [
           "title",
           "version"
         ],
         "title": "CdiscProductSummary",
-        "type": "object"
+        "description": "Summary metadata of a CDISC product catalog entry."
       },
       "CodelistDefinition": {
-        "description": "Controlled terminology codelist definition.",
         "properties": {
           "codelist_code": {
-            "title": "Codelist Code",
-            "type": "string"
-          },
-          "extensible": {
-            "default": false,
-            "title": "Extensible",
-            "type": "boolean"
+            "type": "string",
+            "title": "Codelist Code"
           },
           "name": {
-            "title": "Name",
-            "type": "string"
+            "type": "string",
+            "title": "Name"
+          },
+          "extensible": {
+            "type": "boolean",
+            "title": "Extensible",
+            "default": false
           },
           "terms": {
             "items": {
               "$ref": "#/components/schemas/CodelistTerm"
             },
-            "title": "Terms",
-            "type": "array"
+            "type": "array",
+            "title": "Terms"
           }
         },
+        "type": "object",
         "required": [
           "codelist_code",
           "name"
         ],
         "title": "CodelistDefinition",
-        "type": "object"
+        "description": "Controlled terminology codelist definition."
       },
       "CodelistTerm": {
-        "description": "Controlled terminology codelist term item.",
         "properties": {
           "concept_id": {
-            "title": "Concept Id",
-            "type": "string"
+            "type": "string",
+            "title": "Concept Id"
+          },
+          "submission_value": {
+            "type": "string",
+            "title": "Submission Value"
+          },
+          "preferred_term": {
+            "type": "string",
+            "title": "Preferred Term"
           },
           "definition": {
             "anyOf": [
@@ -207,36 +1330,40 @@
               }
             ],
             "title": "Definition"
-          },
-          "preferred_term": {
-            "title": "Preferred Term",
-            "type": "string"
-          },
-          "submission_value": {
-            "title": "Submission Value",
-            "type": "string"
           }
         },
+        "type": "object",
         "required": [
           "concept_id",
           "submission_value",
           "preferred_term"
         ],
         "title": "CodelistTerm",
-        "type": "object"
+        "description": "Controlled terminology codelist term item."
       },
       "ConflictStrategyEnum": {
-        "description": "Explicit validated conflict resolution strategies.\n\nRequirements: PRD-SYS-001",
+        "type": "string",
         "enum": [
           "CLIENT_WINS",
           "SERVER_WINS",
           "MERGE"
         ],
         "title": "ConflictStrategyEnum",
-        "type": "string"
+        "description": "Explicit validated conflict resolution strategies.\n\nRequirements: PRD-SYS-001"
       },
       "DemoSessionRequest": {
         "properties": {
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          },
           "roles": {
             "anyOf": [
               {
@@ -261,82 +1388,71 @@
               }
             ],
             "title": "Tenant Id"
-          },
-          "username": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Username"
           }
         },
-        "title": "DemoSessionRequest",
-        "type": "object"
+        "type": "object",
+        "title": "DemoSessionRequest"
       },
       "EPROBulkSyncRequest": {
-        "description": "A bulk list of ePRO submissions for offline queue reconciliation.\n\nRequirements: PRD-SYS-001",
         "properties": {
           "submissions": {
-            "description": "A list of queued ePRO submissions",
             "items": {
               "$ref": "#/components/schemas/EPROOfflineEntry"
             },
+            "type": "array",
             "title": "Submissions",
-            "type": "array"
+            "description": "A list of queued ePRO submissions"
           }
         },
+        "type": "object",
         "required": [
           "submissions"
         ],
         "title": "EPROBulkSyncRequest",
-        "type": "object"
+        "description": "A bulk list of ePRO submissions for offline queue reconciliation.\n\nRequirements: PRD-SYS-001"
       },
       "EPROBulkSyncResponse": {
-        "description": "Response payload for bulk list of ePRO offline sync submissions.\n\nRequirements: PRD-SYS-001",
         "properties": {
-          "conflict_count": {
-            "description": "Number of conflicts encountered",
-            "title": "Conflict Count",
-            "type": "integer"
-          },
-          "created_count": {
-            "description": "Number of created records",
-            "title": "Created Count",
-            "type": "integer"
-          },
-          "ignored_count": {
-            "description": "Number of ignored records",
-            "title": "Ignored Count",
-            "type": "integer"
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Bulk processing overall status"
           },
           "processed_count": {
-            "description": "Number of submissions processed",
+            "type": "integer",
             "title": "Processed Count",
-            "type": "integer"
+            "description": "Number of submissions processed"
+          },
+          "created_count": {
+            "type": "integer",
+            "title": "Created Count",
+            "description": "Number of created records"
+          },
+          "updated_count": {
+            "type": "integer",
+            "title": "Updated Count",
+            "description": "Number of updated records"
+          },
+          "ignored_count": {
+            "type": "integer",
+            "title": "Ignored Count",
+            "description": "Number of ignored records"
+          },
+          "conflict_count": {
+            "type": "integer",
+            "title": "Conflict Count",
+            "description": "Number of conflicts encountered"
           },
           "results": {
-            "description": "Per-item processing results",
             "items": {
               "$ref": "#/components/schemas/EPROSubmitResponse"
             },
+            "type": "array",
             "title": "Results",
-            "type": "array"
-          },
-          "status": {
-            "description": "Bulk processing overall status",
-            "title": "Status",
-            "type": "string"
-          },
-          "updated_count": {
-            "description": "Number of updated records",
-            "title": "Updated Count",
-            "type": "integer"
+            "description": "Per-item processing results"
           }
         },
+        "type": "object",
         "required": [
           "status",
           "processed_count",
@@ -347,38 +1463,38 @@
           "results"
         ],
         "title": "EPROBulkSyncResponse",
-        "type": "object"
+        "description": "Response payload for bulk list of ePRO offline sync submissions.\n\nRequirements: PRD-SYS-001"
       },
       "EPROOfflineEntry": {
-        "description": "A single participant ePRO/eCOA diary submission.\n\nRequirements: PRD-SYS-001",
         "properties": {
-          "answers": {
-            "additionalProperties": true,
-            "description": "The questionnaire response key-values",
-            "title": "Answers",
-            "type": "object"
-          },
-          "device_timestamp": {
-            "description": "ISO 8601 timestamp when the entry was created on device",
-            "format": "date-time",
-            "title": "Device Timestamp",
-            "type": "string"
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Pseudonymized identifier of the subject"
           },
           "diary_id": {
-            "description": "Unique identifier for the diary or survey",
+            "type": "string",
             "title": "Diary Id",
-            "type": "string"
+            "description": "Unique identifier for the diary or survey"
+          },
+          "device_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Device Timestamp",
+            "description": "ISO 8601 timestamp when the entry was created on device"
+          },
+          "answers": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Answers",
+            "description": "The questionnaire response key-values"
           },
           "offline_sync_markers": {
             "$ref": "#/components/schemas/EPROOfflineMarker",
             "description": "The offline sync queue conflict tracking parameters"
-          },
-          "subject_id": {
-            "description": "Pseudonymized identifier of the subject",
-            "title": "Subject Id",
-            "type": "string"
           }
         },
+        "type": "object",
         "required": [
           "subject_id",
           "diary_id",
@@ -387,25 +1503,24 @@
           "offline_sync_markers"
         ],
         "title": "EPROOfflineEntry",
-        "type": "object"
+        "description": "A single participant ePRO/eCOA diary submission.\n\nRequirements: PRD-SYS-001"
       },
       "EPROOfflineMarker": {
-        "description": "Offline queue reconciliation and conflict resolution parameters.\n\nRequirements: PRD-SYS-001",
         "properties": {
+          "sequence_number": {
+            "type": "integer",
+            "title": "Sequence Number",
+            "description": "The queue order sequence from device"
+          },
           "client_id": {
-            "description": "Unique identifier for the mobile device",
+            "type": "string",
             "title": "Client Id",
-            "type": "string"
+            "description": "Unique identifier for the mobile device"
           },
           "conflict_strategy": {
             "$ref": "#/components/schemas/ConflictStrategyEnum",
-            "default": "CLIENT_WINS",
-            "description": "Conflict strategy to resolve duplicate submissions"
-          },
-          "sequence_number": {
-            "description": "The queue order sequence from device",
-            "title": "Sequence Number",
-            "type": "integer"
+            "description": "Conflict strategy to resolve duplicate submissions",
+            "default": "CLIENT_WINS"
           },
           "signature": {
             "anyOf": [
@@ -416,15 +1531,15 @@
                 "type": "null"
               }
             ],
-            "description": "Optional HMAC-SHA256 signature of the payload for integrity",
-            "title": "Signature"
+            "title": "Signature",
+            "description": "Optional HMAC-SHA256 signature of the payload for integrity"
           },
           "timestamps": {
             "anyOf": [
               {
                 "additionalProperties": {
-                  "format": "date-time",
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 "type": "object"
               },
@@ -432,57 +1547,24 @@
                 "type": "null"
               }
             ],
-            "description": "Optional per-field UTC timestamps",
-            "title": "Timestamps"
+            "title": "Timestamps",
+            "description": "Optional per-field UTC timestamps"
           }
         },
+        "type": "object",
         "required": [
           "sequence_number",
           "client_id"
         ],
         "title": "EPROOfflineMarker",
-        "type": "object"
+        "description": "Offline queue reconciliation and conflict resolution parameters.\n\nRequirements: PRD-SYS-001"
       },
       "EPROSubmitResponse": {
-        "description": "Response payload for a single participant ePRO submission.\n\nRequirements: PRD-SYS-001",
         "properties": {
-          "answers": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The questionnaire response key-values",
-            "title": "Answers"
-          },
-          "audit_details": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Audit entry details",
-            "title": "Audit Details"
-          },
-          "diary_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Unique identifier for the diary or survey",
-            "title": "Diary Id"
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Sync resolution status"
           },
           "id": {
             "anyOf": [
@@ -493,8 +1575,69 @@
                 "type": "null"
               }
             ],
-            "description": "Unique record identifier",
-            "title": "Id"
+            "title": "Id",
+            "description": "Unique record identifier"
+          },
+          "subject_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Id",
+            "description": "Pseudonymized identifier of the subject"
+          },
+          "diary_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diary Id",
+            "description": "Unique identifier for the diary or survey"
+          },
+          "answers": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answers",
+            "description": "The questionnaire response key-values"
+          },
+          "sync_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sync Status",
+            "description": "Sync resolution status"
+          },
+          "version_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Index",
+            "description": "The current version of the record"
           },
           "query": {
             "anyOf": [
@@ -506,21 +1649,8 @@
                 "type": "null"
               }
             ],
-            "description": "Optional clinical query detail",
-            "title": "Query"
-          },
-          "reconciliation_result": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Reconciliation details",
-            "title": "Reconciliation Result"
+            "title": "Query",
+            "description": "Optional clinical query detail"
           },
           "signature_validation": {
             "anyOf": [
@@ -532,56 +1662,42 @@
                 "type": "null"
               }
             ],
-            "description": "Signature validation status",
-            "title": "Signature Validation"
+            "title": "Signature Validation",
+            "description": "Signature validation status"
           },
-          "status": {
-            "description": "Sync resolution status",
-            "title": "Status",
-            "type": "string"
-          },
-          "subject_id": {
+          "reconciliation_result": {
             "anyOf": [
               {
-                "type": "string"
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Pseudonymized identifier of the subject",
-            "title": "Subject Id"
+            "title": "Reconciliation Result",
+            "description": "Reconciliation details"
           },
-          "sync_status": {
+          "audit_details": {
             "anyOf": [
               {
-                "type": "string"
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Sync resolution status",
-            "title": "Sync Status"
-          },
-          "version_index": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The current version of the record",
-            "title": "Version Index"
+            "title": "Audit Details",
+            "description": "Audit entry details"
           }
         },
+        "type": "object",
         "required": [
           "status"
         ],
         "title": "EPROSubmitResponse",
-        "type": "object"
+        "description": "Response payload for a single participant ePRO submission.\n\nRequirements: PRD-SYS-001"
       },
       "HTTPValidationError": {
         "properties": {
@@ -589,15 +1705,25 @@
             "items": {
               "$ref": "#/components/schemas/ValidationError"
             },
-            "title": "Detail",
-            "type": "array"
+            "type": "array",
+            "title": "Detail"
           }
         },
-        "title": "HTTPValidationError",
-        "type": "object"
+        "type": "object",
+        "title": "HTTPValidationError"
       },
       "InstrumentCreate": {
         "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique identifier of the clinical study"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "The name of the questionnaire/diary"
+          },
           "description": {
             "anyOf": [
               {
@@ -607,43 +1733,34 @@
                 "type": "null"
               }
             ],
-            "description": "Optional description",
-            "title": "Description"
+            "title": "Description",
+            "description": "Optional description"
           },
           "items": {
             "additionalProperties": true,
-            "description": "Items/questions",
+            "type": "object",
             "title": "Items",
-            "type": "object"
-          },
-          "name": {
-            "description": "The name of the questionnaire/diary",
-            "title": "Name",
-            "type": "string"
-          },
-          "reason_for_change": {
-            "description": "21 CFR Part 11 compliant reason for change",
-            "title": "Reason For Change",
-            "type": "string"
+            "description": "Items/questions"
           },
           "response_types": {
             "additionalProperties": true,
-            "description": "Response types and options",
+            "type": "object",
             "title": "Response Types",
-            "type": "object"
+            "description": "Response types and options"
           },
           "scoring_metadata": {
             "additionalProperties": true,
-            "description": "Scoring metadata",
+            "type": "object",
             "title": "Scoring Metadata",
-            "type": "object"
+            "description": "Scoring metadata"
           },
-          "study_id": {
-            "description": "Unique identifier of the clinical study",
-            "title": "Study Id",
-            "type": "string"
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "21 CFR Part 11 compliant reason for change"
           }
         },
+        "type": "object",
         "required": [
           "study_id",
           "name",
@@ -652,19 +1769,17 @@
           "scoring_metadata",
           "reason_for_change"
         ],
-        "title": "InstrumentCreate",
-        "type": "object"
+        "title": "InstrumentCreate"
       },
       "InstrumentResponse": {
         "properties": {
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
+          "id": {
+            "type": "string",
+            "title": "Id"
           },
-          "created_by": {
-            "title": "Created By",
-            "type": "string"
+          "name": {
+            "type": "string",
+            "title": "Name"
           },
           "description": {
             "anyOf": [
@@ -677,38 +1792,40 @@
             ],
             "title": "Description"
           },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
           "items": {
             "additionalProperties": true,
-            "title": "Items",
-            "type": "object"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "reason_for_change": {
-            "title": "Reason For Change",
-            "type": "string"
+            "type": "object",
+            "title": "Items"
           },
           "response_types": {
             "additionalProperties": true,
-            "title": "Response Types",
-            "type": "object"
+            "type": "object",
+            "title": "Response Types"
           },
           "scoring_metadata": {
             "additionalProperties": true,
-            "title": "Scoring Metadata",
-            "type": "object"
+            "type": "object",
+            "title": "Scoring Metadata"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
           },
           "version_index": {
-            "title": "Version Index",
-            "type": "integer"
+            "type": "integer",
+            "title": "Version Index"
           }
         },
+        "type": "object",
         "required": [
           "id",
           "name",
@@ -721,26 +1838,13 @@
           "reason_for_change",
           "version_index"
         ],
-        "title": "InstrumentResponse",
-        "type": "object"
+        "title": "InstrumentResponse"
       },
       "SdtmDomainDefinition": {
-        "description": "SDTM domain specification definition.",
         "properties": {
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
-          },
           "domain_code": {
-            "title": "Domain Code",
-            "type": "string"
+            "type": "string",
+            "title": "Domain Code"
           },
           "structure": {
             "anyOf": [
@@ -753,57 +1857,47 @@
             ],
             "title": "Structure"
           },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "default": "3.4"
+          },
           "variables": {
             "items": {
               "additionalProperties": true,
               "type": "object"
             },
-            "title": "Variables",
-            "type": "array"
-          },
-          "version": {
-            "default": "3.4",
-            "title": "Version",
-            "type": "string"
+            "type": "array",
+            "title": "Variables"
           }
         },
+        "type": "object",
         "required": [
           "domain_code"
         ],
         "title": "SdtmDomainDefinition",
-        "type": "object"
+        "description": "SDTM domain specification definition."
       },
       "SignatureVerificationRequest": {
         "properties": {
-          "action": {
-            "title": "Action",
-            "type": "string"
-          },
-          "batch_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Batch Id"
+          "username": {
+            "type": "string",
+            "title": "Username"
           },
           "password": {
-            "title": "Password",
-            "type": "string"
-          },
-          "semantic_action": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Semantic Action"
+            "type": "string",
+            "title": "Password"
           },
           "totp": {
             "anyOf": [
@@ -816,49 +1910,69 @@
             ],
             "title": "Totp"
           },
-          "username": {
-            "title": "Username",
-            "type": "string"
-          }
-        },
-        "required": [
-          "username",
-          "password",
-          "action"
-        ],
-        "title": "SignatureVerificationRequest",
-        "type": "object"
-      },
-      "SubjectAssignmentCreate": {
-        "properties": {
-          "due_at": {
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "batch_id": {
             "anyOf": [
               {
-                "format": "date-time",
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Optional specific due date/time",
-            "title": "Due At"
+            "title": "Batch Id"
           },
-          "end_date": {
-            "description": "End of the due/recurrence window",
-            "format": "date-time",
-            "title": "End Date",
-            "type": "string"
+          "semantic_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Semantic Action"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password",
+          "action"
+        ],
+        "title": "SignatureVerificationRequest"
+      },
+      "SubjectAssignmentCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique identifier of the clinical study"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Unique subject identifier"
           },
           "instrument_id": {
-            "description": "ID of the Instrument to assign",
+            "type": "string",
             "title": "Instrument Id",
-            "type": "string"
+            "description": "ID of the Instrument to assign"
           },
-          "reason_for_change": {
-            "description": "21 CFR Part 11 compliant reason for change",
-            "title": "Reason For Change",
-            "type": "string"
+          "start_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start Date",
+            "description": "Start of the due/recurrence window"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End Date",
+            "description": "End of the due/recurrence window"
           },
           "recurrence_pattern": {
             "anyOf": [
@@ -869,26 +1983,29 @@
                 "type": "null"
               }
             ],
-            "description": "E.g., DAILY, WEEKLY",
-            "title": "Recurrence Pattern"
+            "title": "Recurrence Pattern",
+            "description": "E.g., DAILY, WEEKLY"
           },
-          "start_date": {
-            "description": "Start of the due/recurrence window",
-            "format": "date-time",
-            "title": "Start Date",
-            "type": "string"
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At",
+            "description": "Optional specific due date/time"
           },
-          "study_id": {
-            "description": "Unique identifier of the clinical study",
-            "title": "Study Id",
-            "type": "string"
-          },
-          "subject_id": {
-            "description": "Unique subject identifier",
-            "title": "Subject Id",
-            "type": "string"
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "21 CFR Part 11 compliant reason for change"
           }
         },
+        "type": "object",
         "required": [
           "study_id",
           "subject_id",
@@ -897,48 +2014,31 @@
           "end_date",
           "reason_for_change"
         ],
-        "title": "SubjectAssignmentCreate",
-        "type": "object"
+        "title": "SubjectAssignmentCreate"
       },
       "SubjectAssignmentResponse": {
         "properties": {
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "created_by": {
-            "title": "Created By",
-            "type": "string"
-          },
-          "due_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Due At"
-          },
-          "end_date": {
-            "format": "date-time",
-            "title": "End Date",
-            "type": "string"
-          },
           "id": {
-            "title": "Id",
-            "type": "string"
+            "type": "string",
+            "title": "Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
           },
           "instrument_id": {
-            "title": "Instrument Id",
-            "type": "string"
+            "type": "string",
+            "title": "Instrument Id"
           },
-          "reason_for_change": {
-            "title": "Reason For Change",
-            "type": "string"
+          "start_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End Date"
           },
           "recurrence_pattern": {
             "anyOf": [
@@ -951,20 +2051,37 @@
             ],
             "title": "Recurrence Pattern"
           },
-          "start_date": {
-            "format": "date-time",
-            "title": "Start Date",
-            "type": "string"
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
           },
-          "subject_id": {
-            "title": "Subject Id",
-            "type": "string"
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
           },
           "version_index": {
-            "title": "Version Index",
-            "type": "integer"
+            "type": "integer",
+            "title": "Version Index"
           }
         },
+        "type": "object",
         "required": [
           "id",
           "subject_id",
@@ -978,39 +2095,39 @@
           "reason_for_change",
           "version_index"
         ],
-        "title": "SubjectAssignmentResponse",
-        "type": "object"
+        "title": "SubjectAssignmentResponse"
       },
       "SubjectComplianceResponse": {
         "properties": {
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "compliance_rate": {
+            "type": "number",
+            "title": "Compliance Rate"
+          },
+          "completed_count": {
+            "type": "integer",
+            "title": "Completed Count"
+          },
+          "pending_count": {
+            "type": "integer",
+            "title": "Pending Count"
+          },
+          "overdue_count": {
+            "type": "integer",
+            "title": "Overdue Count"
+          },
           "assignments": {
             "items": {
               "$ref": "#/components/schemas/AssignmentComplianceDetail"
             },
-            "title": "Assignments",
-            "type": "array"
-          },
-          "completed_count": {
-            "title": "Completed Count",
-            "type": "integer"
-          },
-          "compliance_rate": {
-            "title": "Compliance Rate",
-            "type": "number"
-          },
-          "overdue_count": {
-            "title": "Overdue Count",
-            "type": "integer"
-          },
-          "pending_count": {
-            "title": "Pending Count",
-            "type": "integer"
-          },
-          "subject_id": {
-            "title": "Subject Id",
-            "type": "string"
+            "type": "array",
+            "title": "Assignments"
           }
         },
+        "type": "object",
         "required": [
           "subject_id",
           "compliance_rate",
@@ -1019,12 +2136,20 @@
           "overdue_count",
           "assignments"
         ],
-        "title": "SubjectComplianceResponse",
-        "type": "object"
+        "title": "SubjectComplianceResponse"
       },
       "SubjectNotificationResponse": {
-        "description": "Subject notification response schema.\n\nRequirements: PRD-SYS-001",
         "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique notification identifier"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Unique subject identifier"
+          },
           "assignment_id": {
             "anyOf": [
               {
@@ -1034,75 +2159,66 @@
                 "type": "null"
               }
             ],
-            "description": "Optional associated assignment identifier",
-            "title": "Assignment Id"
-          },
-          "channel": {
-            "description": "The channel of delivery",
-            "title": "Channel",
-            "type": "string"
-          },
-          "created_at": {
-            "description": "The timestamp when the record was created",
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "created_by": {
-            "description": "The identity of the user who created the record",
-            "title": "Created By",
-            "type": "string"
-          },
-          "delivery_status": {
-            "description": "The status of delivery",
-            "title": "Delivery Status",
-            "type": "string"
+            "title": "Assignment Id",
+            "description": "Optional associated assignment identifier"
           },
           "due_at": {
-            "description": "The timestamp when the assignment is due",
+            "type": "string",
             "format": "date-time",
             "title": "Due At",
-            "type": "string"
+            "description": "The timestamp when the assignment is due"
           },
-          "id": {
-            "description": "Unique notification identifier",
-            "title": "Id",
-            "type": "string"
+          "channel": {
+            "type": "string",
+            "title": "Channel",
+            "description": "The channel of delivery"
+          },
+          "delivery_status": {
+            "type": "string",
+            "title": "Delivery Status",
+            "description": "The status of delivery"
           },
           "is_read": {
-            "description": "Flag indicating if the notification is read",
+            "type": "boolean",
             "title": "Is Read",
-            "type": "boolean"
+            "description": "Flag indicating if the notification is read"
           },
           "read_at": {
             "anyOf": [
               {
-                "format": "date-time",
-                "type": "string"
+                "type": "string",
+                "format": "date-time"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "The timestamp when the notification was read",
-            "title": "Read At"
+            "title": "Read At",
+            "description": "The timestamp when the notification was read"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "The timestamp when the record was created"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "The identity of the user who created the record"
           },
           "reason_for_change": {
-            "description": "The 21 CFR Part 11 reason for change",
+            "type": "string",
             "title": "Reason For Change",
-            "type": "string"
-          },
-          "subject_id": {
-            "description": "Unique subject identifier",
-            "title": "Subject Id",
-            "type": "string"
+            "description": "The 21 CFR Part 11 reason for change"
           },
           "version_index": {
-            "description": "The current version of the record",
+            "type": "integer",
             "title": "Version Index",
-            "type": "integer"
+            "description": "The current version of the record"
           }
         },
+        "type": "object",
         "required": [
           "id",
           "subject_id",
@@ -1116,36 +2232,41 @@
           "version_index"
         ],
         "title": "SubjectNotificationResponse",
-        "type": "object"
+        "description": "Subject notification response schema.\n\nRequirements: PRD-SYS-001"
       },
       "UsdmExportResponse": {
-        "description": "Response payload for exported USDM protocol graph specification.",
         "properties": {
           "study_id": {
-            "title": "Study Id",
-            "type": "string"
+            "type": "string",
+            "title": "Study Id"
           },
           "usdm_json": {
             "additionalProperties": true,
-            "title": "Usdm Json",
-            "type": "object"
+            "type": "object",
+            "title": "Usdm Json"
           }
         },
+        "type": "object",
         "required": [
           "study_id",
           "usdm_json"
         ],
         "title": "UsdmExportResponse",
-        "type": "object"
+        "description": "Response payload for exported USDM protocol graph specification."
       },
       "UsdmImportRequest": {
-        "description": "Request payload for importing a CDISC USDM protocol JSON specification.",
         "properties": {
           "raw_usdm_json": {
             "additionalProperties": true,
-            "description": "Raw USDM protocol JSON dictionary payload",
+            "type": "object",
             "title": "Raw Usdm Json",
-            "type": "object"
+            "description": "Raw USDM protocol JSON dictionary payload"
+          },
+          "target_version": {
+            "type": "string",
+            "title": "Target Version",
+            "description": "Target USDM spec version ('v2.0' or 'v3.0')",
+            "default": "v3.0"
           },
           "reason_for_change": {
             "anyOf": [
@@ -1156,62 +2277,50 @@
                 "type": "null"
               }
             ],
-            "description": "GxP audit reason for import/change",
-            "title": "Reason For Change"
-          },
-          "target_version": {
-            "default": "v3.0",
-            "description": "Target USDM spec version ('v2.0' or 'v3.0')",
-            "title": "Target Version",
-            "type": "string"
+            "title": "Reason For Change",
+            "description": "GxP audit reason for import/change"
           }
         },
+        "type": "object",
         "required": [
           "raw_usdm_json"
         ],
         "title": "UsdmImportRequest",
-        "type": "object"
+        "description": "Request payload for importing a CDISC USDM protocol JSON specification."
       },
       "UsdmImportResponse": {
-        "description": "Response payload returned after USDM protocol import.",
         "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
           "nodes_created": {
-            "title": "Nodes Created",
-            "type": "integer"
+            "type": "integer",
+            "title": "Nodes Created"
           },
           "relationships_created": {
-            "title": "Relationships Created",
-            "type": "integer"
-          },
-          "study_id": {
-            "title": "Study Id",
-            "type": "string"
+            "type": "integer",
+            "title": "Relationships Created"
           },
           "validation_warnings": {
             "items": {
               "type": "string"
             },
-            "title": "Validation Warnings",
-            "type": "array"
+            "type": "array",
+            "title": "Validation Warnings"
           }
         },
+        "type": "object",
         "required": [
           "study_id",
           "nodes_created",
           "relationships_created"
         ],
         "title": "UsdmImportResponse",
-        "type": "object"
+        "description": "Response payload returned after USDM protocol import."
       },
       "ValidationError": {
         "properties": {
-          "ctx": {
-            "title": "Context",
-            "type": "object"
-          },
-          "input": {
-            "title": "Input"
-          },
           "loc": {
             "items": {
               "anyOf": [
@@ -1223,1141 +2332,32 @@
                 }
               ]
             },
-            "title": "Location",
-            "type": "array"
+            "type": "array",
+            "title": "Location"
           },
           "msg": {
-            "title": "Message",
-            "type": "string"
+            "type": "string",
+            "title": "Message"
           },
           "type": {
-            "title": "Error Type",
-            "type": "string"
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
           }
         },
+        "type": "object",
         "required": [
           "loc",
           "msg",
           "type"
         ],
-        "title": "ValidationError",
-        "type": "object"
-      }
-    }
-  },
-  "info": {
-    "title": "Cadence Clinical - API Gateway",
-    "version": "0.1.0"
-  },
-  "openapi": "3.1.0",
-  "paths": {
-    "/api/v1/auth/demo": {
-      "post": {
-        "operationId": "create_demo_session_api_v1_auth_demo_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/DemoSessionRequest"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "title": "Body"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Create Demo Session Api V1 Auth Demo Post",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Create Demo Session"
-      }
-    },
-    "/api/v1/auth/demo-session": {
-      "post": {
-        "operationId": "create_demo_session_api_v1_auth_demo_session_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/DemoSessionRequest"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "title": "Body"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Create Demo Session Api V1 Auth Demo Session Post",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Create Demo Session"
-      }
-    },
-    "/api/v1/auth/signature-verification": {
-      "post": {
-        "description": "POST /api/v1/auth/signature-verification\nVerifies re-supplied credentials (and MFA/TOTP when enabled) against Keycloak.\nEnforces step-up authentication using ACR (Authentication Context Class Reference),\nmax_age bounds, and direct password re-verification.\nIssues a short-lived (60-second) sig_token bound to user and action.",
-        "operationId": "signature_verification_api_v1_auth_signature_verification_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SignatureVerificationRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Signature Verification"
-      }
-    },
-    "/api/v1/cdisc/cdash/{domain_code}": {
-      "get": {
-        "description": "Retrieve CDASH domain specification definition.\n\nRequirements: PRD-SYS-001",
-        "operationId": "get_cdash_domain_definition_api_v1_cdisc_cdash__domain_code__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "domain_code",
-            "required": true,
-            "schema": {
-              "title": "Domain Code",
-              "type": "string"
-            }
-          },
-          {
-            "description": "CDASHIG version",
-            "in": "query",
-            "name": "version",
-            "required": false,
-            "schema": {
-              "default": "2.3",
-              "description": "CDASHIG version",
-              "title": "Version",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CdashDomainDefinition"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Get Cdash Domain Definition",
-        "tags": [
-          "CDISC Standards"
-        ]
-      }
-    },
-    "/api/v1/cdisc/codelists/{codelist_code}": {
-      "get": {
-        "description": "Retrieve controlled terminology codelist definition with local cache check.\n\nRequirements: PRD-SYS-001",
-        "operationId": "get_controlled_terminology_codelist_api_v1_cdisc_codelists__codelist_code__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "codelist_code",
-            "required": true,
-            "schema": {
-              "title": "Codelist Code",
-              "type": "string"
-            }
-          },
-          {
-            "description": "CT package name",
-            "in": "query",
-            "name": "package",
-            "required": false,
-            "schema": {
-              "default": "cdashct-2024-09-27",
-              "description": "CT package name",
-              "title": "Package",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodelistDefinition"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Get Controlled Terminology Codelist",
-        "tags": [
-          "CDISC Standards"
-        ]
-      }
-    },
-    "/api/v1/cdisc/products": {
-      "get": {
-        "description": "List available CDISC products and standards catalogs.\n\nRequirements: PRD-SYS-001",
-        "operationId": "list_cdisc_products_api_v1_cdisc_products_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/CdiscProductSummary"
-                  },
-                  "title": "Response List Cdisc Products Api V1 Cdisc Products Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "List Cdisc Products",
-        "tags": [
-          "CDISC Standards"
-        ]
-      }
-    },
-    "/api/v1/cdisc/sdtm/{domain_code}": {
-      "get": {
-        "description": "Retrieve SDTM domain specification definition.\n\nRequirements: PRD-SYS-001",
-        "operationId": "get_sdtm_domain_definition_api_v1_cdisc_sdtm__domain_code__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "domain_code",
-            "required": true,
-            "schema": {
-              "title": "Domain Code",
-              "type": "string"
-            }
-          },
-          {
-            "description": "SDTMIG version",
-            "in": "query",
-            "name": "version",
-            "required": false,
-            "schema": {
-              "default": "3.4",
-              "description": "SDTMIG version",
-              "title": "Version",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SdtmDomainDefinition"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Get Sdtm Domain Definition",
-        "tags": [
-          "CDISC Standards"
-        ]
-      }
-    },
-    "/api/v1/ecoa/assignments": {
-      "post": {
-        "description": "Assign an eCOA instrument to a subject with due/recurrence window data.\n\nRequirements: PRD-SYS-001",
-        "operationId": "create_subject_assignment_api_v1_ecoa_assignments_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SubjectAssignmentCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SubjectAssignmentResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Create Subject Assignment",
-        "tags": [
-          "eCOA"
-        ]
-      }
-    },
-    "/api/v1/ecoa/assignments/subject/{subject_id}": {
-      "get": {
-        "description": "Retrieve all assignments for a given subject.\n\nRequirements: PRD-SYS-001",
-        "operationId": "get_subject_assignments_api_v1_ecoa_assignments_subject__subject_id__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "subject_id",
-            "required": true,
-            "schema": {
-              "title": "Subject Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/SubjectAssignmentResponse"
-                  },
-                  "title": "Response Get Subject Assignments Api V1 Ecoa Assignments Subject  Subject Id  Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Get Subject Assignments",
-        "tags": [
-          "eCOA"
-        ]
-      }
-    },
-    "/api/v1/ecoa/epro/submit": {
-      "post": {
-        "description": "Submit a single participant ePRO/eCOA diary submission.\n\nRequirements: PRD-SYS-001",
-        "operationId": "submit_epro_entry_api_v1_ecoa_epro_submit_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EPROOfflineEntry"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EPROSubmitResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Submit Epro Entry",
-        "tags": [
-          "eCOA"
-        ]
-      }
-    },
-    "/api/v1/ecoa/epro/sync": {
-      "post": {
-        "description": "Bulk sync offline participant ePRO submissions.\n\nRequirements: PRD-SYS-001",
-        "operationId": "sync_epro_entries_api_v1_ecoa_epro_sync_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EPROBulkSyncRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EPROBulkSyncResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Sync Epro Entries",
-        "tags": [
-          "eCOA"
-        ]
-      }
-    },
-    "/api/v1/ecoa/instruments": {
-      "post": {
-        "description": "Author a new eCOA questionnaire/diary definition.\n\nRequirements: PRD-SYS-001",
-        "operationId": "create_instrument_api_v1_ecoa_instruments_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/InstrumentCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InstrumentResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Create Instrument",
-        "tags": [
-          "eCOA"
-        ]
-      }
-    },
-    "/api/v1/ecoa/instruments/{id}": {
-      "get": {
-        "description": "Retrieve an eCOA instrument definition by ID.\n\nRequirements: PRD-SYS-001",
-        "operationId": "get_instrument_api_v1_ecoa_instruments__id__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "title": "Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InstrumentResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Get Instrument",
-        "tags": [
-          "eCOA"
-        ]
-      }
-    },
-    "/api/v1/ecoa/notifications/{notification_id}/acknowledge": {
-      "post": {
-        "description": "Acknowledge/read a notification.\n\nRequirements: PRD-SYS-001",
-        "operationId": "acknowledge_notification_api_v1_ecoa_notifications__notification_id__acknowledge_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "notification_id",
-            "required": true,
-            "schema": {
-              "title": "Notification Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AcknowledgeNotificationRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SubjectNotificationResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Acknowledge Notification",
-        "tags": [
-          "eCOA"
-        ]
-      }
-    },
-    "/api/v1/ecoa/subjects/{subject_id}/compliance": {
-      "get": {
-        "description": "Retrieve/compute eCOA compliance status metrics for a subject.\n\nRequirements: PRD-SYS-001",
-        "operationId": "get_subject_compliance_api_v1_ecoa_subjects__subject_id__compliance_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "subject_id",
-            "required": true,
-            "schema": {
-              "title": "Subject Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SubjectComplianceResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Get Subject Compliance",
-        "tags": [
-          "eCOA"
-        ]
-      }
-    },
-    "/api/v1/ecoa/subjects/{subject_id}/instruments": {
-      "get": {
-        "description": "Retrieve all unique assigned instruments for a given subject.\n\nRequirements: PRD-SYS-001",
-        "operationId": "get_subject_instruments_api_v1_ecoa_subjects__subject_id__instruments_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "subject_id",
-            "required": true,
-            "schema": {
-              "title": "Subject Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/InstrumentResponse"
-                  },
-                  "title": "Response Get Subject Instruments Api V1 Ecoa Subjects  Subject Id  Instruments Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Get Subject Instruments",
-        "tags": [
-          "eCOA"
-        ]
-      }
-    },
-    "/api/v1/ecoa/subjects/{subject_id}/notifications": {
-      "get": {
-        "description": "Retrieve all notifications for a given subject.\n\nRequirements: PRD-SYS-001",
-        "operationId": "get_subject_notifications_api_v1_ecoa_subjects__subject_id__notifications_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "subject_id",
-            "required": true,
-            "schema": {
-              "title": "Subject Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/SubjectNotificationResponse"
-                  },
-                  "title": "Response Get Subject Notifications Api V1 Ecoa Subjects  Subject Id  Notifications Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Get Subject Notifications",
-        "tags": [
-          "eCOA"
-        ]
-      }
-    },
-    "/api/v1/usdm/export/{study_id}": {
-      "get": {
-        "description": "Export study protocol graph specification as CDISC USDM JSON.\n\nRequirements: PRD-SYS-001",
-        "operationId": "export_usdm_protocol_spec_api_v1_usdm_export__study_id__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "study_id",
-            "required": true,
-            "schema": {
-              "title": "Study Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UsdmExportResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Export Usdm Protocol Spec",
-        "tags": [
-          "USDM Data Flow"
-        ]
-      }
-    },
-    "/api/v1/usdm/import": {
-      "post": {
-        "description": "Import CDISC USDM JSON protocol specification into Study Designer.\n\nRequirements: PRD-SYS-001",
-        "operationId": "import_usdm_protocol_spec_api_v1_usdm_import_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UsdmImportRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UsdmImportResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Import Usdm Protocol Spec",
-        "tags": [
-          "USDM Data Flow"
-        ]
-      }
-    },
-    "/{path}": {
-      "delete": {
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "path",
-            "required": true,
-            "schema": {
-              "title": "Path",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Proxy Requests"
-      },
-      "get": {
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "path",
-            "required": true,
-            "schema": {
-              "title": "Path",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Proxy Requests"
-      },
-      "head": {
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "path",
-            "required": true,
-            "schema": {
-              "title": "Path",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Proxy Requests"
-      },
-      "options": {
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "path",
-            "required": true,
-            "schema": {
-              "title": "Path",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Proxy Requests"
-      },
-      "patch": {
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "path",
-            "required": true,
-            "schema": {
-              "title": "Path",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Proxy Requests"
-      },
-      "post": {
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "path",
-            "required": true,
-            "schema": {
-              "title": "Path",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Proxy Requests"
-      },
-      "put": {
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "path",
-            "required": true,
-            "schema": {
-              "title": "Path",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Proxy Requests"
+        "title": "ValidationError"
       }
     }
   }
