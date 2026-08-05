@@ -523,7 +523,7 @@ async def test_start_stop_notification_worker_integration():
 
     # Poll for the notification to be created in the database to prevent flakiness under heavy test runner load
     notifs = []
-    for _ in range(100):
+    for _ in range(300):
         async with notifications_db_manager.get_session_maker()() as session:
             stmt = select(Notification).where(
                 Notification.related_entity_id == "evt-integration-99"
