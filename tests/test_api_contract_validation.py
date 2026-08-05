@@ -26,6 +26,7 @@ def loaded_specs():
 
     # 1b. Load separate microservice specs and merge them
     import json
+
     for json_path, schema_prefix in [
         ("docs/openapi/org_openapi.json", "Org_"),
         ("docs/openapi/econsent_openapi.json", "Econsent_"),
@@ -39,7 +40,9 @@ def loaded_specs():
                 for path, path_item in ms_spec_rewritten.get("paths", {}).items():
                     spec_dict["paths"][path] = path_item
                 # Merge schemas
-                for name, val in ms_spec_rewritten.get("components", {}).get("schemas", {}).items():
+                for name, val in (
+                    ms_spec_rewritten.get("components", {}).get("schemas", {}).items()
+                ):
                     if "components" not in spec_dict:
                         spec_dict["components"] = {}
                     if "schemas" not in spec_dict["components"]:
