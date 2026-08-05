@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { useSyncStore } from "../../src/stores/sync";
 import { ClientSyncEngine, PendingDelta } from "../../src/utils/syncEngine";
+import { offlineAuthManager } from "../../src/utils/offlineAuth";
 
 // Mock global fetch
 const mockFetch = vi.fn();
@@ -18,6 +19,14 @@ describe("ClientSyncEngine and Conflict Resolution Sync Queue", () => {
     syncStore = useSyncStore();
     syncEngine = new ClientSyncEngine();
     await syncEngine.dbManager.init();
+
+    offlineAuthManager.setActiveSession({
+      userId: "user-123",
+      userRoles: ["site_investigator"],
+      offlineToken: "jwt-test-token-xyz",
+      createdAt: new Date().toISOString(),
+      maxOfflineHours: 72,
+    });
 
     mockFetch.mockReset();
     vi.useFakeTimers();
@@ -223,5 +232,71 @@ describe("ClientSyncEngine and Conflict Resolution Sync Queue", () => {
 
     const remaining = await syncEngine.dbManager.getDeltas();
     expect(remaining).toHaveLength(0);
+  });
+
+  it("should preserve queued record payloads during decryption/session missing errors and recover successfully when correct PIN/session is set", async () => {
+    const delta: Omit<PendingDelta, "deltaId"> = {
+      entityType: "FormSubmission",
+      entityId: "SUBJ-999-VS",
+      action: "UPDATE",
+      payload: { vssbp: "200" },
+      clientTimestampUtc: new Date().toISOString(),
+      reasonForChange: "Recovery check",
+    };
+
+    // Queue an item
+    await syncEngine.queueDelta(delta);
+    expect(syncStore.pendingCount).toBe(1);
+
+    // Remove active session to simulate decryption error / locked out session key
+    offlineAuthManager.setActiveSession(null);
+
+    // Call flushQueue - it should stop and throw pin-challenge-required event, keeping items intact
+    const dispatchSpy = vi.spyOn(window, "dispatchEvent");
+    
+    await syncEngine.flushQueue();
+
+    expect(syncStore.status).toBe("ERROR");
+    expect(syncStore.pendingCount).toBe(1);
+    expect(mockFetch).not.toHaveBeenCalled();
+
+    // Check that we dispatched the interactive PIN challenge event
+    expect(dispatchSpy).toHaveBeenCalled();
+    const event = dispatchSpy.mock.calls.find(call => call[0] && call[0].type === "pin-challenge-required")?.[0] as CustomEvent;
+    expect(event).toBeDefined();
+    expect(event.type).toBe("pin-challenge-required");
+
+    // Payloads must be fully intact in IndexedDB
+    const remainingBefore = await syncEngine.dbManager.getDeltas();
+    expect(remainingBefore).toHaveLength(1);
+    expect(remainingBefore[0].payload.vssbp).toBe("200");
+
+    // Restore session (equivalent to successful PIN verification)
+    offlineAuthManager.setActiveSession({
+      userId: "user-123",
+      userRoles: ["site_investigator"],
+      offlineToken: "jwt-test-token-xyz",
+      createdAt: new Date().toISOString(),
+      maxOfflineHours: 72,
+    });
+
+    // Mock successful fetch
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: "success" }),
+    });
+
+    // Flush queue again
+    await syncEngine.flushQueue();
+
+    expect(syncStore.status).toBe("COMPLETED");
+    expect(syncStore.pendingCount).toBe(0);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    const remainingAfter = await syncEngine.dbManager.getDeltas();
+    expect(remainingAfter).toHaveLength(0);
+
+    dispatchSpy.mockRestore();
   });
 });

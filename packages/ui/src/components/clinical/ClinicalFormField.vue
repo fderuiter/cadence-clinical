@@ -4,7 +4,7 @@
     :style="wrapperStyle"
     class="clinical-form-field-wrapper"
   >
-    <template v-if="isIntersecting">
+    <template v-if="shouldRender">
       <ClinicalRadioGroup
         v-if="field.type === 'radio' || field.type === 'choice_single'"
         :id="field.id"
@@ -111,6 +111,17 @@ const customAttributes = computed(() => {
 const elRef = ref(null);
 const isIntersecting = ref(true); // Default to true so initial render compiles inside the DOM, then gets intersected
 const measuredHeight = ref(0);
+const hasEnteredViewport = ref(false);
+
+const shouldRender = computed(() => {
+  if (isIntersecting.value) return true;
+  // Guarded unmounting: prevent unmounting/recycling until a valid, non-zero height is measured and stored,
+  // or until the component has actually been onscreen.
+  if (!hasEnteredViewport.value && measuredHeight.value === 0) {
+    return true;
+  }
+  return false;
+});
 
 let io = null;
 let ro = null;
@@ -121,7 +132,7 @@ const wrapperStyle = computed(() => {
     width: "100%",
     boxSizing: "border-box",
   };
-  if (!isIntersecting.value) {
+  if (!shouldRender.value) {
     styles.height = measuredHeight.value ? `${measuredHeight.value}px` : "44px";
     styles.overflow = "hidden";
   } else {
@@ -136,6 +147,9 @@ onMounted(() => {
       (entries) => {
         const entry = entries[0];
         isIntersecting.value = entry.isIntersecting;
+        if (entry.isIntersecting) {
+          hasEnteredViewport.value = true;
+        }
       },
       {
         rootMargin: "200px", // Render slightly ahead of viewport to avoid visual pop-in
@@ -150,14 +164,16 @@ onMounted(() => {
 
   if (typeof ResizeObserver !== "undefined") {
     ro = new ResizeObserver((entries) => {
-      if (!isIntersecting.value) return;
+      // Bypass the early-return guard for the very first height registration event
+      const isFirstMeasurement = measuredHeight.value === 0;
+      if (!isFirstMeasurement && !isIntersecting.value) return;
       const entry = entries[0];
       if (entry) {
         const height =
           entry.borderBoxSize && entry.borderBoxSize[0]
             ? entry.borderBoxSize[0].blockSize
             : entry.target.getBoundingClientRect().height;
-        if (height >= 44) {
+        if (height > 0) {
           measuredHeight.value = height;
         }
       }

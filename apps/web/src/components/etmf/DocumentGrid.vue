@@ -66,6 +66,7 @@
               <span class="filename" :title="doc.filename">{{
                 doc.filename
               }}</span>
+              <span v-if="doc.is_redacted" class="compliance-badge-pill" title="HIPAA/GDPR Compliant Redacted Copy">🛡️ Compliant</span>
             </td>
             <td
               :tabindex="
@@ -1432,5 +1433,16 @@ async function submitUpload() {
   font-size: 0.85rem;
   height: auto;
   border-radius: 4px;
+}
+
+.compliance-badge-pill {
+  font-size: 0.7rem;
+  background-color: #dbeafe;
+  color: #1e40af;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-weight: 700;
+  margin-left: 6px;
+  white-space: nowrap;
 }
 </style>

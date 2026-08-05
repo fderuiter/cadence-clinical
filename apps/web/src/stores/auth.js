@@ -137,19 +137,55 @@ export const useAuthStore = defineStore("auth", {
           );
         }
         console.warn(
-          "Keycloak not initialized or running in demo mode. Logging in with offline mock."
+          "Keycloak not initialized or running in demo mode. Attempting gateway-issued ephemeral session login."
         );
-        this.isAuthenticated = true;
-        this.isDemoMode = true;
-        // Seed default roles so the offline UI is functional
-        this.rawRoles = [
-          "Sponsor Admin",
-          "Sponsor Designer",
-          "CRA",
-          "Data Manager",
-          "Site Investigator",
-          "Auditor",
-        ];
+        try {
+          const baseUrl =
+            import.meta.env?.VITE_API_BASE_URL || "http://localhost:8000";
+          const resp = await fetch(`${baseUrl}/api/v1/auth/demo-session`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              username: "demo-user",
+              roles: ["site investigator", "cra", "admin", "auditor"],
+              tenant_id: "sandbox-tenant-default",
+            }),
+          });
+          if (resp.ok) {
+            const data = await resp.json();
+            this.accessToken = data.access_token;
+            this.isAuthenticated = true;
+            this.isDemoMode = true;
+            this.user = {
+              username: data.username,
+              email: "demo-user@example.com",
+              firstName: "Demo",
+              lastName: "User",
+              id: "demo-sub-id",
+            };
+            this.rawRoles = data.roles;
+          } else {
+            throw new Error("Demo session endpoint failed");
+          }
+        } catch (e) {
+          console.error(
+            "Gateway demo session login failed. Falling back to offline client mock.",
+            e
+          );
+          this.isAuthenticated = true;
+          this.isDemoMode = true;
+          // Seed default roles so the offline UI is functional
+          this.rawRoles = [
+            "Sponsor Admin",
+            "Sponsor Designer",
+            "CRA",
+            "Data Manager",
+            "Site Investigator",
+            "Auditor",
+          ];
+        }
       }
       this.persist();
     },

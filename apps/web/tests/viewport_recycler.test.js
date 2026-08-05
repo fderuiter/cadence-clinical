@@ -145,4 +145,46 @@ describe("Viewport-Driven DOM Recycler Integration Tests", () => {
     await wrapper.vm.$nextTick();
     expect(wrapper.find("input").element.value).toBe("Persistent State");
   });
+
+  it("should implement Dynamic Guarded Recycling for offscreen fields on initial load", async () => {
+    /**
+     * Requirement 1: Guarded unmounting prevents offscreen components from unmounting
+     * until a valid non-zero height is captured.
+     * Requirement 2: The height measurement callback bypasses its early-return guard
+     * for the very first height registration event.
+     * Requirement 4: Standard viewport recycling resumes once initial height is captured.
+     */
+    const field = { id: "field-1", label: "Test Input", type: "text" };
+    const wrapper = mount(ClinicalFormField, {
+      props: {
+        field,
+        modelValue: "Guarded Content",
+      },
+    });
+
+    // 1. Initial offscreen intersection event (isIntersecting = false)
+    intersectionCallback([{ isIntersecting: false }]);
+    await wrapper.vm.$nextTick();
+
+    // With Guarded Recycling, the component must NOT unmount yet because measuredHeight is still 0
+    let input = wrapper.find("input");
+    expect(input.exists()).toBe(true);
+
+    // 2. While offscreen, ResizeObserver reports its first height measurement
+    resizeCallback([
+      {
+        target: wrapper.element,
+        borderBoxSize: [{ blockSize: 120 }],
+      },
+    ]);
+    await wrapper.vm.$nextTick();
+
+    // After the first measurement is captured, standard viewport recycling should resume and unmount the field
+    input = wrapper.find("input");
+    expect(input.exists()).toBe(false);
+
+    // The wrapper must preserve and apply the captured height (120px) rather than collapsing to 44px
+    const wrapperDiv = wrapper.find(".clinical-form-field-wrapper");
+    expect(wrapperDiv.element.style.height).toBe("120px");
+  });
 });

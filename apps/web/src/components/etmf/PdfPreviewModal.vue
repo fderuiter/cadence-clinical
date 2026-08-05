@@ -119,6 +119,40 @@
               </p>
             </div>
           </div>
+
+          <!-- Redaction / Compliance Manifest -->
+          <div v-if="document.is_redacted" class="meta-section border-top redaction-manifest-section">
+            <h4>Redaction Manifest</h4>
+            <div class="manifest-card redacted">
+              <p class="redact-status">🛡️ HIPAA/GDPR COMPLIANT</p>
+              <p class="redact-meta" v-if="document.redaction_manifest_json?.operator_name">
+                Operator: <strong>{{ document.redaction_manifest_json.operator_name }}</strong>
+              </p>
+              <p class="redact-meta" v-else-if="document.created_by">
+                Operator: <strong>{{ document.created_by }}</strong>
+              </p>
+              <p class="redact-meta" v-if="document.redaction_manifest_json?.reason">
+                Reason: <strong>{{ document.redaction_manifest_json.reason }}</strong>
+              </p>
+              <p class="redact-meta" v-else-if="document.reason_for_change">
+                Reason: <strong>{{ document.reason_for_change }}</strong>
+              </p>
+              <div v-if="document.redaction_manifest_json?.redacted_items_count" class="redacted-items-list">
+                <span class="meta-label-items">Redacted Items:</span>
+                <ul class="redact-ul">
+                  <li v-for="(count, category) in document.redaction_manifest_json.redacted_items_count" :key="category">
+                    {{ category }}: <strong>{{ count }}</strong>
+                  </li>
+                </ul>
+              </div>
+              <div v-if="document.redaction_manifest_json?.signature" class="signature-block">
+                <span class="meta-label-items">HMAC Signature:</span>
+                <code class="signature-text-code" :title="document.redaction_manifest_json.signature">
+                  {{ document.redaction_manifest_json.signature }}
+                </code>
+              </div>
+            </div>
+          </div>
         </aside>
 
         <!-- Simulated Document Frame with Dynamic Overlay Watermark -->
@@ -139,6 +173,10 @@
               </div>
 
               <div class="page-content">
+                <div v-if="document.is_redacted" class="redaction-badge-banner">
+                  🛡️ COMPLIANT DERIVATIVE - SENSITIVE PII MASKED BY AUTOMATED NER SCANS
+                </div>
+
                 <h1 class="doc-title">
                   {{ document.artifact_type || "Clinical Trial Document" }}
                 </h1>
@@ -171,7 +209,9 @@
                     }}<br />
                     <strong>MIME Category:</strong> {{ document.mime_type
                     }}<br />
-                    <strong>Author Identity:</strong> {{ document.created_by }}
+                    <strong>Author Identity:</strong>
+                    <span v-if="document.is_redacted" class="redaction-overlay-block" title="Redacted: Author Identity">[REDACTED_NAME]</span>
+                    <span v-else>{{ document.created_by }}</span>
                   </p>
                 </section>
 
@@ -184,6 +224,27 @@
                     date-timestamp on-the-fly. Do not photocopy or distribute
                     this document without explicit study delegation authority.
                   </p>
+                </section>
+
+                <section class="doc-section-content" v-if="document.is_redacted">
+                  <h3>4. SERVER-SIDE REDACTION SUMMARY</h3>
+                  <div class="redaction-summary-box">
+                    <p>
+                      This document was safely processed using the server-side Named Entity Recognition (NER) pipeline. 
+                      All standard HIPAA 18 and GDPR identifiers have been successfully scrubbed and mapped.
+                    </p>
+                    <div class="visual-redaction-preview">
+                      <div class="redacted-line">
+                        Subject Name: <span class="redaction-overlay-block">John Doe</span>
+                      </div>
+                      <div class="redacted-line">
+                        Tax Identifier: <span class="redaction-overlay-block">000-12-3456</span>
+                      </div>
+                      <div class="redacted-line">
+                        Electronic Mail: <span class="redaction-overlay-block">john.doe@example.com</span>
+                      </div>
+                    </div>
+                  </div>
                 </section>
               </div>
 
@@ -550,5 +611,90 @@ function formatDate(dateStr) {
   border-top: 1px solid #e2e8f0;
   padding-top: 12px;
   margin-top: 32px;
+}
+
+/* Redaction styles */
+.redaction-overlay-block {
+  background-color: #000000;
+  color: #000000;
+  border-radius: 2px;
+  padding: 1px 4px;
+  font-family: monospace;
+  user-select: none;
+}
+.redaction-overlay-block:hover {
+  color: #ef4444;
+}
+.redaction-badge-banner {
+  background-color: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  margin-bottom: 16px;
+  text-align: center;
+}
+.redaction-summary-box {
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 8px;
+}
+.visual-redaction-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 0.8rem;
+}
+.redacted-line {
+  font-family: monospace;
+  color: #475569;
+}
+.manifest-card.redacted {
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+}
+.redact-status {
+  font-weight: 700;
+  margin: 0 0 6px 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.redact-meta {
+  margin: 0 0 4px 0;
+  font-size: 0.8rem;
+}
+.redacted-items-list {
+  margin-top: 8px;
+  font-size: 0.8rem;
+}
+.meta-label-items {
+  color: #1e40af;
+  font-weight: 600;
+}
+.redact-ul {
+  margin: 4px 0 0 16px;
+  padding: 0;
+}
+.signature-block {
+  margin-top: 8px;
+  font-size: 0.8rem;
+}
+.signature-text-code {
+  display: block;
+  font-family: monospace;
+  font-size: 0.75rem;
+  background-color: #dbeafe;
+  color: #1e40af;
+  padding: 6px;
+  border-radius: 4px;
+  overflow-x: auto;
+  word-break: break-all;
 }
 </style>

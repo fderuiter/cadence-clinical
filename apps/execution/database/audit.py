@@ -74,6 +74,7 @@ def receive_before_flush(session: Session, flush_context, instances):
             "tmf_document_expiration_alert_states",
             "epro_submissions",
             "epro_defeated_submissions",
+            "epro_quarantined_submissions",
             "interop_audit_logs",
             "instruments",
             "subject_assignments",

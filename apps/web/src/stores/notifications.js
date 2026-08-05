@@ -101,7 +101,7 @@ export const useNotificationsStore = defineStore("notifications", {
           notificationsService.getNotifications &&
           (notificationsService.getNotifications._isMockFunction ||
             typeof notificationsService.getNotifications.mock === "object");
-        if (authStore.isDemoMode && !isMocked) {
+        if (authStore.isDemoMode && !authStore.token && !isMocked) {
           await new Promise((resolve) => setTimeout(resolve, 100));
           let list = [];
           if (typeof window !== "undefined" && window.localStorage) {
@@ -156,7 +156,7 @@ export const useNotificationsStore = defineStore("notifications", {
           (notificationsService.acknowledgeNotification._isMockFunction ||
             typeof notificationsService.acknowledgeNotification.mock ===
               "object");
-        if (authStore.isDemoMode && !isMocked) {
+        if (authStore.isDemoMode && !authStore.token && !isMocked) {
           await new Promise((resolve) => setTimeout(resolve, 100));
           let list = [];
           if (typeof window !== "undefined" && window.localStorage) {
@@ -222,7 +222,7 @@ export const useNotificationsStore = defineStore("notifications", {
           notificationsService.resolveNotification &&
           (notificationsService.resolveNotification._isMockFunction ||
             typeof notificationsService.resolveNotification.mock === "object");
-        if (authStore.isDemoMode && !isMocked) {
+        if (authStore.isDemoMode && !authStore.token && !isMocked) {
           await new Promise((resolve) => setTimeout(resolve, 100));
           let list = [];
           if (typeof window !== "undefined" && window.localStorage) {

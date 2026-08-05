@@ -50,7 +50,7 @@ describe("OfflineAuthManager and Crypto Store", () => {
   });
 
   afterEach(async () => {
-    await manager.clearOfflineSession();
+    await manager.clearAllOfflineSessions();
   });
 
   it("should successfully store and retrieve/decrypt an offline session with the correct PIN", async () => {
@@ -174,5 +174,85 @@ describe("OfflineAuthManager and Crypto Store", () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(mockPost).not.toHaveBeenCalled();
+  });
+
+  it("should validate that PIN must be between 4 and 6 digits during storage setup", async () => {
+    const invalidPinShort = "12";
+    const invalidPinLong = "1234567";
+    const invalidPinLetters = "abcd";
+    const validPin4 = "1234";
+    const validPin6 = "123456";
+
+    await expect(manager.storeEncryptedSession(invalidPinShort, validSession)).rejects.toThrow(
+      "PIN must be between 4 and 6 digits"
+    );
+    await expect(manager.storeEncryptedSession(invalidPinLong, validSession)).rejects.toThrow(
+      "PIN must be between 4 and 6 digits"
+    );
+    await expect(manager.storeEncryptedSession(invalidPinLetters, validSession)).rejects.toThrow(
+      "PIN must be between 4 and 6 digits"
+    );
+
+    // Should succeed with valid PINs
+    await manager.storeEncryptedSession(validPin4, validSession);
+    await manager.storeEncryptedSession(validPin6, { ...validSession, userId: "user-456" });
+  });
+
+  it("should map keys directly to user IDs and preserve consecutive users' keys", async () => {
+    const user1Session: OfflineSession = {
+      userId: "user-abc",
+      userRoles: ["site_investigator"],
+      offlineToken: "token-abc-111",
+      createdAt: new Date().toISOString(),
+      maxOfflineHours: 72,
+    };
+
+    const user2Session: OfflineSession = {
+      userId: "user-xyz",
+      userRoles: ["site_investigator"],
+      offlineToken: "token-xyz-222",
+      createdAt: new Date().toISOString(),
+      maxOfflineHours: 72,
+    };
+
+    // User 1 logs in and sets PIN "1111"
+    await manager.storeEncryptedSession("1111", user1Session);
+
+    // User 2 logs in and sets PIN "2222" (should not overwrite User 1)
+    await manager.storeEncryptedSession("2222", user2Session);
+
+    // Unlock User 1's session with their correct PIN
+    const unlocked1 = await manager.unlockOfflineSession("1111", "user-abc");
+    expect(unlocked1.offlineToken).toBe("token-abc-111");
+
+    // Unlock User 2's session with their correct PIN
+    const unlocked2 = await manager.unlockOfflineSession("2222", "user-xyz");
+    expect(unlocked2.offlineToken).toBe("token-xyz-222");
+  });
+
+  it("should lock key recovery capabilities for a specific user ID after five consecutive incorrect PIN entry attempts", async () => {
+    const pin = "1234";
+    const incorrectPin = "1111";
+    await manager.storeEncryptedSession(pin, validSession);
+
+    // 1st, 2nd, 3rd, 4th failed attempts
+    for (let i = 0; i < 4; i++) {
+      await expect(manager.unlockOfflineSession(incorrectPin, validSession.userId)).rejects.toThrow();
+    }
+
+    // 5th failed attempt - should lock and throw error
+    await expect(manager.unlockOfflineSession(incorrectPin, validSession.userId)).rejects.toThrow(
+      "Key recovery locked. Too many failed attempts."
+    );
+
+    // 6th attempt (even with correct PIN) should immediately throw lock error
+    await expect(manager.unlockOfflineSession(pin, validSession.userId)).rejects.toThrow(
+      "Key recovery locked. Too many failed attempts."
+    );
+
+    // Resetting failed attempts should allow successful unlock
+    await manager.resetFailedAttempts(validSession.userId);
+    const unlocked = await manager.unlockOfflineSession(pin, validSession.userId);
+    expect(unlocked.offlineToken).toBe(validSession.offlineToken);
   });
 });
