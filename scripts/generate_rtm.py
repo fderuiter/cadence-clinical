@@ -27,7 +27,7 @@ def parse_srs(filepath):
         content = f.read()
 
     # We look for Section 8 Trace 1, Trace 2, Trace 3
-    # e.g., * **Trace 1: Shadow Schema Retention:** Database-level...
+    # e.g., - **Trace 1: Shadow Schema Retention:** Database-level...
     # Update pattern to accept both hyphenated (Trace-14) and space-separated (Trace 14) formats
     pattern = re.compile(r"[-*]\s*\*\*Trace[\s-]*(\d+)\s*:\s*(.+?):\s*\*\*\s*(.*)")
     for line in content.splitlines():

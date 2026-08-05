@@ -108,7 +108,7 @@ def parse_srs(filepath: str) -> set[str]:
         content = f.read()
 
     # Pattern used in generate_rtm.py: e.g. - **Trace 1: Shadow Schema Retention:**
-    pattern = re.compile(r"[-*]\s*\*\*Trace\s*(\d+)")
+    pattern = re.compile(r"[-*]\s*\*\*Trace[\s-]*(\d+)")
     for line in content.splitlines():
         match = pattern.search(line)
         if match:
