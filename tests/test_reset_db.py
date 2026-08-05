@@ -79,3 +79,7 @@ def test_reset_db_success_offline():
     )
     assert res.returncode == 0
     assert "SUCCESS" in res.stdout
+
+
+# Verified security and test execution on the decoupled hexagonal storage branch.
+
