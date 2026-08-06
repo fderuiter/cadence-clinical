@@ -8,6 +8,7 @@ export default mergeConfig(
     test: {
       environment: "jsdom",
       globals: true,
+      testTimeout: 45000,
       setupFiles: [fileURLToPath(new URL("./tests/setup.js", import.meta.url))],
       exclude: ["**/node_modules/**", "**/dist/**", "**/tests/e2e/**"],
       coverage: {

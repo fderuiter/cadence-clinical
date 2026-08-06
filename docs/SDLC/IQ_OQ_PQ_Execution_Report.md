@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2141
-- **Passed:** 2136 🟢
+- **Total Automated Test Cases Run:** 2144
+- **Passed:** 2139 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
 - **Overall Operational Pass Rate:** 99.77%
@@ -436,9 +436,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_designer_signing_raises_runtime_error_if_secret_missing`                     | `tests.test_compliance_security`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_gateway_raises_runtime_error_if_secret_missing`                              | `tests.test_compliance_security`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_security_audit_exclusions`                                                   | `tests.test_compliance_security`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_security_audit_glob_pattern_matching`                                        | `tests.test_compliance_security`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_security_audit_invalid_justification`                                        | `tests.test_compliance_security`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_security_audit_scanner_detection_and_bypass`                                 | `tests.test_compliance_security`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_security_audit_script`                                                       | `tests.test_compliance_security`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_security_audit_targeted_files`                                               | `tests.test_compliance_security`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_security_audit_unapproved_bypass`                                            | `tests.test_compliance_security`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_signing_raises_runtime_error_if_email_secret_missing`                        | `tests.test_compliance_security`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_check_dict_for_value`                                                        | `tests.test_concept_locks`                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_concept_mutations_locked_active_recruiting`                                  | `tests.test_concept_locks`                                  | PRD-MDR-002                                  | 🟢 PASSED  | < 1s     |
