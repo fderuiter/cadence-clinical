@@ -1,5 +1,27 @@
 import { vi, expect } from "vitest";
 import { toBeAccessible } from "ui";
+import { webcrypto } from "node:crypto";
+
+// Polyfill Web Crypto API for JSDOM / Node environment
+if (typeof globalThis !== "undefined") {
+  if (!globalThis.crypto || !globalThis.crypto.subtle) {
+    Object.defineProperty(globalThis, "crypto", {
+      value: webcrypto,
+      writable: true,
+      configurable: true,
+    });
+  }
+}
+
+if (typeof window !== "undefined") {
+  if (!window.crypto || !window.crypto.subtle) {
+    Object.defineProperty(window, "crypto", {
+      value: webcrypto,
+      writable: true,
+      configurable: true,
+    });
+  }
+}
 
 expect.extend({
   toBeAccessible,
