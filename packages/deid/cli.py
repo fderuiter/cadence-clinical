@@ -238,6 +238,8 @@ def scan_file(
             or "transmit-mock" in val_lower
             or "cadence-clinical.com" in val_lower
             or "ccrsoft.com" in val_lower
+            or "brand_domain" in val_lower
+            or "brand_domain" in line_content.lower()
             # Development infrastructure — not PHI: source control, package registries,
             # CI/CD providers, and documentation hosts are standard toolchain URLs.
             or "github.com" in val_lower
