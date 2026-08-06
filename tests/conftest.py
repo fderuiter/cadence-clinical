@@ -255,6 +255,8 @@ def patch_init_db():
         ):
             db_name = f"cadence_edc{worker_suffix}"
             new_url = f"{base_postgres_url}{db_name}"
+            kwargs["pool_size"] = 2
+            kwargs["max_overflow"] = 5
             return original_exec_init_db(self, new_url, **kwargs)
         return original_exec_init_db(self, database_url, **kwargs)
 
@@ -265,6 +267,8 @@ def patch_init_db():
             base_name = service_map.get(self.service_name, "cadence_edc")
             db_name = f"{base_name}{worker_suffix}"
             new_url = f"{base_postgres_url}{db_name}"
+            kwargs["pool_size"] = 2
+            kwargs["max_overflow"] = 5
             return original_rel_init_db(self, new_url, **kwargs)
         return original_rel_init_db(self, database_url, **kwargs)
 
@@ -1018,7 +1022,11 @@ async def clean_postgres_databases():
         db_name = f"{db_prefix}{worker_suffix}"
         db_url = f"{base_postgres_url}{db_name}"
         if db_url not in _postgres_engines_cache:
-            _postgres_engines_cache[db_url] = create_async_engine(db_url)
+            from sqlalchemy.pool import NullPool
+
+            _postgres_engines_cache[db_url] = create_async_engine(
+                db_url, poolclass=NullPool
+            )
         engine = _postgres_engines_cache[db_url]
         try:
             async with engine.begin() as conn:
