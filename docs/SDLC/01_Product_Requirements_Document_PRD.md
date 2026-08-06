@@ -776,6 +776,32 @@ To coordinate, track, and standardize laboratory reference range specifications,
 
 - The system must standardize laboratory reference models and map them to their corresponding verification runs.
 
+### 7.6 Site Compliance Cache & Compliance Gating
+
+To guarantee absolute GxP compliance and prevent trial sites from initiating clinical procedures or enrolling subjects prior to completing necessary regulatory/document qualifications, the system maintains a secure, local relational site compliance cache synchronized asynchronously with the eTMF.
+
+#### PRD-COMP-001: Event-Driven Site Compliance Cache Sync
+
+- The system must implement an event-driven relational cache of site compliance states inside the Execution Engine.
+- The compliance cache must update asynchronously upon receiving secure inbound eTMF document approval webhook events.
+- All incoming compliance synchronization events must be verified for cryptographic signature validity and written to the cache database within 200 milliseconds of receipt.
+
+#### PRD-COMP-002: Real-Time Site Compliance Retrieval
+
+- The system must expose high-performance endpoints (`/api/v1/execution/compliance/cache`) to retrieve cached site compliance states in real-time.
+- Cached compliance lookups must return responses in under 5 milliseconds to satisfy execution-layer performance SLA constraints.
+
+#### PRD-COMP-003: Operational Site Gating Constraints
+
+- The system must enforce operational site gating by checking site compliance state prior to performing site state transitions.
+- Attempting to transition a site to an active or approved operational state must be strictly blocked if the site compliance cache indicates missing or non-compliant document requirements.
+- Blocked activation attempts must return a clean, descriptive validation error and write a high-priority entry to the audit trail.
+
+#### PRD-COMP-004: Strict Regulatory Subject Gating
+
+- The system must prevent trial investigators from registering, screening, or enrolling clinical subjects at a site that is not fully compliant with active protocol qualifications.
+- Attempting to enroll a subject at a non-compliant or unverified site must trigger an immediate transactional rollback, block the transition, and record a GCP compliance violation in the audit ledger.
+
 ## 8. Definition of Done (DoD) & Bi-directional Traceability
 
 This Product Requirements Document represents the definitive, legally compliant system configuration for Cadence Clinical. To satisfy the Definition of Done (DoD) for GxP system validation:
