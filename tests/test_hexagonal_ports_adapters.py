@@ -7,6 +7,7 @@ for Hexagonal Architecture decoupling across the clinical execution and designer
 
 import ast
 import os
+from pathlib import Path
 
 import pytest
 
@@ -48,10 +49,10 @@ def test_domain_models_contain_zero_database_imports():
 
     @req:PRD-SYS-001
     """
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    base_dir = Path(__file__).resolve().parent.parent
     domain_paths = [
-        os.path.join(base_dir, "apps/execution/domain/models.py"),
-        os.path.join(base_dir, "apps/ctms/domain/models.py"),
+        str(base_dir / "apps/execution/domain/models.py"),
+        str(base_dir / "apps/ctms/domain/models.py"),
     ]
     forbidden_imports = {
         "sqlalchemy",
@@ -154,10 +155,10 @@ def test_api_routers_contain_no_direct_db_calls():
 
     @req:PRD-SYS-001
     """
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    base_dir = Path(__file__).resolve().parent.parent
     router_paths = [
-        os.path.join(base_dir, "apps/execution/routers/doa.py"),
-        os.path.join(base_dir, "apps/ctms/routers/doa.py"),
+        str(base_dir / "apps/execution/routers/doa.py"),
+        str(base_dir / "apps/ctms/routers/doa.py"),
     ]
 
     for path in router_paths:
