@@ -569,7 +569,9 @@ async def test_recruitment_records_crud_and_audit():
 
 
 @pytest.mark.asyncio
-async def test_site_milestones_crud_and_audit():
+async def test_site_milestones_crud_and_audit(
+    shared_sqlite_dbs, intercept_cross_service_calls
+):
     # @req:PRD-CTMS-001
     # @req:Trace-6
     """
@@ -642,6 +644,103 @@ async def test_site_milestones_crud_and_audit():
         actions = [log.action for log in logs]
         assert "CREATE_MILESTONE" in actions
         assert "UPDATE_MILESTONE" in actions
+
+
+@pytest.mark.asyncio
+async def test_ctms_site_activation_gating(
+    shared_sqlite_dbs, intercept_cross_service_calls
+):
+    """Verify that CTMS gates SITE_ACTIVATION to ACHIEVED transition based on Execution compliance status."""
+    import uuid
+    from datetime import UTC
+
+    from httpx import ASGITransport, AsyncClient
+
+    from apps.execution.main import app as exec_app
+
+    client = TestClient(app)
+    cra_headers = get_auth_headers(roles="CRA", change_reason="Planning milestone")
+    study_id = f"study_{uuid.uuid4()}"
+    site_id = f"site_{uuid.uuid4()}"
+
+    # 1. First, update the Execution Engine compliance cache to non-compliant via webhook
+    webhook_headers = get_auth_headers(
+        roles="system", change_reason="etmf status update"
+    )
+    webhook_payload = {
+        "study_id": study_id,
+        "site_id": site_id,
+        "milestone_type": "SITE_ACTIVATION",
+        "is_compliant": False,
+        "missing_documents": ["Investigator CV", "FDA Form 1572"],
+    }
+    async with AsyncClient(
+        transport=ASGITransport(app=exec_app), base_url="http://test"
+    ) as ac:
+        resp_webhook = await ac.post(
+            "/api/v1/execution/compliance/webhook",
+            json=webhook_payload,
+            headers=webhook_headers,
+        )
+    assert resp_webhook.status_code == 200
+
+    # 2. In CTMS, create a SITE_ACTIVATION milestone for this study and site
+    payload = {
+        "site_id": site_id,
+        "study_id": study_id,
+        "milestone_type": "SITE_ACTIVATION",
+        "planned_date": (datetime.now(UTC) + timedelta(days=30)).isoformat(),
+        "status": "PLANNED",
+    }
+    response = client.post(
+        "/api/v1/ctms/site-milestones", json=payload, headers=cra_headers
+    )
+    assert response.status_code == 201
+    m_data = response.json()
+    m_id = m_data["id"]
+
+    # 3. Attempt to transition status to ACHIEVED -> should be BLOCKED (400 Bad Request)
+    update_headers = get_auth_headers(
+        roles="Monitor", change_reason="Site is activated"
+    )
+    update_payload = {
+        "actual_date": datetime.now(UTC).isoformat(),
+        "status": "ACHIEVED",
+    }
+    update_response = client.put(
+        f"/api/v1/ctms/site-milestones/{m_id}",
+        json=update_payload,
+        headers=update_headers,
+    )
+    assert update_response.status_code == 400
+    assert "site compliance is incomplete" in update_response.json()["detail"]
+
+    # 4. Update the compliance cache to compliant
+    webhook_payload_success = {
+        "study_id": study_id,
+        "site_id": site_id,
+        "milestone_type": "SITE_ACTIVATION",
+        "is_compliant": True,
+        "missing_documents": [],
+    }
+    async with AsyncClient(
+        transport=ASGITransport(app=exec_app), base_url="http://test"
+    ) as ac:
+        resp_webhook_success = await ac.post(
+            "/api/v1/execution/compliance/webhook",
+            json=webhook_payload_success,
+            headers=webhook_headers,
+        )
+    assert resp_webhook_success.status_code == 200
+
+    # 5. Transition to ACHIEVED again -> should now SUCCEED
+    update_response_success = client.put(
+        f"/api/v1/ctms/site-milestones/{m_id}",
+        json=update_payload,
+        headers=update_headers,
+    )
+    assert update_response_success.status_code == 200
+    assert update_response_success.json()["status"] == "ACHIEVED"
 
 
 @pytest.mark.asyncio

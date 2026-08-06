@@ -1677,3 +1677,21 @@ class ProcessedOfflineBatch(Base):
     client_batch_id: Mapped[str] = mapped_column(String(255), primary_key=True)
     device_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     synced_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+
+class SiteComplianceCache(AuditedModel):
+    """Local relational cache of site-level and study-level milestone compliance statuses.
+
+    Tracks eTMF completeness statuses to enforce regulatory gating during execution.
+    """
+
+    __tablename__ = "site_compliance_caches"
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+    milestone_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    is_compliant: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    missing_documents: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+

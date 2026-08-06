@@ -1330,6 +1330,41 @@ async def update_site_milestone(
     if payload.actual_date is not None:
         milestone.actual_date = payload.actual_date
     if payload.status is not None:
+        if (
+            milestone.milestone_type == "SITE_ACTIVATION"
+            and payload.status == "ACHIEVED"
+        ):
+            # Point-to-point HTTP query to Execution Engine compliance cache
+            from packages.security.gateway_client import GatewayBaseClient
+
+            exec_url = (os.getenv("EXECUTION_URL") or "http://localhost:8002").rstrip(
+                "/"
+            )
+            g_client = GatewayBaseClient(base_url=exec_url)
+
+            resp = await g_client.request(
+                method="GET",
+                path=f"/api/v1/execution/compliance/badge?study_id={milestone.study_id}&site_id={milestone.site_id}",
+                user_id="ctms-service",
+                roles="system",
+                change_reason="Verify site compliance prior to site activation",
+            )
+            if resp.status_code == 200:
+                badge_data = resp.json()
+                if not badge_data.get("is_compliant", True):
+                    missing = badge_data.get("missing_documents", [])
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Cannot transition SITE_ACTIVATION milestone to ACHIEVED because site compliance is incomplete on the Execution Engine. Missing: {missing}",
+                    )
+            elif resp.status_code == 404:
+                pass
+            else:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Failed to verify compliance with Execution Engine: service returned status {resp.status_code}.",
+                )
+
         milestone.status = payload.status
 
     milestone.version_index += 1

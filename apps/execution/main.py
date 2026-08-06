@@ -67,6 +67,7 @@ from apps.execution.database.models import (
     FormSubmissionStatus,
     ImportState,
     MigrationRule,
+    SiteComplianceCache,
     StudyAuthoredRule,
     SubjectConsent,
     SubjectRandomization,
@@ -732,6 +733,7 @@ class SubjectCreate(BaseModel):
 
     subject_id: str
     study_id: str
+    site_id: str | None = None
     demographics: Demographics | None = None
 
 
@@ -741,6 +743,7 @@ class SubjectResponse(BaseModel):
     id: str
     subject_id: str
     study_id: str
+    site_id: str | None = None
     encrypted_demographics: str | None = None
 
 
@@ -935,6 +938,7 @@ async def create_subject(
             subj = ClinicalSubject(
                 subject_id=payload.subject_id,
                 study_id=payload.study_id,
+                site_id=payload.site_id,
                 encrypted_demographics=encrypted_demo,
                 enrollment_index=new_idx,
             )
@@ -947,6 +951,7 @@ async def create_subject(
             id=subj_db.id,
             subject_id=subj_db.subject_id,
             study_id=subj_db.study_id,
+            site_id=subj_db.site_id,
             encrypted_demographics=subj_db.encrypted_demographics,
         )
 
@@ -1102,6 +1107,36 @@ async def evaluate_and_transition_screening(
                 session.add(subject_obj)
                 await session.commit()
             elif res.eligible is True:
+                is_comp, missing = await check_compliance(
+                    session, study_id, subject_obj.site_id
+                )
+                if not is_comp:
+                    try:
+                        user_val = current_user_id.get()
+                    except LookupError:
+                        user_val = "system"
+
+                    audit_log = AuditLog(
+                        id=str(uuid.uuid4()),
+                        table_name="clinical_subjects",
+                        record_id=subject_obj.id,
+                        action="BLOCKED_SUBJECT_ENROLLMENT",
+                        user_id=user_val,
+                        ip_address="127.0.0.1",
+                        timestamp=datetime.now(UTC),
+                        old_values={},
+                        new_values={"missing_documents": missing},
+                        change_reason=f"Blocked subject enrollment for subject {subject_obj.id} due to missing compliance documents: {missing}",
+                        version_index=1,
+                    )
+                    session.add(audit_log)
+                    await session.commit()
+
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Subject enrollment blocked: compliance is incomplete. Missing: {missing}",
+                    )
+
                 custom_reason = f"Subject met all eligibility criteria and transitioned to ENROLLED. Original reason: {change_reason}"
                 current_change_reason.set(custom_reason)
 
@@ -6046,3 +6081,234 @@ async def export_biostat_bundle(
             raise HTTPException(
                 status_code=500, detail=f"Export execution failed: {scrubbed_msg}"
             )
+
+
+async def check_compliance(
+    session, study_id: str, site_id: str | None = None
+) -> tuple[bool, list[str]]:
+    """Check if the study/site is compliant based on cached compliance statuses.
+
+    Checks site-level cache first (if site_id is provided), then study-level.
+    """
+    if site_id:
+        stmt = select(SiteComplianceCache).where(
+            SiteComplianceCache.study_id == study_id,
+            SiteComplianceCache.site_id == site_id,
+            SiteComplianceCache.is_deleted.is_(False),
+        )
+        res = await session.execute(stmt)
+        entries = res.scalars().all()
+        for entry in entries:
+            if not entry.is_compliant:
+                missing = (
+                    entry.missing_documents.get("missing", [])
+                    if entry.missing_documents
+                    else []
+                )
+                return False, missing
+
+    # Check study-level
+    stmt = select(SiteComplianceCache).where(
+        SiteComplianceCache.study_id == study_id,
+        SiteComplianceCache.site_id.is_(None),
+        SiteComplianceCache.is_deleted.is_(False),
+    )
+    res = await session.execute(stmt)
+    entries = res.scalars().all()
+    for entry in entries:
+        if not entry.is_compliant:
+            missing = (
+                entry.missing_documents.get("missing", [])
+                if entry.missing_documents
+                else []
+            )
+            return False, missing
+
+    return True, []
+
+
+class ETMFComplianceWebhookPayload(BaseModel):
+    """Pydantic model representing incoming webhook payload from eTMF completeness engine."""
+
+    study_id: str
+    site_id: str | None = None
+    milestone_type: str
+    is_compliant: bool
+    missing_documents: list[str] | None = None
+
+
+class SiteActivationResponse(BaseModel):
+    """Pydantic model representing site activation result."""
+
+    site_id: str
+    status: str
+    message: str
+
+
+class ComplianceBadgeResponse(BaseModel):
+    """Pydantic model representing compliance readiness status badge."""
+
+    study_id: str
+    site_id: str | None = None
+    is_compliant: bool
+    status_label: str
+    missing_documents: list[str]
+
+
+class SiteComplianceCacheResponse(BaseModel):
+    """Pydantic model representing cached compliance entry."""
+
+    id: str
+    study_id: str
+    site_id: str | None = None
+    milestone_type: str
+    is_compliant: bool
+    missing_documents: list[str] | None = None
+
+
+@app.post("/api/v1/execution/compliance/webhook")
+async def inbound_compliance_webhook(
+    payload: ETMFComplianceWebhookPayload,
+) -> dict[str, str]:
+    """Asynchronous webhook receiver to update the local compliance cache from the eTMF completeness engine.
+
+    Requirement 2
+    """
+    async with db_manager.get_session_maker()() as session, session.begin():
+        stmt = select(SiteComplianceCache).where(
+            SiteComplianceCache.study_id == payload.study_id,
+            SiteComplianceCache.site_id == payload.site_id,
+            SiteComplianceCache.milestone_type == payload.milestone_type,
+            SiteComplianceCache.is_deleted.is_(False),
+        )
+        res = await session.execute(stmt)
+        cache_entry = res.scalars().first()
+
+        missing_docs_dict = (
+            {"missing": payload.missing_documents}
+            if payload.missing_documents is not None
+            else None
+        )
+
+        if cache_entry:
+            cache_entry.is_compliant = payload.is_compliant
+            cache_entry.missing_documents = missing_docs_dict
+            cache_entry.version += 1
+        else:
+            cache_entry = SiteComplianceCache(
+                study_id=payload.study_id,
+                site_id=payload.site_id,
+                milestone_type=payload.milestone_type,
+                is_compliant=payload.is_compliant,
+                missing_documents=missing_docs_dict,
+            )
+            session.add(cache_entry)
+
+    return {"status": "SUCCESS", "message": "Compliance cache updated successfully."}
+
+
+@app.post(
+    "/api/v1/execution/sites/{site_id}/activate",
+    response_model=SiteActivationResponse,
+)
+async def activate_site(
+    site_id: str,
+    study_id: str,
+) -> SiteActivationResponse:
+    """Attempt to activate a clinical site on the Execution Engine after checking compliance.
+
+    Requirement 3
+    """
+    async with db_manager.get_session_maker()() as session:
+        is_comp, missing = await check_compliance(session, study_id, site_id)
+        if not is_comp:
+            try:
+                user_val = current_user_id.get()
+            except LookupError:
+                user_val = "system"
+
+            audit_log = AuditLog(
+                id=str(uuid.uuid4()),
+                table_name="site_compliance_caches",
+                record_id=site_id,
+                action="BLOCKED_SITE_ACTIVATION",
+                user_id=user_val,
+                ip_address="127.0.0.1",
+                timestamp=datetime.now(UTC),
+                old_values={},
+                new_values={"missing_documents": missing},
+                change_reason=f"Blocked Site Activation for site {site_id} due to missing compliance documents: {missing}",
+                version_index=1,
+            )
+            session.add(audit_log)
+            await session.commit()
+
+            raise HTTPException(
+                status_code=400,
+                detail=f"Site Activation blocked: site-level or study-level compliance is incomplete. Missing: {missing}",
+            )
+
+        return SiteActivationResponse(
+            site_id=site_id, status="ACTIVE", message="Site activated successfully."
+        )
+
+
+@app.get(
+    "/api/v1/execution/compliance/badge",
+    response_model=ComplianceBadgeResponse,
+)
+async def get_compliance_badge(
+    study_id: str,
+    site_id: str | None = None,
+) -> ComplianceBadgeResponse:
+    """Retrieve the compliance readiness status badge for a given study and optional site.
+
+    Requirement 4
+    """
+    async with db_manager.get_session_maker()() as session:
+        is_comp, missing = await check_compliance(session, study_id, site_id)
+        status_label = "READY" if is_comp else "NON_COMPLIANT"
+        return ComplianceBadgeResponse(
+            study_id=study_id,
+            site_id=site_id,
+            is_compliant=is_comp,
+            status_label=status_label,
+            missing_documents=missing,
+        )
+
+
+@app.get(
+    "/api/v1/execution/compliance/cache",
+    response_model=list[SiteComplianceCacheResponse],
+)
+async def list_compliance_cache(
+    study_id: str | None = None,
+    site_id: str | None = None,
+) -> list[SiteComplianceCacheResponse]:
+    """List all local compliance cache entries, optionally filtered by study and/or site.
+
+    Requirement 1
+    """
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(SiteComplianceCache).where(
+            SiteComplianceCache.is_deleted.is_(False)
+        )
+        if study_id:
+            stmt = stmt.where(SiteComplianceCache.study_id == study_id)
+        if site_id:
+            stmt = stmt.where(SiteComplianceCache.site_id == site_id)
+        res = await session.execute(stmt)
+        entries = res.scalars().all()
+        return [
+            SiteComplianceCacheResponse(
+                id=e.id,
+                study_id=e.study_id,
+                site_id=e.site_id,
+                milestone_type=e.milestone_type,
+                is_compliant=e.is_compliant,
+                missing_documents=e.missing_documents.get("missing", [])
+                if e.missing_documents
+                else None,
+            )
+            for e in entries
+        ]
