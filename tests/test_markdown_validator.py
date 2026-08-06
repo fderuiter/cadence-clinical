@@ -602,13 +602,28 @@ def test_sys_path_append():
     import sys
     from pathlib import Path
 
-    repo_root = Path(__file__).resolve().parents[1]
-    for p in (repo_root / "packages").glob("*"):
-        if p.is_dir():
-            path_str = str(p)
-            assert path_str in sys.path
+    resolved_sys_path = []
+    for x in sys.path:
+        try:
+            resolved_sys_path.append(str(Path(x).resolve()))
+        except Exception:
+            resolved_sys_path.append(x)
+
+    project_root = Path(__file__).resolve().parent.parent
+    for p in (project_root / "packages").glob("*"):
+        if p.is_dir() and p.name != "__pycache__":
+            resolved_path_str = str(p.resolve())
+            assert resolved_path_str in resolved_sys_path
             # Since they were appended, they should not be at index 0
-            assert sys.path.index(path_str) > 0
+            found_index = -1
+            for idx, x in enumerate(sys.path):
+                try:
+                    if str(Path(x).resolve()) == resolved_path_str:
+                        found_index = idx
+                        break
+                except Exception:
+                    pass
+            assert found_index > 0
 
 
 def test_mock_environment_variables():

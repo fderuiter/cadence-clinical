@@ -38,7 +38,7 @@ for k, v in MOCK_ENV_VARS.items():
         os.environ[k] = v
 
 # Add packages subfolders and apps to sys.path to resolve imports within modules
-REPO_ROOT = Path(__file__).parent.parent.resolve()
+REPO_ROOT = Path(__file__).resolve().parent.parent
 for p in (REPO_ROOT / "packages").glob("*"):
     if p.is_dir() and str(p) not in sys.path:
         sys.path.append(str(p))
