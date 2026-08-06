@@ -237,10 +237,10 @@ if os.environ.get("USE_LIVE_DB") == "true":
 dirty_databases = set()
 
 
-def register_engine_listener(engine, db_prefix):
-    from sqlalchemy import event
+def setup_global_engine_listener():
+    from sqlalchemy import Engine, event
 
-    @event.listens_for(engine.sync_engine, "before_cursor_execute")
+    @event.listens_for(Engine, "before_cursor_execute")
     def receive_before_cursor_execute(
         conn, cursor, statement, parameters, context, executemany
     ):
@@ -257,7 +257,29 @@ def register_engine_listener(engine, db_prefix):
                 "ALTER",
             )
         ):
-            dirty_databases.add(db_prefix)
+            db_name = conn.engine.url.database
+            if db_name:
+                prefixes = (
+                    "cadence_edc",
+                    "cadence_etmf",
+                    "cadence_ctms",
+                    "cadence_quality",
+                    "cadence_interop",
+                    "cadence_tickets",
+                    "cadence_notifications",
+                    "cadence_econsent",
+                    "cadence_safety",
+                    "cadence_org",
+                    "cadence_eisf",
+                )
+                for db_prefix in prefixes:
+                    if db_name.startswith(db_prefix):
+                        dirty_databases.add(db_prefix)
+                        break
+
+
+# Initialize the global Engine event listener
+setup_global_engine_listener()
 
 
 # Patch and create databases
@@ -290,10 +312,7 @@ def patch_init_db():
         ):
             db_name = f"cadence_edc{worker_suffix}"
             new_url = f"{base_postgres_url}{db_name}"
-            res = original_exec_init_db(self, new_url, **kwargs)
-            if self.engine is not None:
-                register_engine_listener(self.engine, "cadence_edc")
-            return res
+            return original_exec_init_db(self, new_url, **kwargs)
         return original_exec_init_db(self, database_url, **kwargs)
 
     def patched_rel_init_db(self, database_url: str, **kwargs):
@@ -303,10 +322,7 @@ def patch_init_db():
             base_name = service_map.get(self.service_name, "cadence_edc")
             db_name = f"{base_name}{worker_suffix}"
             new_url = f"{base_postgres_url}{db_name}"
-            res = original_rel_init_db(self, new_url, **kwargs)
-            if self.engine is not None:
-                register_engine_listener(self.engine, base_name)
-            return res
+            return original_rel_init_db(self, new_url, **kwargs)
         return original_rel_init_db(self, database_url, **kwargs)
 
     DatabaseSessionManager.init_db = patched_exec_init_db
