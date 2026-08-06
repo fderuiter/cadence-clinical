@@ -337,8 +337,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         validation_errors_list.append(
             InvalidParam(field=field_path, reason=msg, value=val_str)
         )
+    brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
     problem = ProblemDetails(
-        type="https://api.cadence-clinical.com/errors/validation-failed",
+        type=f"https://api.{brand_domain}/errors/validation-failed",
         title="Request Validation Failed",
         status=400,
         detail="The request body fails to satisfy schema rules. Refer to 'invalid_params' for details.",
@@ -389,8 +390,9 @@ async def authorization_denied_handler(
 async def subject_eligibility_error_handler(
     request: Request, exc: SubjectEligibilityError
 ) -> JSONResponse:
+    brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
     problem = ProblemDetails(
-        type="https://api.cadence-clinical.com/errors/eligibility-violation",
+        type=f"https://api.{brand_domain}/errors/eligibility-violation",
         title="Subject Eligibility Violation",
         status=400,
         detail=str(exc),
@@ -404,8 +406,9 @@ async def subject_eligibility_error_handler(
 async def coding_assignment_not_found_handler(
     request: Request, exc: CodingAssignmentNotFoundError
 ) -> JSONResponse:
+    brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
     problem = ProblemDetails(
-        type="https://api.cadence-clinical.com/errors/coding-assignment-not-found",
+        type=f"https://api.{brand_domain}/errors/coding-assignment-not-found",
         title="Coding Assignment Not Found",
         status=404,
         detail=str(exc),
@@ -419,8 +422,9 @@ async def coding_assignment_not_found_handler(
 async def invalid_coding_action_handler(
     request: Request, exc: InvalidCodingActionError
 ) -> JSONResponse:
+    brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
     problem = ProblemDetails(
-        type="https://api.cadence-clinical.com/errors/invalid-coding-action",
+        type=f"https://api.{brand_domain}/errors/invalid-coding-action",
         title="Invalid Coding Action",
         status=400,
         detail=str(exc),
@@ -434,8 +438,9 @@ async def invalid_coding_action_handler(
 async def dictionary_not_found_handler(
     request: Request, exc: DictionaryNotFoundError
 ) -> JSONResponse:
+    brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
     problem = ProblemDetails(
-        type="https://api.cadence-clinical.com/errors/dictionary-not-found",
+        type=f"https://api.{brand_domain}/errors/dictionary-not-found",
         title="Dictionary Not Found",
         status=404,
         detail=str(exc),
@@ -449,8 +454,9 @@ async def dictionary_not_found_handler(
 async def change_request_not_found_handler(
     request: Request, exc: ChangeRequestNotFoundError
 ) -> JSONResponse:
+    brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
     problem = ProblemDetails(
-        type="https://api.cadence-clinical.com/errors/change-request-not-found",
+        type=f"https://api.{brand_domain}/errors/change-request-not-found",
         title="Change Request Not Found",
         status=404,
         detail=str(exc),
@@ -464,8 +470,9 @@ async def change_request_not_found_handler(
 async def invalid_change_request_action_handler(
     request: Request, exc: InvalidChangeRequestActionError
 ) -> JSONResponse:
+    brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
     problem = ProblemDetails(
-        type="https://api.cadence-clinical.com/errors/invalid-change-request-action",
+        type=f"https://api.{brand_domain}/errors/invalid-change-request-action",
         title="Invalid Change Request Action",
         status=400,
         detail=str(exc),

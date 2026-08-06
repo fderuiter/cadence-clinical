@@ -390,8 +390,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         val = error.get("input")
         val_str = str(val) if val is not None else ""
         invalid_params.append(InvalidParam(field=field_path, reason=msg, value=val_str))
+    brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
     problem = ProblemDetails(
-        type="https://api.cadence-clinical.com/errors/validation-failed",
+        type=f"https://api.{brand_domain}/errors/validation-failed",
         title="Request Validation Failed",
         status=400,
         detail="The request body fails to satisfy schema rules. Refer to 'invalid_params' for details.",
@@ -471,8 +472,9 @@ async def library_object_locked_active_study_handler(
 async def template_rendering_error_handler(
     request: Request, exc: TemplateRenderingError
 ):
+    brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
     problem = ProblemDetails(
-        type="https://api.cadence-clinical.com/errors/template-unavailable",
+        type=f"https://api.{brand_domain}/errors/template-unavailable",
         title="Template Unavailable",
         status=503,
         detail=str(exc),
@@ -626,8 +628,9 @@ async def import_usdm_study(
                     field=err.field or "payload", reason=err.reason, value=err.value
                 )
             )
+        brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
         problem = ProblemDetails(
-            type="https://api.cadence-clinical.com/errors/usdm-validation-failed",
+            type=f"https://api.{brand_domain}/errors/usdm-validation-failed",
             title="USDM Ingestion Validation Failed",
             status=422,
             detail=f"The provided {report.format} payload failed USDM {report.version} validation.",
@@ -2903,8 +2906,9 @@ async def validate_usdm_endpoint(
                     field=err.field or "payload", reason=err.reason, value=err.value
                 )
             )
+        brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
         problem = ProblemDetails(
-            type="https://api.cadence-clinical.com/errors/usdm-validation-failed",
+            type=f"https://api.{brand_domain}/errors/usdm-validation-failed",
             title="USDM Ingestion Validation Failed",
             status=422,
             detail=f"The provided {report.format} payload failed USDM {report.version} validation.",

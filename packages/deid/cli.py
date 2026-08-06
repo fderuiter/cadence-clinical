@@ -237,6 +237,7 @@ def scan_file(
             or "0.0.0.0" in val_lower  # nosec B104
             or "transmit-mock" in val_lower
             or "cadence-clinical.com" in val_lower
+            or "ccrsoft.com" in val_lower
             # Development infrastructure — not PHI: source control, package registries,
             # CI/CD providers, and documentation hosts are standard toolchain URLs.
             or "github.com" in val_lower

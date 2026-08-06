@@ -72,7 +72,7 @@ A valid JWT token contains the following standard and custom claims:
 
 ```json
 {
-  "iss": "https://auth.cadence-clinical.com/realms/cadence",
+  "iss": "https://auth.ccrsoft.com/realms/cadence",
   "sub": "usr_9921a88b2c410",
   "aud": "cadence-api-gateway",
   "exp": 1782035200,
@@ -80,7 +80,7 @@ A valid JWT token contains the following standard and custom claims:
   "iat": 1782031600,
   "jti": "jwt_ef881029cbaef9901",
   "name": "Dr. Sarah Jenkins",
-  "email": "s.jenkins@cadence-clinical.com",
+  "email": "s.jenkins@ccrsoft.com",
   "realm_access": {
     "roles": ["STUDY_DESIGNER", "TERMINOLOGY_MANAGER", "PRINCIPAL_INVESTIGATOR"]
   }
@@ -109,7 +109,7 @@ When limits are exceeded, the API Gateway immediately rejects the request with a
 
 ```json
 {
-  "type": "https://api.cadence-clinical.com/errors/too-many-requests",
+  "type": "https://api.ccrsoft.com/errors/too-many-requests",
   "title": "Rate Limit Exceeded",
   "status": 429,
   "detail": "The request limit of 500 requests per 60 seconds has been exceeded. Please retry after 14 seconds.",
@@ -137,7 +137,7 @@ All errors returned by the Cadence Clinical API are modeled on **RFC 7807 (Probl
 
 ```json
 {
-  "type": "https://api.cadence-clinical.com/errors/validation-failed",
+  "type": "https://api.ccrsoft.com/errors/validation-failed",
   "title": "Request Validation Failed",
   "status": 400,
   "detail": "The request body fails to satisfy schema rules. Refer to 'invalid_params' for details.",
@@ -188,7 +188,7 @@ Commonly used for static terminology tables or lookup configurations.
 - `limit` (integer, query param): Number of records.
 
 Headers returned:
-`Link: <https://api.cadence-clinical.com/api/v1/mdr/concepts?offset=100&limit=50>; rel="next", <https://api.cadence-clinical.com/api/v1/mdr/concepts?offset=0&limit=50>; rel="prev"`
+`Link: <https://api.ccrsoft.com/api/v1/mdr/concepts?offset=100&limit=50>; rel="next", <https://api.ccrsoft.com/api/v1/mdr/concepts?offset=0&limit=50>; rel="prev"`
 
 ### 3.5 Payload Compression & Wire Formats
 
@@ -680,7 +680,7 @@ Imports raw dictionary files. Requires terminal operator role `SYSTEM_ADMIN` or 
 **Request Structure (Curl Example)**:
 
 ```bash
-curl -X POST https://api.cadence-clinical.com/api/v1/dictionaries/import \
+curl -X POST https://api.ccrsoft.com/api/v1/dictionaries/import \
   -H "Authorization: Bearer <JWT>" \
   -F "dictionary_type=MEDDRA" \
   -F "version=26.0" \
@@ -1066,96 +1066,92 @@ This section attaches the full OpenAPI 3.0 YAML Contract representing the core i
 openapi: 3.1.0
 info:
   title: Cadence Clinical Unified Gateway API
-  description:
-    "Unified microservices API contract for Cadence Clinical Platform.
+  description: 'Unified microservices API contract for Cadence Clinical Platform.
 
-    Enforces OIDC/Keycloak authentication, RFC 7807 problem details, and ISO 14155:2020 regulatory compliance."
+    Enforces OIDC/Keycloak authentication, RFC 7807 problem details, and ISO 14155:2020 regulatory compliance.'
   version: 1.0.0-PROD
 servers:
-  - url: https://api.cadence-clinical.com/api/v1
-    description: Production API Gateway
-  - url: http://localhost:8000/api/v1
-    description: Local Dev Gateway Proxy
+- url: https://api.ccrsoft.com/api/v1
+  description: Production API Gateway
+- url: http://localhost:8000/api/v1
+  description: Local Dev Gateway Proxy
 paths:
   /api/v1/synopsis/export:
     post:
       tags:
-        - Synopsis
+      - Synopsis
       summary: Export Synopsis Document
-      description:
-        "Export authored clinical protocol synopsis into PDF, DOCX, or HTML format.
+      description: 'Export authored clinical protocol synopsis into PDF, DOCX, or HTML format.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: export_synopsis_document_api_v1_synopsis_export_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SynopsisExportRequest"
+              $ref: '#/components/schemas/SynopsisExportRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SynopsisExportResponse"
-        "422":
+                $ref: '#/components/schemas/SynopsisExportResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/synopsis/render/{study_id}:
     get:
       tags:
-        - Synopsis
+      - Synopsis
       summary: Render Synopsis Download
-      description:
-        "Direct file download endpoint for rendered protocol synopsis documents.
+      description: 'Direct file download endpoint for rendered protocol synopsis documents.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: render_synopsis_download_api_v1_synopsis_render__study_id__get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: format
-          in: query
-          required: false
-          schema:
-            type: string
-            description: "Export format: pdf, docx, html"
-            default: pdf
-            title: Format
-          description: "Export format: pdf, docx, html"
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: format
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Export format: pdf, docx, html'
+          default: pdf
+          title: Format
+        description: 'Export format: pdf, docx, html'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema: {}
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/designer/sentinel/evaluate:
     post:
       tags:
-        - QualitySentinel
+      - QualitySentinel
       summary: Evaluate Protocol Quality Endpoint
-      description:
-        "Evaluate authored protocol specification payload against quality and burden rules.
+      description: 'Evaluate authored protocol specification payload against quality and burden rules.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: evaluate_protocol_quality_endpoint_api_v1_designer_sentinel_evaluate_post
       requestBody:
         content:
@@ -1166,37 +1162,36 @@ paths:
               title: Payload
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProtocolQualityScore"
-        "422":
+                $ref: '#/components/schemas/ProtocolQualityScore'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/designer/cascade/propagate:
     post:
       tags:
-        - ArtifactCascade
+      - ArtifactCascade
       summary: Propagate Cascade Endpoint
-      description:
-        "Cascade authored USDM protocol specification changes to downstream eCRFs and SoA matrices.
+      description: 'Cascade authored USDM protocol specification changes to downstream eCRFs and SoA matrices.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: propagate_cascade_endpoint_api_v1_designer_cascade_propagate_post
       parameters:
-        - name: amendment_version
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-            title: Amendment Version
+      - name: amendment_version
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+          title: Amendment Version
       requestBody:
         required: true
         content:
@@ -1206,153 +1201,152 @@ paths:
               additionalProperties: true
               title: Payload
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CascadeSummaryReport"
-        "422":
+                $ref: '#/components/schemas/CascadeSummaryReport'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/designer/export/m11/{study_id}:
     get:
       tags:
-        - ProtocolExport
+      - ProtocolExport
       summary: Export Protocol M11 Endpoint
-      description:
-        "Download authored protocol specification in formatted ICH M11 Word (.docx) or USDM JSON format.
+      description: 'Download authored protocol specification in formatted ICH M11 Word (.docx) or USDM JSON format.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: export_protocol_m11_endpoint_api_v1_designer_export_m11__study_id__get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: format
-          in: query
-          required: false
-          schema:
-            type: string
-            description: "Target export format: docx or json"
-            default: docx
-            title: Format
-          description: "Target export format: docx or json"
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: format
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Target export format: docx or json'
+          default: docx
+          title: Format
+        description: 'Target export format: docx or json'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema: {}
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/designer/forms/{form_id}/comments:
     get:
       tags:
-        - FormComments
+      - FormComments
       summary: Get Form Comments
       description: Fetch all review comments for a given form.
       operationId: get_form_comments_api_v1_designer_forms__form_id__comments_get
       parameters:
-        - name: form_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Form Id
+      - name: form_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Form Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/FormReviewCommentResponse"
+                  $ref: '#/components/schemas/FormReviewCommentResponse'
                 title: Response Get Form Comments Api V1 Designer Forms  Form Id  Comments Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     post:
       tags:
-        - FormComments
+      - FormComments
       summary: Post Form Comment
       description: Post a new review comment anchored to a field_id.
       operationId: post_form_comment_api_v1_designer_forms__form_id__comments_post
       parameters:
-        - name: form_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Form Id
+      - name: form_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Form Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CommentCreatePayload"
+              $ref: '#/components/schemas/CommentCreatePayload'
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/FormReviewCommentResponse"
-        "422":
+                $ref: '#/components/schemas/FormReviewCommentResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/designer/comments/{comment_id}/resolve:
     patch:
       tags:
-        - FormComments
+      - FormComments
       summary: Resolve Comment
       description: Mark a comment thread/item as resolved and log a GxP audit event.
       operationId: resolve_comment_api_v1_designer_comments__comment_id__resolve_patch
       parameters:
-        - name: comment_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Comment Id
+      - name: comment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Comment Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/FormReviewCommentResponse"
-        "422":
+                $ref: '#/components/schemas/FormReviewCommentResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /health:
     get:
       summary: Health Check
       description: "Service health check endpoint.\n\nReturns a basic JSON payload indicating the service is operational.\n\nReturns:\n    dict[str, str]: The health status payload."
       operationId: health_check_health_get
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -1367,14 +1361,14 @@ paths:
       description: "Returns the legacy internal projection with no USDM formatting.\n\nArgs:\n    study_id = get_study_projection(study_id)"
       operationId: get_legacy_study_api_v1_studies__study_id__get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -1382,91 +1376,90 @@ paths:
                 type: object
                 additionalProperties: true
                 title: Response Get Legacy Study Api V1 Studies  Study Id  Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v2/studies/{study_id}/usdm:
     get:
       summary: Get Usdm Study
       description: "Dynamically processes the internal projection and returns a compliant USDM structure.\n\nArgs:\n    study_id (str): The unique identifier of the study.\n    format (str, optional): Output format.\n\nReturns:\n    Any: Mapped USDM data (as dict or serialized Response).\n\nRaises:\n    HTTPException: If the study is not found or validation fails."
       operationId: get_usdm_study_api_v2_studies__study_id__usdm_get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: format
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            description: "Output format: json or yaml"
-            title: Format
-          description: "Output format: json or yaml"
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: format
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: 'Output format: json or yaml'
+          title: Format
+        description: 'Output format: json or yaml'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 title: Response Get Usdm Study Api V2 Studies  Study Id  Usdm Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     post:
       summary: Import Usdm Study
-      description:
-        "Ingests, validates, maps, and persists a USDM JSON/YAML payload for a specific study.
+      description: 'Ingests, validates, maps, and persists a USDM JSON/YAML payload for a specific study.
 
 
-        Requirements: Phase 2 Ingestion"
+        Requirements: Phase 2 Ingestion'
       operationId: import_usdm_study_api_v2_studies__study_id__usdm_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: override
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            description: Optional explicit version override ('v2' or 'v3')
-            title: Override
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: override
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
           description: Optional explicit version override ('v2' or 'v3')
+          title: Override
+        description: Optional explicit version override ('v2' or 'v3')
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema: {}
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/admin/cache/clear:
     post:
       summary: Clear Cache
       description: "Flushes the controlled terminology cache.\n\nReturns:\n    Dict[str, str]: A success message indicating the cache was cleared."
       operationId: clear_cache_api_admin_cache_clear_post
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -1481,7 +1474,7 @@ paths:
       description: "Returns the current size and status of the terminology cache.\n\nReturns:\n    Dict[str, int]: The status dictionary containing size and max_size."
       operationId: cache_status_api_admin_cache_status_get
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -1496,484 +1489,498 @@ paths:
       description: "Generate an alignment validation report for a specific clinical study.\n\nAnalyzes trace links dynamically to ensure the\nStudy Data Requirements (SDR) align with Metadata Requirements (MDR).\n\nArgs:\n    study_id (str): The unique identifier of the study to validate.\n\nReturns:\n    StudyAlignmentReport: The structured validation report."
       operationId: validate_study_alignment_api_v1_studies__study_id__alignment_validation_get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StudyAlignmentReport"
-        "422":
+                $ref: '#/components/schemas/StudyAlignmentReport'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/terminology-validation:
     get:
       summary: Validate Study Terminology Endpoint
       description: "Generate a terminology validation report for a specific clinical study.\n\nTraverses study concept references and aggregates validation outcomes\nsuch as identifying affected elements and references.\n\nArgs:\n    study_id (str): The unique identifier of the study to validate.\n\nReturns:\n    StudyTerminologyValidationReport: The structured validation report."
       operationId: validate_study_terminology_endpoint_api_v1_studies__study_id__terminology_validation_get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StudyTerminologyValidationReport"
-        "422":
+                $ref: '#/components/schemas/StudyTerminologyValidationReport'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/ct-validation:
     get:
       summary: Validate Study Ct Endpoint
       description: "Generate a controlled terminology (CT) validation report for a specific clinical study.\n\nTraverses study concept references and aggregates validation outcomes\nsuch as identifying affected elements and references.\n\nArgs:\n    study_id (str): The unique identifier of the study to validate.\n\nReturns:\n    StudyTerminologyValidationReport: The structured validation report."
       operationId: validate_study_ct_endpoint_api_v1_studies__study_id__ct_validation_get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StudyTerminologyValidationReport"
-        "422":
+                $ref: '#/components/schemas/StudyTerminologyValidationReport'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/terminology/validate/{code}:
     get:
       summary: Validate Single Code
       description: "Validates a single terminology concept code.\n\nArgs:\n    code (str): The concept code to validate.\n\nReturns:\n    ConceptValidationReport: Validation status and metadata."
       operationId: validate_single_code_api_v1_terminology_validate__code__get
       parameters:
-        - name: code
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Code
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Code
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConceptValidationReport"
-        "422":
+                $ref: '#/components/schemas/ConceptValidationReport'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/terminology/search:
     get:
       summary: Search Terminology
-      description: "Search or autocomplete terminology concepts by text query.\n\nArgs:\n    term (str): Search term.\n    from_record (int, optional): Record offset.\n    page_size (int, optional): Page size.\n\nReturns:\n    TerminologySearchResponse: Search results and status."
+      description: "Search or autocomplete terminology concepts by text query.\n\nArgs:\n    term (str): Search term.\n    from_record (int, optional): Record offset.\n    page_size (int, optional): Page size.\n    bypass_cache (bool, optional): Whether to bypass reading from cache. Defaults to False.\n    refresh (bool, optional): Whether to refresh the cache. Defaults to False.\n\nReturns:\n    TerminologySearchResponse: Search results and status."
       operationId: search_terminology_api_v1_terminology_search_get
       parameters:
-        - name: term
-          in: query
-          required: true
-          schema:
-            type: string
-            title: Term
-        - name: from_record
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: integer
-              - type: "null"
-            title: From Record
-        - name: page_size
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: integer
-              - type: "null"
-            title: Page Size
+      - name: term
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Term
+      - name: from_record
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: From Record
+      - name: page_size
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Page Size
+      - name: bypass_cache
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Bypass Cache
+      - name: refresh
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Refresh
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TerminologySearchResponse"
-        "422":
+                $ref: '#/components/schemas/TerminologySearchResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/differences:
     get:
       summary: Study Differences
       description: "Get human-readable field-level differences between two version actions of a study.\n\nThis endpoint uses a decoupled, API-first in-memory diffing architecture. Instead of\nrelying on a direct database connection (which led to 503 errors and tight coupling),\nit fetches full study payloads from an external registry. The comparison logic runs\nentirely in-memory by flattening nested dictionary structures to dynamically identify\nadded, modified, and deleted fields. This ensures high availability and fast execution\nwithout maintaining direct database connections.\n\nArgs:\n    study_id (str): The unique identifier of the study.\n    action_id1 (str): The ID of the first action version.\n    action_id2 (str): The ID of the second action version.\n\nReturns:\n    List[DifferenceResult]: A list of field-level differences."
       operationId: study_differences_api_v1_studies__study_id__differences_get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: action_id1
-          in: query
-          required: true
-          schema:
-            type: string
-            title: Action Id1
-        - name: action_id2
-          in: query
-          required: true
-          schema:
-            type: string
-            title: Action Id2
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: action_id1
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Action Id1
+      - name: action_id2
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Action Id2
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/DifferenceResult"
+                  $ref: '#/components/schemas/DifferenceResult'
                 title: Response Study Differences Api V1 Studies  Study Id  Differences Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/sections/{section_id}/transition:
     post:
       summary: Transition Section
       operationId: transition_section_api_v1_studies__study_id__sections__section_id__transition_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: section_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Section Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: section_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Section Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SectionTransitionRequest"
+              $ref: '#/components/schemas/SectionTransitionRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SectionReviewTransition"
-        "422":
+                $ref: '#/components/schemas/SectionReviewTransition'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/sections/{section_id}/status:
     get:
       summary: Get Section Review Status
       operationId: get_section_review_status_api_v1_studies__study_id__sections__section_id__status_get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: section_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Section Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: section_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Section Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema: {}
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/sections/{section_id}/threads:
     post:
       summary: Create Thread Endpoint
       operationId: create_thread_endpoint_api_v1_studies__study_id__sections__section_id__threads_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: section_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Section Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: section_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Section Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CommentThreadCreate"
+              $ref: '#/components/schemas/CommentThreadCreate'
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CommentThread"
-        "422":
+                $ref: '#/components/schemas/CommentThread'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       summary: Get Threads Endpoint
       operationId: get_threads_endpoint_api_v1_studies__study_id__sections__section_id__threads_get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: section_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Section Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: section_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Section Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/CommentThread"
+                  $ref: '#/components/schemas/CommentThread'
                 title: Response Get Threads Endpoint Api V1 Studies  Study Id  Sections  Section Id  Threads Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/threads/{thread_id}/comments:
     post:
       summary: Add Comment Endpoint
       operationId: add_comment_endpoint_api_v1_studies__study_id__threads__thread_id__comments_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: thread_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Thread Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: thread_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Thread Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CommentCreate"
+              $ref: '#/components/schemas/CommentCreate'
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CommentThread"
-        "422":
+                $ref: '#/components/schemas/CommentThread'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/threads/{thread_id}/resolve:
     post:
       summary: Resolve Thread Endpoint
       operationId: resolve_thread_endpoint_api_v1_studies__study_id__threads__thread_id__resolve_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: thread_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Thread Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: thread_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Thread Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CommentThread"
-        "422":
+                $ref: '#/components/schemas/CommentThread'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/blocks/{block_id}/suggestions:
     post:
       summary: Create Suggestion Endpoint
       operationId: create_suggestion_endpoint_api_v1_studies__study_id__blocks__block_id__suggestions_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: block_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Block Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: block_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Block Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SuggestionCreate"
+              $ref: '#/components/schemas/SuggestionCreate'
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Suggestion"
-        "422":
+                $ref: '#/components/schemas/Suggestion'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       summary: Get Suggestions Endpoint
       operationId: get_suggestions_endpoint_api_v1_studies__study_id__blocks__block_id__suggestions_get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: block_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Block Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: block_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Block Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Suggestion"
+                  $ref: '#/components/schemas/Suggestion'
                 title: Response Get Suggestions Endpoint Api V1 Studies  Study Id  Blocks  Block Id  Suggestions Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/suggestions/{suggestion_id}/decision:
     post:
       summary: Decide Suggestion Endpoint
       operationId: decide_suggestion_endpoint_api_v1_studies__study_id__suggestions__suggestion_id__decision_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: suggestion_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Suggestion Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: suggestion_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Suggestion Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SuggestionDecisionRequest"
+              $ref: '#/components/schemas/SuggestionDecisionRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Suggestion"
-        "422":
+                $ref: '#/components/schemas/Suggestion'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/designer/ingestion/upload:
     post:
       summary: Upload Protocol Ingestion
@@ -1982,1022 +1989,1020 @@ paths:
         content:
           multipart/form-data:
             schema:
-              $ref: "#/components/schemas/Body_upload_protocol_ingestion_api_v1_designer_ingestion_upload_post"
+              $ref: '#/components/schemas/Body_upload_protocol_ingestion_api_v1_designer_ingestion_upload_post'
         required: true
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema: {}
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/designer/ingestion/jobs/{job_id}:
     get:
       summary: Get Ingestion Job Status
       operationId: get_ingestion_job_status_api_v1_designer_ingestion_jobs__job_id__get
       parameters:
-        - name: job_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Job Id
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema: {}
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/designer/ingestion/candidates/{candidate_id}:
     get:
       summary: Get Ingestion Candidate
       operationId: get_ingestion_candidate_api_v1_designer_ingestion_candidates__candidate_id__get
       parameters:
-        - name: candidate_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Candidate Id
+      - name: candidate_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Candidate Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema: {}
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/designer/ingestion/candidates/{candidate_id}/items/{item_id}/transition:
     post:
       summary: Transition Ingestion Item
       operationId: transition_ingestion_item_api_v1_designer_ingestion_candidates__candidate_id__items__item_id__transition_post
       parameters:
-        - name: candidate_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Candidate Id
-        - name: item_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Item Id
+      - name: candidate_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Candidate Id
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Item Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TransitionItemRequest"
+              $ref: '#/components/schemas/TransitionItemRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema: {}
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/designer/ingestion/candidates/{candidate_id}/promote:
     post:
       summary: Promote Ingestion Candidate
       operationId: promote_ingestion_candidate_api_v1_designer_ingestion_candidates__candidate_id__promote_post
       parameters:
-        - name: candidate_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Candidate Id
+      - name: candidate_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Candidate Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PromoteRequest"
+              $ref: '#/components/schemas/PromoteRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema: {}
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions/{version_id}/arms/{arm_id}:
     delete:
       summary: Retire Arm Endpoint
       operationId: retire_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__delete
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
-        - name: arm_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Arm Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      - name: arm_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Arm Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoAEntityCreatedResponse"
-        "422":
+                $ref: '#/components/schemas/SoAEntityCreatedResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       summary: Get Arm Endpoint
       operationId: get_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
-        - name: arm_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Arm Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      - name: arm_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Arm Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoAEntityDetail"
-        "422":
+                $ref: '#/components/schemas/SoAEntityDetail'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     put:
       summary: Update Arm Endpoint
       operationId: update_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__put
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
-        - name: arm_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Arm Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      - name: arm_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Arm Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateStudyArmRequest"
+              $ref: '#/components/schemas/UpdateStudyArmRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoAEntityCreatedResponse"
-        "422":
+                $ref: '#/components/schemas/SoAEntityCreatedResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions/{version_id}/epochs/{epoch_id}:
     delete:
       summary: Retire Epoch Endpoint
       operationId: retire_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__delete
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
-        - name: epoch_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Epoch Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      - name: epoch_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Epoch Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoAEntityCreatedResponse"
-        "422":
+                $ref: '#/components/schemas/SoAEntityCreatedResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       summary: Get Epoch Endpoint
       operationId: get_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
-        - name: epoch_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Epoch Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      - name: epoch_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Epoch Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoAEntityDetail"
-        "422":
+                $ref: '#/components/schemas/SoAEntityDetail'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     put:
       summary: Update Epoch Endpoint
       operationId: update_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__put
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
-        - name: epoch_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Epoch Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      - name: epoch_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Epoch Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateEpochRequest"
+              $ref: '#/components/schemas/UpdateEpochRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoAEntityCreatedResponse"
-        "422":
+                $ref: '#/components/schemas/SoAEntityCreatedResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions/{version_id}/visits/{visit_id}:
     delete:
       summary: Retire Visit Endpoint
       operationId: retire_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__delete
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
-        - name: visit_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Visit Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      - name: visit_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Visit Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoAEntityCreatedResponse"
-        "422":
+                $ref: '#/components/schemas/SoAEntityCreatedResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       summary: Get Visit Endpoint
       operationId: get_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
-        - name: visit_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Visit Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      - name: visit_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Visit Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoAEntityDetail"
-        "422":
+                $ref: '#/components/schemas/SoAEntityDetail'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     put:
       summary: Update Visit Endpoint
       operationId: update_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__put
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
-        - name: visit_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Visit Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      - name: visit_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Visit Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/apps__designer__soa_models__UpdateVisitRequest"
+              $ref: '#/components/schemas/protocol_authoring__soa__UpdateVisitRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoAEntityCreatedResponse"
-        "422":
+                $ref: '#/components/schemas/SoAEntityCreatedResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions/{version_id}/procedures/{procedure_id}:
     delete:
       summary: Retire Procedure Endpoint
       operationId: retire_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__delete
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
-        - name: procedure_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Procedure Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      - name: procedure_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Procedure Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoAEntityCreatedResponse"
-        "422":
+                $ref: '#/components/schemas/SoAEntityCreatedResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       summary: Get Procedure Endpoint
       operationId: get_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
-        - name: procedure_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Procedure Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      - name: procedure_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Procedure Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoAEntityDetail"
-        "422":
+                $ref: '#/components/schemas/SoAEntityDetail'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     put:
       summary: Update Procedure Endpoint
       operationId: update_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__put
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
-        - name: procedure_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Procedure Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      - name: procedure_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Procedure Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateProcedureRequest"
+              $ref: '#/components/schemas/UpdateProcedureRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoAEntityCreatedResponse"
-        "422":
+                $ref: '#/components/schemas/SoAEntityCreatedResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions/{version_id}/timing-windows/{timing_id}:
     delete:
       summary: Retire Timing Window Endpoint
       operationId: retire_timing_window_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows__timing_id__delete
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
-        - name: timing_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Timing Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      - name: timing_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Timing Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoAEntityCreatedResponse"
-        "422":
+                $ref: '#/components/schemas/SoAEntityCreatedResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       summary: Get Timing Window Endpoint
       operationId: get_timing_window_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows__timing_id__get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
-        - name: timing_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Timing Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      - name: timing_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Timing Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoAEntityDetail"
-        "422":
+                $ref: '#/components/schemas/SoAEntityDetail'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     put:
       summary: Update Timing Window Endpoint
       operationId: update_timing_window_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows__timing_id__put
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
-        - name: timing_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Timing Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      - name: timing_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Timing Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateTimingWindowRequest"
+              $ref: '#/components/schemas/UpdateTimingWindowRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoAEntityCreatedResponse"
-        "422":
+                $ref: '#/components/schemas/SoAEntityCreatedResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions/{version_id}/links/epoch-visit:
     delete:
       summary: Retire Epoch Visit Endpoint
       operationId: retire_epoch_visit_endpoint_api_v1_studies__study_id__versions__version_id__links_epoch_visit_delete
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LinkEpochVisitRequest"
+              $ref: '#/components/schemas/LinkEpochVisitRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoALinkResponse"
-        "422":
+                $ref: '#/components/schemas/SoALinkResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     post:
       summary: Link Epoch Visit Endpoint
       operationId: link_epoch_visit_endpoint_api_v1_studies__study_id__versions__version_id__links_epoch_visit_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LinkEpochVisitRequest"
+              $ref: '#/components/schemas/LinkEpochVisitRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoALinkResponse"
-        "422":
+                $ref: '#/components/schemas/SoALinkResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions/{version_id}/links/visit-procedure:
     delete:
       summary: Retire Visit Procedure Endpoint
       operationId: retire_visit_procedure_endpoint_api_v1_studies__study_id__versions__version_id__links_visit_procedure_delete
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LinkVisitProcedureRequest"
+              $ref: '#/components/schemas/LinkVisitProcedureRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoALinkResponse"
-        "422":
+                $ref: '#/components/schemas/SoALinkResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     post:
       summary: Link Visit Procedure Endpoint
       operationId: link_visit_procedure_endpoint_api_v1_studies__study_id__versions__version_id__links_visit_procedure_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LinkVisitProcedureRequest"
+              $ref: '#/components/schemas/LinkVisitProcedureRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoALinkResponse"
-        "422":
+                $ref: '#/components/schemas/SoALinkResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions/{version_id}/links/timing:
     delete:
       summary: Retire Timing Endpoint
       operationId: retire_timing_endpoint_api_v1_studies__study_id__versions__version_id__links_timing_delete
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LinkTimingRequest"
+              $ref: '#/components/schemas/LinkTimingRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoALinkResponse"
-        "422":
+                $ref: '#/components/schemas/SoALinkResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     post:
       summary: Link Timing Endpoint
       operationId: link_timing_endpoint_api_v1_studies__study_id__versions__version_id__links_timing_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LinkTimingRequest"
+              $ref: '#/components/schemas/LinkTimingRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoALinkResponse"
-        "422":
+                $ref: '#/components/schemas/SoALinkResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions/{version_id}/links/arm-applicability:
     delete:
       summary: Retire Arm Applicability Endpoint
       operationId: retire_arm_applicability_endpoint_api_v1_studies__study_id__versions__version_id__links_arm_applicability_delete
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LinkArmApplicabilityRequest"
+              $ref: '#/components/schemas/LinkArmApplicabilityRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoALinkResponse"
-        "422":
+                $ref: '#/components/schemas/SoALinkResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     post:
       summary: Link Arm Applicability Endpoint
       operationId: link_arm_applicability_endpoint_api_v1_studies__study_id__versions__version_id__links_arm_applicability_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LinkArmApplicabilityRequest"
+              $ref: '#/components/schemas/LinkArmApplicabilityRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoALinkResponse"
-        "422":
+                $ref: '#/components/schemas/SoALinkResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/export:
     get:
       summary: Export Protocol
-      description:
-        "Assembles a study version's data, maps it to a canonical USDM content model,
+      description: 'Assembles a study version''s data, maps it to a canonical USDM content model,
 
         and renders the resulting clinical protocol document as a structurally valid
 
-        PDF or DOCX document using shared layout templates."
+        PDF or DOCX document using shared layout templates.'
       operationId: export_protocol_api_v1_studies__study_id__export_get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: format
-          in: query
-          required: false
-          schema:
-            type: string
-            default: pdf
-            title: Format
-        - name: output
-          in: query
-          required: false
-          schema:
-            type: string
-            default: combined
-            title: Output
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: format
+        in: query
+        required: false
+        schema:
+          type: string
+          default: pdf
+          title: Format
+      - name: output
+        in: query
+        required: false
+        schema:
+          type: string
+          default: combined
+          title: Output
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema: {}
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions/{version_id}/sign-off:
     post:
       summary: Approve Study Version Endpoint
-      description:
-        "Approve and cryptographically sign a Metadata Designer clinical protocol version, producing
+      description: 'Approve and cryptographically sign a Metadata Designer clinical protocol version, producing
 
         a 21 CFR Part 11 compliant persisted signature manifestation, recording immutable Action history,
 
@@ -3005,29 +3010,29 @@ paths:
 
         Locked statuses (APPROVED, SIGNED) block any subsequent edits via immutability checks across both Neo4j and mock databases.
 
-        Successfully approved protocols are archived as PROTOCOL_SIGNOFF artifacts to the eTMF service asynchronously."
+        Successfully approved protocols are archived as PROTOCOL_SIGNOFF artifacts to the eTMF service asynchronously.'
       operationId: approve_study_version_endpoint_api_v1_studies__study_id__versions__version_id__sign_off_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ApproveProtocolRequest"
+              $ref: '#/components/schemas/ApproveProtocolRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -3035,17 +3040,16 @@ paths:
                 type: object
                 additionalProperties: true
                 title: Response Approve Study Version Endpoint Api V1 Studies  Study Id  Versions  Version Id  Sign Off Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions/{version_id}/approve:
     post:
       summary: Approve Study Version Endpoint
-      description:
-        "Approve and cryptographically sign a Metadata Designer clinical protocol version, producing
+      description: 'Approve and cryptographically sign a Metadata Designer clinical protocol version, producing
 
         a 21 CFR Part 11 compliant persisted signature manifestation, recording immutable Action history,
 
@@ -3053,29 +3057,29 @@ paths:
 
         Locked statuses (APPROVED, SIGNED) block any subsequent edits via immutability checks across both Neo4j and mock databases.
 
-        Successfully approved protocols are archived as PROTOCOL_SIGNOFF artifacts to the eTMF service asynchronously."
+        Successfully approved protocols are archived as PROTOCOL_SIGNOFF artifacts to the eTMF service asynchronously.'
       operationId: approve_study_version_endpoint_api_v1_studies__study_id__versions__version_id__approve_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ApproveProtocolRequest"
+              $ref: '#/components/schemas/ApproveProtocolRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -3083,137 +3087,137 @@ paths:
                 type: object
                 additionalProperties: true
                 title: Response Approve Study Version Endpoint Api V1 Studies  Study Id  Versions  Version Id  Approve Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/eligibility-criteria:
     get:
       summary: List Eligibility Criteria
       description: Retrieves all active eligibility criteria for a specific clinical study.
       operationId: list_eligibility_criteria_api_v1_studies__study_id__eligibility_criteria_get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/EligibilityCriterion"
+                  $ref: '#/components/schemas/EligibilityCriterion'
                 title: Response List Eligibility Criteria Api V1 Studies  Study Id  Eligibility Criteria Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     post:
       summary: Create Eligibility Criterion Endpoint
       description: Creates a new eligibility criterion for a specific clinical study, parsing and validating the DSL.
       operationId: create_eligibility_criterion_endpoint_api_v1_studies__study_id__eligibility_criteria_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateEligibilityCriterionRequest"
+              $ref: '#/components/schemas/CreateEligibilityCriterionRequest'
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EligibilityCriterion"
-        "422":
+                $ref: '#/components/schemas/EligibilityCriterion'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/eligibility-criteria/{criterion_id}:
     get:
       summary: Get Eligibility Criterion Detail
       description: Retrieves details for a specific eligibility criterion by ID.
       operationId: get_eligibility_criterion_detail_api_v1_studies__study_id__eligibility_criteria__criterion_id__get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: criterion_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Criterion Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: criterion_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Criterion Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EligibilityCriterion"
-        "422":
+                $ref: '#/components/schemas/EligibilityCriterion'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     put:
       summary: Update Eligibility Criterion Endpoint
       description: Updates an eligibility criterion for a specific clinical study, parsing and validating the DSL.
       operationId: update_eligibility_criterion_endpoint_api_v1_studies__study_id__eligibility_criteria__criterion_id__put
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: criterion_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Criterion Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: criterion_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Criterion Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateEligibilityCriterionRequest"
+              $ref: '#/components/schemas/UpdateEligibilityCriterionRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EligibilityCriterion"
-        "422":
+                $ref: '#/components/schemas/EligibilityCriterion'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/mappings/upload:
     post:
       summary: Upload Mapping Csv
@@ -3223,51 +3227,50 @@ paths:
         content:
           multipart/form-data:
             schema:
-              $ref: "#/components/schemas/Body_upload_mapping_csv_api_v1_mappings_upload_post"
+              $ref: '#/components/schemas/Body_upload_mapping_csv_api_v1_mappings_upload_post'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema: {}
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/designer/usdm/validate:
     post:
       summary: Validate Usdm Endpoint
-      description:
-        "Validates a USDM JSON or YAML payload, normalizes shape differences, and returns a detailed validation report.
+      description: 'Validates a USDM JSON or YAML payload, normalizes shape differences, and returns a detailed validation report.
 
-        If the payload is invalid, raises a structured HTTP 422 ProblemDetails response."
+        If the payload is invalid, raises a structured HTTP 422 ProblemDetails response.'
       operationId: validate_usdm_endpoint_api_v1_designer_usdm_validate_post
       parameters:
-        - name: override
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            description: Optional explicit version override ('v2' or 'v3')
-            title: Override
+      - name: override
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
           description: Optional explicit version override ('v2' or 'v3')
+          title: Override
+        description: Optional explicit version override ('v2' or 'v3')
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema: {}
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/designer/round-trip:
     post:
       summary: Run Round Trip Endpoint
@@ -3282,68 +3285,68 @@ paths:
               title: Payload
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema: {}
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/mdr/concepts:
     get:
       summary: Get Concepts
       description: Fetches a paginated list of Biomedical Concepts.
       operationId: get_concepts_api_v1_mdr_concepts_get
       parameters:
-        - name: terminology
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - $ref: "#/components/schemas/TerminologyEnum"
-              - type: "null"
-            title: Terminology
-        - name: domain
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            title: Domain
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            maximum: 250
-            default: 50
-            title: Limit
-        - name: starting_after
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            title: Starting After
+      - name: terminology
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/TerminologyEnum'
+          - type: 'null'
+          title: Terminology
+      - name: domain
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Domain
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 250
+          default: 50
+          title: Limit
+      - name: starting_after
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Starting After
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConceptListResponse"
-        "422":
+                $ref: '#/components/schemas/ConceptListResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     post:
       summary: Create Concept
       description: Creates a new Biomedical Concept inside the MDR graph repository.
@@ -3353,76 +3356,76 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateConceptRequest"
+              $ref: '#/components/schemas/CreateConceptRequest'
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConceptDetail"
-        "400":
+                $ref: '#/components/schemas/ConceptDetail'
+        '400':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProblemDetails"
+                $ref: '#/components/schemas/ProblemDetails'
           description: Bad Request
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/mdr/concepts/{id}:
     put:
       summary: Update Concept
       description: Updates an existing concept, creating a new audit history and incrementing version index.
       operationId: update_concept_api_v1_mdr_concepts__id__put
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Id
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateConceptRequest"
+              $ref: '#/components/schemas/UpdateConceptRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConceptDetail"
-        "400":
+                $ref: '#/components/schemas/ConceptDetail'
+        '400':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProblemDetails"
+                $ref: '#/components/schemas/ProblemDetails'
           description: Bad Request
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     delete:
       summary: Delete Concept
       description: Deletes an existing Biomedical Concept if it is not referenced by an Active-Recruiting study.
       operationId: delete_concept_api_v1_mdr_concepts__id__delete
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Id
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -3431,43 +3434,43 @@ paths:
                 additionalProperties:
                   type: string
                 title: Response Delete Concept Api V1 Mdr Concepts  Id  Delete
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/mdr/concepts/{id}/rename:
     post:
       summary: Rename Concept
       description: Renames an existing Biomedical Concept if it is not referenced by an Active-Recruiting study.
       operationId: rename_concept_api_v1_mdr_concepts__id__rename_post
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Id
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RenameConceptRequest"
+              $ref: '#/components/schemas/RenameConceptRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConceptDetail"
-        "422":
+                $ref: '#/components/schemas/ConceptDetail'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/mdr/library:
     post:
       summary: Create Library Object Endpoint
@@ -3479,244 +3482,243 @@ paths:
           application/json:
             schema:
               oneOf:
-                - $ref: "#/components/schemas/CreateFormRequest"
-                - $ref: "#/components/schemas/CreateDataElementRequest"
-                - $ref: "#/components/schemas/CreateArmRequest"
-                - $ref: "#/components/schemas/apps__designer__library__CreateVisitRequest"
+              - $ref: '#/components/schemas/CreateFormRequest'
+              - $ref: '#/components/schemas/CreateDataElementRequest'
+              - $ref: '#/components/schemas/CreateArmRequest'
+              - $ref: '#/components/schemas/apps__designer__library__CreateVisitRequest'
               discriminator:
                 propertyName: object_type
                 mapping:
-                  FORM: "#/components/schemas/CreateFormRequest"
-                  DATA_ELEMENT: "#/components/schemas/CreateDataElementRequest"
-                  ARM: "#/components/schemas/CreateArmRequest"
-                  VISIT: "#/components/schemas/apps__designer__library__CreateVisitRequest"
+                  FORM: '#/components/schemas/CreateFormRequest'
+                  DATA_ELEMENT: '#/components/schemas/CreateDataElementRequest'
+                  ARM: '#/components/schemas/CreateArmRequest'
+                  VISIT: '#/components/schemas/apps__designer__library__CreateVisitRequest'
               title: Payload
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
                 oneOf:
-                  - $ref: "#/components/schemas/FormLibraryObjectDetail"
-                  - $ref: "#/components/schemas/DataElementLibraryObjectDetail"
-                  - $ref: "#/components/schemas/ArmLibraryObjectDetail"
-                  - $ref: "#/components/schemas/VisitLibraryObjectDetail"
+                - $ref: '#/components/schemas/FormLibraryObjectDetail'
+                - $ref: '#/components/schemas/DataElementLibraryObjectDetail'
+                - $ref: '#/components/schemas/ArmLibraryObjectDetail'
+                - $ref: '#/components/schemas/VisitLibraryObjectDetail'
                 discriminator:
                   propertyName: object_type
                   mapping:
-                    FORM: "#/components/schemas/FormLibraryObjectDetail"
-                    DATA_ELEMENT: "#/components/schemas/DataElementLibraryObjectDetail"
-                    ARM: "#/components/schemas/ArmLibraryObjectDetail"
-                    VISIT: "#/components/schemas/VisitLibraryObjectDetail"
+                    FORM: '#/components/schemas/FormLibraryObjectDetail'
+                    DATA_ELEMENT: '#/components/schemas/DataElementLibraryObjectDetail'
+                    ARM: '#/components/schemas/ArmLibraryObjectDetail'
+                    VISIT: '#/components/schemas/VisitLibraryObjectDetail'
                 title: Response Create Library Object Endpoint Api V1 Mdr Library Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       summary: List Library Objects Endpoint
-      description:
-        "Lists latest global library objects under the authenticated sponsor.
+      description: 'Lists latest global library objects under the authenticated sponsor.
 
-        Supports Stripe-style cursor-based pagination."
+        Supports Stripe-style cursor-based pagination.'
       operationId: list_library_objects_endpoint_api_v1_mdr_library_get
       parameters:
-        - name: object_type
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - $ref: "#/components/schemas/ObjectType"
-              - type: "null"
-            title: Object Type
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            maximum: 250
-            default: 50
-            title: Limit
-        - name: starting_after
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            title: Starting After
+      - name: object_type
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/ObjectType'
+          - type: 'null'
+          title: Object Type
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 250
+          default: 50
+          title: Limit
+      - name: starting_after
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Starting After
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LibraryObjectListResponse"
-        "422":
+                $ref: '#/components/schemas/LibraryObjectListResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/mdr/library/{id}:
     get:
       summary: Get Library Object Endpoint
       description: Retrieves the latest version or a specific version of a global library object.
       operationId: get_library_object_endpoint_api_v1_mdr_library__id__get
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Id
-        - name: version
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: integer
-              - type: "null"
-            title: Version
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      - name: version
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Version
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 oneOf:
-                  - $ref: "#/components/schemas/FormLibraryObjectDetail"
-                  - $ref: "#/components/schemas/DataElementLibraryObjectDetail"
-                  - $ref: "#/components/schemas/ArmLibraryObjectDetail"
-                  - $ref: "#/components/schemas/VisitLibraryObjectDetail"
+                - $ref: '#/components/schemas/FormLibraryObjectDetail'
+                - $ref: '#/components/schemas/DataElementLibraryObjectDetail'
+                - $ref: '#/components/schemas/ArmLibraryObjectDetail'
+                - $ref: '#/components/schemas/VisitLibraryObjectDetail'
                 discriminator:
                   propertyName: object_type
                   mapping:
-                    FORM: "#/components/schemas/FormLibraryObjectDetail"
-                    DATA_ELEMENT: "#/components/schemas/DataElementLibraryObjectDetail"
-                    ARM: "#/components/schemas/ArmLibraryObjectDetail"
-                    VISIT: "#/components/schemas/VisitLibraryObjectDetail"
+                    FORM: '#/components/schemas/FormLibraryObjectDetail'
+                    DATA_ELEMENT: '#/components/schemas/DataElementLibraryObjectDetail'
+                    ARM: '#/components/schemas/ArmLibraryObjectDetail'
+                    VISIT: '#/components/schemas/VisitLibraryObjectDetail'
                 title: Response Get Library Object Endpoint Api V1 Mdr Library  Id  Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     put:
       summary: Update Library Object Endpoint
       description: Updates a global library object by creating a new version.
       operationId: update_library_object_endpoint_api_v1_mdr_library__id__put
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Id
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
               oneOf:
-                - $ref: "#/components/schemas/UpdateFormRequest"
-                - $ref: "#/components/schemas/UpdateDataElementRequest"
-                - $ref: "#/components/schemas/UpdateArmRequest"
-                - $ref: "#/components/schemas/apps__designer__library__UpdateVisitRequest"
+              - $ref: '#/components/schemas/UpdateFormRequest'
+              - $ref: '#/components/schemas/UpdateDataElementRequest'
+              - $ref: '#/components/schemas/UpdateArmRequest'
+              - $ref: '#/components/schemas/apps__designer__library__UpdateVisitRequest'
               discriminator:
                 propertyName: object_type
                 mapping:
-                  FORM: "#/components/schemas/UpdateFormRequest"
-                  DATA_ELEMENT: "#/components/schemas/UpdateDataElementRequest"
-                  ARM: "#/components/schemas/UpdateArmRequest"
-                  VISIT: "#/components/schemas/apps__designer__library__UpdateVisitRequest"
+                  FORM: '#/components/schemas/UpdateFormRequest'
+                  DATA_ELEMENT: '#/components/schemas/UpdateDataElementRequest'
+                  ARM: '#/components/schemas/UpdateArmRequest'
+                  VISIT: '#/components/schemas/apps__designer__library__UpdateVisitRequest'
               title: Payload
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 oneOf:
-                  - $ref: "#/components/schemas/FormLibraryObjectDetail"
-                  - $ref: "#/components/schemas/DataElementLibraryObjectDetail"
-                  - $ref: "#/components/schemas/ArmLibraryObjectDetail"
-                  - $ref: "#/components/schemas/VisitLibraryObjectDetail"
+                - $ref: '#/components/schemas/FormLibraryObjectDetail'
+                - $ref: '#/components/schemas/DataElementLibraryObjectDetail'
+                - $ref: '#/components/schemas/ArmLibraryObjectDetail'
+                - $ref: '#/components/schemas/VisitLibraryObjectDetail'
                 discriminator:
                   propertyName: object_type
                   mapping:
-                    FORM: "#/components/schemas/FormLibraryObjectDetail"
-                    DATA_ELEMENT: "#/components/schemas/DataElementLibraryObjectDetail"
-                    ARM: "#/components/schemas/ArmLibraryObjectDetail"
-                    VISIT: "#/components/schemas/VisitLibraryObjectDetail"
+                    FORM: '#/components/schemas/FormLibraryObjectDetail'
+                    DATA_ELEMENT: '#/components/schemas/DataElementLibraryObjectDetail'
+                    ARM: '#/components/schemas/ArmLibraryObjectDetail'
+                    VISIT: '#/components/schemas/VisitLibraryObjectDetail'
                 title: Response Update Library Object Endpoint Api V1 Mdr Library  Id  Put
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/mdr/library/{id}/amend:
     post:
       summary: Amend Library Object Endpoint
       description: Initiates an amendment on a library object that is in use by creating a successor draft version.
       operationId: amend_library_object_endpoint_api_v1_mdr_library__id__amend_post
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Id
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LibraryObjectAmendRequest"
+              $ref: '#/components/schemas/LibraryObjectAmendRequest'
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
                 oneOf:
-                  - $ref: "#/components/schemas/FormLibraryObjectDetail"
-                  - $ref: "#/components/schemas/DataElementLibraryObjectDetail"
-                  - $ref: "#/components/schemas/ArmLibraryObjectDetail"
-                  - $ref: "#/components/schemas/VisitLibraryObjectDetail"
+                - $ref: '#/components/schemas/FormLibraryObjectDetail'
+                - $ref: '#/components/schemas/DataElementLibraryObjectDetail'
+                - $ref: '#/components/schemas/ArmLibraryObjectDetail'
+                - $ref: '#/components/schemas/VisitLibraryObjectDetail'
                 discriminator:
                   propertyName: object_type
                   mapping:
-                    FORM: "#/components/schemas/FormLibraryObjectDetail"
-                    DATA_ELEMENT: "#/components/schemas/DataElementLibraryObjectDetail"
-                    ARM: "#/components/schemas/ArmLibraryObjectDetail"
-                    VISIT: "#/components/schemas/VisitLibraryObjectDetail"
+                    FORM: '#/components/schemas/FormLibraryObjectDetail'
+                    DATA_ELEMENT: '#/components/schemas/DataElementLibraryObjectDetail'
+                    ARM: '#/components/schemas/ArmLibraryObjectDetail'
+                    VISIT: '#/components/schemas/VisitLibraryObjectDetail'
                 title: Response Amend Library Object Endpoint Api V1 Mdr Library  Id  Amend Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/mdr/library/{id}/history:
     get:
       summary: Get Library Object History Endpoint
       description: Retrieves the complete version history of a global library object.
       operationId: get_library_object_history_endpoint_api_v1_mdr_library__id__history_get
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Id
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -3724,91 +3726,91 @@ paths:
                 type: array
                 items:
                   oneOf:
-                    - $ref: "#/components/schemas/FormLibraryObjectDetail"
-                    - $ref: "#/components/schemas/DataElementLibraryObjectDetail"
-                    - $ref: "#/components/schemas/ArmLibraryObjectDetail"
-                    - $ref: "#/components/schemas/VisitLibraryObjectDetail"
+                  - $ref: '#/components/schemas/FormLibraryObjectDetail'
+                  - $ref: '#/components/schemas/DataElementLibraryObjectDetail'
+                  - $ref: '#/components/schemas/ArmLibraryObjectDetail'
+                  - $ref: '#/components/schemas/VisitLibraryObjectDetail'
                   discriminator:
                     propertyName: object_type
                     mapping:
-                      FORM: "#/components/schemas/FormLibraryObjectDetail"
-                      DATA_ELEMENT: "#/components/schemas/DataElementLibraryObjectDetail"
-                      ARM: "#/components/schemas/ArmLibraryObjectDetail"
-                      VISIT: "#/components/schemas/VisitLibraryObjectDetail"
+                      FORM: '#/components/schemas/FormLibraryObjectDetail'
+                      DATA_ELEMENT: '#/components/schemas/DataElementLibraryObjectDetail'
+                      ARM: '#/components/schemas/ArmLibraryObjectDetail'
+                      VISIT: '#/components/schemas/VisitLibraryObjectDetail'
                 title: Response Get Library Object History Endpoint Api V1 Mdr Library  Id  History Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/mdr/library/{id}/transition:
     post:
       summary: Transition Library Object Endpoint
-      description: "Transitions the lifecycle status of a global library object.
+      description: 'Transitions the lifecycle status of a global library object.
 
-        Enforces a strict role-gated ALLOWED_LIBRARY_TRANSITIONS map."
+        Enforces a strict role-gated ALLOWED_LIBRARY_TRANSITIONS map.'
       operationId: transition_library_object_endpoint_api_v1_mdr_library__id__transition_post
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Id
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LibraryObjectTransitionRequest"
+              $ref: '#/components/schemas/LibraryObjectTransitionRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 oneOf:
-                  - $ref: "#/components/schemas/FormLibraryObjectDetail"
-                  - $ref: "#/components/schemas/DataElementLibraryObjectDetail"
-                  - $ref: "#/components/schemas/ArmLibraryObjectDetail"
-                  - $ref: "#/components/schemas/VisitLibraryObjectDetail"
+                - $ref: '#/components/schemas/FormLibraryObjectDetail'
+                - $ref: '#/components/schemas/DataElementLibraryObjectDetail'
+                - $ref: '#/components/schemas/ArmLibraryObjectDetail'
+                - $ref: '#/components/schemas/VisitLibraryObjectDetail'
                 discriminator:
                   propertyName: object_type
                   mapping:
-                    FORM: "#/components/schemas/FormLibraryObjectDetail"
-                    DATA_ELEMENT: "#/components/schemas/DataElementLibraryObjectDetail"
-                    ARM: "#/components/schemas/ArmLibraryObjectDetail"
-                    VISIT: "#/components/schemas/VisitLibraryObjectDetail"
+                    FORM: '#/components/schemas/FormLibraryObjectDetail'
+                    DATA_ELEMENT: '#/components/schemas/DataElementLibraryObjectDetail'
+                    ARM: '#/components/schemas/ArmLibraryObjectDetail'
+                    VISIT: '#/components/schemas/VisitLibraryObjectDetail'
                 title: Response Transition Library Object Endpoint Api V1 Mdr Library  Id  Transition Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions:
     post:
       summary: Post Study Version
-      description: "Establishes a new StudyVersion node under a clinical study.
+      description: 'Establishes a new StudyVersion node under a clinical study.
 
-        Enforces that concurrent creation with duplicate index or tag fails with 409 Conflict."
+        Enforces that concurrent creation with duplicate index or tag fails with 409 Conflict.'
       operationId: post_study_version_api_v1_studies__study_id__versions_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateStudyVersionRequest"
+              $ref: '#/components/schemas/CreateStudyVersionRequest'
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
@@ -3816,26 +3818,26 @@ paths:
                 type: object
                 additionalProperties: true
                 title: Response Post Study Version Api V1 Studies  Study Id  Versions Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/rules:
     get:
       summary: Get Study Rules
       description: Retrieves all non-soft-deleted active rules for a specific clinical study.
       operationId: get_study_rules_api_v1_studies__study_id__rules_get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -3845,31 +3847,31 @@ paths:
                   type: object
                   additionalProperties: true
                 title: Response Get Study Rules Api V1 Studies  Study Id  Rules Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     post:
       summary: Create Study Rule
       description: Creates a new rule for a clinical study, enforcing auth and X-Change-Reason.
       operationId: create_study_rule_api_v1_studies__study_id__rules_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateRuleRequest"
+              $ref: '#/components/schemas/CreateRuleRequest'
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
@@ -3877,32 +3879,32 @@ paths:
                 type: object
                 additionalProperties: true
                 title: Response Create Study Rule Api V1 Studies  Study Id  Rules Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/rules/{rule_id}:
     get:
       summary: Get Study Rule By Id
       description: Retrieves a specific rule by ID.
       operationId: get_study_rule_by_id_api_v1_studies__study_id__rules__rule_id__get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: rule_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Rule Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: rule_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Rule Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -3910,37 +3912,37 @@ paths:
                 type: object
                 additionalProperties: true
                 title: Response Get Study Rule By Id Api V1 Studies  Study Id  Rules  Rule Id  Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     put:
       summary: Update Study Rule By Id
       description: Updates a rule's parameters, incrementing version index.
       operationId: update_study_rule_by_id_api_v1_studies__study_id__rules__rule_id__put
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: rule_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Rule Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: rule_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Rule Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateRuleRequest"
+              $ref: '#/components/schemas/CreateRuleRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -3948,31 +3950,31 @@ paths:
                 type: object
                 additionalProperties: true
                 title: Response Update Study Rule By Id Api V1 Studies  Study Id  Rules  Rule Id  Put
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     delete:
       summary: Delete Study Rule By Id
       description: Soft-deletes a rule, retaining its historical properties in audit.
       operationId: delete_study_rule_by_id_api_v1_studies__study_id__rules__rule_id__delete
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: rule_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Rule Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: rule_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Rule Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -3981,101 +3983,100 @@ paths:
                 additionalProperties:
                   type: string
                 title: Response Delete Study Rule By Id Api V1 Studies  Study Id  Rules  Rule Id  Delete
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/rules/preview:
     post:
       summary: Compile Preview Rule
-      description: "Read-only compile and validation preview route.
+      description: 'Read-only compile and validation preview route.
 
-        Detects unknown field references and circular skip-logic dependencies."
+        Detects unknown field references and circular skip-logic dependencies.'
       operationId: compile_preview_rule_api_v1_studies__study_id__rules_preview_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateRuleRequest"
+              $ref: '#/components/schemas/CreateRuleRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RulePreviewResponse"
-        "422":
+                $ref: '#/components/schemas/RulePreviewResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/rules/validate:
     post:
       summary: Compile Validate Rule
-      description: "Read-only compile and validation preview route.
+      description: 'Read-only compile and validation preview route.
 
-        Detects unknown field references and circular skip-logic dependencies."
+        Detects unknown field references and circular skip-logic dependencies.'
       operationId: compile_validate_rule_api_v1_studies__study_id__rules_validate_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateRuleRequest"
+              $ref: '#/components/schemas/CreateRuleRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RulePreviewResponse"
-        "422":
+                $ref: '#/components/schemas/RulePreviewResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/designer/protocols/{id}/amend:
     post:
       summary: Amend Protocol
-      description:
-        "Exposes POST /api/designer/protocols/{id}/amend with 201, new_version, status, and parent_version.
+      description: 'Exposes POST /api/designer/protocols/{id}/amend with 201, new_version, status, and parent_version.
 
-        Creates a transaction-safe DRAFT successor with incremented version index."
+        Creates a transaction-safe DRAFT successor with incremented version index.'
       operationId: amend_protocol_api_designer_protocols__id__amend_post
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Id
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ProtocolAmendRequest"
+              $ref: '#/components/schemas/ProtocolAmendRequest'
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
@@ -4083,932 +4084,1191 @@ paths:
                 type: object
                 additionalProperties: true
                 title: Response Amend Protocol Api Designer Protocols  Id  Amend Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions/{version_id}/blocks:
     post:
       summary: Create Block Endpoint
       operationId: create_block_endpoint_api_v1_studies__study_id__versions__version_id__blocks_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateBlockRequest"
+              $ref: '#/components/schemas/CreateBlockRequest'
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/BlockCreatedResponse"
-        "422":
+                $ref: '#/components/schemas/BlockCreatedResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       summary: List Blocks Endpoint
       operationId: list_blocks_endpoint_api_v1_studies__study_id__versions__version_id__blocks_get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/BlockDetailResponse"
+                  $ref: '#/components/schemas/BlockDetailResponse'
                 title: Response List Blocks Endpoint Api V1 Studies  Study Id  Versions  Version Id  Blocks Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions/{version_id}/blocks/{block_id}:
     put:
       summary: Update Block Endpoint
       operationId: update_block_endpoint_api_v1_studies__study_id__versions__version_id__blocks__block_id__put
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
-        - name: block_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Block Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      - name: block_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Block Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateBlockRequest"
+              $ref: '#/components/schemas/UpdateBlockRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/BlockCreatedResponse"
-        "422":
+                $ref: '#/components/schemas/BlockCreatedResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     delete:
       summary: Delete Block Endpoint
       operationId: delete_block_endpoint_api_v1_studies__study_id__versions__version_id__blocks__block_id__delete
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
-        - name: block_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Block Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      - name: block_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Block Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/BlockCreatedResponse"
-        "422":
+                $ref: '#/components/schemas/BlockCreatedResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       summary: Get Block Endpoint
       operationId: get_block_endpoint_api_v1_studies__study_id__versions__version_id__blocks__block_id__get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
-        - name: block_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Block Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      - name: block_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Block Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/BlockDetailResponse"
-        "422":
+                $ref: '#/components/schemas/BlockDetailResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions/{version_id}/blocks/reorder:
     post:
       summary: Reorder Blocks Endpoint
       operationId: reorder_blocks_endpoint_api_v1_studies__study_id__versions__version_id__blocks_reorder_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ReorderBlocksRequest"
+              $ref: '#/components/schemas/ReorderBlocksRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoALinkResponse"
-        "422":
+                $ref: '#/components/schemas/SoALinkResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions/{version_id}/arms:
     post:
       summary: Create Arm Endpoint
       operationId: create_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateStudyArmRequest"
+              $ref: '#/components/schemas/CreateStudyArmRequest'
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoAEntityCreatedResponse"
-        "422":
+                $ref: '#/components/schemas/SoAEntityCreatedResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       summary: List Arms Endpoint
       operationId: list_arms_endpoint_api_v1_studies__study_id__versions__version_id__arms_get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/SoAEntityDetail"
+                  $ref: '#/components/schemas/SoAEntityDetail'
                 title: Response List Arms Endpoint Api V1 Studies  Study Id  Versions  Version Id  Arms Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions/{version_id}/epochs:
     post:
       summary: Create Epoch Endpoint
       operationId: create_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateEpochRequest"
+              $ref: '#/components/schemas/CreateEpochRequest'
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoAEntityCreatedResponse"
-        "422":
+                $ref: '#/components/schemas/SoAEntityCreatedResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       summary: List Epochs Endpoint
       operationId: list_epochs_endpoint_api_v1_studies__study_id__versions__version_id__epochs_get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/SoAEntityDetail"
+                  $ref: '#/components/schemas/SoAEntityDetail'
                 title: Response List Epochs Endpoint Api V1 Studies  Study Id  Versions  Version Id  Epochs Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions/{version_id}/visits:
     post:
       summary: Create Visit Endpoint
       operationId: create_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/apps__designer__soa_models__CreateVisitRequest"
+              $ref: '#/components/schemas/protocol_authoring__soa__CreateVisitRequest'
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoAEntityCreatedResponse"
-        "422":
+                $ref: '#/components/schemas/SoAEntityCreatedResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       summary: List Visits Endpoint
       operationId: list_visits_endpoint_api_v1_studies__study_id__versions__version_id__visits_get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/SoAEntityDetail"
+                  $ref: '#/components/schemas/SoAEntityDetail'
                 title: Response List Visits Endpoint Api V1 Studies  Study Id  Versions  Version Id  Visits Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions/{version_id}/procedures:
     post:
       summary: Create Procedure Endpoint
       operationId: create_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateProcedureRequest"
+              $ref: '#/components/schemas/CreateProcedureRequest'
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoAEntityCreatedResponse"
-        "422":
+                $ref: '#/components/schemas/SoAEntityCreatedResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       summary: List Procedures Endpoint
       operationId: list_procedures_endpoint_api_v1_studies__study_id__versions__version_id__procedures_get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/SoAEntityDetail"
+                  $ref: '#/components/schemas/SoAEntityDetail'
                 title: Response List Procedures Endpoint Api V1 Studies  Study Id  Versions  Version Id  Procedures Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions/{version_id}/timing-windows:
     post:
       summary: Create Timing Window Endpoint
       operationId: create_timing_window_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateTimingWindowRequest"
+              $ref: '#/components/schemas/CreateTimingWindowRequest'
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoAEntityCreatedResponse"
-        "422":
+                $ref: '#/components/schemas/SoAEntityCreatedResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       summary: List Timing Windows Endpoint
       operationId: list_timing_windows_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows_get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/SoAEntityDetail"
+                  $ref: '#/components/schemas/SoAEntityDetail'
                 title: Response List Timing Windows Endpoint Api V1 Studies  Study Id  Versions  Version Id  Timing Windows Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions/{version_id}/soa-projection:
     get:
       summary: Get Soa Projection Endpoint
       operationId: get_soa_projection_endpoint_api_v1_studies__study_id__versions__version_id__soa_projection_get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoAMatrixView"
-        "422":
+                $ref: '#/components/schemas/SoAMatrixView'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/studies/{study_id}/versions/{version_id}/arms/reorder:
+    post:
+      summary: Reorder Arms Endpoint
+      operationId: reorder_arms_endpoint_api_v1_studies__study_id__versions__version_id__arms_reorder_post
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArmReorderRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Reorder Arms Endpoint Api V1 Studies  Study Id  Versions  Version Id  Arms Reorder Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/studies/{study_id}/versions/{version_id}/epochs/reorder:
+    post:
+      summary: Reorder Epochs Endpoint
+      operationId: reorder_epochs_endpoint_api_v1_studies__study_id__versions__version_id__epochs_reorder_post
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EpochReorderRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Reorder Epochs Endpoint Api V1 Studies  Study Id  Versions  Version Id  Epochs Reorder Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/studies/{study_id}/versions/{version_id}/visits/reorder:
+    post:
+      summary: Reorder Visits Endpoint
+      operationId: reorder_visits_endpoint_api_v1_studies__study_id__versions__version_id__visits_reorder_post
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisitReorderRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Reorder Visits Endpoint Api V1 Studies  Study Id  Versions  Version Id  Visits Reorder Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/studies/{study_id}/versions/{version_id}/procedures/reorder:
+    post:
+      summary: Reorder Procedures Endpoint
+      operationId: reorder_procedures_endpoint_api_v1_studies__study_id__versions__version_id__procedures_reorder_post
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcedureReorderRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Reorder Procedures Endpoint Api V1 Studies  Study Id  Versions  Version Id  Procedures Reorder Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/studies/{study_id}/versions/{version_id}/assignments/activities:
+    post:
+      summary: Assign Activities To Visit Endpoint
+      operationId: assign_activities_to_visit_endpoint_api_v1_studies__study_id__versions__version_id__assignments_activities_post
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityAssignmentRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Assign Activities To Visit Endpoint Api V1 Studies  Study Id  Versions  Version Id  Assignments Activities Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/studies/{study_id}/versions/{version_id}/assignments/arms:
+    post:
+      summary: Assign Visits To Arm Endpoint
+      operationId: assign_visits_to_arm_endpoint_api_v1_studies__study_id__versions__version_id__assignments_arms_post
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisitToArmAssignmentRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Assign Visits To Arm Endpoint Api V1 Studies  Study Id  Versions  Version Id  Assignments Arms Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/studies/{study_id}/versions/{version_id}/assignments/epochs:
+    post:
+      summary: Assign Visits To Epoch Endpoint
+      operationId: assign_visits_to_epoch_endpoint_api_v1_studies__study_id__versions__version_id__assignments_epochs_post
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisitToEpochAssignmentRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Assign Visits To Epoch Endpoint Api V1 Studies  Study Id  Versions  Version Id  Assignments Epochs Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/versions/diff:
     get:
       summary: Get Versions Diff Endpoint
-      description: "Exposes graph-native, form-level version-diff API.
+      description: 'Exposes graph-native, form-level version-diff API.
 
         Identifies additions, modifications, and deletions of forms.
 
-        Returns HTTP 400 Bad Request if either version is nonexistent or unrelated."
+        Returns HTTP 400 Bad Request if either version is nonexistent or unrelated.'
       operationId: get_versions_diff_endpoint_api_v1_studies__study_id__versions_diff_get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version_id1
-          in: query
-          required: true
-          schema:
-            type: string
-            description: The old version ID
-            title: Version Id1
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version_id1
+        in: query
+        required: true
+        schema:
+          type: string
           description: The old version ID
-        - name: version_id2
-          in: query
-          required: true
-          schema:
-            type: string
-            description: The new version ID
-            title: Version Id2
+          title: Version Id1
+        description: The old version ID
+      - name: version_id2
+        in: query
+        required: true
+        schema:
+          type: string
           description: The new version ID
+          title: Version Id2
+        description: The new version ID
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/VersionDiffResponse"
-        "422":
+                $ref: '#/components/schemas/VersionDiffResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/library-instances:
     post:
       summary: Instantiate Library Object Endpoint
-      description:
-        "Instantiates a specific version (or latest) of a Global Library object into a study-scoped instance.
+      description: 'Instantiates a specific version (or latest) of a Global Library object into a study-scoped instance.
 
-        Enforces that the library object and study both belong to/are accessible by the authenticated sponsor."
+        Enforces that the library object and study both belong to/are accessible by the authenticated sponsor.'
       operationId: instantiate_library_object_endpoint_api_v1_studies__study_id__library_instances_post
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/InstantiateLibraryObjectRequest"
+              $ref: '#/components/schemas/InstantiateLibraryObjectRequest'
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LibraryInstanceResponse"
-        "422":
+                $ref: '#/components/schemas/LibraryInstanceResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/library-instances/{instance_id}:
     put:
       summary: Update Library Instance Endpoint
-      description:
-        "Updates the payload of an instantiated library object inside a study.
+      description: 'Updates the payload of an instantiated library object inside a study.
 
         Verifies that target study belongs to or is accessible by the authenticated sponsor,
 
-        leaving the global library source immutable."
+        leaving the global library source immutable.'
       operationId: update_library_instance_endpoint_api_v1_studies__study_id__library_instances__instance_id__put
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: instance_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Instance Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: instance_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Instance Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateLibraryInstanceRequest"
+              $ref: '#/components/schemas/UpdateLibraryInstanceRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LibraryInstanceResponse"
-        "422":
+                $ref: '#/components/schemas/LibraryInstanceResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/studies/{study_id}/library-instances/{instance_id}/diff:
     get:
       summary: Get Library Instance Diff Endpoint
       description: Returns field-level dot-notated differences between the library instance payload and its linked source version.
       operationId: get_library_instance_diff_endpoint_api_v1_studies__study_id__library_instances__instance_id__diff_get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: instance_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Instance Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: instance_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Instance Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/DifferenceResult"
+                  $ref: '#/components/schemas/DifferenceResult'
                 title: Response Get Library Instance Diff Endpoint Api V1 Studies  Study Id  Library Instances  Instance Id  Diff Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/locks/lock:
     post:
       tags:
-        - DataLock
+      - DataLock
       summary: Lock Data Endpoint
-      description:
-        "Execute form, item-group, or field-level data lock or freeze operation.
+      description: 'Execute form, item-group, or field-level data lock or freeze operation.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: lock_data_endpoint_api_v1_execution_locks_lock_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DataLockRequest"
+              $ref: '#/components/schemas/DataLockRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DataLockResponse"
-        "422":
+                $ref: '#/components/schemas/DataLockResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/locks/unlock:
     post:
       tags:
-        - DataLock
+      - DataLock
       summary: Unlock Data Endpoint
-      description: "Execute GxP data unlock override operation.
+      description: 'Execute GxP data unlock override operation.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: unlock_data_endpoint_api_v1_execution_locks_unlock_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DataLockRequest"
+              $ref: '#/components/schemas/DataLockRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DataLockResponse"
-        "422":
+                $ref: '#/components/schemas/DataLockResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/locks/status/{form_id}:
     get:
       tags:
-        - DataLock
+      - DataLock
       summary: Get Form Lock Status Endpoint
-      description:
-        "Retrieve active data locks for specified eCRF form submission.
+      description: 'Retrieve active data locks for specified eCRF form submission.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: get_form_lock_status_endpoint_api_v1_execution_locks_status__form_id__get
       parameters:
-        - name: form_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Form Id
+      - name: form_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Form Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/DataLockRecord"
+                  $ref: '#/components/schemas/DataLockRecord'
                 title: Response Get Form Lock Status Endpoint Api V1 Execution Locks Status  Form Id  Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/signatures/batch-sign-off:
     post:
       tags:
-        - Signatures
+      - Signatures
       summary: Batch Signature Sign Off Endpoint
-      description:
-        "Execute 21 CFR Part 11 batch electronic signature casebook sign-off.
+      description: 'Execute 21 CFR Part 11 batch electronic signature casebook sign-off.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: batch_signature_sign_off_endpoint_api_v1_execution_signatures_batch_sign_off_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/BatchSignatureRequest"
+              $ref: '#/components/schemas/BatchSignatureRequest'
         required: true
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/BatchSignatureResponse"
-        "422":
+                $ref: '#/components/schemas/BatchSignatureResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/amendments/publish:
     post:
       tags:
-        - Amendments
+      - Amendments
       summary: Publish Amendment Endpoint
-      description:
-        "Publish protocol amendment version and compute structural summary of changes.
+      description: 'Publish protocol amendment version and compute structural summary of changes.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: publish_amendment_endpoint_api_v1_execution_amendments_publish_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PublishAmendmentRequest"
+              $ref: '#/components/schemas/PublishAmendmentRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PublishAmendmentResponse"
-        "422":
+                $ref: '#/components/schemas/PublishAmendmentResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/amendments/summary/{study_id}/{version}:
     get:
       tags:
-        - Amendments
+      - Amendments
       summary: Get Amendment Summary Endpoint
-      description:
-        "Export Summary of Changes report for specified study version.
+      description: 'Export Summary of Changes report for specified study version.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: get_amendment_summary_endpoint_api_v1_execution_amendments_summary__study_id___version__get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: version
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Version
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: version
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -5016,31 +5276,30 @@ paths:
                 type: object
                 additionalProperties: true
                 title: Response Get Amendment Summary Endpoint Api V1 Execution Amendments Summary  Study Id   Version  Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/auditor/token/generate:
     post:
       tags:
-        - Auditor
+      - Auditor
       summary: Generate Auditor Token Endpoint
-      description:
-        "Generate temporary time-bounded access token for regulatory auditors.
+      description: 'Generate temporary time-bounded access token for regulatory auditors.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: generate_auditor_token_endpoint_api_v1_execution_auditor_token_generate_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/GenerateAuditorTokenRequest"
+              $ref: '#/components/schemas/GenerateAuditorTokenRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -5048,41 +5307,40 @@ paths:
                 additionalProperties: true
                 type: object
                 title: Response Generate Auditor Token Endpoint Api V1 Execution Auditor Token Generate Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/auditor/inspect/audit-trail/{study_id}:
     get:
       tags:
-        - Auditor
+      - Auditor
       summary: Inspect Study Audit Trail Endpoint
-      description:
-        "Expose read-only 21 CFR Part 11 audit trail inspection endpoint for study.
+      description: 'Expose read-only 21 CFR Part 11 audit trail inspection endpoint for study.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: inspect_study_audit_trail_endpoint_api_v1_execution_auditor_inspect_audit_trail__study_id__get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: limit
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: integer
-              - type: "null"
-            default: 100
-            title: Limit
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: limit
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          default: 100
+          title: Limit
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -5090,60 +5348,59 @@ paths:
                 type: object
                 additionalProperties: true
                 title: Response Inspect Study Audit Trail Endpoint Api V1 Execution Auditor Inspect Audit Trail  Study Id  Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/safety/dispatch:
     post:
       tags:
-        - Safety
+      - Safety
       summary: Dispatch Safety Report Endpoint
-      description:
-        "Dispatch ICH E2B(R3) safety report to external pharmacovigilance gateway.
+      description: 'Dispatch ICH E2B(R3) safety report to external pharmacovigilance gateway.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: dispatch_safety_report_endpoint_api_v1_execution_safety_dispatch_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SafetyDispatchRequest"
+              $ref: '#/components/schemas/SafetyDispatchRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SafetyDispatchResponse"
-        "422":
+                $ref: '#/components/schemas/SafetyDispatchResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/safety/reconcile:
     post:
       tags:
-        - Safety
+      - Safety
       summary: Reconcile Sae Cases Endpoint
-      description: "Execute automated EDC AE to Safety ICSR case reconciliation.
+      description: 'Execute automated EDC AE to Safety ICSR case reconciliation.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: reconcile_sae_cases_endpoint_api_v1_execution_safety_reconcile_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SAEReconcileRequest"
+              $ref: '#/components/schemas/SAEReconcileRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -5151,101 +5408,98 @@ paths:
                 additionalProperties: true
                 type: object
                 title: Response Reconcile Sae Cases Endpoint Api V1 Execution Safety Reconcile Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/eisf/upload:
     post:
       tags:
-        - eISF
+      - eISF
       summary: Upload Eisf Document Endpoint
-      description:
-        "Upload eISF regulatory binder document and calculate SHA-256 integrity checksum.
+      description: 'Upload eISF regulatory binder document and calculate SHA-256 integrity checksum.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: upload_eisf_document_endpoint_api_v1_execution_eisf_upload_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UploadEISFDocumentRequest"
+              $ref: '#/components/schemas/UploadEISFDocumentRequest'
         required: true
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EISFDocumentRecord"
-        "422":
+                $ref: '#/components/schemas/EISFDocumentRecord'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/eisf/binder/{study_id}/{site_id}:
     get:
       tags:
-        - eISF
+      - eISF
       summary: Get Site Regulatory Binder Endpoint
-      description:
-        "Retrieve site-isolated regulatory binder documents for specified study and site.
+      description: 'Retrieve site-isolated regulatory binder documents for specified study and site.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: get_site_regulatory_binder_endpoint_api_v1_execution_eisf_binder__study_id___site_id__get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: site_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Site Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: site_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Site Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/EISFDocumentRecord"
+                  $ref: '#/components/schemas/EISFDocumentRecord'
                 title: Response Get Site Regulatory Binder Endpoint Api V1 Execution Eisf Binder  Study Id   Site Id  Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/anonymization/scan-phi:
     post:
       tags:
-        - Anonymization
+      - Anonymization
       summary: Scan Phi Endpoint
-      description:
-        "Scan text payload for Protected Health Information (PHI) identifiers.
+      description: 'Scan text payload for Protected Health Information (PHI) identifiers.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: scan_phi_endpoint_api_v1_execution_anonymization_scan_phi_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PHIScanRequest"
+              $ref: '#/components/schemas/PHIScanRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -5253,31 +5507,30 @@ paths:
                 additionalProperties: true
                 type: object
                 title: Response Scan Phi Endpoint Api V1 Execution Anonymization Scan Phi Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/anonymization/redact-pdf:
     post:
       tags:
-        - Anonymization
+      - Anonymization
       summary: Redact Pdf Endpoint
-      description:
-        "Apply non-destructive PHI redaction overlays to PDF document.
+      description: 'Apply non-destructive PHI redaction overlays to PDF document.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: redact_pdf_endpoint_api_v1_execution_anonymization_redact_pdf_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RedactPDFRequest"
+              $ref: '#/components/schemas/RedactPDFRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -5285,307 +5538,304 @@ paths:
                 additionalProperties: true
                 type: object
                 title: Response Redact Pdf Endpoint Api V1 Execution Anonymization Redact Pdf Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/doa/assignment:
     post:
       tags:
-        - DOA
+      - DOA
       summary: Add Doa Assignment Endpoint
-      description:
-        "Add site personnel task delegation entry to Delegation of Authority log.
+      description: 'Add site personnel task delegation entry to Delegation of Authority log.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: add_doa_assignment_endpoint_api_v1_execution_doa_assignment_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AddDOAAssignmentRequest"
+              $ref: '#/components/schemas/AddDOAAssignmentRequest'
         required: true
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DOAAssignmentRecord"
-        "422":
+                $ref: '#/components/schemas/DOAAssignmentRecord'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/doa/sign-off:
     post:
       tags:
-        - DOA
+      - DOA
       summary: Sign Off Doa Assignment Endpoint
-      description:
-        "Endorse Delegation of Authority task assignment with Principal Investigator eSignature.
+      description: 'Endorse Delegation of Authority task assignment with Principal Investigator eSignature.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: sign_off_doa_assignment_endpoint_api_v1_execution_doa_sign_off_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DOASignOffRequest"
+              $ref: '#/components/schemas/DOASignOffRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DOAAssignmentRecord"
-        "422":
+                $ref: '#/components/schemas/DOAAssignmentRecord'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/doa/log/{study_id}/{site_id}:
     get:
       tags:
-        - DOA
+      - DOA
       summary: Get Site Doa Log Endpoint
-      description: "Retrieve site-isolated Delegation of Authority log entries.
+      description: 'Retrieve site-isolated Delegation of Authority log entries.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: get_site_doa_log_endpoint_api_v1_execution_doa_log__study_id___site_id__get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: site_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Site Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: site_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Site Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/DOAAssignmentRecord"
+                  $ref: '#/components/schemas/DOAAssignmentRecord'
                 title: Response Get Site Doa Log Endpoint Api V1 Execution Doa Log  Study Id   Site Id  Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/doa/delegate:
     post:
       tags:
-        - DOA
+      - DOA
       summary: Delegate Task Endpoint
       operationId: delegate_task_endpoint_api_v1_execution_doa_delegate_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DelegateTaskRequest"
+              $ref: '#/components/schemas/DelegateTaskRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DOADelegationRecordResponse"
-        "422":
+                $ref: '#/components/schemas/DOADelegationRecordResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/doa/endorse:
     post:
       tags:
-        - DOA
+      - DOA
       summary: Approve Delegation Endpoint
       operationId: approve_delegation_endpoint_api_v1_execution_doa_endorse_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ApproveDelegationRequest"
+              $ref: '#/components/schemas/ApproveDelegationRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DOADelegationRecordResponse"
-        "422":
+                $ref: '#/components/schemas/DOADelegationRecordResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/doa/endorse_task:
     post:
       tags:
-        - DOA
+      - DOA
       summary: Approve Task Endpoint
       operationId: approve_task_endpoint_api_v1_execution_doa_endorse_task_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ApproveTaskDelegationRequest"
+              $ref: '#/components/schemas/ApproveTaskDelegationRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DOADelegationRecordResponse"
-        "422":
+                $ref: '#/components/schemas/DOADelegationRecordResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/doa/revoke:
     post:
       tags:
-        - DOA
+      - DOA
       summary: Revoke Delegation Endpoint
       operationId: revoke_delegation_endpoint_api_v1_execution_doa_revoke_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RevokeDelegationRequest"
+              $ref: '#/components/schemas/RevokeDelegationRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DOADelegationRecordResponse"
-        "422":
+                $ref: '#/components/schemas/DOADelegationRecordResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/doa/staff:
     post:
       tags:
-        - DOA
+      - DOA
       summary: Create Staff Endpoint
       operationId: create_staff_endpoint_api_v1_execution_doa_staff_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SiteStaffMemberRequest"
+              $ref: '#/components/schemas/SiteStaffMemberRequest'
         required: true
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SiteStaffMemberResponse"
-        "422":
+                $ref: '#/components/schemas/SiteStaffMemberResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/doa/audit-logs:
     get:
       tags:
-        - DOA
+      - DOA
       summary: Get Audit Logs Endpoint
       operationId: get_audit_logs_endpoint_api_v1_execution_doa_audit_logs_get
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 items:
-                  $ref: "#/components/schemas/DOAAuditLogResponse"
+                  $ref: '#/components/schemas/DOAAuditLogResponse'
                 type: array
                 title: Response Get Audit Logs Endpoint Api V1 Execution Doa Audit Logs Get
   /api/v1/execution/doa/delegations:
     get:
       tags:
-        - DOA
+      - DOA
       summary: Get Delegations Endpoint
       operationId: get_delegations_endpoint_api_v1_execution_doa_delegations_get
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 items:
-                  $ref: "#/components/schemas/DOADelegationRecordResponse"
+                  $ref: '#/components/schemas/DOADelegationRecordResponse'
                 type: array
                 title: Response Get Delegations Endpoint Api V1 Execution Doa Delegations Get
   /api/v1/offline/sync-batch:
     post:
       tags:
-        - Offline Sync
+      - Offline Sync
       summary: Sync Offline Batch
-      description:
-        "Ingest batch of queued offline eCRF/ePRO deltas idempotently.
+      description: 'Ingest batch of queued offline eCRF/ePRO deltas idempotently.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: sync_offline_batch_api_v1_offline_sync_batch_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OfflineBatchSyncRequest"
+              $ref: '#/components/schemas/OfflineBatchSyncRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OfflineBatchSyncResponse"
-        "422":
+                $ref: '#/components/schemas/OfflineBatchSyncResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/offline/sync:
     post:
       tags:
-        - Offline Sync
+      - Offline Sync
       summary: Offline Sync Endpoint
-      description: "Synchronize queued offline delta transactions.
+      description: 'Synchronize queued offline delta transactions.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: offline_sync_endpoint_api_v1_execution_offline_sync_post
       requestBody:
         content:
@@ -5596,7 +5846,7 @@ paths:
               title: Payload
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -5604,218 +5854,215 @@ paths:
                 additionalProperties: true
                 type: object
                 title: Response Offline Sync Endpoint Api V1 Execution Offline Sync Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/documents/upload:
     post:
       tags:
-        - Documents
+      - Documents
       summary: Upload Document
-      description:
-        "Upload regulated document, compute SHA-256 hash, and record GxP audit trail.
+      description: 'Upload regulated document, compute SHA-256 hash, and record GxP audit trail.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: upload_document_api_v1_documents_upload_post
       requestBody:
         content:
           multipart/form-data:
             schema:
-              $ref: "#/components/schemas/Body_upload_document_api_v1_documents_upload_post"
+              $ref: '#/components/schemas/Body_upload_document_api_v1_documents_upload_post'
         required: true
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DocumentUploadResponse"
-        "422":
+                $ref: '#/components/schemas/DocumentUploadResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/documents/{doc_id}:
     get:
       tags:
-        - Documents
+      - Documents
       summary: Download Document
-      description: "Stream file content with dynamic watermarking.
+      description: 'Stream file content with dynamic watermarking.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: download_document_api_v1_documents__doc_id__get
       parameters:
-        - name: doc_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Doc Id
+      - name: doc_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Doc Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema: {}
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/documents/{doc_id}/versions:
     get:
       tags:
-        - Documents
+      - Documents
       summary: List Document Versions
-      description: "Return complete version history list.
+      description: 'RETURN complete version history list.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
       operationId: list_document_versions_api_v1_documents__doc_id__versions_get
       parameters:
-        - name: doc_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Doc Id
+      - name: doc_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Doc Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/DocumentMetadataResponse"
+                  $ref: '#/components/schemas/DocumentMetadataResponse'
                 title: Response List Document Versions Api V1 Documents  Doc Id  Versions Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/tsdv/config:
     post:
       tags:
-        - SDV/TSDV
+      - SDV/TSDV
       summary: Create Or Update Tsdv Config
-      description:
-        "Create or update Targeted SDV (TSDV) configuration for a study.
+      description: 'CREATE or UPDATE Targeted SDV (TSDV) configuration for a study.
 
 
-        Restricts config writes to CRA/Data Manager roles with GxP change justifications."
+        Restricts config writes to CRA/Data Manager roles WITH GxP change justifications.'
       operationId: create_or_update_tsdv_config_api_v1_execution_tsdv_config_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TSDVConfigCreate"
+              $ref: '#/components/schemas/TSDVConfigCreate'
         required: true
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TSDVConfigResponse"
-        "422":
+                $ref: '#/components/schemas/TSDVConfigResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/tsdv/config/{study_id}:
     get:
       tags:
-        - SDV/TSDV
+      - SDV/TSDV
       summary: Get Tsdv Config
       description: Retrieve existing TSDV configuration for a study.
       operationId: get_tsdv_config_api_v1_execution_tsdv_config__study_id__get
       parameters:
-        - name: study_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Study Id
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TSDVConfigResponse"
-        "422":
+                $ref: '#/components/schemas/TSDVConfigResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/tsdv/required:
     get:
       tags:
-        - SDV/TSDV
+      - SDV/TSDV
       summary: Evaluate Tsdv Rule
-      description:
-        "Evaluate Targeted SDV (TSDV) requirement for a given context.
+      description: 'Evaluate Targeted SDV (TSDV) requirement for a given context.
 
 
-        Calculates deterministic sampling decisions and returns component results with an audit explanation."
+        Calculates deterministic sampling decisions and returns component results with an audit explanation.'
       operationId: evaluate_tsdv_rule_api_v1_execution_tsdv_required_get
       parameters:
-        - name: study_id
-          in: query
-          required: true
-          schema:
-            type: string
-            title: Study Id
-        - name: subject_id
-          in: query
-          required: true
-          schema:
-            type: string
-            title: Subject Id
-        - name: domain
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            title: Domain
-        - name: enrollment_index
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: integer
-              - type: "null"
-            title: Enrollment Index
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      - name: subject_id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Subject Id
+      - name: domain
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Domain
+      - name: enrollment_index
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Enrollment Index
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TSDVEvaluationResponse"
-        "422":
+                $ref: '#/components/schemas/TSDVEvaluationResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/sdv/signoff:
     post:
       tags:
-        - SDV/TSDV
+      - SDV/TSDV
       summary: Sdv Signoff
       description: CRA/monitor-gated SDV sign-off endpoint for Field, Page, or Visit scopes.
       operationId: sdv_signoff_api_v1_execution_sdv_signoff_post
@@ -5823,25 +6070,25 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SDVSignOffRequest"
+              $ref: '#/components/schemas/SDVSignOffRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SDVSignOffResponse"
-        "422":
+                $ref: '#/components/schemas/SDVSignOffResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/sdv/bulk-sign-off:
     post:
       tags:
-        - SDV/TSDV
+      - SDV/TSDV
       summary: Bulk Sdv Signoff
       description: CRA/monitor-gated bulk SDV sign-off endpoint for Field, Page, or Visit scopes.
       operationId: bulk_sdv_signoff_api_v1_execution_sdv_bulk_sign_off_post
@@ -5849,25 +6096,25 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/BulkSdvSignOffRequest"
+              $ref: '#/components/schemas/BulkSdvSignOffRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/BulkSdvSignOffResponse"
-        "422":
+                $ref: '#/components/schemas/BulkSdvSignOffResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/queries/generate:
     post:
       tags:
-        - SDV/TSDV
+      - SDV/TSDV
       summary: Bulk Generate Queries
       description: CRA/monitor-gated bulk query generation endpoint.
       operationId: bulk_generate_queries_api_v1_execution_queries_generate_post
@@ -5875,21 +6122,21 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/BulkQueryGenerationRequest"
+              $ref: '#/components/schemas/BulkQueryGenerationRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/BulkQueryGenerationResponse"
-        "422":
+                $ref: '#/components/schemas/BulkQueryGenerationResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /events/study-published:
     post:
       summary: Study Published
@@ -5899,10 +6146,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/StudyEvent"
+              $ref: '#/components/schemas/StudyEvent'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -5911,25 +6158,25 @@ paths:
                   type: string
                 type: object
                 title: Response Study Published Events Study Published Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/translation/jobs:
     get:
       summary: List Translation Jobs
       description: Retrieve a list of historical translation jobs.
       operationId: list_translation_jobs_api_v1_execution_translation_jobs_get
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 items:
-                  $ref: "#/components/schemas/TranslationJobResponse"
+                  $ref: '#/components/schemas/TranslationJobResponse'
                 type: array
                 title: Response List Translation Jobs Api V1 Execution Translation Jobs Get
   /api/v1/execution/translation/jobs/{job_id}:
@@ -5938,25 +6185,25 @@ paths:
       description: Query the execution status, output metadata, and error messages of a single translation job by ID.
       operationId: get_translation_job_api_v1_execution_translation_jobs__job_id__get
       parameters:
-        - name: job_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Job Id
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TranslationJobResponse"
-        "422":
+                $ref: '#/components/schemas/TranslationJobResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/subjects:
     post:
       summary: Create Subject
@@ -5966,340 +6213,339 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SubjectCreate"
+              $ref: '#/components/schemas/SubjectCreate'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SubjectResponse"
-        "422":
+                $ref: '#/components/schemas/SubjectResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/subjects/{subject_id}/consents:
     post:
       summary: Record Subject Consent Endpoint
       description: Record/upload a signed informed consent form (ICF) for a subject, clearing any requires_reconsent gate.
       operationId: record_subject_consent_endpoint_api_v1_execution_subjects__subject_id__consents_post
       parameters:
-        - name: subject_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Subject Id
+      - name: subject_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subject Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SubjectConsentRequest"
+              $ref: '#/components/schemas/SubjectConsentRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SubjectConsentResponse"
-        "422":
+                $ref: '#/components/schemas/SubjectConsentResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/subjects/{subject_id}/consent:
     post:
       summary: Record Subject Consent Endpoint
       description: Record/upload a signed informed consent form (ICF) for a subject, clearing any requires_reconsent gate.
       operationId: record_subject_consent_endpoint_api_v1_execution_subjects__subject_id__consent_post
       parameters:
-        - name: subject_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Subject Id
+      - name: subject_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subject Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SubjectConsentRequest"
+              $ref: '#/components/schemas/SubjectConsentRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SubjectConsentResponse"
-        "422":
+                $ref: '#/components/schemas/SubjectConsentResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/subjects/{subject_id}/screening:
     post:
       summary: Evaluate And Transition Screening
       description: Evaluate subject's eligibility criteria and execute the guarded screening lifecycle transition.
       operationId: evaluate_and_transition_screening_api_v1_execution_subjects__subject_id__screening_post
       parameters:
-        - name: subject_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Subject Id
+      - name: subject_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subject Id
       requestBody:
         content:
           application/json:
             schema:
               anyOf:
-                - $ref: "#/components/schemas/SubjectScreeningRequest"
-                - type: "null"
+              - $ref: '#/components/schemas/SubjectScreeningRequest'
+              - type: 'null'
               title: Payload
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SubjectScreeningResponse"
-        "422":
+                $ref: '#/components/schemas/SubjectScreeningResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/subjects/{subject_id}/unblind:
     post:
       summary: Unblind Subject
-      description:
-        "Execute an emergency treatment-allocation unblinding for a randomised subject.\n\nThis endpoint implements the GxP / 21 CFR Part 11 compliant emergency\nunblinding workflow: it validates step-up re-authentication, performs\nShamir dual-custody reconstruction of the encrypted allocation, builds a\ncryptographically signed evidence record, writes an immutable audit-log\nentry, and dispatches a critical-priority dashboard notification \u2014 all\nwithin a single atomic database transaction.\n\nArgs:\n    subject_id: Path parameter identifying the subject to unblind.\n    request: The raw FastAPI request object; used to extract and validate\n        the step-up ``X-Sig-Token`` and change-justification headers.\n    background_tasks: FastAPI background-task registry used to dispatch\n        the post-commit dashboard notification without blocking the response.\n    payload: Validated ``UnblindRequest`` body containing the reason code,\n        clinical justification, and exactly\
+      description: "Execute an emergency treatment-allocation unblinding for a randomised subject.\n\nThis endpoint implements the GxP / 21 CFR Part 11 compliant emergency\nunblinding workflow: it validates step-up re-authentication, performs\nShamir dual-custody reconstruction of the encrypted allocation, builds a\ncryptographically signed evidence record, writes an immutable audit-log\nentry, and dispatches a critical-priority dashboard notification \u2014 all\nwithin a single atomic database transaction.\n\nArgs:\n    subject_id: Path parameter identifying the subject to unblind.\n    request: The raw FastAPI request object; used to extract and validate\n        the step-up ``X-Sig-Token`` and change-justification headers.\n    background_tasks: FastAPI background-task registry used to dispatch\n        the post-commit dashboard notification without blocking the response.\n    payload: Validated ``UnblindRequest`` body containing the reason code,\n        clinical justification, and exactly\
         \ two Shamir custodian shares.\n    principal: The authenticated caller resolved by ``get_principal``.\n    roles: Role enforcement dependency; only the four approved unblinding\n        personas may call this endpoint.\n\nReturns:\n    SubjectUnblindResponse: The subject's updated unblinding status and\n    allocation details, masked according to the caller's access level.\n\nRaises:\n    HTTPException(400): If the justification is too short, the subject has\n        not been randomised, the Shamir reconstruction fails, the decrypted\n        payload does not contain a recognisable allocation field, or the\n        subject is already unblinded.\n    HTTPException(401): If the ``X-Sig-Token`` is absent or invalid\n        (step-up re-authentication required).\n    HTTPException(403): If the caller's role is insufficient.\n    HTTPException(404): If the subject record does not exist."
       operationId: unblind_subject_api_v1_execution_subjects__subject_id__unblind_post
       parameters:
-        - name: subject_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Subject Id
+      - name: subject_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subject Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UnblindRequest"
+              $ref: '#/components/schemas/UnblindRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SubjectUnblindResponse"
-        "422":
+                $ref: '#/components/schemas/SubjectUnblindResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/subjects/{subject_id}/randomize:
     post:
       summary: Randomize Subject Endpoint
       description: Execute GxP compliant subject randomization allocation and block-index advancement.
       operationId: randomize_subject_endpoint_api_v1_execution_subjects__subject_id__randomize_post
       parameters:
-        - name: subject_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Subject Id
+      - name: subject_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subject Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SubjectRandomizationResponse"
-        "422":
+                $ref: '#/components/schemas/SubjectRandomizationResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /subjects/{id}/state:
     patch:
       summary: Update Subject State Endpoint
       operationId: update_subject_state_endpoint_subjects__id__state_patch
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Id
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SubjectStateUpdateRequest"
+              $ref: '#/components/schemas/SubjectStateUpdateRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SubjectResponse"
-        "422":
+                $ref: '#/components/schemas/SubjectResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/subjects/{id}/state:
     patch:
       summary: Update Subject State Endpoint
       operationId: update_subject_state_endpoint_api_v1_execution_subjects__id__state_patch
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Id
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SubjectStateUpdateRequest"
+              $ref: '#/components/schemas/SubjectStateUpdateRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SubjectResponse"
-        "422":
+                $ref: '#/components/schemas/SubjectResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /subjects/{id}/demographics:
     put:
       summary: Update Subject Demographics Endpoint
       operationId: update_subject_demographics_endpoint_subjects__id__demographics_put
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Id
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SubjectDemographicsUpdateRequest"
+              $ref: '#/components/schemas/SubjectDemographicsUpdateRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SubjectResponse"
-        "422":
+                $ref: '#/components/schemas/SubjectResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     delete:
       summary: Delete Subject Demographics Endpoint
       operationId: delete_subject_demographics_endpoint_subjects__id__demographics_delete
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Id
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SubjectResponse"
-        "422":
+                $ref: '#/components/schemas/SubjectResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/subjects/{id}/demographics:
     put:
       summary: Update Subject Demographics Endpoint
       operationId: update_subject_demographics_endpoint_api_v1_execution_subjects__id__demographics_put
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Id
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SubjectDemographicsUpdateRequest"
+              $ref: '#/components/schemas/SubjectDemographicsUpdateRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SubjectResponse"
-        "422":
+                $ref: '#/components/schemas/SubjectResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     delete:
       summary: Delete Subject Demographics Endpoint
       operationId: delete_subject_demographics_endpoint_api_v1_execution_subjects__id__demographics_delete
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Id
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SubjectResponse"
-        "422":
+                $ref: '#/components/schemas/SubjectResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/visits:
     post:
       summary: Create Visit
@@ -6309,95 +6555,95 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/VisitCreate"
+              $ref: '#/components/schemas/VisitCreate'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/VisitResponse"
-        "422":
+                $ref: '#/components/schemas/VisitResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/subjects/{subject_id}:
     get:
       summary: Get Subject Detail
       description: Retrieve detailed subject information, applying dynamic blinding redaction & site isolation.
       operationId: get_subject_detail_api_v1_execution_subjects__subject_id__get
       parameters:
-        - name: subject_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Subject Id
+      - name: subject_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subject Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SubjectDetailResponse"
-        "422":
+                $ref: '#/components/schemas/SubjectDetailResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/visits/{visit_id}:
     get:
       summary: Get Visit Detail
       description: Retrieve detailed visit information, applying dynamic blinding redaction & site isolation.
       operationId: get_visit_detail_api_v1_execution_visits__visit_id__get
       parameters:
-        - name: visit_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Visit Id
+      - name: visit_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Visit Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/VisitDetailResponse"
-        "422":
+                $ref: '#/components/schemas/VisitDetailResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/observations:
     post:
       summary: Create Observation
-      description: Create a new clinical observation, performing unit normalization and outlier checks.
+      description: CREATE a new clinical observation, performing unit normalization and outlier checks.
       operationId: create_observation_api_v1_execution_observations_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ObservationCreate"
+              $ref: '#/components/schemas/ObservationCreate'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ObservationResponse"
-        "422":
+                $ref: '#/components/schemas/ObservationResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/unit-conversion:
     post:
       summary: Post Unit Conversion Execution
@@ -6408,56 +6654,56 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UnitConversionRequest"
+              $ref: '#/components/schemas/UnitConversionRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UnitConversionResponse"
-        "422":
+                $ref: '#/components/schemas/UnitConversionResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       summary: Get Unit Conversion Execution
       description: Translate incoming values using UCUM mapping rules via GET (Execution API).
       operationId: get_unit_conversion_execution_api_v1_execution_unit_conversion_get
       parameters:
-        - name: value
-          in: query
-          required: true
-          schema:
-            type: number
-            title: Value
-        - name: from_unit
-          in: query
-          required: true
-          schema:
-            type: string
-            title: From Unit
-        - name: to_unit
-          in: query
-          required: true
-          schema:
-            type: string
-            title: To Unit
+      - name: value
+        in: query
+        required: true
+        schema:
+          type: number
+          title: Value
+      - name: from_unit
+        in: query
+        required: true
+        schema:
+          type: string
+          title: From Unit
+      - name: to_unit
+        in: query
+        required: true
+        schema:
+          type: string
+          title: To Unit
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UnitConversionResponse"
-        "422":
+                $ref: '#/components/schemas/UnitConversionResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /dictionary/unit-conversion:
     post:
       summary: Post Unit Conversion Dictionary
@@ -6468,56 +6714,56 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UnitConversionRequest"
+              $ref: '#/components/schemas/UnitConversionRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UnitConversionResponse"
-        "422":
+                $ref: '#/components/schemas/UnitConversionResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       summary: Get Unit Conversion Dictionary
       description: Translate incoming values using UCUM mapping rules via GET (Dictionary API).
       operationId: get_unit_conversion_dictionary_dictionary_unit_conversion_get
       parameters:
-        - name: value
-          in: query
-          required: true
-          schema:
-            type: number
-            title: Value
-        - name: from_unit
-          in: query
-          required: true
-          schema:
-            type: string
-            title: From Unit
-        - name: to_unit
-          in: query
-          required: true
-          schema:
-            type: string
-            title: To Unit
+      - name: value
+        in: query
+        required: true
+        schema:
+          type: number
+          title: Value
+      - name: from_unit
+        in: query
+        required: true
+        schema:
+          type: string
+          title: From Unit
+      - name: to_unit
+        in: query
+        required: true
+        schema:
+          type: string
+          title: To Unit
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UnitConversionResponse"
-        "422":
+                $ref: '#/components/schemas/UnitConversionResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/outliers/recalculate:
     post:
       summary: Trigger Outlier Recalculation
@@ -6527,184 +6773,184 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OutlierRecalculateRequest"
+              $ref: '#/components/schemas/OutlierRecalculateRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OutlierRecalculateResponse"
-        "422":
+                $ref: '#/components/schemas/OutlierRecalculateResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/lab-ranges:
     post:
       summary: Create Lab Range
-      description: Create a new lab reference range, validating all range invariants.
+      description: CREATE a new lab reference range, validating all range invariants.
       operationId: create_lab_range_api_v1_execution_lab_ranges_post
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LabReferenceRangeCreate"
+              $ref: '#/components/schemas/LabReferenceRangeCreate'
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LabReferenceRangeResponse"
-        "422":
+                $ref: '#/components/schemas/LabReferenceRangeResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       summary: List Lab Ranges
       description: List and filter reference ranges.
       operationId: list_lab_ranges_api_v1_execution_lab_ranges_get
       parameters:
-        - name: study_id
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            title: Study Id
-        - name: test_code
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            title: Test Code
-        - name: source
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            title: Source
-        - name: lab_source
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            title: Lab Source
-        - name: include_deleted
-          in: query
-          required: false
-          schema:
-            type: boolean
-            default: false
-            title: Include Deleted
+      - name: study_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Study Id
+      - name: test_code
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Test Code
+      - name: source
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Source
+      - name: lab_source
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Lab Source
+      - name: include_deleted
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Include Deleted
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/LabReferenceRangeResponse"
+                  $ref: '#/components/schemas/LabReferenceRangeResponse'
                 title: Response List Lab Ranges Api V1 Execution Lab Ranges Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/lab-ranges/{range_id}:
     get:
       summary: Get Lab Range
       description: Retrieve a single lab reference range.
       operationId: get_lab_range_api_v1_execution_lab_ranges__range_id__get
       parameters:
-        - name: range_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Range Id
+      - name: range_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Range Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LabReferenceRangeResponse"
-        "422":
+                $ref: '#/components/schemas/LabReferenceRangeResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     put:
       summary: Update Lab Range
-      description: Update an existing lab reference range, validating all range invariants on the merged state.
+      description: UPDATE an existing lab reference range, validating all range invariants on the merged state.
       operationId: update_lab_range_api_v1_execution_lab_ranges__range_id__put
       parameters:
-        - name: range_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Range Id
+      - name: range_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Range Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LabReferenceRangeUpdate"
+              $ref: '#/components/schemas/LabReferenceRangeUpdate'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LabReferenceRangeResponse"
-        "422":
+                $ref: '#/components/schemas/LabReferenceRangeResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     delete:
       summary: Delete Lab Range
       description: Soft-delete a lab reference range by setting is_deleted = True.
       operationId: delete_lab_range_api_v1_execution_lab_ranges__range_id__delete
       parameters:
-        - name: range_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Range Id
+      - name: range_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Range Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LabReferenceRangeResponse"
-        "422":
+                $ref: '#/components/schemas/LabReferenceRangeResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/lab-ranges/recalculate:
     post:
       summary: Trigger Lab Range Recalculation
@@ -6714,204 +6960,201 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LabRangeRecalculateRequest"
+              $ref: '#/components/schemas/LabRangeRecalculateRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LabRangeRecalculateResponse"
-        "422":
+                $ref: '#/components/schemas/LabRangeRecalculateResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/export:
     get:
       summary: Get Cdisc Export Execution
       description: Export stored clinical subject observations in CDISC ODM XML format (Execution API).
       operationId: get_cdisc_export_execution_api_v1_execution_export_get
       parameters:
-        - name: study_id
-          in: query
-          required: true
-          schema:
-            type: string
-            title: Study Id
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Study Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema: {}
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /dictionary/export:
     get:
       summary: Get Cdisc Export Dictionary
       description: Export stored clinical subject observations in CDISC ODM XML format (Dictionary API).
       operationId: get_cdisc_export_dictionary_dictionary_export_get
       parameters:
-        - name: study_id
-          in: query
-          required: true
-          schema:
-            type: string
-            title: Study Id
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Study Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema: {}
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/dictionaries/import:
     post:
       summary: Import Dictionary
-      description:
-        "Imports raw dictionary files and schedules a background parsing task.
+      description: 'Imports raw dictionary files and schedules a background parsing task.
 
 
-        Satisfies Epic #109 / Issue #1122 / Phase 16: Dictionary Ingestion & Persistence."
+        Satisfies Epic #109 / Issue #1122 / Phase 16: Dictionary Ingestion & Persistence.'
       operationId: import_dictionary_api_v1_dictionaries_import_post
       requestBody:
         content:
           multipart/form-data:
             schema:
-              $ref: "#/components/schemas/Body_import_dictionary_api_v1_dictionaries_import_post"
+              $ref: '#/components/schemas/Body_import_dictionary_api_v1_dictionaries_import_post'
         required: true
       responses:
-        "202":
+        '202':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/JobStatusResponse"
-        "422":
+                $ref: '#/components/schemas/JobStatusResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/dictionaries/jobs/{job_id}:
     get:
       summary: Get Dictionary Import Job
       description: Query the execution status, progress, and import counts of a dictionary import job by ID.
       operationId: get_dictionary_import_job_api_v1_dictionaries_jobs__job_id__get
       parameters:
-        - name: job_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Job Id
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/JobStatusResponse"
-        "422":
+                $ref: '#/components/schemas/JobStatusResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/dictionaries/meddra/code:
     get:
       summary: Get Meddra Code
-      description:
-        "Performs coding or interactive auto-complete lookup on adverse events using version-aware matcher.
+      description: 'Performs coding or interactive auto-complete lookup on adverse events using version-aware matcher.
 
 
-        Phase 17 / Epic #109 dictionary lookup endpoint."
+        Phase 17 / Epic #109 dictionary lookup endpoint.'
       operationId: get_meddra_code_api_v1_dictionaries_meddra_code_get
       parameters:
-        - name: term
-          in: query
-          required: true
-          schema:
-            type: string
-            title: Term
-        - name: version
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            default: "26.0"
-            title: Version
-        - name: target_level
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - $ref: "#/components/schemas/MedDRATargetLevelEnum"
-              - type: "null"
-            default: LLT
-            title: Target Level
+      - name: term
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Term
+      - name: version
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: '26.0'
+          title: Version
+      - name: target_level
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/MedDRATargetLevelEnum'
+          - type: 'null'
+          default: LLT
+          title: Target Level
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MedDRACodeLookupResponse"
-        "422":
+                $ref: '#/components/schemas/MedDRACodeLookupResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/dictionaries/whodrug/code:
     get:
       summary: Get Whodrug Code
-      description:
-        "Performs coding or interactive lookup on WHODrug database using version-aware matcher.
+      description: 'Performs coding or interactive lookup on WHODrug database using version-aware matcher.
 
 
-        Phase 17 / Epic #109 drug dictionary lookup endpoint."
+        Phase 17 / Epic #109 drug dictionary lookup endpoint.'
       operationId: get_whodrug_code_api_v1_dictionaries_whodrug_code_get
       parameters:
-        - name: term
-          in: query
-          required: true
-          schema:
-            type: string
-            title: Term
-        - name: version
-          in: query
-          required: true
-          schema:
-            type: string
-            title: Version
+      - name: term
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Term
+      - name: version
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Version
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WHODrugCodeLookupResponse"
-        "422":
+                $ref: '#/components/schemas/WHODrugCodeLookupResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/dictionaries/ucum/convert:
     post:
       summary: Post Ucum Convert
@@ -6921,81 +7164,81 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UCUMConvertRequest"
+              $ref: '#/components/schemas/UCUMConvertRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UCUMConvertResponse"
-        "400":
+                $ref: '#/components/schemas/UCUMConvertResponse'
+        '400':
           description: Bad Request
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProblemDetails"
-        "422":
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/queries:
     get:
       summary: List Queries
       description: "Retrieve a list of clinical queries with optional filtering.\n\nArgs:\n    study_id (Optional[str]): Filter by study identifier.\n    subject_id (Optional[str]): Filter by subject identifier.\n    visit_id (Optional[str]): Filter by visit identifier.\n    status (Optional[str]): Filter by query status.\n\nReturns:\n    List[ClinicalQueryResponse]: List of matching queries including audit history."
       operationId: list_queries_api_v1_execution_queries_get
       parameters:
-        - name: study_id
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            title: Study Id
-        - name: subject_id
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            title: Subject Id
-        - name: visit_id
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            title: Visit Id
-        - name: status
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            title: Status
+      - name: study_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Study Id
+      - name: subject_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subject Id
+      - name: visit_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Visit Id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/ClinicalQueryResponse"
+                  $ref: '#/components/schemas/ClinicalQueryResponse'
                 title: Response List Queries Api V1 Execution Queries Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     post:
       summary: Open Query
       description: "Raise a new clinical query on a specific field coordinate.\n\nArgs:\n    request (Request): The incoming FastAPI request.\n    payload (QueryCreate): The coordinate details and query explanation.\n\nReturns:\n    ClinicalQueryResponse: The newly opened clinical query."
@@ -7005,75 +7248,75 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/QueryCreate"
+              $ref: '#/components/schemas/QueryCreate'
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ClinicalQueryResponse"
-        "422":
+                $ref: '#/components/schemas/ClinicalQueryResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/queries/{query_id}:
     get:
       summary: Get Query
       description: "Query a single clinical query by ID, returning its full audit history.\n\nArgs:\n    query_id (str): The unique database identifier of the query.\n\nReturns:\n    ClinicalQueryResponse: The query record including detailed history."
       operationId: get_query_api_v1_execution_queries__query_id__get
       parameters:
-        - name: query_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Query Id
+      - name: query_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Query Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ClinicalQueryResponse"
-        "422":
+                $ref: '#/components/schemas/ClinicalQueryResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     patch:
       summary: Update Query State
       description: "Transition a query through the designated state sequence and perform role checks.\n\nArgs:\n    query_id (str): Unique database identifier of the query.\n    request (Request): The incoming FastAPI request.\n    payload (QueryUpdate): Target status and optional explanation/response fields.\n\nReturns:\n    ClinicalQueryResponse: The updated query record and audit trail."
       operationId: update_query_state_api_v1_execution_queries__query_id__patch
       parameters:
-        - name: query_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Query Id
+      - name: query_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Query Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/QueryUpdate"
+              $ref: '#/components/schemas/QueryUpdate'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ClinicalQueryResponse"
-        "422":
+                $ref: '#/components/schemas/ClinicalQueryResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/form-submissions:
     post:
       summary: Create Form Submission
@@ -7084,129 +7327,129 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/FormSubmissionCreate"
+              $ref: '#/components/schemas/FormSubmissionCreate'
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/FormSubmissionResponse"
-        "422":
+                $ref: '#/components/schemas/FormSubmissionResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       summary: List Form Submissions
       description: List form submissions with filters.
       operationId: list_form_submissions_api_v1_execution_form_submissions_get
       parameters:
-        - name: study_id
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            title: Study Id
-        - name: subject_id
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            title: Subject Id
-        - name: visit_id
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            title: Visit Id
-        - name: form_id
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            title: Form Id
+      - name: study_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Study Id
+      - name: subject_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subject Id
+      - name: visit_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Visit Id
+      - name: form_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Form Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/FormSubmissionResponse"
+                  $ref: '#/components/schemas/FormSubmissionResponse'
                 title: Response List Form Submissions Api V1 Execution Form Submissions Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/form-submissions/{submission_id}/complete:
     post:
       summary: Complete Form Submission
       description: Transition a FormSubmission from DRAFT to COMPLETED.
       operationId: complete_form_submission_api_v1_execution_form_submissions__submission_id__complete_post
       parameters:
-        - name: submission_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Submission Id
+      - name: submission_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Submission Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/FormSubmissionResponse"
-        "422":
+                $ref: '#/components/schemas/FormSubmissionResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/form-submissions/{submission_id}/approve:
     post:
       summary: Approve Form Submission
       description: PI Approve/Sign-off a completed FormSubmission.
       operationId: approve_form_submission_api_v1_execution_form_submissions__submission_id__approve_post
       parameters:
-        - name: submission_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Submission Id
+      - name: submission_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Submission Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/FormSubmissionApprove"
+              $ref: '#/components/schemas/FormSubmissionApprove'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/FormSubmissionResponse"
-        "422":
+                $ref: '#/components/schemas/FormSubmissionResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/batch-sign-off:
     post:
       summary: Post Batch Sign Off
@@ -7216,185 +7459,184 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/BatchSignOffRequest"
+              $ref: '#/components/schemas/BatchSignOffRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/BatchSignOffResponse"
-        "422":
+                $ref: '#/components/schemas/BatchSignOffResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/form-submissions/{submission_id}:
     get:
       summary: Get Form Submission
       description: Retrieve a single form submission by ID.
       operationId: get_form_submission_api_v1_execution_form_submissions__submission_id__get
       parameters:
-        - name: submission_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Submission Id
+      - name: submission_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Submission Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/FormSubmissionResponse"
-        "422":
+                $ref: '#/components/schemas/FormSubmissionResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/queries/{query_id}/respond:
     post:
       summary: Respond Query
       description: "Submit an investigator response/answer to an open or reopened clinical query.\n\nArgs:\n    query_id (str): Unique database identifier of the query.\n    request (Request): The incoming FastAPI request.\n    payload (QueryRespond): The investigator's response explanation.\n\nReturns:\n    ClinicalQueryResponse: The updated query with ANSWERED status."
       operationId: respond_query_api_v1_execution_queries__query_id__respond_post
       parameters:
-        - name: query_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Query Id
+      - name: query_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Query Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/QueryRespond"
+              $ref: '#/components/schemas/QueryRespond'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ClinicalQueryResponse"
-        "422":
+                $ref: '#/components/schemas/ClinicalQueryResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/queries/{query_id}/close:
     post:
       summary: Close Query
       description: "Close an answered query (resolving the discrepancy loop).\n\nArgs:\n    query_id (str): Unique database identifier of the query.\n    request (Request): The incoming FastAPI request.\n\nReturns:\n    ClinicalQueryResponse: The updated query with CLOSED status."
       operationId: close_query_api_v1_execution_queries__query_id__close_post
       parameters:
-        - name: query_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Query Id
+      - name: query_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Query Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ClinicalQueryResponse"
-        "422":
+                $ref: '#/components/schemas/ClinicalQueryResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/queries/{query_id}/reopen:
     post:
       summary: Reopen Query
       description: "Reopen an answered or closed clinical query for further clarification.\n\nArgs:\n    query_id (str): Unique database identifier of the query.\n    request (Request): The incoming FastAPI request.\n    payload (Optional[QueryReopen]): Optional reopen payload containing reject reason.\n\nReturns:\n    ClinicalQueryResponse: The updated query with REOPENED status."
       operationId: reopen_query_api_v1_execution_queries__query_id__reopen_post
       parameters:
-        - name: query_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Query Id
+      - name: query_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Query Id
       requestBody:
         content:
           application/json:
             schema:
               anyOf:
-                - $ref: "#/components/schemas/QueryReopen"
-                - type: "null"
+              - $ref: '#/components/schemas/QueryReopen'
+              - type: 'null'
               title: Payload
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ClinicalQueryResponse"
-        "422":
+                $ref: '#/components/schemas/ClinicalQueryResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/queries/{query_id}/cancel:
     post:
       summary: Cancel Query
       description: "Cancel a clinical query raised in error.\n\nArgs:\n    query_id (str): Unique database identifier of the query.\n    request (Request): The incoming FastAPI request.\n    payload (QueryCancel): The cancellation reason.\n\nReturns:\n    ClinicalQueryResponse: The updated query with CANCELLED status."
       operationId: cancel_query_api_v1_execution_queries__query_id__cancel_post
       parameters:
-        - name: query_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Query Id
+      - name: query_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Query Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/QueryCancel"
+              $ref: '#/components/schemas/QueryCancel'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ClinicalQueryResponse"
-        "422":
+                $ref: '#/components/schemas/ClinicalQueryResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/queries/sync:
     post:
       summary: Sync Queries
-      description:
-        "Synchronize clinical query local ledger blocks to the target database.
+      description: 'Synchronize clinical query local ledger blocks to the target database.
 
 
         Translates local ledger blocks to correct fields in the target database schema,
 
-        verifying caller roles and payload integrity."
+        verifying caller roles and payload integrity.'
       operationId: sync_queries_api_v1_execution_queries_sync_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SyncRequest"
+              $ref: '#/components/schemas/SyncRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -7402,38 +7644,38 @@ paths:
                 additionalProperties: true
                 type: object
                 title: Response Sync Queries Api V1 Execution Queries Sync Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/locks:
     get:
       summary: Get Lock Status
       description: Retrieve the current lock/freeze status of sites, visits, forms, subjects, and study-wide trial.
       operationId: get_lock_status_api_v1_execution_locks_get
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LockStatusResponse"
+                $ref: '#/components/schemas/LockStatusResponse'
   /api/v1/execution/locks/site/{site_id}/freeze:
     post:
       summary: Lock Site Endpoint
       description: Locks or freezes a specific site.
       operationId: lock_site_endpoint_api_v1_execution_locks_site__site_id__freeze_post
       parameters:
-        - name: site_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Site Id
+      - name: site_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Site Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -7442,26 +7684,26 @@ paths:
                 additionalProperties:
                   type: string
                 title: Response Lock Site Endpoint Api V1 Execution Locks Site  Site Id  Freeze Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/locks/site/{site_id}/lock:
     post:
       summary: Lock Site Endpoint
       description: Locks or freezes a specific site.
       operationId: lock_site_endpoint_api_v1_execution_locks_site__site_id__lock_post
       parameters:
-        - name: site_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Site Id
+      - name: site_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Site Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -7470,26 +7712,26 @@ paths:
                 additionalProperties:
                   type: string
                 title: Response Lock Site Endpoint Api V1 Execution Locks Site  Site Id  Lock Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/locks/site/{site_id}/unfreeze:
     post:
       summary: Unlock Site Endpoint
       description: Unlocks or unfreezes a specific site.
       operationId: unlock_site_endpoint_api_v1_execution_locks_site__site_id__unfreeze_post
       parameters:
-        - name: site_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Site Id
+      - name: site_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Site Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -7498,26 +7740,26 @@ paths:
                 additionalProperties:
                   type: string
                 title: Response Unlock Site Endpoint Api V1 Execution Locks Site  Site Id  Unfreeze Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/locks/site/{site_id}/unlock:
     post:
       summary: Unlock Site Endpoint
       description: Unlocks or unfreezes a specific site.
       operationId: unlock_site_endpoint_api_v1_execution_locks_site__site_id__unlock_post
       parameters:
-        - name: site_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Site Id
+      - name: site_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Site Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -7526,26 +7768,26 @@ paths:
                 additionalProperties:
                   type: string
                 title: Response Unlock Site Endpoint Api V1 Execution Locks Site  Site Id  Unlock Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/locks/visit/{visit_id}/freeze:
     post:
       summary: Lock Visit Endpoint
       description: Locks or freezes a specific visit.
       operationId: lock_visit_endpoint_api_v1_execution_locks_visit__visit_id__freeze_post
       parameters:
-        - name: visit_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Visit Id
+      - name: visit_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Visit Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -7554,26 +7796,26 @@ paths:
                 additionalProperties:
                   type: string
                 title: Response Lock Visit Endpoint Api V1 Execution Locks Visit  Visit Id  Freeze Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/locks/visit/{visit_id}/lock:
     post:
       summary: Lock Visit Endpoint
       description: Locks or freezes a specific visit.
       operationId: lock_visit_endpoint_api_v1_execution_locks_visit__visit_id__lock_post
       parameters:
-        - name: visit_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Visit Id
+      - name: visit_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Visit Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -7582,26 +7824,26 @@ paths:
                 additionalProperties:
                   type: string
                 title: Response Lock Visit Endpoint Api V1 Execution Locks Visit  Visit Id  Lock Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/locks/visit/{visit_id}/unfreeze:
     post:
       summary: Unlock Visit Endpoint
       description: Unlocks or unfreezes a specific visit.
       operationId: unlock_visit_endpoint_api_v1_execution_locks_visit__visit_id__unfreeze_post
       parameters:
-        - name: visit_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Visit Id
+      - name: visit_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Visit Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -7610,26 +7852,26 @@ paths:
                 additionalProperties:
                   type: string
                 title: Response Unlock Visit Endpoint Api V1 Execution Locks Visit  Visit Id  Unfreeze Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/locks/visit/{visit_id}/unlock:
     post:
       summary: Unlock Visit Endpoint
       description: Unlocks or unfreezes a specific visit.
       operationId: unlock_visit_endpoint_api_v1_execution_locks_visit__visit_id__unlock_post
       parameters:
-        - name: visit_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Visit Id
+      - name: visit_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Visit Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -7638,26 +7880,26 @@ paths:
                 additionalProperties:
                   type: string
                 title: Response Unlock Visit Endpoint Api V1 Execution Locks Visit  Visit Id  Unlock Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/locks/form/{form_id}/freeze:
     post:
       summary: Lock Form Endpoint
       description: Locks or freezes a specific form.
       operationId: lock_form_endpoint_api_v1_execution_locks_form__form_id__freeze_post
       parameters:
-        - name: form_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Form Id
+      - name: form_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Form Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -7666,26 +7908,26 @@ paths:
                 additionalProperties:
                   type: string
                 title: Response Lock Form Endpoint Api V1 Execution Locks Form  Form Id  Freeze Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/locks/form/{form_id}/lock:
     post:
       summary: Lock Form Endpoint
       description: Locks or freezes a specific form.
       operationId: lock_form_endpoint_api_v1_execution_locks_form__form_id__lock_post
       parameters:
-        - name: form_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Form Id
+      - name: form_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Form Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -7694,26 +7936,26 @@ paths:
                 additionalProperties:
                   type: string
                 title: Response Lock Form Endpoint Api V1 Execution Locks Form  Form Id  Lock Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/locks/form/{form_id}/unfreeze:
     post:
       summary: Unlock Form Endpoint
       description: Unlocks or unfreezes a specific form.
       operationId: unlock_form_endpoint_api_v1_execution_locks_form__form_id__unfreeze_post
       parameters:
-        - name: form_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Form Id
+      - name: form_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Form Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -7722,26 +7964,26 @@ paths:
                 additionalProperties:
                   type: string
                 title: Response Unlock Form Endpoint Api V1 Execution Locks Form  Form Id  Unfreeze Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/locks/form/{form_id}/unlock:
     post:
       summary: Unlock Form Endpoint
       description: Unlocks or unfreezes a specific form.
       operationId: unlock_form_endpoint_api_v1_execution_locks_form__form_id__unlock_post
       parameters:
-        - name: form_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Form Id
+      - name: form_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Form Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -7750,26 +7992,26 @@ paths:
                 additionalProperties:
                   type: string
                 title: Response Unlock Form Endpoint Api V1 Execution Locks Form  Form Id  Unlock Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/locks/subject/{subject_id}/freeze:
     post:
       summary: Lock Subject Endpoint
       description: Locks or freezes a specific subject.
       operationId: lock_subject_endpoint_api_v1_execution_locks_subject__subject_id__freeze_post
       parameters:
-        - name: subject_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Subject Id
+      - name: subject_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subject Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -7778,26 +8020,26 @@ paths:
                 additionalProperties:
                   type: string
                 title: Response Lock Subject Endpoint Api V1 Execution Locks Subject  Subject Id  Freeze Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/locks/subject/{subject_id}/lock:
     post:
       summary: Lock Subject Endpoint
       description: Locks or freezes a specific subject.
       operationId: lock_subject_endpoint_api_v1_execution_locks_subject__subject_id__lock_post
       parameters:
-        - name: subject_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Subject Id
+      - name: subject_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subject Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -7806,26 +8048,26 @@ paths:
                 additionalProperties:
                   type: string
                 title: Response Lock Subject Endpoint Api V1 Execution Locks Subject  Subject Id  Lock Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/locks/subject/{subject_id}/unfreeze:
     post:
       summary: Unlock Subject Endpoint
       description: Unlocks or unfreezes a specific subject.
       operationId: unlock_subject_endpoint_api_v1_execution_locks_subject__subject_id__unfreeze_post
       parameters:
-        - name: subject_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Subject Id
+      - name: subject_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subject Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -7834,26 +8076,26 @@ paths:
                 additionalProperties:
                   type: string
                 title: Response Unlock Subject Endpoint Api V1 Execution Locks Subject  Subject Id  Unfreeze Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/locks/subject/{subject_id}/unlock:
     post:
       summary: Unlock Subject Endpoint
       description: Unlocks or unfreezes a specific subject.
       operationId: unlock_subject_endpoint_api_v1_execution_locks_subject__subject_id__unlock_post
       parameters:
-        - name: subject_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Subject Id
+      - name: subject_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subject Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -7862,19 +8104,19 @@ paths:
                 additionalProperties:
                   type: string
                 title: Response Unlock Subject Endpoint Api V1 Execution Locks Subject  Subject Id  Unlock Post
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/locks/trial/freeze:
     post:
       summary: Lock Trial Endpoint
       description: Locks or freezes the trial/study.
       operationId: lock_trial_endpoint_api_v1_execution_locks_trial_freeze_post
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -7889,7 +8131,7 @@ paths:
       description: Locks or freezes the trial/study.
       operationId: lock_trial_endpoint_api_v1_execution_locks_trial_lock_post
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -7904,7 +8146,7 @@ paths:
       description: Unlocks or unfreezes the trial/study.
       operationId: unlock_trial_endpoint_api_v1_execution_locks_trial_unfreeze_post
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -7919,7 +8161,7 @@ paths:
       description: Unlocks or unfreezes the trial/study.
       operationId: unlock_trial_endpoint_api_v1_execution_locks_trial_unlock_post
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -7937,136 +8179,135 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ImpactAnalysisRequest"
+              $ref: '#/components/schemas/ImpactAnalysisRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ImpactAnalysisResponse"
-        "422":
+                $ref: '#/components/schemas/ImpactAnalysisResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/coding/assignments:
     get:
       summary: List Coding Assignments
       description: Lists and filters medical coding assignments.
       operationId: list_coding_assignments_api_v1_execution_coding_assignments_get
       parameters:
-        - name: observation_id
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            title: Observation Id
-        - name: status
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            title: Status
-        - name: verbatim_text
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            title: Verbatim Text
-        - name: dictionary_type
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: "null"
-            title: Dictionary Type
+      - name: observation_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Observation Id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: verbatim_text
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Verbatim Text
+      - name: dictionary_type
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Dictionary Type
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/CodingAssignmentResponse"
+                  $ref: '#/components/schemas/CodingAssignmentResponse'
                 title: Response List Coding Assignments Api V1 Execution Coding Assignments Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/coding/assignments/{assignment_id}:
     get:
       summary: Get Coding Assignment
       description: Retrieves a single medical coding assignment by ID.
       operationId: get_coding_assignment_api_v1_execution_coding_assignments__assignment_id__get
       parameters:
-        - name: assignment_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Assignment Id
+      - name: assignment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Assignment Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CodingAssignmentResponse"
-        "422":
+                $ref: '#/components/schemas/CodingAssignmentResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/coding/assignments/{assignment_id}/action:
     post:
       summary: Process Coding Action
       description: Accepts a suggestion or submits a manual override, persisting results and updating the ledger.
       operationId: process_coding_action_api_v1_execution_coding_assignments__assignment_id__action_post
       parameters:
-        - name: assignment_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Assignment Id
+      - name: assignment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Assignment Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CoderActionRequest"
+              $ref: '#/components/schemas/CoderActionRequest'
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CodingAssignmentResponse"
-        "422":
+                $ref: '#/components/schemas/CodingAssignmentResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/biostat/sdtm/{domain}:
     get:
       summary: Export Sdtm Domain
-      description:
-        "Exports SDTM domain data (DM, AE, VS, LB, MH, CM) in CDISC Dataset-JSON format.
+      description: 'Exports SDTM domain data (DM, AE, VS, LB, MH, CM) in CDISC Dataset-JSON format.
 
 
         - **Protected Endpoint**: Requires authenticated session under GatewayAuthMiddleware.
@@ -8077,25 +8318,25 @@ paths:
 
         - **Media Type Contract**: `application/json` conforming to CDISC Dataset-JSON 1.0.0.
 
-        - **Supplemental Contract**: Includes matching SUPP<domain> dataset alongside the parent dataset when supplemental records exist."
+        - **Supplemental Contract**: Includes matching SUPP<domain> dataset alongside the parent dataset when supplemental records exist.'
       operationId: export_sdtm_domain_api_v1_execution_biostat_sdtm__domain__get
       parameters:
-        - name: domain
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Domain
-        - name: study_id
-          in: query
-          required: true
-          schema:
-            type: string
-            description: The unique study identifier
-            title: Study Id
+      - name: domain
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Domain
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
           description: The unique study identifier
+          title: Study Id
+        description: The unique study identifier
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -8103,42 +8344,41 @@ paths:
                 type: object
                 additionalProperties: true
                 title: Response Export Sdtm Domain Api V1 Execution Biostat Sdtm  Domain  Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/rtsm/dispense:
     post:
       summary: Dispense Kit Endpoint
-      description:
-        "End-point to dispense investigational product (IP) kits against site inventory.
+      description: 'End-point to dispense investigational product (IP) kits against site inventory.
 
 
         Checks site locks early, calls dispense_kit_transaction, and handles commits atomically.
 
-        Launches resupply alerts via fastapi background tasks post-commit if triggered."
+        Launches resupply alerts via fastapi background tasks post-commit if triggered.'
       operationId: dispense_kit_endpoint_api_v1_execution_rtsm_dispense_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DispenseRequest"
+              $ref: '#/components/schemas/DispenseRequest'
         required: true
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DispenseResponse"
-        "422":
+                $ref: '#/components/schemas/DispenseResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/migration-rules:
     post:
       summary: Create Migration Rule
@@ -8149,60 +8389,59 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/MigrationRuleCreate"
+              $ref: '#/components/schemas/MigrationRuleCreate'
       responses:
-        "201":
+        '201':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MigrationRuleResponse"
-        "422":
+                $ref: '#/components/schemas/MigrationRuleResponse'
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       summary: List Migration Rules
       description: List migration rules for a clinical study.
       operationId: list_migration_rules_api_v1_execution_migration_rules_get
       parameters:
-        - name: study_id
-          in: query
-          required: true
-          schema:
-            type: string
-            title: Study Id
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Study Id
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/MigrationRuleResponse"
+                  $ref: '#/components/schemas/MigrationRuleResponse'
                 title: Response List Migration Rules Api V1 Execution Migration Rules Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/audit/integrity:
     get:
       summary: Get Execution Audit Integrity
-      description:
-        "Verify the GxP clinical execution ledger integrity via block-sealing validation.
+      description: 'Verify the GxP clinical execution ledger integrity via block-sealing validation.
 
 
         Ensures that chronological audit logs, block-level seals, and sequential chaining
 
-        remain structurally unbroken."
+        remain structurally unbroken.'
       operationId: get_execution_audit_integrity_api_v1_execution_audit_integrity_get
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -8213,8 +8452,7 @@ paths:
   /api/v1/execution/biostat/adam/{dataset}:
     get:
       summary: Export Adam Dataset
-      description:
-        "Exports ADaM dataset data (ADSL, ADAE, ADVS) in CDISC Dataset-JSON format.
+      description: 'Exports ADaM dataset data (ADSL, ADAE, ADVS) in CDISC Dataset-JSON format.
 
 
         - **Protected Endpoint**: Requires authenticated session under GatewayAuthMiddleware.
@@ -8223,25 +8461,25 @@ paths:
 
         - **Validations**: Automatically validates schema, keys, demographics, and referential consistency.
 
-        - **Media Type Contract**: `application/json` conforming to CDISC Dataset-JSON 1.0.0."
+        - **Media Type Contract**: `application/json` conforming to CDISC Dataset-JSON 1.0.0.'
       operationId: export_adam_dataset_api_v1_execution_biostat_adam__dataset__get
       parameters:
-        - name: dataset
-          in: path
-          required: true
-          schema:
-            type: string
-            title: Dataset
-        - name: study_id
-          in: query
-          required: true
-          schema:
-            type: string
-            description: The unique study identifier
-            title: Study Id
+      - name: dataset
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Dataset
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
           description: The unique study identifier
+          title: Study Id
+        description: The unique study identifier
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -8249,17 +8487,16 @@ paths:
                 type: object
                 additionalProperties: true
                 title: Response Export Adam Dataset Api V1 Execution Biostat Adam  Dataset  Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/biostat/bundle:
     get:
       summary: Export Biostat Bundle
-      description:
-        "Exports all SDTM domains and ADaM datasets bundled in a single CDISC Dataset-JSON document.
+      description: 'Exports all SDTM domains and ADaM datasets bundled in a single CDISC Dataset-JSON document.
 
 
         - **Protected Endpoint**: Requires authenticated session under GatewayAuthMiddleware.
@@ -8270,19 +8507,19 @@ paths:
 
         - **Media Type Contract**: `application/json` conforming to CDISC Dataset-JSON 1.0.0.
 
-        - **Supplemental Contract**: Includes all generated SUPP-- datasets alongside their parent datasets in the bundle."
+        - **Supplemental Contract**: Includes all generated SUPP-- datasets alongside their parent datasets in the bundle.'
       operationId: export_biostat_bundle_api_v1_execution_biostat_bundle_get
       parameters:
-        - name: study_id
-          in: query
-          required: true
-          schema:
-            type: string
-            description: The unique study identifier
-            title: Study Id
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
           description: The unique study identifier
+          title: Study Id
+        description: The unique study identifier
       responses:
-        "200":
+        '200':
           description: Successful Response
           content:
             application/json:
@@ -8290,36 +8527,60 @@ paths:
                 type: object
                 additionalProperties: true
                 title: Response Export Biostat Bundle Api V1 Execution Biostat Bundle Get
-        "422":
+        '422':
           description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HTTPValidationError"
+                $ref: '#/components/schemas/HTTPValidationError'
 components:
   schemas:
+    ActivityAssignmentRequest:
+      properties:
+        visit_id:
+          type: string
+          minLength: 1
+          title: Visit Id
+          description: The visit identifier.
+        procedure_ids:
+          items:
+            type: string
+          type: array
+          title: Procedure Ids
+          description: One or more procedure identifiers (non-empty).
+        activity_ids:
+          items:
+            type: string
+          type: array
+          title: Activity Ids
+          description: One or more activity/procedure identifiers (non-empty).
+      type: object
+      required:
+      - visit_id
+      title: ActivityAssignmentRequest
+      description: Request contract carrying a visit id and one or more procedure/activity ids.
     ActivityReport:
       properties:
         epoch_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Epoch Id
         epoch_internal_id:
           type: integer
           title: Epoch Internal Id
         scheduled_event_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Scheduled Event Id
         scheduled_event_internal_id:
           type: integer
           title: Scheduled Event Internal Id
         activity_def_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Activity Def Id
         activity_def_internal_id:
           type: integer
@@ -8329,25 +8590,25 @@ components:
           title: Status
         unmapped_items:
           items:
-            $ref: "#/components/schemas/ItemMappingStatus"
+            $ref: '#/components/schemas/ItemMappingStatus'
           type: array
           title: Unmapped Items
         mapped_items:
           items:
-            $ref: "#/components/schemas/ItemMappingStatus"
+            $ref: '#/components/schemas/ItemMappingStatus'
           type: array
           title: Mapped Items
       type: object
       required:
-        - epoch_id
-        - epoch_internal_id
-        - scheduled_event_id
-        - scheduled_event_internal_id
-        - activity_def_id
-        - activity_def_internal_id
-        - status
-        - unmapped_items
-        - mapped_items
+      - epoch_id
+      - epoch_internal_id
+      - scheduled_event_id
+      - scheduled_event_internal_id
+      - activity_def_id
+      - activity_def_internal_id
+      - status
+      - unmapped_items
+      - mapped_items
       title: ActivityReport
       description: "Detailed report of an activity definition mapped within an epoch schedule.\n\nAttributes:\n    epoch_id: The public identifier for the study epoch.\n    epoch_internal_id: The internal database ID for the epoch.\n    scheduled_event_id: The public identifier for the scheduled event instance.\n    scheduled_event_internal_id: The internal database ID for the scheduled event instance.\n    activity_def_id: The public identifier for the activity definition.\n    activity_def_internal_id: The internal database ID for the activity definition.\n    status: Mapping status of this activity ('complete', 'incomplete', or 'unmapped').\n    unmapped_items: List of `ItemMappingStatus` for items lacking an operational mapping.\n    mapped_items: List of `ItemMappingStatus` for items successfully mapped to operational nodes."
     AllowableUnit:
@@ -8360,21 +8621,21 @@ components:
           title: Name
       type: object
       required:
-        - ucum_code
-        - name
+      - ucum_code
+      - name
       title: AllowableUnit
     AmendmentImpactReport:
       properties:
         base_version:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Base Version
           description: Parent/base version tag
         amended_version:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Amended Version
           description: Current amended version tag
         added_forms_count:
@@ -8408,17 +8669,17 @@ components:
           description: Detailed text explanation of impact and costs
       type: object
       required:
-        - explanation
+      - explanation
       title: AmendmentImpactReport
       description: Analysis of changes and cost estimates of a study amendment.
     ApproveProtocolRequest:
       properties:
         signing_reason:
-          $ref: "#/components/schemas/SigningReason"
+          $ref: '#/components/schemas/SigningReason'
           description: Reason for signing
       type: object
       required:
-        - signing_reason
+      - signing_reason
       title: ApproveProtocolRequest
     ArmAttributes:
       properties:
@@ -8436,9 +8697,9 @@ components:
           description: Allocation ratio (e.g., '1:1', '2:1').
       type: object
       required:
-        - arm_type
-        - target_sample_size
-        - randomization_ratio
+      - arm_type
+      - target_sample_size
+      - randomization_ratio
       title: ArmAttributes
       description: Attributes defining a study arm.
     ArmLibraryObjectDetail:
@@ -8452,7 +8713,7 @@ components:
           title: Version
           description: Semantic version of the library object.
         status:
-          $ref: "#/components/schemas/LibraryStatus"
+          $ref: '#/components/schemas/LibraryStatus'
           description: Workflow review status of the object.
         sponsor_id:
           type: string
@@ -8473,27 +8734,27 @@ components:
           description: User ID who created this object.
         updated_at:
           anyOf:
-            - type: string
-              format: date-time
-            - type: "null"
+          - type: string
+            format: date-time
+          - type: 'null'
           title: Updated At
           description: Audit timestamp of last update.
         updated_by:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Updated By
           description: User ID of last updater.
         reason_for_change:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Reason For Change
           description: Detailed explanation of changes applied.
         prior_status:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Prior Status
           description: Previous status before transition.
         object_type:
@@ -8502,29 +8763,55 @@ components:
           title: Object Type
           default: ARM
         payload:
-          $ref: "#/components/schemas/ArmPayload"
+          $ref: '#/components/schemas/ArmPayload'
       type: object
       required:
-        - id
-        - version
-        - status
-        - sponsor_id
-        - tenant_id
-        - created_at
-        - created_by
-        - payload
+      - id
+      - version
+      - status
+      - sponsor_id
+      - tenant_id
+      - created_at
+      - created_by
+      - payload
       title: ArmLibraryObjectDetail
       description: Response model for an Arm library object.
     ArmPayload:
       properties:
         attributes:
-          $ref: "#/components/schemas/ArmAttributes"
+          $ref: '#/components/schemas/ArmAttributes'
           description: Clinical arm configurations.
       type: object
       required:
-        - attributes
+      - attributes
       title: ArmPayload
       description: Arm-specific payload validation containing arm attributes.
+    ArmReorderItem:
+      properties:
+        arm_id:
+          type: string
+          minLength: 1
+          title: Arm Id
+        sequence:
+          type: integer
+          minimum: 1.0
+          title: Sequence
+      type: object
+      required:
+      - arm_id
+      - sequence
+      title: ArmReorderItem
+    ArmReorderRequest:
+      properties:
+        arms:
+          items:
+            $ref: '#/components/schemas/ArmReorderItem'
+          type: array
+          title: Arms
+      type: object
+      required:
+      - arms
+      title: ArmReorderRequest
     AttritionStep:
       properties:
         criterion_id:
@@ -8557,13 +8844,13 @@ components:
           description: Percentage of current cohort lost at this step
       type: object
       required:
-        - criterion_id
-        - type
-        - description
-        - passed_count
-        - failed_count
-        - remaining_count
-        - attrition_rate
+      - criterion_id
+      - type
+      - description
+      - passed_count
+      - failed_count
+      - remaining_count
+      - attrition_rate
       title: AttritionStep
       description: Step in the patient population attrition funnel.
     BlockCreatedResponse:
@@ -8577,7 +8864,7 @@ components:
           title: Id
       type: object
       required:
-        - id
+      - id
       title: BlockCreatedResponse
     BlockDetailResponse:
       properties:
@@ -8605,13 +8892,13 @@ components:
       additionalProperties: true
       type: object
       required:
-        - id
-        - block_id
-        - block_type
-        - order
-        - version_index
-        - created_by
-        - created_at
+      - id
+      - block_id
+      - block_type
+      - order
+      - version_index
+      - created_by
+      - created_at
       title: BlockDetailResponse
     Body_upload_mapping_csv_api_v1_mappings_upload_post:
       properties:
@@ -8621,7 +8908,7 @@ components:
           title: File
       type: object
       required:
-        - file
+      - file
       title: Body_upload_mapping_csv_api_v1_mappings_upload_post
     Body_upload_protocol_ingestion_api_v1_designer_ingestion_upload_post:
       properties:
@@ -8631,7 +8918,7 @@ components:
           title: File
       type: object
       required:
-        - file
+      - file
       title: Body_upload_protocol_ingestion_api_v1_designer_ingestion_upload_post
     BurdenTraceItem:
       properties:
@@ -8657,11 +8944,11 @@ components:
           description: Trace explanation of this component
       type: object
       required:
-        - component
-        - count
-        - weight
-        - subtotal
-        - explanation
+      - component
+      - count
+      - weight
+      - subtotal
+      - explanation
       title: BurdenTraceItem
       description: An itemized breakdown of clinical operational burden.
     BurdenTraceReport:
@@ -8684,16 +8971,16 @@ components:
           description: Total clinical burden score
         trace:
           items:
-            $ref: "#/components/schemas/BurdenTraceItem"
+            $ref: '#/components/schemas/BurdenTraceItem'
           type: array
           title: Trace
           description: Trace details explaining the sum
       type: object
       required:
-        - visit_burden
-        - procedure_burden
-        - activity_burden
-        - total_burden
+      - visit_burden
+      - procedure_burden
+      - activity_burden
+      - total_burden
       title: BurdenTraceReport
       description: Patient operational burden trace score.
     CDASHMapping:
@@ -8709,9 +8996,9 @@ components:
           title: Data Type
       type: object
       required:
-        - domain
-        - variable_name
-        - data_type
+      - domain
+      - variable_name
+      - data_type
       title: CDASHMapping
     CascadeSummaryReport:
       properties:
@@ -8738,22 +9025,21 @@ components:
           description: Number of edit check rules generated
         forms:
           items:
-            $ref: "#/components/schemas/CascadedFormTemplate"
+            $ref: '#/components/schemas/CascadedFormTemplate'
           type: array
           title: Forms
           description: Cascaded form templates
       type: object
       required:
-        - study_id
-        - forms_created
-        - visits_created
-        - rules_synced
+      - study_id
+      - forms_created
+      - visits_created
+      - rules_synced
       title: CascadeSummaryReport
-      description:
-        "Summary report of downstream eCRF and SoA cascade propagation.
+      description: 'Summary report of downstream eCRF and SoA cascade propagation.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     CascadedFormTemplate:
       properties:
         form_id:
@@ -8782,21 +9068,20 @@ components:
           default: true
       type: object
       required:
-        - form_id
-        - form_name
-        - domain
+      - form_id
+      - form_name
+      - domain
       title: CascadedFormTemplate
-      description:
-        "Auto-generated eCRF form template derived from USDM activities.
+      description: 'Auto-generated eCRF form template derived from USDM activities.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     CodeValidationState:
       type: string
       enum:
-        - VALID
-        - INVALID
-        - DEGRADED
+      - VALID
+      - INVALID
+      - DEGRADED
       title: CodeValidationState
       description: Validation state of a controlled terminology concept code.
     Comment:
@@ -8823,8 +9108,8 @@ components:
           description: Creation timestamp.
         updated_at:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Updated At
           description: Optional modification timestamp.
         version_index:
@@ -8834,10 +9119,10 @@ components:
           default: 1
       type: object
       required:
-        - comment_id
-        - thread_id
-        - text
-        - created_by
+      - comment_id
+      - thread_id
+      - text
+      - created_by
       title: Comment
       description: Represent an individual block-anchored user review comment.
     CommentCreate:
@@ -8847,7 +9132,7 @@ components:
           title: Text
       type: object
       required:
-        - text
+      - text
       title: CommentCreate
     CommentCreatePayload:
       properties:
@@ -8861,8 +9146,8 @@ components:
           description: The text content of the comment
       type: object
       required:
-        - field_id
-        - comment_text
+      - field_id
+      - comment_text
       title: CommentCreatePayload
     CommentThread:
       properties:
@@ -8901,18 +9186,18 @@ components:
           description: The block's version_index at the time of thread creation.
         comments:
           items:
-            $ref: "#/components/schemas/Comment"
+            $ref: '#/components/schemas/Comment'
           type: array
           title: Comments
           description: Ordered list of comments.
       type: object
       required:
-        - thread_id
-        - block_id
-        - section_id
-        - study_id
-        - created_by
-        - block_version_index
+      - thread_id
+      - block_id
+      - section_id
+      - study_id
+      - created_by
+      - block_version_index
       title: CommentThread
       description: Represents a collection of ordered review comments anchored to a specific block and section.
     CommentThreadCreate:
@@ -8925,18 +9210,18 @@ components:
           title: Text
       type: object
       required:
-        - block_id
-        - text
+      - block_id
+      - text
       title: CommentThreadCreate
     ComparisonOperator:
       type: string
       enum:
-        - ==
-        - "!="
-        - <
-        - <=
-        - ">"
-        - ">="
+      - ==
+      - '!='
+      - <
+      - <=
+      - '>'
+      - '>='
       title: ComparisonOperator
       description: Allowed binary comparison operators for criteria evaluations.
     ConceptDetail:
@@ -8958,14 +9243,14 @@ components:
           title: Definition
         cdash_mapping:
           anyOf:
-            - $ref: "#/components/schemas/CDASHMapping"
-            - type: "null"
+          - $ref: '#/components/schemas/CDASHMapping'
+          - type: 'null'
         allowable_units:
           anyOf:
-            - items:
-                $ref: "#/components/schemas/AllowableUnit"
-              type: array
-            - type: "null"
+          - items:
+              $ref: '#/components/schemas/AllowableUnit'
+            type: array
+          - type: 'null'
           title: Allowable Units
         version:
           type: string
@@ -8982,31 +9267,31 @@ components:
           title: Created By
         updated_at:
           anyOf:
-            - type: string
-              format: date-time
-            - type: "null"
+          - type: string
+            format: date-time
+          - type: 'null'
           title: Updated At
         updated_by:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Updated By
         reason_for_change:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Reason For Change
       type: object
       required:
-        - id
-        - concept_code
-        - terminology
-        - display_name
-        - definition
-        - version
-        - status
-        - created_at
-        - created_by
+      - id
+      - concept_code
+      - terminology
+      - display_name
+      - definition
+      - version
+      - status
+      - created_at
+      - created_by
       title: ConceptDetail
     ConceptListResponse:
       properties:
@@ -9015,7 +9300,7 @@ components:
           title: Object
         data:
           items:
-            $ref: "#/components/schemas/ConceptDetail"
+            $ref: '#/components/schemas/ConceptDetail'
           type: array
           title: Data
         has_more:
@@ -9023,14 +9308,14 @@ components:
           title: Has More
         next_cursor:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Next Cursor
       type: object
       required:
-        - object
-        - data
-        - has_more
+      - object
+      - data
+      - has_more
       title: ConceptListResponse
     ConceptReference:
       properties:
@@ -9048,10 +9333,10 @@ components:
           title: Attribute
       type: object
       required:
-        - element_type
-        - element_id
-        - element_name
-        - attribute
+      - element_type
+      - element_id
+      - element_name
+      - attribute
       title: ConceptReference
       description: Identifies a specific study element referencing a terminology concept.
     ConceptValidationReport:
@@ -9060,32 +9345,32 @@ components:
           type: string
           title: Concept Code
         state:
-          $ref: "#/components/schemas/CodeValidationState"
+          $ref: '#/components/schemas/CodeValidationState'
         decode:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Decode
         system:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: System
         error_message:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Error Message
         references:
           items:
-            $ref: "#/components/schemas/ConceptReference"
+            $ref: '#/components/schemas/ConceptReference'
           type: array
           title: References
           default: []
       type: object
       required:
-        - concept_code
-        - state
+      - concept_code
+      - state
       title: ConceptValidationReport
       description: Detailed validation status for a single terminology concept code.
     CreateArmRequest:
@@ -9100,7 +9385,7 @@ components:
           description: Initial version code.
           default: 1.0.0
         status:
-          $ref: "#/components/schemas/LibraryStatus"
+          $ref: '#/components/schemas/LibraryStatus'
           description: Initial library state.
           default: DRAFT
         sponsor_id:
@@ -9117,13 +9402,13 @@ components:
           title: Object Type
           default: ARM
         payload:
-          $ref: "#/components/schemas/ArmPayload"
+          $ref: '#/components/schemas/ArmPayload'
       type: object
       required:
-        - id
-        - sponsor_id
-        - change_reason
-        - payload
+      - id
+      - sponsor_id
+      - change_reason
+      - payload
       title: CreateArmRequest
       description: Request model for creating an Arm library object.
     CreateBlockRequest:
@@ -9143,15 +9428,15 @@ components:
           title: Properties
         change_reason:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Change Reason
       type: object
       required:
-        - id
-        - block_type
-        - order
-        - properties
+      - id
+      - block_type
+      - order
+      - properties
       title: CreateBlockRequest
     CreateConceptRequest:
       properties:
@@ -9169,25 +9454,25 @@ components:
           title: Definition
         cdash_mapping:
           anyOf:
-            - $ref: "#/components/schemas/CDASHMapping"
-            - type: "null"
+          - $ref: '#/components/schemas/CDASHMapping'
+          - type: 'null'
         allowable_units:
           anyOf:
-            - items:
-                $ref: "#/components/schemas/AllowableUnit"
-              type: array
-            - type: "null"
+          - items:
+              $ref: '#/components/schemas/AllowableUnit'
+            type: array
+          - type: 'null'
           title: Allowable Units
         change_reason:
           type: string
           title: Change Reason
       type: object
       required:
-        - concept_code
-        - terminology
-        - display_name
-        - definition
-        - change_reason
+      - concept_code
+      - terminology
+      - display_name
+      - definition
+      - change_reason
       title: CreateConceptRequest
     CreateDataElementRequest:
       properties:
@@ -9201,7 +9486,7 @@ components:
           description: Initial version code.
           default: 1.0.0
         status:
-          $ref: "#/components/schemas/LibraryStatus"
+          $ref: '#/components/schemas/LibraryStatus'
           description: Initial library state.
           default: DRAFT
         sponsor_id:
@@ -9218,13 +9503,13 @@ components:
           title: Object Type
           default: DATA_ELEMENT
         payload:
-          $ref: "#/components/schemas/DataElementPayload"
+          $ref: '#/components/schemas/DataElementPayload'
       type: object
       required:
-        - id
-        - sponsor_id
-        - change_reason
-        - payload
+      - id
+      - sponsor_id
+      - change_reason
+      - payload
       title: CreateDataElementRequest
       description: Request model for creating a Data Element library object.
     CreateEligibilityCriterionRequest:
@@ -9236,8 +9521,8 @@ components:
         criterion_type:
           type: string
           enum:
-            - inclusion
-            - exclusion
+          - inclusion
+          - exclusion
           title: Criterion Type
           description: Whether this is an inclusion or exclusion criterion.
         description:
@@ -9259,11 +9544,11 @@ components:
           description: Reason for creating this criterion.
       type: object
       required:
-        - criterion_id
-        - criterion_type
-        - description
-        - dsl_source
-        - change_reason
+      - criterion_id
+      - criterion_type
+      - description
+      - dsl_source
+      - change_reason
       title: CreateEligibilityCriterionRequest
     CreateEpochRequest:
       properties:
@@ -9273,7 +9558,7 @@ components:
           title: Id
           description: Unique identifier for the epoch.
         properties:
-          $ref: "#/components/schemas/EpochProperties"
+          $ref: '#/components/schemas/EpochProperties'
         change_reason:
           type: string
           title: Change Reason
@@ -9281,8 +9566,8 @@ components:
           default: Created epoch
       type: object
       required:
-        - id
-        - properties
+      - id
+      - properties
       title: CreateEpochRequest
     CreateFormRequest:
       properties:
@@ -9296,7 +9581,7 @@ components:
           description: Initial version code.
           default: 1.0.0
         status:
-          $ref: "#/components/schemas/LibraryStatus"
+          $ref: '#/components/schemas/LibraryStatus'
           description: Initial library state.
           default: DRAFT
         sponsor_id:
@@ -9313,13 +9598,13 @@ components:
           title: Object Type
           default: FORM
         payload:
-          $ref: "#/components/schemas/FormPayload"
+          $ref: '#/components/schemas/FormPayload'
       type: object
       required:
-        - id
-        - sponsor_id
-        - change_reason
-        - payload
+      - id
+      - sponsor_id
+      - change_reason
+      - payload
       title: CreateFormRequest
       description: Request model for creating a Form library object.
     CreateProcedureRequest:
@@ -9330,7 +9615,7 @@ components:
           title: Id
           description: Unique identifier for the procedure.
         properties:
-          $ref: "#/components/schemas/ProcedureProperties"
+          $ref: '#/components/schemas/ProcedureProperties'
         change_reason:
           type: string
           title: Change Reason
@@ -9338,52 +9623,52 @@ components:
           default: Created procedure
       type: object
       required:
-        - id
-        - properties
+      - id
+      - properties
       title: CreateProcedureRequest
     CreateRuleRequest:
       properties:
         type:
           type: string
           enum:
-            - skip_logic
-            - constraint
-            - cross_form_check
+          - skip_logic
+          - constraint
+          - cross_form_check
           title: Type
         condition:
-          $ref: "#/components/schemas/ExpressionNode-Input"
+          $ref: '#/components/schemas/ExpressionNode-Input'
         action:
           anyOf:
-            - type: string
-              enum:
-                - show
-                - hide
-            - type: "null"
+          - type: string
+            enum:
+            - show
+            - hide
+          - type: 'null'
           title: Action
         target_field:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Target Field
         target_form:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Target Form
         target_group:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Target Group
         query_message:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Query Message
       type: object
       required:
-        - type
-        - condition
+      - type
+      - condition
       title: CreateRuleRequest
       description: Request schema to create a rule.
     CreateStudyArmRequest:
@@ -9394,7 +9679,7 @@ components:
           title: Id
           description: Unique identifier for the study arm.
         properties:
-          $ref: "#/components/schemas/StudyArmProperties"
+          $ref: '#/components/schemas/StudyArmProperties'
         change_reason:
           type: string
           title: Change Reason
@@ -9402,8 +9687,8 @@ components:
           default: Created study arm
       type: object
       required:
-        - id
-        - properties
+      - id
+      - properties
       title: CreateStudyArmRequest
     CreateStudyVersionRequest:
       properties:
@@ -9421,10 +9706,10 @@ components:
           title: Version Index
       type: object
       required:
-        - id
-        - version_tag
-        - status
-        - version_index
+      - id
+      - version_tag
+      - status
+      - version_index
       title: CreateStudyVersionRequest
       description: Request payload to establish a StudyVersion node.
     CreateTimingWindowRequest:
@@ -9435,7 +9720,7 @@ components:
           title: Id
           description: Unique identifier for the timing window.
         properties:
-          $ref: "#/components/schemas/TimingWindowProperties"
+          $ref: '#/components/schemas/TimingWindowProperties'
         change_reason:
           type: string
           title: Change Reason
@@ -9443,8 +9728,8 @@ components:
           default: Created timing window
       type: object
       required:
-        - id
-        - properties
+      - id
+      - properties
       title: CreateTimingWindowRequest
     DataElementLibraryObjectDetail:
       properties:
@@ -9457,7 +9742,7 @@ components:
           title: Version
           description: Semantic version of the library object.
         status:
-          $ref: "#/components/schemas/LibraryStatus"
+          $ref: '#/components/schemas/LibraryStatus'
           description: Workflow review status of the object.
         sponsor_id:
           type: string
@@ -9478,27 +9763,27 @@ components:
           description: User ID who created this object.
         updated_at:
           anyOf:
-            - type: string
-              format: date-time
-            - type: "null"
+          - type: string
+            format: date-time
+          - type: 'null'
           title: Updated At
           description: Audit timestamp of last update.
         updated_by:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Updated By
           description: User ID of last updater.
         reason_for_change:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Reason For Change
           description: Detailed explanation of changes applied.
         prior_status:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Prior Status
           description: Previous status before transition.
         object_type:
@@ -9507,17 +9792,17 @@ components:
           title: Object Type
           default: DATA_ELEMENT
         payload:
-          $ref: "#/components/schemas/DataElementPayload"
+          $ref: '#/components/schemas/DataElementPayload'
       type: object
       required:
-        - id
-        - version
-        - status
-        - sponsor_id
-        - tenant_id
-        - created_at
-        - created_by
-        - payload
+      - id
+      - version
+      - status
+      - sponsor_id
+      - tenant_id
+      - created_at
+      - created_by
+      - payload
       title: DataElementLibraryObjectDetail
       description: Response model for a Data Element library object.
     DataElementPayload:
@@ -9534,14 +9819,14 @@ components:
           description: List of standard UCUM unit codes allowed.
         default_unit:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Default Unit
           description: Default unit code from the allowable list.
       type: object
       required:
-        - data_type
-        - allowable_units
+      - data_type
+      - allowable_units
       title: DataElementPayload
       description: Data-element specific payload validation containing units and format.
     DifferenceResult:
@@ -9555,9 +9840,9 @@ components:
           title: New Value
       type: object
       required:
-        - field
-        - old_value
-        - new_value
+      - field
+      - old_value
+      - new_value
       title: DifferenceResult
       description: "Represents a field-level difference between two versions.\n\nAttributes:\n    field: The name of the field that changed.\n    old_value: The previous value of the field."
     EligibilityCriterion:
@@ -9583,31 +9868,31 @@ components:
           type: string
           title: Id
           description: Unique identifier of this eligibility criterion, e.g., 'INC_01'.
-          default: ""
+          default: ''
         criterion_type:
           type: string
           enum:
-            - inclusion
-            - exclusion
+          - inclusion
+          - exclusion
           title: Criterion Type
           description: Whether this is an inclusion or exclusion criterion.
         identifier:
           type: string
           title: Identifier
           description: Business identifier of this criterion, e.g., 'INC-001'.
-          default: ""
+          default: ''
         human_readable_text:
           type: string
           title: Human Readable Text
           description: Human-readable text description of the criterion.
-          default: ""
+          default: ''
         dsl_expression_string:
           type: string
           title: Dsl Expression String
           description: The raw DSL statement source, e.g., 'eCRF.DM.AGE >= 18'.
-          default: ""
+          default: ''
         structured_expression_tree:
-          $ref: "#/components/schemas/ExpressionNode-Output"
+          $ref: '#/components/schemas/ExpressionNode-Output'
           description: The parsed structured AST of this criterion.
         expected_outcome:
           type: boolean
@@ -9618,41 +9903,41 @@ components:
           type: string
           title: Criterion Id
           description: Backward compatible criterion_id field.
-          default: ""
+          default: ''
         description:
           type: string
           title: Description
           description: Backward compatible description field.
-          default: ""
+          default: ''
         dsl_source:
           type: string
           title: Dsl Source
           description: Backward compatible dsl_source field.
-          default: ""
+          default: ''
         condition:
-          $ref: "#/components/schemas/ExpressionNode-Output"
+          $ref: '#/components/schemas/ExpressionNode-Output'
           description: Backward compatible condition field.
       type: object
       required:
-        - created_by
-        - reason_for_change
-        - criterion_type
+      - created_by
+      - reason_for_change
+      - criterion_type
       title: EligibilityCriterion
       description: Represents a single inclusion or exclusion criterion with full GxP audit metadata.
     EpochProperties:
       properties:
         name:
           anyOf:
-            - type: string
-              minLength: 1
-            - type: "null"
+          - type: string
+            minLength: 1
+          - type: 'null'
           title: Name
           description: The name of the study epoch, e.g., 'Screening'.
         epoch_name:
           anyOf:
-            - type: string
-              minLength: 1
-            - type: "null"
+          - type: string
+            minLength: 1
+          - type: 'null'
           title: Epoch Name
           description: Alternate/legacy field name for epoch name.
         sequence:
@@ -9662,44 +9947,70 @@ components:
           description: Sequential ordering rank of the epoch.
       type: object
       required:
-        - sequence
+      - sequence
       title: EpochProperties
       description: Properties specific to a Study Epoch.
+    EpochReorderItem:
+      properties:
+        epoch_id:
+          type: string
+          minLength: 1
+          title: Epoch Id
+        sequence:
+          type: integer
+          minimum: 1.0
+          title: Sequence
+      type: object
+      required:
+      - epoch_id
+      - sequence
+      title: EpochReorderItem
+    EpochReorderRequest:
+      properties:
+        epochs:
+          items:
+            $ref: '#/components/schemas/EpochReorderItem'
+          type: array
+          title: Epochs
+      type: object
+      required:
+      - epochs
+      title: EpochReorderRequest
     ExpressionNode-Input:
       properties:
         type:
           type: string
           enum:
-            - logical
-            - comparison
-            - function
-            - field_ref
-            - constant
+          - logical
+          - comparison
+          - function
+          - field_ref
+          - constant
           title: Type
         operator:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Operator
         operands:
           anyOf:
-            - items:
-                $ref: "#/components/schemas/ExpressionNode-Input"
-              type: array
-            - type: "null"
+          - items:
+              $ref: '#/components/schemas/ExpressionNode-Input'
+            type: array
+          - type: 'null'
           title: Operands
         value:
           anyOf:
-            - {}
-            - type: "null"
+          - {}
+          - type: 'null'
           title: Value
         field_ref:
           anyOf:
-            - $ref: "#/components/schemas/FieldReference-Input"
-            - type: "null"
+          - $ref: '#/components/schemas/FieldReference-Input'
+          - type: 'null'
       type: object
       required:
-        - type
+      - type
       title: ExpressionNode
       description: A recursive node in a structured clinical expression tree.
     ExpressionNode-Output:
@@ -9707,47 +10018,46 @@ components:
         type:
           type: string
           enum:
-            - logical
-            - comparison
-            - field_ref
-            - constant
+          - logical
+          - comparison
+          - field_ref
+          - constant
           title: Type
           description: Node type indicating the structure of the node.
         operator:
           anyOf:
-            - $ref: "#/components/schemas/ComparisonOperator"
-            - $ref: "#/components/schemas/LogicalOperator"
-            - type: string
-            - type: "null"
+          - $ref: '#/components/schemas/ComparisonOperator'
+          - $ref: '#/components/schemas/LogicalOperator'
+          - type: string
+          - type: 'null'
           title: Operator
           description: Operator for logical (and, or, not) or comparison (==, !=, <, <=, >, >=) nodes.
         operands:
           anyOf:
-            - items:
-                $ref: "#/components/schemas/ExpressionNode-Output"
-              type: array
-            - type: "null"
+          - items:
+              $ref: '#/components/schemas/ExpressionNode-Output'
+            type: array
+          - type: 'null'
           title: Operands
           description: Child operands of logical or comparison nodes.
         value:
           anyOf:
-            - {}
-            - type: "null"
+          - {}
+          - type: 'null'
           title: Value
           description: Literal constant value of type constant.
         field_ref:
           anyOf:
-            - $ref: "#/components/schemas/FieldReference-Output"
-            - type: "null"
+          - $ref: '#/components/schemas/FieldReference-Output'
+          - type: 'null'
           description: Field reference details of type field_ref.
       type: object
       required:
-        - type
+      - type
       title: ExpressionNode
-      description:
-        "Recursive node inside a structured clinical expression tree (AST).
+      description: 'Recursive node inside a structured clinical expression tree (AST).
 
-        Supported types are: logical, comparison, field_ref, constant."
+        Supported types are: logical, comparison, field_ref, constant.'
     FeasibilityReport:
       properties:
         starting_cohort_size:
@@ -9764,15 +10074,15 @@ components:
           description: Percentage of cohort that is eligible
         attrition_steps:
           items:
-            $ref: "#/components/schemas/AttritionStep"
+            $ref: '#/components/schemas/AttritionStep'
           type: array
           title: Attrition Steps
           description: Step-by-step funnel of attrition
       type: object
       required:
-        - starting_cohort_size
-        - final_eligible_count
-        - overall_eligibility_rate
+      - starting_cohort_size
+      - final_eligible_count
+      - overall_eligibility_rate
       title: FeasibilityReport
       description: Cohort-backed patient population feasibility and attrition rates.
     FieldReference-Input:
@@ -9782,22 +10092,22 @@ components:
           title: Field Id
         form_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Form Id
         visit_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Visit Id
         visit_relative:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Visit Relative
       type: object
       required:
-        - field_id
+      - field_id
       title: FieldReference
       description: Represents a structured field reference within an expression tree.
     FieldReference-Output:
@@ -9816,14 +10126,13 @@ components:
           description: The domain variable, e.g., 'AGE'.
       type: object
       required:
-        - raw_reference
-        - domain
-        - variable
+      - raw_reference
+      - domain
+      - variable
       title: FieldReference
-      description:
-        "Represents a structured field reference pointing to an eCRF domain variable.
+      description: 'Represents a structured field reference pointing to an eCRF domain variable.
 
-        Format must strictly follow: eCRF.<DOMAIN>.<VARIABLE>"
+        Format must strictly follow: eCRF.<DOMAIN>.<VARIABLE>'
     FormItem:
       properties:
         item_id:
@@ -9849,10 +10158,10 @@ components:
           default: true
       type: object
       required:
-        - item_id
-        - name
-        - question_text
-        - data_type
+      - item_id
+      - name
+      - question_text
+      - data_type
       title: FormItem
       description: Represents an individual question/field item within a Form.
     FormLibraryObjectDetail:
@@ -9866,7 +10175,7 @@ components:
           title: Version
           description: Semantic version of the library object.
         status:
-          $ref: "#/components/schemas/LibraryStatus"
+          $ref: '#/components/schemas/LibraryStatus'
           description: Workflow review status of the object.
         sponsor_id:
           type: string
@@ -9887,27 +10196,27 @@ components:
           description: User ID who created this object.
         updated_at:
           anyOf:
-            - type: string
-              format: date-time
-            - type: "null"
+          - type: string
+            format: date-time
+          - type: 'null'
           title: Updated At
           description: Audit timestamp of last update.
         updated_by:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Updated By
           description: User ID of last updater.
         reason_for_change:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Reason For Change
           description: Detailed explanation of changes applied.
         prior_status:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Prior Status
           description: Previous status before transition.
         object_type:
@@ -9916,30 +10225,30 @@ components:
           title: Object Type
           default: FORM
         payload:
-          $ref: "#/components/schemas/FormPayload"
+          $ref: '#/components/schemas/FormPayload'
       type: object
       required:
-        - id
-        - version
-        - status
-        - sponsor_id
-        - tenant_id
-        - created_at
-        - created_by
-        - payload
+      - id
+      - version
+      - status
+      - sponsor_id
+      - tenant_id
+      - created_at
+      - created_by
+      - payload
       title: FormLibraryObjectDetail
       description: Response model for a Form library object.
     FormPayload:
       properties:
         items:
           items:
-            $ref: "#/components/schemas/FormItem"
+            $ref: '#/components/schemas/FormItem'
           type: array
           title: Items
           description: List of form items/fields defined in this template.
       type: object
       required:
-        - items
+      - items
       title: FormPayload
       description: Form-specific payload validation containing items.
     FormReviewCommentResponse:
@@ -9979,23 +10288,23 @@ components:
           title: Text
       type: object
       required:
-        - id
-        - form_id
-        - field_id
-        - author_id
-        - comment_text
-        - status
-        - created_at
-        - isResolved
-        - authorName
-        - createdAt
-        - text
+      - id
+      - form_id
+      - field_id
+      - author_id
+      - comment_text
+      - status
+      - created_at
+      - isResolved
+      - authorName
+      - createdAt
+      - text
       title: FormReviewCommentResponse
     HTTPValidationError:
       properties:
         detail:
           items:
-            $ref: "#/components/schemas/ValidationError"
+            $ref: '#/components/schemas/ValidationError'
           type: array
           title: Detail
       type: object
@@ -10008,13 +10317,13 @@ components:
           description: Stable, unique global library ID to instantiate.
         version:
           anyOf:
-            - type: integer
-            - type: "null"
+          - type: integer
+          - type: 'null'
           title: Version
           description: The specific version of the library object to instantiate. Defaults to latest if not specified.
       type: object
       required:
-        - library_object_id
+      - library_object_id
       title: InstantiateLibraryObjectRequest
     InstantiatedFromDetail:
       properties:
@@ -10029,26 +10338,26 @@ components:
           title: Sponsor Id
       type: object
       required:
-        - library_object_id
-        - version
-        - sponsor_id
+      - library_object_id
+      - version
+      - sponsor_id
       title: InstantiatedFromDetail
     InvalidParam:
       properties:
         field:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Field
         reason:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Reason
         value:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Value
       type: object
       title: InvalidParam
@@ -10056,22 +10365,22 @@ components:
       properties:
         item_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Item Id
         internal_id:
           anyOf:
-            - type: integer
-            - type: "null"
+          - type: integer
+          - type: 'null'
           title: Internal Id
         is_mapped:
           type: boolean
           title: Is Mapped
       type: object
       required:
-        - item_id
-        - internal_id
-        - is_mapped
+      - item_id
+      - internal_id
+      - is_mapped
       title: ItemMappingStatus
       description: "Represents the mapping status of an individual activity item.\n\nAttributes:\n    item_id: The public string identifier of the activity item.\n    internal_id: The internal graph database ID of the activity item.\n    is_mapped: Boolean indicating whether this item has a corresponding ODM/CRF node mapped to it."
     LibraryInstanceResponse:
@@ -10096,16 +10405,16 @@ components:
           type: string
           title: Created By
         instantiated_from:
-          $ref: "#/components/schemas/InstantiatedFromDetail"
+          $ref: '#/components/schemas/InstantiatedFromDetail'
       type: object
       required:
-        - id
-        - study_id
-        - object_type
-        - payload
-        - created_at
-        - created_by
-        - instantiated_from
+      - id
+      - study_id
+      - object_type
+      - payload
+      - created_at
+      - created_by
+      - instantiated_from
       title: LibraryInstanceResponse
     LibraryObjectAmendRequest:
       properties:
@@ -10115,14 +10424,14 @@ components:
           description: Mandatory reason for initiating the amendment.
         payload:
           anyOf:
-            - additionalProperties: true
-              type: object
-            - type: "null"
+          - additionalProperties: true
+            type: object
+          - type: 'null'
           title: Payload
           description: Optional updated payload for the amended version. If not provided, the latest payload is cloned.
       type: object
       required:
-        - reason_for_change
+      - reason_for_change
       title: LibraryObjectAmendRequest
       description: Payload for the Library Object Amendment endpoint.
     LibraryObjectListResponse:
@@ -10134,17 +10443,17 @@ components:
         data:
           items:
             oneOf:
-              - $ref: "#/components/schemas/FormLibraryObjectDetail"
-              - $ref: "#/components/schemas/DataElementLibraryObjectDetail"
-              - $ref: "#/components/schemas/ArmLibraryObjectDetail"
-              - $ref: "#/components/schemas/VisitLibraryObjectDetail"
+            - $ref: '#/components/schemas/FormLibraryObjectDetail'
+            - $ref: '#/components/schemas/DataElementLibraryObjectDetail'
+            - $ref: '#/components/schemas/ArmLibraryObjectDetail'
+            - $ref: '#/components/schemas/VisitLibraryObjectDetail'
             discriminator:
               propertyName: object_type
               mapping:
-                ARM: "#/components/schemas/ArmLibraryObjectDetail"
-                DATA_ELEMENT: "#/components/schemas/DataElementLibraryObjectDetail"
-                FORM: "#/components/schemas/FormLibraryObjectDetail"
-                VISIT: "#/components/schemas/VisitLibraryObjectDetail"
+                ARM: '#/components/schemas/ArmLibraryObjectDetail'
+                DATA_ELEMENT: '#/components/schemas/DataElementLibraryObjectDetail'
+                FORM: '#/components/schemas/FormLibraryObjectDetail'
+                VISIT: '#/components/schemas/VisitLibraryObjectDetail'
           type: array
           title: Data
         has_more:
@@ -10152,21 +10461,21 @@ components:
           title: Has More
         next_cursor:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Next Cursor
       type: object
       required:
-        - data
-        - has_more
+      - data
+      - has_more
       title: LibraryObjectListResponse
-      description: "Paginated response envelope for Global Library Objects.
+      description: 'Paginated response envelope for Global Library Objects.
 
-        Matches Stripe-style list response."
+        Matches Stripe-style list response.'
     LibraryObjectTransitionRequest:
       properties:
         status:
-          $ref: "#/components/schemas/LibraryStatus"
+          $ref: '#/components/schemas/LibraryStatus'
           description: Target status level for transition.
         change_reason:
           type: string
@@ -10174,19 +10483,19 @@ components:
           description: Mandatory reason for change / audit trail justification.
       type: object
       required:
-        - status
-        - change_reason
+      - status
+      - change_reason
       title: LibraryObjectTransitionRequest
       description: Request model for transitioning library object lifecycle status.
     LibraryStatus:
       type: string
       enum:
-        - DRAFT
-        - IN_REVIEW
-        - APPROVED
-        - PUBLISHED
-        - ARCHIVED
-        - REJECTED
+      - DRAFT
+      - IN_REVIEW
+      - APPROVED
+      - PUBLISHED
+      - ARCHIVED
+      - REJECTED
       title: LibraryStatus
       description: Standard status levels for Global Library objects.
     LinkArmApplicabilityRequest:
@@ -10202,15 +10511,15 @@ components:
         target_type:
           type: string
           enum:
-            - visit
-            - procedure
-            - epoch
+          - visit
+          - procedure
+          - epoch
           title: Target Type
           default: visit
       type: object
       required:
-        - arm_id
-        - target_id
+      - arm_id
+      - target_id
       title: LinkArmApplicabilityRequest
     LinkEpochVisitRequest:
       properties:
@@ -10224,8 +10533,8 @@ components:
           title: Visit Id
       type: object
       required:
-        - epoch_id
-        - visit_id
+      - epoch_id
+      - visit_id
       title: LinkEpochVisitRequest
     LinkTimingRequest:
       properties:
@@ -10240,14 +10549,14 @@ components:
         source_type:
           type: string
           enum:
-            - visit
-            - procedure
+          - visit
+          - procedure
           title: Source Type
           default: visit
       type: object
       required:
-        - source_id
-        - timing_id
+      - source_id
+      - timing_id
       title: LinkTimingRequest
     LinkVisitProcedureRequest:
       properties:
@@ -10261,24 +10570,24 @@ components:
           title: Procedure Id
       type: object
       required:
-        - visit_id
-        - procedure_id
+      - visit_id
+      - procedure_id
       title: LinkVisitProcedureRequest
     LogicalOperator:
       type: string
       enum:
-        - and
-        - or
-        - not
+      - and
+      - or
+      - not
       title: LogicalOperator
       description: Allowed logical connectors for composite criteria expressions.
     ObjectType:
       type: string
       enum:
-        - FORM
-        - DATA_ELEMENT
-        - ARM
-        - VISIT
+      - FORM
+      - DATA_ELEMENT
+      - ARM
+      - VISIT
       title: ObjectType
       description: Supported types of clinical design objects in the Global Library.
     ProblemDetails:
@@ -10303,39 +10612,65 @@ components:
           title: Code
         invalid_params:
           anyOf:
-            - items:
-                $ref: "#/components/schemas/InvalidParam"
-              type: array
-            - type: "null"
+          - items:
+              $ref: '#/components/schemas/InvalidParam'
+            type: array
+          - type: 'null'
           title: Invalid Params
       type: object
       required:
-        - type
-        - title
-        - status
-        - detail
-        - instance
-        - code
+      - type
+      - title
+      - status
+      - detail
+      - instance
+      - code
       title: ProblemDetails
     ProcedureProperties:
       properties:
         name:
           anyOf:
-            - type: string
-              minLength: 1
-            - type: "null"
+          - type: string
+            minLength: 1
+          - type: 'null'
           title: Name
           description: The display name of the procedure.
         activity_name:
           anyOf:
-            - type: string
-              minLength: 1
-            - type: "null"
+          - type: string
+            minLength: 1
+          - type: 'null'
           title: Activity Name
           description: Alternate/legacy field name for the procedure.
       type: object
       title: ProcedureProperties
       description: Properties specific to a clinical Procedure / Activity.
+    ProcedureReorderItem:
+      properties:
+        procedure_id:
+          type: string
+          minLength: 1
+          title: Procedure Id
+        sequence:
+          type: integer
+          minimum: 1.0
+          title: Sequence
+      type: object
+      required:
+      - procedure_id
+      - sequence
+      title: ProcedureReorderItem
+    ProcedureReorderRequest:
+      properties:
+        procedures:
+          items:
+            $ref: '#/components/schemas/ProcedureReorderItem'
+          type: array
+          title: Procedures
+      type: object
+      required:
+      - procedures
+      title: ProcedureReorderRequest
     PromoteRequest:
       properties:
         change_reason:
@@ -10343,20 +10678,20 @@ components:
           title: Change Reason
       type: object
       required:
-        - change_reason
+      - change_reason
       title: PromoteRequest
     ProtocolAmendRequest:
       properties:
         amendment_type:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Amendment Type
           default: minor
         type:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Type
       type: object
       title: ProtocolAmendRequest
@@ -10377,7 +10712,7 @@ components:
           description: Calculated patient operational burden score
         findings:
           items:
-            $ref: "#/components/schemas/QualityRuleFinding"
+            $ref: '#/components/schemas/QualityRuleFinding'
           type: array
           title: Findings
           description: Quality findings
@@ -10387,35 +10722,35 @@ components:
           description: True if no ERROR severity findings exist
         readability:
           anyOf:
-            - $ref: "#/components/schemas/ReadabilityReport"
-            - type: "null"
+          - $ref: '#/components/schemas/ReadabilityReport'
+          - type: 'null'
           description: Readability metrics of narrative text blocks
         burden_details:
           anyOf:
-            - $ref: "#/components/schemas/BurdenTraceReport"
-            - type: "null"
+          - $ref: '#/components/schemas/BurdenTraceReport'
+          - type: 'null'
           description: Traceable operational burden details
         amendment_impact:
           anyOf:
-            - $ref: "#/components/schemas/AmendmentImpactReport"
-            - type: "null"
+          - $ref: '#/components/schemas/AmendmentImpactReport'
+          - type: 'null'
           description: Amendment impact and cost estimation
         feasibility:
           anyOf:
-            - $ref: "#/components/schemas/FeasibilityReport"
-            - type: "null"
+          - $ref: '#/components/schemas/FeasibilityReport'
+          - type: 'null'
           description: Pluggable patient population feasibility metrics
       type: object
       required:
-        - study_id
-        - quality_score
-        - patient_burden_index
-        - passed
+      - study_id
+      - quality_score
+      - patient_burden_index
+      - passed
       title: ProtocolQualityScore
-      description: "Protocol Quality Sentinel evaluation summary report.
+      description: 'Protocol Quality Sentinel evaluation summary report.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     QualityRuleFinding:
       properties:
         rule_id:
@@ -10425,32 +10760,32 @@ components:
         severity:
           type: string
           title: Severity
-          description: "Severity level: ERROR, WARNING, INFO"
+          description: 'Severity level: ERROR, WARNING, INFO'
         category:
           type: string
           title: Category
-          description: "Category: Structural, Regulatory, Burden, Inconsistency"
+          description: 'Category: Structural, Regulatory, Burden, Inconsistency'
         message:
           type: string
           title: Message
           description: Human-readable rule finding message
         target_node_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Target Node Id
           description: Target USDM graph node ID
       type: object
       required:
-        - rule_id
-        - severity
-        - category
-        - message
+      - rule_id
+      - severity
+      - category
+      - message
       title: QualityRuleFinding
-      description: "Specific protocol quality rule finding.
+      description: 'Specific protocol quality rule finding.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     ReadabilityReport:
       properties:
         flesch_reading_ease:
@@ -10479,12 +10814,12 @@ components:
           description: Human-readable readability description
       type: object
       required:
-        - flesch_reading_ease
-        - flesch_kincaid_grade_level
-        - word_count
-        - sentence_count
-        - syllable_count
-        - interpretation
+      - flesch_reading_ease
+      - flesch_kincaid_grade_level
+      - word_count
+      - sentence_count
+      - syllable_count
+      - interpretation
       title: ReadabilityReport
       description: Deterministic readability metrics of block texts.
     RenameConceptRequest:
@@ -10497,8 +10832,8 @@ components:
           title: Reason For Change
       type: object
       required:
-        - display_name
-        - reason_for_change
+      - display_name
+      - reason_for_change
       title: RenameConceptRequest
     ReorderBlocksRequest:
       properties:
@@ -10509,12 +10844,12 @@ components:
           title: Block Ids
         change_reason:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Change Reason
       type: object
       required:
-        - block_ids
+      - block_ids
       title: ReorderBlocksRequest
     RulePreviewResponse:
       properties:
@@ -10533,18 +10868,18 @@ components:
           title: Circular Cycles
       type: object
       required:
-        - xpath
-        - failures
-        - circular_cycles
+      - xpath
+      - failures
+      - circular_cycles
       title: RulePreviewResponse
       description: Response for rule preview/validation request.
     SectionReviewStatus:
       type: string
       enum:
-        - DRAFT
-        - IN_REVIEW
-        - LOCKED
-        - APPROVED
+      - DRAFT
+      - IN_REVIEW
+      - LOCKED
+      - APPROVED
       title: SectionReviewStatus
       description: Standard review statuses representing the lifecycle of an ICH section.
     SectionReviewTransition:
@@ -10562,10 +10897,10 @@ components:
           title: Study Id
           description: Associated study identifier.
         from_status:
-          $ref: "#/components/schemas/SectionReviewStatus"
+          $ref: '#/components/schemas/SectionReviewStatus'
           description: Source review status.
         to_status:
-          $ref: "#/components/schemas/SectionReviewStatus"
+          $ref: '#/components/schemas/SectionReviewStatus'
           description: Destination review status.
         actor_id:
           type: string
@@ -10585,58 +10920,58 @@ components:
           description: Transition timestamp.
       type: object
       required:
-        - transition_id
-        - section_id
-        - study_id
-        - from_status
-        - to_status
-        - actor_id
-        - actor_role
-        - reason_for_change
+      - transition_id
+      - section_id
+      - study_id
+      - from_status
+      - to_status
+      - actor_id
+      - actor_role
+      - reason_for_change
       title: SectionReviewTransition
       description: Represents an immutable, audited, Part 11 compliant transition of a section review status.
     SectionTransitionRequest:
       properties:
         to_status:
-          $ref: "#/components/schemas/SectionReviewStatus"
+          $ref: '#/components/schemas/SectionReviewStatus'
         reason_for_change:
           type: string
           title: Reason For Change
         username:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Username
         password:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Password
         signing_reason:
           anyOf:
-            - $ref: "#/components/schemas/SigningReason"
-            - type: "null"
+          - $ref: '#/components/schemas/SigningReason'
+          - type: 'null'
       type: object
       required:
-        - to_status
-        - reason_for_change
+      - to_status
+      - reason_for_change
       title: SectionTransitionRequest
     SigningReason:
       type: string
       enum:
-        - AUTHOR
-        - REVIEW
-        - APPROVAL
-        - SPONSOR_APPROVAL
-        - INVESTIGATOR_SIGNATURE
-        - TECHNICAL_QC
-        - CLINICAL_QC
-        - DATA_LOCK
-        - SYSTEM_SEAL
-        - PROTOCOL_APPROVAL
-        - REGULATORY_FORM_SIGNATURE
-        - TRAINING_ACKNOWLEDGEMENT
-        - SITE_VISIT_SIGN_OFF
+      - AUTHOR
+      - REVIEW
+      - APPROVAL
+      - SPONSOR_APPROVAL
+      - INVESTIGATOR_SIGNATURE
+      - TECHNICAL_QC
+      - CLINICAL_QC
+      - DATA_LOCK
+      - SYSTEM_SEAL
+      - PROTOCOL_APPROVAL
+      - REGULATORY_FORM_SIGNATURE
+      - TRAINING_ACKNOWLEDGEMENT
+      - SITE_VISIT_SIGN_OFF
       title: SigningReason
       description: Controlled reasons for creating an electronic signature in compliance with 21 CFR Part 11.
     SoACellView:
@@ -10659,14 +10994,14 @@ components:
           description: Whether the activity is planned to occur during this encounter.
         details:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Details
           description: Optional timing windows, constraints, or instruction notes.
         arm_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Arm Id
           description: Optional associated arm ID.
         derived_from_soa:
@@ -10676,10 +11011,10 @@ components:
           default: false
       type: object
       required:
-        - activity_id
-        - encounter_id
-        - epoch_id
-        - is_applicable
+      - activity_id
+      - encounter_id
+      - epoch_id
+      - is_applicable
       title: SoACellView
       description: An individual cell within the SoA matrix indicating applicability of an activity at an encounter.
     SoAEntityCreatedResponse:
@@ -10693,7 +11028,7 @@ components:
           title: Id
       type: object
       required:
-        - id
+      - id
       title: SoAEntityCreatedResponse
       description: Standard successful creation response.
     SoAEntityDetail:
@@ -10721,10 +11056,10 @@ components:
       additionalProperties: true
       type: object
       required:
-        - id
-        - version_index
-        - created_by
-        - created_at
+      - id
+      - version_index
+      - created_by
+      - created_at
       title: SoAEntityDetail
       description: Standard details of a versioned SoA entity.
     SoAHeaderArm:
@@ -10743,9 +11078,9 @@ components:
           description: Sequence number of the arm.
       type: object
       required:
-        - arm_id
-        - arm_name
-        - sequence
+      - arm_id
+      - arm_name
+      - sequence
       title: SoAHeaderArm
       description: Presentation header representing a trial Study Arm.
     SoAHeaderEncounter:
@@ -10768,16 +11103,16 @@ components:
           description: Sequence number of the encounter/visit.
         arm_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Arm Id
           description: Optional associated arm ID.
       type: object
       required:
-        - encounter_id
-        - encounter_name
-        - epoch_id
-        - sequence
+      - encounter_id
+      - encounter_name
+      - epoch_id
+      - sequence
       title: SoAHeaderEncounter
       description: Presentation header representing a visit or Encounter within a Study Epoch.
     SoAHeaderEpoch:
@@ -10796,15 +11131,15 @@ components:
           description: Sequence number of the epoch.
         arm_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Arm Id
           description: Optional associated arm ID.
       type: object
       required:
-        - epoch_id
-        - epoch_name
-        - sequence
+      - epoch_id
+      - epoch_name
+      - sequence
       title: SoAHeaderEpoch
       description: Presentation header representing a trial Study Epoch.
     SoALinkResponse:
@@ -10823,25 +11158,25 @@ components:
       properties:
         epochs:
           items:
-            $ref: "#/components/schemas/SoAHeaderEpoch"
+            $ref: '#/components/schemas/SoAHeaderEpoch'
           type: array
           title: Epochs
           description: Ordered list of Study Epoch columns.
         encounters:
           items:
-            $ref: "#/components/schemas/SoAHeaderEncounter"
+            $ref: '#/components/schemas/SoAHeaderEncounter'
           type: array
           title: Encounters
           description: Ordered list of Encounter/Visit sub-columns.
         rows:
           items:
-            $ref: "#/components/schemas/SoARowView"
+            $ref: '#/components/schemas/SoARowView'
           type: array
           title: Rows
           description: Ordered list of row-wise activity procedures.
         arms:
           items:
-            $ref: "#/components/schemas/SoAHeaderArm"
+            $ref: '#/components/schemas/SoAHeaderArm'
           type: array
           title: Arms
           description: Ordered list of Study Arm columns.
@@ -10860,7 +11195,7 @@ components:
           description: Name or label of the activity/procedure.
         cells:
           items:
-            $ref: "#/components/schemas/SoACellView"
+            $ref: '#/components/schemas/SoACellView'
           type: array
           title: Cells
           description: Applicability cell mapping for each encounter column.
@@ -10871,8 +11206,8 @@ components:
           default: false
       type: object
       required:
-        - activity_id
-        - activity_name
+      - activity_id
+      - activity_name
       title: SoARowView
       description: A single row in the SoA matrix table representing a specific activity and its cell mappings.
     StudyAlignmentReport:
@@ -10882,17 +11217,17 @@ components:
           title: Study Id
         complete_activities:
           items:
-            $ref: "#/components/schemas/ActivityReport"
+            $ref: '#/components/schemas/ActivityReport'
           type: array
           title: Complete Activities
         incomplete_activities:
           items:
-            $ref: "#/components/schemas/ActivityReport"
+            $ref: '#/components/schemas/ActivityReport'
           type: array
           title: Incomplete Activities
         unmapped_activities:
           items:
-            $ref: "#/components/schemas/ActivityReport"
+            $ref: '#/components/schemas/ActivityReport'
           type: array
           title: Unmapped Activities
         unmapped_odm_items:
@@ -10909,12 +11244,12 @@ components:
           title: Unmapped Crf Item Values
       type: object
       required:
-        - study_id
-        - complete_activities
-        - incomplete_activities
-        - unmapped_activities
-        - unmapped_odm_items
-        - unmapped_crf_item_values
+      - study_id
+      - complete_activities
+      - incomplete_activities
+      - unmapped_activities
+      - unmapped_odm_items
+      - unmapped_crf_item_values
       title: StudyAlignmentReport
       description: "Comprehensive alignment report analyzing the mapping between study epochs and CRFs.\n\nAttributes:\n    study_id: The unique identifier of the study being evaluated.\n    complete_activities: Activities where all required items are mapped successfully.\n    incomplete_activities: Activities with partially mapped items.\n    unmapped_activities: Activities completely lacking any mapped items.\n    unmapped_odm_items: ODM nodes present but not associated with any active activity item.\n    unmapped_crf_item_values: CRF items/values present but not associated with any activity definition."
     StudyArmProperties:
@@ -10931,15 +11266,15 @@ components:
           description: The classification type of the arm.
         sequence:
           anyOf:
-            - type: integer
-              minimum: 1.0
-            - type: "null"
+          - type: integer
+            minimum: 1.0
+          - type: 'null'
           title: Sequence
           description: Sequential ordering rank.
       type: object
       required:
-        - name
-        - type
+      - name
+      - type
       title: StudyArmProperties
       description: Properties specific to a clinical trial Study Arm.
     StudyTerminologyValidationReport:
@@ -10964,18 +11299,18 @@ components:
           title: Degraded Count
         concepts:
           items:
-            $ref: "#/components/schemas/ConceptValidationReport"
+            $ref: '#/components/schemas/ConceptValidationReport'
           type: array
           title: Concepts
       type: object
       required:
-        - study_id
-        - is_valid
-        - total_concepts
-        - valid_count
-        - invalid_count
-        - degraded_count
-        - concepts
+      - study_id
+      - is_valid
+      - total_concepts
+      - valid_count
+      - invalid_count
+      - degraded_count
+      - concepts
       title: StudyTerminologyValidationReport
       description: Aggregated terminology validation report for an entire study structure.
     Suggestion:
@@ -11001,7 +11336,7 @@ components:
           title: Original Text
           description: Original block text at proposed time.
         status:
-          $ref: "#/components/schemas/SuggestionStatus"
+          $ref: '#/components/schemas/SuggestionStatus'
           description: Current suggestion status.
           default: pending
         created_by:
@@ -11018,20 +11353,20 @@ components:
           description: Rationale for the suggestion.
         decision_reason:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Decision Reason
           description: Rationale for acceptance or rejection.
         decided_by:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Decided By
           description: User ID of decider.
         decided_at:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Decided At
           description: Timestamp of decision.
         block_version_index:
@@ -11045,14 +11380,14 @@ components:
           default: 1
       type: object
       required:
-        - suggestion_id
-        - block_id
-        - study_id
-        - suggested_text
-        - original_text
-        - created_by
-        - reason
-        - block_version_index
+      - suggestion_id
+      - block_id
+      - study_id
+      - suggested_text
+      - original_text
+      - created_by
+      - reason
+      - block_version_index
       title: Suggestion
       description: Represents a proposed collaborative content replacement suggestion for a block.
     SuggestionCreate:
@@ -11065,31 +11400,31 @@ components:
           title: Reason
       type: object
       required:
-        - suggested_text
-        - reason
+      - suggested_text
+      - reason
       title: SuggestionCreate
     SuggestionDecisionRequest:
       properties:
         decision:
           type: string
           enum:
-            - accept
-            - reject
+          - accept
+          - reject
           title: Decision
         decision_reason:
           type: string
           title: Decision Reason
       type: object
       required:
-        - decision
-        - decision_reason
+      - decision
+      - decision_reason
       title: SuggestionDecisionRequest
     SuggestionStatus:
       type: string
       enum:
-        - pending
-        - accepted
-        - rejected
+      - pending
+      - accepted
+      - rejected
       title: SuggestionStatus
       description: Statuses for suggestion workflows.
     SynopsisExportRequest:
@@ -11101,30 +11436,30 @@ components:
         format:
           type: string
           title: Format
-          description: "Target export format: 'pdf', 'docx', or 'html'"
+          description: 'Target export format: ''pdf'', ''docx'', or ''html'''
           default: pdf
         creator:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Creator
           description: Author or creator username
           default: Cadence Clinical DDF Engine
         change_reason:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Change Reason
           description: GxP 21 CFR Part 11 change reason
           default: Initial Baseline
       type: object
       required:
-        - study_id
+      - study_id
       title: SynopsisExportRequest
-      description: "Request payload for exporting a clinical protocol synopsis.
+      description: 'Request payload for exporting a clinical protocol synopsis.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     SynopsisExportResponse:
       properties:
         study_id:
@@ -11145,16 +11480,15 @@ components:
           description: Generated export filename
       type: object
       required:
-        - study_id
-        - format
-        - content_base64
-        - filename
+      - study_id
+      - format
+      - content_base64
+      - filename
       title: SynopsisExportResponse
-      description:
-        "Response payload containing base64 encoded document export stream.
+      description: 'Response payload containing base64 encoded document export stream.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     TerminologyConcept:
       properties:
         code:
@@ -11171,21 +11505,21 @@ components:
           title: Valid
       type: object
       required:
-        - code
-        - decode
-        - system
-        - valid
+      - code
+      - decode
+      - system
+      - valid
       title: TerminologyConcept
       description: Normalized terminology concept details.
     TerminologyEnum:
       type: string
       enum:
-        - SNOMED-CT
-        - LOINC
-        - MedDRA
-        - WHODrug
-        - NCI
-        - CDISC-CT
+      - SNOMED-CT
+      - LOINC
+      - MedDRA
+      - WHODrug
+      - NCI
+      - CDISC-CT
       title: TerminologyEnum
     TerminologySearchResponse:
       properties:
@@ -11193,10 +11527,10 @@ components:
           type: string
           title: Query
         state:
-          $ref: "#/components/schemas/CodeValidationState"
+          $ref: '#/components/schemas/CodeValidationState'
         results:
           items:
-            $ref: "#/components/schemas/TerminologyConcept"
+            $ref: '#/components/schemas/TerminologyConcept'
           type: array
           title: Results
         total_results:
@@ -11204,15 +11538,15 @@ components:
           title: Total Results
         error_message:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Error Message
       type: object
       required:
-        - query
-        - state
-        - results
-        - total_results
+      - query
+      - state
+      - results
+      - total_results
       title: TerminologySearchResponse
       description: Response model for search and autocomplete queries.
     TimingWindowProperties:
@@ -11222,22 +11556,46 @@ components:
           minLength: 1
           title: Name
           description: Label or duration specification of the timing window.
+        anchor_reference:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Anchor Reference
+          description: Anchor reference, e.g. a visit name.
+        target_day:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Target Day
+          description: Target scheduled day.
+        min_offset:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Min Offset
+          description: Minimum day offset.
+        max_offset:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Max Offset
+          description: Maximum day offset.
         conditional:
           anyOf:
-            - type: boolean
-            - type: "null"
+          - type: boolean
+          - type: 'null'
           title: Conditional
           description: Flag indicating if the timing or applicability is conditional.
         reason:
           anyOf:
-            - type: string
-              minLength: 1
-            - type: "null"
+          - type: string
+            minLength: 1
+          - type: 'null'
           title: Reason
           description: Mandatory justification reason required if conditional is True.
       type: object
       required:
-        - name
+      - name
       title: TimingWindowProperties
       description: Properties specific to a Timing Window. Enforces cross-field conditional justification.
     TransitionItemRequest:
@@ -11250,23 +11608,23 @@ components:
           title: Reason
         name:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Name
         label:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Label
         value:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Value
       type: object
       required:
-        - status
-        - reason
+      - status
+      - reason
       title: TransitionItemRequest
     UpdateArmRequest:
       properties:
@@ -11280,11 +11638,11 @@ components:
           title: Object Type
           default: ARM
         payload:
-          $ref: "#/components/schemas/ArmPayload"
+          $ref: '#/components/schemas/ArmPayload'
       type: object
       required:
-        - reason_for_change
-        - payload
+      - reason_for_change
+      - payload
       title: UpdateArmRequest
       description: Request model for updating an Arm library object.
     UpdateBlockRequest:
@@ -11295,12 +11653,12 @@ components:
           title: Properties
         change_reason:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Change Reason
       type: object
       required:
-        - properties
+      - properties
       title: UpdateBlockRequest
     UpdateConceptRequest:
       properties:
@@ -11312,23 +11670,23 @@ components:
           title: Definition
         cdash_mapping:
           anyOf:
-            - $ref: "#/components/schemas/CDASHMapping"
-            - type: "null"
+          - $ref: '#/components/schemas/CDASHMapping'
+          - type: 'null'
         allowable_units:
           anyOf:
-            - items:
-                $ref: "#/components/schemas/AllowableUnit"
-              type: array
-            - type: "null"
+          - items:
+              $ref: '#/components/schemas/AllowableUnit'
+            type: array
+          - type: 'null'
           title: Allowable Units
         reason_for_change:
           type: string
           title: Reason For Change
       type: object
       required:
-        - display_name
-        - definition
-        - reason_for_change
+      - display_name
+      - definition
+      - reason_for_change
       title: UpdateConceptRequest
     UpdateDataElementRequest:
       properties:
@@ -11342,11 +11700,11 @@ components:
           title: Object Type
           default: DATA_ELEMENT
         payload:
-          $ref: "#/components/schemas/DataElementPayload"
+          $ref: '#/components/schemas/DataElementPayload'
       type: object
       required:
-        - reason_for_change
-        - payload
+      - reason_for_change
+      - payload
       title: UpdateDataElementRequest
       description: Request model for updating a Data Element library object.
     UpdateEligibilityCriterionRequest:
@@ -11354,8 +11712,8 @@ components:
         criterion_type:
           type: string
           enum:
-            - inclusion
-            - exclusion
+          - inclusion
+          - exclusion
           title: Criterion Type
           description: Whether this is an inclusion or exclusion criterion.
         description:
@@ -11377,15 +11735,15 @@ components:
           description: Reason for updating this criterion.
       type: object
       required:
-        - criterion_type
-        - description
-        - dsl_source
-        - change_reason
+      - criterion_type
+      - description
+      - dsl_source
+      - change_reason
       title: UpdateEligibilityCriterionRequest
     UpdateEpochRequest:
       properties:
         properties:
-          $ref: "#/components/schemas/EpochProperties"
+          $ref: '#/components/schemas/EpochProperties'
         reason_for_change:
           type: string
           title: Reason For Change
@@ -11393,7 +11751,7 @@ components:
           default: Updated epoch
       type: object
       required:
-        - properties
+      - properties
       title: UpdateEpochRequest
     UpdateFormRequest:
       properties:
@@ -11407,11 +11765,11 @@ components:
           title: Object Type
           default: FORM
         payload:
-          $ref: "#/components/schemas/FormPayload"
+          $ref: '#/components/schemas/FormPayload'
       type: object
       required:
-        - reason_for_change
-        - payload
+      - reason_for_change
+      - payload
       title: UpdateFormRequest
       description: Request model for updating a Form library object.
     UpdateLibraryInstanceRequest:
@@ -11423,12 +11781,12 @@ components:
           description: The complete updated payload of the library instance.
       type: object
       required:
-        - payload
+      - payload
       title: UpdateLibraryInstanceRequest
     UpdateProcedureRequest:
       properties:
         properties:
-          $ref: "#/components/schemas/ProcedureProperties"
+          $ref: '#/components/schemas/ProcedureProperties'
         reason_for_change:
           type: string
           title: Reason For Change
@@ -11436,12 +11794,12 @@ components:
           default: Updated procedure
       type: object
       required:
-        - properties
+      - properties
       title: UpdateProcedureRequest
     UpdateStudyArmRequest:
       properties:
         properties:
-          $ref: "#/components/schemas/StudyArmProperties"
+          $ref: '#/components/schemas/StudyArmProperties'
         reason_for_change:
           type: string
           title: Reason For Change
@@ -11449,12 +11807,12 @@ components:
           default: Updated study arm
       type: object
       required:
-        - properties
+      - properties
       title: UpdateStudyArmRequest
     UpdateTimingWindowRequest:
       properties:
         properties:
-          $ref: "#/components/schemas/TimingWindowProperties"
+          $ref: '#/components/schemas/TimingWindowProperties'
         reason_for_change:
           type: string
           title: Reason For Change
@@ -11462,15 +11820,15 @@ components:
           default: Updated timing window
       type: object
       required:
-        - properties
+      - properties
       title: UpdateTimingWindowRequest
     ValidationError:
       properties:
         loc:
           items:
             anyOf:
-              - type: string
-              - type: integer
+            - type: string
+            - type: integer
           type: array
           title: Location
         msg:
@@ -11486,32 +11844,32 @@ components:
           title: Context
       type: object
       required:
-        - loc
-        - msg
-        - type
+      - loc
+      - msg
+      - type
       title: ValidationError
     VersionDiffResponse:
       properties:
         added_nodes:
           items:
-            $ref: "#/components/schemas/DifferenceResult"
+            $ref: '#/components/schemas/DifferenceResult'
           type: array
           title: Added Nodes
         modified_nodes:
           items:
-            $ref: "#/components/schemas/DifferenceResult"
+            $ref: '#/components/schemas/DifferenceResult'
           type: array
           title: Modified Nodes
         deleted_nodes:
           items:
-            $ref: "#/components/schemas/DifferenceResult"
+            $ref: '#/components/schemas/DifferenceResult'
           type: array
           title: Deleted Nodes
       type: object
       required:
-        - added_nodes
-        - modified_nodes
-        - deleted_nodes
+      - added_nodes
+      - modified_nodes
+      - deleted_nodes
       title: VersionDiffResponse
     VisitAttributes:
       properties:
@@ -11529,9 +11887,9 @@ components:
           description: "Allowable margin of days around the planned day (e.g., \xB13 days)."
       type: object
       required:
-        - visit_type
-        - planned_day
-        - window_days
+      - visit_type
+      - planned_day
+      - window_days
       title: VisitAttributes
       description: Attributes defining a study visit.
     VisitLibraryObjectDetail:
@@ -11545,7 +11903,7 @@ components:
           title: Version
           description: Semantic version of the library object.
         status:
-          $ref: "#/components/schemas/LibraryStatus"
+          $ref: '#/components/schemas/LibraryStatus'
           description: Workflow review status of the object.
         sponsor_id:
           type: string
@@ -11566,27 +11924,27 @@ components:
           description: User ID who created this object.
         updated_at:
           anyOf:
-            - type: string
-              format: date-time
-            - type: "null"
+          - type: string
+            format: date-time
+          - type: 'null'
           title: Updated At
           description: Audit timestamp of last update.
         updated_by:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Updated By
           description: User ID of last updater.
         reason_for_change:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Reason For Change
           description: Detailed explanation of changes applied.
         prior_status:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Prior Status
           description: Previous status before transition.
         object_type:
@@ -11595,43 +11953,43 @@ components:
           title: Object Type
           default: VISIT
         payload:
-          $ref: "#/components/schemas/VisitPayload"
+          $ref: '#/components/schemas/VisitPayload'
       type: object
       required:
-        - id
-        - version
-        - status
-        - sponsor_id
-        - tenant_id
-        - created_at
-        - created_by
-        - payload
+      - id
+      - version
+      - status
+      - sponsor_id
+      - tenant_id
+      - created_at
+      - created_by
+      - payload
       title: VisitLibraryObjectDetail
       description: Response model for a Visit library object.
     VisitPayload:
       properties:
         attributes:
-          $ref: "#/components/schemas/VisitAttributes"
+          $ref: '#/components/schemas/VisitAttributes'
           description: Clinical visit configurations.
       type: object
       required:
-        - attributes
+      - attributes
       title: VisitPayload
       description: Visit-specific payload validation containing visit attributes.
     VisitProperties:
       properties:
         name:
           anyOf:
-            - type: string
-              minLength: 1
-            - type: "null"
+          - type: string
+            minLength: 1
+          - type: 'null'
           title: Name
           description: The display name of the visit.
         encounter_name:
           anyOf:
-            - type: string
-              minLength: 1
-            - type: "null"
+          - type: string
+            minLength: 1
+          - type: 'null'
           title: Encounter Name
           description: Alternate/legacy field name for encounter/visit.
         sequence:
@@ -11641,9 +11999,74 @@ components:
           description: Sequential ordering rank of the visit.
       type: object
       required:
-        - sequence
+      - sequence
       title: VisitProperties
       description: Properties specific to a Visit / Encounter.
+    VisitReorderItem:
+      properties:
+        visit_id:
+          type: string
+          minLength: 1
+          title: Visit Id
+          description: Unique identifier for the visit.
+        sequence:
+          type: integer
+          minimum: 1.0
+          title: Sequence
+          description: New sequential order rank of the visit.
+      type: object
+      required:
+      - visit_id
+      - sequence
+      title: VisitReorderItem
+      description: Represents a visit id and its new sequence value.
+    VisitReorderRequest:
+      properties:
+        visits:
+          items:
+            $ref: '#/components/schemas/VisitReorderItem'
+          type: array
+          title: Visits
+          description: Ordered list of visit sequence updates.
+      type: object
+      required:
+      - visits
+      title: VisitReorderRequest
+      description: Request contract carrying an ordered list of visit ID and sequence value pairs.
+    VisitToArmAssignmentRequest:
+      properties:
+        arm_id:
+          type: string
+          minLength: 1
+          title: Arm Id
+        visit_ids:
+          items:
+            type: string
+          type: array
+          minItems: 1
+          title: Visit Ids
+      type: object
+      required:
+      - arm_id
+      - visit_ids
+      title: VisitToArmAssignmentRequest
+    VisitToEpochAssignmentRequest:
+      properties:
+        epoch_id:
+          type: string
+          minLength: 1
+          title: Epoch Id
+        visit_ids:
+          items:
+            type: string
+          type: array
+          minItems: 1
+          title: Visit Ids
+      type: object
+      required:
+      - epoch_id
+      - visit_ids
+      title: VisitToEpochAssignmentRequest
     apps__designer__library__CreateVisitRequest:
       properties:
         id:
@@ -11656,7 +12079,7 @@ components:
           description: Initial version code.
           default: 1.0.0
         status:
-          $ref: "#/components/schemas/LibraryStatus"
+          $ref: '#/components/schemas/LibraryStatus'
           description: Initial library state.
           default: DRAFT
         sponsor_id:
@@ -11673,13 +12096,13 @@ components:
           title: Object Type
           default: VISIT
         payload:
-          $ref: "#/components/schemas/VisitPayload"
+          $ref: '#/components/schemas/VisitPayload'
       type: object
       required:
-        - id
-        - sponsor_id
-        - change_reason
-        - payload
+      - id
+      - sponsor_id
+      - change_reason
+      - payload
       title: CreateVisitRequest
       description: Request model for creating a Visit library object.
     apps__designer__library__UpdateVisitRequest:
@@ -11694,14 +12117,14 @@ components:
           title: Object Type
           default: VISIT
         payload:
-          $ref: "#/components/schemas/VisitPayload"
+          $ref: '#/components/schemas/VisitPayload'
       type: object
       required:
-        - reason_for_change
-        - payload
+      - reason_for_change
+      - payload
       title: UpdateVisitRequest
       description: Request model for updating a Visit library object.
-    apps__designer__soa_models__CreateVisitRequest:
+    protocol_authoring__soa__CreateVisitRequest:
       properties:
         id:
           type: string
@@ -11709,7 +12132,7 @@ components:
           title: Id
           description: Unique identifier for the visit.
         properties:
-          $ref: "#/components/schemas/VisitProperties"
+          $ref: '#/components/schemas/VisitProperties'
         change_reason:
           type: string
           title: Change Reason
@@ -11717,13 +12140,13 @@ components:
           default: Created visit
       type: object
       required:
-        - id
-        - properties
+      - id
+      - properties
       title: CreateVisitRequest
-    apps__designer__soa_models__UpdateVisitRequest:
+    protocol_authoring__soa__UpdateVisitRequest:
       properties:
         properties:
-          $ref: "#/components/schemas/VisitProperties"
+          $ref: '#/components/schemas/VisitProperties'
         reason_for_change:
           type: string
           title: Reason For Change
@@ -11731,7 +12154,7 @@ components:
           default: Updated visit
       type: object
       required:
-        - properties
+      - properties
       title: UpdateVisitRequest
     AddDOAAssignmentRequest:
       properties:
@@ -11752,11 +12175,11 @@ components:
           title: Personnel Email
           description: Email address
         role:
-          $ref: "#/components/schemas/DOATaskRoleEnum"
+          $ref: '#/components/schemas/DOATaskRoleEnum'
           description: Site role
         delegated_tasks:
           items:
-            $ref: "#/components/schemas/DOATaskDelegationEnum"
+            $ref: '#/components/schemas/DOATaskDelegationEnum'
           type: array
           title: Delegated Tasks
           description: List of delegated tasks
@@ -11766,19 +12189,18 @@ components:
           description: Delegation start date (YYYY-MM-DD)
       type: object
       required:
-        - study_id
-        - site_id
-        - personnel_name
-        - personnel_email
-        - role
-        - delegated_tasks
-        - start_date
+      - study_id
+      - site_id
+      - personnel_name
+      - personnel_email
+      - role
+      - delegated_tasks
+      - start_date
       title: AddDOAAssignmentRequest
-      description:
-        "Request payload to add site personnel task delegation record.
+      description: 'Request payload to add site personnel task delegation record.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     ApproveDelegationRequest:
       properties:
         delegation_id:
@@ -11792,14 +12214,14 @@ components:
           title: Password
         totp_code:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Totp Code
       type: object
       required:
-        - delegation_id
-        - pi_user_id
-        - password
+      - delegation_id
+      - pi_user_id
+      - password
       title: ApproveDelegationRequest
     ApproveTaskDelegationRequest:
       properties:
@@ -11817,10 +12239,10 @@ components:
           title: Reason For Change
       type: object
       required:
-        - delegation_id
-        - pi_user_id
-        - signature_hash
-        - reason_for_change
+      - delegation_id
+      - pi_user_id
+      - signature_hash
+      - reason_for_change
       title: ApproveTaskDelegationRequest
     BatchSignOffRequest:
       properties:
@@ -11840,10 +12262,10 @@ components:
           title: Signing Reason
       type: object
       required:
-        - study_id
-        - target_type
-        - target_ids
-        - signing_reason
+      - study_id
+      - target_type
+      - target_ids
+      - signing_reason
       title: BatchSignOffRequest
     BatchSignOffResponse:
       properties:
@@ -11867,10 +12289,10 @@ components:
           title: Skipped Targets
       type: object
       required:
-        - status
-        - approved_submission_ids
-        - skipped_submission_ids
-        - skipped_targets
+      - status
+      - approved_submission_ids
+      - skipped_submission_ids
+      - skipped_targets
       title: BatchSignOffResponse
     BatchSignatureRequest:
       properties:
@@ -11885,7 +12307,7 @@ components:
         target_type:
           type: string
           title: Target Type
-          description: "Target artifact type: FORM, CASEBOOK, DOC"
+          description: 'Target artifact type: FORM, CASEBOOK, DOC'
           default: FORM
         target_ids:
           items:
@@ -11913,17 +12335,16 @@ components:
           description: Printed full name of Principal Investigator
       type: object
       required:
-        - study_id
-        - subject_id
-        - signing_reason
-        - password
-        - printed_name
+      - study_id
+      - subject_id
+      - signing_reason
+      - password
+      - printed_name
       title: BatchSignatureRequest
-      description:
-        "Request payload for Principal Investigator batch eSignature casebook sign-off.
+      description: 'Request payload for Principal Investigator batch eSignature casebook sign-off.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     BatchSignatureResponse:
       properties:
         signature_id:
@@ -11956,23 +12377,22 @@ components:
           description: Immutable GxP audit ledger transaction ID
       type: object
       required:
-        - signature_id
-        - study_id
-        - subject_id
-        - signed_forms_count
-        - content_digest
-        - timestamp_utc
-        - audit_tx
+      - signature_id
+      - study_id
+      - subject_id
+      - signed_forms_count
+      - content_digest
+      - timestamp_utc
+      - audit_tx
       title: BatchSignatureResponse
-      description:
-        "Response payload following successful batch eSignature execution.
+      description: 'Response payload following successful batch eSignature execution.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     Body_import_dictionary_api_v1_dictionaries_import_post:
       properties:
         dictionary_type:
-          $ref: "#/components/schemas/DictTypeEnum"
+          $ref: '#/components/schemas/DictTypeEnum'
         version:
           type: string
           title: Version
@@ -11986,9 +12406,9 @@ components:
           default: true
       type: object
       required:
-        - dictionary_type
-        - version
-        - files
+      - dictionary_type
+      - version
+      - files
       title: Body_import_dictionary_api_v1_dictionaries_import_post
     Body_upload_document_api_v1_documents_upload_post:
       properties:
@@ -12004,33 +12424,33 @@ components:
           title: Reason For Change
       type: object
       required:
-        - file
-        - dia_tmf_code
-        - reason_for_change
+      - file
+      - dia_tmf_code
+      - reason_for_change
       title: Body_upload_document_api_v1_documents_upload_post
     BulkQueryGenerationRequest:
       properties:
         study_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Study Id
           description: Target protocol study ID
         site_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Site Id
           description: Optional target site identifier
         subject_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Subject Id
           description: Optional target subject identifier
         targets:
           items:
-            $ref: "#/components/schemas/QueryTargetDescriptor"
+            $ref: '#/components/schemas/QueryTargetDescriptor'
           type: array
           title: Targets
           description: List of query target coordinate fields and explanations
@@ -12040,31 +12460,31 @@ components:
           description: Mandatory GxP 21 CFR Part 11 justification reason
       type: object
       required:
-        - targets
-        - reason_for_change
+      - targets
+      - reason_for_change
       title: BulkQueryGenerationRequest
-      description: "Request payload to execute bulk clinical query generation.
+      description: 'Request payload to execute bulk clinical query generation.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     BulkQueryGenerationResponse:
       properties:
         batch_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Batch Id
           description: Unique bulk query batch identifier
         audit_tx:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Audit Tx
           description: Immutable GxP audit ledger transaction ID
         generated_count:
           anyOf:
-            - type: integer
-            - type: "null"
+          - type: integer
+          - type: 'null'
           title: Generated Count
           description: Legacy generated query count
         generated_query_ids:
@@ -12075,24 +12495,24 @@ components:
           description: List of generated unique query IDs
         skipped_targets:
           items:
-            $ref: "#/components/schemas/QueryTargetDescriptor"
+            $ref: '#/components/schemas/QueryTargetDescriptor'
           type: array
           title: Skipped Targets
           description: List of target descriptors that were skipped due to already having an active query
         timestamp_utc:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Timestamp Utc
           description: UTC ISO timestamp of query generation execution
       type: object
       required:
-        - generated_query_ids
+      - generated_query_ids
       title: BulkQueryGenerationResponse
-      description: "Response payload following bulk query generation execution.
+      description: 'Response payload following bulk query generation execution.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     BulkSdvSignOffRequest:
       properties:
         study_id:
@@ -12106,7 +12526,7 @@ components:
         scope:
           type: string
           title: Scope
-          description: "SDV scope boundary: FIELD, PAGE, or VISIT"
+          description: 'SDV scope boundary: FIELD, PAGE, or VISIT'
         target_ids:
           items:
             type: string
@@ -12119,8 +12539,8 @@ components:
           description: Mandatory GxP 21 CFR Part 11 justification reason
         site_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Site Id
           description: Optional site identifier for the targets
         signing_reason:
@@ -12130,22 +12550,22 @@ components:
           default: CRA/monitor-gated bulk SDV sign-off
       type: object
       required:
-        - study_id
-        - subject_id
-        - scope
-        - target_ids
-        - reason_for_change
+      - study_id
+      - subject_id
+      - scope
+      - target_ids
+      - reason_for_change
       title: BulkSdvSignOffRequest
-      description: "Request payload to execute bulk SDV sign-offs.
+      description: 'Request payload to execute bulk SDV sign-offs.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     BulkSdvSignOffResponse:
       properties:
         bulk_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Bulk Id
           description: Unique bulk signature operation identifier
         content_digest:
@@ -12162,25 +12582,25 @@ components:
           description: Immutable GxP audit ledger transaction ID
         verified_count:
           anyOf:
-            - type: integer
-            - type: "null"
+          - type: integer
+          - type: 'null'
           title: Verified Count
           description: Total number of successfully verified SDV items
         verified_target_ids:
           anyOf:
-            - items:
-                type: string
-              type: array
-            - type: "null"
+          - items:
+              type: string
+            type: array
+          - type: 'null'
           title: Verified Target Ids
           description: List of target IDs that were successfully signed
         skipped_targets:
           anyOf:
-            - items:
-                additionalProperties: true
-                type: object
-              type: array
-            - type: "null"
+          - items:
+              additionalProperties: true
+              type: object
+            type: array
+          - type: 'null'
           title: Skipped Targets
           description: List of skipped targets with details on skip reasons
         signed_count:
@@ -12201,17 +12621,17 @@ components:
           description: List of target IDs that were skipped or already signed
       type: object
       required:
-        - content_digest
-        - timestamp_utc
-        - audit_tx
-        - signed_count
-        - signed_target_ids
-        - skipped_target_ids
+      - content_digest
+      - timestamp_utc
+      - audit_tx
+      - signed_count
+      - signed_target_ids
+      - skipped_target_ids
       title: BulkSdvSignOffResponse
-      description: "Response payload following bulk SDV sign-off execution.
+      description: 'Response payload following bulk SDV sign-off execution.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     ClinicalQueryResponse:
       properties:
         id:
@@ -12225,13 +12645,13 @@ components:
           title: Subject Id
         visit_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Visit Id
         domain:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Domain
         test_code:
           type: string
@@ -12241,13 +12661,13 @@ components:
           title: Status
         explanation:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Explanation
         response:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Response
         created_at:
           type: string
@@ -12259,101 +12679,101 @@ components:
           title: Updated At
         history:
           items:
-            $ref: "#/components/schemas/QueryHistoryItem"
+            $ref: '#/components/schemas/QueryHistoryItem'
           type: array
           title: History
           default: []
         observation_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Observation Id
         field_link:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Field Link
         message:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Message
         origin:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Origin
         priority:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Priority
         rule_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Rule Id
         created_by:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Created By
         responder:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Responder
         resolver:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Resolver
         resolved_at:
           anyOf:
-            - type: string
-              format: date-time
-            - type: "null"
+          - type: string
+            format: date-time
+          - type: 'null'
           title: Resolved At
         cancellation_reason:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Cancellation Reason
         escalated_at:
           anyOf:
-            - type: string
-              format: date-time
-            - type: "null"
+          - type: string
+            format: date-time
+          - type: 'null'
           title: Escalated At
         form_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Form Id
         field_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Field Id
         query_type:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Query Type
         action_required:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Action Required
       type: object
       required:
-        - id
-        - study_id
-        - subject_id
-        - test_code
-        - status
-        - created_at
-        - updated_at
+      - id
+      - study_id
+      - subject_id
+      - test_code
+      - status
+      - created_at
+      - updated_at
       title: ClinicalQueryResponse
       description: Pydantic schema returning query details and full audit history.
     CoderActionRequest:
@@ -12363,27 +12783,27 @@ components:
           title: Action
         code:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Code
         term:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Term
         suggestion_index:
           anyOf:
-            - type: integer
-            - type: "null"
+          - type: integer
+          - type: 'null'
           title: Suggestion Index
         reason_for_change:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Reason For Change
       type: object
       required:
-        - action
+      - action
       title: CoderActionRequest
     CodingAssignmentResponse:
       properties:
@@ -12395,13 +12815,13 @@ components:
           title: Verbatim Text
         source_field:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Source Field
         observation_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Observation Id
         dictionary_type:
           type: string
@@ -12411,13 +12831,13 @@ components:
           title: Dictionary Version
         coded_code:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Coded Code
         coded_term:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Coded Term
         status:
           type: string
@@ -12427,8 +12847,8 @@ components:
           title: Recoding Status
         assigned_by:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Assigned By
         assigned_at:
           type: string
@@ -12436,29 +12856,29 @@ components:
           title: Assigned At
         score:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Score
         hierarchy:
           anyOf:
-            - additionalProperties: true
-              type: object
-            - items: {}
-              type: array
-            - type: "null"
+          - additionalProperties: true
+            type: object
+          - items: {}
+            type: array
+          - type: 'null'
           title: Hierarchy
         suggestions:
           anyOf:
-            - items: {}
-              type: array
-            - additionalProperties: true
-              type: object
-            - type: "null"
+          - items: {}
+            type: array
+          - additionalProperties: true
+            type: object
+          - type: 'null'
           title: Suggestions
         domain:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Domain
         version:
           type: integer
@@ -12468,15 +12888,15 @@ components:
           title: Is Deleted
       type: object
       required:
-        - id
-        - verbatim_text
-        - dictionary_type
-        - dictionary_version
-        - status
-        - recoding_status
-        - assigned_at
-        - version
-        - is_deleted
+      - id
+      - verbatim_text
+      - dictionary_type
+      - dictionary_version
+      - status
+      - recoding_status
+      - assigned_at
+      - version
+      - is_deleted
       title: CodingAssignmentResponse
     CriterionLevelResult:
       properties:
@@ -12500,25 +12920,25 @@ components:
           title: Is Indeterminate
       type: object
       required:
-        - criterion_id
-        - criterion_type
-        - description
-        - dsl_source
-        - is_met
-        - is_indeterminate
+      - criterion_id
+      - criterion_type
+      - description
+      - dsl_source
+      - is_met
+      - is_indeterminate
       title: CriterionLevelResult
       description: Pydantic schema for individual criterion level evaluation result.
     CustodianEnum:
       type: string
       enum:
-        - Lead Unblinded Statistician
-        - IDMC
+      - Lead Unblinded Statistician
+      - IDMC
       title: CustodianEnum
       description: "Enumeration of the two permissible dual-custody key holders.\n\nThe Shamir secret-sharing scheme used for emergency unblinding mandates\nthat exactly one share comes from each of these two custodians.  Any\nother custodian identity is rejected with a 422 validation error before\nthe request reaches the cryptographic layer.\n\nAttributes:\n    LEAD_UNBLINDED_STATISTICIAN: The lead unblinded statistician who holds\n        one half of the Shamir key share.\n    IDMC: The Independent Data Monitoring Committee representative who holds\n        the second half of the Shamir key share."
     CustodianShare:
       properties:
         custodian:
-          $ref: "#/components/schemas/CustodianEnum"
+          $ref: '#/components/schemas/CustodianEnum'
         version:
           type: integer
           title: Version
@@ -12534,10 +12954,10 @@ components:
           description: Shamir y-coordinate; must be >= 0
       type: object
       required:
-        - custodian
-        - version
-        - x
-        - y
+      - custodian
+      - version
+      - x
+      - y
       title: CustodianShare
       description: "A single custodian's Shamir secret share for dual-custody unblinding.\n\nBoth shares must be present in the request body before the encrypted\nallocation record can be reconstructed.  Field constraints are enforced\nat the schema boundary so malformed shares produce structured 422\nresponses rather than opaque crypto-layer failures.\n\nAttributes:\n    custodian: The identity of the key custodian; must be one of the two\n        approved dual-custody holders defined by ``CustodianEnum``.\n    version: The version of the key material associated with this share;\n        used to select the correct key generation from the database.\n    x: The x-coordinate of the Shamir share point; must be strictly\n        positive (> 0) as required by the polynomial reconstruction.\n    y: The y-coordinate of the Shamir share point; must be non-negative\n        (>= 0) and less than the prime modulus used by the crypto layer."
     DOAAssignmentRecord:
@@ -12563,11 +12983,11 @@ components:
           title: Personnel Email
           description: Email address of site personnel
         role:
-          $ref: "#/components/schemas/DOATaskRoleEnum"
+          $ref: '#/components/schemas/DOATaskRoleEnum'
           description: Site personnel role
         delegated_tasks:
           items:
-            $ref: "#/components/schemas/DOATaskDelegationEnum"
+            $ref: '#/components/schemas/DOATaskDelegationEnum'
           type: array
           title: Delegated Tasks
           description: List of delegated study tasks
@@ -12577,8 +12997,8 @@ components:
           description: Task delegation start date (YYYY-MM-DD)
         end_date:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: End Date
           description: Optional task delegation end date
         is_active:
@@ -12593,20 +13013,19 @@ components:
           default: false
       type: object
       required:
-        - record_id
-        - study_id
-        - site_id
-        - personnel_name
-        - personnel_email
-        - role
-        - delegated_tasks
-        - start_date
+      - record_id
+      - study_id
+      - site_id
+      - personnel_name
+      - personnel_email
+      - role
+      - delegated_tasks
+      - start_date
       title: DOAAssignmentRecord
-      description:
-        "Delegation of Authority (DOA) site personnel assignment log record.
+      description: 'Delegation of Authority (DOA) site personnel assignment log record.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     DOAAuditLogResponse:
       properties:
         id:
@@ -12627,11 +13046,11 @@ components:
           title: Timestamp
       type: object
       required:
-        - id
-        - user_id
-        - action
-        - details
-        - timestamp
+      - id
+      - user_id
+      - action
+      - details
+      - timestamp
       title: DOAAuditLogResponse
     DOADelegationRecordResponse:
       properties:
@@ -12649,45 +13068,45 @@ components:
           title: Task Code
         pi_user_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Pi User Id
         status:
           type: string
           title: Status
         pi_signature_hash:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Pi Signature Hash
         pi_approved_at:
           anyOf:
-            - type: string
-              format: date-time
-            - type: "null"
+          - type: string
+            format: date-time
+          - type: 'null'
           title: Pi Approved At
         end_date:
           anyOf:
-            - type: string
-              format: date-time
-            - type: "null"
+          - type: string
+            format: date-time
+          - type: 'null'
           title: End Date
         reason_for_change:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Reason For Change
         is_active:
           type: boolean
           title: Is Active
       type: object
       required:
-        - id
-        - site_id
-        - staff_user_id
-        - task_code
-        - status
-        - is_active
+      - id
+      - site_id
+      - staff_user_id
+      - task_code
+      - status
+      - is_active
       title: DOADelegationRecordResponse
     DOASignOffRequest:
       properties:
@@ -12701,40 +13120,39 @@ components:
           description: Mandatory GxP 21 CFR Part 11 justification
       type: object
       required:
-        - record_id
-        - reason_for_change
+      - record_id
+      - reason_for_change
       title: DOASignOffRequest
-      description: "Request payload for PI eSignature endorsement of DOA record.
+      description: 'Request payload for PI eSignature endorsement of DOA record.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     DOATaskDelegationEnum:
       type: string
       enum:
-        - SUBJECT_INFORMED_CONSENT
-        - PHYSICAL_EXAMINATION
-        - AE_SAE_REPORTING
-        - CRF_DATA_ENTRY
-        - PI_CASEBOOK_SIGNOFF
+      - SUBJECT_INFORMED_CONSENT
+      - PHYSICAL_EXAMINATION
+      - AE_SAE_REPORTING
+      - CRF_DATA_ENTRY
+      - PI_CASEBOOK_SIGNOFF
       title: DOATaskDelegationEnum
-      description:
-        "Specific clinical trial study tasks delegated to site personnel.
+      description: 'Specific clinical trial study tasks delegated to site personnel.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     DOATaskRoleEnum:
       type: string
       enum:
-        - PRINCIPAL_INVESTIGATOR
-        - SUB_INVESTIGATOR
-        - CLINICAL_RESEARCH_COORDINATOR
-        - STUDY_NURSE
-        - DATA_MANAGER
+      - PRINCIPAL_INVESTIGATOR
+      - SUB_INVESTIGATOR
+      - CLINICAL_RESEARCH_COORDINATOR
+      - STUDY_NURSE
+      - DATA_MANAGER
       title: DOATaskRoleEnum
-      description: "Site personnel roles on Delegation of Authority log.
+      description: 'Site personnel roles on Delegation of Authority log.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     DataLockRecord:
       properties:
         lock_id:
@@ -12755,22 +13173,22 @@ components:
           description: Target eCRF form submission ID
         item_group_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Item Group Id
           description: Optional target item group code
         field_name:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Field Name
           description: Optional target field variable name
         scope:
-          $ref: "#/components/schemas/LockScopeEnum"
-          description: "Lock scope: FORM, ITEM_GROUP, FIELD"
+          $ref: '#/components/schemas/LockScopeEnum'
+          description: 'Lock scope: FORM, ITEM_GROUP, FIELD'
         status:
-          $ref: "#/components/schemas/LockStatusEnum"
-          description: "Lock status: UNLOCKED, FROZEN, LOCKED"
+          $ref: '#/components/schemas/LockStatusEnum'
+          description: 'Lock status: UNLOCKED, FROZEN, LOCKED'
           default: LOCKED
         locked_by:
           type: string
@@ -12786,20 +13204,19 @@ components:
           description: UTC ISO timestamp of lock execution
       type: object
       required:
-        - lock_id
-        - study_id
-        - subject_id
-        - form_id
-        - scope
-        - locked_by
-        - reason_for_change
-        - locked_at
+      - lock_id
+      - study_id
+      - subject_id
+      - form_id
+      - scope
+      - locked_by
+      - reason_for_change
+      - locked_at
       title: DataLockRecord
-      description:
-        "Data lock state record representing frozen or locked clinical eCRF data.
+      description: 'Data lock state record representing frozen or locked clinical eCRF data.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     DataLockRequest:
       properties:
         study_id:
@@ -12816,24 +13233,24 @@ components:
           description: Target eCRF form ID
         item_group_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Item Group Id
           description: Optional target item group code
         field_name:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Field Name
           description: Optional target field variable name
         scope:
-          $ref: "#/components/schemas/LockScopeEnum"
-          description: "Lock scope: FORM, ITEM_GROUP, FIELD"
+          $ref: '#/components/schemas/LockScopeEnum'
+          description: 'Lock scope: FORM, ITEM_GROUP, FIELD'
           default: FORM
         action:
           type: string
           title: Action
-          description: "Action to perform: LOCK, FREEZE, UNLOCK"
+          description: 'Action to perform: LOCK, FREEZE, UNLOCK'
           default: LOCK
         reason_for_change:
           type: string
@@ -12841,16 +13258,15 @@ components:
           description: Mandatory GxP 21 CFR Part 11 justification reason
       type: object
       required:
-        - study_id
-        - subject_id
-        - form_id
-        - reason_for_change
+      - study_id
+      - subject_id
+      - form_id
+      - reason_for_change
       title: DataLockRequest
-      description:
-        "Request payload to execute form, item group, or field-level data locking.
+      description: 'Request payload to execute form, item group, or field-level data locking.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     DataLockResponse:
       properties:
         lock_id:
@@ -12860,25 +13276,25 @@ components:
         status:
           type: string
           title: Status
-          description: "Resulting status: LOCKED, FROZEN, UNLOCKED"
+          description: 'Resulting status: LOCKED, FROZEN, UNLOCKED'
         message:
           type: string
           title: Message
           description: Operation result confirmation message
         record:
-          $ref: "#/components/schemas/DataLockRecord"
+          $ref: '#/components/schemas/DataLockRecord'
           description: Updated data lock record
       type: object
       required:
-        - lock_id
-        - status
-        - message
-        - record
+      - lock_id
+      - status
+      - message
+      - record
       title: DataLockResponse
-      description: "Response payload for data lock/unlock operations.
+      description: 'Response payload for data lock/unlock operations.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     DelegateTaskRequest:
       properties:
         site_id:
@@ -12898,33 +13314,33 @@ components:
           title: Reason For Change
       type: object
       required:
-        - site_id
-        - staff_user_id
-        - task_code
-        - pi_user_id
-        - reason_for_change
+      - site_id
+      - staff_user_id
+      - task_code
+      - pi_user_id
+      - reason_for_change
       title: DelegateTaskRequest
     Demographics:
       properties:
         name:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Name
         birthdate:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Birthdate
         gender:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Gender
         race:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Race
       type: object
       title: Demographics
@@ -12932,10 +13348,10 @@ components:
     DictTypeEnum:
       type: string
       enum:
-        - MEDDRA
-        - WHODRUG
-        - LOINC
-        - SNOMED
+      - MEDDRA
+      - WHODRUG
+      - LOINC
+      - SNOMED
       title: DictTypeEnum
     DispenseRequest:
       properties:
@@ -12961,11 +13377,11 @@ components:
           default: 1
       type: object
       required:
-        - study_id
-        - site_id
-        - subject_id
-        - visit_id
-        - kit_id
+      - study_id
+      - site_id
+      - subject_id
+      - visit_id
+      - kit_id
       title: DispenseRequest
     DispenseResponse:
       properties:
@@ -12980,9 +13396,9 @@ components:
           title: Resupply Triggered
       type: object
       required:
-        - status
-        - message
-        - resupply_triggered
+      - status
+      - message
+      - resupply_triggered
       title: DispenseResponse
     DocumentMetadataResponse:
       properties:
@@ -13013,19 +13429,19 @@ components:
           title: Created At
       type: object
       required:
-        - document_id
-        - filename
-        - version_index
-        - sha256_hash
-        - dia_tmf_code
-        - status
-        - created_by
-        - created_at
+      - document_id
+      - filename
+      - version_index
+      - sha256_hash
+      - dia_tmf_code
+      - status
+      - created_by
+      - created_at
       title: DocumentMetadataResponse
-      description: "Schema representing complete document metadata.
+      description: 'Schema representing complete document metadata.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     DocumentUploadResponse:
       properties:
         document_id:
@@ -13042,15 +13458,15 @@ components:
           title: Sha256 Hash
       type: object
       required:
-        - document_id
-        - filename
-        - version_index
-        - sha256_hash
+      - document_id
+      - filename
+      - version_index
+      - sha256_hash
       title: DocumentUploadResponse
-      description: "Schema representing upload response.
+      description: 'Schema representing upload response.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     EISFDocumentRecord:
       properties:
         document_id:
@@ -13066,7 +13482,7 @@ components:
           title: Site Id
           description: Target investigator site ID (for site-scoped isolation)
         category:
-          $ref: "#/components/schemas/EISFTaxonomyCategoryEnum"
+          $ref: '#/components/schemas/EISFTaxonomyCategoryEnum'
           description: DIA taxonomy category
         title:
           type: string
@@ -13076,7 +13492,7 @@ components:
           type: string
           title: Version
           description: Document version string
-          default: "1.0"
+          default: '1.0'
         file_name:
           type: string
           title: File Name
@@ -13099,8 +13515,8 @@ components:
           description: UTC ISO timestamp of upload
         expiration_date:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Expiration Date
           description: Optional document expiration date (YYYY-MM-DD)
         is_redacted:
@@ -13110,37 +13526,37 @@ components:
           default: false
       type: object
       required:
-        - document_id
-        - study_id
-        - site_id
-        - category
-        - title
-        - file_name
-        - file_size_bytes
-        - sha256_hash
-        - uploaded_by
-        - uploaded_at
+      - document_id
+      - study_id
+      - site_id
+      - category
+      - title
+      - file_name
+      - file_size_bytes
+      - sha256_hash
+      - uploaded_by
+      - uploaded_at
       title: EISFDocumentRecord
-      description: "eISF regulatory binder document metadata record.
+      description: 'eISF regulatory binder document metadata record.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     EISFTaxonomyCategoryEnum:
       type: string
       enum:
-        - 1_INVESTIGATOR_CV
-        - 2_MEDICAL_LICENSE
-        - 3_PROTOCOL_APPROVAL
-        - 4_IRB_IEC_APPROVAL
-        - 5_INFORMED_CONSENT
-        - 6_FINANCIAL_DISCLOSURE
-        - 7_DELEGATION_OF_AUTHORITY
-        - 8_SAFETY_REPORT
+      - 1_INVESTIGATOR_CV
+      - 2_MEDICAL_LICENSE
+      - 3_PROTOCOL_APPROVAL
+      - 4_IRB_IEC_APPROVAL
+      - 5_INFORMED_CONSENT
+      - 6_FINANCIAL_DISCLOSURE
+      - 7_DELEGATION_OF_AUTHORITY
+      - 8_SAFETY_REPORT
       title: EISFTaxonomyCategoryEnum
-      description: "DIA eISF / Regulatory Binder document taxonomy categories.
+      description: 'DIA eISF / Regulatory Binder document taxonomy categories.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     FormSubmissionApprove:
       properties:
         signature_manifest:
@@ -13152,8 +13568,8 @@ components:
           title: Signing Reason
       type: object
       required:
-        - signature_manifest
-        - signing_reason
+      - signature_manifest
+      - signing_reason
       title: FormSubmissionApprove
     FormSubmissionCreate:
       properties:
@@ -13168,18 +13584,18 @@ components:
           title: Subject Id
         visit_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Visit Id
         form_id:
           type: string
           title: Form Id
       type: object
       required:
-        - study_id
-        - site_id
-        - subject_id
-        - form_id
+      - study_id
+      - site_id
+      - subject_id
+      - form_id
       title: FormSubmissionCreate
     FormSubmissionResponse:
       properties:
@@ -13197,14 +13613,14 @@ components:
           title: Subject Id
         visit_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Visit Id
         form_id:
           type: string
           title: Form Id
         status:
-          $ref: "#/components/schemas/FormSubmissionStatusEnum"
+          $ref: '#/components/schemas/FormSubmissionStatusEnum'
         version:
           type: integer
           title: Version
@@ -13213,27 +13629,27 @@ components:
           title: Is Deleted
         signature_manifest:
           anyOf:
-            - additionalProperties: true
-              type: object
-            - type: "null"
+          - additionalProperties: true
+            type: object
+          - type: 'null'
           title: Signature Manifest
       type: object
       required:
-        - id
-        - study_id
-        - site_id
-        - subject_id
-        - form_id
-        - status
-        - version
-        - is_deleted
+      - id
+      - study_id
+      - site_id
+      - subject_id
+      - form_id
+      - status
+      - version
+      - is_deleted
       title: FormSubmissionResponse
     FormSubmissionStatusEnum:
       type: string
       enum:
-        - DRAFT
-        - COMPLETED
-        - APPROVED
+      - DRAFT
+      - COMPLETED
+      - APPROVED
       title: FormSubmissionStatusEnum
     GenerateAuditorTokenRequest:
       properties:
@@ -13256,26 +13672,25 @@ components:
           description: GxP reason for provisioning auditor access
       type: object
       required:
-        - auditor_email
-        - study_id
-        - reason_for_access
+      - auditor_email
+      - study_id
+      - reason_for_access
       title: GenerateAuditorTokenRequest
-      description:
-        "Request payload to generate a temporary auditor access token.
+      description: 'Request payload to generate a temporary auditor access token.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     ImpactAnalysisRequest:
       properties:
         dictionary_type:
-          $ref: "#/components/schemas/DictTypeEnum"
+          $ref: '#/components/schemas/DictTypeEnum'
         new_version:
           type: string
           title: New Version
       type: object
       required:
-        - dictionary_type
-        - new_version
+      - dictionary_type
+      - new_version
       title: ImpactAnalysisRequest
     ImpactAnalysisResponse:
       properties:
@@ -13284,18 +13699,18 @@ components:
           const: success
           title: Status
         dictionary_type:
-          $ref: "#/components/schemas/DictTypeEnum"
+          $ref: '#/components/schemas/DictTypeEnum'
         new_version:
           type: string
           title: New Version
         metrics:
-          $ref: "#/components/schemas/ImpactMetrics"
+          $ref: '#/components/schemas/ImpactMetrics'
       type: object
       required:
-        - status
-        - dictionary_type
-        - new_version
-        - metrics
+      - status
+      - dictionary_type
+      - new_version
+      - metrics
       title: ImpactAnalysisResponse
     ImpactMetrics:
       properties:
@@ -13317,28 +13732,28 @@ components:
           default: 0
         verbatim_terms_affected:
           anyOf:
-            - type: integer
-            - type: "null"
+          - type: integer
+          - type: 'null'
           title: Verbatim Terms Affected
         coded_terms_affected:
           anyOf:
-            - type: integer
-            - type: "null"
+          - type: integer
+          - type: 'null'
           title: Coded Terms Affected
         uncodable_terms:
           anyOf:
-            - type: integer
-            - type: "null"
+          - type: integer
+          - type: 'null'
           title: Uncodable Terms
       type: object
       title: ImpactMetrics
     JobStatusEnum:
       type: string
       enum:
-        - PENDING
-        - PROCESSING
-        - COMPLETED
-        - FAILED
+      - PENDING
+      - PROCESSING
+      - COMPLETED
+      - FAILED
       title: JobStatusEnum
     JobStatusResponse:
       properties:
@@ -13352,39 +13767,39 @@ components:
           type: string
           title: Version
         status:
-          $ref: "#/components/schemas/JobStatusEnum"
+          $ref: '#/components/schemas/JobStatusEnum'
         started_at:
           type: string
           format: date-time
           title: Started At
         completed_at:
           anyOf:
-            - type: string
-              format: date-time
-            - type: "null"
+          - type: string
+            format: date-time
+          - type: 'null'
           title: Completed At
         progress_percentage:
           anyOf:
-            - type: integer
-            - type: "null"
+          - type: integer
+          - type: 'null'
           title: Progress Percentage
         records_imported:
           anyOf:
-            - type: integer
-            - type: "null"
+          - type: integer
+          - type: 'null'
           title: Records Imported
         errors_encountered:
           anyOf:
-            - type: integer
-            - type: "null"
+          - type: integer
+          - type: 'null'
           title: Errors Encountered
       type: object
       required:
-        - job_id
-        - dictionary_type
-        - version
-        - status
-        - started_at
+      - job_id
+      - dictionary_type
+      - version
+      - status
+      - started_at
       title: JobStatusResponse
     LabRangeRecalculateRequest:
       properties:
@@ -13396,8 +13811,8 @@ components:
           title: Test Code
       type: object
       required:
-        - study_id
-        - test_code
+      - study_id
+      - test_code
       title: LabRangeRecalculateRequest
       description: Pydantic schema for triggering lab range recalculations.
     LabRangeRecalculateResponse:
@@ -13416,10 +13831,10 @@ components:
           title: Updated Count
       type: object
       required:
-        - status
-        - study_id
-        - test_code
-        - updated_count
+      - status
+      - study_id
+      - test_code
+      - updated_count
       title: LabRangeRecalculateResponse
       description: Pydantic schema returning recalculation status.
     LabReferenceRangeCreate:
@@ -13438,8 +13853,8 @@ components:
           title: Source
         site_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Site Id
         unit:
           type: string
@@ -13452,43 +13867,43 @@ components:
           title: Sex Applicability
         age_low:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Age Low
         age_high:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Age High
         low_bound:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Low Bound
         high_bound:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: High Bound
         critical_low:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Critical Low
         critical_high:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Critical High
       type: object
       required:
-        - study_id
-        - test_code
-        - test_name
-        - source
-        - unit
-        - normalized_unit
-        - sex_applicability
+      - study_id
+      - test_code
+      - test_name
+      - source
+      - unit
+      - normalized_unit
+      - sex_applicability
       title: LabReferenceRangeCreate
       description: Pydantic schema for creating a reference range.
     LabReferenceRangeResponse:
@@ -13510,8 +13925,8 @@ components:
           title: Source
         site_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Site Id
         unit:
           type: string
@@ -13524,33 +13939,33 @@ components:
           title: Sex Applicability
         age_low:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Age Low
         age_high:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Age High
         low_bound:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Low Bound
         high_bound:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: High Bound
         critical_low:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Critical Low
         critical_high:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Critical High
         version:
           type: integer
@@ -13560,89 +13975,89 @@ components:
           title: Is Deleted
       type: object
       required:
-        - id
-        - study_id
-        - test_code
-        - test_name
-        - source
-        - unit
-        - normalized_unit
-        - sex_applicability
-        - version
-        - is_deleted
+      - id
+      - study_id
+      - test_code
+      - test_name
+      - source
+      - unit
+      - normalized_unit
+      - sex_applicability
+      - version
+      - is_deleted
       title: LabReferenceRangeResponse
       description: Pydantic schema for returning reference range details.
     LabReferenceRangeUpdate:
       properties:
         study_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Study Id
         test_code:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Test Code
         test_name:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Test Name
         source:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Source
         site_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Site Id
         unit:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Unit
         normalized_unit:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Normalized Unit
         sex_applicability:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Sex Applicability
         age_low:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Age Low
         age_high:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Age High
         low_bound:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Low Bound
         high_bound:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: High Bound
         critical_low:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Critical Low
         critical_high:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Critical High
       type: object
       title: LabReferenceRangeUpdate
@@ -13660,7 +14075,7 @@ components:
           type: string
           title: Action
         details:
-          $ref: "#/components/schemas/SyncBlockDetails"
+          $ref: '#/components/schemas/SyncBlockDetails'
         reason:
           type: string
           title: Reason
@@ -13672,37 +14087,37 @@ components:
           title: Hash
       type: object
       required:
-        - index
-        - timestamp
-        - action
-        - details
-        - reason
-        - prevHash
-        - hash
+      - index
+      - timestamp
+      - action
+      - details
+      - reason
+      - prevHash
+      - hash
       title: LocalLedgerBlock
       description: Pydantic schema representing a cryptographically chained offline ledger block.
     LockScopeEnum:
       type: string
       enum:
-        - FORM
-        - ITEM_GROUP
-        - FIELD
+      - FORM
+      - ITEM_GROUP
+      - FIELD
       title: LockScopeEnum
-      description: "Granular lock scope boundaries.
+      description: 'Granular lock scope boundaries.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     LockStatusEnum:
       type: string
       enum:
-        - UNLOCKED
-        - FROZEN
-        - LOCKED
+      - UNLOCKED
+      - FROZEN
+      - LOCKED
       title: LockStatusEnum
-      description: "Data lock lifecycle status.
+      description: 'Data lock lifecycle status.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     LockStatusResponse:
       properties:
         locked_sites:
@@ -13730,11 +14145,11 @@ components:
           title: Trial Locked
       type: object
       required:
-        - locked_sites
-        - locked_visits
-        - locked_forms
-        - locked_subjects
-        - trial_locked
+      - locked_sites
+      - locked_visits
+      - locked_forms
+      - locked_subjects
+      - trial_locked
       title: LockStatusResponse
       description: Pydantic model representing the active locking/freezing state of the system.
     MedDRACodeLookupResponse:
@@ -13742,19 +14157,19 @@ components:
         status:
           type: string
           enum:
-            - AUTO-CODED
-            - SUGGESTIONS
-            - UNCODABLE
+          - AUTO-CODED
+          - SUGGESTIONS
+          - UNCODABLE
           title: Status
         matches:
           items:
-            $ref: "#/components/schemas/MedDRAMatch"
+            $ref: '#/components/schemas/MedDRAMatch'
           type: array
           title: Matches
       type: object
       required:
-        - status
-        - matches
+      - status
+      - matches
       title: MedDRACodeLookupResponse
     MedDRAMatch:
       properties:
@@ -13790,31 +14205,31 @@ components:
           title: Soc Name
         primary_soc_flag:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Primary Soc Flag
         score:
           type: number
           title: Score
       type: object
       required:
-        - llt_code
-        - llt_name
-        - pt_code
-        - pt_name
-        - hlt_code
-        - hlt_name
-        - hlgt_code
-        - hlgt_name
-        - soc_code
-        - soc_name
-        - score
+      - llt_code
+      - llt_name
+      - pt_code
+      - pt_name
+      - hlt_code
+      - hlt_name
+      - hlgt_code
+      - hlgt_name
+      - soc_code
+      - soc_name
+      - score
       title: MedDRAMatch
     MedDRATargetLevelEnum:
       type: string
       enum:
-        - LLT
-        - PT
+      - LLT
+      - PT
       title: MedDRATargetLevelEnum
     MigrationRuleCreate:
       properties:
@@ -13832,30 +14247,30 @@ components:
           title: Rule Type
         source_field:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Source Field
         target_field:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Target Field
         default_value_string:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Default Value String
         default_value_float:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Default Value Float
       type: object
       required:
-        - study_id
-        - source_version
-        - target_version
-        - rule_type
+      - study_id
+      - source_version
+      - target_version
+      - rule_type
       title: MigrationRuleCreate
     MigrationRuleResponse:
       properties:
@@ -13876,31 +14291,31 @@ components:
           title: Rule Type
         source_field:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Source Field
         target_field:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Target Field
         default_value_string:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Default Value String
         default_value_float:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Default Value Float
       type: object
       required:
-        - id
-        - study_id
-        - source_version
-        - target_version
-        - rule_type
+      - id
+      - study_id
+      - source_version
+      - target_version
+      - rule_type
       title: MigrationRuleResponse
     ObservationCreate:
       properties:
@@ -13909,13 +14324,13 @@ components:
           title: Subject Id
         study_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Study Id
         visit_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Visit Id
         domain:
           type: string
@@ -13928,41 +14343,41 @@ components:
           title: Test Name
         value:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Value
         value_string:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Value String
         unit:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Unit
         observation_date:
           anyOf:
-            - type: string
-              format: date-time
-            - type: "null"
+          - type: string
+            format: date-time
+          - type: 'null'
           title: Observation Date
         lab_source:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Lab Source
         lab_site_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Lab Site Id
       type: object
       required:
-        - subject_id
-        - domain
-        - test_code
-        - test_name
+      - subject_id
+      - domain
+      - test_code
+      - test_name
       title: ObservationCreate
       description: Pydantic schema for creating a clinical observation.
     ObservationResponse:
@@ -13978,8 +14393,8 @@ components:
           title: Study Id
         visit_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Visit Id
         domain:
           type: string
@@ -13996,97 +14411,97 @@ components:
           title: Test Name
         value:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Value
         value_string:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Value String
         unit:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Unit
         normalized_value:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Normalized Value
         normalized_unit:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Normalized Unit
         is_outlier:
           type: boolean
           title: Is Outlier
         lab_source:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Lab Source
         lab_site_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Lab Site Id
         lab_indicator:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Lab Indicator
         lab_out_of_range:
           anyOf:
-            - type: boolean
-            - type: "null"
+          - type: boolean
+          - type: 'null'
           title: Lab Out Of Range
         matched_normal_bounds:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Matched Normal Bounds
         range_indicator:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Range Indicator
         is_out_of_range:
           anyOf:
-            - type: boolean
-            - type: "null"
+          - type: boolean
+          - type: 'null'
           title: Is Out Of Range
         reference_range_low:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Reference Range Low
         reference_range_high:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Reference Range High
         protocol_version_tag:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Protocol Version Tag
         protocol_version_index:
           anyOf:
-            - type: integer
-            - type: "null"
+          - type: integer
+          - type: 'null'
           title: Protocol Version Index
       type: object
       required:
-        - id
-        - subject_id
-        - study_id
-        - domain
-        - observation_date
-        - test_code
-        - test_name
-        - is_outlier
+      - id
+      - subject_id
+      - study_id
+      - domain
+      - observation_date
+      - test_code
+      - test_name
+      - is_outlier
       title: ObservationResponse
       description: Pydantic schema returning observation details.
     OfflineBatchSyncRequest:
@@ -14101,20 +14516,20 @@ components:
           description: Identifier of the device performing the sync
         deltas:
           items:
-            $ref: "#/components/schemas/OfflineDeltaItem"
+            $ref: '#/components/schemas/OfflineDeltaItem'
           type: array
           title: Deltas
           description: List of sync deltas to process
       type: object
       required:
-        - client_batch_id
-        - device_id
-        - deltas
+      - client_batch_id
+      - device_id
+      - deltas
       title: OfflineBatchSyncRequest
-      description: "Request schema for offline batch delta sync.
+      description: 'Request schema for offline batch delta sync.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     OfflineBatchSyncResponse:
       properties:
         client_batch_id:
@@ -14124,9 +14539,9 @@ components:
         status:
           type: string
           enum:
-            - SUCCESS
-            - PARTIAL_SUCCESS
-            - ALREADY_PROCESSED
+          - SUCCESS
+          - PARTIAL_SUCCESS
+          - ALREADY_PROCESSED
           title: Status
           description: Processing status of the batch
         processed_count:
@@ -14142,14 +14557,14 @@ components:
           description: List of conflicts encountered during processing
       type: object
       required:
-        - client_batch_id
-        - status
-        - processed_count
+      - client_batch_id
+      - status
+      - processed_count
       title: OfflineBatchSyncResponse
-      description: "Response schema for offline batch delta sync.
+      description: 'Response schema for offline batch delta sync.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     OfflineDeltaItem:
       properties:
         delta_id:
@@ -14167,9 +14582,9 @@ components:
         action:
           type: string
           enum:
-            - CREATE
-            - UPDATE
-            - SUBMIT
+          - CREATE
+          - UPDATE
+          - SUBMIT
           title: Action
           description: Mutation action type
         payload:
@@ -14187,19 +14602,18 @@ components:
           description: Reason for the mutation change
       type: object
       required:
-        - delta_id
-        - entity_type
-        - entity_id
-        - action
-        - payload
-        - client_timestamp_utc
-        - reason_for_change
+      - delta_id
+      - entity_type
+      - entity_id
+      - action
+      - payload
+      - client_timestamp_utc
+      - reason_for_change
       title: OfflineDeltaItem
-      description:
-        "An individual sync delta item representing an entity mutation.
+      description: 'An individual sync delta item representing an entity mutation.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     OutlierRecalculateRequest:
       properties:
         study_id:
@@ -14210,8 +14624,8 @@ components:
           title: Test Code
       type: object
       required:
-        - study_id
-        - test_code
+      - study_id
+      - test_code
       title: OutlierRecalculateRequest
       description: Pydantic schema for triggering outlier calculations.
     OutlierRecalculateResponse:
@@ -14230,10 +14644,10 @@ components:
           title: Outliers Found
       type: object
       required:
-        - status
-        - study_id
-        - test_code
-        - outliers_found
+      - status
+      - study_id
+      - test_code
+      - outliers_found
       title: OutlierRecalculateResponse
       description: Pydantic schema returning recalculation status.
     PHIScanRequest:
@@ -14244,12 +14658,12 @@ components:
           description: Document text content to scan for PHI
       type: object
       required:
-        - text
+      - text
       title: PHIScanRequest
-      description: "Request payload to scan text for HIPAA 18 PHI identifiers.
+      description: 'Request payload to scan text for HIPAA 18 PHI identifiers.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     ProtocolVersionRef:
       properties:
         study_id:
@@ -14265,33 +14679,32 @@ components:
           title: Version Index
           description: Chronological, incrementing index of the protocol version (must be >= 1).
         status:
-          $ref: "#/components/schemas/ProtocolVersionStatus"
+          $ref: '#/components/schemas/ProtocolVersionStatus'
           description: Current controlled status of this protocol version.
       type: object
       required:
-        - study_id
-        - version_tag
-        - version_index
-        - status
+      - study_id
+      - version_tag
+      - version_index
+      - status
       title: ProtocolVersionRef
-      description:
-        "Pydantic v2 model representing a reference to a specific clinical trial protocol version.
+      description: 'Pydantic v2 model representing a reference to a specific clinical trial protocol version.
 
 
         This contract is shared between Execution, eTMF, and other services to prevent
 
         the duplication of ad-hoc protocol reference fields and ensure consistent cross-service
 
-        payload structures, validation, and serialization."
+        payload structures, validation, and serialization.'
     ProtocolVersionStatus:
       type: string
       enum:
-        - DRAFT
-        - ACTIVE
-        - LOCKED
-        - PUBLISHED
-        - ARCHIVED
-        - FROZEN
+      - DRAFT
+      - ACTIVE
+      - LOCKED
+      - PUBLISHED
+      - ARCHIVED
+      - FROZEN
       title: ProtocolVersionStatus
       description: Controlled vocabulary of statuses for a clinical protocol or study version.
     PublishAmendmentRequest:
@@ -14320,16 +14733,16 @@ components:
           description: New amended USDM snapshot
       type: object
       required:
-        - study_id
-        - version_number
-        - description
-        - baseline_snapshot
-        - amended_snapshot
+      - study_id
+      - version_number
+      - description
+      - baseline_snapshot
+      - amended_snapshot
       title: PublishAmendmentRequest
-      description: "Request payload to publish a new protocol amendment version.
+      description: 'Request payload to publish a new protocol amendment version.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     PublishAmendmentResponse:
       properties:
         amendment_id:
@@ -14362,18 +14775,18 @@ components:
           description: Number of removed activities
       type: object
       required:
-        - amendment_id
-        - study_id
-        - version_number
-        - published_at
-        - summary_of_changes
-        - added_activities_count
-        - removed_activities_count
+      - amendment_id
+      - study_id
+      - version_number
+      - published_at
+      - summary_of_changes
+      - added_activities_count
+      - removed_activities_count
       title: PublishAmendmentResponse
-      description: "Response payload following protocol amendment publishing.
+      description: 'Response payload following protocol amendment publishing.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     QueryCancel:
       properties:
         reason:
@@ -14381,7 +14794,7 @@ components:
           title: Reason
       type: object
       required:
-        - reason
+      - reason
       title: QueryCancel
       description: Pydantic schema for cancelling a query with a reason.
     QueryCreate:
@@ -14394,13 +14807,13 @@ components:
           title: Subject Id
         visit_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Visit Id
         domain:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Domain
         test_code:
           type: string
@@ -14410,71 +14823,71 @@ components:
           title: Explanation
         status:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Status
           default: OPEN
         observation_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Observation Id
         field_link:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Field Link
         message:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Message
         origin:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Origin
         priority:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Priority
         rule_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Rule Id
         created_by:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Created By
         form_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Form Id
         field_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Field Id
         query_type:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Query Type
         action_required:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Action Required
       type: object
       required:
-        - study_id
-        - subject_id
-        - test_code
-        - explanation
+      - study_id
+      - subject_id
+      - test_code
+      - explanation
       title: QueryCreate
       description: Pydantic schema for raising a new query.
     QueryHistoryItem:
@@ -14484,8 +14897,8 @@ components:
           title: Action
         user_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: User Id
         timestamp:
           type: string
@@ -14493,37 +14906,37 @@ components:
           title: Timestamp
         old_values:
           anyOf:
-            - additionalProperties: true
-              type: object
-            - type: "null"
+          - additionalProperties: true
+            type: object
+          - type: 'null'
           title: Old Values
         new_values:
           anyOf:
-            - additionalProperties: true
-              type: object
-            - type: "null"
+          - additionalProperties: true
+            type: object
+          - type: 'null'
           title: New Values
         change_reason:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Change Reason
         version_index:
           type: integer
           title: Version Index
       type: object
       required:
-        - action
-        - timestamp
-        - version_index
+      - action
+      - timestamp
+      - version_index
       title: QueryHistoryItem
       description: Pydantic schema representing a single audited event in query history.
     QueryReopen:
       properties:
         reason:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Reason
       type: object
       title: QueryReopen
@@ -14535,20 +14948,20 @@ components:
           title: Response
         responder:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Responder
       type: object
       required:
-        - response
+      - response
       title: QueryRespond
       description: Pydantic schema for responding to an open query.
     QueryTargetDescriptor:
       properties:
         study_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Study Id
           description: Target study trial identifier
         subject_id:
@@ -14569,40 +14982,39 @@ components:
           description: Target clinical test code
         observation_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Observation Id
           description: Optional target unique clinical observation ID
         form_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Form Id
           description: Optional form identifier
         field_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Field Id
           description: Optional field identifier
         explanation:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Explanation
           description: Contextual explanation/issue description triggering query generation
       type: object
       required:
-        - subject_id
-        - visit_id
-        - domain
-        - test_code
+      - subject_id
+      - visit_id
+      - domain
+      - test_code
       title: QueryTargetDescriptor
-      description:
-        "Coordinate fields representing the specific target of a query.
+      description: 'Coordinate fields representing the specific target of a query.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     QueryUpdate:
       properties:
         status:
@@ -14610,99 +15022,99 @@ components:
           title: Status
         explanation:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Explanation
         response:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Response
         observation_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Observation Id
         field_link:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Field Link
         message:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Message
         origin:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Origin
         priority:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Priority
         rule_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Rule Id
         created_by:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Created By
         responder:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Responder
         resolver:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Resolver
         resolved_at:
           anyOf:
-            - type: string
-              format: date-time
-            - type: "null"
+          - type: string
+            format: date-time
+          - type: 'null'
           title: Resolved At
         cancellation_reason:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Cancellation Reason
         escalated_at:
           anyOf:
-            - type: string
-              format: date-time
-            - type: "null"
+          - type: string
+            format: date-time
+          - type: 'null'
           title: Escalated At
         form_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Form Id
         field_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Field Id
         query_type:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Query Type
         action_required:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Action Required
       type: object
       required:
-        - status
+      - status
       title: QueryUpdate
       description: Pydantic schema for general state transitions.
     RedactPDFRequest:
@@ -14719,13 +15131,12 @@ components:
           description: Target PHI strings to redact
       type: object
       required:
-        - pdf_base64
+      - pdf_base64
       title: RedactPDFRequest
-      description:
-        "Request payload to apply non-destructive redactions to PDF document.
+      description: 'Request payload to apply non-destructive redactions to PDF document.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     RevokeDelegationRequest:
       properties:
         delegation_id:
@@ -14740,9 +15151,9 @@ components:
           title: Reason For Change
       type: object
       required:
-        - delegation_id
-        - end_date
-        - reason_for_change
+      - delegation_id
+      - end_date
+      - reason_for_change
       title: RevokeDelegationRequest
     SAEReconcileRequest:
       properties:
@@ -14759,33 +15170,32 @@ components:
           description: List of EDC AE form data dicts
         safety_cases_xml:
           anyOf:
-            - items:
-                type: string
-              type: array
-            - type: "null"
+          - items:
+              type: string
+            type: array
+          - type: 'null'
           title: Safety Cases Xml
           description: Optional raw E2B XML reports to parse
       type: object
       required:
-        - study_id
-        - edc_ae_events
+      - study_id
+      - edc_ae_events
       title: SAEReconcileRequest
-      description:
-        "Request payload to reconcile EDC AE data against Safety ICSR cases.
+      description: 'Request payload to reconcile EDC AE data against Safety ICSR cases.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     SDVScopeEnum:
       type: string
       enum:
-        - FIELD
-        - PAGE
-        - VISIT
+      - FIELD
+      - PAGE
+      - VISIT
       title: SDVScopeEnum
     SDVSignOffRequest:
       properties:
         scope:
-          $ref: "#/components/schemas/SDVScopeEnum"
+          $ref: '#/components/schemas/SDVScopeEnum'
         target_id:
           type: string
           title: Target Id
@@ -14797,15 +15207,15 @@ components:
           title: Study Id
         site_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Site Id
       type: object
       required:
-        - scope
-        - target_id
-        - subject_id
-        - study_id
+      - scope
+      - target_id
+      - subject_id
+      - study_id
       title: SDVSignOffRequest
       description: Pydantic request schema for SDV sign-off.
     SDVSignOffResponse:
@@ -14827,42 +15237,42 @@ components:
           title: Study Id
         site_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Site Id
         is_verified:
           type: boolean
           title: Is Verified
         verified_by:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Verified By
         verified_at:
           anyOf:
-            - type: string
-              format: date-time
-            - type: "null"
+          - type: string
+            format: date-time
+          - type: 'null'
           title: Verified At
         dropped_reason:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Dropped Reason
         dropped_at:
           anyOf:
-            - type: string
-              format: date-time
-            - type: "null"
+          - type: string
+            format: date-time
+          - type: 'null'
           title: Dropped At
       type: object
       required:
-        - id
-        - scope
-        - target_id
-        - subject_id
-        - study_id
-        - is_verified
+      - id
+      - scope
+      - target_id
+      - subject_id
+      - study_id
+      - is_verified
       title: SDVSignOffResponse
       description: Pydantic response schema for SDV sign-off.
     SafetyDispatchRequest:
@@ -14882,7 +15292,7 @@ components:
         destination_gateway:
           type: string
           title: Destination Gateway
-          description: "Destination safety gateway: ARGUS, ARISG, EUDRAVIGILANCE"
+          description: 'Destination safety gateway: ARGUS, ARISG, EUDRAVIGILANCE'
           default: ARGUS
         expedited:
           type: boolean
@@ -14895,16 +15305,15 @@ components:
           description: Mandatory GxP 21 CFR Part 11 justification reason
       type: object
       required:
-        - study_id
-        - subject_id
-        - safety_report_id
-        - reason_for_change
+      - study_id
+      - subject_id
+      - safety_report_id
+      - reason_for_change
       title: SafetyDispatchRequest
-      description:
-        "Request payload to dispatch ICH E2B(R3) safety report to external PV gateway.
+      description: 'Request payload to dispatch ICH E2B(R3) safety report to external PV gateway.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     SafetyDispatchResponse:
       properties:
         dispatch_id:
@@ -14918,7 +15327,7 @@ components:
         status:
           type: string
           title: Status
-          description: "Dispatch status: DISPATCHED, DELIVERED, ACKNOWLEDGED"
+          description: 'Dispatch status: DISPATCHED, DELIVERED, ACKNOWLEDGED'
         dispatched_at:
           type: string
           title: Dispatched At
@@ -14929,23 +15338,22 @@ components:
           description: AS2 / SFTP gateway acknowledgment message
       type: object
       required:
-        - dispatch_id
-        - safety_report_id
-        - status
-        - dispatched_at
-        - ack_status
+      - dispatch_id
+      - safety_report_id
+      - status
+      - dispatched_at
+      - ack_status
       title: SafetyDispatchResponse
-      description:
-        "Response payload following E2B safety report gateway dispatch.
+      description: 'Response payload following E2B safety report gateway dispatch.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     SamplingModelEnum:
       type: string
       enum:
-        - SUBJECT_BASED
-        - FIELD_BASED
-        - COMBINED
+      - SUBJECT_BASED
+      - FIELD_BASED
+      - COMBINED
       title: SamplingModelEnum
     SiteStaffMemberRequest:
       properties:
@@ -14967,10 +15375,10 @@ components:
           default: true
       type: object
       required:
-        - site_id
-        - staff_user_id
-        - name
-        - email
+      - site_id
+      - staff_user_id
+      - name
+      - email
       title: SiteStaffMemberRequest
     SiteStaffMemberResponse:
       properties:
@@ -14994,12 +15402,12 @@ components:
           title: Has Gcp Training
       type: object
       required:
-        - id
-        - site_id
-        - staff_user_id
-        - name
-        - email
-        - has_gcp_training
+      - id
+      - site_id
+      - staff_user_id
+      - name
+      - email
+      - has_gcp_training
       title: SiteStaffMemberResponse
     StudyEvent:
       properties:
@@ -15012,22 +15420,22 @@ components:
           title: Payload
       type: object
       required:
-        - study_id
-        - payload
+      - study_id
+      - payload
       title: StudyEvent
       description: "Pydantic model representing an incoming study publication event.\n\nAttributes:\n    study_id (str): The unique identifier of the study.\n    payload (dict[str, Any]): The raw USDM protocol payload."
     SubjectConsentRequest:
       properties:
         protocol_version:
-          $ref: "#/components/schemas/ProtocolVersionRef"
+          $ref: '#/components/schemas/ProtocolVersionRef'
         icf_signed:
           type: boolean
           title: Icf Signed
         icf_signed_date:
           anyOf:
-            - type: string
-              format: date-time
-            - type: "null"
+          - type: string
+            format: date-time
+          - type: 'null'
           title: Icf Signed Date
         requires_reconsent:
           type: boolean
@@ -15035,8 +15443,8 @@ components:
           default: false
       type: object
       required:
-        - protocol_version
-        - icf_signed
+      - protocol_version
+      - icf_signed
       title: SubjectConsentRequest
       description: Pydantic schema for recording a subject's consent to a protocol version.
     SubjectConsentResponse:
@@ -15061,9 +15469,9 @@ components:
           title: Icf Signed
         icf_signed_date:
           anyOf:
-            - type: string
-              format: date-time
-            - type: "null"
+          - type: string
+            format: date-time
+          - type: 'null'
           title: Icf Signed Date
         requires_reconsent:
           type: boolean
@@ -15073,14 +15481,14 @@ components:
           title: Version
       type: object
       required:
-        - id
-        - subject_id
-        - study_id
-        - version_tag
-        - version_index
-        - icf_signed
-        - requires_reconsent
-        - version
+      - id
+      - subject_id
+      - study_id
+      - version_tag
+      - version_index
+      - icf_signed
+      - requires_reconsent
+      - version
       title: SubjectConsentResponse
       description: Pydantic schema returning subject consent details.
     SubjectCreate:
@@ -15093,25 +15501,25 @@ components:
           title: Study Id
         demographics:
           anyOf:
-            - $ref: "#/components/schemas/Demographics"
-            - type: "null"
+          - $ref: '#/components/schemas/Demographics'
+          - type: 'null'
       type: object
       required:
-        - subject_id
-        - study_id
+      - subject_id
+      - study_id
       title: SubjectCreate
       description: Pydantic schema for creating a clinical subject pseudonymously.
     SubjectDemographicsUpdateRequest:
       properties:
         demographics:
           anyOf:
-            - $ref: "#/components/schemas/Demographics"
-            - type: "null"
+          - $ref: '#/components/schemas/Demographics'
+          - type: 'null'
         strat_factors:
           anyOf:
-            - additionalProperties: true
-              type: object
-            - type: "null"
+          - additionalProperties: true
+            type: object
+          - type: 'null'
           title: Strat Factors
       type: object
       title: SubjectDemographicsUpdateRequest
@@ -15128,29 +15536,29 @@ components:
           title: Status
         site_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Site Id
         treatment_group:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Treatment Group
         randomization_seed:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Randomization Seed
         investigational_product_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Investigational Product Id
       type: object
       required:
-        - subject_id
-        - study_id
-        - status
+      - subject_id
+      - study_id
+      - status
       title: SubjectDetailResponse
     SubjectRandomizationResponse:
       properties:
@@ -15162,8 +15570,8 @@ components:
           title: Status
         stratum_key:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Stratum Key
         randomized_at:
           type: string
@@ -15171,19 +15579,19 @@ components:
           title: Randomized At
         kit_reference:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Kit Reference
         treatment_arm:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Treatment Arm
       type: object
       required:
-        - subject_id
-        - status
-        - randomized_at
+      - subject_id
+      - status
+      - randomized_at
       title: SubjectRandomizationResponse
       description: Pydantic schema for returning blinded subject randomization details.
     SubjectResponse:
@@ -15199,22 +15607,22 @@ components:
           title: Study Id
         encrypted_demographics:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Encrypted Demographics
       type: object
       required:
-        - id
-        - subject_id
-        - study_id
+      - id
+      - subject_id
+      - study_id
       title: SubjectResponse
       description: Pydantic schema returning subject details.
     SubjectScreeningRequest:
       properties:
         study_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Study Id
       type: object
       title: SubjectScreeningRequest
@@ -15223,8 +15631,8 @@ components:
       properties:
         eligible:
           anyOf:
-            - type: boolean
-            - type: "null"
+          - type: boolean
+          - type: 'null'
           title: Eligible
         failed_criteria:
           items:
@@ -15238,7 +15646,7 @@ components:
           title: Indeterminate Criteria
         criterion_evaluations:
           items:
-            $ref: "#/components/schemas/CriterionLevelResult"
+            $ref: '#/components/schemas/CriterionLevelResult'
           type: array
           title: Criterion Evaluations
       type: object
@@ -15248,13 +15656,13 @@ components:
       properties:
         status:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Status
         state:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: State
       type: object
       title: SubjectStateUpdateRequest
@@ -15271,35 +15679,35 @@ components:
           title: Is Unblinded
         treatment_arm:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Treatment Arm
         drug_code:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Drug Code
         unblinded_at:
           anyOf:
-            - type: string
-              format: date-time
-            - type: "null"
+          - type: string
+            format: date-time
+          - type: 'null'
           title: Unblinded At
         unblinded_by:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Unblinded By
         unblinded_reason:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Unblinded Reason
       type: object
       required:
-        - subject_id
-        - status
-        - is_unblinded
+      - subject_id
+      - status
+      - is_unblinded
       title: SubjectUnblindResponse
       description: Pydantic schema for returning emergency unblind details.
     SyncBlockDetails:
@@ -15309,56 +15717,56 @@ components:
           title: Fieldid
         studyId:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Studyid
         subjectId:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Subjectid
         visitId:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Visitid
         domain:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Domain
         testCode:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Testcode
         query:
           anyOf:
-            - $ref: "#/components/schemas/SyncBlockQuery"
-            - type: "null"
+          - $ref: '#/components/schemas/SyncBlockQuery'
+          - type: 'null'
         label:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Label
         cdash:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Cdash
         oldValue:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Oldvalue
         newValue:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Newvalue
       type: object
       required:
-        - fieldId
+      - fieldId
       title: SyncBlockDetails
       description: Pydantic schema representing block-specific metadata and clinical coordinates.
     SyncBlockQuery:
@@ -15368,59 +15776,59 @@ components:
           title: Status
         message:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Message
         createdBy:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Createdby
         createdAt:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Createdat
         response:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Response
         respondedBy:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Respondedby
         respondedAt:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Respondedat
         closedBy:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Closedby
         closedAt:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Closedat
       type: object
       required:
-        - status
+      - status
       title: SyncBlockQuery
       description: Pydantic schema representing the query details in a local ledger block.
     SyncRequest:
       properties:
         blocks:
           items:
-            $ref: "#/components/schemas/LocalLedgerBlock"
+            $ref: '#/components/schemas/LocalLedgerBlock'
           type: array
           title: Blocks
       type: object
       required:
-        - blocks
+      - blocks
       title: SyncRequest
       description: Pydantic schema for bulk-synchronizing local client-side ledger updates.
     TSDVConfigCreate:
@@ -15429,7 +15837,7 @@ components:
           type: string
           title: Study Id
         sampling_model:
-          $ref: "#/components/schemas/SamplingModelEnum"
+          $ref: '#/components/schemas/SamplingModelEnum'
         initial_full_sdv_subject_count:
           type: integer
           minimum: 0.0
@@ -15443,35 +15851,35 @@ components:
           default: 0.0
         full_sdv_domains:
           anyOf:
-            - items:
-                type: string
-              type: array
-            - type: "null"
+          - items:
+              type: string
+            type: array
+          - type: 'null'
           title: Full Sdv Domains
         safety_endpoints:
           anyOf:
-            - items:
-                type: string
-              type: array
-            - type: "null"
+          - items:
+              type: string
+            type: array
+          - type: 'null'
           title: Safety Endpoints
         zero_sdv_domains:
           anyOf:
-            - items:
-                type: string
-              type: array
-            - type: "null"
+          - items:
+              type: string
+            type: array
+          - type: 'null'
           title: Zero Sdv Domains
         trial_random_seed:
           anyOf:
-            - type: integer
-              minimum: 0.0
-            - type: "null"
+          - type: integer
+            minimum: 0.0
+          - type: 'null'
           title: Trial Random Seed
       type: object
       required:
-        - study_id
-        - sampling_model
+      - study_id
+      - sampling_model
       title: TSDVConfigCreate
     TSDVConfigResponse:
       properties:
@@ -15492,41 +15900,41 @@ components:
           title: Random Sample Percentage
         full_sdv_domains:
           anyOf:
-            - items:
-                type: string
-              type: array
-            - type: "null"
+          - items:
+              type: string
+            type: array
+          - type: 'null'
           title: Full Sdv Domains
         safety_endpoints:
           anyOf:
-            - items:
-                type: string
-              type: array
-            - type: "null"
+          - items:
+              type: string
+            type: array
+          - type: 'null'
           title: Safety Endpoints
         zero_sdv_domains:
           anyOf:
-            - items:
-                type: string
-              type: array
-            - type: "null"
+          - items:
+              type: string
+            type: array
+          - type: 'null'
           title: Zero Sdv Domains
         trial_random_seed:
           anyOf:
-            - type: integer
-            - type: "null"
+          - type: integer
+          - type: 'null'
           title: Trial Random Seed
         version:
           type: integer
           title: Version
       type: object
       required:
-        - id
-        - study_id
-        - sampling_model
-        - initial_full_sdv_subject_count
-        - random_sample_percentage
-        - version
+      - id
+      - study_id
+      - sampling_model
+      - initial_full_sdv_subject_count
+      - random_sample_percentage
+      - version
       title: TSDVConfigResponse
     TSDVEvaluationResponse:
       properties:
@@ -15538,8 +15946,8 @@ components:
           title: Subject Selected
         field_decision:
           anyOf:
-            - type: boolean
-            - type: "null"
+          - type: boolean
+          - type: 'null'
           title: Field Decision
         sampling_model:
           type: string
@@ -15555,12 +15963,12 @@ components:
           title: Explanation
       type: object
       required:
-        - required
-        - subject_selected
-        - sampling_model
-        - config_id
-        - enrollment_index
-        - explanation
+      - required
+      - subject_selected
+      - sampling_model
+      - config_id
+      - enrollment_index
+      - explanation
       title: TSDVEvaluationResponse
     TranslationJobResponse:
       properties:
@@ -15575,24 +15983,24 @@ components:
           title: Status
         odm_payload:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Odm Payload
         openrosa_payload:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Openrosa Payload
         error_message:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Error Message
       type: object
       required:
-        - id
-        - study_id
-        - status
+      - id
+      - study_id
+      - status
       title: TranslationJobResponse
       description: Pydantic schema returning translation job status and metadata.
     UCUMConvertRequest:
@@ -15608,16 +16016,16 @@ components:
           title: Target Unit
       type: object
       required:
-        - value
-        - source_unit
-        - target_unit
+      - value
+      - source_unit
+      - target_unit
       title: UCUMConvertRequest
     UCUMConvertResponse:
       properties:
         source:
-          $ref: "#/components/schemas/UCUMUnitValue"
+          $ref: '#/components/schemas/UCUMUnitValue'
         target:
-          $ref: "#/components/schemas/UCUMUnitValue"
+          $ref: '#/components/schemas/UCUMUnitValue'
         is_compatible:
           type: boolean
           title: Is Compatible
@@ -15626,15 +16034,15 @@ components:
           title: Scale Factor
         offset:
           anyOf:
-            - type: number
-            - type: "null"
+          - type: number
+          - type: 'null'
           title: Offset
       type: object
       required:
-        - source
-        - target
-        - is_compatible
-        - scale_factor
+      - source
+      - target
+      - is_compatible
+      - scale_factor
       title: UCUMConvertResponse
     UCUMUnitValue:
       properties:
@@ -15646,20 +16054,20 @@ components:
           title: Unit
       type: object
       required:
-        - value
-        - unit
+      - value
+      - unit
       title: UCUMUnitValue
     UnblindRequest:
       properties:
         reason_code:
-          $ref: "#/components/schemas/UnblindingReasonCode"
+          $ref: '#/components/schemas/UnblindingReasonCode'
         justification:
           type: string
           minLength: 50
           title: Justification
         shares:
           items:
-            $ref: "#/components/schemas/CustodianShare"
+            $ref: '#/components/schemas/CustodianShare'
           type: array
           maxItems: 2
           minItems: 2
@@ -15667,17 +16075,17 @@ components:
           description: Exactly two custodian shares are required (dual-custody contract).
       type: object
       required:
-        - reason_code
-        - justification
-        - shares
+      - reason_code
+      - justification
+      - shares
       title: UnblindRequest
       description: "Request body for an emergency treatment-allocation unblinding operation.\n\nThe dual-custody contract requires exactly two custodian shares \u2014 one from\neach approved custodian.  Requests with fewer or more shares, or with an\ninsufficiently detailed justification, are rejected at the schema layer.\n\nAttributes:\n    reason_code: One of the three regulatory-approved unblinding scenarios\n        from ``UnblindingReasonCode``.\n    justification: A free-text clinical justification of at least\n        ``MIN_JUSTIFICATION_LENGTH`` characters.  Stored only in the\n        immutable audit record; never broadcast in notifications.\n    shares: Exactly two ``CustodianShare`` objects \u2014 one per approved\n        custodian \u2014 supplying the Shamir secret shares needed to\n        reconstruct the blinded allocation key."
     UnblindingReasonCode:
       type: string
       enum:
-        - SAE-Life-Threatening-Event
-        - Accidental-Overdose
-        - Required-by-Regulatory-Authority
+      - SAE-Life-Threatening-Event
+      - Accidental-Overdose
+      - Required-by-Regulatory-Authority
       title: UnblindingReasonCode
       description: "Controlled vocabulary of approved reason codes for emergency unblinding.\n\nOnly these three regulatory-approved scenarios authorise an emergency\ntreatment-allocation disclosure outside of the standard end-of-study\nunblinding process.\n\nAttributes:\n    SAE_LIFE_THREATENING_EVENT: Serious Adverse Event that is immediately\n        life-threatening and requires knowledge of the treatment assignment.\n    ACCIDENTAL_OVERDOSE: Accidental administration of an overdose requiring\n        immediate clinical intervention with knowledge of the treatment arm.\n    REQUIRED_BY_REGULATORY_AUTHORITY: A competent regulatory authority has\n        formally requested disclosure of the blinded assignment."
     UnitConversionRequest:
@@ -15693,9 +16101,9 @@ components:
           title: To Unit
       type: object
       required:
-        - value
-        - from_unit
-        - to_unit
+      - value
+      - from_unit
+      - to_unit
       title: UnitConversionRequest
       description: Pydantic schema for unit conversion requests.
     UnitConversionResponse:
@@ -15714,10 +16122,10 @@ components:
           title: Converted Value
       type: object
       required:
-        - value
-        - from_unit
-        - to_unit
-        - converted_value
+      - value
+      - from_unit
+      - to_unit
+      - converted_value
       title: UnitConversionResponse
       description: Pydantic schema returning converted values.
     UploadEISFDocumentRequest:
@@ -15731,7 +16139,7 @@ components:
           title: Site Id
           description: Target investigator site ID
         category:
-          $ref: "#/components/schemas/EISFTaxonomyCategoryEnum"
+          $ref: '#/components/schemas/EISFTaxonomyCategoryEnum'
           description: DIA taxonomy category
         title:
           type: string
@@ -15747,17 +16155,17 @@ components:
           description: Base64 encoded file content string
       type: object
       required:
-        - study_id
-        - site_id
-        - category
-        - title
-        - file_name
-        - content_base64
+      - study_id
+      - site_id
+      - category
+      - title
+      - file_name
+      - content_base64
       title: UploadEISFDocumentRequest
-      description: "Request payload to upload an eISF document.
+      description: 'Request payload to upload an eISF document.
 
 
-        Requirements: PRD-SYS-001"
+        Requirements: PRD-SYS-001'
     VisitCreate:
       properties:
         subject_id:
@@ -15771,15 +16179,38 @@ components:
           title: Study Id
         visit_date:
           anyOf:
-            - type: string
-              format: date-time
-            - type: "null"
+          - type: string
+            format: date-time
+          - type: 'null'
           title: Visit Date
+        planned_date:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Planned Date
+        window_start:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Window Start
+        window_end:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Window End
+        window_status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Window Status
       type: object
       required:
-        - subject_id
-        - visit_name
-        - study_id
+      - subject_id
+      - visit_name
+      - study_id
       title: VisitCreate
       description: Pydantic schema for creating a clinical visit.
     VisitDetailResponse:
@@ -15802,26 +16233,49 @@ components:
           title: Study Id
         treatment_group:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Treatment Group
         randomization_seed:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Randomization Seed
         investigational_product_id:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Investigational Product Id
+        planned_date:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Planned Date
+        window_start:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Window Start
+        window_end:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Window End
+        window_status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Window Status
       type: object
       required:
-        - id
-        - subject_id
-        - visit_name
-        - visit_date
-        - study_id
+      - id
+      - subject_id
+      - visit_name
+      - visit_date
+      - study_id
       title: VisitDetailResponse
     VisitResponse:
       properties:
@@ -15843,21 +16297,44 @@ components:
           title: Study Id
         protocol_version_tag:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Protocol Version Tag
         protocol_version_index:
           anyOf:
-            - type: integer
-            - type: "null"
+          - type: integer
+          - type: 'null'
           title: Protocol Version Index
+        planned_date:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Planned Date
+        window_start:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Window Start
+        window_end:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Window End
+        window_status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Window Status
       type: object
       required:
-        - id
-        - subject_id
-        - visit_name
-        - visit_date
-        - study_id
+      - id
+      - subject_id
+      - visit_name
+      - visit_date
+      - study_id
       title: VisitResponse
       description: Pydantic schema returning visit details.
     WHODrugATCContext:
@@ -15870,37 +16347,37 @@ components:
           title: Description
         code:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Code
         text:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Text
       type: object
       required:
-        - atc_code
-        - description
+      - atc_code
+      - description
       title: WHODrugATCContext
     WHODrugCodeLookupResponse:
       properties:
         status:
           type: string
           enum:
-            - AUTO-CODED
-            - SUGGESTIONS
-            - UNCODABLE
+          - AUTO-CODED
+          - SUGGESTIONS
+          - UNCODABLE
           title: Status
         matches:
           items:
-            $ref: "#/components/schemas/WHODrugMatch"
+            $ref: '#/components/schemas/WHODrugMatch'
           type: array
           title: Matches
       type: object
       required:
-        - status
-        - matches
+      - status
+      - matches
       title: WHODrugCodeLookupResponse
     WHODrugIngredientItem:
       properties:
@@ -15912,18 +16389,18 @@ components:
           title: Ingredient Name
         code:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Code
         name:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Name
       type: object
       required:
-        - ingredient_code
-        - ingredient_name
+      - ingredient_code
+      - ingredient_name
       title: WHODrugIngredientItem
     WHODrugMatch:
       properties:
@@ -15935,45 +16412,45 @@ components:
           title: Preferred Name
         drug_name:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Drug Name
         score:
           type: number
           title: Score
         ingredients:
           items:
-            $ref: "#/components/schemas/WHODrugIngredientItem"
+            $ref: '#/components/schemas/WHODrugIngredientItem'
           type: array
           title: Ingredients
           default: []
         atc_context:
           items:
-            $ref: "#/components/schemas/WHODrugATCContext"
+            $ref: '#/components/schemas/WHODrugATCContext'
           type: array
           title: Atc Context
           default: []
         code:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Code
         name:
           anyOf:
-            - type: string
-            - type: "null"
+          - type: string
+          - type: 'null'
           title: Name
         atc:
           items:
-            $ref: "#/components/schemas/WHODrugATCContext"
+            $ref: '#/components/schemas/WHODrugATCContext'
           type: array
           title: Atc
           default: []
       type: object
       required:
-        - drug_code
-        - preferred_name
-        - score
+      - drug_code
+      - preferred_name
+      - score
       title: WHODrugMatch
 ```
 

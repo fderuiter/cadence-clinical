@@ -149,12 +149,13 @@ class NotificationWorker:
             logger.info(
                 f"No database assignments found. Using deterministic fallback for {event_type}."
             )
+            brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
             if event_type == "EDC_QUERY_RAISED":
                 target_id = f"crc_{site_id or 'default'}"
                 resolved.append(
                     {
                         "user_id": target_id,
-                        "email": f"{target_id}@cadenceclinical.com",
+                        "email": f"{target_id}@{brand_domain}",
                     }
                 )
             elif event_type == "ETMF_DOCUMENT_EXPIRING":
@@ -162,21 +163,21 @@ class NotificationWorker:
                 resolved.append(
                     {
                         "user_id": target_id,
-                        "email": f"{target_id}@cadenceclinical.com",
+                        "email": f"{target_id}@{brand_domain}",
                     }
                 )
             elif event_type == "SAE_RECONCILIATION_FLAG":
                 resolved.append(
                     {
                         "user_id": "safety_officer",
-                        "email": "safety_officer@cadenceclinical.com",  # deid-ignore
+                        "email": f"safety_officer@{brand_domain}",  # deid-ignore
                     }
                 )
             elif event_type == "PROTOCOL_AMENDMENT_SUBMITTED":
                 resolved.append(
                     {
                         "user_id": "designer_john",
-                        "email": "designer_john@cadenceclinical.com",  # deid-ignore
+                        "email": f"designer_john@{brand_domain}",  # deid-ignore
                     }
                 )
 

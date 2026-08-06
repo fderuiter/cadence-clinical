@@ -541,7 +541,7 @@ async def test_start_stop_notification_worker_integration():
 
     async def mock_resolve_recipients(*args, **kwargs):
         return [
-            {"user_id": "designer_john", "email": "designer_john@cadenceclinical.com"}
+            {"user_id": "designer_john", "email": "designer_john@ccrsoft.com"}
         ]
 
     with patch(
