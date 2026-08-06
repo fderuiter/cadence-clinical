@@ -65,6 +65,20 @@ class ESignatureVerifier:
                     failure_reason="Mock signature detected and blocked.",
                 )
 
+            # Check for duplicate/injected cert/signature blocks
+            if (
+                signed_data.count(b"-----BEGIN CERTIFICATE-----") > 1
+                or signed_data.count(b"-----BEGIN SIGNATURE-----") > 1
+                or signed_data.count(b"<X509Certificate>") > 1
+                or signed_data.count(b"<SignatureValue>") > 1
+                or signed_data.count(b"<Signature>") > 1
+            ):
+                return VerificationResult(
+                    is_valid=False,
+                    status="DUPLICATE_BLOCKS_REJECTED",
+                    failure_reason="Duplicate or injected certificate/signature blocks detected.",
+                )
+
             # Locate certificate and signature PEM blocks
             cert_start = signed_data.find(b"-----BEGIN CERTIFICATE-----")
             sig_start = signed_data.find(b"-----BEGIN SIGNATURE-----")
@@ -110,15 +124,39 @@ class ESignatureVerifier:
             # Cryptographically verify the signature of the combined data (original data + cert_pem)
             try:
                 if isinstance(public_key, rsa.RSAPublicKey):
-                    public_key.verify(
-                        signature,
-                        original_data + cert_pem,
-                        padding.PSS(
-                            mgf=padding.MGF1(hashes.SHA256()),
-                            salt_length=padding.PSS.MAX_LENGTH,
-                        ),
-                        hashes.SHA256(),
-                    )
+                    try:
+                        public_key.verify(
+                            signature,
+                            original_data + cert_pem,
+                            padding.PSS(
+                                mgf=padding.MGF1(hashes.SHA256()),
+                                salt_length=padding.PSS.MAX_LENGTH,
+                            ),
+                            hashes.SHA256(),
+                        )
+                    except InvalidSignature:
+                        # Check if it was signed with PKCS#1 v1.5 deterministic padding
+                        try:
+                            public_key.verify(
+                                signature,
+                                original_data + cert_pem,
+                                padding.PKCS1v15(),
+                                hashes.SHA256(),
+                            )
+                            # Succeeded with PKCS1v15, meaning it's a legacy padding signature!
+                            import logging
+
+                            logging.getLogger("esignature-verifier").error(
+                                "COMPLIANCE ALERT: Legacy PKCS#1 v1.5 signature padding detected. This signature is insecure and has been rejected."
+                            )
+                            return VerificationResult(
+                                is_valid=False,
+                                status="LEGACY_PADDING_REJECTED",
+                                failure_reason="LEGACY PADDING DETECTED: Document signatures using legacy PKCS#1 v1.5 padding fail verification to satisfy 21 CFR Part 11 strict compliance.",
+                            )
+                        except Exception:
+                            # It failed PKCS1v15 too, so it's just a regular invalid signature
+                            raise InvalidSignature()
                 else:
                     public_key.verify(
                         signature,
