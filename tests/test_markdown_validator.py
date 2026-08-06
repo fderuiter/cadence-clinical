@@ -609,8 +609,8 @@ def test_sys_path_append():
         except Exception:
             resolved_sys_path.append(x)
 
-    repo_root = Path(__file__).resolve().parent.parent
-    for p in (repo_root / "packages").glob("*"):
+    project_root = Path(__file__).resolve().parent.parent
+    for p in (project_root / "packages").glob("*"):
         if p.is_dir() and p.name != "__pycache__":
             resolved_path_str = str(p.resolve())
             assert resolved_path_str in resolved_sys_path
