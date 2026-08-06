@@ -30,10 +30,12 @@ def run_command(args: list[str]) -> tuple[int, str, str]:
 def main():
     # Set default environment variables for compliance / security checks if not already set
     os.environ.setdefault(
-        "AUDIT_LOG_SECRET_KEY", "test-gxp-audit-secret-key-placeholder-abc"
+        "AUDIT_LOG_SECRET_KEY",
+        "test-gxp-audit-secret-key-placeholder-abc",  # pragma: allowlist secret
     )
     os.environ.setdefault(
-        "INBOUND_EMAIL_HMAC_SECRET", "test-email-hmac-secret-placeholder-xyz"
+        "INBOUND_EMAIL_HMAC_SECRET",
+        "test-email-hmac-secret-placeholder-xyz",  # pragma: allowlist secret
     )
 
     repo = os.environ.get("GITHUB_REPOSITORY")
@@ -41,12 +43,18 @@ def main():
 
     # Set default fallback values for GxP security environment variables to prevent RuntimeError
     os.environ.setdefault(
-        "AUDIT_LOG_SECRET_KEY", "test-gxp-audit-secret-key-placeholder-abc"
+        "AUDIT_LOG_SECRET_KEY",
+        "test-gxp-audit-secret-key-placeholder-abc",  # pragma: allowlist secret
     )
-    os.environ.setdefault("GATEWAY_SECRET", "internal-gateway-secret-12345")
-    os.environ.setdefault("SIGNING_SECRET", "designer-amendment-secure-key-12345")
     os.environ.setdefault(
-        "INBOUND_EMAIL_HMAC_SECRET", "test-email-hmac-secret-placeholder-xyz"
+        "GATEWAY_SECRET", "internal-gateway-secret-12345"
+    )  # pragma: allowlist secret
+    os.environ.setdefault(
+        "SIGNING_SECRET", "designer-amendment-secure-key-12345"
+    )  # pragma: allowlist secret
+    os.environ.setdefault(
+        "INBOUND_EMAIL_HMAC_SECRET",
+        "test-email-hmac-secret-placeholder-xyz",  # pragma: allowlist secret
     )
 
     # If running locally, we can set default mock values for display/testing
