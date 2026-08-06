@@ -35,7 +35,7 @@ def pseudonymize_identifier(identifier: str) -> str:
     Returns:
         str: Cryptographic hash of the identifier.
     """
-    salt = os.getenv("PSEUDONYMIZATION_SALT", "secure-clinical-salt-98765")
+    salt = os.getenv("PSEUDONYMIZATION_SALT", "secure-clinical-salt-98765")  # pragma: allowlist secret
     return hmac.new(salt.encode(), identifier.encode(), hashlib.sha256).hexdigest()
 
 
