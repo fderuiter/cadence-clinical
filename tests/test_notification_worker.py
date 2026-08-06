@@ -1,5 +1,4 @@
 import asyncio
-import contextlib
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -92,16 +91,23 @@ async def mock_org_client():
 @pytest_asyncio.fixture(autouse=True)
 async def setup_test_databases():
     """
-    Autouse fixture to spin up separate in-memory sqlite databases for
-    both the Notifications and Org microservices, preventing test-to-test pollution.
+    Autouse fixture to spin up separate file-backed sqlite databases for
+    both the Notifications and Org microservices, preventing test-to-test pollution
+    and avoiding shared-cache lock issues.
     Also ensures any background worker task is cleanly terminated and reset.
     """
+    import contextlib
+    import os
+    import uuid
+
+    from sqlalchemy.pool import NullPool
+
     import apps.notifications.workers.notification_worker as nw
 
     nw._should_run = False
     if nw._worker_task:
         nw._worker_task.cancel()
-        with contextlib.suppress(asyncio.CancelledError, Exception):
+        with contextlib.suppress(BaseException):
             await nw._worker_task
         nw._worker_task = None
 
@@ -113,31 +119,22 @@ async def setup_test_databases():
         except asyncio.QueueEmpty:
             break
 
-    # Initialize Notifications Relational DB
-    import uuid
-
-    from sqlalchemy.pool import NullPool
-
-    notif_db_name = f"notif_memdb_{uuid.uuid4().hex}"
+    # Generate unique temp file-based sqlite databases
+    notif_db_path = f"/tmp/notif_memdb_{uuid.uuid4().hex}.db"
     notifications_db_manager.init_db(
-        f"sqlite+aiosqlite:///file:{notif_db_name}?mode=memory&cache=shared&uri=true&timeout=60",
+        f"sqlite+aiosqlite:///{notif_db_path}?timeout=60",
         echo=False,
         poolclass=NullPool,
     )
-    # Open and hold a connection to keep the shared-cache in-memory DB alive
-    notif_keepalive = await notifications_db_manager.engine.connect()
     async with notifications_db_manager.engine.begin() as conn:
         await conn.run_sync(NotificationsBase.metadata.create_all)
 
-    # Initialize Org Directory Relational DB
-    org_db_name = f"org_memdb_{uuid.uuid4().hex}"
+    org_db_path = f"/tmp/org_memdb_{uuid.uuid4().hex}.db"
     org_db_manager.init_db(
-        f"sqlite+aiosqlite:///file:{org_db_name}?mode=memory&cache=shared&uri=true&timeout=60",
+        f"sqlite+aiosqlite:///{org_db_path}?timeout=60",
         echo=False,
         poolclass=NullPool,
     )
-    # Open and hold a connection to keep the shared-cache in-memory DB alive
-    org_keepalive = await org_db_manager.engine.connect()
     async with org_db_manager.engine.begin() as conn:
         await conn.run_sync(OrgBase.metadata.create_all)
 
@@ -147,7 +144,9 @@ async def setup_test_databases():
     nw._should_run = False
     if nw._worker_task:
         nw._worker_task.cancel()
-        with contextlib.suppress(asyncio.CancelledError, Exception):
+        import contextlib
+
+        with contextlib.suppress(BaseException):
             await nw._worker_task
         nw._worker_task = None
 
@@ -161,13 +160,19 @@ async def setup_test_databases():
     # Clean up both DB sessions & engines
     async with notifications_db_manager.engine.begin() as conn:
         await conn.run_sync(NotificationsBase.metadata.drop_all)
-    await notif_keepalive.close()
     await notifications_db_manager.close()
 
     async with org_db_manager.engine.begin() as conn:
         await conn.run_sync(OrgBase.metadata.drop_all)
-    await org_keepalive.close()
     await org_db_manager.close()
+
+    # Clean up files on disk
+    for path in [notif_db_path, org_db_path]:
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+        except Exception:
+            pass
 
 
 @pytest.mark.asyncio
