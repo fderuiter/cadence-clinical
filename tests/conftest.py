@@ -26,6 +26,49 @@ os.environ.setdefault(
 )
 
 
+# Prevent test cases from dropping or creating schemas in PostgreSQL under parallel execution
+allow_schema_modification = True
+
+
+def setup_metadata_patch():
+    from sqlalchemy import MetaData
+
+    original_create_all = MetaData.create_all
+    original_drop_all = MetaData.drop_all
+
+    def patched_create_all(self, bind=None, tables=None, checkfirst=True):
+        if not allow_schema_modification:
+            is_postgres = os.environ.get("TEST_DATABASE_URL", "").startswith(
+                ("postgres", "postgresql")
+            )
+            is_live_db = os.environ.get("USE_LIVE_DB") == "true"
+            if is_postgres or is_live_db:
+                print(
+                    f"[conftest] Bypassing MetaData.create_all for {self} to preserve pre-seeded schemas."
+                )
+                return None
+        return original_create_all(self, bind, tables, checkfirst)
+
+    def patched_drop_all(self, bind=None, tables=None, checkfirst=True):
+        if not allow_schema_modification:
+            is_postgres = os.environ.get("TEST_DATABASE_URL", "").startswith(
+                ("postgres", "postgresql")
+            )
+            is_live_db = os.environ.get("USE_LIVE_DB") == "true"
+            if is_postgres or is_live_db:
+                print(
+                    f"[conftest] Bypassing MetaData.drop_all for {self} to prevent schema destruction."
+                )
+                return None
+        return original_drop_all(self, bind, tables, checkfirst)
+
+    MetaData.create_all = patched_create_all
+    MetaData.drop_all = patched_drop_all
+
+
+setup_metadata_patch()
+
+
 # Identify and override Database URL for workers early, and ensure database isolation
 def get_postgres_base_config():
     url = (
@@ -179,7 +222,18 @@ def verify_live_db_connections():
 
 
 async def create_all_schemas_async(worker_suffix: str):
+    # Import test-specific models to register them on Base.metadata before schema creation
+    import contextlib
+
     from sqlalchemy.ext.asyncio import create_async_engine
+
+    with contextlib.suppress(Exception):
+        import tests.test_audit as t3
+        import tests.test_granular_locks_api as t2
+        import tests.test_ledger_and_triggers as t1
+        import tests.test_trial_lock as t4
+
+        _dummy = [t1, t2, t3, t4]
 
     from apps.ctms.migrate import run_migrations as run_ctms_migrations
     from apps.ctms.models import Base as CTMSBase
@@ -375,6 +429,8 @@ except Exception as e:
         print(
             f"[conftest] Warning: PostgreSQL database is not available ({e}). Skipping worker-isolated DB setup and patching. Tests will fall back to SQLite or mocked states."
         )
+
+allow_schema_modification = False
 
 # Ensure packages path injection is run before tests start
 import packages  # noqa: F401, E402
