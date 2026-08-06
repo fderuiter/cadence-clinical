@@ -19,8 +19,8 @@ from apps.notifications.models import (
     NotificationStatus,
 )
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
-from packages.security.middleware import GatewayAuthMiddleware
 from packages.security import assert_secure_secrets
+from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import get_normalized_roles
 
 
@@ -69,7 +69,9 @@ class NotificationResponse(BaseModel):
 
 DATABASE_URL = os.getenv("NOTIFICATIONS_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
-assert_secure_secrets("notifications", {"WEBHOOK_SIGNING_SECRET": os.getenv("WEBHOOK_SIGNING_SECRET")})
+assert_secure_secrets(
+    "notifications", {"WEBHOOK_SIGNING_SECRET": os.getenv("WEBHOOK_SIGNING_SECRET")}
+)
 
 
 # Global set to track active deliveries in memory

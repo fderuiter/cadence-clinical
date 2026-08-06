@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-06
-- **Authors:** @jules
+- **Authors:** @jules, @engineering-team
 - **Deciders:** @engineering-lead, @quality-officer
 
 ---
