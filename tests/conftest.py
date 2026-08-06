@@ -36,30 +36,38 @@ def setup_metadata_patch():
     original_create_all = MetaData.create_all
     original_drop_all = MetaData.drop_all
 
+    def is_postgresql_operation(bind):
+        if bind is None:
+            return True
+        dialect_name = getattr(getattr(bind, "dialect", None), "name", "")
+        return dialect_name == "postgresql"
+
     def patched_create_all(self, bind=None, tables=None, checkfirst=True):
         if not allow_schema_modification:
-            is_postgres = os.environ.get("TEST_DATABASE_URL", "").startswith(
-                ("postgres", "postgresql")
-            )
-            is_live_db = os.environ.get("USE_LIVE_DB") == "true"
-            if is_postgres or is_live_db:
-                print(
-                    f"[conftest] Bypassing MetaData.create_all for {self} to preserve pre-seeded schemas."
+            if is_postgresql_operation(bind):
+                is_postgres = os.environ.get("TEST_DATABASE_URL", "").startswith(
+                    ("postgres", "postgresql")
                 )
-                return None
+                is_live_db = os.environ.get("USE_LIVE_DB") == "true"
+                if is_postgres or is_live_db:
+                    print(
+                        f"[conftest] Bypassing MetaData.create_all for {self} to preserve pre-seeded schemas."
+                    )
+                    return None
         return original_create_all(self, bind, tables, checkfirst)
 
     def patched_drop_all(self, bind=None, tables=None, checkfirst=True):
         if not allow_schema_modification:
-            is_postgres = os.environ.get("TEST_DATABASE_URL", "").startswith(
-                ("postgres", "postgresql")
-            )
-            is_live_db = os.environ.get("USE_LIVE_DB") == "true"
-            if is_postgres or is_live_db:
-                print(
-                    f"[conftest] Bypassing MetaData.drop_all for {self} to prevent schema destruction."
+            if is_postgresql_operation(bind):
+                is_postgres = os.environ.get("TEST_DATABASE_URL", "").startswith(
+                    ("postgres", "postgresql")
                 )
-                return None
+                is_live_db = os.environ.get("USE_LIVE_DB") == "true"
+                if is_postgres or is_live_db:
+                    print(
+                        f"[conftest] Bypassing MetaData.drop_all for {self} to prevent schema destruction."
+                    )
+                    return None
         return original_drop_all(self, bind, tables, checkfirst)
 
     MetaData.create_all = patched_create_all
