@@ -11,7 +11,6 @@ from apps.etmf.main import app as etmf_app
 from apps.execution.main import app as execution_app
 from apps.org.main import app as org_app
 from apps.quality.main import app as quality_app
-
 from tests.contract_helpers import (
     assert_schema_parity,
     extract_openapi_yaml,
@@ -505,7 +504,6 @@ WHITELISTED_ROUTES = {
     for (method, path) in _RAW_WHITELISTED_ROUTES
     if "/execution" not in path
 }
-
 
 
 def is_whitelisted(method: str, path: str) -> bool:

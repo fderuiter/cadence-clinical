@@ -356,13 +356,68 @@ def assert_schema_parity(
         raise AssertionError(error_msg)
 
 
-def find_code_route(spec_path: str, code_routes: dict[str, Any]) -> Any:
+def find_code_route(
+    spec_path: str, code_routes: dict[str, Any], tags: list[str] | None = None
+) -> Any:
     """Match a specification relative path to its registered codebase route, stripping prefixes like /api/v1."""
+    if tags is None:
+        tags = []
+
+    # Determine likely prefix from tags
+    pfx_match = None
+    for pfx in [
+        "designer",
+        "execution",
+        "org",
+        "eisf",
+        "econsent",
+        "ctms",
+        "etmf",
+        "quality",
+    ]:
+        if pfx in tags or pfx.upper() in tags or pfx.capitalize() in tags:
+            pfx_match = "/" + pfx
+            break
+
+    # Strip prefixes like /api/v1 or leading/trailing slashes for comparison
     clean_spec = spec_path.replace("/api/v1", "").strip("/")
 
+    # Try matching prioritizing pfx_match first
+    if pfx_match:
+        for c_path, c_route_info in code_routes.items():
+            if not c_path.startswith(pfx_match):
+                continue
+            norm_path = c_path
+            for pfx in [
+                "/designer",
+                "/execution",
+                "/org",
+                "/eisf",
+                "/econsent",
+                "/ctms",
+                "/etmf",
+                "/quality",
+            ]:
+                if c_path.startswith(pfx):
+                    norm_path = c_path[len(pfx) :]
+                    break
+            clean_code = norm_path.replace("/api/v1", "").strip("/")
+            if clean_spec == clean_code:
+                return c_route_info
+
+    # Fallback to any match if no prioritized match found
     for c_path, c_route_info in code_routes.items():
         norm_path = c_path
-        for pfx in ["/designer", "/execution", "/org", "/eisf", "/econsent", "/ctms", "/etmf", "/quality"]:
+        for pfx in [
+            "/designer",
+            "/execution",
+            "/org",
+            "/eisf",
+            "/econsent",
+            "/ctms",
+            "/etmf",
+            "/quality",
+        ]:
             if c_path.startswith(pfx):
                 norm_path = c_path[len(pfx) :]
                 break
@@ -375,7 +430,16 @@ def find_code_route(spec_path: str, code_routes: dict[str, Any]) -> Any:
 def find_spec_route(code_path: str, spec_paths: dict) -> str:
     """Match a codebase path to its registered specification path, stripping prefixes like /api/v1."""
     norm_path = code_path
-    for pfx in ["/designer", "/execution", "/org", "/eisf", "/econsent", "/ctms", "/etmf", "/quality"]:
+    for pfx in [
+        "/designer",
+        "/execution",
+        "/org",
+        "/eisf",
+        "/econsent",
+        "/ctms",
+        "/etmf",
+        "/quality",
+    ]:
         if code_path.startswith(pfx):
             norm_path = code_path[len(pfx) :]
             break
