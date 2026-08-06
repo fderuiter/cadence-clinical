@@ -248,6 +248,7 @@ def scan_file(
             or "cadence.clinical" in val_lower
             or "nih.gov" in val_lower
             or "json-schema.org" in val_lower
+            or "{brand_domain}" in line_content
         ):
             continue
         if cat_lower == "email" and (
