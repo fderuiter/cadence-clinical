@@ -20,6 +20,11 @@ async def test_run_migrations_success():
         class MockBegin:
             async def __aenter__(self):
                 self.conn = AsyncMock()
+                mock_result = MagicMock()
+                mock_result.fetchall.return_value = []
+                mock_result.all.return_value = []
+                mock_result.scalar.return_value = None
+                self.conn.execute.return_value = mock_result
                 return self.conn
 
             async def __aexit__(self, exc_type, exc, tb):
