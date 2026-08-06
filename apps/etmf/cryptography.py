@@ -255,21 +255,47 @@ def verify_x509_signature(
 
         # Verify the signature using the public key with RSA-PSS padding
         if isinstance(public_key, rsa.RSAPublicKey):
-            public_key.verify(
-                signature_bytes,
-                signed_data,
-                padding.PSS(
-                    mgf=padding.MGF1(hashes.SHA256()),
-                    salt_length=padding.PSS.MAX_LENGTH,
-                ),
-                hashes.SHA256(),
-            )
+            from cryptography.exceptions import InvalidSignature
+
+            try:
+                public_key.verify(
+                    signature_bytes,
+                    signed_data,
+                    padding.PSS(
+                        mgf=padding.MGF1(hashes.SHA256()),
+                        salt_length=padding.PSS.MAX_LENGTH,
+                    ),
+                    hashes.SHA256(),
+                )
+            except InvalidSignature:
+                # Check if it was signed with PKCS#1 v1.5 deterministic padding
+                try:
+                    public_key.verify(
+                        signature_bytes,
+                        signed_data,
+                        padding.PKCS1v15(),
+                        hashes.SHA256(),
+                    )
+                    # Succeeded with PKCS1v15, meaning it's a legacy padding signature!
+                    logger.error(
+                        "COMPLIANCE ALERT: Legacy PKCS#1 v1.5 signature padding detected. This signature is insecure and has been rejected."
+                    )
+                    raise ValueError(
+                        "Legacy PKCS#1 v1.5 padding is insecure and signature verification failed."
+                    )
+                except ValueError:
+                    raise
+                except Exception:
+                    # It failed PKCS1v15 too, so it's just a regular invalid signature
+                    raise InvalidSignature()
         elif isinstance(public_key, ec.EllipticCurvePublicKey):
             public_key.verify(signature_bytes, signed_data, ec.ECDSA(hashes.SHA256()))
         else:
             logger.warning("Unsupported public key type for active validation.")
             return False
         return True
+    except ValueError as ve:
+        raise ve
     except Exception as e:
         logger.error("Active signature verification failed: %s", e)
         return False
@@ -326,10 +352,9 @@ def validate_document_signature(
     )
     is_strict = is_strict_compliance or is_strict_compliance_active()
     if (
-        is_strict
-        and is_mandatory
+        is_mandatory
         and is_bypass_requested(metadata_json)
-        and not is_mock_allowed()
+        and (is_strict or not is_mock_allowed())
     ):
         return False, "Bypass attempt rejected for mandatory regulatory document."
 
@@ -435,7 +460,12 @@ def validate_document_signature(
         return False, f"Certificate validation failed: {status_msg}"
 
     # 7. Perform actual cryptographic validation
-    is_valid = verify_x509_signature(cert_pem, sig_bytes, signed_data.encode("utf-8"))
+    try:
+        is_valid = verify_x509_signature(
+            cert_pem, sig_bytes, signed_data.encode("utf-8")
+        )
+    except ValueError as e:
+        return False, f"COMPLIANCE ALERT: {str(e)}"
     if not is_valid:
         return False, "Cryptographic signature verification failed (invalid signature)."
 
