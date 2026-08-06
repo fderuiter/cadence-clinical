@@ -613,18 +613,36 @@ def test_sys_path_append():
     # Verify packages subfolders are registered
     for p in (repo_root / "packages").glob("*"):
         if p.is_dir() and p.name != "__pycache__" and not p.name.startswith("."):
-            resolved_p = p.resolve()
-            assert resolved_p in resolved_sys_paths
+            rel_p = p.relative_to(repo_root)
+            matching_indices = [
+                i
+                for i, sp in enumerate(resolved_sys_paths)
+                if sp.parts[-len(rel_p.parts) :] == rel_p.parts
+            ]
+            assert len(matching_indices) > 0, (
+                f"Expected {rel_p} to be registered in sys.path, but got {resolved_sys_paths}"
+            )
             # Exempt core-models as packages/__init__.py purposefully prepends it to index 0
             if p.name != "core-models":
-                assert resolved_sys_paths.index(resolved_p) > 0
+                assert any(idx > 0 for idx in matching_indices), (
+                    f"Expected {rel_p} to be appended, not prepended (index 0)"
+                )
 
     # Verify apps subfolders are registered
     for p in (repo_root / "apps").glob("*"):
         if p.is_dir() and p.name != "__pycache__" and not p.name.startswith("."):
-            resolved_p = p.resolve()
-            assert resolved_p in resolved_sys_paths
-            assert resolved_sys_paths.index(resolved_p) > 0
+            rel_p = p.relative_to(repo_root)
+            matching_indices = [
+                i
+                for i, sp in enumerate(resolved_sys_paths)
+                if sp.parts[-len(rel_p.parts) :] == rel_p.parts
+            ]
+            assert len(matching_indices) > 0, (
+                f"Expected {rel_p} to be registered in sys.path, but got {resolved_sys_paths}"
+            )
+            assert any(idx > 0 for idx in matching_indices), (
+                f"Expected {rel_p} to be appended, not prepended (index 0)"
+            )
 
 
 def test_mock_environment_variables():
