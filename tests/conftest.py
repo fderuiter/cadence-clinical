@@ -300,6 +300,7 @@ def patch_init_db():
         "Notifications": "cadence_notifications",
         "eConsent": "cadence_econsent",
         "Safety": "cadence_safety",
+        "Org": "cadence_org",
         "Organization": "cadence_org",
         "eISF": "cadence_eisf",
     }
