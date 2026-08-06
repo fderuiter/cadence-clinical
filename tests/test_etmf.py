@@ -686,7 +686,8 @@ async def test_etmf_edge_cases_for_coverage():
 
     from packages.security.cert_store import get_active_cert_store
 
-    while True:
+    cert_pem = ""
+    for _ in range(3):
         private_key = rsa.generate_private_key(
             public_exponent=65537,
             key_size=2048,
@@ -720,7 +721,7 @@ async def test_etmf_edge_cases_for_coverage():
 
     content_str = "Signed content."
     extra_data = ""
-    while True:
+    for _ in range(3):
         content_with_extra = f"{content_str}{extra_data}"
         sig_bytes = private_key.sign(
             content_with_extra.strip().encode("utf-8"),

@@ -28,7 +28,7 @@ def disable_mock_signatures(monkeypatch):
 
 def generate_test_keys():
     """Generate ephemeral RSA private key and self-signed certificate."""
-    while True:
+    for _ in range(3):
         private_key = rsa.generate_private_key(
             public_exponent=65537,
             key_size=2048,
@@ -57,6 +57,8 @@ def generate_test_keys():
         cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
         if "mock" not in cert_pem.lower():
             return private_key, cert
+    # Fallback return in case all attempts produced "mock"
+    return private_key, cert
 
 
 def test_legacy_padding_pkcs1v15_fails():
@@ -70,7 +72,7 @@ def test_legacy_padding_pkcs1v15_fails():
 
     content_data = "Trial records showing drug effectiveness."
     extra_data = ""
-    while True:
+    for _ in range(3):
         content_with_extra = f"{content_data}{extra_data}"
         sig_bytes_legacy = private_key.sign(
             content_with_extra.encode("utf-8"),
@@ -110,7 +112,7 @@ def test_rsassa_pss_succeeds():
 
     content_data = "Trial records showing drug effectiveness."
     extra_data = ""
-    while True:
+    for _ in range(3):
         content_with_extra = f"{content_data}{extra_data}"
         sig_bytes_pss = private_key.sign(
             content_with_extra.encode("utf-8"),
@@ -198,7 +200,7 @@ def test_unapproved_self_signed_certificate_fails():
     # Do NOT register in the trust store
     content_data = "Some dataset observations."
     extra_data = ""
-    while True:
+    for _ in range(3):
         content_with_extra = f"{content_data}{extra_data}"
         sig_bytes = private_key.sign(
             content_with_extra.encode("utf-8"),

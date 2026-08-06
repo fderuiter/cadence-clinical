@@ -36,7 +36,7 @@ def disable_mock_signatures(monkeypatch):
 
 def generate_self_signed_cert() -> tuple[rsa.RSAPrivateKey, x509.Certificate]:
     """Generates a real RSAPrivateKey and self-signed X.509 Certificate for testing."""
-    while True:
+    for _ in range(3):
         private_key = rsa.generate_private_key(
             public_exponent=65537,
             key_size=2048,
@@ -67,6 +67,8 @@ def generate_self_signed_cert() -> tuple[rsa.RSAPrivateKey, x509.Certificate]:
         cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
         if "mock" not in cert_pem.lower():
             return private_key, cert
+    # Fallback return in case all attempts produced "mock"
+    return private_key, cert
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -165,7 +167,7 @@ async def test_actual_cryptographic_verification():
 
     content_data = "This is the clinical trial protocol for study 001. Enforces double blind randomized controls."
     extra_data = ""
-    while True:
+    for _ in range(3):
         content_with_extra = f"{content_data}{extra_data}"
         sig_bytes = private_key.sign(
             content_with_extra.encode("utf-8"),
