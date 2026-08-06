@@ -34,6 +34,7 @@ from apps.econsent.models import (
     SubjectConsent,
 )
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
+from packages.security import assert_secure_secrets
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import verify_not_auditor
 
@@ -506,6 +507,8 @@ class SubjectConsentStatusResponse(BaseModel):
 
 
 DATABASE_URL = os.getenv("ECONSENT_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+
+assert_secure_secrets("econsent", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
 
 logger = logging.getLogger("econsent-main")
 
@@ -1213,7 +1216,9 @@ async def capture_subject_consent(
     from packages.security.sig_token_verifier import verify_and_consume_sig_token
 
     sig_payload = verify_and_consume_sig_token(sig_token, user_id)
-    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
+    secret = os.getenv(
+        "GATEWAY_SECRET", "internal-gateway-secret-12345"
+    ).encode()  # pragma: allowlist secret
 
     # 4. Custom action-binding rule inside the consent application
     bound_action = sig_payload.get("action", "")

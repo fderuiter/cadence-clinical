@@ -164,7 +164,7 @@ from apps.designer.validator import (
     validate_study_terminology,
 )
 from apps.designer.xml_mapping import validate_mapping_csv
-from packages.security import ROLE_ALIASES, get_normalized_roles
+from packages.security import ROLE_ALIASES, assert_secure_secrets, get_normalized_roles
 from packages.security.context import audit_context
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.org_client import is_sponsor_known_to_org_directory
@@ -302,6 +302,8 @@ validate_branding_and_domain()
 
 
 app = FastAPI(title=f"{BRAND_NAME} - Designer (MDR/SDR)", version="0.1.0")
+
+assert_secure_secrets("designer", {"SIGNING_SECRET": os.getenv("SIGNING_SECRET")})
 
 from apps.designer.routers.cascade import router as cascade_router
 from apps.designer.routers.comments import router as comments_router

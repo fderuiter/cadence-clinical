@@ -20,6 +20,7 @@ from apps.quality.models import (
 )
 from apps.quality.services.quality_service import QualityService
 from packages.database import get_relational_db_lifespan
+from packages.security import assert_secure_secrets
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import (
     Principal,
@@ -157,6 +158,8 @@ class CAPAResponse(BaseModel):
 
 
 DATABASE_URL = os.getenv("QUALITY_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+
+assert_secure_secrets("quality", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
 
 
 BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
@@ -445,7 +448,9 @@ async def transition_capa(
         sig_token = request.headers.get("X-Sig-Token") or request.headers.get(
             "x-sig-token"
         )
-        secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
+        secret = os.getenv(
+            "GATEWAY_SECRET", "internal-gateway-secret-12345"
+        ).encode()  # pragma: allowlist secret
         expected_semantic = (
             SemanticAction.CAPA_CLOSE
             if payload.to_status == CAPAStatus.CLOSED

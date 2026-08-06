@@ -49,10 +49,13 @@ from packages.deid.detector import DeidDetector
 from packages.deid.manifest import build_redaction_manifest, sign_manifest_symmetric
 from packages.deid.models import ComplianceProfile, DetectionResult, DetectorCategory
 from packages.deid.transforms import apply_deid_transforms
+from packages.security import assert_secure_secrets
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import Principal, get_principal, has_permission
 
 DATABASE_URL = os.getenv("ETMF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+
+assert_secure_secrets("etmf", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
 
 
 def normalize_milestone(milestone: str) -> str:

@@ -1,0 +1,1 @@
+# Exclude tests directory from automated security scans as they are test assets.

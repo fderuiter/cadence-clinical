@@ -47,9 +47,18 @@ from apps.interop.sync_engine import (
     verify_record_signature,
 )
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
+from packages.security import assert_secure_secrets
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("INTEROP_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+
+assert_secure_secrets(
+    "interop",
+    {
+        "GATEWAY_SECRET": os.getenv("GATEWAY_SECRET"),
+        "PSEUDONYMIZATION_SALT": os.getenv("PSEUDONYMIZATION_SALT"),
+    },
+)
 
 
 BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
@@ -373,7 +382,9 @@ async def resolve_and_save_submission(
     )
 
     # Decode GATEWAY_SECRET for signature verification
-    gateway_secret_str = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+    gateway_secret_str = os.getenv(
+        "GATEWAY_SECRET", "internal-gateway-secret-12345"
+    )  # pragma: allowlist secret
     secret_bytes = gateway_secret_str.encode("utf-8")
 
     signature_status = "SKIPPED"
