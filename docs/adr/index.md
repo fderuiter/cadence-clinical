@@ -12,6 +12,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ### 1. Core Platform & Execution Engine
 - [2026-08-06: Purge Legacy Physical Lab Columns for Dynamic JSON Schema](2026-08-06-purge-legacy-physical-lab-columns-for-dynamic-json-schema.md)
 
+- [2026-08-05: PostgreSQL Migration for Regulatory Services](2026-08-05-postgresql-migration-for-regulatory-services.md)
+
 - [2026-08-04: Metadata-driven Additional Properties JSON column for ClinicalObservation](2026-08-04-metadata-driven-additional-properties-json-column-for-clinicalobservation.md)
 - [2026-08-04: Implement Hexagonal Domain Repository Separation](2026-08-04-implement-hexagonal-domain-repository-separation.md)
 - [2026-08-04: System-Wide Hexagonal Architecture and Pytest-Archon Enforcement](2026-08-04-system-wide-hexagonal-architecture-and-pytest-archon-enforcement.md)

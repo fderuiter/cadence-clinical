@@ -267,6 +267,21 @@ def parse_test_results(report_xml_path):
             classname = testcase.get("classname", "")
             name = testcase.get("name", "")
 
+            # Normalize classname to make it fully deterministic regardless of pytest execution path
+            if classname and not classname.startswith("tests."):
+                if classname.startswith("validation."):
+                    classname = "tests." + classname
+                elif classname in (
+                    "gxp_compliance_suite",
+                    "prd_compliance_traceability_suite",
+                    "dia_tmf_validation_suite",
+                    "environment_integrity_suite",
+                    "test_path_boundary_linter",
+                ):
+                    classname = "tests.validation." + classname
+                else:
+                    classname = "tests." + classname
+
             # Check for failure, error, skipped
             status = "PASSED"
             failure_message = ""

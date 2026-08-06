@@ -174,6 +174,7 @@ def verify_live_db_connections():
 async def create_all_schemas_async(worker_suffix: str):
     from sqlalchemy.ext.asyncio import create_async_engine
 
+    from apps.ctms.migrate import run_migrations as run_ctms_migrations
     from apps.ctms.models import Base as CTMSBase
     from apps.econsent.models import Base as EConsentBase
     from apps.eisf.database.migrate import run_migrations as run_eisf_migrations
@@ -189,6 +190,7 @@ async def create_all_schemas_async(worker_suffix: str):
     from apps.interop.models import Base as InteropBase
     from apps.notifications.models import Base as NotificationsBase
     from apps.org.models import Base as OrgBase
+    from apps.quality.migrate import run_migrations as run_quality_migrations
     from apps.quality.models import Base as QualityBase
     from apps.safety.models import Base as SafetyBase
     from apps.tickets.models import Base as TicketsBase
@@ -196,8 +198,8 @@ async def create_all_schemas_async(worker_suffix: str):
     service_bases = {
         "cadence_edc": (ExecBase, run_exec_migrations),
         "cadence_etmf": (ETMFBase, run_etmf_migrations),
-        "cadence_ctms": (CTMSBase, None),
-        "cadence_quality": (QualityBase, None),
+        "cadence_ctms": (CTMSBase, run_ctms_migrations),
+        "cadence_quality": (QualityBase, run_quality_migrations),
         "cadence_interop": (InteropBase, None),
         "cadence_tickets": (TicketsBase, None),
         "cadence_notifications": (NotificationsBase, None),
@@ -226,6 +228,9 @@ if os.environ.get("USE_LIVE_DB") == "true":
 
 
 # Patch and create databases
+_initialized_databases = set()
+
+
 def patch_init_db():
     from apps.execution.database.core import DatabaseSessionManager
     from packages.database import RelationalDatabaseManager
@@ -254,6 +259,7 @@ def patch_init_db():
             ("postgres", "postgresql")
         ):
             db_name = f"cadence_edc{worker_suffix}"
+            _initialized_databases.add("cadence_edc")
             new_url = f"{base_postgres_url}{db_name}"
             return original_exec_init_db(self, new_url, **kwargs)
         return original_exec_init_db(self, database_url, **kwargs)
@@ -264,6 +270,7 @@ def patch_init_db():
         ):
             base_name = service_map.get(self.service_name, "cadence_edc")
             db_name = f"{base_name}{worker_suffix}"
+            _initialized_databases.add(base_name)
             new_url = f"{base_postgres_url}{db_name}"
             return original_rel_init_db(self, new_url, **kwargs)
         return original_rel_init_db(self, database_url, **kwargs)
@@ -1000,8 +1007,17 @@ async def clean_postgres_databases():
         "cadence_eisf": EISFBase,
     }
 
+    import unittest.mock
+
     base_postgres_url = get_postgres_base_config()
+    is_mocked = isinstance(create_async_engine, unittest.mock.Mock)
     for db_prefix, base in service_bases.items():
+        if (
+            os.environ.get("USE_LIVE_DB") != "true"
+            and not is_mocked
+            and db_prefix not in _initialized_databases
+        ):
+            continue
         db_name = f"{db_prefix}{worker_suffix}"
         db_url = f"{base_postgres_url}{db_name}"
         engine = create_async_engine(db_url)
@@ -1010,17 +1026,26 @@ async def clean_postgres_databases():
                 # Disable triggers and foreign keys for safe, trigger-free TRUNCATE of audited/restricted tables
                 await conn.execute(text("SET session_replication_role = 'replica';"))
 
-                # Truncate tables in reverse topological order of sorted tables to avoid cascade issues
-                for table in reversed(base.metadata.sorted_tables):
+                # Truncate all tables in a single statement for extreme speedup, with fallback
+                table_names = [
+                    f'"{table.name}"' for table in base.metadata.sorted_tables
+                ]
+                if table_names:
+                    truncate_query = f"TRUNCATE TABLE {', '.join(table_names)} RESTART IDENTITY CASCADE;"
                     try:
-                        await conn.execute(
-                            text(
-                                f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'
-                            )
-                        )
+                        await conn.execute(text(truncate_query))
                     except Exception:
-                        with contextlib.suppress(Exception):
-                            await conn.execute(table.delete())
+                        # Fallback to per-table truncate/delete if combined fails
+                        for table in reversed(base.metadata.sorted_tables):
+                            try:
+                                await conn.execute(
+                                    text(
+                                        f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'
+                                    )
+                                )
+                            except Exception:
+                                with contextlib.suppress(Exception):
+                                    await conn.execute(table.delete())
 
                 # Also truncate audit schema tables if they exist
                 with contextlib.suppress(Exception):

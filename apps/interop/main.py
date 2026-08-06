@@ -228,11 +228,7 @@ def validate_epro_payload(answers: dict[str, Any]) -> list[str]:
                 errors.append(
                     "Demographic Validation Error: Participant age must be between 18 and 110."
                 )
-        except ValueError:
-            errors.append(
-                "Demographic Validation Error: Participant age must be a valid integer."
-            )
-        except TypeError:
+        except (ValueError, TypeError) as _:
             errors.append(
                 "Demographic Validation Error: Participant age must be a valid integer."
             )
@@ -251,11 +247,7 @@ def validate_epro_payload(answers: dict[str, Any]) -> list[str]:
                 errors.append(
                     "Clinical Validation Error: Pain score must be between 0 and 10."
                 )
-        except ValueError:
-            errors.append(
-                "Clinical Validation Error: Pain score must be a valid integer."
-            )
-        except TypeError:
+        except (ValueError, TypeError) as _:
             errors.append(
                 "Clinical Validation Error: Pain score must be a valid integer."
             )

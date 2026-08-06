@@ -48,10 +48,10 @@ def test_domain_models_contain_zero_database_imports():
 
     @req:PRD-SYS-001
     """
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     domain_paths = [
-        os.path.join(base_dir, "apps/execution/domain/models.py"),
-        os.path.join(base_dir, "apps/ctms/domain/models.py"),
+        os.path.join(repo_root, "apps/execution/domain/models.py"),
+        os.path.join(repo_root, "apps/ctms/domain/models.py"),
     ]
     forbidden_imports = {
         "sqlalchemy",
@@ -154,10 +154,10 @@ def test_api_routers_contain_no_direct_db_calls():
 
     @req:PRD-SYS-001
     """
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     router_paths = [
-        os.path.join(base_dir, "apps/execution/routers/doa.py"),
-        os.path.join(base_dir, "apps/ctms/routers/doa.py"),
+        os.path.join(repo_root, "apps/execution/routers/doa.py"),
+        os.path.join(repo_root, "apps/ctms/routers/doa.py"),
     ]
 
     for path in router_paths:

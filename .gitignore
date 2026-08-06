@@ -73,6 +73,9 @@ htmlcov/
 # Database & Container Persistence (Local Dev)
 # ------------------------------------------
 docker/postgres-data/
+docker/postgres-etmf-data/
+docker/postgres-ctms-data/
+docker/postgres-quality-data/
 docker/neo4j-data/
 docker/keycloak-data/
 *.db

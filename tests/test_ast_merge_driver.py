@@ -16,14 +16,15 @@ def run_merge_driver(
     current_path.write_text(current_content, encoding="utf-8")
     other_path.write_text(other_content, encoding="utf-8")
 
-    project_root = Path(__file__).resolve().parent.parent
     try:
         # Run driver
         start_time = time.time()
+        repo_root = Path(__file__).resolve().parent.parent
+        driver_path = repo_root / "scripts" / "ast_merge_driver.py"
         res = subprocess.run(
             [
                 "python3",
-                str(project_root / "scripts" / "ast_merge_driver.py"),
+                str(driver_path),
                 str(ancestor_path),
                 str(current_path),
                 str(other_path),
