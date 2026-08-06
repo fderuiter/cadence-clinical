@@ -601,6 +601,7 @@ def test_sys_path_append():
     """Verifies that packages and apps subdirectories are appended to sys.path, not prepended."""
     import sys
     from pathlib import Path
+
     import scripts.validate_markdown as vm
 
     # Re-run path registration to make sure the current process's sys.path is fully populated
