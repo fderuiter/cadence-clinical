@@ -1,5 +1,6 @@
 import subprocess
 import time
+import uuid
 from pathlib import Path
 
 
@@ -7,10 +8,11 @@ def run_merge_driver(
     ancestor_content: str, current_content: str, other_content: str, filename: str
 ):
     """Helper to run the custom merge driver on temporary files and return the result and exit code."""
-    # Write to temp files
-    ancestor_path = Path(f"/tmp/ancestor_{filename}")
-    current_path = Path(f"/tmp/current_{filename}")
-    other_path = Path(f"/tmp/other_{filename}")
+    # Write to temp files with unique run IDs to avoid collisions in parallel execution
+    run_id = uuid.uuid4().hex
+    ancestor_path = Path(f"/tmp/ancestor_{run_id}_{filename}")
+    current_path = Path(f"/tmp/current_{run_id}_{filename}")
+    other_path = Path(f"/tmp/other_{run_id}_{filename}")
 
     ancestor_path.write_text(ancestor_content, encoding="utf-8")
     current_path.write_text(current_content, encoding="utf-8")
