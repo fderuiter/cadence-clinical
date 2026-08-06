@@ -1,10 +1,10 @@
-# Architecture Specification: Cadence Clinical
+# Architecture Specification: Cadence Clinical Research Software
 
 ## 1. System Vision & Problem Statement
 
 Traditional clinical trial builds require manual, error-prone translation of protocol documents into downstream EDC systems. This causes multi-month setup delays, risk of discrepancies between protocols and CRFs, and expensive amendment re-work.
 
-**Cadence Clinical** solves this by establishing a single, metadata-driven source of truth that automates the generation of downstream trial infrastructure directly from digitized protocol definitions.
+**Cadence Clinical Research Software** solves this by establishing a single, metadata-driven source of truth that automates the generation of downstream trial infrastructure directly from digitized protocol definitions.
 
 ---
 

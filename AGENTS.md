@@ -1,8 +1,8 @@
-# Agent Guidelines: Cadence Clinical Platform
+# Agent Guidelines: Cadence Clinical Research Software Platform
 
 ## Product Mission
 
-Cadence Clinical is a unified, standalone eClinical platform synthesising
+Cadence Clinical Research Software is a unified, standalone eClinical platform synthesising
 upstream Clinical Metadata Management (MDR) with downstream Electronic Data
 Capture (EDC) into an automated Digital Data Flow (DDF) platform.
 
@@ -110,7 +110,7 @@ exclusion is global.**
 
 ### REST API-First Architecture & Microservice Decoupling
 
-To ensure proper GxP boundaries and architectural decoupling across the Cadence Clinical Platform, agents must adhere strictly to the following standards for all inter-service communications:
+To ensure proper GxP boundaries and architectural decoupling across the Cadence Clinical Research Software Platform, agents must adhere strictly to the following standards for all inter-service communications:
 
 1. **No Sibling Database Imports:** Sibling database imports (of models, schemas, or session helpers) across distinct microservice boundary paths (e.g., CTMS importing execution database models) are strictly prohibited.
 2. **REST Endpoints for Cross-App Operations:** All inter-service communications, state changes, and validations must be routed through secure, performance-optimized, and well-typed REST endpoints exposed by the owning microservice (e.g., `/api/v1/execution/doa/*`).

@@ -1,6 +1,6 @@
-# Cadence Clinical — Contributor Guide
+# Cadence Clinical Research Software — Contributor Guide
 
-Welcome to the **Cadence Clinical** platform repository. This document is the
+Welcome to the **Cadence Clinical Research Software** platform repository. This document is the
 single authoritative reference for development workflows, coding standards,
 quality gates, and CI failure recovery procedures.
 
