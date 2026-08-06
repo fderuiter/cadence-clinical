@@ -20,8 +20,7 @@ def run_merge_driver(
     try:
         # Run driver
         start_time = time.time()
-        repo_root = Path(__file__).resolve().parent.parent
-        driver_path = repo_root / "scripts" / "ast_merge_driver.py"
+        driver_path = project_root / "scripts" / "ast_merge_driver.py"
         res = subprocess.run(
             [
                 "python3",
