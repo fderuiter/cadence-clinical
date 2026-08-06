@@ -26,8 +26,11 @@ function getBabelParser() {
   try {
     return require("@babel/parser");
   } catch (e) {
-    const webNodeModules =
-      "/app/apps/web/node_modules/@babel/parser/lib/index.js";
+    const repoRoot = path.dirname(__dirname);
+    const webNodeModules = path.join(
+      repoRoot,
+      "apps/web/node_modules/@babel/parser/lib/index.js"
+    );
     if (fs.existsSync(webNodeModules)) {
       return require(webNodeModules);
     }
