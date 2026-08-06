@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+
 - [2026-08-06: Relational Cache for Site Compliance and Milestone Gating](2026-08-06-relational-cache-for-site-compliance-and-milestone-gating.md)
 - [2026-08-06: Purge Legacy Physical Lab Columns for Dynamic JSON Schema](2026-08-06-purge-legacy-physical-lab-columns-for-dynamic-json-schema.md)
 
@@ -50,6 +51,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
 
 ### 2. API Gateway, Security & Identity
+
 - [2026-08-06: Part 11 Electronic Signature Compliance Engine Improvements](2026-08-06-part-11-electronic-signature-compliance-engine-improvements.md)
 
 - [2026-08-04: Fail-Fast Environment Validation for Cryptographic Secrets](2026-08-04-fail-fast-environment-validation-for-cryptographic-secrets.md)
