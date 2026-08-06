@@ -3,7 +3,7 @@
     <!-- Header -->
     <header>
       <div class="header-title-area">
-        <h1>Cadence <span>Clinical</span></h1>
+        <h1>{{ brandNameFirst }} <span>{{ brandNameRest }}</span></h1>
         <p>Interactive Web Demo & Regulatory Validation Sandbox</p>
       </div>
       <div
@@ -419,6 +419,11 @@ import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
 const authStore = useAuthStore();
 const clinicalStore = useClinicalStore();
 const onboardingStore = useOnboardingStore();
+
+const brandName = import.meta.env.VITE_BRAND_NAME || "Cadence Clinical";
+const parts = brandName.split(" ");
+const brandNameFirst = parts[0] || "";
+const brandNameRest = parts.slice(1).join(" ") || "";
 
 const screenReaderAnnouncement = ref("");
 let refreshTimer = null;

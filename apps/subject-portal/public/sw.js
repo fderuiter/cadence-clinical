@@ -1,4 +1,4 @@
-const CACHE_NAME = "cadence-portal-cache-v1";
+const CACHE_NAME = "portal-cache-v1";
 const ASSETS = [
   "/subject-portal/",
   "/subject-portal/index.html",

@@ -8,8 +8,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig({
-  base: "/cadence-clinical/",
-  plugins: [vue()],
+  base: process.env.VITE_BASE_PATH || "/cadence-clinical/",
+  plugins: [
+    vue(),
+    {
+      name: "html-transform",
+      transformIndexHtml(html) {
+        const title = process.env.VITE_APP_TITLE || "Cadence Clinical";
+        return html.replace(/%VITE_APP_TITLE%/g, title);
+      },
+    },
+  ],
   resolve: {
     alias: {
       ui: path.resolve(__dirname, "../../packages/ui/dist/index.js"),
