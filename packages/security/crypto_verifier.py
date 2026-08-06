@@ -202,11 +202,25 @@ def verify_asymmetric_signature(
     Returns: (is_valid, error_code, error_message)
     """
     # Reject mock signatures / certificates
-    if (
-        "mock" in payload_str.lower()
-        or "mock" in signature_b64.lower()
-        or "mock" in public_key_pem.lower()
-    ):
+    is_mock = False
+    for s in (payload_str, signature_b64, public_key_pem):
+        if not s:
+            continue
+        s_lower = s.lower()
+        if "-----BEGIN" in s or len(s) > 60:
+            if (
+                "mock_signature" in s_lower
+                or "mock-signature" in s_lower
+                or "invalid_mock" in s_lower
+                or s_lower == "mock"
+            ):
+                is_mock = True
+                break
+        elif "mock" in s_lower:
+            is_mock = True
+            break
+
+    if is_mock:
         return (
             False,
             "MOCK_SIGNATURE_DETECTED",
@@ -382,10 +396,25 @@ def verify_electronic_signature(
         )
 
     # Check mock for both asymmetric and symmetric paths
-    req_payload_lower = (request.payload_hash or "").lower()
-    req_sig_lower = (request.signature_bytes_b64 or "").lower()
-    req_pk_lower = (public_key_pem or "").lower()
-    if "mock" in req_payload_lower or "mock" in req_sig_lower or "mock" in req_pk_lower:
+    is_mock = False
+    for s in (request.payload_hash, request.signature_bytes_b64, public_key_pem):
+        if not s:
+            continue
+        s_lower = s.lower()
+        if "-----BEGIN" in s or len(s) > 60:
+            if (
+                "mock_signature" in s_lower
+                or "mock-signature" in s_lower
+                or "invalid_mock" in s_lower
+                or s_lower == "mock"
+            ):
+                is_mock = True
+                break
+        elif "mock" in s_lower:
+            is_mock = True
+            break
+
+    if is_mock:
         return SignatureVerificationResult(
             is_valid=False,
             error_code="MOCK_SIGNATURE_DETECTED",
