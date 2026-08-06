@@ -285,20 +285,39 @@ def verify_asymmetric_signature(
                         hashes.SHA256(),
                     )
             except Exception:
-                # Fallback to PKCS#1 v1.5 padding
-                if is_prehashed:
-                    public_key.verify(
-                        signature_bytes,
-                        binary_data,
-                        padding.PKCS1v15(),
-                        Prehashed(hashes.SHA256()),
+                # Check if it was signed with PKCS#1 v1.5 deterministic padding
+                try:
+                    if is_prehashed:
+                        public_key.verify(
+                            signature_bytes,
+                            binary_data,
+                            padding.PKCS1v15(),
+                            Prehashed(hashes.SHA256()),
+                        )
+                    else:
+                        public_key.verify(
+                            signature_bytes,
+                            binary_data,
+                            padding.PKCS1v15(),
+                            hashes.SHA256(),
+                        )
+                    # Succeeded with PKCS1v15, meaning it's a legacy padding signature!
+                    import logging
+
+                    logging.getLogger("crypto-verifier").error(
+                        "COMPLIANCE ALERT: Legacy PKCS#1 v1.5 signature padding detected. This signature is insecure and has been rejected."
                     )
-                else:
-                    public_key.verify(
-                        signature_bytes,
-                        binary_data,
-                        padding.PKCS1v15(),
-                        hashes.SHA256(),
+                    return (
+                        False,
+                        "LEGACY_PADDING_REJECTED",
+                        "LEGACY PADDING DETECTED: Document signatures using legacy PKCS#1 v1.5 padding fail verification to satisfy 21 CFR Part 11 strict compliance.",
+                    )
+                except Exception:
+                    # It failed PKCS1v15 too, so it's just a general verification failure
+                    return (
+                        False,
+                        "SIGNATURE_MISMATCH",
+                        "Asymmetric verification failed: Invalid RSA-PSS signature.",
                     )
         elif isinstance(public_key, ec.EllipticCurvePublicKey):
             if is_prehashed:
