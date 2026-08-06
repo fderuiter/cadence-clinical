@@ -38,22 +38,24 @@ def main():
         os.environ["PR_NUMBER"] = "123"
 
     # Inject default/mock environment configurations to prevent top-level execution errors
+    # fmt: off
     mock_env_vars = {
-        "DATABASE_URL": "postgresql://mock_user:mock_pass@localhost:5432/mock_db",
+        "DATABASE_URL": "postgresql://mock_user:mock_pass@localhost:5432/mock_db",  # pragma: allowlist secret
         "ENV": "development",
         "ENVIRONMENT": "development",
         "DEBUG": "True",
         "QUALITY_DATABASE_URL": "sqlite+aiosqlite:///:memory:",
         "SAFETY_DATABASE_URL": "sqlite+aiosqlite:///:memory:",
-        "GATEWAY_SECRET": "mock-gateway-" + "sec" + "ret-12345",
-        "SAFETY_SALT": "mock-safety-" + "salt-12345",
-        "SIGNING_SECRET": "mock-signing-" + "sec" + "ret-12345",
+        "GATEWAY_SECRET": "mock-gateway-" + "sec" + "ret-12345",  # pragma: allowlist secret
+        "SAFETY_SALT": "mock-safety-" + "salt-12345",  # pragma: allowlist secret
+        "SIGNING_SECRET": "mock-signing-" + "sec" + "ret-12345",  # pragma: allowlist secret
         "NEO4J_URI": "bolt://localhost:7687",
         "NEO4J_USER": "neo4j",
-        "NEO4J_PASSWORD": "pass" + "word",
-        "AUDIT_LOG_SECRET_KEY": "test-gxp-audit-" + "sec" + "ret-key-placeholder-abc",
-        "INBOUND_EMAIL_HMAC_SECRET": "test-email-hmac-" + "sec" + "ret-placeholder-xyz",
+        "NEO4J_PASSWORD": "pass" + "word",  # pragma: allowlist secret
+        "AUDIT_LOG_SECRET_KEY": "test-gxp-audit-" + "sec" + "ret-key-placeholder-abc",  # pragma: allowlist secret
+        "INBOUND_EMAIL_HMAC_SECRET": "test-email-hmac-" + "sec" + "ret-placeholder-xyz",  # pragma: allowlist secret
     }
+    # fmt: on
     for k, v in mock_env_vars.items():
         if k not in os.environ:
             os.environ[k] = v
