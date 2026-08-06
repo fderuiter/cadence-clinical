@@ -38,11 +38,11 @@ for k, v in MOCK_ENV_VARS.items():
         os.environ[k] = v
 
 # Add packages subfolders and apps to sys.path to resolve imports within modules
-REPO_ROOT_DIR = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def setup_sys_path():
-    for p in (REPO_ROOT_DIR / "packages").glob("*"):
+    for p in (REPO_ROOT / "packages").glob("*"):
         if (
             p.is_dir()
             and p.name != "__pycache__"
@@ -50,7 +50,7 @@ def setup_sys_path():
             and str(p) not in sys.path
         ):
             sys.path.append(str(p))
-    for p in (REPO_ROOT_DIR / "apps").glob("*"):
+    for p in (REPO_ROOT / "apps").glob("*"):
         if (
             p.is_dir()
             and p.name != "__pycache__"
@@ -58,8 +58,8 @@ def setup_sys_path():
             and str(p) not in sys.path
         ):
             sys.path.append(str(p))
-    if str(REPO_ROOT_DIR) not in sys.path:
-        sys.path.append(str(REPO_ROOT_DIR))
+    if str(REPO_ROOT) not in sys.path:
+        sys.path.append(str(REPO_ROOT))
 
 
 setup_sys_path()
