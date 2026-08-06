@@ -330,7 +330,10 @@ def test_assert_secure_secrets_validation(monkeypatch):
     monkeypatch.setenv("APP_ENV", "production")
     with pytest.raises(RuntimeError) as exc_info:
         assert_secure_secrets(
-            "test-service", {"GATEWAY_SECRET": "internal-gateway-secret-12345"}
+            "test-service",
+            {
+                "GATEWAY_SECRET": "internal-gateway-secret-12345"
+            },  # pragma: allowlist secret
         )
     assert "GATEWAY_SECRET" in str(exc_info.value)
     assert "Uses insecure fallback value" in str(exc_info.value)
@@ -344,13 +347,15 @@ def test_assert_secure_secrets_validation(monkeypatch):
     # Case 3: Dev env should permit insecure fallback value without raising error
     monkeypatch.setenv("APP_ENV", "development")
     assert_secure_secrets(
-        "test-service", {"GATEWAY_SECRET": "internal-gateway-secret-12345"}
+        "test-service",
+        {"GATEWAY_SECRET": "internal-gateway-secret-12345"},  # pragma: allowlist secret
     )
 
     # Case 4: Missing/unset APP_ENV should permit fallback (local developer mode)
     monkeypatch.delenv("APP_ENV", raising=False)
     assert_secure_secrets(
-        "test-service", {"GATEWAY_SECRET": "internal-gateway-secret-12345"}
+        "test-service",
+        {"GATEWAY_SECRET": "internal-gateway-secret-12345"},  # pragma: allowlist secret
     )
 
 
@@ -363,7 +368,7 @@ def test_global_scanner_with_opt_out(tmp_path):
     dir_a.mkdir()
     file_a = dir_a / "service.py"
     file_a.write_text(
-        "GATEWAY_SECRET = os.getenv('GATEWAY_SECRET', 'internal-gateway-secret-12345')",
+        "GATEWAY_SECRET = os.getenv('GATEWAY_SECRET', 'internal-gateway-secret-12345')",  # pragma: allowlist secret
         encoding="utf-8",
     )
 
@@ -373,7 +378,7 @@ def test_global_scanner_with_opt_out(tmp_path):
     (dir_b / ".scannerignore").write_text("", encoding="utf-8")
     file_b = dir_b / "test_mock.py"
     file_b.write_text(
-        "GATEWAY_SECRET = os.getenv('GATEWAY_SECRET', 'internal-gateway-secret-12345')",
+        "GATEWAY_SECRET = os.getenv('GATEWAY_SECRET', 'internal-gateway-secret-12345')",  # pragma: allowlist secret
         encoding="utf-8",
     )
 
