@@ -21,18 +21,19 @@ The Cadence Clinical platform consists of multiple active clinical microservices
 
 - **Option 1: Individual Service Custom Startup Checks**
   Write service-specific validation logic in each microservice entrypoint.
-  - *Pros:* Custom messages per service.
-  - *Cons:* High duplication, difficult to maintain, prone to drift.
+  - _Pros:_ Custom messages per service.
+  - _Cons:_ High duplication, difficult to maintain, prone to drift.
 
 - **Option 2: Centralized Security Guardrail and Global Scan Upgrades (Selected)**
   Implement a shared `assert_secure_secrets` function in `packages/security/fail_fast.py`, integrate it into every clinical microservice's `main.py`, configure global scanning by default, and support `.scannerignore`.
-  - *Pros:* Single source of truth for fail-fast behavior, zero duplication, global linter enforcement, and robust test coverage.
-  - *Cons:* Require test configurations to explicitly mock APP_ENV or secrets.
+  - _Pros:_ Single source of truth for fail-fast behavior, zero duplication, global linter enforcement, and robust test coverage.
+  - _Cons:_ Require test configurations to explicitly mock APP_ENV or secrets.
 
 ## 4. Decision Outcome
 
 We chose **Option 2**.
 To implement this, we:
+
 1. Created `packages/security/fail_fast.py` to centralized `assert_secure_secrets` behavior.
 2. Anchored validation checks in `main.py` across all active clinical microservices.
 3. Configured the security scanner to run globally while respecting a `.scannerignore` file.
