@@ -393,6 +393,54 @@ async def upgrade_existing_tables(conn) -> None:
                     )
                 )
 
+        # Migrate and drop legacy physical columns if present to strictly enforce metadata-driven practices
+        import json
+        removed_cols = [
+            "lab_source",
+            "lab_site_id",
+            "lab_indicator",
+            "lab_out_of_range",
+            "matched_normal_bounds",
+            "range_indicator",
+            "is_out_of_range",
+            "reference_range_low",
+            "reference_range_high",
+        ]
+        present_removed_cols = [c for c in removed_cols if c in obs_cols]
+        if present_removed_cols:
+            print(f"Migrating legacy columns {present_removed_cols} to additional_properties...")
+            select_cols = ["id", "additional_properties"] + present_removed_cols
+            cols_str = ", ".join(select_cols)
+            res = await conn.execute(text(f"SELECT {cols_str} FROM clinical_observations;"))
+            rows = res.all()
+            for row in rows:
+                row_id = row[0]
+                existing_props = row[1]
+                if existing_props is None:
+                    props_dict = {}
+                elif isinstance(existing_props, str):
+                    try:
+                        props_dict = json.loads(existing_props)
+                    except Exception:
+                        props_dict = {}
+                else:
+                    props_dict = dict(existing_props)
+
+                for idx, col_name in enumerate(present_removed_cols):
+                    val = row[2 + idx]
+                    if val is not None:
+                        props_dict[col_name] = val
+
+                props_json = json.dumps(props_dict)
+                await conn.execute(
+                    text("UPDATE clinical_observations SET additional_properties = :props WHERE id = :id;"),
+                    {"props": props_json, "id": row_id}
+                )
+
+            for col in present_removed_cols:
+                print(f"Dropping physical column {col} from clinical_observations table...")
+                await conn.execute(text(f"ALTER TABLE clinical_observations DROP COLUMN {col};"))
+
     # Upgrade clinical_coding_ledger with new columns
     ledger_cols = await conn.run_sync(
         lambda sc: get_table_columns(sc, "clinical_coding_ledger")
