@@ -549,6 +549,8 @@ def is_whitelisted(method: str, path: str) -> bool:
         "/execution/visits",
         "/execution/queries",
         "/execution/doa",
+        "/execution/compliance",
+        "/execution/sites",
         "/synopsis/export",
         "/synopsis/render",
         "/designer/sentinel/evaluate",

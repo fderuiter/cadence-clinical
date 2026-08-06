@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-06: Relational Cache for Site Compliance and Milestone Gating](2026-08-06-relational-cache-for-site-compliance-and-milestone-gating.md)
 - [2026-08-06: Purge Legacy Physical Lab Columns for Dynamic JSON Schema](2026-08-06-purge-legacy-physical-lab-columns-for-dynamic-json-schema.md)
 
 - [2026-08-05: PostgreSQL Migration for Regulatory Services](2026-08-05-postgresql-migration-for-regulatory-services.md)
