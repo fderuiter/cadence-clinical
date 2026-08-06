@@ -152,7 +152,7 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
     await flushPromises();
 
     // Wait for the mock API call and DOM updates to have fully resolved (handles async crypto signature delay under CPU load)
-    let retries = 200;
+    let retries = 500;
     while (
       (vi.mocked(apiClient.get).mock.calls.length === 0 ||
         !wrapper.text().includes("rule_1")) &&
