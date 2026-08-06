@@ -23,6 +23,7 @@ from apps.safety.models import (
 )
 from apps.safety.processor import process_sae_reconciliation
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
+from packages.security import assert_secure_secrets
 from packages.security.middleware import GatewayAuthMiddleware
 
 logger = logging.getLogger("safety-main")
@@ -145,6 +146,14 @@ class SAEReconciliationJobResponse(BaseModel):
 
 
 DATABASE_URL = os.getenv("SAFETY_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+
+assert_secure_secrets(
+    "safety",
+    {
+        "GATEWAY_SECRET": os.getenv("GATEWAY_SECRET"),
+        "SAFETY_SALT": os.getenv("SAFETY_SALT"),
+    },
+)
 
 
 app = FastAPI(
@@ -614,7 +623,9 @@ async def export_safety_case(
     # 3. Pseudonymize and remove direct patient PII following the HMAC approach
     from packages.deid.transforms import pseudonymize_value
 
-    salt = os.getenv("SAFETY_SALT", "internal-safety-salt-12345")
+    salt = os.getenv(
+        "SAFETY_SALT", "internal-safety-salt-12345"
+    )  # pragma: allowlist secret
     icsr_copy = copy.deepcopy(payload.icsr)
 
     raw_patient_id = icsr_copy.patient.patient_id

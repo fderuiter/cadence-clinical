@@ -1,9 +1,9 @@
 # ADR-2159: Purge Legacy Physical Lab Columns for Dynamic JSON Schema
 
-* **Status:** Accepted
-* **Date:** 2026-08-06
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-06
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -13,9 +13,9 @@ To prevent database schema bloating and align with the design in ADR-117, we nee
 
 ## 2. Decision Drivers & Constraints
 
-* Ensure 100% data preservation of existing physical column records during schema upgrade.
-* Automate the inline migration to avoid downstream pipeline breakage and manual migrations.
-* Business/GxP requirement (PRD-LAB-001)
+- Ensure 100% data preservation of existing physical column records during schema upgrade.
+- Automate the inline migration to avoid downstream pipeline breakage and manual migrations.
+- Business/GxP requirement (PRD-LAB-001)
 
 ## 3. Options Considered
 
@@ -28,10 +28,10 @@ Chosen option: Option A because it integrates the pre-migration directly into th
 
 ## 5. Consequences & Trade-offs
 
-* Positive: Zero data loss, self-healing database upgrades, and clean physical relational schema.
-* Negative: Slightly higher database startup migration time during initial deployment.
+- Positive: Zero data loss, self-healing database upgrades, and clean physical relational schema.
+- Negative: Slightly higher database startup migration time during initial deployment.
 
 ## 6. Implementation & Verification
 
-* Affected files: `apps/execution/database/migrate.py`
-* Verification: Verified that reference range tests pass and schema remains clean.
+- Affected files: `apps/execution/database/migrate.py`
+- Verification: Verified that reference range tests pass and schema remains clean.

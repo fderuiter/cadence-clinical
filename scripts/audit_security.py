@@ -70,18 +70,7 @@ def scan_file_for_secrets(filepath: str) -> list[str]:
 
             for pattern_name, regex in SECRET_PATTERNS:
                 if pattern_name == "Hardcoded Environment Fallback":
-                    # Hardcoded Environment Fallback is only enforced on Gateway Service, Study Designer, and Security packages
-                    normalized = filepath.replace("\\", "/")
-                    is_relevant = (
-                        "apps/gateway/" in normalized
-                        or "apps/designer/" in normalized
-                        or "packages/security/" in normalized
-                        or "test_compliance_security.py" in normalized
-                        or "temp" in normalized.lower()
-                        or "tmp" in normalized.lower()
-                    )
-                    if not is_relevant:
-                        continue
+                    # Removed path whitelist restriction. Enforces global monorepo scanning.
 
                     # Only flag actually sensitive credential/secret variables
                     line_lower = line.lower()
@@ -127,7 +116,26 @@ def is_excluded(filepath: str) -> bool:
     # Normalize paths to handle cross-platform slash differences (Windows vs Unix)
     normalized = filepath.replace("\\", "/")
     parts = normalized.split("/")
-    return any(part in EXCLUDED_PATHS for part in parts)
+    if any(part in EXCLUDED_PATHS for part in parts):
+        return True
+
+    # Check for explicit opt-out files (.scannerignore or .nosec) in the file's directory hierarchy
+    try:
+        abs_path = os.path.abspath(filepath)
+        dir_path = os.path.dirname(abs_path)
+        while True:
+            if os.path.exists(os.path.join(dir_path, ".scannerignore")):
+                return True
+            if os.path.exists(os.path.join(dir_path, ".nosec")):
+                return True
+            parent = os.path.dirname(dir_path)
+            if parent == dir_path:
+                break
+            dir_path = parent
+    except Exception:
+        pass
+
+    return False
 
 
 def run_security_audit(root_dir: str = ".", files: list[str] = None) -> bool:
@@ -159,8 +167,14 @@ def run_security_audit(root_dir: str = ".", files: list[str] = None) -> bool:
     else:
         print(f"Full Scan: recursively scanning directory '{root_dir}'...")
         for root, dirs, files_in_dir in os.walk(root_dir):
-            # Filter out excluded directories in-place
-            dirs[:] = [d for d in dirs if d not in EXCLUDED_PATHS]
+            # Filter out excluded or opted-out directories in-place
+            dirs[:] = [
+                d
+                for d in dirs
+                if d not in EXCLUDED_PATHS
+                and not os.path.exists(os.path.join(root, d, ".scannerignore"))
+                and not os.path.exists(os.path.join(root, d, ".nosec"))
+            ]
 
             for file in files_in_dir:
                 filepath = os.path.join(root, file)

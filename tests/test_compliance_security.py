@@ -318,3 +318,74 @@ def test_signing_raises_runtime_error_if_email_secret_missing(monkeypatch):
             sys.modules.pop("packages.security.signing", None)
         if orig_security is not None:
             sys.modules["packages.security"] = orig_security
+
+
+def test_assert_secure_secrets_validation(monkeypatch):
+    """Verify that assert_secure_secrets raises RuntimeError on insecure fallbacks in production/staging but permits them in dev."""
+    import pytest
+
+    from packages.security.fail_fast import assert_secure_secrets
+
+    # Case 1: Non-dev env with insecure fallback should raise RuntimeError
+    monkeypatch.setenv("APP_ENV", "production")
+    with pytest.raises(RuntimeError) as exc_info:
+        assert_secure_secrets(
+            "test-service",
+            {
+                "GATEWAY_SECRET": "internal-gateway-secret-12345"  # pragma: allowlist secret
+            },
+        )
+    assert "GATEWAY_SECRET" in str(exc_info.value)
+    assert "Uses insecure fallback value" in str(exc_info.value)
+
+    # Case 2: Non-dev env with missing/empty secret should raise RuntimeError
+    with pytest.raises(RuntimeError) as exc_info:
+        assert_secure_secrets("test-service", {"GATEWAY_SECRET": ""})
+    assert "GATEWAY_SECRET" in str(exc_info.value)
+    assert "Missing override" in str(exc_info.value)
+
+    # Case 3: Dev env should permit insecure fallback value without raising error
+    monkeypatch.setenv("APP_ENV", "development")
+    assert_secure_secrets(
+        "test-service",
+        {"GATEWAY_SECRET": "internal-gateway-secret-12345"},  # pragma: allowlist secret
+    )
+
+    # Case 4: Missing/unset APP_ENV should permit fallback (local developer mode)
+    monkeypatch.delenv("APP_ENV", raising=False)
+    assert_secure_secrets(
+        "test-service",
+        {"GATEWAY_SECRET": "internal-gateway-secret-12345"},  # pragma: allowlist secret
+    )
+
+
+def test_global_scanner_with_opt_out(tmp_path):
+    """Verify static security scanner runs globally but respects explicit opt-out via .scannerignore or .nosec."""
+    from scripts.audit_security import run_security_audit
+
+    # Create dir_a (no opt-out)
+    dir_a = tmp_path / "dir_a"
+    dir_a.mkdir()
+    file_a = dir_a / "service.py"
+    file_a.write_text(
+        "GATEWAY_SECRET = os.getenv('GATEWAY_SECRET', 'internal-gateway-secret-12345')",  # pragma: allowlist secret
+        encoding="utf-8",
+    )
+
+    # Create dir_b (opted out via .scannerignore)
+    dir_b = tmp_path / "dir_b"
+    dir_b.mkdir()
+    (dir_b / ".scannerignore").write_text("", encoding="utf-8")
+    file_b = dir_b / "test_mock.py"
+    file_b.write_text(
+        "GATEWAY_SECRET = os.getenv('GATEWAY_SECRET', 'internal-gateway-secret-12345')",  # pragma: allowlist secret
+        encoding="utf-8",
+    )
+
+    # Run scan on file_a (must fail/find secret fallback)
+    success_a = run_security_audit(files=[str(file_a)])
+    assert success_a is False
+
+    # Run scan on file_b (must pass because parent has .scannerignore)
+    success_b = run_security_audit(files=[str(file_b)])
+    assert success_b is True

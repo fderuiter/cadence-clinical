@@ -30,10 +30,13 @@ from apps.ctms.models import (
 from apps.ctms.rendering import render_confirmation_letter, render_follow_up_letter
 from apps.ctms.routers.doa import router as doa_router
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
+from packages.security import assert_secure_secrets
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import Principal, get_principal, has_permission
 
 DATABASE_URL = os.getenv("CTMS_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+
+assert_secure_secrets("ctms", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
 
 
 app = FastAPI(
@@ -1901,7 +1904,7 @@ async def update_grant(
             )
             secret = os.getenv(
                 "GATEWAY_SECRET", "internal-gateway-secret-12345"
-            ).encode()
+            ).encode()  # pragma: allowlist secret
 
             success, result = verify_sig_token(
                 sig_token=sig_token,
@@ -2560,7 +2563,9 @@ async def process_visit_sync(
         metadata=metadata,
     )
 
-    gateway_secret_str = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+    gateway_secret_str = os.getenv(
+        "GATEWAY_SECRET", "internal-gateway-secret-12345"
+    )  # pragma: allowlist secret
     secret_bytes = gateway_secret_str.encode("utf-8")
 
     signature_status = "SKIPPED"
