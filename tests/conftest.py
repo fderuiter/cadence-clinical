@@ -36,15 +36,16 @@ def setup_metadata_patch():
     original_create_all = MetaData.create_all
     original_drop_all = MetaData.drop_all
 
-    def is_postgresql_operation(bind):
-        if bind is None:
+    def is_postgresql_operation(metadata, bind):
+        target_bind = bind if bind is not None else getattr(metadata, "bind", None)
+        if target_bind is None:
             return True
-        dialect_name = getattr(getattr(bind, "dialect", None), "name", "")
+        dialect_name = getattr(getattr(target_bind, "dialect", None), "name", "")
         return dialect_name == "postgresql"
 
     def patched_create_all(self, bind=None, tables=None, checkfirst=True):
         if not allow_schema_modification:
-            if is_postgresql_operation(bind):
+            if is_postgresql_operation(self, bind):
                 is_postgres = os.environ.get("TEST_DATABASE_URL", "").startswith(
                     ("postgres", "postgresql")
                 )
@@ -58,7 +59,7 @@ def setup_metadata_patch():
 
     def patched_drop_all(self, bind=None, tables=None, checkfirst=True):
         if not allow_schema_modification:
-            if is_postgresql_operation(bind):
+            if is_postgresql_operation(self, bind):
                 is_postgres = os.environ.get("TEST_DATABASE_URL", "").startswith(
                     ("postgres", "postgresql")
                 )
