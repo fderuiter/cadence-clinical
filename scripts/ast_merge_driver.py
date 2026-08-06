@@ -139,7 +139,8 @@ def parse_js_blocks(
     num_lines = len(lines)
 
     # Run Node script to get AST ranges
-    node_script = "/app/scripts/parse_js_blocks.js"
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    node_script = os.path.join(script_dir, "parse_js_blocks.js")
     if not os.path.exists(node_script):
         return None
 
@@ -401,9 +402,11 @@ def log_resolved_file(file_path: str):
         except Exception:
             pass
 
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    repo_root = os.path.abspath(os.path.join(script_dir, ".."))
     rel_path = (
-        os.path.relpath(file_path, "/app")
-        if file_path.startswith("/app")
+        os.path.relpath(file_path, repo_root)
+        if file_path.startswith(repo_root)
         else file_path
     )
     if rel_path not in data["resolved_files"]:
