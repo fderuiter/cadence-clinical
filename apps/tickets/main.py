@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import logging
 import os
+import sys
 from datetime import datetime
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request
@@ -291,10 +292,8 @@ async def dispatch_ticket_notifications(
         )
 
 
-import os
-import sys
-
 BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
+
 
 def validate_branding_and_domain() -> None:
     app_env = os.getenv("APP_ENV", "").strip().lower()
@@ -303,12 +302,16 @@ def validate_branding_and_domain() -> None:
         invalid = []
         if not os.getenv("BRAND_NAME") or os.getenv("BRAND_NAME") == "Cadence Clinical":
             invalid.append("BRAND_NAME")
-        if not os.getenv("BRAND_DOMAIN") or os.getenv("BRAND_DOMAIN") == "cadenceclinical.com":
+        if (
+            not os.getenv("BRAND_DOMAIN")
+            or os.getenv("BRAND_DOMAIN") == "cadenceclinical.com"
+        ):
             invalid.append("BRAND_DOMAIN")
         if invalid:
             error_msg = f"STARTUP ERROR: Outdated default 'Cadence' branding or missing secure configurations detected in environment '{app_env}' for variables: {', '.join(invalid)}. Halting boot sequence."
             print(error_msg, file=sys.stderr)
             sys.exit(1)
+
 
 validate_branding_and_domain()
 
