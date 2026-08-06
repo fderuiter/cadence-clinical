@@ -45,13 +45,13 @@ study-<STUDY_ID>[+<binder-hint>]@<domain>
 
 - **`STUDY_ID`:** Verbatim identifier of the clinical study (e.g., `study_abc`, `study_123`). Empty or whitespace-only tokens are rejected.
 - **`binder-hint`:** Optional taxonomy code or artifact name specifying the destination folder. If provided, the hint is parsed and resolved via the TMF Reference Model taxonomy.
-  - _Example with hint (code):_ `study-study_abc+05.02.01@cadenceclinical.com`
-  - _Example with hint (name):_ `study-study_abc+FDA Form 1572@cadenceclinical.com`
-  - _Example with hint (alias):_ `study-study_abc+FORM_1572@cadenceclinical.com`
+  - _Example with hint (code):_ `study-study_abc+05.02.01@ccrsoft.com`
+  - _Example with hint (name):_ `study-study_abc+FDA Form 1572@ccrsoft.com`
+  - _Example with hint (alias):_ `study-study_abc+FORM_1572@ccrsoft.com`
 
 ### 3.2 Default Target Mapping
 
-If no `binder-hint` is supplied in the address (e.g., `study-study_abc@cadenceclinical.com`), the webhook uses the following default mapping:
+If no `binder-hint` is supplied in the address (e.g., `study-study_abc@ccrsoft.com`), the webhook uses the following default mapping:
 
 - **Default Artifact:** `"Site Communication Log"` (TMF Code: `"05.04.01"`)
 - **Default Zone:** `5` (Investigator Site Management)

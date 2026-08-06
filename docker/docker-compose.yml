@@ -316,7 +316,7 @@ services:
       - SMTP_PASSWORD=dev_password
       - SMTP_USE_TLS=false
       - SMTP_USE_SSL=false
-      - SMTP_SENDER=no-reply@cadenceclinical.com
+      - SMTP_SENDER=no-reply@ccrsoft.com
       - WEBHOOK_URL=http://webhooks.local/receiver
       - WEBHOOK_SIGNING_SECRET=dev_webhook_secret_key_12345
       - WEBHOOK_TIMEOUT=5.0

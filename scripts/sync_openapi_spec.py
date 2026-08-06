@@ -45,6 +45,7 @@ def main():
     designer_spec = designer_app.openapi()
     execution_spec = execution_app.openapi()
 
+    brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
     # Create the aggregated structure
     merged_spec = {
         "openapi": "3.1.0",
@@ -55,7 +56,7 @@ def main():
         },
         "servers": [
             {
-                "url": "https://api.cadence-clinical.com/api/v1",
+                "url": f"https://api.{brand_domain}/api/v1",
                 "description": "Production API Gateway",
             },
             {

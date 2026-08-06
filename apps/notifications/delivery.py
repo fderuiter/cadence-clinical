@@ -51,15 +51,16 @@ async def send_email_notification(notification: Notification) -> None:
     smtp_password = os.getenv("SMTP_PASSWORD")
     smtp_use_tls = os.getenv("SMTP_USE_TLS", "false").lower() == "true"
     smtp_use_ssl = os.getenv("SMTP_USE_SSL", "false").lower() == "true"
-    smtp_sender = os.getenv("SMTP_SENDER", "no-reply@cadenceclinical.com")
+    brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
+    smtp_sender = os.getenv("SMTP_SENDER", f"no-reply@{brand_domain}")
 
     # Resolve recipient email address
     if notification.recipient_user_id:
-        recipient = f"{notification.recipient_user_id}@cadenceclinical.com"
+        recipient = f"{notification.recipient_user_id}@{brand_domain}"
     elif notification.recipient_role:
-        recipient = f"{notification.recipient_role}@cadenceclinical.com"
+        recipient = f"{notification.recipient_role}@{brand_domain}"
     else:
-        recipient = "admin@cadenceclinical.com"
+        recipient = f"admin@{brand_domain}"
 
     # Build the EmailMessage
     msg = EmailMessage()
