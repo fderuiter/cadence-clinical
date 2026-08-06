@@ -19,8 +19,8 @@ from apps.quality.models import (
 )
 from apps.quality.services.quality_service import QualityService
 from packages.database import get_relational_db_lifespan
-from packages.security.middleware import GatewayAuthMiddleware
 from packages.security import assert_secure_secrets
+from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import (
     Principal,
     get_principal,
@@ -423,7 +423,9 @@ async def transition_capa(
         sig_token = request.headers.get("X-Sig-Token") or request.headers.get(
             "x-sig-token"
         )
-        secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()  # pragma: allowlist secret
+        secret = os.getenv(
+            "GATEWAY_SECRET", "internal-gateway-secret-12345"
+        ).encode()  # pragma: allowlist secret
         expected_semantic = (
             SemanticAction.CAPA_CLOSE
             if payload.to_status == CAPAStatus.CLOSED

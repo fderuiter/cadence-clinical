@@ -163,7 +163,7 @@ from apps.designer.validator import (
     validate_study_terminology,
 )
 from apps.designer.xml_mapping import validate_mapping_csv
-from packages.security import ROLE_ALIASES, get_normalized_roles, assert_secure_secrets
+from packages.security import ROLE_ALIASES, assert_secure_secrets, get_normalized_roles
 from packages.security.context import audit_context
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.org_client import is_sponsor_known_to_org_directory

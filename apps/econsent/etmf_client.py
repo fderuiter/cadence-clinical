@@ -27,7 +27,9 @@ async def forward_icf_to_etmf(
     etmf_base_url = os.getenv("ETMF_URL", "http://localhost:8003").rstrip("/")
     url = f"{etmf_base_url}/api/v1/etmf/ingest"
 
-    gateway_secret_env = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # pragma: allowlist secret
+    gateway_secret_env = os.getenv(
+        "GATEWAY_SECRET", "internal-gateway-secret-12345"
+    )  # pragma: allowlist secret
     gateway_secret = (
         gateway_secret_env.encode("utf-8")
         if isinstance(gateway_secret_env, str)

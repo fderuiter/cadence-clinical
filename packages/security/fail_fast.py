@@ -11,7 +11,10 @@ INSECURE_FALLBACKS = {
     "dev-default-secret-inbound-email-hmac",
 }
 
-def assert_secure_secrets(service_name: str, required_secrets: dict[str, str | None]) -> None:
+
+def assert_secure_secrets(
+    service_name: str, required_secrets: dict[str, str | None]
+) -> None:
     """
     Validate required environment secrets on process startup.
     Immediately crashes the service with an informative error message if running in
@@ -19,7 +22,7 @@ def assert_secure_secrets(service_name: str, required_secrets: dict[str, str | N
     an insecure fallback value.
     """
     app_env = os.getenv("APP_ENV", "").strip().lower()
-    
+
     # Non-development environments (e.g. production or staging)
     if app_env and app_env not in ("development", "dev", "test"):
         invalid_secrets = []
@@ -27,7 +30,7 @@ def assert_secure_secrets(service_name: str, required_secrets: dict[str, str | N
             if not value:
                 invalid_secrets.append((name, "Missing override (empty or None)"))
                 continue
-            
+
             # Check for insecure fallbacks
             normalized_value = value.strip()
             is_insecure = (
@@ -37,10 +40,12 @@ def assert_secure_secrets(service_name: str, required_secrets: dict[str, str | N
             )
             if is_insecure:
                 invalid_secrets.append((name, "Uses insecure fallback value"))
-        
+
         if invalid_secrets:
             # Format detailed error message identifying the specific environment variables
-            details = "; ".join(f"{name} ({reason})" for name, reason in invalid_secrets)
+            details = "; ".join(
+                f"{name} ({reason})" for name, reason in invalid_secrets
+            )
             error_msg = (
                 f"FATAL STARTUP ERROR: [{service_name}] Environment configuration validation failed "
                 f"for non-development environment '{app_env}'. Critical secrets must have secure overrides. "

@@ -28,6 +28,7 @@ from packages.security.delegation import (
     validate_request_staff_roles,
     verify_delegation_scope,
 )
+from packages.security.fail_fast import assert_secure_secrets
 from packages.security.gateway_client import (
     GatewayBaseClient,
     run_async,
@@ -97,7 +98,6 @@ from packages.security.trial_roles import (
     check_trial_role,
     enforce_site_isolation,
 )
-from packages.security.fail_fast import assert_secure_secrets
 
 __all__ = [
     "TokenConsumptionCache",

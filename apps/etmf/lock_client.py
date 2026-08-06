@@ -40,7 +40,9 @@ async def verify_trial_lock_status(is_testing: bool | None = None) -> bool:
 
     # Live API-driven check
     execution_url = os.getenv("EXECUTION_URL", "http://localhost:8002")
-    gateway_secret_env = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # pragma: allowlist secret
+    gateway_secret_env = os.getenv(
+        "GATEWAY_SECRET", "internal-gateway-secret-12345"
+    )  # pragma: allowlist secret
     gateway_secret = (
         gateway_secret_env.encode("utf-8")
         if isinstance(gateway_secret_env, str)
@@ -108,7 +110,9 @@ async def trigger_global_trial_lock(
             pass
 
     execution_url = os.getenv("EXECUTION_URL", "http://localhost:8002")
-    gateway_secret_env = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # pragma: allowlist secret
+    gateway_secret_env = os.getenv(
+        "GATEWAY_SECRET", "internal-gateway-secret-12345"
+    )  # pragma: allowlist secret
     gateway_secret = (
         gateway_secret_env.encode("utf-8")
         if isinstance(gateway_secret_env, str)

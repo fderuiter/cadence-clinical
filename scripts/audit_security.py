@@ -169,7 +169,8 @@ def run_security_audit(root_dir: str = ".", files: list[str] = None) -> bool:
         for root, dirs, files_in_dir in os.walk(root_dir):
             # Filter out excluded or opted-out directories in-place
             dirs[:] = [
-                d for d in dirs
+                d
+                for d in dirs
                 if d not in EXCLUDED_PATHS
                 and not os.path.exists(os.path.join(root, d, ".scannerignore"))
                 and not os.path.exists(os.path.join(root, d, ".nosec"))
