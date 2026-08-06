@@ -332,8 +332,8 @@ def test_assert_secure_secrets_validation(monkeypatch):
         assert_secure_secrets(
             "test-service",
             {
-                "GATEWAY_SECRET": "internal-gateway-secret-12345"
-            },  # pragma: allowlist secret
+                "GATEWAY_SECRET": "internal-gateway-secret-12345"  # pragma: allowlist secret
+            },
         )
     assert "GATEWAY_SECRET" in str(exc_info.value)
     assert "Uses insecure fallback value" in str(exc_info.value)
