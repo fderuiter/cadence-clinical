@@ -28,6 +28,14 @@ def run_command(args: list[str]) -> tuple[int, str, str]:
 
 
 def main():
+    # Set default environment variables for compliance / security checks if not already set
+    os.environ.setdefault(
+        "AUDIT_LOG_SECRET_KEY", "test-gxp-audit-secret-key-placeholder-abc"
+    )
+    os.environ.setdefault(
+        "INBOUND_EMAIL_HMAC_SECRET", "test-email-hmac-secret-placeholder-xyz"
+    )
+
     repo = os.environ.get("GITHUB_REPOSITORY")
     pr_number = os.environ.get("PR_NUMBER")
 
