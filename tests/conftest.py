@@ -286,11 +286,11 @@ async def create_all_schemas_async(worker_suffix: str):
 
         if migration_func is not None:
             await migration_func(db_url)
-        else:
-            engine = create_async_engine(db_url)
-            async with engine.begin() as conn:
-                await conn.run_sync(base.metadata.create_all)
-            await engine.dispose()
+
+        engine = create_async_engine(db_url)
+        async with engine.begin() as conn:
+            await conn.run_sync(base.metadata.create_all)
+        await engine.dispose()
 
 
 if os.environ.get("USE_LIVE_DB") == "true":
