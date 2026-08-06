@@ -278,3 +278,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-04: RSA-PSS Cryptographic Padding for Electronic Signatures](2026-08-04-rsa-pss-cryptographic-padding-for-electronic-signatures.md)
 - [2026-09-09: RSA Signature Verification Fallback to PKCS1v15](2026-09-09-rsa-signature-verification-fallback-pkcs1v15.md)
 - [2026-08-05: ADR-2026-08-05: Global Prettier Formatting and Pre-commit Checks](2026-08-05-global-prettier-formatting-and-pre-commit-checks.md)
+- [2026-08-06: ADR-[NUMBER]: Global Monorepo Security Scanning and Fail-Fast Startup Assertions](2026-08-06-monorepo-security-scanning-and-fail-fast-assertions.md)
