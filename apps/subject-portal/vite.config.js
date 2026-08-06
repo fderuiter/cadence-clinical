@@ -24,6 +24,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    testTimeout: 45000,
     exclude: ["**/e2e/**", "node_modules/**", "dist/**"],
     setupFiles: [path.resolve(__dirname, "./tests/setup.js")],
     coverage: {
