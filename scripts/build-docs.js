@@ -7,6 +7,11 @@ const repoRoot = path.resolve(__dirname, "..");
 // Automatically set RTM_DRAFT to true for docs compilation to ensure the process is fail-safe when report.xml is absent.
 process.env.RTM_DRAFT = "true";
 
+const appBase = process.env.VITE_BASE_PATH || "/";
+const normalizedAppBase = appBase.endsWith("/") ? appBase : `${appBase}/`;
+const base = process.env.VITEPRESS_BASE || (appBase === "/" ? "/docs/" : `${normalizedAppBase}docs/`);
+console.log(`Documentation Build configured with subpath: "${base}" (resolved from VITE_BASE_PATH="${process.env.VITE_BASE_PATH || ""}" and VITEPRESS_BASE="${process.env.VITEPRESS_BASE || ""}")`);
+
 let pnpmCmd = "pnpm";
 
 /**

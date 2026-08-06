@@ -87,12 +87,16 @@ function getSdlcSidebar() {
     });
 }
 
+const appBase = process.env.VITE_BASE_PATH || "/";
+const normalizedAppBase = appBase.endsWith("/") ? appBase : `${appBase}/`;
+const base = process.env.VITEPRESS_BASE || (appBase === "/" ? "/docs/" : `${normalizedAppBase}docs/`);
+
 export default withMermaid(
   defineConfig({
     title: "Cadence Clinical Portal",
     description:
       "Metadata-Driven Clinical Execution Platform Documentation Portal",
-    base: "/cadence-clinical/docs/",
+    base,
     outDir: path.resolve(__dirname, "../../apps/web/dist/docs"),
     ignoreDeadLinks: true,
     themeConfig: {

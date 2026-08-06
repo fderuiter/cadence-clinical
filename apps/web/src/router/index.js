@@ -170,7 +170,7 @@ const routes = [
 
 export const router = createRouter({
   // Use a GitHub Pages-compatible history mode resolving from the configured Pages base path
-  history: createWebHistory(import.meta.env.BASE_URL || "/cadence-clinical/"),
+  history: createWebHistory(import.meta.env.BASE_URL || "/"),
   routes,
 });
 
@@ -208,7 +208,7 @@ router.beforeEach(async (to) => {
           await authStore.login({
             redirectUri:
               window.location.origin +
-              (import.meta.env.BASE_URL || "/cadence-clinical/") +
+              (import.meta.env.BASE_URL || "/") +
               to.fullPath.replace(/^\//, ""),
           });
           return false; // Abort navigation as page is redirecting

@@ -7,9 +7,28 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+function overrideBasePlugin() {
+  return {
+    name: "override-base-plugin",
+    config(config) {
+      let base = process.env.VITE_BASE_PATH || "/";
+      if (!base.startsWith("/")) base = "/" + base;
+      if (!base.endsWith("/")) base = base + "/";
+      config.base = base;
+      return { base };
+    },
+    configResolved(config) {
+      let base = process.env.VITE_BASE_PATH || "/";
+      if (!base.startsWith("/")) base = "/" + base;
+      if (!base.endsWith("/")) base = base + "/";
+      config.base = base;
+    }
+  };
+}
+
 export default defineConfig({
-  base: "/cadence-clinical/",
-  plugins: [vue()],
+  base: "/",
+  plugins: [vue(), overrideBasePlugin()],
   resolve: {
     alias: {
       ui: path.resolve(__dirname, "../../packages/ui/dist/index.js"),

@@ -39,6 +39,9 @@ jobs:
 
       - name: Build Web Application
         run: pnpm --filter web build
+        env:
+          VITE_BASE_PATH: /cadence-clinical/
+          VITEPRESS_BASE: /cadence-clinical/docs/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
