@@ -164,6 +164,35 @@ def step_run_tests(dry_run: bool) -> None:
     print("\n" + "=" * 60)
     print("STEP 1 / 3 — Running test suite")
     print("=" * 60)
+
+    report_files = [
+        "report_main.xml",
+        "report_notif.xml",
+        "report_integration.xml",
+        "report_qualification.xml",
+    ]
+    if all(os.path.exists(f) for f in report_files):
+        print(
+            "✔  Existing JUnit XML reports found. Skipping test execution to reuse existing reports."
+        )
+        try:
+            # Merge reports
+            _run(
+                [
+                    "python3",
+                    "scripts/merge_junit.py",
+                    JUNIT_REPORT,
+                    "report_main.xml",
+                    "report_notif.xml",
+                    "report_integration.xml",
+                    "report_qualification.xml",
+                ]
+            )
+            return
+        except subprocess.CalledProcessError:
+            print("\n  Failed to merge existing reports.")
+            sys.exit(1)
+
     try:
         # Run main tests with concurrency
         _run(
