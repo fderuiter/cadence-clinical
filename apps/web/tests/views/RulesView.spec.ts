@@ -158,6 +158,7 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
       await new Promise((resolve) => setTimeout(resolve, 10));
       retries--;
     }
+    await flushPromises();
 
     // Authorized role should NOT see the gating banner
     expect(wrapper.find(".rules-gating-banner").exists()).toBe(false);
