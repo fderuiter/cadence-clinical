@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import { createRouter, createWebHistory } from "vue-router";
+import { createRouter, createMemoryHistory } from "vue-router";
 import RulesView from "@/views/RulesView.vue";
 import { useAuthStore } from "@/stores/auth";
 import { useClinicalStore } from "@/stores/clinical";
@@ -18,20 +18,25 @@ vi.mock("@/api/apiClient", () => {
   };
 });
 
-// Setup mock router
-const router = createRouter({
-  history: createWebHistory(),
-  routes: [{ path: "/rules", component: RulesView }],
-});
-
 describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () => {
   let pinia: any;
   let authStore: any;
   let clinicalStore: any;
+  let router: any;
 
   beforeEach(() => {
     pinia = createPinia();
     setActivePinia(pinia);
+
+    // Setup isolated router instance using Memory history per test to prevent JSDOM history state pollution
+    router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: "/", component: RulesView },
+        { path: "/rules", component: RulesView },
+        { path: "", component: RulesView },
+      ],
+    });
 
     authStore = useAuthStore();
     clinicalStore = useClinicalStore();
