@@ -15,9 +15,11 @@ app.use(pinia);
 app.use(router);
 
 // Graceful Keycloak / OIDC setup
-const keycloakUrl = import.meta.env.VITE_KEYCLOAK_URL || "http://localhost:8080/";
+const keycloakUrl =
+  import.meta.env.VITE_KEYCLOAK_URL || "http://localhost:8080/";
 const keycloakRealm = import.meta.env.VITE_KEYCLOAK_REALM || "cadence";
-const keycloakClientId = import.meta.env.VITE_KEYCLOAK_CLIENT_ID || "cadence-web";
+const keycloakClientId =
+  import.meta.env.VITE_KEYCLOAK_CLIENT_ID || "cadence-web";
 
 const keycloakConfig = {
   url: keycloakUrl,

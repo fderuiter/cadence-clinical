@@ -3,7 +3,9 @@
     <!-- Header -->
     <header>
       <div class="header-title-area">
-        <h1>{{ brandNameFirst }} <span>{{ brandNameRest }}</span></h1>
+        <h1>
+          {{ brandNameFirst }} <span>{{ brandNameRest }}</span>
+        </h1>
         <p>Interactive Web Demo & Regulatory Validation Sandbox</p>
       </div>
       <div

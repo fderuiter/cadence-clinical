@@ -13,7 +13,8 @@ export default defineConfig({
     {
       name: "html-transform",
       transformIndexHtml(html) {
-        const title = process.env.VITE_APP_TITLE || "Subject Portal - Cadence Clinical";
+        const title =
+          process.env.VITE_APP_TITLE || "Subject Portal - Cadence Clinical";
         return html.replace(/%VITE_APP_TITLE%/g, title);
       },
     },

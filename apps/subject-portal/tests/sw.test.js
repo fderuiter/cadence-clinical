@@ -118,9 +118,7 @@ describe("Subject Portal Service Worker (sw.js)", () => {
 
     await listeners["activate"](mockEvent);
     expect(mockCaches.delete).toHaveBeenCalledWith("old-cache");
-    expect(mockCaches.delete).not.toHaveBeenCalledWith(
-      "portal-cache-v1"
-    );
+    expect(mockCaches.delete).not.toHaveBeenCalledWith("portal-cache-v1");
   });
 
   it("should bypass timeout and caching for non-static-asset GET requests (e.g. dynamic API queries)", async () => {

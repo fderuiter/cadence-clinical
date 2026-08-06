@@ -3,7 +3,9 @@
     <!-- Portal Header -->
     <header class="portal-header">
       <div class="header-branding">
-        <h1>My <span>{{ brandName }}</span></h1>
+        <h1>
+          My <span>{{ brandName }}</span>
+        </h1>
         <p class="role-badge">Participant Companion Portal</p>
       </div>
       <div class="compliance-badges">

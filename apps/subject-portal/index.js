@@ -1836,7 +1836,12 @@ async function initializeApp() {
   // Initialize genesis compliance ledger
   await logAuditRecord(
     "GENESIS",
-    { platform: import.meta.env.VITE_BRAND_NAME ? `${import.meta.env.VITE_BRAND_NAME} MyPortal` : "Cadence MyPortal", roles: state.session.roles },
+    {
+      platform: import.meta.env.VITE_BRAND_NAME
+        ? `${import.meta.env.VITE_BRAND_NAME} MyPortal`
+        : "Cadence MyPortal",
+      roles: state.session.roles,
+    },
     "Patient companion portal session securely booted."
   );
 
