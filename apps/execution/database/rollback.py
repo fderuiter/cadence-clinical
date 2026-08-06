@@ -7,6 +7,18 @@ Executes forward migration, performs a simulated rollback, and verifies schema i
 import asyncio
 import os
 import sys
+
+# Ensure required environment variables for security packages are set
+os.environ.setdefault(
+    "AUDIT_LOG_SECRET_KEY", "test-gxp-audit-secret-key-placeholder-abc"
+)
+os.environ.setdefault("GATEWAY_SECRET", "internal-gateway-secret-12345")
+os.environ.setdefault("SIGNING_SECRET", "designer-amendment-secure-key-12345")
+os.environ.setdefault("ALLOW_MOCK_SIGNATURES", "1")
+os.environ.setdefault(
+    "INBOUND_EMAIL_HMAC_SECRET", "test-email-hmac-secret-placeholder-xyz"
+)
+
 import tempfile
 import uuid
 
