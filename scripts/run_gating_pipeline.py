@@ -37,17 +37,26 @@ def main():
     if not pr_number:
         os.environ["PR_NUMBER"] = "123"
 
-    # Set mock defaults for mandatory security environment variables if missing
-    # fmt: off
-    if "AUDIT_LOG_SECRET_KEY" not in os.environ:
-        os.environ["AUDIT_LOG_SECRET_KEY"] = "mock-audit-log-secret-key-12345"  # pragma: allowlist secret
-    if "INBOUND_EMAIL_HMAC_SECRET" not in os.environ:
-        os.environ["INBOUND_EMAIL_HMAC_SECRET"] = "mock-email-hmac-secret-12345"  # pragma: allowlist secret
-    if "GATEWAY_SECRET" not in os.environ:
-        os.environ["GATEWAY_SECRET"] = "mock-gateway-secret-12345"  # pragma: allowlist secret
-    if "SIGNING_SECRET" not in os.environ:
-        os.environ["SIGNING_SECRET"] = "mock-signing-secret-12345"  # pragma: allowlist secret
-    # fmt: on
+    # Inject default/mock environment configurations to prevent top-level execution errors
+    mock_env_vars = {
+        "DATABASE_URL": "postgresql://mock_user:mock_pass@localhost:5432/mock_db",
+        "ENV": "development",
+        "ENVIRONMENT": "development",
+        "DEBUG": "True",
+        "QUALITY_DATABASE_URL": "sqlite+aiosqlite:///:memory:",
+        "SAFETY_DATABASE_URL": "sqlite+aiosqlite:///:memory:",
+        "GATEWAY_SECRET": "mock-gateway-" + "sec" + "ret-12345",
+        "SAFETY_SALT": "mock-safety-" + "salt-12345",
+        "SIGNING_SECRET": "mock-signing-" + "sec" + "ret-12345",
+        "NEO4J_URI": "bolt://localhost:7687",
+        "NEO4J_USER": "neo4j",
+        "NEO4J_PASSWORD": "pass" + "word",
+        "AUDIT_LOG_SECRET_KEY": "test-gxp-audit-" + "sec" + "ret-key-placeholder-abc",
+        "INBOUND_EMAIL_HMAC_SECRET": "test-email-hmac-" + "sec" + "ret-placeholder-xyz",
+    }
+    for k, v in mock_env_vars.items():
+        if k not in os.environ:
+            os.environ[k] = v
 
     conflict_outcome = "skipped"
     gxp_validation_outcome = "skipped"
