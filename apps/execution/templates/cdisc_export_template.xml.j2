@@ -13,6 +13,33 @@
         <FormData FormOID="Form.{{ obs.domain }}">
           <ItemGroupData ItemGroupOID="Group.{{ obs.domain }}" ItemGroupRepeatKey="1">
             <ItemData ItemOID="{{ obs.test_code }}" Value="{% if obs.value is not none %}{{ obs.value }}{% else %}{{ obs.value_string }}{% endif %}"/>
+            {% if obs.lab_source is not none %}
+            <ItemData ItemOID="{{ obs.test_code }}.lab_source" Value="{{ obs.lab_source }}"/>
+            {% endif %}
+            {% if obs.lab_site_id is not none %}
+            <ItemData ItemOID="{{ obs.test_code }}.lab_site_id" Value="{{ obs.lab_site_id }}"/>
+            {% endif %}
+            {% if obs.lab_indicator is not none %}
+            <ItemData ItemOID="{{ obs.test_code }}.lab_indicator" Value="{{ obs.lab_indicator }}"/>
+            {% endif %}
+            {% if obs.lab_out_of_range is not none %}
+            <ItemData ItemOID="{{ obs.test_code }}.lab_out_of_range" Value="{{ obs.lab_out_of_range }}"/>
+            {% endif %}
+            {% if obs.matched_normal_bounds is not none %}
+            <ItemData ItemOID="{{ obs.test_code }}.matched_normal_bounds" Value="{{ obs.matched_normal_bounds }}"/>
+            {% endif %}
+            {% if obs.range_indicator is not none %}
+            <ItemData ItemOID="{{ obs.test_code }}.range_indicator" Value="{{ obs.range_indicator }}"/>
+            {% endif %}
+            {% if obs.is_out_of_range is not none %}
+            <ItemData ItemOID="{{ obs.test_code }}.is_out_of_range" Value="{{ obs.is_out_of_range }}"/>
+            {% endif %}
+            {% if obs.reference_range_low is not none %}
+            <ItemData ItemOID="{{ obs.test_code }}.reference_range_low" Value="{{ obs.reference_range_low }}"/>
+            {% endif %}
+            {% if obs.reference_range_high is not none %}
+            <ItemData ItemOID="{{ obs.test_code }}.reference_range_high" Value="{{ obs.reference_range_high }}"/>
+            {% endif %}
           </ItemGroupData>
         </FormData>
         {% endfor %}
