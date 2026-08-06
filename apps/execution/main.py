@@ -140,10 +140,16 @@ from packages.security import (
     verify_not_auditor,
 )
 from packages.security.middleware import GatewayAuthMiddleware
+from packages.security import assert_secure_secrets
 from packages.security.rbac import SITE_SCOPED_ROLES, can_access_study, mask_payload
 from packages.security.signing import generate_canonical_signature
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+
+assert_secure_secrets("execution", {
+    "GATEWAY_SECRET": os.getenv("GATEWAY_SECRET"),
+    "BIOSTAT_EXPORT_SALT": os.getenv("BIOSTAT_EXPORT_SALT")
+})
 
 
 @asynccontextmanager
@@ -1325,7 +1331,7 @@ async def unblind_subject(
             "allocation_reference": allocation_reference,
         }
 
-        secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
+        secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()  # pragma: allowlist secret
         signature = generate_canonical_signature(decision_payload, secret)
 
         # Capture actual pre-unblind state *before* calling subject.unblind()
@@ -5574,7 +5580,7 @@ async def export_sdtm_domain(
                 export_data[f"SUPP{dom_upper}"] = supp_records
 
             # Apply deterministic de-identification transform
-            salt = os.getenv("BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765")
+            salt = os.getenv("BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765")  # pragma: allowlist secret
             from apps.execution.biostat.deid import (
                 deidentify_export_data,
                 scrub_error_message,
@@ -5892,7 +5898,7 @@ async def export_adam_dataset(
             records = await run_adam_derivation(session, study_id, ds_upper)
 
             # Apply deterministic de-identification transform
-            salt = os.getenv("BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765")
+            salt = os.getenv("BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765")  # pragma: allowlist secret
             from apps.execution.biostat.deid import (
                 deidentify_export_data,
                 scrub_error_message,
@@ -5990,7 +5996,7 @@ async def export_biostat_bundle(
                 )
 
             # Apply deterministic de-identification transform
-            salt = os.getenv("BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765")
+            salt = os.getenv("BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765")  # pragma: allowlist secret
             from apps.execution.biostat.deid import (
                 deidentify_export_data,
                 scrub_error_message,

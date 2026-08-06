@@ -97,6 +97,7 @@ from packages.security.trial_roles import (
     check_trial_role,
     enforce_site_isolation,
 )
+from packages.security.fail_fast import assert_secure_secrets
 
 __all__ = [
     "TokenConsumptionCache",
@@ -176,4 +177,5 @@ __all__ = [
     "SignatureVerificationRequest",
     "SignatureVerificationResult",
     "verify_electronic_signature",
+    "assert_secure_secrets",
 ]

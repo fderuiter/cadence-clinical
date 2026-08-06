@@ -14,6 +14,7 @@ from apps.eisf.routers.eisf import get_eisf_repository
 from apps.eisf.routers.eisf import router as eisf_router
 from packages.database import get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
+from packages.security import assert_secure_secrets
 from packages.security.rbac import (
     SITE_SCOPED_ROLES,
     Principal,
@@ -24,6 +25,8 @@ from packages.security.rbac import (
 )
 
 DATABASE_URL = os.getenv("EISF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+
+assert_secure_secrets("eisf", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
 
 
 # Pydantic Schemas for eISF API Requests/Responses
@@ -1037,7 +1040,7 @@ async def propagate_to_etmf(
     user_id = "eisf_sync_service"
     roles = "system"
     timestamp = str(time.time())
-    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
+    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()  # pragma: allowlist secret
 
     # Thread originating reason_for_change into X-Change-Reason; otherwise fallback to structured sync reason
     resolved_change_reason = reason_for_change
