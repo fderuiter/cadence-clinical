@@ -20,7 +20,7 @@
     <div
       class="tree-root-nodes"
       role="tree"
-      tabindex="0"
+      tabindex="-1"
       aria-label="TMF Binder Folder Tree"
       @keydown="handleTreeKeyDown"
     >
@@ -34,15 +34,15 @@
       >
         <div
           :id="'tree-node-' + zone.id"
+          :ref="el => setNodeRef(zone.id, el)"
           class="node-header zone-header"
           role="treeitem"
           :aria-expanded="isExpanded(zone.id)"
           :aria-selected="false"
-          tabindex="0"
+          :tabindex="activeFocusedNodeId === zone.id ? 0 : -1"
           :class="{ 'is-expanded': isExpanded(zone.id) }"
           @click="clickZone(zone)"
-          @keydown.enter="clickZone(zone)"
-          @keydown.space.prevent="clickZone(zone)"
+          @focus="activeFocusedNodeId = zone.id"
         >
           <span class="toggle-icon">{{ isExpanded(zone.id) ? "▼" : "▶" }}</span>
           <span class="folder-icon">📂</span>
@@ -68,15 +68,15 @@
           >
             <div
               :id="'tree-node-' + section.id"
+              :ref="el => setNodeRef(section.id, el)"
               class="node-header section-header"
               role="treeitem"
               :aria-expanded="isExpanded(section.id)"
               :aria-selected="false"
-              tabindex="0"
+              :tabindex="activeFocusedNodeId === section.id ? 0 : -1"
               :class="{ 'is-expanded': isExpanded(section.id) }"
               @click="clickSection(section)"
-              @keydown.enter="clickSection(section)"
-              @keydown.space.prevent="clickSection(section)"
+              @focus="activeFocusedNodeId = section.id"
             >
               <span class="toggle-icon">{{
                 isExpanded(section.id) ? "▼" : "▶"
@@ -100,15 +100,15 @@
               <div
                 v-for="artifact in section.children"
                 :id="'tree-node-' + artifact.id"
+                :ref="el => setNodeRef(artifact.id, el)"
                 :key="artifact.id"
                 class="tree-node artifact-node"
                 role="treeitem"
                 :aria-selected="selectedArtifactId === artifact.code"
-                tabindex="0"
+                :tabindex="activeFocusedNodeId === artifact.id ? 0 : -1"
                 :class="{ 'is-selected': selectedArtifactId === artifact.code }"
                 @click="clickArtifact(artifact)"
-                @keydown.enter="clickArtifact(artifact)"
-                @keydown.space.prevent="clickArtifact(artifact)"
+                @focus="activeFocusedNodeId = artifact.id"
               >
                 <div class="node-header artifact-header">
                   <span class="file-icon">📄</span>
@@ -145,6 +145,15 @@ const emit = defineEmits(["select-artifact"]);
 const searchQuery = ref("");
 const selectedZoneFilter = ref("");
 const selectedArtifactId = ref(null);
+
+const nodeRefs = ref({});
+function setNodeRef(id, el) {
+  if (el) {
+    nodeRefs.value[id] = el;
+  } else {
+    delete nodeRefs.value[id];
+  }
+}
 
 // Tracks open state of collapsible nodes
 const expandedNodes = ref({});
@@ -291,7 +300,7 @@ const visibleNodesList = computed(() => {
 function focusNodeId(nodeId) {
   activeFocusedNodeId.value = nodeId;
   nextTick(() => {
-    const el = document.getElementById(`tree-node-${nodeId}`);
+    const el = nodeRefs.value[nodeId];
     if (el) {
       el.focus();
     }
@@ -376,6 +385,7 @@ function handleTreeKeyDown(e) {
 
     case "Enter":
     case "Space":
+    case " ":
       e.preventDefault();
       if (currentItem.type === "artifact") {
         selectArtifact(currentItem.node);
