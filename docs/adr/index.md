@@ -181,6 +181,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-03: Native Interval Filtering and Custom Name Matching](2026-08-03-native-interval-filtering-and-custom-name-matching.md)
 
 ### 6. Frontend & Design System
+
 - [2026-08-07: Skip to content link and strict layout validation](2026-08-07-skip-to-content-link-and-strict-layout-validation.md)
 
 - [2026-08-04: Viewport-Driven DOM Recycler for Large eCRFs](2026-08-04-viewport-driven-dom-recycler-for-large-ecrfs.md)
