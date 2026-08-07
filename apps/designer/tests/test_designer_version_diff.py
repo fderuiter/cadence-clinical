@@ -133,3 +133,17 @@ def test_version_diff_unrelated_or_nonexistent(client):
     )
     assert response.status_code == 400
     assert "not found" in response.json()["detail"]
+
+
+def test_designer_signing_raises_runtime_error_if_secret_missing(monkeypatch):
+    """Verify that the study designer signing module raises a RuntimeError when generating or verifying if SIGNING_SECRET is missing.
+
+    Requirements: PRD-SYS-001
+    """
+    from apps.designer.delta import verify_version_signature
+
+    monkeypatch.delenv("SIGNING_SECRET", raising=False)
+    with pytest.raises(RuntimeError) as exc_info:
+        verify_version_signature({"signature": "some_signature"})
+    assert "SIGNING_SECRET environment variable is missing" in str(exc_info.value)
+

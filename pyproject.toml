@@ -94,10 +94,10 @@ ignore = [
 minversion = "6.0"
 addopts = "--cov=apps --cov=packages --cov-fail-under=80"
 testpaths = [
+    "tests",
     "apps",
     "packages",
     "scripts",
-    "tests",
 ]
 python_files = "test_*.py *_test.py *tests.py *suite.py"
 asyncio_mode = "auto"

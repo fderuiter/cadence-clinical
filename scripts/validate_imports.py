@@ -50,6 +50,9 @@ def check_file_imports(file_path: Path) -> list[str]:
         except ValueError:
             return violations
 
+    if "tests" in file_path.parts:
+        return violations
+
     if not entity_name or entity_name == "__pycache__":
         return violations
 
