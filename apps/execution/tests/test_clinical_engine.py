@@ -23,7 +23,9 @@ from apps.execution.outliers import (
 from apps.execution.ucum import convert_unit, get_normalized_representation
 from apps.gateway.main import app as gateway_app
 
-GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # pragma: allowlist secret
+GATEWAY_SECRET = os.getenv(
+    "GATEWAY_SECRET", "internal-gateway-secret-12345"
+)  # pragma: allowlist secret
 
 
 def get_auth_headers(

@@ -211,7 +211,6 @@ def test_gateway_raises_runtime_error_if_secret_missing(monkeypatch):
             sys.modules.pop("apps.gateway.main", None)
 
 
-
 def test_security_audit_scanner_detection_and_bypass():
     """Verify that the security scanner detects hardcoded environment fallbacks and honors inline bypass comments."""
     import os

@@ -12,7 +12,9 @@ from apps.execution.database.models import Base, ClinicalSubject, SubjectRandomi
 from apps.execution.main import app
 from packages.security.signing import generate_gateway_signature
 
-GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # pragma: allowlist secret
+GATEWAY_SECRET = os.getenv(
+    "GATEWAY_SECRET", "internal-gateway-secret-12345"
+)  # pragma: allowlist secret
 
 
 def get_auth_headers(
