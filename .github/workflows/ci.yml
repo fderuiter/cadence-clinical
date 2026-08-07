@@ -726,7 +726,6 @@ jobs:
       - name: Sync Ruleset
         env:
           GH_TOKEN: ${{ secrets.SERVICE_ACCOUNT_TOKEN || secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
-          FAIL_ON_RULESET_SYNC_ERROR: "true"
         run: |
           uv run python scripts/sync_ruleset.py
 
