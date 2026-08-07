@@ -6,12 +6,14 @@ Requirements: PRD-SYS-001
 from datetime import datetime
 
 import pytest
-from execution.lab_models import (
+from pydantic import ValidationError
+
+from apps.execution.src.domain.lab_models import (
     LabSourceEnum,
     LabTestMasterRecord,
     LabUnitConversionRecord,
 )
-from execution.lab_transport_models import (
+from apps.execution.src.domain.lab_transport_models import (
     LabRangeRecalculateRequest,
     LabRangeRecalculateResponse,
     LabReferenceRangeCreate,
@@ -22,7 +24,6 @@ from execution.lab_transport_models import (
     LabUnitConversionCreate,
     LabUnitConversionResponse,
 )
-from pydantic import ValidationError
 
 
 def test_lab_source_enum_values():

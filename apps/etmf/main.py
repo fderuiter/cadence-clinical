@@ -18,14 +18,6 @@ from protocol_version_ref import ProtocolVersionRef
 from pydantic import BaseModel, Field, model_validator
 from signature import SigningReason
 
-# select removed
-# AsyncSession removed
-from tmf_reference_model import (
-    get_active_catalog,
-    get_mandatory_artifacts,
-    resolve_artifact,
-)
-
 from apps.etmf.adapters.repository import SQLETMFRepository
 from apps.etmf.database import db_manager, transactional
 from apps.etmf.export import generate_binder_zip
@@ -44,6 +36,14 @@ from apps.etmf.models import (
 from apps.etmf.ports.repository import ETMFRepositoryPort
 from apps.etmf.routers.archive import router as archive_router
 from apps.etmf.routers.taxonomy import router as taxonomy_router
+
+# select removed
+# AsyncSession removed
+from apps.etmf.src.domain.tmf_reference_model import (
+    get_active_catalog,
+    get_mandatory_artifacts,
+    resolve_artifact,
+)
 from packages.database import get_relational_db_lifespan
 from packages.deid.detector import DeidDetector
 from packages.deid.manifest import build_redaction_manifest, sign_manifest_symmetric
@@ -2777,7 +2777,10 @@ async def get_artifact_history(
         )
 
     # Resolve active taxonomy/catalog to obtain the canonical artifact type if possible
-    from tmf_reference_model import get_active_catalog, resolve_artifact
+    from apps.etmf.src.domain.tmf_reference_model import (
+        get_active_catalog,
+        resolve_artifact,
+    )
 
     version = get_active_catalog().version
     canonical_name = artifact_type

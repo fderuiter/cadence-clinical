@@ -7,13 +7,13 @@ import uuid
 from datetime import UTC, datetime
 
 import defusedxml.ElementTree as ET
-from execution.safety_models import (
+
+import packages  # noqa: F401
+from apps.execution.src.domain.safety_models import (
     CausalityEnum,
     SAECaseRecord,
     SeriousnessCriteriaEnum,
 )
-
-import packages  # noqa: F401
 
 
 class E2BR3Parser:

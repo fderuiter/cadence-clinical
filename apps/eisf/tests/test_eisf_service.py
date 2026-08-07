@@ -5,10 +5,9 @@ Requirements: PRD-SYS-001
 
 import hashlib
 
-from execution.eisf_models import EISFTaxonomyCategoryEnum
-
 import packages  # noqa: F401
 from apps.execution.services.eisf_service import EISFService
+from apps.execution.src.domain.eisf_models import EISFTaxonomyCategoryEnum
 
 
 def test_eisf_upload_and_watermark() -> None:

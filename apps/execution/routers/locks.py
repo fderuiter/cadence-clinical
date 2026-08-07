@@ -6,17 +6,17 @@ Requirements: PRD-SYS-001
 import uuid
 from datetime import UTC, datetime
 
-from execution.lock_models import (
-    DataLockRecord,
-    LockStatusEnum,
-)
-from execution.lock_transport_models import (
-    DataLockRequest,
-    DataLockResponse,
-)
 from fastapi import APIRouter, Depends, HTTPException
 
 import packages  # noqa: F401
+from apps.execution.src.domain.lock_models import (
+    DataLockRecord,
+    LockStatusEnum,
+)
+from apps.execution.src.domain.lock_transport_models import (
+    DataLockRequest,
+    DataLockResponse,
+)
 from packages.security.middleware import get_current_user
 
 router = APIRouter(prefix="/api/v1/execution/locks", tags=["DataLock"])

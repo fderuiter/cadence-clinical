@@ -5,9 +5,8 @@ Requirements: PRD-SYS-001
 
 from typing import Any
 
-from execution.safety_models import SAECaseRecord
-
 import packages  # noqa: F401
+from apps.execution.src.domain.safety_models import SAECaseRecord
 
 
 class SAEReconciler:

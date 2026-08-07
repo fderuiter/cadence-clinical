@@ -5,9 +5,8 @@ import sys
 import uuid
 from datetime import UTC, datetime
 
-from audit import AuditFields
 from fastapi import Depends, FastAPI, HTTPException, Request
-from localization import validate_language_code
+from packages.database.audit import AuditFields
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,6 +32,7 @@ from apps.econsent.models import (
     EtmfArchivalDelivery,
     SubjectConsent,
 )
+from apps.execution.src.domain.localization.models import validate_language_code
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security import assert_secure_secrets
 from packages.security.middleware import GatewayAuthMiddleware

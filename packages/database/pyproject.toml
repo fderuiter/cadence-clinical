@@ -11,8 +11,10 @@ dependencies = [
     "alembic>=1.13.0",
     "asyncpg>=0.29.0",
     "fastapi>=0.139.2,<0.140.0",
+    "pydantic>=2.6.0",
     "sqlalchemy>=2.0.28",
 ]
 
-[tool.hatch.build.targets.wheel.sources]
-"" = "packages/database"
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+

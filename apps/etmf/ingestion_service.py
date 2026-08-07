@@ -6,20 +6,20 @@ from typing import Any
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 from cryptography.x509.oid import NameOID
-from protocol_version_ref import ProtocolVersionRef
 from signature import SignatureManifestation, SigningReason
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from tmf_reference_model import (
-    get_active_catalog,
-    validate_hierarchy,
-)
 
+from apps.designer.src.domain.protocol_version_ref.models import ProtocolVersionRef
 from apps.etmf.cryptography import (
     extract_signature_from_content,
     validate_document_signature,
 )
 from apps.etmf.models import TMFAuditLog, TMFDocument, is_site_level_artifact
+from apps.etmf.src.domain.tmf_reference_model import (
+    get_active_catalog,
+    validate_hierarchy,
+)
 
 
 async def ingest_tmf_document(

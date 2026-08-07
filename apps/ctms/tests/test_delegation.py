@@ -5,8 +5,8 @@ Comprehensive suite of unit and integration tests for delegation and role author
 import pytest
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.testclient import TestClient
-from organization_domain import ClinicalStaffRole
 
+from apps.org.src.domain.models import ClinicalStaffRole
 from packages.security.delegation import (
     normalize_and_validate_staff_role,
     require_delegation,

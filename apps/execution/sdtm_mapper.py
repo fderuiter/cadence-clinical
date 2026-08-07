@@ -13,8 +13,8 @@ from datetime import date, datetime
 from typing import Any
 
 # Import shared SDTM models and terminology normalizers
-from sdtm.models import AE, CM, DM, LB, VS
-from sdtm.terminology import (
+from apps.execution.src.domain.sdtm.models import AE, CM, DM, LB, VS
+from apps.execution.src.domain.sdtm.terminology import (
     normalize_race,
     normalize_seriousness,
     normalize_severity,

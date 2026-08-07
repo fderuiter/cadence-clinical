@@ -2,7 +2,6 @@ from datetime import datetime
 
 import pytest
 import pytest_asyncio
-from execution.econsent_models import EConsentSignRequest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -16,6 +15,7 @@ from apps.execution.services.econsent_capture_service import (
     EConsentWorkflowEngine,
     process_econsent_signature,
 )
+from apps.execution.src.domain.econsent_models import EConsentSignRequest
 from packages.security.audit_logger import audit_logger_engine
 
 

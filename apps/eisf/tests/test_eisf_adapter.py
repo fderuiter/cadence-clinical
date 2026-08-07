@@ -278,9 +278,8 @@ def test_eisf_mappings_resolve_through_active_catalog():
     Version and is_extension expectations are hardcoded per artifact code so
     that a bad catalog change cannot make this test pass falsely.
     """
-    from tmf_reference_model import resolve_artifact
-
     from apps.eisf.adapter import FORWARD_MAPPING
+    from apps.etmf.src.domain.tmf_reference_model import resolve_artifact
 
     for (binder_sec, art_type), (
         zone,
@@ -317,9 +316,8 @@ def test_eisf_reverse_mappings_resolve_through_active_catalog():
     Version and is_extension expectations are hardcoded per artifact code so
     that a bad catalog change cannot make this test pass falsely.
     """
-    from tmf_reference_model import resolve_artifact
-
     from apps.eisf.adapter import REVERSE_MAPPING
+    from apps.etmf.src.domain.tmf_reference_model import resolve_artifact
 
     for (zone, section, etmf_art_type, etmf_code), (
         binder_sec,
@@ -350,7 +348,7 @@ def test_eisf_resolve_known_extension_artifact():
     Verify that resolving a known extension artifact directly from v3.2.0-extended
     results in an artifact with is_extension=True.
     """
-    from tmf_reference_model import resolve_artifact
+    from apps.etmf.src.domain.tmf_reference_model import resolve_artifact
 
     resolved = resolve_artifact("v3.2.0-extended", code="05.02.99")
     artifact = resolved["artifact"]

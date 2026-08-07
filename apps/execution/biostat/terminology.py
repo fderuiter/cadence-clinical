@@ -1,14 +1,14 @@
-from sdtm.enums import AESeverity, Race, Sex
-from sdtm.terminology import (
+from apps.execution.src.domain.sdtm.enums import AESeverity, Race, Sex
+from apps.execution.src.domain.sdtm.terminology import (
     normalize_race as _normalize_race,
 )
-from sdtm.terminology import (
+from apps.execution.src.domain.sdtm.terminology import (
     normalize_seriousness as _normalize_seriousness,
 )
-from sdtm.terminology import (
+from apps.execution.src.domain.sdtm.terminology import (
     normalize_severity as _normalize_severity,
 )
-from sdtm.terminology import (
+from apps.execution.src.domain.sdtm.terminology import (
     normalize_sex as _normalize_sex,
 )
 

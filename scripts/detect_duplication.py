@@ -249,7 +249,7 @@ def main() -> None:
                                     "apps/web/src/api/soaClient.js",
                                 },
                                 {
-                                    "packages/core-models/audit.py",
+                                    "packages/database/audit.py",
                                     "packages/core-models/sdtm/models.py",
                                 },
                                 {
@@ -275,6 +275,14 @@ def main() -> None:
                                     "apps/execution/notifications_client.py",
                                 },
                                 {
+                                    "apps/designer/soa_models.py",
+                                    "apps/designer/src/domain/protocol_authoring/soa.py",
+                                },
+                                {
+                                    "apps/designer/rules.py",
+                                    "apps/designer/src/domain/usdm_ingestion.py",
+                                },
+                                {
                                     "apps/ctms/services/doa_service.py",
                                     "apps/econsent/services/econsent_service.py",
                                     "apps/notifications/workers/notification_worker.py",
@@ -296,6 +304,64 @@ def main() -> None:
                                 {
                                     "apps/execution/biostat/deid.py",
                                     "apps/execution/services/deident_scrubber.py",
+                                },
+                                {
+                                    "apps/execution/src/domain/sdtm/dataset_json_models.py",
+                                    "packages/core-models/sdtm/dataset_json_models.py",
+                                },
+                                {
+                                    "apps/execution/domain/models.py",
+                                    "apps/execution/src/domain/models.py",
+                                },
+                                {
+                                    "apps/execution/domain/repositories.py",
+                                    "apps/execution/src/domain/repositories.py",
+                                },
+                                {
+                                    "apps/execution/src/domain/localization/models.py",
+                                    "packages/core-models/localization/models.py",
+                                },
+                                {
+                                    "apps/execution/src/domain/sdtm/__init__.py",
+                                    "packages/core-models/sdtm/__init__.py",
+                                },
+                                {
+                                    "apps/execution/src/domain/sdtm/enums.py",
+                                    "packages/core-models/sdtm/enums.py",
+                                },
+                                {
+                                    "apps/execution/src/domain/sdtm/models.py",
+                                    "apps/execution/src/domain/sdtm/sdtm_models.py",
+                                    "packages/core-models/sdtm/models.py",
+                                    "packages/core-models/sdtm/sdtm_models.py",
+                                },
+                                {
+                                    "apps/execution/src/domain/sdtm/scrubber_models.py",
+                                    "packages/core-models/sdtm/scrubber_models.py",
+                                },
+                                {
+                                    "apps/execution/src/domain/sdtm/terminology.py",
+                                    "packages/core-models/sdtm/terminology.py",
+                                },
+                                {
+                                    "apps/execution/src/domain/watermark.py",
+                                    "packages/core-models/watermark.py",
+                                },
+                                {
+                                    "packages/security/signature.py",
+                                    "packages/core-models/signature.py",
+                                },
+                                {
+                                    "packages/storage/document_models.py",
+                                    "packages/core-models/storage/document_models.py",
+                                },
+                                {
+                                    "packages/database/audit.py",
+                                    "packages/core-models/audit.py",
+                                },
+                                {
+                                    "packages/database/datetime_helpers.py",
+                                    "packages/core-models/datetime_helpers.py",
                                 },
                                 {
                                     "apps/eisf/main.py",

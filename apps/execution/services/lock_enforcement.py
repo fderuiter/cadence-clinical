@@ -5,9 +5,12 @@ Requirements: PRD-SYS-001
 
 from typing import Any
 
-from execution.lock_models import DataLockRecord, LockScopeEnum, LockStatusEnum
-
 import packages  # noqa: F401
+from apps.execution.src.domain.lock_models import (
+    DataLockRecord,
+    LockScopeEnum,
+    LockStatusEnum,
+)
 
 
 class FormLockedError(Exception):

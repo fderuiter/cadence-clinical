@@ -4,7 +4,9 @@ Requirements: PRD-SYS-001, GxP, 21 CFR Part 11
 """
 
 import pytest
-from execution.sdv_transport_models import (
+from pydantic import ValidationError
+
+from apps.execution.src.domain.sdv_transport_models import (
     FlagTargetDescriptor,
     SdvFlagRequest,
     SdvFlagResponse,
@@ -12,8 +14,6 @@ from execution.sdv_transport_models import (
     SdvResolveRequest,
     SdvResolveResponse,
 )
-from pydantic import ValidationError
-
 from packages.security.permissions import PermissionEnum, RoleEnum
 from packages.security.permissions import has_permission as has_perm_granular
 from packages.security.rbac import (

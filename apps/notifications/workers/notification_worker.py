@@ -6,8 +6,6 @@ import os
 import sys
 from typing import Any
 
-from notifications.event_models import SystemDomainEvent
-
 from apps.notifications.database import db_manager as notifications_db_manager
 from apps.notifications.models import (
     Notification,
@@ -20,6 +18,7 @@ from apps.notifications.services.email_renderer import (
     get_template_name_for_event,
     render_email_template,
 )
+from apps.notifications.src.domain.event_models import SystemDomainEvent
 from packages.security.gateway_client import (
     GatewayBaseClient,
     create_service_auth_headers,

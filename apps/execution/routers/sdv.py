@@ -7,12 +7,6 @@ import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from execution.sdv_transport_models import (
-    BulkQueryGenerationRequest,
-    BulkQueryGenerationResponse,
-    BulkSdvSignOffRequest,
-    BulkSdvSignOffResponse,
-)
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select, text
@@ -29,6 +23,12 @@ from apps.execution.database.models import (
 )
 from apps.execution.rtsm_authz import verify_site_access
 from apps.execution.sdv_helper import validate_and_upsert_sdv_target
+from apps.execution.src.domain.sdv_transport_models import (
+    BulkQueryGenerationRequest,
+    BulkQueryGenerationResponse,
+    BulkSdvSignOffRequest,
+    BulkSdvSignOffResponse,
+)
 from apps.execution.tsdv import evaluate_tsdv_requirement
 from packages.security import can_access_study, get_principal, run_async
 from packages.security.rbac import (

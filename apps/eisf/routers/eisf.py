@@ -6,17 +6,17 @@ Requirements: PRD-SYS-001
 import hashlib
 from datetime import date
 
-from etmf.eisf_transport_models import (
-    EISFDocumentDetail,
-    EISFDocumentUploadRequest,
-    EISFFolderNode,
-)
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from apps.eisf.adapters.repository import SQLEISFRepository
 from apps.eisf.database import transactional
 from apps.eisf.models import ISFAuditLog, ISFDocument
 from apps.eisf.ports.repository import EISFRepositoryPort
+from apps.etmf.src.domain.etmf.eisf_transport_models import (
+    EISFDocumentDetail,
+    EISFDocumentUploadRequest,
+    EISFFolderNode,
+)
 from packages.security.audit_logger import AuditLogPayload
 from packages.security.audit_logger import audit_logger_engine as central_audit_logger
 from packages.security.rbac import (

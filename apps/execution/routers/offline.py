@@ -7,11 +7,6 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from execution.offline_models import (
-    OfflineBatchSyncRequest,
-    OfflineBatchSyncResponse,
-    OfflineDeltaItem,
-)
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select, text
 
@@ -25,6 +20,11 @@ from apps.execution.database.models import (
 )
 from apps.execution.services.offline_sync import (
     OfflineSyncEngine as ServiceOfflineSyncEngine,
+)
+from apps.execution.src.domain.offline_models import (
+    OfflineBatchSyncRequest,
+    OfflineBatchSyncResponse,
+    OfflineDeltaItem,
 )
 from packages.security.middleware import get_current_user
 

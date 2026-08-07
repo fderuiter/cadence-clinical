@@ -1,8 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from tmf_reference_model import get_active_catalog, get_catalog
 
 from apps.etmf.classification_service import classify_tmf_document
+from apps.etmf.src.domain.tmf_reference_model import (
+    get_active_catalog,
+    get_catalog,
+)
 from packages.security.rbac import Principal, require_permission, require_study_scope
 
 router = APIRouter(prefix="/api/v1/etmf", tags=["Taxonomy"])

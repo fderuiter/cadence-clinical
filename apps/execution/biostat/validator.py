@@ -16,7 +16,7 @@ from apps.execution.biostat.terminology import (
 )
 
 try:
-    from sdtm.enums import (
+    from apps.execution.src.domain.sdtm.enums import (
         AEOutcome,
         AERelationship,
         AESeriousness,
