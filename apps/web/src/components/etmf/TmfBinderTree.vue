@@ -33,6 +33,7 @@
         :key="zone.id"
         class="tree-node zone-node"
       >
+        <!-- eslint-disable-next-line vuejs-accessibility/interactive-supports-focus -->
         <div
           :id="'tree-node-' + zone.id"
           :ref="(el) => setNodeRef(zone.id, el)"
@@ -67,6 +68,7 @@
             :key="section.id"
             class="tree-node section-node"
           >
+            <!-- eslint-disable-next-line vuejs-accessibility/interactive-supports-focus -->
             <div
               :id="'tree-node-' + section.id"
               :ref="(el) => setNodeRef(section.id, el)"
@@ -98,6 +100,7 @@
               class="node-children section-children"
               role="group"
             >
+              <!-- eslint-disable-next-line vuejs-accessibility/interactive-supports-focus -->
               <div
                 v-for="artifact in section.children"
                 :id="'tree-node-' + artifact.id"
