@@ -41,7 +41,7 @@ export const vKeyboardClick = {
           return;
         }
         e.preventDefault();
-        
+
         if (typeof el._keyboardClickCallback === "function") {
           el._keyboardClickCallback(e);
         } else {

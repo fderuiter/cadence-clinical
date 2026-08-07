@@ -60,7 +60,7 @@ describe("Keyboard Navigation & Focus Accessibility Engine", () => {
       });
 
       const div = wrapper.find("#test-div");
-      
+
       // Press Enter
       await div.trigger("keydown", { key: "Enter" });
       expect(callback).toHaveBeenCalledTimes(1);
@@ -154,7 +154,7 @@ describe("Keyboard Navigation & Focus Accessibility Engine", () => {
   describe("Component: FormSectionContainer.vue", () => {
     it("handles section toggle, tabindex, and aria-expanded correctly", async () => {
       const designerStore = useDesignerStore(pinia);
-      
+
       const section = {
         id: "section-1",
         name: "Vitals Section",
@@ -226,7 +226,7 @@ describe("Keyboard Navigation & Focus Accessibility Engine", () => {
         bubbles: true,
       });
       tabsList.element.dispatchEvent(arrowRightEvent);
-      
+
       expect(econsentStore.activeLanguage).toBe("es");
 
       // Spanish is active now
@@ -240,7 +240,7 @@ describe("Keyboard Navigation & Focus Accessibility Engine", () => {
         bubbles: true,
       });
       tabsList.element.dispatchEvent(arrowLeftEvent);
-      
+
       expect(econsentStore.activeLanguage).toBe("en");
 
       wrapper.unmount();

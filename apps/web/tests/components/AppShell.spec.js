@@ -122,4 +122,90 @@ describe("AppShell.vue - Application Shell Component", () => {
     await loginBtn.trigger("click");
     expect(loginSpy).toHaveBeenCalledTimes(1);
   });
+
+  it("renders a skip-to-content link as the very first focusable element inside the template root", () => {
+    const wrapper = mount(AppShell, {
+      global: {
+        plugins: [router],
+      },
+    });
+
+    const focusable = wrapper.element.querySelectorAll(
+      "a, button, input, select, textarea, [tabindex]"
+    );
+    expect(focusable.length).toBeGreaterThan(0);
+    const firstFocusable = focusable[0];
+    expect(firstFocusable.classList.contains("skip-link")).toBe(true);
+    expect(firstFocusable.getAttribute("href")).toBe("#main-content");
+    expect(firstFocusable.textContent.trim()).toBe("Skip to main content");
+  });
+
+  it("targets the main content container with correct id and tabindex", () => {
+    const wrapper = mount(AppShell, {
+      global: {
+        plugins: [router],
+      },
+    });
+
+    const mainEl = wrapper.find("main");
+    expect(mainEl.exists()).toBe(true);
+    expect(mainEl.attributes("id")).toBe("main-content");
+    expect(mainEl.attributes("tabindex")).toBe("-1");
+  });
+
+  it("passes the accessibility audit in strict mode", async () => {
+    const wrapper = mount(AppShell, {
+      global: {
+        plugins: [router],
+      },
+    });
+
+    await expect(wrapper).toBeAccessible({
+      rules: {
+        "landmark-one-main": { enabled: true },
+        region: { enabled: true },
+        bypass: { enabled: true },
+      },
+    });
+  });
+
+  it("fails the accessibility audit in strict mode if the main landmark or skip link targets are missing/removed", async () => {
+    const wrapper = mount(AppShell, {
+      global: {
+        plugins: [router],
+      },
+    });
+
+    const clonedEl = wrapper.element.cloneNode(true);
+
+    // Unmount the original wrapper to clean up document.body
+    wrapper.unmount();
+
+    // 1. Remove the skip link completely
+    const skipLink = clonedEl.querySelector(".skip-link");
+    if (skipLink) {
+      skipLink.remove();
+    }
+
+    // 2. Remove main landmark container (turn it into a div)
+    const mainEl = clonedEl.querySelector("main");
+    if (mainEl) {
+      const divEl = document.createElement("div");
+      divEl.innerHTML = mainEl.innerHTML;
+      mainEl.parentNode.replaceChild(divEl, mainEl);
+    }
+
+    // Run the accessibility audit on the malformed clone using strict mode rules.
+    // Imported directly from ui package
+    const { toBeAccessible: auditFn } = await import("ui");
+    const result = await auditFn(clonedEl, {
+      rules: {
+        "landmark-one-main": { enabled: true },
+        region: { enabled: true },
+        bypass: { enabled: true },
+      },
+    });
+
+    expect(result.pass).toBe(false);
+  });
 });
