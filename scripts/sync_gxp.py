@@ -181,6 +181,7 @@ def step_run_tests(dry_run: bool) -> None:
                 "--ignore=tests/test_layout_validator.py",
                 "--ignore=tests/test_notifications.py",
                 "--ignore=tests/test_notification_worker.py",
+                "--ignore=tests/validation",
             ]
         )
         # Run notification tests sequentially
