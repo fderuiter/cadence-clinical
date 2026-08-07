@@ -27,6 +27,7 @@ def merge_junit_xml(output_path: str, input_paths: list[str]) -> None:
     # Create root element for consolidated testsuites
     merged_root = ET.Element("testsuites")
 
+    # Trace and track individual test outcomes deterministically to prevent duplicated qualification metrics.
     total_tests = 0
     total_failures = 0
     total_errors = 0
