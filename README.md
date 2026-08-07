@@ -1,3 +1,4 @@
+# Cadence Clinical Research Software
 > [!WARNING]
 > **Pre-Demo Sandbox Status:** This repository represents an active pre-demo sandbox environment. It is intended strictly for evaluation and development walkthroughs, and is not ready for production use or public integration inquiries. For official, production-ready product access and inquiries, please visit [cadence-clinical.com](https://cadence-clinical.com).
 
@@ -12,20 +13,20 @@
 
 ## ⚠️ Work in Progress / Active Development Status
 
-**Active Development:** This platform is currently a work in progress and is undergoing rapid structural evolution. The platform scope, specifications, API endpoints, and integration interfaces are actively evolving. Various modules in the layout are either under active pre-production development or planned in the backlog. Please refer to the [Feature & Compatibility Matrix](docs/FEATURE_MATRIX.md) and the live issue tracker for current capability mappings and strategic roadmap milestones.
+**Active Development:** This platform is currently a work in progress and is undergoing rapid structural evolution. The platform scope, specifications, API endpoints, and integration interfaces are actively evolving. Various modules in the layout are either under active pre-production development or planned in the backlog. Please refer to the [Feature & Compatibility Matrix](docs/FEATURE_MATRIX.md) for current capability mappings and strategic roadmap milestones. For general and clinical pilot inquiries, please consult our [Support Policy](SUPPORT.md) or visit [ccrsoft.com](https://ccrsoft.com) rather than using the public tracker.
 
 ---
 
 ## 🚀 Overview
 
-**Cadence Clinical** is a next-generation, open-source eClinical platform designed to eliminate manual study builds, expensive handoffs, and data silos in clinical research. By integrating the concepts of an upstream Clinical Metadata Repository (MDR/SDR) with a downstream Electronic Data Capture (EDC) engine, Cadence Clinical automates the digital data flow to turn static, narrative protocol documents into executable, machine-readable digital trials.
+**Cadence Clinical Research Software** is a next-generation, open-source eClinical platform designed to eliminate manual study builds, expensive handoffs, and data silos in clinical research. By integrating the concepts of an upstream Clinical Metadata Repository (MDR/SDR) with a downstream Electronic Data Capture (EDC) engine, Cadence Clinical Research Software automates the digital data flow to turn static, narrative protocol documents into executable, machine-readable digital trials.
 
 The core architecture synthesizes two complementary clinical trial paradigms:
 
 1. **MDR/Designer (Neo4j)**: Upstream study design, CDISC Unified Study Definitions Model (USDM), and graph-based metadata modeling based on references like `openstudybuilder-ref`.
 2. **EDC/Execution (PostgreSQL)**: Downstream EDC execution, subject enrollment state machines, eCRF form rendering (OpenRosa/Enketo XForms), clinical query workflows, and GxP-compliant audit trails based on references like `openclinica-ref`.
 
-These core execution paths are bridged seamlessly via CDISC USDM data transfers and automated transform pipelines. The scope of Cadence Clinical has expanded to provide unified, compliant domain coverage across the entire clinical trial lifecycle, including:
+These core execution paths are bridged seamlessly via CDISC USDM data transfers and automated transform pipelines. The scope of Cadence Clinical Research Software has expanded to provide unified, compliant domain coverage across the entire clinical trial lifecycle, including:
 
 - **Safety / Pharmacovigilance (PV)**: Processing E2B(R3) Individual Case Safety Reports (ICSR).
 - **eConsent**: Secure, Part 11 compliant digital informed consent execution.
@@ -40,7 +41,7 @@ Every mutation across the entire platform enforces strict, GxP-compliant field-l
 
 ## 🏛️ System Architecture
 
-Cadence Clinical is organized as a reverse-proxy fronted microservices topology utilizing a unified identity layer and a dual-persistence database layout.
+Cadence Clinical Research Software is organized as a reverse-proxy fronted microservices topology utilizing a unified identity layer and a dual-persistence database layout.
 
 ```text
                                ┌────────────────────────────────────────────────┐
@@ -116,18 +117,18 @@ This monorepo leverages `pnpm` workspace management for the frontend and `uv` wo
 
 | Path                       | Component Title / Standard Reference                  | Description / Purpose                                                                                                                                                      | Status          |
 | :------------------------- | :---------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------- |
-| **`apps/designer`**        | Cadence Clinical - Designer (MDR/SDR)                 | Study design, metadata authoring, and CDISC USDM graph modeling. Persisted in Neo4j.                                                                                       | **Supported**   |
-| **`apps/execution`**       | Cadence Clinical - EDC Execution Engine               | Downstream EDC runtime managing subjects, eCRF schedules, real-time edit checks, medical coding, lab ranges, and SDTM/ADaM exports.                                        | **Supported**   |
-| **`apps/gateway`**         | Cadence Clinical - API Gateway                        | Gateway-fronted microservices proxy. Handles OIDC token checks, step-up re-auth tokens, rate limiting, and OpenAPI docs aggregation.                                       | **Supported**   |
-| **`apps/etmf`**            | Cadence Clinical - Event-Driven eTMF Module           | Ingests, classifies, and tracks clinical document archives against DIA TMF Reference Model v3.2.0. Enforces data-driven expected document lists.                           | **Supported**   |
-| **`apps/ctms`**            | Cadence Clinical - CTMS                               | Tracks trial/site milestones, monitor visits, budget allocations, and CRA workloads. Fully audited append-only ledger.                                                     | **Supported**   |
-| **`apps/quality`**         | Cadence Clinical - Quality & CAPA                     | Manages protocol deviations, root cause analysis (RCA) attachments, and corrective/preventive action (CAPA) workflow transitions.                                          | **Supported**   |
-| **`apps/interop`**         | Cadence Clinical - FHIR / eSource & eCOA Sync Gateway | Processes FHIR bundles and reconciles bulk offline ePRO submissions with durable conflict resolution and clinical query automation.                                        | **Supported**   |
-| **`apps/notifications`**   | Cadence Clinical - Notifications Service              | Dynamic multi-channel reminder dispatcher supporting SMS, Email, Webhooks, and In-App notifications.                                                                       | **Supported**   |
-| **`apps/safety`**          | Cadence Clinical - Safety & Pharmacovigilance Gateway | Implements E2B(R3) Individual Case Safety Report (ICSR) XML compilation and rendering, with immutable audits.                                                              | **Supported**   |
-| **`apps/org`**             | Cadence Clinical - Organization Directory             | Directory for Organizations, Sites, Personnel, and Delegations of Authority. _No business logic routes are currently routed; exposes health check only._                   | **In Progress** |
-| **`apps/econsent`**        | Cadence Clinical - eConsent                           | Template compilation, digital signatures, and consent audit ledgers. _Not yet routed through the central gateway proxy._                                                   | **In Progress** |
-| **`apps/eisf`**            | Cadence Clinical - eISF Service                       | Site-scoped investigator site files and binder section browser. _Not yet routed through the central gateway proxy._                                                        | **In Progress** |
+| **`apps/designer`**        | Cadence Clinical Research Software - Designer (MDR/SDR)                 | Study design, metadata authoring, and CDISC USDM graph modeling. Persisted in Neo4j.                                                                                       | **Supported**   |
+| **`apps/execution`**       | Cadence Clinical Research Software - EDC Execution Engine               | Downstream EDC runtime managing subjects, eCRF schedules, real-time edit checks, medical coding, lab ranges, and SDTM/ADaM exports.                                        | **Supported**   |
+| **`apps/gateway`**         | Cadence Clinical Research Software - API Gateway                        | Gateway-fronted microservices proxy. Handles OIDC token checks, step-up re-auth tokens, rate limiting, and OpenAPI docs aggregation.                                       | **Supported**   |
+| **`apps/etmf`**            | Cadence Clinical Research Software - Event-Driven eTMF Module           | Ingests, classifies, and tracks clinical document archives against DIA TMF Reference Model v3.2.0. Enforces data-driven expected document lists.                           | **Supported**   |
+| **`apps/ctms`**            | Cadence Clinical Research Software - CTMS                               | Tracks trial/site milestones, monitor visits, budget allocations, and CRA workloads. Fully audited append-only ledger.                                                     | **Supported**   |
+| **`apps/quality`**         | Cadence Clinical Research Software - Quality & CAPA                     | Manages protocol deviations, root cause analysis (RCA) attachments, and corrective/preventive action (CAPA) workflow transitions.                                          | **Supported**   |
+| **`apps/interop`**         | Cadence Clinical Research Software - FHIR / eSource & eCOA Sync Gateway | Processes FHIR bundles and reconciles bulk offline ePRO submissions with durable conflict resolution and clinical query automation.                                        | **Supported**   |
+| **`apps/notifications`**   | Cadence Clinical Research Software - Notifications Service              | Dynamic multi-channel reminder dispatcher supporting SMS, Email, Webhooks, and In-App notifications.                                                                       | **Supported**   |
+| **`apps/safety`**          | Cadence Clinical Research Software - Safety & Pharmacovigilance Gateway | Implements E2B(R3) Individual Case Safety Report (ICSR) XML compilation and rendering, with immutable audits.                                                              | **Supported**   |
+| **`apps/org`**             | Cadence Clinical Research Software - Organization Directory             | Directory for Organizations, Sites, Personnel, and Delegations of Authority. _No business logic routes are currently routed; exposes health check only._                   | **In Progress** |
+| **`apps/econsent`**        | Cadence Clinical Research Software - eConsent                           | Template compilation, digital signatures, and consent audit ledgers. _Not yet routed through the central gateway proxy._                                                   | **In Progress** |
+| **`apps/eisf`**            | Cadence Clinical Research Software - eISF Service                       | Site-scoped investigator site files and binder section browser. _Not yet routed through the central gateway proxy._                                                        | **In Progress** |
 | **`apps/web`**             | Vue 3 SPA Sandbox & Legacy Engine                     | Primary frontend SPA with Keycloak authentication. _Features a legacy vanilla-JS layout parser (index.js) coexisting during migration to Vue 3 (src/App.vue) per ADR-052._ | **In Progress** |
 | **`apps/subject-portal`**  | Offline-First eCOA/ePRO PWA                           | Mobile-optimized Progressive Web App (PWA) running on port 5174. Includes IndexedDB offline queues and sync exception panels.                                              | **Supported**   |
 | **`packages/security`**    | Cryptography & Security Library                       | Shared libraries for HMAC signature generation, security context variables, and Keycloak auth validation helpers.                                                          | **Supported**   |
@@ -151,7 +152,7 @@ During the current active development phase, several known discrepancies exist w
 
 ## 🛠️ Stack and Tooling
 
-Cadence Clinical is built using high-performance, compliance-ready frameworks:
+Cadence Clinical Research Software is built using high-performance, compliance-ready frameworks:
 
 - **Backend Framework**: Python 3.14+ using FastAPI and Pydantic v2.
 - **Relational Databases**: PostgreSQL (production EDC, auditing, security, and ledger systems) and SQLite (used for rapid test isolation across CTMS, eTMF, Quality, and Interop).
@@ -255,7 +256,7 @@ Detailed structural specifications, compliance designs, and operational instruct
 
 ## 🗺️ Roadmap & Status (TBD)
 
-We track our live feature backlog and feature requests via the live [GitHub Issues](https://github.com/fderuiter/cadence-clinical/issues) and milestones pages.
+We track our live technical feature backlog, software enhancements, and engineering issues via the live GitHub Issues and milestones pages. Please do not open public GitHub issues or support tickets for clinical pilot requests, trial evaluation queries, or general support. All general inquiries and clinical evaluation requests must be routed via [ccrsoft.com](https://ccrsoft.com) as detailed in our [Support Policy](SUPPORT.md).
 
 Strategic backlog priorities and technical debt resolutions currently planned (TBD) include:
 
@@ -267,6 +268,12 @@ Strategic backlog priorities and technical debt resolutions currently planned (T
 
 ---
 
+## 💬 Support & Contact
+
+For clinical evaluations, pilot testing inquiries, partnership queries, or general non-technical support, please contact us directly via our corporate portal at [ccrsoft.com](https://ccrsoft.com) or consult our comprehensive [Support Policy](SUPPORT.md). Please refrain from posting general questions or pilot inquiries in the public GitHub issue tracker.
+
+---
+
 ## 📄 License
 
-Cadence Clinical is licensed under the **ISC License**. See the [LICENSE](LICENSE) file for the full terms and conditions.
+Cadence Clinical Research Software is licensed under the **ISC License**. See the [LICENSE](LICENSE) file for the full terms and conditions.

@@ -115,6 +115,7 @@ ALLOWED_ROOT_FILES = {
     "CONTRIBUTING.md",
     "README.md",
     "AGENTS.md",
+    "SUPPORT.md",
     "LICENSE",
     "Makefile",
     "package.json",
