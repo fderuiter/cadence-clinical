@@ -8,7 +8,17 @@ const __dirname = path.dirname(__filename);
 
 export default defineConfig({
   base: "/subject-portal/",
-  plugins: [vue()],
+  plugins: [
+    vue(),
+    {
+      name: "html-transform",
+      transformIndexHtml(html) {
+        const title =
+          process.env.VITE_APP_TITLE || "Subject Portal - Cadence Clinical";
+        return html.replace(/%VITE_APP_TITLE%/g, title);
+      },
+    },
+  ],
   server: {
     port: 5174,
   },

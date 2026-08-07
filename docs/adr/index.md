@@ -51,6 +51,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 2. API Gateway, Security & Identity
 
+- [2026-08-06: Parameterized Branding and Dynamic Domain Configurations](2026-08-06-parameterized-branding-and-dynamic-domain-configurations.md)
 - [2026-08-06: Part 11 Electronic Signature Compliance Engine Improvements](2026-08-06-part-11-electronic-signature-compliance-engine-improvements.md)
 
 - [2026-08-04: Fail-Fast Environment Validation for Cryptographic Secrets](2026-08-04-fail-fast-environment-validation-for-cryptographic-secrets.md)

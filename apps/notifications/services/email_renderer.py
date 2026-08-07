@@ -48,6 +48,10 @@ def render_email_template(template_name: str, context: dict[str, Any]) -> str:
 
     Requirements: PRD-SYS-001
     """
+    context = dict(context)
+    context.setdefault("brand_name", os.getenv("BRAND_NAME", "Clinical Platform"))
+    context.setdefault("brand_domain", os.getenv("BRAND_DOMAIN", "example.com"))
+
     if os.path.exists(TEMPLATE_DIR):
         try:
             env = Environment(

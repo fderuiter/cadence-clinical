@@ -17,7 +17,7 @@ onMounted(async () => {
     await store.addLedgerBlock(
       "GENESIS",
       {
-        platform: "Cadence Clinical",
+        platform: import.meta.env.VITE_BRAND_NAME || "Cadence Clinical",
         environment: "Interactive Web Sandbox",
         compliantStandards: [
           "21 CFR Part 11",

@@ -15,10 +15,16 @@ app.use(pinia);
 app.use(router);
 
 // Graceful Keycloak / OIDC setup
+const keycloakUrl =
+  import.meta.env.VITE_KEYCLOAK_URL || "http://localhost:8080/";
+const keycloakRealm = import.meta.env.VITE_KEYCLOAK_REALM || "cadence";
+const keycloakClientId =
+  import.meta.env.VITE_KEYCLOAK_CLIENT_ID || "cadence-web";
+
 const keycloakConfig = {
-  url: "http://localhost:8080/",
-  realm: "cadence",
-  clientId: "cadence-web",
+  url: keycloakUrl,
+  realm: keycloakRealm,
+  clientId: keycloakClientId,
 };
 
 const keycloak = new Keycloak(keycloakConfig);
@@ -32,8 +38,9 @@ const checkKeycloakReachable = async () => {
   const timeoutId = setTimeout(() => controller.abort(), 1000);
   try {
     // Check OIDC discovery endpoint
+    const urlClean = keycloakUrl.replace(/\/$/, "");
     await fetch(
-      "http://localhost:8080/realms/cadence/.well-known/openid-configuration",
+      `${urlClean}/realms/${keycloakRealm}/.well-known/openid-configuration`,
       {
         signal: controller.signal,
         mode: "no-cors",

@@ -1779,9 +1779,9 @@ async function initializeApp() {
           window.Keycloak || (await import("keycloak-js")).default;
         if (KeycloakClass) {
           const keycloak = new KeycloakClass({
-            url: "http://localhost:8080/",
-            realm: "cadence",
-            clientId: "cadence-web",
+            url: import.meta.env.VITE_KEYCLOAK_URL || "http://localhost:8080/",
+            realm: import.meta.env.VITE_KEYCLOAK_REALM || "cadence",
+            clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || "cadence-web",
           });
           window.keycloakInstance = keycloak;
           keycloak.onAuthLogout = () => {
@@ -1836,7 +1836,12 @@ async function initializeApp() {
   // Initialize genesis compliance ledger
   await logAuditRecord(
     "GENESIS",
-    { platform: "Cadence MyPortal", roles: state.session.roles },
+    {
+      platform: import.meta.env.VITE_BRAND_NAME
+        ? `${import.meta.env.VITE_BRAND_NAME} MyPortal`
+        : "Cadence MyPortal",
+      roles: state.session.roles,
+    },
     "Patient companion portal session securely booted."
   );
 

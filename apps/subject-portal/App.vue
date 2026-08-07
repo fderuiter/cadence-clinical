@@ -3,7 +3,9 @@
     <!-- Portal Header -->
     <header class="portal-header">
       <div class="header-branding">
-        <h1>My <span>Cadence</span></h1>
+        <h1>
+          My <span>{{ brandName }}</span>
+        </h1>
         <p class="role-badge">Participant Companion Portal</p>
       </div>
       <div class="compliance-badges">
@@ -842,6 +844,8 @@
 <script setup>
 import { onMounted, nextTick, computed } from "vue";
 import { state, showView, logout, syncOfflineQueue } from "./index.js";
+
+const brandName = computed(() => import.meta.env.VITE_BRAND_NAME || "Cadence");
 
 function handleLogout() {
   logout();

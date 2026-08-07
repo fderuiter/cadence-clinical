@@ -148,9 +148,10 @@ async def send_webhook_notification(notification: Notification) -> None:
         webhook_signing_secret.encode("utf-8"), payload_bytes, hashlib.sha256
     ).hexdigest()
 
+    sig_header = os.getenv("WEBHOOK_SIGNATURE_HEADER", "X-Cadence-Signature")
     headers = {
         "Content-Type": "application/json",
-        "X-Cadence-Signature": sig,
+        sig_header: sig,
     }
 
     async with httpx.AsyncClient(timeout=webhook_timeout) as client:

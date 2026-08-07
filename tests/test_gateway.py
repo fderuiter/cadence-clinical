@@ -2121,6 +2121,10 @@ def test_gateway_startup_production_no_bypass_configs() -> None:
         "GATEWAY_SECRET": "internal-gateway-secret-12345",  # pragma: allowlist secret
         "AUDIT_LOG_SECRET_KEY": "test-gxp-audit-secret-key-placeholder-abc",  # pragma: allowlist secret
         "INBOUND_EMAIL_HMAC_SECRET": "test-email-hmac-secret-placeholder-xyz",  # pragma: allowlist secret
+        "BRAND_NAME": "My Custom Brand",
+        "BRAND_DOMAIN": "mycustombrand.com",
+        "KEYCLOAK_REALM": "custom-realm",
+        "KEYCLOAK_CLIENT_ID": "custom-client-id",
     }
     # Ensure bypass env vars are not in the environment
     env_keys = ["JWT_TEST_SECRET", "ALLOW_UNVERIFIED_JWT_FOR_TEST", "SKIP_JWKS_FETCH"]

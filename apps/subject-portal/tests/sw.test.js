@@ -98,7 +98,7 @@ describe("Subject Portal Service Worker (sw.js)", () => {
 
     await listeners["install"](mockEvent);
 
-    expect(mockCaches.open).toHaveBeenCalledWith("cadence-portal-cache-v1");
+    expect(mockCaches.open).toHaveBeenCalledWith("portal-cache-v1");
     expect(mockCache.addAll).toHaveBeenCalledWith([
       "/subject-portal/",
       "/subject-portal/index.html",
@@ -110,7 +110,7 @@ describe("Subject Portal Service Worker (sw.js)", () => {
 
   it("should cleanup older caches on activation", async () => {
     expect(listeners["activate"]).toBeDefined();
-    mockCaches.keys.mockResolvedValue(["old-cache", "cadence-portal-cache-v1"]);
+    mockCaches.keys.mockResolvedValue(["old-cache", "portal-cache-v1"]);
 
     const mockEvent = {
       waitUntil: vi.fn((promise) => promise),
@@ -118,9 +118,7 @@ describe("Subject Portal Service Worker (sw.js)", () => {
 
     await listeners["activate"](mockEvent);
     expect(mockCaches.delete).toHaveBeenCalledWith("old-cache");
-    expect(mockCaches.delete).not.toHaveBeenCalledWith(
-      "cadence-portal-cache-v1"
-    );
+    expect(mockCaches.delete).not.toHaveBeenCalledWith("portal-cache-v1");
   });
 
   it("should bypass timeout and caching for non-static-asset GET requests (e.g. dynamic API queries)", async () => {
@@ -177,7 +175,7 @@ describe("Subject Portal Service Worker (sw.js)", () => {
     expect(globalThis.fetch).toHaveBeenCalledWith(request);
 
     // It should dynamically cache the successfully retrieved asset
-    expect(mockCaches.open).toHaveBeenCalledWith("cadence-portal-cache-v1");
+    expect(mockCaches.open).toHaveBeenCalledWith("portal-cache-v1");
     expect(mockCache.put).toHaveBeenCalledWith(
       request,
       expect.any(globalThis.Response)

@@ -56,8 +56,48 @@ def validate_environment() -> None:
 
 validate_environment()
 
+BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
+BRAND_DOMAIN = os.getenv("BRAND_DOMAIN", "cadenceclinical.com")
+KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM", "cadence")
+KEYCLOAK_CLIENT_ID = os.getenv("KEYCLOAK_CLIENT_ID", "cadence-clinical")
+
+
+def validate_branding_and_auth() -> None:
+    """
+    Validate mandatory branding/domain and authentication configurations.
+    Halts the boot sequence if secure fallbacks are missing or default
+    identity is left unconfigured in production/staging environments.
+    """
+    app_env = os.getenv("APP_ENV", "").strip().lower()
+    is_prod_or_staging = app_env not in ("development", "dev", "test", "")
+
+    if is_prod_or_staging:
+        invalid = []
+        if not os.getenv("BRAND_NAME") or os.getenv("BRAND_NAME") == "Cadence Clinical":
+            invalid.append("BRAND_NAME")
+        if (
+            not os.getenv("BRAND_DOMAIN")
+            or os.getenv("BRAND_DOMAIN") == "cadenceclinical.com"
+        ):
+            invalid.append("BRAND_DOMAIN")
+        if not os.getenv("KEYCLOAK_REALM") or os.getenv("KEYCLOAK_REALM") == "cadence":
+            invalid.append("KEYCLOAK_REALM")
+        if (
+            not os.getenv("KEYCLOAK_CLIENT_ID")
+            or os.getenv("KEYCLOAK_CLIENT_ID") == "cadence-clinical"
+        ):
+            invalid.append("KEYCLOAK_CLIENT_ID")
+
+        if invalid:
+            error_msg = f"STARTUP ERROR: Outdated default 'Cadence' branding or missing secure configurations detected in environment '{app_env}' for variables: {', '.join(invalid)}. Halting boot sequence."
+            print(error_msg, file=sys.stderr)
+            sys.exit(1)
+
+
+validate_branding_and_auth()
+
 app = FastAPI(
-    title="Cadence Clinical - API Gateway",
+    title=f"{BRAND_NAME} - API Gateway",
     version="0.1.0",
     openapi_url=None,
     docs_url=None,
@@ -156,7 +196,7 @@ app.add_middleware(RateLimitMiddleware)
 
 JWKS_URL = os.getenv(
     "JWKS_URL",
-    "http://keycloak:8080/realms/cadence/protocol/openid-connect/certs",  # deid-ignore
+    f"http://keycloak:8080/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs",  # deid-ignore
 )
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "RS256")
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET")
@@ -507,7 +547,7 @@ async def get_openapi_json() -> Response:
 
     merged = {
         "openapi": "3.1.0",
-        "info": {"title": "Cadence Clinical - Unified API", "version": "0.1.0"},
+        "info": {"title": f"{BRAND_NAME} - Unified API", "version": "0.1.0"},
         "paths": {},
         "components": {"schemas": {}},
     }
@@ -709,7 +749,7 @@ async def get_openapi_json() -> Response:
             from fastapi.openapi.utils import get_openapi
 
             native_openapi = get_openapi(
-                title="Cadence Clinical - API Gateway",
+                title=f"{BRAND_NAME} - API Gateway",
                 version="0.1.0",
                 routes=app.routes,
             )
@@ -737,7 +777,7 @@ async def get_swagger_ui() -> Response:
         Response: An HTMLResponse containing the Swagger UI.
     """
     return get_swagger_ui_html(
-        openapi_url="/openapi.json", title="Cadence Clinical - Unified API Docs"
+        openapi_url="/openapi.json", title=f"{BRAND_NAME} - Unified API Docs"
     )
 
 
@@ -876,7 +916,7 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
         try:
             data = {
                 "grant_type": "password",
-                "client_id": os.getenv("KEYCLOAK_CLIENT_ID", "cadence-clinical"),
+                "client_id": KEYCLOAK_CLIENT_ID,
                 "username": body.username,
                 "password": body.password,
             }
