@@ -7,8 +7,11 @@ import Keycloak from "keycloak-js";
 import { useAuthStore } from "./stores/auth";
 import { initHoverDetection } from "ui";
 import { resolveAssetUrl } from "./utils/url";
+import { vKeyboardClick } from "./directives/keyboardClick";
 
 const app = createApp(App);
+app.directive("keyboard-click", vKeyboardClick);
+
 const pinia = createPinia();
 
 app.use(pinia);

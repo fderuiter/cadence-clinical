@@ -8,8 +8,10 @@
   >
     <!-- Section Header Card -->
     <div
-      class="section-header px-4 py-3 bg-white border-b border-gray-200 flex items-center justify-between cursor-pointer select-none"
+      class="section-header px-4 py-3 bg-white border-b border-gray-200 flex items-center justify-between cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-inset"
+      v-keyboard-click="toggleCollapse"
       @click="toggleCollapse"
+      :aria-expanded="!section.isCollapsed"
     >
       <div class="flex items-center gap-3">
         <!-- Drag Handle for Section Reordering -->
@@ -101,6 +103,7 @@ import { ref, computed } from "vue";
 import draggable from "vuedraggable";
 import CanvasFieldWidget from "./CanvasFieldWidget.vue";
 import { useDesignerStore } from "../../stores/designer.js";
+import { vKeyboardClick } from "../../directives/keyboardClick.js";
 
 const props = defineProps({
   section: {
