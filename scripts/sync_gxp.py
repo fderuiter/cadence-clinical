@@ -173,14 +173,14 @@ def step_run_tests(dry_run: bool) -> None:
                 "--all-extras",
                 "pytest",
                 "-n",
-                "4",
+                "2",
                 "--junitxml",
                 "report_main.xml",
                 "-q",
                 "--no-cov",
-                "--ignore=tests/test_layout_validator.py",
-                "--ignore=tests/test_notifications.py",
-                "--ignore=tests/test_notification_worker.py",
+                "--ignore=scripts/tests/test_layout_validator.py",
+                "--ignore=apps/notifications/tests/test_notifications.py",
+                "--ignore=apps/notifications/tests/test_notification_worker.py",
                 "--ignore=tests/validation",
             ]
         )
@@ -195,8 +195,8 @@ def step_run_tests(dry_run: bool) -> None:
                 "report_notif.xml",
                 "-q",
                 "--no-cov",
-                "tests/test_notifications.py",
-                "tests/test_notification_worker.py",
+                "apps/notifications/tests/test_notifications.py",
+                "apps/notifications/tests/test_notification_worker.py",
             ]
         )
         # Run layout validator tests sequentially
@@ -210,7 +210,7 @@ def step_run_tests(dry_run: bool) -> None:
                 "report_integration.xml",
                 "-q",
                 "--no-cov",
-                "tests/test_layout_validator.py",
+                "scripts/tests/test_layout_validator.py",
             ]
         )
         # Run GxP qualification validation suite sequentially
