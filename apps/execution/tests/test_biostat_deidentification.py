@@ -31,7 +31,7 @@ from apps.execution.database.models import (
 from apps.execution.demographics import encrypt_demographics
 from apps.execution.main import app
 
-GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # pragma: allowlist secret
 
 
 def get_auth_headers(
