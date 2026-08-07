@@ -2,13 +2,14 @@
   <div class="language-translation-tabs-container card">
     <div class="tabs-header">
       <span class="tabs-label">🌍 Localized Consent Translations:</span>
-      <div class="tabs-list" role="tablist">
+      <div class="tabs-list" role="tablist" ref="tabsListRef">
         <button
           v-for="lang in availableLanguages"
           :key="lang.code"
           type="button"
           role="tab"
           :aria-selected="econsentStore.activeLanguage === lang.code"
+          :tabindex="econsentStore.activeLanguage === lang.code ? 0 : -1"
           :class="[
             'tab-item',
             { active: econsentStore.activeLanguage === lang.code },
@@ -40,10 +41,12 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { useEconsentStore } from "../../stores/econsent.js";
+import { useRovingTabindex } from "../../composables/useRovingTabindex.js";
 
 const econsentStore = useEconsentStore();
+const tabsListRef = ref(null);
 
 const availableLanguages = [
   { code: "en", name: "English", flag: "🇬🇧" },
@@ -51,6 +54,15 @@ const availableLanguages = [
   { code: "fr", name: "French", flag: "🇫🇷" },
   { code: "de", name: "German", flag: "🇩🇪" },
 ];
+
+const onSelectTab = (index) => {
+  const selectedLang = availableLanguages[index];
+  if (selectedLang) {
+    selectLanguage(selectedLang.code);
+  }
+};
+
+useRovingTabindex(tabsListRef, onSelectTab);
 
 const activeLanguageName = computed(() => {
   const found = availableLanguages.find(
@@ -120,6 +132,11 @@ const selectLanguage = (langCode) => {
 .tab-item:hover {
   background-color: #f1f5f9;
   border-color: var(--accent);
+}
+
+.tab-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .tab-item.active {
