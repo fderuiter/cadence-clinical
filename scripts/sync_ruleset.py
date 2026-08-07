@@ -192,22 +192,13 @@ def sync_ruleset():
             stderr_msg = e.stderr or ""
             stdout_msg = e.stdout or ""
             combined_output = f"{stderr_msg}\n{stdout_msg}"
-            if (
-                "Resource not accessible by integration" in combined_output
-                or "403" in combined_output
-                or "Must have admin rights" in combined_output
-            ):
-                print(
-                    "Warning: Permission denied (HTTP 403) during ruleset administration.\n"
-                    "Ruleset administration requires a token with 'Administration: write' permissions. "
-                    "Skipping automated ruleset sync for this run."
-                )
-                if os.environ.get("FAIL_ON_RULESET_SYNC_ERROR") == "true":
-                    sys.exit(1)
-            else:
-                print(
-                    f"Error: Command failed with exit code {e.returncode}.\nStderr: {stderr_msg}\nStdout: {stdout_msg}"
-                )
+            print(
+                f"WARNING: Branch ruleset sync failed for '{ruleset_name}' (exit code {e.returncode}).\n"
+                f"Output: {combined_output.strip()}\n"
+                "Ruleset administration requires a token with 'Administration: write' permissions. "
+                "Skipping automated ruleset sync for this run."
+            )
+            if os.environ.get("FAIL_ON_RULESET_SYNC_ERROR") == "true":
                 sys.exit(1)
 
 
