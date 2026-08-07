@@ -30,6 +30,21 @@ export async function toBeAccessible(received, customOptions = {}) {
     };
   }
 
+  // Strict Layout Mode validation checks (WCAG 2.4.1 Bypass Blocks & Landmark requirements)
+  if (customOptions.strictLayoutMode || (customOptions.rules && customOptions.rules["landmark-one-main"]?.enabled)) {
+    const hasMain = element.querySelector("main#main-content");
+    const hasSkipLink = element.querySelector(".skip-link[href='#main-content']");
+    if (!hasMain || !hasSkipLink) {
+      return {
+        pass: false,
+        message: () =>
+          `Accessibility strict validation failed:\n` +
+          (!hasMain ? ` - Missing main landmark element (<main>) with id="main-content"\n` : "") +
+          (!hasSkipLink ? ` - Missing skip-to-content link (.skip-link) with href="#main-content"\n` : ""),
+      };
+    }
+  }
+
   // Default fragment-level bypass rules to support isolated component testing
   const defaultRules = {
     "document-title": { enabled: false },
