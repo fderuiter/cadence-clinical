@@ -1,6 +1,6 @@
 <template>
   <div
-    class="canvas-field-widget p-3 rounded-lg border-2 transition-all relative group bg-white shadow-sm"
+    class="canvas-field-widget p-3 rounded-lg border-2 transition-all relative group bg-white shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2"
     :class="[
       isSelected
         ? 'border-indigo-600 ring-2 ring-indigo-100'
@@ -8,6 +8,7 @@
           ? 'border-amber-400 bg-amber-50/10 hover:border-amber-500'
           : 'border-gray-200 hover:border-gray-300',
     ]"
+    v-keyboard-click="selectField"
     @click="selectField"
   >
     <!-- Field Header / Metadata -->
@@ -207,6 +208,7 @@
  */
 import { computed } from "vue";
 import { useDesignerStore } from "../../stores/designer.js";
+import { vKeyboardClick } from "../../directives/keyboardClick.js";
 
 const designerStore = useDesignerStore();
 
