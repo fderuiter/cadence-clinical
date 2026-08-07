@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import TmfBinderTree from "../../src/components/etmf/TmfBinderTree.vue";
 import { nextTick } from "vue";
@@ -21,26 +21,26 @@ describe("TmfBinderTree Keyboard Navigation & Roving Tabindex Tests", () => {
               id: "art_01.01.01",
               name: "Clinical Trial Protocol",
               code: "01.01.01",
-              type: "artifact"
-            }
-          ]
-        }
-      ]
+              type: "artifact",
+            },
+          ],
+        },
+      ],
     },
     {
       id: "zone_2",
       name: "Central Trial Documents",
       code: "2",
       type: "zone",
-      children: []
-    }
+      children: [],
+    },
   ];
 
   it("restricts container sequential navigation to exactly one stop (container tabindex=-1, active node tabindex=0)", async () => {
     const wrapper = mount(TmfBinderTree, {
       props: {
-        tree: mockTree
-      }
+        tree: mockTree,
+      },
     });
 
     // Root container must have tabindex="-1" to prevent the wrapper from being a tab stop
@@ -59,8 +59,8 @@ describe("TmfBinderTree Keyboard Navigation & Roving Tabindex Tests", () => {
   it("updates internal activeFocusedNodeId and shifts tabindex dynamically upon native focus action", async () => {
     const wrapper = mount(TmfBinderTree, {
       props: {
-        tree: mockTree
-      }
+        tree: mockTree,
+      },
     });
 
     const zone1Header = wrapper.find("#tree-node-zone_1");
@@ -77,9 +77,9 @@ describe("TmfBinderTree Keyboard Navigation & Roving Tabindex Tests", () => {
   it("traverses visible tree nodes using ArrowDown and ArrowUp, updating focused element", async () => {
     const wrapper = mount(TmfBinderTree, {
       props: {
-        tree: mockTree
+        tree: mockTree,
       },
-      attachTo: document.body // Required for native element focus calls to succeed in JSDOM
+      attachTo: document.body, // Required for native element focus calls to succeed in JSDOM
     });
 
     const rootContainer = wrapper.find(".tree-root-nodes");
@@ -112,12 +112,11 @@ describe("TmfBinderTree Keyboard Navigation & Roving Tabindex Tests", () => {
   it("expands folder nodes on Enter or Space keydown events exactly once", async () => {
     const wrapper = mount(TmfBinderTree, {
       props: {
-        tree: mockTree
-      }
+        tree: mockTree,
+      },
     });
 
     const rootContainer = wrapper.find(".tree-root-nodes");
-    const zone1Header = wrapper.find("#tree-node-zone_1");
 
     // Ensure Zone 1 is initially collapsed
     expect(wrapper.vm.isExpanded("zone_1")).toBe(false);

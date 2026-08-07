@@ -1,4 +1,5 @@
 <template>
+  <!-- eslint-disable vuejs-accessibility/interactive-supports-focus, vuejs-accessibility/click-events-have-key-events -->
   <div class="tmf-binder-tree-container">
     <div class="tree-search-bar">
       <input
@@ -34,7 +35,7 @@
       >
         <div
           :id="'tree-node-' + zone.id"
-          :ref="el => setNodeRef(zone.id, el)"
+          :ref="(el) => setNodeRef(zone.id, el)"
           class="node-header zone-header"
           role="treeitem"
           :aria-expanded="isExpanded(zone.id)"
@@ -68,7 +69,7 @@
           >
             <div
               :id="'tree-node-' + section.id"
-              :ref="el => setNodeRef(section.id, el)"
+              :ref="(el) => setNodeRef(section.id, el)"
               class="node-header section-header"
               role="treeitem"
               :aria-expanded="isExpanded(section.id)"
@@ -100,7 +101,7 @@
               <div
                 v-for="artifact in section.children"
                 :id="'tree-node-' + artifact.id"
-                :ref="el => setNodeRef(artifact.id, el)"
+                :ref="(el) => setNodeRef(artifact.id, el)"
                 :key="artifact.id"
                 class="tree-node artifact-node"
                 role="treeitem"
