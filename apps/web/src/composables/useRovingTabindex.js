@@ -2,7 +2,7 @@ import { onMounted, onUnmounted, nextTick } from "vue";
 
 /**
  * useRovingTabindex - Horizontal arrow-key focus and selection manager (roving tabindex pattern)
- * 
+ *
  * @param {Ref<HTMLElement>} containerRef - Ref to the tab list container containing role="tab" elements
  * @param {Function} onSelectTab - Callback with parameters (index, tabElement) when a tab should be activated
  */
