@@ -8,6 +8,7 @@ from packages.storage.blob_store import (
     BlobStorageProvider,
     StorageIntegrityError,
     StorageObjectNotFoundError,
+    validate_key,
 )
 
 
@@ -22,6 +23,7 @@ class LocalStorageProvider(BlobStorageProvider):
         self.base_dir.mkdir(parents=True, exist_ok=True)
 
     def _get_path(self, key: str) -> Path:
+        validate_key(key)
         # Prevent relative directory traversal
         path = (self.base_dir / key).resolve()
         try:

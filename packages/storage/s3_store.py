@@ -7,6 +7,7 @@ from packages.storage.blob_store import (
     BlobStorageProvider,
     StorageIntegrityError,
     StorageObjectNotFoundError,
+    validate_key,
 )
 
 
@@ -48,6 +49,7 @@ class S3StorageProvider(BlobStorageProvider):
 
         Requirements: PRD-SYS-001
         """
+        validate_key(key)
         hasher = hashlib.sha256()
         chunk_size = 65536
         if not data:
@@ -81,6 +83,7 @@ class S3StorageProvider(BlobStorageProvider):
 
         Requirements: PRD-SYS-001
         """
+        validate_key(key)
         async with self._get_client() as client:
             try:
                 response = await client.get_object(Bucket=self.bucket_name, Key=key)
@@ -118,6 +121,7 @@ class S3StorageProvider(BlobStorageProvider):
 
     async def exists(self, key: str) -> bool:
         """Check if an object exists in storage."""
+        validate_key(key)
         async with self._get_client() as client:
             try:
                 await client.head_object(Bucket=self.bucket_name, Key=key)
@@ -130,6 +134,7 @@ class S3StorageProvider(BlobStorageProvider):
 
     async def delete_object(self, key: str) -> None:
         """Delete an object from storage."""
+        validate_key(key)
         async with self._get_client() as client:
             try:
                 await client.head_object(Bucket=self.bucket_name, Key=key)

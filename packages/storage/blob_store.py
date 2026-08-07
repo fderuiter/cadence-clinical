@@ -50,3 +50,13 @@ def verify_checksum(data: bytes, expected_sha256: str) -> None:
         raise StorageIntegrityError(
             f"Storage integrity verification failed! Expected {expected_sha256}, got {actual}"
         )
+
+
+def validate_key(key: str) -> None:
+    """Validate storage key to block directory traversal or absolute path escapes."""
+    normalized = key.replace("\\", "/")
+    parts = normalized.split("/")
+    if ".." in parts or "." in parts or any(not p.strip() for p in parts if p):
+        raise ValueError(f"Path traversal attempt detected: {key}")
+    if key.startswith("/") or key.startswith("\\"):
+        raise ValueError(f"Path traversal attempt detected: {key}")

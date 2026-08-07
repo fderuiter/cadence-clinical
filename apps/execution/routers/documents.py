@@ -29,6 +29,7 @@ import packages  # noqa: F401
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import AuditLog
 from packages.security.middleware import get_current_user
+from packages.storage import get_storage_provider
 
 router = APIRouter(prefix="/api/v1/documents", tags=["Documents"])
 
@@ -80,6 +81,11 @@ async def upload_document(
     document_id = f"doc_{uuid.uuid4().hex[:8]}"
     created_at = datetime.datetime.now(datetime.UTC)
 
+    # Persist raw document bytes via the storage provider
+    storage_key = f"clinical_documents/{document_id}"
+    provider = get_storage_provider()
+    await provider.put_object(storage_key, content, expected_sha256=sha256_hash)
+
     doc_record = {
         "document_id": document_id,
         "filename": file.filename or "uploaded_document.pdf",
@@ -89,7 +95,7 @@ async def upload_document(
         "status": "DRAFT",
         "created_by": current_user.get("sub", "datamanager_user"),
         "created_at": created_at,
-        "content": content,
+        "storage_key": storage_key,
         "reason_for_change": reason_for_change,
         "mime_type": file.content_type or "application/octet-stream",
     }
@@ -126,7 +132,11 @@ async def download_document(
     user_id = current_user.get("sub", "unknown_user")
     user_roles = ",".join(current_user.get("roles", []))
 
-    content_str = doc["content"].decode("utf-8", errors="ignore")
+    # Retrieve raw document bytes from storage provider
+    provider = get_storage_provider()
+    content_bytes, _ = await provider.get_object(doc["storage_key"])
+
+    content_str = content_bytes.decode("utf-8", errors="ignore")
     watermarked_content = apply_watermark(
         content_str, doc["mime_type"], user_id, user_roles
     )

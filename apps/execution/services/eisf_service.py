@@ -13,6 +13,7 @@ from execution.eisf_models import (
 )
 
 import packages  # noqa: F401
+from packages.storage import get_storage_provider
 
 
 class EISFService:
@@ -25,7 +26,7 @@ class EISFService:
         """Initialize in-memory document metadata store."""
         self._document_store: dict[str, EISFDocumentRecord] = {}
 
-    def upload_document(
+    async def upload_document(
         self,
         study_id: str,
         site_id: str,
@@ -55,6 +56,13 @@ class EISFService:
         sha256_hash = hashlib.sha256(content_bytes).hexdigest()
         now_iso = datetime.now(UTC).isoformat()
 
+        # Save raw content bytes to the active storage provider
+        storage_key = f"eisf_documents/{doc_id}"
+        provider = get_storage_provider()
+        await provider.put_object(
+            storage_key, content_bytes, expected_sha256=sha256_hash
+        )
+
         record = EISFDocumentRecord(
             document_id=doc_id,
             study_id=study_id,
@@ -72,6 +80,16 @@ class EISFService:
 
         self._document_store[doc_id] = record
         return record
+
+    async def get_document_content(self, doc_id: str) -> bytes:
+        """Retrieve raw document content bytes for the given document ID.
+
+        Requirements: PRD-SYS-001
+        """
+        storage_key = f"eisf_documents/{doc_id}"
+        provider = get_storage_provider()
+        content_bytes, _ = await provider.get_object(storage_key)
+        return content_bytes
 
     def apply_watermark(self, content_bytes: bytes, watermark_text: str) -> bytes:
         """Apply dynamic security watermark banner text to document content.

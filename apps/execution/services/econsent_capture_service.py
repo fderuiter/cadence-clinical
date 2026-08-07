@@ -1,5 +1,4 @@
 import hashlib
-import os
 from datetime import UTC, datetime
 from io import BytesIO
 
@@ -18,6 +17,7 @@ from apps.execution.database.models import (
 )
 from packages.security import CentralAuditLogger
 from packages.security.gateway_client import create_service_auth_headers
+from packages.storage import get_storage_provider
 
 try:
     from reportlab.graphics import renderPDF
@@ -192,13 +192,12 @@ async def process_econsent_signature(
     session.add(signature)
 
     # 5. Write signed PDF blob into document storage layer.
-    os.makedirs("/tmp/consent_pdfs", exist_ok=True)  # nosec B108: secure internal container temp storage
     pdf_filename = f"{payload.subject_id}_{payload.icf_version_id}_{now.strftime('%Y%m%d%H%M%S')}.pdf"
-    pdf_path = os.path.join("/tmp/consent_pdfs", pdf_filename)  # nosec B108: secure internal container temp storage
-    with open(pdf_path, "wb") as f:
-        f.write(pdf_bytes)
+    storage_key = f"consent_pdfs/{pdf_filename}"
+    provider = get_storage_provider()
+    await provider.put_object(storage_key, pdf_bytes)
 
-    signed_pdf_url = f"file://{pdf_path}"
+    signed_pdf_url = f"storage://{storage_key}"
 
     await session.commit()
 

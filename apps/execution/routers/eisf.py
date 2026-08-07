@@ -57,7 +57,7 @@ async def upload_eisf_document_endpoint(
 
     uploader = current_user.get("sub", "crc_user")
 
-    return _EISF_SERVICE.upload_document(
+    return await _EISF_SERVICE.upload_document(
         study_id=payload.study_id,
         site_id=payload.site_id,
         category=payload.category,
