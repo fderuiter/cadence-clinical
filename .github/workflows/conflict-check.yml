@@ -25,6 +25,14 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref || github.ref }}
           fetch-depth: 0
 
+      - name: Checkout trusted base branch
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          ref: ${{ github.event.pull_request.base.ref || 'main' }}
+          path: .github/trusted-base
+
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
         with:
@@ -72,7 +80,7 @@ jobs:
         run: |
           # Only attempt self-healing if PR_NUMBER is set
           if [ -n "$PR_NUMBER" ]; then
-            python3 scripts/self_heal.py
+            python3 .github/trusted-base/scripts/self_heal.py
           fi
 
       - name: Post PR Quality Checklist Comment on Conflict Fallback
@@ -81,4 +89,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           CONFLICT_OUTCOME: "failure"
-        run: python3 scripts/post_pr_comment.py
+        run: |
+          if [ -f ".github/trusted-base/scripts/post_pr_comment.py" ]; then
+            python3 .github/trusted-base/scripts/post_pr_comment.py
+          else
+            python3 scripts/post_pr_comment.py
+          fi
