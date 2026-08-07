@@ -12,6 +12,7 @@ from packages.storage import (
 )
 
 
+# Async integration tests for dynamic storage providers
 @pytest.mark.asyncio
 async def test_default_storage_provider_is_local():
     """Verify default storage provider resolves to LocalStorageProvider.
