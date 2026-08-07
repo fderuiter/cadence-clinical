@@ -22,7 +22,7 @@ function overrideBasePlugin() {
       if (!base.startsWith("/")) base = "/" + base;
       if (!base.endsWith("/")) base = base + "/";
       config.base = base;
-    }
+    },
   };
 }
 
