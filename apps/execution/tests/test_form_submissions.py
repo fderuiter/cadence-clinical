@@ -13,7 +13,7 @@ from apps.execution.database.models import AuditLog, Base
 from apps.execution.main import app
 from apps.execution.trial_lock import TrialLockManager
 
-GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # pragma: allowlist secret
 
 
 def get_auth_headers(

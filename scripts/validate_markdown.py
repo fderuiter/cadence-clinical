@@ -297,7 +297,19 @@ def resolve_path(path_str, md_file_path, repo_root, root_dirs, root_files):
     # If it starts with a known root dir or root file, resolve relative to root
     first_part = stripped_path.split("/")[0]
     if first_part in root_dirs or first_part in root_files:
-        return repo_root / stripped_path
+        candidate = repo_root / stripped_path
+        if candidate.exists():
+            return candidate
+
+        # Fallback for decentralized tests: if path starts with tests/test_*, search in workspace test dirs
+        if first_part == "tests" and "/test_" in stripped_path:
+            test_filename = os.path.basename(stripped_path)
+            for search_dir in ("apps", "packages", "scripts", "tests"):
+                for root, _, files in os.walk(repo_root / search_dir):
+                    if test_filename in files:
+                        return Path(root) / test_filename
+
+        return candidate
 
     # Relative path starts with ./ or ../
     if path_str.startswith(("./", "../")):
