@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2144
-- **Passed:** 2139 🟢
+- **Total Automated Test Cases Run:** 2152
+- **Passed:** 2147 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
 - **Overall Operational Pass Rate:** 99.77%
@@ -1950,13 +1950,18 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_verify_gateway_signature_tenant_and_multishape_restrictions`                 | `tests.test_security_middleware`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_verify_sig_token_helper_scenarios`                                           | `tests.test_security_middleware`                            | Trace-17                                     | 🟢 PASSED  | < 1s     |
 | `test_handle_github_api_error`                                                     | `tests.test_self_heal`                                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_is_executable_or_test_file`                                                  | `tests.test_self_heal`                                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_is_safe_file`                                                                | `tests.test_self_heal`                                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_is_tampering_attempt`                                                        | `tests.test_self_heal`                                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_main_blocked_on_non_safe_files`                                              | `tests.test_self_heal`                                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_main_graceful_exit_on_api_error`                                             | `tests.test_self_heal`                                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_main_graceful_on_github_api_error`                                           | `tests.test_self_heal`                                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_main_no_conflict_needed`                                                     | `tests.test_self_heal`                                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_main_no_conflict_with_non_safe_files`                                        | `tests.test_self_heal`                                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_main_skipped_if_no_safe_change_label`                                        | `tests.test_self_heal`                                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_tampering_blocked_on_workflow_change`                                        | `tests.test_self_heal`                                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_validation_bypassed_on_code_change`                                          | `tests.test_self_heal`                                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_validation_executed_on_non_executable_change`                                | `tests.test_self_heal`                                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_cross_service_interception_and_replay`                                       | `tests.test_shared_infrastructure`                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_service_client_fixtures_isolation`                                           | `tests.test_shared_infrastructure`                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_signed_headers_generation`                                                   | `tests.test_shared_infrastructure`                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
@@ -2364,6 +2369,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_submission_locks`                                                            | `tests.validation.prd_compliance_traceability_suite`        | PRD-SUB-005                                  | 🟢 PASSED  | < 1s     |
 | `test_submission_version_control`                                                  | `tests.validation.prd_compliance_traceability_suite`        | PRD-SUB-002                                  | 🟢 PASSED  | < 1s     |
 | `test_system_generated_validation_queries`                                         | `tests.validation.prd_compliance_traceability_suite`        | PRD-QRY-002                                  | 🟢 PASSED  | < 1s     |
+| `test_environment_integrity_assertions`                                            | `tests.validation.test_path_boundary_linter`                | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_linter_negative_cases`                                                       | `tests.validation.test_path_boundary_linter`                | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_linter_positive_cases`                                                       | `tests.validation.test_path_boundary_linter`                | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 
