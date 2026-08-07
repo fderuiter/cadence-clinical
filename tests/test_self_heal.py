@@ -186,3 +186,177 @@ def test_main_no_conflict_with_non_safe_files(mock_update_comment, mock_run_cmd)
                 main()
             mock_exit.assert_called_once_with(0)
             mock_update_comment.assert_not_called()
+
+
+def test_is_tampering_attempt():
+    from scripts.self_heal import is_tampering_attempt
+
+    assert is_tampering_attempt(".github/workflows/conflict-check.yml")
+    assert is_tampering_attempt("scripts/self_heal.py")
+    assert is_tampering_attempt("scripts/post_pr_comment.py")
+    assert not is_tampering_attempt("tests/test_self_heal.py")
+    assert not is_tampering_attempt("README.md")
+
+
+def test_is_executable_or_test_file():
+    from scripts.self_heal import is_executable_or_test_file
+
+    assert is_executable_or_test_file("tests/test_self_heal.py")
+    assert is_executable_or_test_file("apps/execution/main.py")
+    assert is_executable_or_test_file("scripts/self_heal.py")
+    assert is_executable_or_test_file("fixture/some_data.json")
+    assert is_executable_or_test_file("test_script.sh")
+    assert not is_executable_or_test_file("README.md")
+    assert not is_executable_or_test_file("uv.lock")
+    assert not is_executable_or_test_file("package.json")
+
+
+@patch("scripts.self_heal.run_command")
+@patch("scripts.self_heal.update_pr_comment")
+def test_tampering_blocked_on_workflow_change(mock_update_comment, mock_run_cmd):
+    # Mock PR with safe-change label, but contains a modified workflow file
+    mock_run_cmd.side_effect = [
+        # gh pr view
+        (
+            '{"labels": [{"name": "safe-change"}], "headRefName": "feat-docs", "baseRefName": "main", "mergeable": "CONFLICTING"}',
+            "",
+        ),
+        # gh api repos/owner/repo/pulls/123/files
+        (".github/workflows/conflict-check.yml", ""),
+    ]
+
+    with patch.dict(
+        os.environ, {"GITHUB_REPOSITORY": "owner/repo", "PR_NUMBER": "123"}
+    ):
+        with patch("sys.exit", side_effect=SystemExit) as mock_exit:
+            with pytest.raises(SystemExit):
+                main()
+            mock_exit.assert_called_once_with(1)
+            mock_update_comment.assert_called_once_with("failure")
+
+
+@patch("scripts.self_heal.run_command")
+@patch("scripts.self_heal.update_pr_comment")
+def test_validation_bypassed_on_code_change(mock_update_comment, mock_run_cmd):
+    # Mock PR with safe-change label and modified test file
+    mock_run_cmd.side_effect = [
+        # 1. gh pr view
+        (
+            '{"labels": [{"name": "safe-change"}], "headRefName": "feat-docs", "baseRefName": "main", "mergeable": "CONFLICTING"}',
+            "",
+        ),
+        # 2. gh api repos/owner/repo/pulls/123/files
+        ("tests/test_something.py", ""),
+        # 3. git config user.name
+        ("", ""),
+        # 4. git config user.email
+        ("", ""),
+        # 5. git fetch origin main
+        ("", ""),
+        # 6. git merge origin/main --no-commit --no-ff
+        ("", ""),
+        # 7. git diff --name-only --diff-filter=U (conflicting files)
+        ("tests/test_something.py", ""),
+        # 8. git checkout --ours tests/test_something.py
+        ("", ""),
+        # 9. git add tests/test_something.py
+        ("", ""),
+        # 10. git status --porcelain
+        ("M tests/test_something.py", ""),
+        # 11. git commit -m ...
+        ("committed", ""),
+        # 12. git remote set-url origin ...
+        ("", ""),
+        # 13. git push origin HEAD:feat-docs
+        ("pushed", ""),
+    ]
+
+    with patch.dict(
+        os.environ,
+        {
+            "GITHUB_REPOSITORY": "owner/repo",
+            "PR_NUMBER": "123",
+            "PAT_FDERUITER": "token_val",
+        },
+    ):
+        main()
+
+        # Verify LINTING_OUTCOME and TEST_OUTCOME are set to skipped
+        assert os.environ.get("LINTING_OUTCOME") == "skipped"
+        assert os.environ.get("TEST_OUTCOME") == "skipped"
+
+        # Verify comment was updated with success after push
+        mock_update_comment.assert_called_once_with("success")
+
+        # Check that we did not run ruff or pytest command
+        for call_args in mock_run_cmd.call_args_list:
+            cmd = call_args[0][0]
+            assert "ruff" not in cmd
+            assert "pytest" not in cmd
+
+
+@patch("scripts.self_heal.run_command")
+@patch("scripts.self_heal.update_pr_comment")
+def test_validation_executed_on_non_executable_change(
+    mock_update_comment, mock_run_cmd
+):
+    # Reset env vars
+    os.environ.pop("LINTING_OUTCOME", None)
+    os.environ.pop("TEST_OUTCOME", None)
+
+    # Mock PR with safe-change label and modified lockfile (non-executable)
+    mock_run_cmd.side_effect = [
+        # 1. gh pr view
+        (
+            '{"labels": [{"name": "safe-change"}], "headRefName": "feat-docs", "baseRefName": "main", "mergeable": "CONFLICTING"}',
+            "",
+        ),
+        # 2. gh api repos/owner/repo/pulls/123/files
+        ("uv.lock\nREADME.md", ""),
+        # 3. git config user.name
+        ("", ""),
+        # 4. git config user.email
+        ("", ""),
+        # 5. git fetch origin main
+        ("", ""),
+        # 6. git merge origin/main --no-commit --no-ff
+        ("", ""),
+        # 7. git diff --name-only --diff-filter=U (conflicting files)
+        ("uv.lock", ""),
+        # 8. git checkout --ours uv.lock
+        ("", ""),
+        # 9. git add uv.lock
+        ("", ""),
+        # 10. uv sync --python 3.14 --all-extras
+        ("", ""),
+        # 11. git add uv.lock
+        ("", ""),
+        # 12. git status --porcelain
+        ("M uv.lock", ""),
+        # 13. git commit -m ...
+        ("committed", ""),
+        # 14. ruff check
+        ("ruff clean", ""),
+        # 15. pytest
+        ("pytest passed", ""),
+        # 16. git remote set-url origin ...
+        ("", ""),
+        # 17. git push origin HEAD:feat-docs
+        ("pushed", ""),
+    ]
+
+    with patch.dict(
+        os.environ,
+        {
+            "GITHUB_REPOSITORY": "owner/repo",
+            "PR_NUMBER": "123",
+            "PAT_FDERUITER": "token_val",
+        },
+    ):
+        main()
+
+        # Verify LINTING_OUTCOME and TEST_OUTCOME are set to success
+        assert os.environ.get("LINTING_OUTCOME") == "success"
+        assert os.environ.get("TEST_OUTCOME") == "success"
+
+        mock_update_comment.assert_called_once_with("success")
