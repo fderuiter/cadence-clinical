@@ -30,9 +30,10 @@ To ensure public stakeholders, clinical partners, and integrators are directed a
 
 ## 🚫 GitHub Issue Tracker Guidelines
 
-To maintain an efficient and compliant development cycle, **zero non-technical support tickets or general inquiries should be opened in the public GitHub issues tracker**. 
+To maintain an efficient and compliant development cycle, **zero non-technical support tickets or general inquiries should be opened in the public GitHub issues tracker**.
 
 Any tickets related to:
+
 - Clinical trial design consultation
 - Pilot testing access or setup requests
 - Pricing or licensing questions
