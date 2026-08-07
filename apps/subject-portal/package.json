@@ -24,7 +24,7 @@
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.1.1",
     "keycloak-js": "^26.2.4",
-    "vite": "^8.2.0",
+    "vite": "^8.2.1",
     "vitest": "^4.1.10",
     "@vitest/coverage-v8": "^4.1.10"
   }
