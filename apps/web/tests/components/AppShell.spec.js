@@ -130,7 +130,9 @@ describe("AppShell.vue - Application Shell Component", () => {
       },
     });
 
-    const focusable = wrapper.element.querySelectorAll("a, button, input, select, textarea, [tabindex]");
+    const focusable = wrapper.element.querySelectorAll(
+      "a, button, input, select, textarea, [tabindex]"
+    );
     expect(focusable.length).toBeGreaterThan(0);
     const firstFocusable = focusable[0];
     expect(firstFocusable.classList.contains("skip-link")).toBe(true);
@@ -161,8 +163,8 @@ describe("AppShell.vue - Application Shell Component", () => {
     await expect(wrapper).toBeAccessible({
       rules: {
         "landmark-one-main": { enabled: true },
-        "region": { enabled: true },
-        "bypass": { enabled: true },
+        region: { enabled: true },
+        bypass: { enabled: true },
       },
     });
   });
@@ -175,10 +177,10 @@ describe("AppShell.vue - Application Shell Component", () => {
     });
 
     const clonedEl = wrapper.element.cloneNode(true);
-    
+
     // Unmount the original wrapper to clean up document.body
     wrapper.unmount();
-    
+
     // 1. Remove the skip link completely
     const skipLink = clonedEl.querySelector(".skip-link");
     if (skipLink) {
@@ -199,12 +201,11 @@ describe("AppShell.vue - Application Shell Component", () => {
     const result = await auditFn(clonedEl, {
       rules: {
         "landmark-one-main": { enabled: true },
-        "region": { enabled: true },
-        "bypass": { enabled: true },
+        region: { enabled: true },
+        bypass: { enabled: true },
       },
     });
 
     expect(result.pass).toBe(false);
   });
 });
-
