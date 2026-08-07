@@ -5,13 +5,13 @@ Requirements: PRD-SYS-001
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Any, Literal, TypeAlias
 
 from pydantic import BaseModel, Field
 
 # Recursive JSON value type representation
-type JsonValue = (
-    str | int | float | bool | None | list[JsonValue] | dict[str, JsonValue]
+JsonValue: TypeAlias = (  # noqa: UP040
+    str | int | float | bool | None | list[Any] | dict[str, Any]
 )
 
 # Submission status for ePRO reconciliation

@@ -1,6 +1,6 @@
 import functools
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 from sqlalchemy.exc import IntegrityError, NoResultFound, SQLAlchemyError
 
@@ -68,7 +68,10 @@ def map_database_exceptions(func):
 # ==========================================
 
 
-class RepositoryPort[T](ABC):
+T = TypeVar("T")
+
+
+class RepositoryPort(Generic[T], ABC):  # noqa: UP046
     """Abstract driven port for persistence operations."""
 
     @abstractmethod
