@@ -1,5 +1,8 @@
 <template>
   <div id="vue-app-root">
+    <!-- Skip Link (WCAG 2.4.1 Bypass Blocks) -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
     <!-- Header -->
     <header>
       <div class="header-title-area">
@@ -193,7 +196,7 @@
       </aside>
 
       <!-- Main Workspace -->
-      <main>
+      <main id="main-content" tabindex="-1">
         <slot />
       </main>
     </div>
