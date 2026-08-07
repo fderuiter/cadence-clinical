@@ -17,7 +17,7 @@ def get_auth_headers():
     user_id = "123"
     roles = "sponsor_designer"
     change_reason = "system_operation"
-    secret = "internal-gateway-secret-12345"
+    secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
     payload = {
         "change_reason": change_reason,
         "roles": roles,
