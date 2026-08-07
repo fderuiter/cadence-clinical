@@ -19,6 +19,7 @@ async def test_default_storage_provider_is_local():
 
     Requirements: PRD-SYS-001
     """
+    # @req:PRD-SYS-001
     reset_storage_provider()
     # Save original env
     orig_provider = os.environ.get("STORAGE_PROVIDER")
@@ -40,6 +41,7 @@ async def test_s3_storage_provider_toggle():
 
     Requirements: PRD-SYS-001
     """
+    # @req:PRD-SYS-001
     reset_storage_provider()
     orig_provider = os.environ.get("STORAGE_PROVIDER")
     os.environ["STORAGE_PROVIDER"] = "s3"
@@ -62,6 +64,7 @@ async def test_path_traversal_prevention_on_dynamic_providers():
 
     Requirements: PRD-SYS-001
     """
+    # @req:PRD-SYS-001
     reset_storage_provider()
     provider = get_storage_provider()
 
@@ -93,6 +96,7 @@ async def test_local_storage_atomic_write_integrity():
 
     Requirements: PRD-SYS-001
     """
+    # @req:PRD-SYS-001
     with tempfile.TemporaryDirectory() as tmp_dir:
         os.environ["STORAGE_PROVIDER"] = "local"
         os.environ["LOCAL_STORAGE_DIR"] = tmp_dir
