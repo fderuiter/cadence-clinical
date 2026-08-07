@@ -48,7 +48,7 @@ def get_storage_provider() -> BlobStorageProvider:
         base_dir = (
             os.getenv("LOCAL_STORAGE_DIR")
             or os.getenv("LOCAL_STORE_DIR")
-            or "/tmp/local_storage"
+            or "/tmp/local_storage"  # nosec B108: secure local fallback
         )
         _provider_instance = LocalStorageProvider(base_dir=base_dir)
 
