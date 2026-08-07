@@ -142,7 +142,7 @@ async def test_subject_demographics_mutation_and_deletion_endpoints() -> None:
 
         # Set stratification factors in pre-randomization (SCREENING) state
         put_res = await client.put(
-            "/api/v1/execution/subjects/SUBJ-902/demographics",
+            "/api/v1/execution/subjects/SUBJ-902/demographics",  # pragma: allowlist secret
             headers=headers,
             json={
                 "strat_factors": {"site": "SITE-A"},
@@ -181,7 +181,7 @@ async def test_subject_demographics_mutation_and_deletion_endpoints() -> None:
             roles="site investigator", change_reason="Idempotent Update"
         )
         put_idempotent = await client.put(
-            "/api/v1/execution/subjects/SUBJ-902/demographics",
+            "/api/v1/execution/subjects/SUBJ-902/demographics",  # pragma: allowlist secret
             headers=headers_put,
             json={
                 "strat_factors": {"site": "SITE-A"},
@@ -196,7 +196,7 @@ async def test_subject_demographics_mutation_and_deletion_endpoints() -> None:
 
         # 4. Test mutating strat_factors post-randomization -> LockedFactorMutationError 422
         put_mutated = await client.put(
-            "/api/v1/execution/subjects/SUBJ-902/demographics",
+            "/api/v1/execution/subjects/SUBJ-902/demographics",  # pragma: allowlist secret
             headers=headers_put,
             json={
                 "strat_factors": {"site": "SITE-B"},
@@ -207,7 +207,7 @@ async def test_subject_demographics_mutation_and_deletion_endpoints() -> None:
 
         # 5. Test mutating demographics post-randomization -> LockedFactorMutationError 422
         put_mutated_demo = await client.put(
-            "/api/v1/execution/subjects/SUBJ-902/demographics",
+            "/api/v1/execution/subjects/SUBJ-902/demographics",  # pragma: allowlist secret
             headers=headers_put,
             json={
                 "demographics": {"gender": "F"},
@@ -221,7 +221,7 @@ async def test_subject_demographics_mutation_and_deletion_endpoints() -> None:
             roles="site investigator", change_reason="Delete Request"
         )
         delete_res = await client.delete(
-            "/api/v1/execution/subjects/SUBJ-902/demographics",
+            "/api/v1/execution/subjects/SUBJ-902/demographics",  # pragma: allowlist secret
             headers=headers_delete,
         )
         assert delete_res.status_code == 403
@@ -240,7 +240,7 @@ async def test_subject_demographics_mutation_and_deletion_endpoints() -> None:
         assert create_res2.status_code == 200
 
         delete_pre_res = await client.delete(
-            "/api/v1/execution/subjects/SUBJ-903/demographics",
+            "/api/v1/execution/subjects/SUBJ-903/demographics",  # pragma: allowlist secret
             headers=headers,
         )
         assert delete_pre_res.status_code == 200

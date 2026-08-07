@@ -455,7 +455,8 @@ async def test_forbidden_roles_matrix() -> None:
 
             # Visit freeze alias
             res = await client.post(
-                "/api/v1/execution/locks/visit/VIS-FORBIDDEN/freeze", headers=headers
+                "/api/v1/execution/locks/visit/VIS-FORBIDDEN/freeze",  # pragma: allowlist secret
+                headers=headers,
             )
             assert res.status_code == 403, (
                 f"Role {role} should be forbidden on visit freeze"
@@ -464,7 +465,8 @@ async def test_forbidden_roles_matrix() -> None:
 
             # Form level
             res = await client.post(
-                "/api/v1/execution/locks/form/FORM-FORBIDDEN/lock", headers=headers
+                "/api/v1/execution/locks/form/FORM-FORBIDDEN/lock",  # pragma: allowlist secret
+                headers=headers,
             )
             assert res.status_code == 403, (
                 f"Role {role} should be forbidden on form lock"
@@ -473,7 +475,8 @@ async def test_forbidden_roles_matrix() -> None:
 
             # Subject level
             res = await client.post(
-                "/api/v1/execution/locks/subject/SUB-FORBIDDEN/lock", headers=headers
+                "/api/v1/execution/locks/subject/SUB-FORBIDDEN/lock",  # pragma: allowlist secret
+                headers=headers,
             )
             assert res.status_code == 403, (
                 f"Role {role} should be forbidden on subject lock"
@@ -504,7 +507,8 @@ async def test_absent_and_malformed_roles() -> None:
             roles="", omit_roles=True, change_reason="Absent roles"
         )  # pragma: allowlist secret
         res = await client.post(
-            "/api/v1/execution/locks/site/SITE-MALFORMED/lock", headers=headers_absent
+            "/api/v1/execution/locks/site/SITE-MALFORMED/lock",  # pragma: allowlist secret
+            headers=headers_absent,
         )
         assert res.status_code == 403
         assert "SITE-MALFORMED" not in TrialLockManager._locked_sites
@@ -514,7 +518,8 @@ async def test_absent_and_malformed_roles() -> None:
             roles="", change_reason="Empty roles"
         )  # pragma: allowlist secret
         res = await client.post(
-            "/api/v1/execution/locks/site/SITE-MALFORMED/lock", headers=headers_empty
+            "/api/v1/execution/locks/site/SITE-MALFORMED/lock",  # pragma: allowlist secret
+            headers=headers_empty,
         )
         assert res.status_code == 403
         assert "SITE-MALFORMED" not in TrialLockManager._locked_sites
@@ -524,7 +529,8 @@ async def test_absent_and_malformed_roles() -> None:
             roles="   ", change_reason="WS roles"
         )  # pragma: allowlist secret
         res = await client.post(
-            "/api/v1/execution/locks/site/SITE-MALFORMED/lock", headers=headers_ws
+            "/api/v1/execution/locks/site/SITE-MALFORMED/lock",  # pragma: allowlist secret
+            headers=headers_ws,
         )
         assert res.status_code == 403
         assert "SITE-MALFORMED" not in TrialLockManager._locked_sites
@@ -534,7 +540,8 @@ async def test_absent_and_malformed_roles() -> None:
             roles="garbage_role_here_abc", change_reason="Garbage roles"
         )
         res = await client.post(
-            "/api/v1/execution/locks/site/SITE-MALFORMED/lock", headers=headers_garbage
+            "/api/v1/execution/locks/site/SITE-MALFORMED/lock",  # pragma: allowlist secret
+            headers=headers_garbage,
         )
         assert res.status_code == 403
         assert "SITE-MALFORMED" not in TrialLockManager._locked_sites
