@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2140
-- **Passed:** 2140 🟢
+- **Total Automated Test Cases Run:** 2143
+- **Passed:** 2143 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -2360,6 +2360,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_submission_locks`                                                            | `tests.validation.prd_compliance_traceability_suite`        | PRD-SUB-005                                  | 🟢 PASSED | < 1s     |
 | `test_submission_version_control`                                                  | `tests.validation.prd_compliance_traceability_suite`        | PRD-SUB-002                                  | 🟢 PASSED | < 1s     |
 | `test_system_generated_validation_queries`                                         | `tests.validation.prd_compliance_traceability_suite`        | PRD-QRY-002                                  | 🟢 PASSED | < 1s     |
+| `test_environment_integrity_assertions`                                            | `tests.validation.test_path_boundary_linter`                | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
+| `test_linter_negative_cases`                                                       | `tests.validation.test_path_boundary_linter`                | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
+| `test_linter_positive_cases`                                                       | `tests.validation.test_path_boundary_linter`                | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 
