@@ -3,7 +3,6 @@
 Requirements: PRD-SYS-001
 """
 
-from execution.lock_models import DataLockRecord, LockStatusEnum
 from fastapi.testclient import TestClient
 
 import packages  # noqa: F401
@@ -13,6 +12,7 @@ from apps.execution.services.lock_enforcement import (
     DataLockEnforcer,
     FormLockedError,
 )
+from apps.execution.src.domain.lock_models import DataLockRecord, LockStatusEnum
 
 client = TestClient(app)
 

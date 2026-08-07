@@ -3,14 +3,14 @@
 Requirements: PRD-SYS-001
 """
 
-from cdisc.usdm_importer import USDMImporter
-from cdisc.usdm_transport_models import (
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from apps.designer.src.domain.cdisc.usdm_importer import USDMImporter
+from apps.designer.src.domain.cdisc.usdm_transport_models import (
     UsdmExportResponse,
     UsdmImportRequest,
     UsdmImportResponse,
 )
-from fastapi import APIRouter, Depends, HTTPException, status
-
 from packages.security.middleware import get_current_user
 
 router = APIRouter()

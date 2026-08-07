@@ -1,6 +1,7 @@
 import pytest
 from pydantic import ValidationError
-from tmf_reference_model import (
+
+from apps.etmf.src.domain.tmf_reference_model import (
     build_catalog,
     get_active_catalog,
     get_catalog,
@@ -201,7 +202,7 @@ def test_resolve_artifact_success():
     - lookup by both
     """
     # @req:PRD-TMF-001
-    from tmf_reference_model import resolve_artifact
+    from apps.etmf.src.domain.tmf_reference_model import resolve_artifact
 
     # Lookup by exact canonical code
     res_code = resolve_artifact("v3.2.0", code="01.01.01")
@@ -234,7 +235,11 @@ def test_resolve_artifact_failures():
     - neither code nor name provided
     """
     # @req:PRD-TMF-001
-    from tmf_reference_model import build_catalog, register_catalog, resolve_artifact
+    from apps.etmf.src.domain.tmf_reference_model import (
+        build_catalog,
+        register_catalog,
+        resolve_artifact,
+    )
 
     # Unknown catalog version
     with pytest.raises(ValueError, match="Unknown catalog version 'v999'"):
@@ -285,7 +290,7 @@ def test_validate_hierarchy_success():
     Test validate_hierarchy success path with valid combinations.
     """
     # @req:PRD-TMF-002
-    from tmf_reference_model import validate_hierarchy
+    from apps.etmf.src.domain.tmf_reference_model import validate_hierarchy
 
     # Valid: zone 1, section 01.01, artifact 01.01.01 in version v3.2.0
     validate_hierarchy(
@@ -305,7 +310,7 @@ def test_validate_hierarchy_failures():
     - mismatched artifact in zone
     """
     # @req:PRD-TMF-002
-    from tmf_reference_model import validate_hierarchy
+    from apps.etmf.src.domain.tmf_reference_model import validate_hierarchy
 
     # Unknown version
     with pytest.raises(ValueError, match="Unknown catalog version 'v999'"):
@@ -357,7 +362,7 @@ def test_get_mandatory_artifacts_success():
     - CLOSEOUT / LOCK
     """
     # @req:PRD-TMF-004
-    from tmf_reference_model import get_mandatory_artifacts
+    from apps.etmf.src.domain.tmf_reference_model import get_mandatory_artifacts
 
     # INITIATION
     init_arts = get_mandatory_artifacts("INITIATION", "v3.2.0")
@@ -389,7 +394,7 @@ def test_get_mandatory_artifacts_failures():
     - mandatory artifact not in the requested version
     """
     # @req:PRD-TMF-004
-    from tmf_reference_model import (
+    from apps.etmf.src.domain.tmf_reference_model import (
         build_catalog,
         get_mandatory_artifacts,
         register_catalog,

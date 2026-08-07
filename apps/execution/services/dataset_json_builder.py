@@ -9,7 +9,8 @@ from typing import Any
 
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
-from sdtm.dataset_json_models import (
+
+from apps.execution.src.domain.sdtm.dataset_json_models import (
     DatasetJsonItemDef,
     DatasetJsonPayload,
 )

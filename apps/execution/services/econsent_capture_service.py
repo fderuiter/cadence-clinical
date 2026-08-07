@@ -3,10 +3,6 @@ import os
 from datetime import UTC, datetime
 from io import BytesIO
 
-from execution.econsent_models import (
-    EConsentSignRequest,
-    EConsentSignResponse,
-)
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +11,10 @@ from apps.execution.database.models import (
     ComprehensionQuizResult,
     ConsentFormRecord,
     ConsentSignature,
+)
+from apps.execution.src.domain.econsent_models import (
+    EConsentSignRequest,
+    EConsentSignResponse,
 )
 from packages.security import CentralAuditLogger
 from packages.security.gateway_client import create_service_auth_headers

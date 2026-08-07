@@ -7,13 +7,13 @@ import os
 from datetime import datetime
 from typing import Any
 
-import document_renderer
-from ctms.doa_transport_models import (
+from apps.ctms.src.domain.doa_transport_models import (
     DelegationTaskRequest,
     DOALogResponse,
     DOASignOffRequest,
     RevokeDelegationRequest,
 )
+from apps.designer.src.domain.document_renderer import ProtocolDocumentRenderer
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
 from apps.ctms.adapter.repositories import (
@@ -24,8 +24,6 @@ from apps.ctms.application.services import CTMSDelegationUseCase
 from apps.ctms.domain.exceptions import CTMSDelegationNotFoundError
 from packages.security.middleware import downstream_replay_cache, verify_sig_token
 from packages.security.rbac import Principal, get_principal, has_permission
-
-ProtocolDocumentRenderer = document_renderer.ProtocolDocumentRenderer
 
 router = APIRouter(prefix="/api/v1/ctms/doa", tags=["DOA"])
 

@@ -3,13 +3,12 @@
 Requirements: PRD-SYS-001
 """
 
-from execution.doa_models import (
+import packages  # noqa: F401
+from apps.execution.src.domain.doa_models import (
     DOAAssignmentRecord,
     DOATaskDelegationEnum,
     DOATaskRoleEnum,
 )
-
-import packages  # noqa: F401
 
 
 def test_doa_assignment_record_creation() -> None:

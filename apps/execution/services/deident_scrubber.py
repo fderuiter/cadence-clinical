@@ -10,7 +10,8 @@ from datetime import timedelta
 from typing import Any
 
 from dateutil import parser as date_parser
-from sdtm.scrubber_models import DeidentConfig, DeidentSummary
+
+from apps.execution.src.domain.sdtm.scrubber_models import DeidentConfig, DeidentSummary
 
 # Regex patterns for free-text PII filtering
 SSN_PATTERN = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")

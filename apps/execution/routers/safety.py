@@ -7,16 +7,16 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from execution.safety_transport_models import (
-    SAEReconcileRequest,
-    SafetyDispatchRequest,
-    SafetyDispatchResponse,
-)
 from fastapi import APIRouter, Depends, HTTPException
 
 import packages  # noqa: F401
 from apps.execution.services.e2b_parser import E2BR3Parser
 from apps.execution.services.sae_reconciler import SAEReconciler
+from apps.execution.src.domain.safety_transport_models import (
+    SAEReconcileRequest,
+    SafetyDispatchRequest,
+    SafetyDispatchResponse,
+)
 from packages.security.middleware import get_current_user
 
 router = APIRouter(prefix="/api/v1/execution/safety", tags=["Safety"])

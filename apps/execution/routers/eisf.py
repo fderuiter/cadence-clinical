@@ -3,15 +3,15 @@
 Requirements: PRD-SYS-001
 """
 
-from execution.eisf_models import (
-    EISFDocumentRecord,
-    EISFTaxonomyCategoryEnum,
-)
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 import packages  # noqa: F401
 from apps.execution.services.eisf_service import EISFService
+from apps.execution.src.domain.eisf_models import (
+    EISFDocumentRecord,
+    EISFTaxonomyCategoryEnum,
+)
 from packages.security.middleware import get_current_user
 
 router = APIRouter(prefix="/api/v1/execution/eisf", tags=["eISF"])

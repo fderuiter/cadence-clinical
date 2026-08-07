@@ -5,7 +5,10 @@ Requirements: PRD-SYS-001
 
 from typing import Any
 
-from cdisc.cascade_models import CascadedFormTemplate, CascadeSummaryReport
+from cdisc.cascade_models import (
+    CascadedFormTemplate,
+    CascadeSummaryReport,
+)
 
 import packages  # noqa: F401
 

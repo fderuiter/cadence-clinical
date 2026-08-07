@@ -12,7 +12,9 @@ import re
 from datetime import date, datetime
 from typing import Any
 
-from sdtm.sdtm_models import (
+from sqlalchemy import select
+
+from apps.execution.src.domain.sdtm.sdtm_models import (
     SDTMRecordAE,
     SDTMRecordCM,
     SDTMRecordDM,
@@ -22,7 +24,6 @@ from sdtm.sdtm_models import (
     SDTMRecordSV,
     SDTMRecordVS,
 )
-from sqlalchemy import select
 
 # NCI C-code controlled terminology lookups
 CONTROLLED_TERMINOLOGY = {

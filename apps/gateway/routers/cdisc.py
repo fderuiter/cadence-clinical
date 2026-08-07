@@ -8,7 +8,9 @@ Requirements: PRD-SYS-001
 
 import os
 
-from cdisc.cdisc_library_client import (
+from fastapi import APIRouter, Depends, Query, status
+
+from apps.designer.src.domain.cdisc.cdisc_library_client import (
     CdashDomainDefinition,
     CdiscLibraryClient,
     CdiscLibraryConfig,
@@ -16,9 +18,7 @@ from cdisc.cdisc_library_client import (
     CodelistDefinition,
     SdtmDomainDefinition,
 )
-from cdisc.terminology_cache import CdiscTerminologyCache
-from fastapi import APIRouter, Depends, Query, status
-
+from apps.designer.src.domain.cdisc.terminology_cache import CdiscTerminologyCache
 from packages.security.middleware import get_current_user
 
 router = APIRouter()

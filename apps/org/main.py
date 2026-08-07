@@ -12,7 +12,6 @@ from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
-from organization_domain import ClinicalStaffRole, OrganizationType
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,6 +27,7 @@ from apps.org.models import (
     Site,
     TrainingLog,
 )
+from apps.org.src.domain.models import ClinicalStaffRole, OrganizationType
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security import assert_secure_secrets
 from packages.security.delegation import verify_delegation_scope

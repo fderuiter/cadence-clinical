@@ -1,8 +1,7 @@
 import os
 import sys
 
-# Inject 'core-models' path into sys.path to allow importing 'tmf_reference_model'
-# directly, since 'core-models' contains a hyphen and cannot be imported using standard dot notation.
+# Inject 'core-models' path into sys.path to allow importing modules directly
 _core_models_path = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "core-models")
 )

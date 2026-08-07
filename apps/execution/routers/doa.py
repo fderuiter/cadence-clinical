@@ -5,11 +5,6 @@ Requirements: PRD-SYS-001
 
 from datetime import datetime
 
-from execution.doa_models import (
-    DOAAssignmentRecord,
-    DOATaskDelegationEnum,
-    DOATaskRoleEnum,
-)
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.params import Depends as DependsClass
 from pydantic import BaseModel, Field
@@ -26,6 +21,11 @@ from apps.execution.domain.exceptions import (
     ExecutionValidationError,
 )
 from apps.execution.services.doa_service import DOAService
+from apps.execution.src.domain.doa_models import (
+    DOAAssignmentRecord,
+    DOATaskDelegationEnum,
+    DOATaskRoleEnum,
+)
 from packages.security.middleware import get_current_user
 
 

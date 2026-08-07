@@ -12,16 +12,16 @@ from typing import Any
 import httpx
 import pytest
 import pytest_asyncio
-from execution.safety_models import (
-    CausalityEnum,
-    SAECaseRecord,
-    SeriousnessCriteriaEnum,
-)
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from apps.execution.exporters.e2b_xml_builder import E2BR3XMLBuilder
 from apps.execution.services.e2b_parser import E2BR3Parser
+from apps.execution.src.domain.safety_models import (
+    CausalityEnum,
+    SAECaseRecord,
+    SeriousnessCriteriaEnum,
+)
 from apps.gateway.main import generate_signature
 from apps.safety.database import db_manager
 from apps.safety.main import app

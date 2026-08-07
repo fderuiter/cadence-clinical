@@ -4,6 +4,7 @@ target-version = "py314"
 exclude = [
     ".git",
     ".venv",
+    ".agents",
     "apps/execution/database/models.py"
 ]
 
@@ -69,6 +70,7 @@ ignore = [
 # violations are expected and excluded from both CLI and per-file checks.
 "apps/execution/database/models.py" = ["ALL"]
 "apps/execution/biostat/models.py" = ["N815"]
+"apps/execution/src/domain/sdtm/dataset_json_models.py" = ["N815"]
 "packages/core-models/sdtm/dataset_json_models.py" = ["N815"]
 "tests/conftest.py" = ["E402"]
 "tests/**" = ["S101"]

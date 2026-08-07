@@ -6,13 +6,13 @@ Requirements: PRD-SYS-001
 import uuid
 from datetime import UTC, datetime
 
-from execution.signature_transport_models import (
-    BatchSignatureRequest,
-    BatchSignatureResponse,
-)
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 import packages  # noqa: F401
+from apps.execution.src.domain.signature_transport_models import (
+    BatchSignatureRequest,
+    BatchSignatureResponse,
+)
 from packages.security.middleware import get_current_user
 from packages.security.sig_token_verifier import verify_and_consume_sig_token
 from packages.security.signature_builder import CryptographicSignatureBuilder

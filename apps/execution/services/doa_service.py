@@ -6,13 +6,12 @@ Requirements: PRD-SYS-001
 import uuid
 from datetime import UTC, datetime
 
-from execution.doa_models import (
+import packages  # noqa: F401
+from apps.execution.src.domain.doa_models import (
     DOAAssignmentRecord,
     DOATaskDelegationEnum,
     DOATaskRoleEnum,
 )
-
-import packages  # noqa: F401
 from packages.security.signature_builder import CryptographicSignatureBuilder
 
 

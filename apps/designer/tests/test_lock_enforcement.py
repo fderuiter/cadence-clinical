@@ -6,16 +6,16 @@ Requirements: PRD-SYS-001
 from datetime import UTC, datetime
 
 import pytest
-from execution.lock_models import (
-    DataLockRecord,
-    LockScopeEnum,
-    LockStatusEnum,
-)
 
 import packages  # noqa: F401
 from apps.execution.services.lock_enforcement import (
     DataLockEnforcer,
     FormLockedError,
+)
+from apps.execution.src.domain.lock_models import (
+    DataLockRecord,
+    LockScopeEnum,
+    LockStatusEnum,
 )
 
 

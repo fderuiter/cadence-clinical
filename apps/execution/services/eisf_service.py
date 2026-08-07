@@ -7,12 +7,11 @@ import hashlib
 import uuid
 from datetime import UTC, datetime
 
-from execution.eisf_models import (
+import packages  # noqa: F401
+from apps.execution.src.domain.eisf_models import (
     EISFDocumentRecord,
     EISFTaxonomyCategoryEnum,
 )
-
-import packages  # noqa: F401
 
 
 class EISFService:
