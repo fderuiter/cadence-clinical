@@ -222,7 +222,7 @@ def step_run_tests(dry_run: bool) -> None:
                 "pytest",
                 "tests/validation",
                 "-o",
-                "python_files=*_suite.py *_tests.py",
+                "python_files=*_suite.py *_tests.py test_*.py",
                 "--junitxml",
                 "report_qualification.xml",
                 "-q",

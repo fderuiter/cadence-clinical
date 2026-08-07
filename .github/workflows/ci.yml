@@ -340,7 +340,7 @@ jobs:
         if: always()
         env:
           TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
-        run: uv run pytest -n auto --cov=apps --cov=packages --cov-fail-under=80 --ignore=tests/test_layout_validator.py --junitxml=report-unit.xml
+        run: uv run pytest -n auto --cov=apps --cov=packages --cov-fail-under=80 --ignore=tests/test_layout_validator.py --ignore=tests/validation --junitxml=report-unit.xml
 
       - name: Upload unit test report
         if: always()
@@ -489,7 +489,7 @@ jobs:
         if: always()
         env:
           TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
-        run: uv run pytest tests/validation -o "python_files=*_suite.py *_tests.py" --no-cov --junitxml=report-qualification.xml
+        run: uv run pytest tests/validation -o "python_files=*_suite.py *_tests.py test_*.py" --no-cov --junitxml=report-qualification.xml
 
       - name: Upload qualification test report
         if: always()
