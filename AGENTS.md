@@ -34,7 +34,7 @@ Capture (EDC) into an automated Digital Data Flow (DDF) platform.
 | OIDC Auth & API routers       | `apps/gateway/`                                                       |
 | Stack orchestration           | `docker/`                                                             |
 | Automation & helper scripts   | `scripts/`                                                            |
-| Unit & integration tests      | `tests/`                                                              |
+| Unit & integration tests      | `apps/<name>/tests/`, `packages/<name>/tests/`, `scripts/tests/` |
 | Architecture Decision Records | `docs/adr/`                                                           |
 | GxP compliance docs           | `docs/SDLC/` (never edit manually — always via `scripts/sync_gxp.py`) |
 
@@ -264,7 +264,7 @@ See [Tier 2](#tier-2--architecture--decision-adr) above.
 
 ### Gate 3 — Mandatory Test Coverage
 
-- Tests live in `tests/` (e.g., `tests/test_transformers.py`).
+- Tests live in decentralized directories (`apps/<name>/tests/`, `packages/<name>/tests/`, `scripts/tests/`).
 - Must run under `pytest` + `pytest-asyncio`. Minimum **80%** total coverage.
 - Integration tests must mock database interactions or use test containers.
 - CI runs: `uv run pytest -n auto --cov=apps --cov=packages --cov-fail-under=80`

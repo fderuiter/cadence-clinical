@@ -193,8 +193,8 @@ def main():
             "uv",
             "run",
             "pytest",
-            "tests/test_pr_comment.py",
-            "tests/test_git_merge_driver.py",
+            "scripts/tests/test_pr_comment.py",
+            "scripts/tests/test_git_merge_driver.py",
             "--no-cov",
         ]
     )

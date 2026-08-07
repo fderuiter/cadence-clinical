@@ -414,7 +414,7 @@ def main() -> None:
         print("Running targeted unit/integration tests validation...")
         try:
             run_command(
-                ["uv", "run", "pytest", "tests/test_pr_comment.py", "--no-cov"],
+                ["uv", "run", "pytest", "scripts/tests/test_pr_comment.py", "--no-cov"],
                 check=True,
             )
             os.environ["TEST_OUTCOME"] = "success"

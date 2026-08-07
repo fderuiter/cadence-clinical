@@ -118,82 +118,55 @@ def parse_prd(filepath):
     return requirements
 
 
-def scan_tests(tests_dir):
+def scan_tests(tests_dirs=None):
+    if tests_dirs is None:
+        tests_dirs = ["apps", "packages", "scripts", "tests"]
+    elif isinstance(tests_dirs, str):
+        tests_dirs = [tests_dirs]
+
     test_mappings = {}  # req_id -> list of test_info dicts
     test_cases_all = {}  # (classname, testname) -> dict of info
 
-    if not os.path.exists(tests_dir):
-        print(f"Warning: Tests directory {tests_dir} not found.")
-        return test_mappings, test_cases_all
+    for tests_dir in tests_dirs:
+        if not os.path.exists(tests_dir):
+            continue
 
-    # Walk directory tree in a stable, sorted order
-    for root, dirs, files in os.walk(tests_dir):
-        dirs.sort()  # In-place sort directories to guarantee deterministic traversal order
-        for file in sorted(files):  # Sort files alphabetically
-            if (
-                file.endswith(".py")
-                and not file.startswith("__")
-                and file != "conftest.py"
-            ):
-                filepath = os.path.join(root, file)
-                rel_filepath = os.path.relpath(filepath, start=os.getcwd())
+        # Walk directory tree in a stable, sorted order
+        for root, dirs, files in os.walk(tests_dir):
+            dirs.sort()  # In-place sort directories to guarantee deterministic traversal order
+            for file in sorted(files):  # Sort files alphabetically
+                if (
+                    file.endswith(".py")
+                    and not file.startswith("__")
+                    and file != "conftest.py"
+                ):
+                    filepath = os.path.join(root, file)
+                    rel_filepath = os.path.relpath(filepath, start=os.getcwd())
 
-                # Dynamic classname resolution based on subdirectory structure
-                rel_root = os.path.relpath(
-                    os.path.abspath(root),
-                    start=os.path.dirname(os.path.abspath(tests_dir)),
-                )
-                parts = rel_root.split(os.sep) + [os.path.splitext(file)[0]]
-                classname = ".".join(p for p in parts if p and p != ".")
-
-                with open(filepath, encoding="utf-8") as f:
-                    lines = f.readlines()
-
-                current_test = None
-                current_indent = 0
-                test_tags = []
-
-                for i, line in enumerate(lines):
-                    line_num = i + 1
-                    # Detect test function definition (handles both def and async def)
-                    def_match = re.match(
-                        r"^(\s*)(?:async\s+)?def\s+(test_[a-zA-Z0-9_]+)\s*\(", line
+                    # Dynamic classname resolution based on workspace path structure
+                    rel_root = os.path.relpath(
+                        os.path.abspath(root),
+                        start=os.getcwd(),
                     )
-                    if def_match:
-                        # If we had a previous test, save its tags
-                        if current_test:
-                            test_cases_all[(classname, current_test)] = {
-                                "file": rel_filepath,
-                                "name": current_test,
-                                "tags": sorted(list(set(test_tags))),
-                            }
-                            for tag in sorted(list(set(test_tags))):
-                                test_mappings.setdefault(tag, []).append(
-                                    {
-                                        "file": rel_filepath,
-                                        "test_name": current_test,
-                                        "line": line_num,
-                                    }
-                                )
+                    parts = rel_root.split(os.sep) + [os.path.splitext(file)[0]]
+                    classname = ".".join(p for p in parts if p and p != ".")
 
-                        current_indent = len(def_match.group(1))
-                        current_test = def_match.group(2)
-                        test_tags = []
-                        continue
+                    with open(filepath, encoding="utf-8") as f:
+                        lines = f.readlines()
 
-                    if current_test:
-                        # Check if indentation has returned to or below the def indentation (signaling end of function)
-                        # excluding empty lines or lines with just whitespace/comments at start
-                        stripped = line.lstrip()
-                        if stripped and not stripped.startswith("#"):
-                            indent = len(line) - len(stripped)
-                            if indent <= current_indent:
-                                if stripped.startswith(")") or (
-                                    stripped.endswith(":")
-                                    and ("->" in stripped or ")" in stripped)
-                                ):
-                                    continue
-                                # Function ended
+                    current_test = None
+                    current_indent = 0
+                    test_tags = []
+
+                    for i, line in enumerate(lines):
+                        line_num = i + 1
+                        # Detect test function definition (handles both def and async def)
+                        def_match = re.match(
+                            r"^(\s*)(?:async\s+)?def\s+(test_[a-zA-Z0-9_]+)\s*\(", line
+                        )
+                        if def_match:
+                            # If we had a previous test, save its tags
+                            if current_test:
                                 test_cases_all[(classname, current_test)] = {
                                     "file": rel_filepath,
                                     "name": current_test,
@@ -207,42 +180,76 @@ def scan_tests(tests_dir):
                                             "line": line_num,
                                         }
                                     )
-                                current_test = None
-                                test_tags = []
-                                continue
 
-                        # Look for requirement tags in comments or docstrings in function body
-                        # e.g., @req:PRD-SYS-001 or @req:Trace-1
-                        tags_found = re.findall(r"@req:\s*([A-Za-z0-9_-]+)", line)
-                        for tag in tags_found:
-                            # Normalize Trace tags
-                            normalized_tag = tag
-                            if normalized_tag.lower().startswith("trace"):
-                                normalized_tag = normalized_tag.replace(
-                                    " ", ""
-                                ).replace("_", "-")
-                                # Ensure trace format is Trace-1 instead of Trace1
-                                if not normalized_tag.startswith("Trace-"):
-                                    match_num = re.search(r"\d+", normalized_tag)
-                                    if match_num:
-                                        normalized_tag = f"Trace-{match_num.group(0)}"
-                            test_tags.append(normalized_tag)
+                            current_indent = len(def_match.group(1))
+                            current_test = def_match.group(2)
+                            test_tags = []
+                            continue
 
-                # Save the last test of the file if any
-                if current_test:
-                    test_cases_all[(classname, current_test)] = {
-                        "file": rel_filepath,
-                        "name": current_test,
-                        "tags": sorted(list(set(test_tags))),
-                    }
-                    for tag in sorted(list(set(test_tags))):
-                        test_mappings.setdefault(tag, []).append(
-                            {
-                                "file": rel_filepath,
-                                "test_name": current_test,
-                                "line": len(lines),
-                            }
-                        )
+                        if current_test:
+                            # Check if indentation has returned to or below the def indentation (signaling end of function)
+                            # excluding empty lines or lines with just whitespace/comments at start
+                            stripped = line.lstrip()
+                            if stripped and not stripped.startswith("#"):
+                                indent = len(line) - len(stripped)
+                                if indent <= current_indent:
+                                    if stripped.startswith(")") or (
+                                        stripped.endswith(":")
+                                        and ("->" in stripped or ")" in stripped)
+                                    ):
+                                        continue
+                                    # Function ended
+                                    test_cases_all[(classname, current_test)] = {
+                                        "file": rel_filepath,
+                                        "name": current_test,
+                                        "tags": sorted(list(set(test_tags))),
+                                    }
+                                    for tag in sorted(list(set(test_tags))):
+                                        test_mappings.setdefault(tag, []).append(
+                                            {
+                                                "file": rel_filepath,
+                                                "test_name": current_test,
+                                                "line": line_num,
+                                            }
+                                        )
+                                    current_test = None
+                                    test_tags = []
+                                    continue
+
+                            # Look for requirement tags in comments or docstrings in function body
+                            # e.g., @req:PRD-SYS-001 or @req:Trace-1
+                            tags_found = re.findall(r"@req:\s*([A-Za-z0-9_-]+)", line)
+                            for tag in tags_found:
+                                # Normalize Trace tags
+                                normalized_tag = tag
+                                if normalized_tag.lower().startswith("trace"):
+                                    normalized_tag = normalized_tag.replace(
+                                        " ", ""
+                                    ).replace("_", "-")
+                                    # Ensure trace format is Trace-1 instead of Trace1
+                                    if not normalized_tag.startswith("Trace-"):
+                                        match_num = re.search(r"\d+", normalized_tag)
+                                        if match_num:
+                                            normalized_tag = (
+                                                f"Trace-{match_num.group(0)}"
+                                            )
+                                test_tags.append(normalized_tag)
+
+                    # Save the last test of the file if any
+                    if current_test:
+                        test_cases_all[(classname, current_test)] = {
+                            "file": rel_filepath,
+                            "name": current_test,
+                            "tags": sorted(list(set(test_tags))),
+                        }
+                        for tag in sorted(list(set(test_tags))):
+                            test_mappings.setdefault(tag, []).append(
+                                {
+                                    "file": rel_filepath,
+                                    "test_name": current_test,
+                                    "line": len(lines),
+                                }
+                            )
 
     # Fully sort test mappings key and value lists to guarantee 100% determinism
     sorted_test_mappings = {}
@@ -268,7 +275,12 @@ def parse_test_results(report_xml_path):
             name = testcase.get("name", "")
 
             # Normalize classname to make it fully deterministic regardless of pytest execution path
-            if classname and not classname.startswith("tests."):
+            if classname and not (
+                classname.startswith("tests.")
+                or classname.startswith("apps.")
+                or classname.startswith("packages.")
+                or classname.startswith("scripts.")
+            ):
                 if classname.startswith("validation."):
                     classname = "tests." + classname
                 elif classname in (
@@ -776,10 +788,10 @@ def main():
         f"Parsed {len(prd_reqs)} PRD requirements and {len(srs_reqs)} SRS requirements."
     )
 
-    # 2. Scan tests
-    test_mappings, test_cases_all = scan_tests("tests")
+    # 2. Scan tests across workspaces
+    test_mappings, test_cases_all = scan_tests(["apps", "packages", "scripts", "tests"])
     print(
-        f"Scanned tests/ directory. Found {len(test_mappings)} unique requirements mapped across {len(test_cases_all)} test functions."
+        f"Scanned workspaces. Found {len(test_mappings)} unique requirements mapped across {len(test_cases_all)} test functions."
     )
 
     # 3. Read test results
