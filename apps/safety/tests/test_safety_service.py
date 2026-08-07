@@ -361,7 +361,9 @@ async def test_successful_export_and_transmission():
 
     from packages.deid.transforms import pseudonymize_value
 
-    salt = os.getenv("SAFETY_SALT", "internal-safety-salt-12345")  # pragma: allowlist secret
+    salt = os.getenv(
+        "SAFETY_SALT", "internal-safety-salt-12345"
+    )  # pragma: allowlist secret
     expected_pseudo_id = pseudonymize_value(raw_patient_id, salt)
     assert expected_pseudo_id in transmitted_xml
 

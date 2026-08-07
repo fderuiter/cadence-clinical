@@ -51,7 +51,9 @@ async def record_subject_consent(
         await session.commit()
 
 
-GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # pragma: allowlist secret
+GATEWAY_SECRET = os.getenv(
+    "GATEWAY_SECRET", "internal-gateway-secret-12345"
+)  # pragma: allowlist secret
 
 
 def get_auth_headers(

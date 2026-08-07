@@ -15,7 +15,9 @@ from apps.execution.notifications_client import publish_notification
 from apps.execution.trial_lock import NotificationRouter
 from packages.security.signing import generate_gateway_signature
 
-GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # pragma: allowlist secret
+GATEWAY_SECRET = os.getenv(
+    "GATEWAY_SECRET", "internal-gateway-secret-12345"
+)  # pragma: allowlist secret
 
 
 def get_auth_headers(

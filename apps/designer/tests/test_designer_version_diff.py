@@ -146,4 +146,3 @@ def test_designer_signing_raises_runtime_error_if_secret_missing(monkeypatch):
     with pytest.raises(RuntimeError) as exc_info:
         verify_version_signature({"signature": "some_signature"})
     assert "SIGNING_SECRET environment variable is missing" in str(exc_info.value)
-

@@ -41,7 +41,9 @@ def test_signed_headers_generation(signed_headers):
     assert "X-Unblinded-Access" not in headers
 
     # Verify that the generated signature is valid
-    secret_env = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # pragma: allowlist secret
+    secret_env = os.getenv(
+        "GATEWAY_SECRET", "internal-gateway-secret-12345"
+    )  # pragma: allowlist secret
     secret_bytes = (
         secret_env.encode("utf-8") if isinstance(secret_env, str) else secret_env
     )
