@@ -10,7 +10,7 @@ from sqlalchemy import Boolean, String, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 import packages  # noqa: F401
-from packages.security.ner_scrubber import PHINameEntityScrubber
+from packages.deid.ner_scrubber import PHINameEntityScrubber
 from packages.security.rbac import Principal, can_access_site
 
 

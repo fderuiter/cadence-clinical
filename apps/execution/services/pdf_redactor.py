@@ -10,7 +10,7 @@ import fitz
 from pydantic import BaseModel
 
 import packages  # noqa: F401
-from packages.security.ner_scrubber import PHINameEntityScrubber
+from packages.deid.ner_scrubber import PHINameEntityScrubber
 
 
 class RedactionBox(BaseModel):
