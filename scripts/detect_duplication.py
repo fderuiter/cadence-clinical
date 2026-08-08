@@ -227,6 +227,10 @@ def main() -> None:
                                     "apps/designer/src/domain/document_renderer.py",
                                 },
                                 {
+                                    "apps/designer/src/domain/cdisc/cdisc_library_client.py",
+                                    "apps/gateway/src/domain/acl/cdisc_dto.py",
+                                },
+                                {
                                     "apps/ctms/src/domain/acl/sync_engine_dto.py",
                                     "apps/interop/src/domain/sync_engine.py",
                                 },
