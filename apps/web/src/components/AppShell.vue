@@ -426,7 +426,9 @@ const clinicalStore = useClinicalStore();
 const onboardingStore = useOnboardingStore();
 
 const brandName = computed(() => {
-  return window.BRAND_NAME_REF ? window.BRAND_NAME_REF.value : (import.meta.env.VITE_BRAND_NAME || "Cadence Clinical");
+  return window.BRAND_NAME_REF
+    ? window.BRAND_NAME_REF.value
+    : import.meta.env.VITE_BRAND_NAME || "Cadence Clinical";
 });
 const brandNameFirst = computed(() => {
   const parts = brandName.value.split(" ");

@@ -14,7 +14,8 @@ const store = useClinicalStore();
 
 onMounted(async () => {
   try {
-    const apiBaseUrl = import.meta.env?.VITE_API_BASE_URL || "http://localhost:8000";
+    const apiBaseUrl =
+      import.meta.env?.VITE_API_BASE_URL || "http://localhost:8000";
     const res = await fetch(`${apiBaseUrl}/api/v1/gateway/config`);
     if (res.ok) {
       const config = await res.json();
@@ -31,14 +32,20 @@ onMounted(async () => {
       }
     }
   } catch (err) {
-    console.error("Failed to load gateway dynamic whitelabel branding config:", err);
+    console.error(
+      "Failed to load gateway dynamic whitelabel branding config:",
+      err
+    );
   }
 
   if (store.ledgerBlocks.length === 0) {
     await store.addLedgerBlock(
       "GENESIS",
       {
-        platform: window.BRAND_NAME || import.meta.env.VITE_BRAND_NAME || "Cadence Clinical",
+        platform:
+          window.BRAND_NAME ||
+          import.meta.env.VITE_BRAND_NAME ||
+          "Cadence Clinical",
         environment: "Interactive Web Sandbox",
         compliantStandards: [
           "21 CFR Part 11",

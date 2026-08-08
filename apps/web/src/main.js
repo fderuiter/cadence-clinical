@@ -10,7 +10,9 @@ import { resolveAssetUrl } from "./utils/url";
 import { vKeyboardClick } from "./directives/keyboardClick";
 
 import { ref as vueRef } from "vue";
-window.BRAND_NAME_REF = vueRef(import.meta.env.VITE_BRAND_NAME || "Cadence Clinical");
+window.BRAND_NAME_REF = vueRef(
+  import.meta.env.VITE_BRAND_NAME || "Cadence Clinical"
+);
 
 const app = createApp(App);
 app.directive("keyboard-click", vKeyboardClick);

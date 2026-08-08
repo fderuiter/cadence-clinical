@@ -98,6 +98,7 @@ async def setup_test_databases():
     """
     import contextlib
     import os
+    import tempfile
     import uuid
 
     from sqlalchemy.pool import NullPool
@@ -120,7 +121,8 @@ async def setup_test_databases():
             break
 
     # Generate unique temp file-based sqlite databases
-    notif_db_path = f"/tmp/notif_memdb_{uuid.uuid4().hex}.db"
+    temp_dir = tempfile.gettempdir()
+    notif_db_path = os.path.join(temp_dir, f"notif_memdb_{uuid.uuid4().hex}.db")
     notifications_db_manager.init_db(
         f"sqlite+aiosqlite:///{notif_db_path}?timeout=60",
         echo=False,
@@ -129,7 +131,7 @@ async def setup_test_databases():
     async with notifications_db_manager.engine.begin() as conn:
         await conn.run_sync(NotificationsBase.metadata.create_all)
 
-    org_db_path = f"/tmp/org_memdb_{uuid.uuid4().hex}.db"
+    org_db_path = os.path.join(temp_dir, f"org_memdb_{uuid.uuid4().hex}.db")
     org_db_manager.init_db(
         f"sqlite+aiosqlite:///{org_db_path}?timeout=60",
         echo=False,
