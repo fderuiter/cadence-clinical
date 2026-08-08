@@ -4,21 +4,21 @@
 /* Cadence Clinical Platform - Modern Interactive Demo Stylesheet */
 
 :root {
-  --primary: var(--color-text);
-  --primary-light: var(--color-text-muted);
-  --accent: var(--color-primary);
-  --accent-light: var(--color-primary-light);
-  --accent-bg: var(--color-primary-light);
-  --neutral-dark: var(--color-text-muted);
-  --neutral-light: var(--color-surface-muted);
-  --border: var(--color-border);
-  --success: var(--color-success);
-  --success-bg: var(--color-success-bg);
-  --warning: var(--color-warning);
-  --warning-bg: var(--color-warning-bg);
-  --error: var(--color-error);
-  --error-bg: var(--color-error-bg);
-  --font: var(--font-sans);
+  --primary: var(--semantic-color-text);
+  --primary-light: var(--semantic-color-text-muted);
+  --accent: var(--semantic-color-primary);
+  --accent-light: var(--semantic-color-primary-light);
+  --accent-bg: var(--semantic-color-primary-light);
+  --neutral-dark: var(--semantic-color-text-muted);
+  --neutral-light: var(--semantic-color-surface-muted);
+  --border: var(--semantic-color-border);
+  --success: var(--semantic-color-success);
+  --success-bg: var(--semantic-color-success-bg);
+  --warning: var(--semantic-color-warning);
+  --warning-bg: var(--semantic-color-warning-bg);
+  --error: var(--semantic-color-error);
+  --error-bg: var(--semantic-color-error-bg);
+  --font: var(--semantic-font-family);
 }
 
 * {
@@ -366,109 +366,7 @@ main {
   margin-top: 16px;
 }
 
-.clinical-input label {
-  display: block;
-  font-weight: 600;
-  font-size: 0.875rem;
-  margin-bottom: 6px;
-  color: var(--neutral-dark);
-}
 
-.input-wrapper {
-  display: flex;
-  gap: 8px;
-  position: relative;
-}
-
-.clinical-input input[type="text"] {
-  flex: 1;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-family: var(--font);
-  font-size: 0.95rem;
-  transition: all 0.2s;
-  background-color: white;
-}
-
-.clinical-input input[type="text"]:focus {
-  outline: none;
-  box-shadow: none;
-  border-color: var(--color-border);
-}
-
-.clinical-input input[type="text"]:focus-visible {
-  outline: 2px solid var(--color-accent) !important;
-  outline-offset: 2px !important;
-  border-color: var(--color-accent) !important;
-}
-
-.clinical-input.has-error input[type="text"] {
-  border-color: var(--color-error) !important;
-  background-color: var(--color-error-bg) !important;
-}
-
-.clinical-input.has-error input[type="text"]:focus,
-.clinical-input.has-error input[type="text"]:focus-visible {
-  border-color: var(--color-error) !important;
-  background-color: var(--color-error-bg) !important;
-  box-shadow: none !important;
-  outline: 2px solid var(--color-error) !important;
-  outline-offset: 2px !important;
-}
-
-.validation-error-msg {
-  color: var(--error);
-  font-size: 0.75rem;
-  font-weight: 600;
-  margin-top: 4px;
-}
-
-/* Radio buttons grid */
-.clinical-radio-grid {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 16px;
-  background-color: white;
-}
-
-.clinical-radio-grid legend {
-  font-weight: 600;
-  font-size: 0.875rem;
-  padding: 0 8px;
-  color: var(--neutral-dark);
-}
-
-.radio-options-wrapper {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.radio-options {
-  display: flex;
-  gap: 24px;
-}
-
-.radio-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
-
-.radio-option input[type="radio"] {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-
-.radio-option label {
-  cursor: pointer;
-  font-weight: 500;
-  font-size: 0.9rem;
-}
 
 /* Query Flag & Panel Override */
 .query-flag {
