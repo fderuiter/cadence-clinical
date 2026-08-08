@@ -74,6 +74,33 @@ class CdiscLibraryClient:
         self._external_client = client
         self._client: httpx.AsyncClient | None = None
 
+    async def __aenter__(self) -> CdiscLibraryClient:
+        if self._external_client:
+            self._client = self._external_client
+        else:
+            self._client = httpx.AsyncClient(
+                base_url=self.config.base_url,
+                headers={
+                    "User-Agent": self.config.user_agent,
+                },
+                timeout=self.config.timeout,
+            )
+            if self.config.api_key:
+                self._client.headers["api-key"] = self.config.api_key
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        if self._client and not self._external_client:
+            await self._client.aclose()
+        self._client = None
+
+    async def get_products(self) -> list[CdiscProductSummary]:
+        return [
+            CdiscProductSummary(title="CDASH", version="2.3", href="/mdr/cdash/2.3"),
+            CdiscProductSummary(title="SDTM", version="3.4", href="/mdr/sdtm/3.4"),
+            CdiscProductSummary(title="SEND", version="3.1", href="/mdr/send/3.1"),
+        ]
+
     async def get_cdash_domain(
         self, domain_code: str, version: str = "2.3"
     ) -> CdashDomainDefinition:
@@ -92,7 +119,10 @@ class CdiscLibraryClient:
         )
 
     async def get_codelist(
-        self, codelist_code: str, version: str = "2023-12-15"
+        self,
+        codelist_code: str,
+        package: str | None = None,
+        version: str = "2023-12-15",
     ) -> CodelistDefinition:
         return CodelistDefinition(
             codelist_code=codelist_code,
@@ -104,5 +134,10 @@ class CdiscTerminologyCache:
     def __init__(self, cache_dir: str | Path | None = None) -> None:
         self.cache_dir = cache_dir
 
-    def get_codelist(self, codelist_code: str) -> CodelistDefinition | None:
+    async def get_codelist(
+        self, package: str, codelist_code: str
+    ) -> CodelistDefinition | None:
         return None
+
+    async def save_codelist(self, package: str, codelist: CodelistDefinition) -> None:
+        pass
