@@ -116,6 +116,8 @@ ALLOWED_ROOT_FILES = {
     "README.md",
     "AGENTS.md",
     "SUPPORT.md",
+    "PROJECT.md",
+    "TEST_INFRA.md",
     "LICENSE",
     "Makefile",
     "package.json",
@@ -132,6 +134,8 @@ ALLOWED_ROOT_FILES = {
     "eslint.config.mjs",
     "duplication_summary.json",
     ".python-version",
+    "PROJECT.md",
+    "TEST_INFRA.md",
 }
 
 # Allowed root-level subdirectories for general file placement

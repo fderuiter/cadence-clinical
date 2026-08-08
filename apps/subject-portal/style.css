@@ -411,7 +411,7 @@ body {
   gap: 24px;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .grid-layout {
     grid-template-columns: 1fr;
   }
@@ -817,11 +817,11 @@ a:focus-visible,
 .btn-sync-status {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-xs);
   background-color: var(--bg-main, #f8fafc);
   color: var(--text-main, #0f172a);
   border: 1px solid var(--border, #cbd5e1);
-  padding: 8px 16px;
+  padding: var(--spacing-xs) var(--spacing-md);
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
@@ -915,7 +915,7 @@ a:focus-visible,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: var(--spacing-lg) var(--spacing-xl);
   border-bottom: 1px solid var(--border, #cbd5e1);
 }
 
@@ -933,7 +933,7 @@ a:focus-visible,
   line-height: 1;
   color: var(--text-muted, #64748b);
   cursor: pointer;
-  padding: 4px 12px;
+  padding: var(--spacing-2xs) var(--spacing-sm);
   border-radius: 4px;
   transition: background-color 0.2s;
 }
@@ -946,16 +946,16 @@ a:focus-visible,
 .drawer-body {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
+  padding: var(--spacing-xl);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--spacing-lg);
 }
 
 .sync-status-section {
   background-color: var(--bg-main, #f8fafc);
   border: 1px solid var(--border, #cbd5e1);
-  padding: 16px;
+  padding: var(--spacing-md);
   border-radius: 12px;
 }
 
@@ -963,25 +963,25 @@ a:focus-visible,
   font-size: 14px;
   font-weight: 500;
   color: var(--text-main, #0f172a);
-  margin-bottom: 10px;
+  margin-bottom: var(--spacing-sm);
 }
 
 .submissions-list-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--spacing-sm);
 }
 
 .submissions-heading {
   font-size: 15px;
   font-weight: 700;
   color: var(--text-main, #0f172a);
-  margin-bottom: 4px;
+  margin-bottom: var(--spacing-2xs);
 }
 
 .empty-state {
   text-align: center;
-  padding: 32px 16px;
+  padding: var(--spacing-2xl) var(--spacing-md);
   color: var(--text-muted, #64748b);
   font-style: italic;
   font-size: 14px;
@@ -992,17 +992,17 @@ a:focus-visible,
 .submissions-items-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--spacing-sm);
 }
 
 .drawer-submission-item {
   border: 1px solid var(--border, #cbd5e1);
   border-radius: 10px;
-  padding: 14px;
+  padding: var(--spacing-sm);
   background-color: var(--bg-card, #ffffff);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--spacing-xs);
   transition: border-color 0.2s;
 }
 
@@ -1023,7 +1023,7 @@ a:focus-visible,
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 12px;
+  gap: var(--spacing-sm);
 }
 
 .item-name {
@@ -1039,12 +1039,12 @@ a:focus-visible,
 
 .item-details {
   border-top: 1px dashed var(--border, #cbd5e1);
-  padding-top: 8px;
-  margin-top: 4px;
+  padding-top: var(--spacing-xs);
+  margin-top: var(--spacing-2xs);
   font-size: 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--spacing-2xs);
 }
 
 .item-desc {
@@ -1059,16 +1059,29 @@ a:focus-visible,
 .data-code {
   display: block;
   background-color: var(--bg-main, #f8fafc);
-  padding: 4px 8px;
+  padding: var(--spacing-2xs) var(--spacing-xs);
   border-radius: 4px;
   font-family: monospace;
   font-size: 11px;
-  margin-top: 4px;
+  margin-top: var(--spacing-2xs);
   overflow-x: auto;
 }
 
+/* Accessibility: Touch target support specifically on pointer-coarse (touch) viewports to avoid bloating layout on wide screens */
+@media (pointer: coarse) {
+  .btn-sync-status,
+  .global-drawer .btn,
+  .global-drawer .btn-close-drawer {
+    min-height: var(--touch-target-min, 48px) !important;
+    min-width: var(--touch-target-min, 48px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
 /* Large viewports: prevent overlaps/obstructions by shifting content when drawer is open */
-@media (min-width: 992px) {
+@media (min-width: 1024px) {
   #app {
     transition: padding-right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }

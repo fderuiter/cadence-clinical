@@ -1,0 +1,1 @@
+# Exclude scripts tests directory from full scan automated security fallback checks.

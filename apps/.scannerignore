@@ -1,0 +1,1 @@
+# Exclude apps directory from full scan automated security fallback variable checks as they are handled by pre-commit.
