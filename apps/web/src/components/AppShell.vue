@@ -548,8 +548,6 @@ const canViewEtmf = computed(() => {
 });
 
 const canViewAdmin = computed(() => {
-  return hasRequiredRole(authStore.normalizedRoles, [
-    "sponsor_admin",
-  ]);
+  return hasRequiredRole(authStore.normalizedRoles, ["sponsor_admin"]);
 });
 </script>

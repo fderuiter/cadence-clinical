@@ -14,29 +14,59 @@ vi.mock("../src/api/apiClient", () => {
       get: vi.fn((path) => {
         if (path === "/api/v1/org/organizations") {
           return Promise.resolve([
-            { id: "org-1", name: "Apex CRO", org_type: "CRO", version_index: 1, reason_for_change: "init" }
+            {
+              id: "org-1",
+              name: "Apex CRO",
+              org_type: "CRO",
+              version_index: 1,
+              reason_for_change: "init",
+            },
           ]);
         }
         if (path === "/api/v1/org/sites") {
           return Promise.resolve([
-            { id: "site-1", site_id: "SITE-001", name: "Boston Site", organization_id: "org-1", study_id: "S-123", version_index: 1, reason_for_change: "init" }
+            {
+              id: "site-1",
+              site_id: "SITE-001",
+              name: "Boston Site",
+              organization_id: "org-1",
+              study_id: "S-123",
+              version_index: 1,
+              reason_for_change: "init",
+            },
           ]);
         }
         if (path === "/api/v1/org/personnel") {
           return Promise.resolve([
-            { id: "person-1", first_name: "John", last_name: "Doe", email: "john@doe.com", role: "Principal Investigator", site_id: "SITE-001", organization_id: "org-1", study_id: "S-123", reason_for_change: "init" }
+            {
+              id: "person-1",
+              first_name: "John",
+              last_name: "Doe",
+              email: "john@doe.com",
+              role: "Principal Investigator",
+              site_id: "SITE-001",
+              organization_id: "org-1",
+              study_id: "S-123",
+              reason_for_change: "init",
+            },
           ]);
         }
         if (path.includes("/assignments")) {
           return Promise.resolve([
-            { id: "asg-1", personnel_id: "person-1", site_id: "SITE-001", study_id: "S-123", is_active: true }
+            {
+              id: "asg-1",
+              personnel_id: "person-1",
+              site_id: "SITE-001",
+              study_id: "S-123",
+              is_active: true,
+            },
           ]);
         }
         return Promise.resolve([]);
       }),
       post: vi.fn().mockResolvedValue({ id: "new-id" }),
-      put: vi.fn().mockResolvedValue({ id: "updated-id" })
-    }
+      put: vi.fn().mockResolvedValue({ id: "updated-id" }),
+    },
   };
 });
 
@@ -96,8 +126,8 @@ describe("Dedicated Site Administration Suite Integration Tests", () => {
 
       const wrapper = mount(AppShell, {
         global: {
-          plugins: [pinia, router]
-        }
+          plugins: [pinia, router],
+        },
       });
 
       expect(wrapper.find("#tab-btn-admin").exists()).toBe(false);
@@ -111,12 +141,14 @@ describe("Dedicated Site Administration Suite Integration Tests", () => {
 
       const wrapper = mount(AppShell, {
         global: {
-          plugins: [pinia, router]
-        }
+          plugins: [pinia, router],
+        },
       });
 
       expect(wrapper.find("#tab-btn-admin").exists()).toBe(true);
-      expect(wrapper.find("#tab-btn-admin").text()).toContain("Site Administration");
+      expect(wrapper.find("#tab-btn-admin").text()).toContain(
+        "Site Administration"
+      );
     });
   });
 
@@ -129,8 +161,8 @@ describe("Dedicated Site Administration Suite Integration Tests", () => {
 
       const wrapper = mount(AdminView, {
         global: {
-          plugins: [pinia, router]
-        }
+          plugins: [pinia, router],
+        },
       });
 
       expect(wrapper.find(".admin-gating-banner").exists()).toBe(true);
@@ -145,8 +177,8 @@ describe("Dedicated Site Administration Suite Integration Tests", () => {
 
       const wrapper = mount(AdminView, {
         global: {
-          plugins: [pinia, router]
-        }
+          plugins: [pinia, router],
+        },
       });
 
       expect(wrapper.find(".admin-gating-banner").exists()).toBe(false);
@@ -163,8 +195,8 @@ describe("Dedicated Site Administration Suite Integration Tests", () => {
 
       const wrapper = mount(AdminView, {
         global: {
-          plugins: [pinia, router]
-        }
+          plugins: [pinia, router],
+        },
       });
 
       // Sites tab is default

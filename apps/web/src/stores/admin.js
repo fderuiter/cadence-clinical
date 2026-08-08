@@ -27,12 +27,16 @@ export const useAdminStore = defineStore("admin", {
       this.loading = true;
       this.error = null;
       try {
-        const response = await apiClient.post("/api/v1/org/organizations", {
-          ...payload,
-          reason_for_change: changeReason,
-        }, {
-          changeReason
-        });
+        const response = await apiClient.post(
+          "/api/v1/org/organizations",
+          {
+            ...payload,
+            reason_for_change: changeReason,
+          },
+          {
+            changeReason,
+          }
+        );
         await this.fetchOrganizations();
         return response;
       } catch (err) {
@@ -58,12 +62,16 @@ export const useAdminStore = defineStore("admin", {
       this.loading = true;
       this.error = null;
       try {
-        const response = await apiClient.post("/api/v1/org/sites", {
-          ...payload,
-          reason_for_change: changeReason,
-        }, {
-          changeReason
-        });
+        const response = await apiClient.post(
+          "/api/v1/org/sites",
+          {
+            ...payload,
+            reason_for_change: changeReason,
+          },
+          {
+            changeReason,
+          }
+        );
         await this.fetchSites();
         return response;
       } catch (err) {
@@ -77,12 +85,16 @@ export const useAdminStore = defineStore("admin", {
       this.loading = true;
       this.error = null;
       try {
-        const response = await apiClient.put(`/api/v1/org/sites/${id}`, {
-          ...payload,
-          reason_for_change: changeReason,
-        }, {
-          changeReason
-        });
+        const response = await apiClient.put(
+          `/api/v1/org/sites/${id}`,
+          {
+            ...payload,
+            reason_for_change: changeReason,
+          },
+          {
+            changeReason,
+          }
+        );
         await this.fetchSites();
         return response;
       } catch (err) {
@@ -108,12 +120,16 @@ export const useAdminStore = defineStore("admin", {
       this.loading = true;
       this.error = null;
       try {
-        const response = await apiClient.post("/api/v1/org/personnel", {
-          ...payload,
-          reason_for_change: changeReason,
-        }, {
-          changeReason
-        });
+        const response = await apiClient.post(
+          "/api/v1/org/personnel",
+          {
+            ...payload,
+            reason_for_change: changeReason,
+          },
+          {
+            changeReason,
+          }
+        );
         await this.fetchPersonnel();
         return response;
       } catch (err) {
@@ -127,12 +143,16 @@ export const useAdminStore = defineStore("admin", {
       this.loading = true;
       this.error = null;
       try {
-        const response = await apiClient.put(`/api/v1/org/personnel/${id}`, {
-          ...payload,
-          reason_for_change: changeReason,
-        }, {
-          changeReason
-        });
+        const response = await apiClient.put(
+          `/api/v1/org/personnel/${id}`,
+          {
+            ...payload,
+            reason_for_change: changeReason,
+          },
+          {
+            changeReason,
+          }
+        );
         await this.fetchPersonnel();
         return response;
       } catch (err) {
@@ -146,10 +166,14 @@ export const useAdminStore = defineStore("admin", {
       this.loading = true;
       this.error = null;
       try {
-        const response = await apiClient.get(`/api/v1/org/personnel/${personnelId}/assignments`);
+        const response = await apiClient.get(
+          `/api/v1/org/personnel/${personnelId}/assignments`
+        );
         this.assignments[personnelId] = response;
       } catch (err) {
-        this.error = err.message || `Failed to fetch assignments for personnel ${personnelId}`;
+        this.error =
+          err.message ||
+          `Failed to fetch assignments for personnel ${personnelId}`;
       } finally {
         this.loading = false;
       }
@@ -158,12 +182,16 @@ export const useAdminStore = defineStore("admin", {
       this.loading = true;
       this.error = null;
       try {
-        const response = await apiClient.post(`/api/v1/org/personnel/${personnelId}/assignments`, {
-          ...payload,
-          reason_for_change: changeReason,
-        }, {
-          changeReason
-        });
+        const response = await apiClient.post(
+          `/api/v1/org/personnel/${personnelId}/assignments`,
+          {
+            ...payload,
+            reason_for_change: changeReason,
+          },
+          {
+            changeReason,
+          }
+        );
         await this.fetchAssignments(personnelId);
         return response;
       } catch (err) {
@@ -172,6 +200,6 @@ export const useAdminStore = defineStore("admin", {
       } finally {
         this.loading = false;
       }
-    }
-  }
+    },
+  },
 });
