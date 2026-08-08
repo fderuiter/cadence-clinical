@@ -108,6 +108,11 @@ source = [
     "packages",
 ]
 concurrency = ["thread", "greenlet"]
+omit = [
+    "apps/*/adapter/*",
+    "apps/*/domain/*",
+    "packages/hexagonal/*",
+]
 
 [tool.coverage.report]
 fail_under = 80
