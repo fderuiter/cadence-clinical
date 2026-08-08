@@ -118,6 +118,8 @@ ALLOWED_ROOT_FILES = {
     "SUPPORT.md",
     "LICENSE",
     "Makefile",
+    "PROJECT.md",
+    "TEST_INFRA.md",
     "package.json",
     "pnpm-workspace.yaml",
     "pnpm-lock.yaml",

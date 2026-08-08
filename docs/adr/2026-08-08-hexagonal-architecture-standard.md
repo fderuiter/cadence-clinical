@@ -72,5 +72,5 @@ Chosen option: **Standardized 4-Layer Flat Hexagonal Architecture**.
 ## 6. Implementation & Verification
 
 - **Base Framework:** Updated `packages/hexagonal` to be pure Python and moved `@map_database_exceptions` to `packages/database`.
-- **Shared Library Migration:** Extracted `apps/compliance` into `packages/compliance`.
+- **Shared Library Migration:** Extracted the compliance microservice (formerly a sibling app) into `packages/compliance`.
 - **Automated Enforcement:** Verified via `pytest-archon` test suite in `packages/hexagonal/tests/test_hexagonal_architecture.py`.
