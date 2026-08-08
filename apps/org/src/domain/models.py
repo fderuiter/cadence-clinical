@@ -24,6 +24,9 @@ class OrganizationType(StrEnum):
     SITE = "site"
 
 
+from packages.security.trial_roles import ClinicalStaffRole  # noqa: F401
+
+
 class TrialDuty(StrEnum):
     """
     Controlled vocabulary of delegatable significant trial-related duties aligned with ICH E6(R2).
