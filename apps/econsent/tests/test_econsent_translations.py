@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from apps.econsent.database import db_manager
 from apps.econsent.main import app, approved_translation_cache
 from apps.econsent.models import Base
-from apps.execution.src.domain.localization.models import validate_language_code
+from apps.econsent.src.domain.localization.models import validate_language_code
 from apps.gateway.main import generate_signature
 
 

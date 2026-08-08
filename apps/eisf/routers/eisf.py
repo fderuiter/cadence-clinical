@@ -12,7 +12,7 @@ from apps.eisf.adapters.repository import SQLEISFRepository
 from apps.eisf.database import transactional
 from apps.eisf.models import ISFAuditLog, ISFDocument
 from apps.eisf.ports.repository import EISFRepositoryPort
-from apps.etmf.src.domain.etmf.eisf_transport_models import (
+from apps.eisf.src.domain.eisf_transport_models import (
     EISFDocumentDetail,
     EISFDocumentUploadRequest,
     EISFFolderNode,

@@ -259,6 +259,7 @@ def resolve_path(path_str, md_file_path, repo_root, root_dirs, root_files):
         or "example" in path_str.lower()
         or "templates" in path_str.lower()
         or "node.js" in path_str.lower()
+        or "core-models" in path_str.lower()
     ):
         return None
 

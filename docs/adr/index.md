@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-07: Eradicate Core Models and Implement Anti-Corruption Layers](2026-08-07-eradicate-core-models-and-implement-anti-corruption-layers.md)
 - [2026-08-07: Decentralize Test Directory Structure Across Workspaces](2026-08-07-decentralize-test-directory-structure-across-workspaces.md)
 
 - [2026-08-06: Purge Legacy Physical Lab Columns for Dynamic JSON Schema](2026-08-06-purge-legacy-physical-lab-columns-for-dynamic-json-schema.md)

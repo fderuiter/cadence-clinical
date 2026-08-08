@@ -10,15 +10,15 @@ import os
 
 from fastapi import APIRouter, Depends, Query, status
 
-from apps.designer.src.domain.cdisc.cdisc_library_client import (
+from apps.gateway.src.domain.acl.cdisc_dto import (
     CdashDomainDefinition,
     CdiscLibraryClient,
     CdiscLibraryConfig,
     CdiscProductSummary,
+    CdiscTerminologyCache,
     CodelistDefinition,
     SdtmDomainDefinition,
 )
-from apps.designer.src.domain.cdisc.terminology_cache import CdiscTerminologyCache
 from packages.security.middleware import get_current_user
 
 router = APIRouter()

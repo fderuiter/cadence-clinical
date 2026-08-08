@@ -11,19 +11,17 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
-from apps.execution.src.domain.epro_transport_models import (
-    InstrumentCreate,
-    InstrumentResponse,
-    SubjectAssignmentCreate,
-    SubjectAssignmentResponse,
-    SubjectComplianceResponse,
-)
-from apps.execution.src.domain.offline_models import (
+from apps.gateway.src.domain.acl.ecoa_dto import (
     AcknowledgeNotificationRequest,
     EPROBulkSyncRequest,
     EPROBulkSyncResponse,
     EPROOfflineEntry,
     EPROSubmitResponse,
+    InstrumentCreate,
+    InstrumentResponse,
+    SubjectAssignmentCreate,
+    SubjectAssignmentResponse,
+    SubjectComplianceResponse,
     SubjectNotificationResponse,
 )
 from packages.security.gateway_client import GatewayBaseClient

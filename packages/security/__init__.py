@@ -94,12 +94,14 @@ from packages.security.signing import (
     verify_canonical_signature,
 )
 from packages.security.trial_roles import (
+    ClinicalStaffRole,
     TrialRole,
     check_trial_role,
     enforce_site_isolation,
 )
 
 __all__ = [
+    "ClinicalStaffRole",
     "TokenConsumptionCache",
     "token_consumption_cache",
     "verify_and_consume_sig_token",
