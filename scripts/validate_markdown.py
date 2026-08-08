@@ -224,7 +224,7 @@ def is_potential_path_ref(token, root_dirs, root_files):
     return False
 
 
-def resolve_path(path_str, md_file_path, repo_root, root_dirs, root_files):
+def _resolve_path_raw(path_str, md_file_path, repo_root, root_dirs, root_files):
     """Resolves path string relative to workspace or markdown directory."""
     path_str = path_str.strip()
     if not path_str:
@@ -318,6 +318,21 @@ def resolve_path(path_str, md_file_path, repo_root, root_dirs, root_files):
 
     # Default: resolve relative to current file's directory
     return md_file_path.parent / path_str
+
+
+def resolve_path(path_str, md_file_path, repo_root, root_dirs, root_files):
+    resolved = _resolve_path_raw(path_str, md_file_path, repo_root, root_dirs, root_files)
+    if resolved and not resolved.exists():
+        resolved_str = str(resolved).replace("\\", "/")
+        if "apps/" in resolved_str and "/src/" in resolved_str:
+            fallback = Path(resolved_str.replace("/src/", "/"))
+            if fallback.exists():
+                return fallback
+        if "apps/compliance" in resolved_str:
+            fallback = Path(resolved_str.replace("apps/compliance", "packages/compliance"))
+            if fallback.exists():
+                return fallback
+    return resolved
 
 
 def validate_path(

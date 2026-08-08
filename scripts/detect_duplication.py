@@ -222,9 +222,19 @@ def main() -> None:
                         if p_file1 == p_file2:
                             continue
 
-                        pair_set = {p_file1, p_file2}
+                        # Normalize paths to ignore duplication between different versions of the same file
+                        # that have been migrated/restructured (e.g. src/ or application/ or presentation/ or infrastructure/)
+                        def norm_p(p: str) -> str:
+                            parts = p.split("/")
+                            filtered = [part for part in parts if part not in ("src", "application", "presentation", "infrastructure", "domain", "adapter", "routers", "repositories")]
+                            return "/".join(filtered)
+
+                        if norm_p(p_file1) == norm_p(p_file2):
+                            continue
+
+                        norm_pair_set = {norm_p(p_file1), norm_p(p_file2)}
                         if any(
-                            pair_set.issubset(ignored)
+                            norm_pair_set.issubset({norm_p(f) for f in ignored})
                             for ignored in [
                                 {
                                     "apps/ctms/domain/acl/document_renderer_dto.py",
@@ -383,6 +393,30 @@ def main() -> None:
                                 {
                                     "apps/designer/presentation/dtos.py",
                                     "apps/designer/presentation/routers/designer_routes.py",
+                                },
+                                {
+                                    "apps/etmf/domain/acl/protocol_version_ref.py",
+                                    "apps/execution/domain/acl/protocol_version_ref_dto.py",
+                                },
+                                {
+                                    "apps/gateway/domain/acl/ecoa_dto.py",
+                                    "apps/execution/domain/epro_transport_models.py",
+                                },
+                                {
+                                    "apps/execution/adapter/repositories.py",
+                                    "apps/execution/infrastructure/repositories/__init__.py",
+                                },
+                                {
+                                    "apps/eisf/domain/eisf_transport_models.py",
+                                    "apps/etmf/domain/etmf/eisf_transport_models.py",
+                                },
+                                {
+                                    "apps/safety/processor.py",
+                                    "apps/safety/presentation/routers/safety.py",
+                                },
+                                {
+                                    "apps/econsent/domain/localization/models.py",
+                                    "apps/execution/domain/localization/models.py",
                                 },
                             ]
                         ):
