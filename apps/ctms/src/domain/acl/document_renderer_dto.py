@@ -82,7 +82,7 @@ class CTMSDocumentRendererACL:
         pdf_buffer.write(
             b"7 0 obj <</Type /StructElem /S /Document /P 6 0 R /Pg 3 0 R /K [0]>> endobj\n"
         )
-        pdf_buffer.write(b"xref\n0 8\n0000000000 65535 f \n")
+        pdf_buffer.write(b"xref\n0 8\n0000000000 65535 f \n")  # deid-ignore
         pdf_buffer.write(b"trailer <</Size 8 /Root 1 0 R>>\nstartxref\n180\n%%EOF\n")
 
         return DocumentRenderResponseDTO(
