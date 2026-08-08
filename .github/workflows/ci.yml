@@ -317,7 +317,7 @@ jobs:
         run: |
           if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
             echo "Playwright cache hit detected. Installing system dependencies and verifying browser binary..."
-            sudo ./.venv/bin/playwright install-deps chromium
+            uv run playwright install-deps chromium
             uv run playwright install chromium
           else
             echo "Playwright cache miss. Performing full browser installation..."
@@ -417,7 +417,7 @@ jobs:
         run: |
           if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
             echo "Playwright cache hit detected. Installing system dependencies and verifying browser binary..."
-            sudo ./.venv/bin/playwright install-deps chromium
+            uv run playwright install-deps chromium
             uv run playwright install chromium
           else
             echo "Playwright cache miss. Performing full browser installation..."
