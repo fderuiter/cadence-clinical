@@ -18,9 +18,9 @@ from apps.ctms.models import Base
 from apps.execution.database.models import Base as ExecutionModelBase
 from apps.gateway.main import generate_signature
 
-GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode(
-    "utf-8"
-)  # pragma: allowlist secret
+GATEWAY_SECRET = os.getenv(
+    "GATEWAY_SECRET", default="internal-gateway-secret-12345"
+).encode("utf-8")  # pragma: allowlist secret
 
 
 @pytest_asyncio.fixture(autouse=True)

@@ -647,7 +647,7 @@ async def export_safety_case(
 
     from packages.deid.transforms import pseudonymize_value
 
-    salt = os.getenv("SAFETY_SALT", "internal-safety-salt-12345")
+    salt = os.getenv("SAFETY_SALT", default="internal-safety-salt-12345")
     icsr_copy = copy.deepcopy(payload.icsr)
 
     raw_patient_id = icsr_copy.patient.patient_id
