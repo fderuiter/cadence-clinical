@@ -74,6 +74,31 @@ class CdiscLibraryClient:
         self._external_client = client
         self._client: httpx.AsyncClient | None = None
 
+    async def __aenter__(self) -> CdiscLibraryClient:
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        pass
+
+    async def get_products(self) -> list[CdiscProductSummary]:
+        return [
+            CdiscProductSummary(
+                title="CDASH",
+                version="2.3",
+                description="Clinical Data Acquisition Standards Harmonization",
+            ),
+            CdiscProductSummary(
+                title="SDTM",
+                version="3.4",
+                description="Study Data Tabulation Model",
+            ),
+            CdiscProductSummary(
+                title="Controlled Terminology",
+                version="2023-12-15",
+                description="Controlled Terminology",
+            ),
+        ]
+
     async def get_cdash_domain(
         self, domain_code: str, version: str = "2.3"
     ) -> CdashDomainDefinition:
@@ -92,7 +117,10 @@ class CdiscLibraryClient:
         )
 
     async def get_codelist(
-        self, codelist_code: str, version: str = "2023-12-15"
+        self,
+        codelist_code: str,
+        version: str = "2023-12-15",
+        package: str | None = None,
     ) -> CodelistDefinition:
         return CodelistDefinition(
             codelist_code=codelist_code,
@@ -104,5 +132,12 @@ class CdiscTerminologyCache:
     def __init__(self, cache_dir: str | Path | None = None) -> None:
         self.cache_dir = cache_dir
 
-    def get_codelist(self, codelist_code: str) -> CodelistDefinition | None:
+    async def get_codelist(
+        self, package: str, codelist_code: str
+    ) -> CodelistDefinition | None:
         return None
+
+    async def save_codelist(
+        self, package: str, codelist: CodelistDefinition
+    ) -> None:
+        pass
