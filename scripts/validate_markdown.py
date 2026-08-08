@@ -321,7 +321,9 @@ def _resolve_path_raw(path_str, md_file_path, repo_root, root_dirs, root_files):
 
 
 def resolve_path(path_str, md_file_path, repo_root, root_dirs, root_files):
-    resolved = _resolve_path_raw(path_str, md_file_path, repo_root, root_dirs, root_files)
+    resolved = _resolve_path_raw(
+        path_str, md_file_path, repo_root, root_dirs, root_files
+    )
     if resolved and not resolved.exists():
         resolved_str = str(resolved).replace("\\", "/")
         if "apps/" in resolved_str and "/src/" in resolved_str:
@@ -329,7 +331,9 @@ def resolve_path(path_str, md_file_path, repo_root, root_dirs, root_files):
             if fallback.exists():
                 return fallback
         if "apps/compliance" in resolved_str:
-            fallback = Path(resolved_str.replace("apps/compliance", "packages/compliance"))
+            fallback = Path(
+                resolved_str.replace("apps/compliance", "packages/compliance")
+            )
             if fallback.exists():
                 return fallback
     return resolved

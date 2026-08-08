@@ -226,7 +226,21 @@ def main() -> None:
                         # that have been migrated/restructured (e.g. src/ or application/ or presentation/ or infrastructure/)
                         def norm_p(p: str) -> str:
                             parts = p.split("/")
-                            filtered = [part for part in parts if part not in ("src", "application", "presentation", "infrastructure", "domain", "adapter", "routers", "repositories")]
+                            filtered = [
+                                part
+                                for part in parts
+                                if part
+                                not in (
+                                    "src",
+                                    "application",
+                                    "presentation",
+                                    "infrastructure",
+                                    "domain",
+                                    "adapter",
+                                    "routers",
+                                    "repositories",
+                                )
+                            ]
                             return "/".join(filtered)
 
                         if norm_p(p_file1) == norm_p(p_file2):
