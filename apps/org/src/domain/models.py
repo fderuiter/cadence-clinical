@@ -10,6 +10,7 @@ EU Annex 11, and ICH E6(R2).
 from enum import StrEnum
 
 from packages.database.audit import AuditFields  # noqa: F401
+from packages.security.trial_roles import ClinicalStaffRole as ClinicalStaffRole
 
 
 class OrganizationType(StrEnum):
