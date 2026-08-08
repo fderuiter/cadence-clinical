@@ -260,6 +260,7 @@ def main() -> None:
                                     "apps/tickets/main.py",
                                     "apps/execution/main.py",
                                     "apps/designer/main.py",
+                                    "apps/designer/presentation/routers/designer_routes.py",
                                 },
                                 {
                                     "apps/web/src/api/terminologyClient.js",
@@ -298,13 +299,20 @@ def main() -> None:
                                 },
                                 {
                                     "apps/interop/designer_client.py",
+                                    "apps/interop/infrastructure/designer_client.py",
                                     "apps/etmf/lock_client.py",
+                                    "apps/etmf/infrastructure/lock_client.py",
                                     "apps/execution/designer_client.py",
                                     "apps/execution/econsent_client.py",
                                 },
                                 {
                                     "apps/safety/processor.py",
                                     "apps/safety/main.py",
+                                    "apps/safety/presentation/routers/safety.py",
+                                },
+                                {
+                                    "apps/econsent/main.py",
+                                    "apps/econsent/presentation/routers/econsent.py",
                                 },
                                 {
                                     "apps/execution/main.py",
