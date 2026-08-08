@@ -137,7 +137,5 @@ class CdiscTerminologyCache:
     ) -> CodelistDefinition | None:
         return None
 
-    async def save_codelist(
-        self, package: str, codelist: CodelistDefinition
-    ) -> None:
+    async def save_codelist(self, package: str, codelist: CodelistDefinition) -> None:
         pass
