@@ -60,7 +60,7 @@ def scan_file_for_secrets(filepath: str) -> list[str]:
             lines = f.readlines()
 
         for idx, line in enumerate(lines, start=1):
-            # Skip explicit inline developer bypass annotations
+            # Skip explicit inline developer bypass annotations (e.g. nosec, pragma: allowlist, or mocks)
             if (
                 "# nosec" in line
                 or "mock" in line.lower()
