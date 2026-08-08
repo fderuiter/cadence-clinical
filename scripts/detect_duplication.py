@@ -367,6 +367,10 @@ def main() -> None:
                                     "apps/eisf/src/domain/eisf_transport_models.py",
                                     "apps/etmf/src/domain/etmf/eisf_transport_models.py",
                                 },
+                                {
+                                    "apps/execution/src/domain/localization/models.py",
+                                    "apps/econsent/src/domain/localization/models.py",
+                                },
                             ]
                         ):
                             continue
