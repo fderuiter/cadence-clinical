@@ -191,6 +191,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         await start_background_sealer(db_manager.get_session_maker())
         await start_background_query_escalation(db_manager.get_session_maker())
 
+        # GxP FMEA-Aligned Boot Recovery Scan
+        from apps.execution.boot_recovery import run_boot_recovery
+
+        await run_boot_recovery(db_manager.get_session_maker())
+    else:
+        # If in testing, and a session maker is configured, we can run it
+        try:
+            session_maker = db_manager.get_session_maker()
+        except Exception:
+            session_maker = None
+        if session_maker:
+            from apps.execution.boot_recovery import run_boot_recovery
+
+            await run_boot_recovery(session_maker)
+
     yield
 
     if not is_testing:
