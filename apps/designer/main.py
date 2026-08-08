@@ -31,7 +31,6 @@ from enum import StrEnum
 from typing import Any, Literal
 
 import httpx
-from eligibility import EligibilityCriterion, ExpressionNode, parse_dsl
 from fastapi import (
     BackgroundTasks,
     Depends,
@@ -46,9 +45,7 @@ from fastapi import (
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from neo4j import AsyncGraphDatabase
-from protocol_render import SoAMatrixView
 from pydantic import BaseModel, Field, TypeAdapter
-from signature import SigningReason
 
 import apps.designer.adapter.repositories  # noqa: F401
 from apps.designer.adapter.safety_gateway import QuerySafetyError  # noqa: F401
@@ -148,6 +145,12 @@ from apps.designer.rules import (
     detect_unknown_fields,
 )
 from apps.designer.serialization import USDMSerializationError, serialize_usdm
+from apps.designer.src.domain.eligibility import (
+    EligibilityCriterion,
+    ExpressionNode,
+    parse_dsl,
+)
+from apps.designer.src.domain.protocol_render import SoAMatrixView
 from apps.designer.usdm_ingestion import (
     normalize_usdm_payload,
     resolve_usdm_version,
@@ -175,6 +178,7 @@ from packages.security.rbac import (
     has_permission,
     require_permission,
 )
+from packages.security.signature import SigningReason
 from packages.security.signing import generate_canonical_signature
 
 
@@ -1035,13 +1039,6 @@ async def study_differences(
 # Collaborative Review, Comments, Suggestions & Section Review Locking
 # =====================================================================
 
-from protocol_authoring.models import (
-    CommentThread,
-    SectionReviewStatus,
-    SectionReviewTransition,
-    Suggestion,
-)
-
 from apps.designer.delta import (
     add_comment_to_thread,
     create_comment_thread,
@@ -1053,6 +1050,12 @@ from apps.designer.delta import (
     get_suggestions,
     resolve_comment_thread,
     transition_section_status,
+)
+from apps.designer.src.domain.protocol_authoring.models import (
+    CommentThread,
+    SectionReviewStatus,
+    SectionReviewTransition,
+    Suggestion,
 )
 
 
@@ -2464,8 +2467,8 @@ async def approve_study_version_endpoint(
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import rsa
     from cryptography.x509.oid import NameOID
-    from signature import SignatureManifestation
 
+    from packages.security.signature import SignatureManifestation
     from packages.security.signing import (
         asymmetric_sign,
         capture_certificate_identifiers,

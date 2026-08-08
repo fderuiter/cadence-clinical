@@ -1,14 +1,13 @@
-from storage.document_models import (
-    ArchiveJobResponse,
-    DocumentMetadataResponse,
-    DocumentUploadResponse,
-)
-
 from .blob_store import (
     BlobStorageProvider,
     StorageIntegrityError,
     StorageObjectNotFoundError,
     verify_checksum,
+)
+from .document_models import (
+    ArchiveJobResponse,
+    DocumentMetadataResponse,
+    DocumentUploadResponse,
 )
 from .local_store import LocalStorageProvider
 from .s3_store import S3StorageProvider

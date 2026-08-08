@@ -37,7 +37,7 @@ if app_root not in sys.path:
     sys.path.insert(0, app_root)
 
 packages_dir = os.path.join(app_root, "packages")
-for name in ["core-models", "database", "deid", "security", "ui"]:
+for name in ["database", "deid", "security", "ui"]:
     pkg_path = os.path.join(packages_dir, name)
     if pkg_path not in sys.path:
         sys.path.insert(0, pkg_path)

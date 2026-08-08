@@ -5,8 +5,9 @@ Defines Pydantic v2 entity-specific contracts for StudyArm, Epoch, Visit, Proced
 relationships, audit metadata, and projection cells.
 """
 
-# Import the core models from protocol_authoring package
-from protocol_authoring import (
+from pydantic import BaseModel, Field, model_validator
+
+from apps.designer.src.domain.protocol_authoring import (
     ActivityAssignmentRequest,
     AuditMetadata,
     CreateEpochRequest,
@@ -39,10 +40,9 @@ from protocol_authoring import (
     VisitReorderItem,
     VisitReorderRequest,
 )
-from protocol_authoring import (
+from apps.designer.src.domain.protocol_authoring import (
     TimingWindow as CoreTimingWindow,  # Subclassed below to add validation rules
 )
-from pydantic import BaseModel, Field, model_validator
 
 __all__ = [
     "TimingWindow",

@@ -17,7 +17,6 @@ dependencies = [
     "docxtpl>=0.20.2",
     "docxcompose>=2.2.0",
     "packages-security",
-    "packages-core-models",
 ]
 
 [tool.hatch.build.targets.wheel.sources]

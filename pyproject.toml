@@ -24,7 +24,6 @@ packages-security = { workspace = true }
 packages-database = { workspace = true }
 packages-deid = { workspace = true }
 packages-storage = { workspace = true }
-packages-core-models = { workspace = true }
 packages-hexagonal = { workspace = true }
 apps-compliance = { workspace = true }
 apps-ctms = { workspace = true }
@@ -71,7 +70,6 @@ ignore = [
 "apps/execution/database/models.py" = ["ALL"]
 "apps/execution/biostat/models.py" = ["N815"]
 "apps/execution/src/domain/sdtm/dataset_json_models.py" = ["N815"]
-"packages/core-models/sdtm/dataset_json_models.py" = ["N815"]
 "tests/conftest.py" = ["E402"]
 "tests/**" = ["S101"]
 "**/tests/**" = ["S101"]

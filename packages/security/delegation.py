@@ -6,8 +6,8 @@ delegation workflows in compliance with ICH E6(R2) and 21 CFR Part 11.
 """
 
 from fastapi import HTTPException, Request, status
-from organization_domain import ClinicalStaffRole
 
+from apps.org.src.domain import ClinicalStaffRole
 from packages.security.rbac import get_normalized_roles
 
 # StaffRole alias matching shared ClinicalStaffRole vocabulary

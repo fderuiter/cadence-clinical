@@ -5,15 +5,14 @@ Requirements: PRD-SYS-001
 
 import httpx
 import pytest
-from cdisc.cdisc_library_client import (
+
+from apps.designer.src.domain.cdisc.cdisc_library_client import (
     CdashDomainDefinition,
     CdiscLibraryClient,
     CdiscLibraryConfig,
     CodelistDefinition,
     SdtmDomainDefinition,
 )
-
-import packages  # noqa: F401 - Injects packages/core-models into sys.path
 
 
 @pytest.mark.asyncio

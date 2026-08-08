@@ -1,6 +1,6 @@
 """CDISC standards data models, library clients, and terminology cache."""
 
-from cdisc.cdisc_library_client import (
+from .cdisc_library_client import (
     CdashDomainDefinition,
     CdiscLibraryClient,
     CdiscLibraryConfig,
@@ -9,8 +9,8 @@ from cdisc.cdisc_library_client import (
     CodelistTerm,
     SdtmDomainDefinition,
 )
-from cdisc.terminology_cache import CdiscTerminologyCache
-from cdisc.usdm_models import (
+from .terminology_cache import CdiscTerminologyCache
+from .usdm_models import (
     Activity,
     Code,
     EligibilityCriterion,
@@ -21,7 +21,7 @@ from cdisc.usdm_models import (
     SyntaxTemplate,
     USDMStudy,
 )
-from cdisc.usdm_transport_models import (
+from .usdm_transport_models import (
     UsdmExportResponse,
     UsdmImportRequest,
     UsdmImportResponse,

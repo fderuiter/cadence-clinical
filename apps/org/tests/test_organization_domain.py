@@ -5,13 +5,14 @@ Unit tests for the shared Organization Directory and Delegation of Authority (DO
 from datetime import UTC, datetime
 
 import pytest
-from organization_domain import (
+from pydantic import ValidationError
+
+from apps.org.src.domain import (
     AuditFields,
     ClinicalStaffRole,
     OrganizationType,
     TrialDuty,
 )
-from pydantic import ValidationError
 
 
 def test_organization_type_values():

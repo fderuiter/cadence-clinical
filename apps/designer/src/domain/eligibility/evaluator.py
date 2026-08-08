@@ -8,7 +8,7 @@ explanations and aggregates individual criteria into a final eligibility report.
 
 from typing import Any
 
-from eligibility.models import (
+from .models import (
     AggregateEligibilityResult,
     CriterionEvaluation,
     EligibilityCriterion,

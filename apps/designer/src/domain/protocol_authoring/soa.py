@@ -8,16 +8,15 @@ reordering/assignment contracts, and complete projection models.
 from datetime import UTC, datetime
 from typing import Literal
 
-from audit import AuditFields
+from pydantic import BaseModel, Field, model_validator
 
-# Import the view DTOs from protocol_render to maintain a one-directional dependency.
-from protocol_render import (
+from apps.designer.src.domain.protocol_render import (
     SoAHeaderArm,
     SoAHeaderEncounter,
     SoAHeaderEpoch,
     SoARowView,
 )
-from pydantic import BaseModel, Field, model_validator
+from packages.database.audit import AuditFields
 
 # --- Task 1: Audited SoA Entity Models ---
 

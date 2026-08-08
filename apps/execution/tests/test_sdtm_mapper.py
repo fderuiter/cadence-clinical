@@ -7,18 +7,6 @@ Tests the stateless rule-based mappings without any database I/O.
 from datetime import UTC, date, datetime
 
 import pytest
-from sdtm.enums import (
-    AEOutcome,
-    AERelationship,
-    AESeriousness,
-    AESeverity,
-    Race,
-    Sex,
-)
-from sdtm.sdtm_models import (
-    SDTMRecordAE,
-    SDTMRecordVS,
-)
 from sqlalchemy import select
 
 from apps.execution.database.core import db_manager
@@ -44,6 +32,18 @@ from apps.execution.services.sdtm_mapper import (
     CDASHToSDTMMapper,
     map_cdash_to_sdtm,
     persist_sdtm_records,
+)
+from apps.execution.src.domain.sdtm.enums import (
+    AEOutcome,
+    AERelationship,
+    AESeriousness,
+    AESeverity,
+    Race,
+    Sex,
+)
+from apps.execution.src.domain.sdtm.sdtm_models import (
+    SDTMRecordAE,
+    SDTMRecordVS,
 )
 
 

@@ -5,12 +5,11 @@ Requirements: PRD-SYS-001
 
 from typing import Any
 
-from cdisc.sentinel_models import ProtocolQualityScore
 from fastapi import APIRouter, Depends
 
-import packages  # noqa: F401
 from apps.designer.dependencies import get_quality_sentinel
 from apps.designer.services.quality_sentinel import ProtocolQualitySentinel
+from apps.designer.src.domain.cdisc.sentinel_models import ProtocolQualityScore
 from packages.security.rbac import (
     Principal,
     get_principal,

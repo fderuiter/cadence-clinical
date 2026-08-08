@@ -10,10 +10,10 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Annotated, Any, Literal
 
-# Import shared Part 11 audit fields from sibling module
-from audit import AuditFields
-from datetime_helpers import AwareDatetime
 from pydantic import BaseModel, Field
+
+from packages.database.audit import AuditFields
+from packages.database.datetime_helpers import AwareDatetime
 
 
 class BlockType(StrEnum):

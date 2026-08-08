@@ -2,13 +2,13 @@ import uuid
 
 import pytest
 import usdm_model
-from protocol_render import RenderedProtocolDocument
 
 from apps.designer.content_assembly import (
     assemble_narrative_sections,
     assemble_rendered_protocol_document,
     assemble_soa_matrix,
 )
+from apps.designer.src.domain.protocol_render import RenderedProtocolDocument
 
 
 @pytest.fixture

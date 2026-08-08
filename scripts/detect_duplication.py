@@ -223,6 +223,23 @@ def main() -> None:
                             pair_set.issubset(ignored)
                             for ignored in [
                                 {
+                                    "apps/ctms/src/domain/acl/document_renderer_dto.py",
+                                    "apps/designer/src/domain/document_renderer.py",
+                                },
+                                {
+                                    "apps/ctms/src/domain/acl/sync_engine_dto.py",
+                                    "apps/interop/src/domain/sync_engine.py",
+                                },
+                                {
+                                    "apps/etmf/watermark.py",
+                                    "apps/execution/src/domain/watermark.py",
+                                },
+                                {
+                                    "apps/execution/src/domain/acl/designer_eligibility_dto.py",
+                                    "apps/interop/src/domain/acl/eligibility_dto.py",
+                                    "apps/designer/src/domain/eligibility/models.py",
+                                },
+                                {
                                     "apps/etmf/sealer.py",
                                     "apps/execution/database/sealer.py",
                                 },
@@ -249,10 +266,6 @@ def main() -> None:
                                     "apps/web/src/api/soaClient.js",
                                 },
                                 {
-                                    "packages/database/audit.py",
-                                    "packages/core-models/sdtm/models.py",
-                                },
-                                {
                                     "apps/execution/biostat/adsl.py",
                                     "apps/execution/biostat/extractors.py",
                                 },
@@ -265,10 +278,6 @@ def main() -> None:
                                 {
                                     "apps/etmf/main.py",
                                     "apps/designer/main.py",
-                                },
-                                {
-                                    "packages/core-models/sdtm/models.py",
-                                    "packages/core-models/sdtm/sdtm_models.py",
                                 },
                                 {
                                     "apps/tickets/notifications_client.py",
@@ -306,10 +315,6 @@ def main() -> None:
                                     "apps/execution/services/deident_scrubber.py",
                                 },
                                 {
-                                    "apps/execution/src/domain/sdtm/dataset_json_models.py",
-                                    "packages/core-models/sdtm/dataset_json_models.py",
-                                },
-                                {
                                     "apps/execution/domain/models.py",
                                     "apps/execution/src/domain/models.py",
                                 },
@@ -318,50 +323,8 @@ def main() -> None:
                                     "apps/execution/src/domain/repositories.py",
                                 },
                                 {
-                                    "apps/execution/src/domain/localization/models.py",
-                                    "packages/core-models/localization/models.py",
-                                },
-                                {
-                                    "apps/execution/src/domain/sdtm/__init__.py",
-                                    "packages/core-models/sdtm/__init__.py",
-                                },
-                                {
-                                    "apps/execution/src/domain/sdtm/enums.py",
-                                    "packages/core-models/sdtm/enums.py",
-                                },
-                                {
                                     "apps/execution/src/domain/sdtm/models.py",
                                     "apps/execution/src/domain/sdtm/sdtm_models.py",
-                                    "packages/core-models/sdtm/models.py",
-                                    "packages/core-models/sdtm/sdtm_models.py",
-                                },
-                                {
-                                    "apps/execution/src/domain/sdtm/scrubber_models.py",
-                                    "packages/core-models/sdtm/scrubber_models.py",
-                                },
-                                {
-                                    "apps/execution/src/domain/sdtm/terminology.py",
-                                    "packages/core-models/sdtm/terminology.py",
-                                },
-                                {
-                                    "apps/execution/src/domain/watermark.py",
-                                    "packages/core-models/watermark.py",
-                                },
-                                {
-                                    "packages/security/signature.py",
-                                    "packages/core-models/signature.py",
-                                },
-                                {
-                                    "packages/storage/document_models.py",
-                                    "packages/core-models/storage/document_models.py",
-                                },
-                                {
-                                    "packages/database/audit.py",
-                                    "packages/core-models/audit.py",
-                                },
-                                {
-                                    "packages/database/datetime_helpers.py",
-                                    "packages/core-models/datetime_helpers.py",
                                 },
                                 {
                                     "apps/eisf/main.py",
@@ -375,18 +338,6 @@ def main() -> None:
                                 {
                                     "apps/web/src/components/clinical/ClinicalLookupInput.vue",
                                     "apps/web/src/components/clinical/ClinicalInput.vue",
-                                },
-                                {
-                                    "apps/designer/rules.py",
-                                    "packages/core-models/usdm_ingestion.py",
-                                },
-                                {
-                                    "apps/designer/soa_models.py",
-                                    "packages/core-models/protocol_authoring/soa.py",
-                                },
-                                {
-                                    "apps/designer/soa_models.py",
-                                    "packages/core-models/protocol_authoring/__init__.py",
                                 },
                                 {
                                     "apps/web/src/style.css",

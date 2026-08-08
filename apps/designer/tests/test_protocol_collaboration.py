@@ -2,10 +2,6 @@ from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
-from protocol_authoring.models import (
-    SectionReviewStatus,
-    SuggestionStatus,
-)
 
 from apps.designer.db import (
     MOCK_STUDY_VERSIONS,
@@ -31,6 +27,10 @@ from apps.designer.delta import (
     update_block,
 )
 from apps.designer.main import app
+from apps.designer.src.domain.protocol_authoring.models import (
+    SectionReviewStatus,
+    SuggestionStatus,
+)
 from packages.security.signing import generate_gateway_signature
 
 

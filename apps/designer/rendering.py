@@ -8,7 +8,11 @@ from docx import Document
 from docx.opc.exceptions import PackageNotFoundError
 from docxtpl import DocxTemplate
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from protocol_render import RenderedProtocolDocument, SoAMatrixView
+
+from apps.designer.src.domain.protocol_render import (
+    RenderedProtocolDocument,
+    SoAMatrixView,
+)
 
 # Initialize Jinja2 environment
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")

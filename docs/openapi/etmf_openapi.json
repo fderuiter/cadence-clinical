@@ -2563,7 +2563,7 @@
           "protocol_version": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ProtocolVersionRef"
+                "$ref": "#/components/schemas/ProtocolVersionRefDTO"
               },
               {
                 "type": "null"
@@ -3081,7 +3081,7 @@
           "protocol_version": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ProtocolVersionRef"
+                "$ref": "#/components/schemas/ProtocolVersionRefDTO"
               },
               {
                 "type": "null"
@@ -3332,7 +3332,7 @@
         "title": "PaginatedAuditLogResponse",
         "description": "Paginated representation of eTMF audit trail logs."
       },
-      "ProtocolVersionRef": {
+      "ProtocolVersionRefDTO": {
         "properties": {
           "study_id": {
             "type": "string",
@@ -3350,7 +3350,7 @@
             "description": "Chronological, incrementing index of the protocol version (must be >= 1)."
           },
           "status": {
-            "$ref": "#/components/schemas/ProtocolVersionStatus",
+            "$ref": "#/components/schemas/ProtocolVersionStatusDTO",
             "description": "Current controlled status of this protocol version."
           }
         },
@@ -3361,10 +3361,10 @@
           "version_index",
           "status"
         ],
-        "title": "ProtocolVersionRef",
-        "description": "Pydantic v2 model representing a reference to a specific clinical trial protocol version.\n\nThis contract is shared between Execution, eTMF, and other services to prevent\nthe duplication of ad-hoc protocol reference fields and ensure consistent cross-service\npayload structures, validation, and serialization."
+        "title": "ProtocolVersionRefDTO",
+        "description": "Pydantic v2 ACL model representing a reference to a specific clinical trial protocol version.\n\nOwned by eTMF service to prevent cross-service imports from Designer database or domain models."
       },
-      "ProtocolVersionStatus": {
+      "ProtocolVersionStatusDTO": {
         "type": "string",
         "enum": [
           "DRAFT",
@@ -3374,7 +3374,7 @@
           "ARCHIVED",
           "FROZEN"
         ],
-        "title": "ProtocolVersionStatus",
+        "title": "ProtocolVersionStatusDTO",
         "description": "Controlled vocabulary of statuses for a clinical protocol or study version."
       },
       "RedactRequest": {

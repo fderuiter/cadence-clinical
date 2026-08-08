@@ -199,7 +199,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/InstrumentCreate"
+                "$ref": "#/components/schemas/InstrumentCreateDTO"
               }
             }
           },
@@ -211,7 +211,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InstrumentResponse"
+                  "$ref": "#/components/schemas/InstrumentResponseDTO"
                 }
               }
             }
@@ -238,7 +238,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SubjectAssignmentCreate"
+                "$ref": "#/components/schemas/SubjectAssignmentCreateDTO"
               }
             }
           },
@@ -250,7 +250,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SubjectAssignmentResponse"
+                  "$ref": "#/components/schemas/SubjectAssignmentResponseDTO"
                 }
               }
             }
@@ -290,7 +290,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InstrumentResponse"
+                  "$ref": "#/components/schemas/InstrumentResponseDTO"
                 }
               }
             }
@@ -332,7 +332,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/SubjectAssignmentResponse"
+                    "$ref": "#/components/schemas/SubjectAssignmentResponseDTO"
                   },
                   "title": "Response Get Subject Assignments Api V1 Interop Assignments Subject  Subject Id  Get"
                 }
@@ -376,7 +376,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/InstrumentResponse"
+                    "$ref": "#/components/schemas/InstrumentResponseDTO"
                   },
                   "title": "Response Get Subject Assigned Instruments Api V1 Interop Subjects  Subject Id  Instruments Get"
                 }
@@ -418,7 +418,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SubjectComplianceResponse"
+                  "$ref": "#/components/schemas/SubjectComplianceResponseDTO"
                 }
               }
             }
@@ -789,7 +789,7 @@
         ],
         "title": "AcknowledgeNotificationRequest"
       },
-      "AssignmentComplianceDetail": {
+      "AssignmentComplianceDetailDTO": {
         "properties": {
           "assignment_id": {
             "type": "string",
@@ -846,7 +846,7 @@
           "due_at",
           "end_date"
         ],
-        "title": "AssignmentComplianceDetail"
+        "title": "AssignmentComplianceDetailDTO"
       },
       "BulkSyncPayload": {
         "properties": {
@@ -1080,7 +1080,7 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
-      "InstrumentCreate": {
+      "InstrumentCreateDTO": {
         "properties": {
           "study_id": {
             "type": "string",
@@ -1137,9 +1137,9 @@
           "scoring_metadata",
           "reason_for_change"
         ],
-        "title": "InstrumentCreate"
+        "title": "InstrumentCreateDTO"
       },
-      "InstrumentResponse": {
+      "InstrumentResponseDTO": {
         "properties": {
           "id": {
             "type": "string",
@@ -1206,7 +1206,7 @@
           "reason_for_change",
           "version_index"
         ],
-        "title": "InstrumentResponse"
+        "title": "InstrumentResponseDTO"
       },
       "OfflineSyncMarkers": {
         "properties": {
@@ -1363,7 +1363,7 @@
         ],
         "title": "ReplayQuarantinedSubmissionRequest"
       },
-      "SubjectAssignmentCreate": {
+      "SubjectAssignmentCreateDTO": {
         "properties": {
           "study_id": {
             "type": "string",
@@ -1432,9 +1432,9 @@
           "end_date",
           "reason_for_change"
         ],
-        "title": "SubjectAssignmentCreate"
+        "title": "SubjectAssignmentCreateDTO"
       },
-      "SubjectAssignmentResponse": {
+      "SubjectAssignmentResponseDTO": {
         "properties": {
           "id": {
             "type": "string",
@@ -1513,9 +1513,9 @@
           "reason_for_change",
           "version_index"
         ],
-        "title": "SubjectAssignmentResponse"
+        "title": "SubjectAssignmentResponseDTO"
       },
-      "SubjectComplianceResponse": {
+      "SubjectComplianceResponseDTO": {
         "properties": {
           "subject_id": {
             "type": "string",
@@ -1539,7 +1539,7 @@
           },
           "assignments": {
             "items": {
-              "$ref": "#/components/schemas/AssignmentComplianceDetail"
+              "$ref": "#/components/schemas/AssignmentComplianceDetailDTO"
             },
             "type": "array",
             "title": "Assignments"
@@ -1554,7 +1554,7 @@
           "overdue_count",
           "assignments"
         ],
-        "title": "SubjectComplianceResponse"
+        "title": "SubjectComplianceResponseDTO"
       },
       "SubjectNotificationResponse": {
         "properties": {

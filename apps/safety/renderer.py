@@ -1,8 +1,8 @@
 import os
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from sae_icsr import IndividualCaseSafetyReport
 
+from apps.safety.src.domain.sae_icsr import IndividualCaseSafetyReport
 from apps.safety.validator import validate_e2b_xml_structure
 
 

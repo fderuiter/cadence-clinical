@@ -2,7 +2,7 @@
 Shared protocol-version reference domain contracts module.
 """
 
-from protocol_version_ref.models import (
+from .models import (
     ProtocolVersionRef,
     ProtocolVersionStatus,
 )

@@ -49,9 +49,6 @@ def should_trigger_schema_generation(staged_files: list[str]) -> bool:
         if not f.endswith(".py"):
             continue
         parts = f.split(os.sep)
-        # Check packages/core-models
-        if len(parts) >= 2 and parts[0] == "packages" and parts[1] == "core-models":
-            return True
         # Check main.py in apps
         if len(parts) >= 3 and parts[0] == "apps" and parts[-1] == "main.py":
             return True

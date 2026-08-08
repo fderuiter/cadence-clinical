@@ -55,7 +55,6 @@ def is_logical_code(pathname: str) -> bool:
         "apps/execution",
         "apps/designer",
         "packages/security",
-        "packages/core-models",
     ]
     if any(pathname.startswith(d) for d in code_dirs):
         # Unless it's a known documentation directory inside those

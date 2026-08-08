@@ -8,8 +8,12 @@ serialization/deserialization scenarios.
 import json
 
 import pytest
-from protocol_version_ref import ProtocolVersionRef, ProtocolVersionStatus
 from pydantic import ValidationError
+
+from apps.designer.src.domain.protocol_version_ref import (
+    ProtocolVersionRef,
+    ProtocolVersionStatus,
+)
 
 
 def test_protocol_version_ref_valid_payload():

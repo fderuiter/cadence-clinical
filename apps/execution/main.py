@@ -24,7 +24,6 @@ from fastapi import (
 )
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from protocol_version_ref import ProtocolVersionRef
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from sqlalchemy import func, select, text
 
@@ -117,6 +116,9 @@ from apps.execution.rtsm_supply import (
     SiteInventoryNotFoundError,
     dispense_kit_transaction,
 )
+from apps.execution.src.domain.acl.protocol_version_ref_dto import (
+    ProtocolVersionRefDTO,
+)
 from apps.execution.subject_lifecycle import InvalidStateTransitionError
 from apps.execution.translator import process_translation
 from apps.execution.trial_lock import TrialLockManager
@@ -143,6 +145,8 @@ from packages.security import (
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import SITE_SCOPED_ROLES, can_access_study, mask_payload
 from packages.security.signing import generate_canonical_signature
+
+ProtocolVersionRef = ProtocolVersionRefDTO
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 

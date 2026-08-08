@@ -4,12 +4,16 @@ import threading
 import time
 from typing import Any
 
-from sae_icsr import IndividualCaseSafetyReport, MedDRACoding, SeriousAdverseEvent
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.safety.adapter import SafetyDatabaseAdapter
 from apps.safety.execution_client import ExecutionClient
 from apps.safety.models import SAEDiscrepancy, SAEReconciliationRun
+from apps.safety.src.domain.sae_icsr import (
+    IndividualCaseSafetyReport,
+    MedDRACoding,
+    SeriousAdverseEvent,
+)
 
 logger = logging.getLogger("safety-reconciliation")
 

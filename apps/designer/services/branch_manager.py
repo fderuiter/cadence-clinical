@@ -6,13 +6,11 @@ Requirements: PRD-SYS-001
 import uuid
 from typing import Any
 
-from cdisc.branch_models import (
+from apps.designer.src.domain.cdisc.branch_models import (
     AmendmentComparisonResponse,
     BlockDiff,
     ProtocolBranch,
 )
-
-import packages  # noqa: F401
 
 
 class ProtocolBranchManager:

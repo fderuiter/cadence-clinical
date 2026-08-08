@@ -7,10 +7,12 @@ import asyncio
 from pathlib import Path
 
 import pytest
-from cdisc.cdisc_library_client import CodelistDefinition, CodelistTerm
-from cdisc.terminology_cache import CdiscTerminologyCache
 
-import packages  # noqa: F401
+from apps.designer.src.domain.cdisc.cdisc_library_client import (
+    CodelistDefinition,
+    CodelistTerm,
+)
+from apps.designer.src.domain.cdisc.terminology_cache import CdiscTerminologyCache
 
 
 @pytest.mark.asyncio

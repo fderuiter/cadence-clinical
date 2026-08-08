@@ -5,20 +5,11 @@ from enum import StrEnum
 from typing import Any
 
 import httpx
-from eligibility import evaluate_eligibility
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.execution.src.domain.epro_transport_models import (
-    AssignmentComplianceDetail,
-    InstrumentCreate,
-    InstrumentResponse,
-    SubjectAssignmentCreate,
-    SubjectAssignmentResponse,
-    SubjectComplianceResponse,
-)
 from apps.interop.auth import (
     has_subject_role,
     require_staff_role,
@@ -38,6 +29,15 @@ from apps.interop.models import (
     InteropAuditLog,
     SubjectAssignment,
     SubjectNotification,
+)
+from apps.interop.src.domain.acl import (
+    AssignmentComplianceDetail,
+    InstrumentCreate,
+    InstrumentResponse,
+    SubjectAssignmentCreate,
+    SubjectAssignmentResponse,
+    SubjectComplianceResponse,
+    evaluate_eligibility,
 )
 from apps.interop.sync_engine import (
     SignatureValidationError,

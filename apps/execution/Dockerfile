@@ -5,7 +5,6 @@ COPY pyproject.toml uv.lock ./
 COPY packages/database ./packages/database
 COPY packages/security ./packages/security
 COPY packages/deid ./packages/deid
-COPY packages/core-models ./packages/core-models
 COPY packages/storage ./packages/storage
 COPY apps/execution ./apps/execution
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -21,7 +20,6 @@ COPY --chown=1000:1000 --from=builder /app/.venv /app/.venv
 COPY --chown=1000:1000 packages/database /app/packages/database
 COPY --chown=1000:1000 packages/security /app/packages/security
 COPY --chown=1000:1000 packages/deid /app/packages/deid
-COPY --chown=1000:1000 packages/core-models /app/packages/core-models
 COPY --chown=1000:1000 packages/storage /app/packages/storage
 COPY --chown=1000:1000 apps/execution /app/apps/execution
 

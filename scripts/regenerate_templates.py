@@ -6,14 +6,7 @@ Constructs the protocol template (protocol_template.docx) programmatically
 and writes it to the designated templates directory.
 """
 
-import os
 import sys
-
-# Ensure correct PYTHONPATH resolution for packages/core-models
-sys.path.insert(
-    0,
-    os.path.join(os.path.dirname(os.path.dirname(__file__)), "packages", "core-models"),
-)
 
 from apps.designer.rendering import build_docx_template
 

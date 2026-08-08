@@ -19,16 +19,16 @@ from fastapi import (
     status,
 )
 from fastapi.responses import StreamingResponse
-from storage.document_models import (
-    DocumentMetadataResponse,
-    DocumentUploadResponse,
-)
 
 import packages  # noqa: F401
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import AuditLog
 from apps.execution.src.domain.watermark import apply_watermark
 from packages.security.middleware import get_current_user
+from packages.storage.document_models import (
+    DocumentMetadataResponse,
+    DocumentUploadResponse,
+)
 
 router = APIRouter(prefix="/api/v1/documents", tags=["Documents"])
 

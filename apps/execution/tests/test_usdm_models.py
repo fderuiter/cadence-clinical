@@ -4,7 +4,8 @@ Requirements: PRD-SYS-001
 """
 
 import pytest
-from cdisc.usdm_models import (
+
+from apps.designer.src.domain.cdisc.usdm_models import (
     Activity,
     EligibilityCriterion,
     Encounter,
@@ -13,8 +14,6 @@ from cdisc.usdm_models import (
     StudyEpoch,
     USDMStudy,
 )
-
-import packages  # noqa: F401
 
 
 @pytest.fixture

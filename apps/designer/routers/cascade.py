@@ -5,12 +5,11 @@ Requirements: PRD-SYS-001
 
 from typing import Any
 
-from cdisc.cascade_models import CascadeSummaryReport
 from fastapi import APIRouter, Depends
 
-import packages  # noqa: F401
 from apps.designer.dependencies import get_cascade_engine
 from apps.designer.services.artifact_cascade import ArtifactCascadeEngine
+from apps.designer.src.domain.cdisc.cascade_models import CascadeSummaryReport
 from packages.security.middleware import get_current_user
 
 router = APIRouter(prefix="/api/v1/designer/cascade", tags=["ArtifactCascade"])

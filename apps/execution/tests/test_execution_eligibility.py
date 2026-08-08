@@ -9,7 +9,6 @@ from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
-from eligibility.models import EligibilityCriterion
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
@@ -28,6 +27,9 @@ from apps.execution.demographics import encrypt_demographics
 from apps.execution.designer_client import DesignerCriteriaClient
 from apps.execution.eligibility_context import build_eligibility_context
 from apps.execution.main import app
+from apps.execution.src.domain.acl.designer_eligibility_dto import (
+    DesignerEligibilityCriterionDTO,
+)
 
 GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
 
@@ -139,7 +141,7 @@ async def test_designer_criteria_client_retrieval_and_parsing():
         criteria = await client.get_eligibility_criteria("study_1")
 
         assert len(criteria) == 2
-        assert isinstance(criteria[0], EligibilityCriterion)
+        assert isinstance(criteria[0], DesignerEligibilityCriterionDTO)
         assert criteria[0].criterion_id == "INC_01"
         assert criteria[0].criterion_type == "inclusion"
         assert criteria[0].condition.operator == ">="
@@ -147,7 +149,7 @@ async def test_designer_criteria_client_retrieval_and_parsing():
             criteria[0].condition.operands[0].field_ref.raw_reference == "eCRF.DM.AGE"
         )
 
-        assert isinstance(criteria[1], EligibilityCriterion)
+        assert isinstance(criteria[1], DesignerEligibilityCriterionDTO)
         assert criteria[1].criterion_id == "EXC_01"
         assert criteria[1].criterion_type == "exclusion"
 
@@ -280,7 +282,7 @@ async def test_screening_endpoint_eligible_and_transition():
 
     # Mock criteria from designer service
     mock_criteria = [
-        EligibilityCriterion(
+        DesignerEligibilityCriterionDTO(
             **make_mock_criterion("INC_01", "inclusion", "eCRF.DM.AGE", ">=", 18, True)
         )
     ]
@@ -343,7 +345,7 @@ async def test_screening_endpoint_ineligible_transition_and_audit():
         await session.commit()
 
     mock_criteria = [
-        EligibilityCriterion(
+        DesignerEligibilityCriterionDTO(
             **make_mock_criterion("INC_01", "inclusion", "eCRF.DM.AGE", ">=", 18, True)
         )
     ]
@@ -425,7 +427,7 @@ async def test_screening_endpoint_indeterminate_behavior():
         await session.commit()
 
     mock_criteria = [
-        EligibilityCriterion(
+        DesignerEligibilityCriterionDTO(
             **make_mock_criterion("INC_01", "inclusion", "eCRF.DM.AGE", ">=", 18, True)
         )
     ]

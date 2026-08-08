@@ -6,7 +6,6 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import Depends, FastAPI, HTTPException, Request
-from packages.database.audit import AuditFields
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,6 +33,7 @@ from apps.econsent.models import (
 )
 from apps.execution.src.domain.localization.models import validate_language_code
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
+from packages.database.audit import AuditFields
 from packages.security import assert_secure_secrets
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import verify_not_auditor
@@ -1275,7 +1275,7 @@ async def capture_subject_consent(
     hmac_sig = generate_canonical_signature(canonical_payload, secret)
 
     # 5. Build SignatureManifestation
-    from signature import SignatureManifestation, SigningReason
+    from packages.security.signature import SignatureManifestation, SigningReason
 
     manifest = SignatureManifestation(
         signer_id=user_id,

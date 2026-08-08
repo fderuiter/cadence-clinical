@@ -5,7 +5,6 @@ COPY pyproject.toml uv.lock ./
 COPY packages/database ./packages/database
 COPY packages/security ./packages/security
 COPY packages/deid ./packages/deid
-COPY packages/core-models ./packages/core-models
 COPY apps/interop ./apps/interop
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --no-dev --package apps-interop
@@ -16,7 +15,6 @@ COPY --from=builder /app/.venv /app/.venv
 COPY packages/database /app/packages/database
 COPY packages/security /app/packages/security
 COPY packages/deid /app/packages/deid
-COPY packages/core-models /app/packages/core-models
 COPY apps/interop /app/apps/interop
 ENV PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000

@@ -5,7 +5,6 @@ COPY pyproject.toml uv.lock ./
 COPY packages/database ./packages/database
 COPY packages/security ./packages/security
 COPY packages/deid ./packages/deid
-COPY packages/core-models ./packages/core-models
 COPY apps/etmf ./apps/etmf
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --no-dev --package apps-etmf
@@ -20,7 +19,6 @@ COPY --chown=1000:1000 --from=builder /app/.venv /app/.venv
 COPY --chown=1000:1000 packages/database /app/packages/database
 COPY --chown=1000:1000 packages/security /app/packages/security
 COPY --chown=1000:1000 packages/deid /app/packages/deid
-COPY --chown=1000:1000 packages/core-models /app/packages/core-models
 COPY --chown=1000:1000 apps/etmf /app/apps/etmf
 
 RUN chown -R 1000:1000 /app

@@ -36,7 +36,7 @@ def test_is_safe_file():
 
     # 6. Core app/model files (forbidden)
     assert not is_safe_file("apps/execution/main.py")
-    assert not is_safe_file("packages/core-models/cdisc/usdm_models.py")
+    assert not is_safe_file("apps/execution/src/domain/sdtm/models.py")
     assert not is_safe_file("packages/security/gating.py")
     assert not is_safe_file("pyproject.toml")
     assert not is_safe_file("package.json")

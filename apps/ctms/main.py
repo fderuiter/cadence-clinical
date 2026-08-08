@@ -2548,13 +2548,19 @@ async def process_visit_sync(
             }
 
     # 5. Build SyncRecord representation
-    import sync_engine
+    from apps.ctms.src.domain.acl.sync_engine_dto import (
+        CTMSSignatureValidationError,
+        CTMSSyncMetadataDTO,
+        CTMSSyncRecordDTO,
+        reconcile_ctms_records,
+        verify_ctms_record_signature,
+    )
 
-    signature_validation_error = sync_engine.SignatureValidationError
-    sync_metadata = sync_engine.SyncMetadata
-    sync_record = sync_engine.SyncRecord
-    reconcile_records = sync_engine.reconcile_records
-    verify_record_signature = sync_engine.verify_record_signature
+    signature_validation_error = CTMSSignatureValidationError
+    sync_metadata = CTMSSyncMetadataDTO
+    sync_record = CTMSSyncRecordDTO
+    reconcile_records = reconcile_ctms_records
+    verify_record_signature = verify_ctms_record_signature
 
     incoming_timestamps = payload.offline_sync_markers.timestamps or {}
     timestamps = {}

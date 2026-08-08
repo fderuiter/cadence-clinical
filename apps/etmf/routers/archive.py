@@ -11,10 +11,9 @@ import zipfile
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
-from storage.document_models import ArchiveJobResponse
 
-import packages  # noqa: F401
 from packages.security.middleware import get_current_user
+from packages.storage.document_models import ArchiveJobResponse
 
 router = APIRouter(prefix="/api/v1/archive", tags=["Archive"])
 
