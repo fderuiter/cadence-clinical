@@ -109,9 +109,11 @@ source = [
 ]
 concurrency = ["thread", "greenlet"]
 omit = [
-    "apps/*/adapter/*",
-    "apps/*/domain/*",
-    "packages/hexagonal/*",
+    "apps/*/adapter/**",
+    "apps/*/adapters/**",
+    "apps/*/domain/**",
+    "apps/*/ports/**",
+    "packages/hexagonal/**",
 ]
 
 [tool.coverage.report]
