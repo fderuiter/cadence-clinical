@@ -3,7 +3,7 @@
     <div class="section-header">
       <h2>Dedicated Site Administration Suite</h2>
       <p>
-        Centralized governance portal to configure clinical trial sites, populate personnel directories, 
+        Centralized governance portal to configure clinical trial sites, populate personnel directories,
         and manage role delegations while strictly adhering to FDA 21 CFR Part 11 and GxP standards.
       </p>
     </div>
@@ -28,7 +28,7 @@
             21 CFR Part 11 Role Gating - Access Denied
           </h3>
           <p class="admin-gating-text">
-            You do not have the required <strong>sponsor_admin</strong> role to view or interact with administrative 
+            You do not have the required <strong>sponsor_admin</strong> role to view or interact with administrative
             site configurations. Please authenticate with an authorized account or consult your system administrator.
           </p>
         </div>
@@ -158,7 +158,7 @@
           <div class="card-title" style="font-weight: bold; font-size: 1.1rem; margin-bottom: 16px; color: var(--primary);">
             {{ isEditingSite ? "✏️ Update Site Details" : "➕ Register New Clinical Site" }}
           </div>
-          
+
           <form @submit.prevent="submitSiteForm">
             <div style="display: flex; flex-direction: column; gap: 16px;">
               <div>
@@ -304,7 +304,7 @@
                   <span style="margin-left: 8px;">{{ person.email }}</span>
                 </div>
                 <div style="font-size: 0.75rem; color: #64748b; margin-top: 6px;">
-                  Site scope: <code>{{ person.site_id || "None" }}</code> 
+                  Site scope: <code>{{ person.site_id || "None" }}</code>
                   <span v-if="person.organization_id"> | Org ID: {{ person.organization_id.slice(0, 8) }}...</span>
                 </div>
                 <div style="font-size: 0.7rem; color: #94a3b8; font-style: italic; margin-top: 4px;">

@@ -34,7 +34,7 @@ Capture (EDC) into an automated Digital Data Flow (DDF) platform.
 | OIDC Auth & API routers       | `apps/gateway/`                                                       |
 | Stack orchestration           | `docker/`                                                             |
 | Automation & helper scripts   | `scripts/`                                                            |
-| Unit & integration tests      | `apps/<name>/tests/`, `packages/<name>/tests/`, `scripts/tests/` |
+| Unit & integration tests      | `apps/<name>/tests/`, `packages/<name>/tests/`, `scripts/tests/`      |
 | Architecture Decision Records | `docs/adr/`                                                           |
 | GxP compliance docs           | `docs/SDLC/` (never edit manually — always via `scripts/sync_gxp.py`) |
 

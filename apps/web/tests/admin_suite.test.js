@@ -200,13 +200,13 @@ describe("Dedicated Site Administration Suite Integration Tests", () => {
   describe("Isolated Pinia Administration State", () => {
     it("uses a separate pinia store state preventing interference with active clinical monitoring choices", () => {
       const adminStore = useAdminStore();
-      
+
       // Initialize store
       expect(adminStore.sites).toEqual([]);
       expect(adminStore.personnel).toEqual([]);
 
       adminStore.sites = [{ id: "site-9", name: "Isolated Site" }];
-      
+
       // Confirm changes remain isolated to adminStore
       expect(adminStore.sites[0].name).toBe("Isolated Site");
     });
