@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-To support centralized, compliant, and secure clinical trial site setups, organization management, and personnel directory provisioning, the Cadence Clinical platform requires a dedicated administrative workspace. 
+To support centralized, compliant, and secure clinical trial site setups, organization management, and personnel directory provisioning, the Cadence Clinical platform requires a dedicated administrative workspace.
 Previously, administrators had to manage site configurations and staff directories through fragmented sub-tabs inside active clinical monitoring views or direct database updates. This mixed approach increased the risk of accidental clinical state corruption and violated strict compliance auditing boundaries.
 
 To resolve these issues, we need a dedicated, decoupled Site Administration Suite under the `/admin` path. This suite must be isolated from the active clinical monitoring context, enforce strict role-based access control (RBAC), and guarantee that all state modifications undergo strict change justification gating before submission.
