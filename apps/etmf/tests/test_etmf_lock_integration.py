@@ -87,7 +87,7 @@ async def test_trigger_global_trial_lock():
         assert headers["X-Signature-Version"] == "2"
 
         # Cryptographically verify the signature
-        secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode(
+        secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode(  # nosec
             "utf-8"
         )  # pragma: allowlist secret
         verified = verify_gateway_signature(
