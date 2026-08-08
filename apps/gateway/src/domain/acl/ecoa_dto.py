@@ -5,7 +5,7 @@ Requirements: PRD-SYS-001
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel, Field
 

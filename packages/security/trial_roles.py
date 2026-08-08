@@ -33,7 +33,6 @@ class ClinicalStaffRole(StrEnum):
     EXTERNAL_MONITOR = "External Monitor"
 
 
-
 def get_normalized_request_roles(request: Request) -> list[str]:
     """
     Retrieves and normalizes request.state.roles or raw X-User-Roles headers.
