@@ -371,6 +371,10 @@ def main() -> None:
                                     "apps/eisf/src/domain/eisf_transport_models.py",
                                     "apps/etmf/src/domain/etmf/eisf_transport_models.py",
                                 },
+                                {
+                                    "apps/designer/src/domain/cdisc/cdisc_library_client.py",
+                                    "apps/gateway/src/domain/acl/cdisc_dto.py",
+                                },
                             ]
                         ):
                             continue
