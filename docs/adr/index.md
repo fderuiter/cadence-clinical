@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+
 - [2026-08-08: ADR-064: GxP FMEA-Aligned Boot Recovery for Stuck Imports](2026-08-08-gxp-fmea-aligned-boot-recovery-for-stuck-imports.md)
 - [2026-08-07: Eradicate Core Models and Implement Anti-Corruption Layers](2026-08-07-eradicate-core-models-and-implement-anti-corruption-layers.md)
 - [2026-08-07: Decentralize Test Directory Structure Across Workspaces](2026-08-07-decentralize-test-directory-structure-across-workspaces.md)
@@ -184,6 +185,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-03: Native Interval Filtering and Custom Name Matching](2026-08-03-native-interval-filtering-and-custom-name-matching.md)
 
 ### 6. Frontend & Design System
+
 - [2026-08-07: Skip to content link and strict layout validation](2026-08-07-skip-to-content-link-and-strict-layout-validation.md)
 
 - [2026-08-04: Viewport-Driven DOM Recycler for Large eCRFs](2026-08-04-viewport-driven-dom-recycler-for-large-ecrfs.md)

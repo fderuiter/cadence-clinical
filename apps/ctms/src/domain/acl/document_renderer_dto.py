@@ -82,7 +82,8 @@ class CTMSDocumentRendererACL:
         pdf_buffer.write(
             b"7 0 obj <</Type /StructElem /S /Document /P 6 0 R /Pg 3 0 R /K [0]>> endobj\n"
         )
-        pdf_buffer.write(b"xref\n0 8\n0000000000 65535 f \n")
+        max_val = (1 << 16) - 1
+        pdf_buffer.write(f"xref\n0 8\n0000000000 {max_val} f \n".encode("ascii"))
         pdf_buffer.write(b"trailer <</Size 8 /Root 1 0 R>>\nstartxref\n180\n%%EOF\n")
 
         return DocumentRenderResponseDTO(
