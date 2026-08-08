@@ -425,10 +425,17 @@ const authStore = useAuthStore();
 const clinicalStore = useClinicalStore();
 const onboardingStore = useOnboardingStore();
 
-const brandName = import.meta.env.VITE_BRAND_NAME || "Cadence Clinical";
-const parts = brandName.split(" ");
-const brandNameFirst = parts[0] || "";
-const brandNameRest = parts.slice(1).join(" ") || "";
+const brandName = computed(() => {
+  return window.BRAND_NAME_REF ? window.BRAND_NAME_REF.value : (import.meta.env.VITE_BRAND_NAME || "Cadence Clinical");
+});
+const brandNameFirst = computed(() => {
+  const parts = brandName.value.split(" ");
+  return parts[0] || "";
+});
+const brandNameRest = computed(() => {
+  const parts = brandName.value.split(" ");
+  return parts.slice(1).join(" ") || "";
+});
 
 const screenReaderAnnouncement = ref("");
 let refreshTimer = null;

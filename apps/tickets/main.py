@@ -44,6 +44,8 @@ BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
 
 
 def validate_branding_and_domain() -> None:
+    if os.getenv("SKIP_BRANDING_VALIDATION") in ("true", "1", "TRUE", "yes", "YES"):
+        return
     app_env = os.getenv("APP_ENV", "").strip().lower()
     is_prod_or_staging = app_env not in ("development", "dev", "test", "")
     if is_prod_or_staging:
