@@ -113,7 +113,7 @@ brand_mappings_cache = None
 DEFAULT_THEME = {
     "--color-primary": "#026597",
     "--color-primary-dark": "#014d76",
-    "--color-primary-light": "#e0f2fe",
+    "--color-primary-light": "#e0f2fe",  # deid: ignore
     "--color-accent": "#4338ca",
 }
 

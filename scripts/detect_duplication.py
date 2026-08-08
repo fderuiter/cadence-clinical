@@ -223,6 +223,10 @@ def main() -> None:
                             pair_set.issubset(ignored)
                             for ignored in [
                                 {
+                                    "apps/ctms/domain/acl/document_renderer_dto.py",
+                                    "apps/designer/infrastructure/document_renderer.py",
+                                },
+                                {
                                     "apps/ctms/src/domain/acl/document_renderer_dto.py",
                                     "apps/designer/src/domain/document_renderer.py",
                                 },
