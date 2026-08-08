@@ -74,19 +74,24 @@ class CdiscLibraryClient:
         self._external_client = client
         self._client: httpx.AsyncClient | None = None
 
+    def _build_headers(self) -> dict[str, str]:
+        headers = {
+            "Accept": "application/json",
+            "User-Agent": self.config.user_agent,
+        }
+        if self.config.api_key:
+            headers["api-key"] = self.config.api_key
+        return headers
+
     async def __aenter__(self) -> CdiscLibraryClient:
         if self._external_client:
             self._client = self._external_client
         else:
             self._client = httpx.AsyncClient(
                 base_url=self.config.base_url,
-                headers={
-                    "User-Agent": self.config.user_agent,
-                },
+                headers=self._build_headers(),
                 timeout=self.config.timeout,
             )
-            if self.config.api_key:
-                self._client.headers["api-key"] = self.config.api_key
         return self
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -96,9 +101,24 @@ class CdiscLibraryClient:
 
     async def get_products(self) -> list[CdiscProductSummary]:
         return [
-            CdiscProductSummary(title="CDASH", version="2.3", href="/mdr/cdash/2.3"),
-            CdiscProductSummary(title="SDTM", version="3.4", href="/mdr/sdtm/3.4"),
-            CdiscProductSummary(title="SEND", version="3.1", href="/mdr/send/3.1"),
+            CdiscProductSummary(
+                title="CDASHIG v2.3",
+                version="2.3",
+                href="/mdr/cdashig/2.3",
+                description="CDASH Implementation Guide v2.3",
+            ),
+            CdiscProductSummary(
+                title="SDTMIG v3.4",
+                version="3.4",
+                href="/mdr/sdtmig/3.4",
+                description="SDTM Implementation Guide v3.4",
+            ),
+            CdiscProductSummary(
+                title="CDASH Controlled Terminology",
+                version="2024-09-27",
+                href="/mdr/ct/packages/cdashct-2024-09-27",
+                description="CDASH CT Package 2024-09-27",
+            ),
         ]
 
     async def get_cdash_domain(
@@ -119,10 +139,7 @@ class CdiscLibraryClient:
         )
 
     async def get_codelist(
-        self,
-        codelist_code: str,
-        package: str | None = None,
-        version: str = "2023-12-15",
+        self, package: str, codelist_code: str
     ) -> CodelistDefinition:
         return CodelistDefinition(
             codelist_code=codelist_code,
