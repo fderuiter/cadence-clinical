@@ -27,7 +27,7 @@ setup: ## Install all Python + Node deps, Playwright browsers, and pre-commit ho
 
 fix: ## Auto-fix all ruff lint violations and reformat code (safe to run anytime)
 	uv run ruff check . --fix
-	uv run ruff format .
+	uv run ruff format --target-version py313 .
 	@echo "$(CYAN)✔ Lint + format complete.$(RESET)"
 
 lint-paths: ## Run lightweight path-pattern boundary linter
@@ -39,7 +39,7 @@ lint: lint-paths ## Check lint (no auto-fix)
 
 format: ## Check formatting only (no auto-fix)
 	pnpm -r format
-	uv run ruff format --check . --exclude apps/execution/database/models.py
+	uv run ruff format --check --target-version py313 . --exclude apps/execution/database/models.py
 
 check: ## Run all pre-push quality gates: format, lint, secrets, ADRs, markdown, security
 	pnpm check
