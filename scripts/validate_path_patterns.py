@@ -134,6 +134,8 @@ ALLOWED_ROOT_FILES = {
     "eslint.config.mjs",
     "duplication_summary.json",
     ".python-version",
+    "PROJECT.md",
+    "TEST_INFRA.md",
 }
 
 # Allowed root-level subdirectories for general file placement

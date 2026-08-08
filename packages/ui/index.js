@@ -255,7 +255,6 @@ export function createQueryPanel(fieldId, query) {
   `.trim();
 }
 
-
 export {
   canonicalSerialize,
   generateCanonicalSignature,

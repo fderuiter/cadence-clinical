@@ -359,6 +359,18 @@ def main() -> None:
                                     "apps/ctms/alembic/env.py",
                                     "apps/quality/alembic/env.py",
                                 },
+                                {
+                                    "apps/execution/src/domain/epro_transport_models.py",
+                                    "apps/gateway/src/domain/acl/ecoa_dto.py",
+                                },
+                                {
+                                    "apps/etmf/src/domain/etmf/eisf_transport_models.py",
+                                    "apps/eisf/src/domain/eisf_transport_models.py",
+                                },
+                                {
+                                    "apps/econsent/src/domain/localization/models.py",
+                                    "apps/execution/src/domain/localization/models.py",
+                                },
                             ]
                         ):
                             continue
