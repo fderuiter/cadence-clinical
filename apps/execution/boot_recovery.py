@@ -14,7 +14,7 @@ async def run_boot_recovery(session_maker: async_sessionmaker[AsyncSession]) -> 
     """Executes a scan for active "PENDING" or "PROCESSING" dictionary import jobs during application startup.
 
     Transitions detected active/stuck jobs to "FAILED" under a dedicated background service audit context.
-    Outputs a structured GxP FMEA-compliant compliance report to the system log with recalculate RPN scores.
+    Outputs a structured GxP FMEA-compliant compliance report to the system log with recalculated RPN scores in alignment with ADR-064.
     """
     logger.info(
         "ℹ️ [Boot Recovery] Scanning for orphaned/stuck dictionary import jobs..."
