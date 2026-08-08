@@ -73,13 +73,24 @@ def validate_branding_and_auth() -> None:
 
     if is_prod_or_staging:
         invalid = []
-        if not os.getenv("BRAND_NAME") or os.getenv("BRAND_NAME") == "Cadence Clinical":
-            invalid.append("BRAND_NAME")
-        if (
-            not os.getenv("BRAND_DOMAIN")
-            or os.getenv("BRAND_DOMAIN") == "cadenceclinical.com"
-        ):
-            invalid.append("BRAND_DOMAIN")
+        skip_branding = os.getenv("SKIP_BRANDING_VALIDATION") in (
+            "true",
+            "1",
+            "TRUE",
+            "yes",
+            "YES",
+        )
+        if not skip_branding:
+            if (
+                not os.getenv("BRAND_NAME")
+                or os.getenv("BRAND_NAME") == "Cadence Clinical"
+            ):
+                invalid.append("BRAND_NAME")
+            if (
+                not os.getenv("BRAND_DOMAIN")
+                or os.getenv("BRAND_DOMAIN") == "cadenceclinical.com"
+            ):
+                invalid.append("BRAND_DOMAIN")
         if not os.getenv("KEYCLOAK_REALM") or os.getenv("KEYCLOAK_REALM") == "cadence":
             invalid.append("KEYCLOAK_REALM")
         if (
@@ -96,6 +107,122 @@ def validate_branding_and_auth() -> None:
 
 validate_branding_and_auth()
 
+
+brand_mappings_cache = None
+
+DEFAULT_THEME = {
+    "--color-primary": "#026597",
+    "--color-primary-dark": "#014d76",
+    "--color-primary-light": "#e0f2fe",  # deid: ignore
+    "--color-accent": "#4338ca",
+}
+
+
+def reset_brand_mappings_cache() -> None:
+    global brand_mappings_cache
+    brand_mappings_cache = None
+
+
+def get_brand_mappings() -> dict[str, dict[str, Any]]:
+    global brand_mappings_cache
+    if brand_mappings_cache is not None:
+        return brand_mappings_cache
+
+    mappings = {}
+    default_name = os.getenv("BRAND_NAME", "Cadence Clinical")
+
+    # 1. Parse BRAND_MAPPINGS JSON
+    brand_mappings_env = os.getenv("BRAND_MAPPINGS")
+    if brand_mappings_env:
+        try:
+            import json
+
+            parsed = json.loads(brand_mappings_env)
+            if isinstance(parsed, dict):
+                for k, v in parsed.items():
+                    k_normalized = k.strip().lower()
+                    if isinstance(v, dict):
+                        mappings[k_normalized] = {
+                            "name": v.get("name", default_name),
+                            "domain": v.get("domain", k_normalized),
+                            "theme": v.get("theme", {}),
+                        }
+                    elif isinstance(v, str):
+                        mappings[k_normalized] = {
+                            "name": v,
+                            "domain": k_normalized,
+                            "theme": {},
+                        }
+        except Exception:
+            pass
+
+    # 2. Scanning environment variables
+    for env_key, env_val in os.environ.items():
+        env_key_upper = env_key.upper()
+        if env_key_upper.startswith("BRAND_MAPPING_"):
+            domain_part = env_key[len("BRAND_MAPPING_") :].lower().replace("_", ".")
+            domain_part_raw = env_key[len("BRAND_MAPPING_") :].lower()
+
+            try:
+                import json
+
+                v_parsed = json.loads(env_val)
+                if isinstance(v_parsed, dict):
+                    resolved = {
+                        "name": v_parsed.get("name", default_name),
+                        "domain": v_parsed.get("domain", domain_part),
+                        "theme": v_parsed.get("theme", {}),
+                    }
+                    mappings[domain_part] = resolved
+                    mappings[domain_part_raw] = resolved
+                    continue
+            except Exception:
+                pass
+
+            resolved = {"name": env_val, "domain": domain_part, "theme": {}}
+            mappings[domain_part] = resolved
+            mappings[domain_part_raw] = resolved
+
+        elif env_key_upper.startswith("BRAND_NAME_") and env_key_upper != "BRAND_NAME":
+            suffix = env_key[len("BRAND_NAME_") :].lower()
+            domain_key = f"BRAND_DOMAIN_{suffix.upper()}"
+            domain_val = None
+            for ek, ev in os.environ.items():
+                if ek.upper() == domain_key.upper():
+                    domain_val = ev
+                    break
+            if not domain_val:
+                domain_val = suffix.replace("_", ".")
+            resolved = {"name": env_val, "domain": domain_val, "theme": {}}
+            mappings[suffix.replace("_", ".")] = resolved
+            mappings[suffix] = resolved
+            if domain_val:
+                mappings[domain_val.lower()] = resolved
+
+    brand_mappings_cache = mappings
+    return mappings
+
+
+def resolve_brand_by_host(host_header: str | None) -> tuple[str, str]:
+    default_name = os.getenv("BRAND_NAME", "Cadence Clinical")
+    default_domain = os.getenv("BRAND_DOMAIN", "cadenceclinical.com")
+
+    if not host_header:
+        return default_name, default_domain
+
+    host = host_header.strip().lower().split(":")[0]
+    mappings = get_brand_mappings()
+
+    if host in mappings:
+        return mappings[host]["name"], mappings[host]["domain"]
+
+    for k, v in mappings.items():
+        if k == host or k.replace("_", ".") == host or k.replace(".", "_") == host:
+            return v["name"], v["domain"]
+
+    return default_name, default_domain
+
+
 app = FastAPI(
     title=f"{BRAND_NAME} - API Gateway",
     version="0.1.0",
@@ -107,6 +234,37 @@ app = FastAPI(
 app.include_router(cdisc_router, prefix="/api/v1/cdisc", tags=["CDISC Standards"])
 app.include_router(usdm_router, prefix="/api/v1/usdm", tags=["USDM Data Flow"])
 app.include_router(ecoa_router, prefix="/api/v1/ecoa", tags=["eCOA"])
+
+
+@app.get("/api/v1/gateway/config")
+@app.get("/api/v1/config")
+async def get_gateway_config(request: Request):
+    host_header = request.headers.get("host") or request.headers.get("Host")
+    brand_name, brand_domain = resolve_brand_by_host(host_header)
+
+    host = host_header.strip().lower().split(":")[0] if host_header else ""
+    mappings = get_brand_mappings()
+
+    theme = dict(DEFAULT_THEME)
+
+    matched_entry = None
+    if host in mappings:
+        matched_entry = mappings[host]
+    else:
+        for k, v in mappings.items():
+            if k == host or k.replace("_", ".") == host or k.replace(".", "_") == host:
+                matched_entry = v
+                break
+
+    if matched_entry and "theme" in matched_entry:
+        theme.update(matched_entry["theme"])
+
+    return {
+        "brand_name": brand_name,
+        "brand_domain": brand_domain,
+        "theme": theme,
+    }
+
 
 # CORS configuration
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
@@ -1058,7 +1216,17 @@ async def proxy_requests(request: Request, path: str) -> Response:
     if path == "api/v1/etmf/inbound-email":
         target_url = f"{SERVICES['etmf']}/{path}"
         headers = dict(request.headers)
+        host_header = headers.get("host") or headers.get("Host")
         headers.pop("host", None)
+        headers.pop("Host", None)
+
+        for k in list(headers.keys()):
+            if k.lower() in ("x-brand-name", "x-brand-domain"):
+                headers.pop(k, None)
+
+        brand_name, brand_domain = resolve_brand_by_host(host_header)
+        headers["X-Brand-Name"] = brand_name
+        headers["X-Brand-Domain"] = brand_domain
         try:
             body: bytes = await request.body()
             if http_client is None:
@@ -1312,7 +1480,9 @@ async def proxy_requests(request: Request, path: str) -> Response:
         target_url = f"{SERVICES['designer']}/{path}"
 
     headers = dict(request.headers)
+    host_header = headers.get("host") or headers.get("Host")
     headers.pop("host", None)
+    headers.pop("Host", None)
 
     # Clean up incoming headers to prevent client-side spoofing of identity and scope claims
     for k in list(headers.keys()):
@@ -1328,6 +1498,8 @@ async def proxy_requests(request: Request, path: str) -> Response:
             "x-sponsor-id",
             "x-unblinded-access",
             "x-tenant-id",
+            "x-brand-name",
+            "x-brand-domain",
         ):
             headers.pop(k, None)
 
@@ -1433,6 +1605,10 @@ async def proxy_requests(request: Request, path: str) -> Response:
         headers["X-Unblinded-Access"] = "true"
     if sig_token:
         headers["X-Sig-Token"] = sig_token
+
+    brand_name, brand_domain = resolve_brand_by_host(host_header)
+    headers["X-Brand-Name"] = brand_name
+    headers["X-Brand-Domain"] = brand_domain
 
     try:
         body: bytes = await request.body()

@@ -31,7 +31,7 @@
     "/api/v1/interop/fhir/prefill": {
       "post": {
         "summary": "Fhir Prefill",
-        "description": "Ingest a standard FHIR Bundle payload, pseudonymize Patient ID,\nstrip all Direct Identifiers (PII), and return mapped CDASH eCRF fields.",
+        "description": "Ingest a standard FHIR Bundle payload and return mapped CDASH eCRF fields.",
         "operationId": "fhir_prefill_api_v1_interop_fhir_prefill_post",
         "requestBody": {
           "content": {
@@ -72,7 +72,7 @@
     "/api/v1/interop/fhir/pre-screen": {
       "post": {
         "summary": "Fhir Pre Screen",
-        "description": "Advisory FHIR eligibility pre-screening endpoint. Orchestrates projection,\nMDR criteria retrieval, kleene AST evaluation, and non-PHI audit logging.\nStrictly isolated from clinical subject execution data mutations.",
+        "description": "Advisory FHIR eligibility pre-screening endpoint.",
         "operationId": "fhir_pre_screen_api_v1_interop_fhir_pre_screen_post",
         "requestBody": {
           "content": {
@@ -111,7 +111,7 @@
     "/api/v1/interop/epro/submit": {
       "post": {
         "summary": "Epro Submit",
-        "description": "Secure REST endpoint for mobile apps to submit a single participant diary/survey entry.\nHandles offline queue reconciliation & conflict resolution on duplicate sync requests.",
+        "description": "Submit a single participant diary/survey entry.",
         "operationId": "epro_submit_api_v1_interop_epro_submit_post",
         "requestBody": {
           "content": {
@@ -152,7 +152,7 @@
     "/api/v1/interop/epro/sync": {
       "post": {
         "summary": "Epro Sync",
-        "description": "Secure bulk sync endpoint for offline queues. Performs reconciliation\nand conflict resolution across multiple participant submissions.",
+        "description": "Bulk sync endpoint for offline queues.",
         "operationId": "epro_sync_api_v1_interop_epro_sync_post",
         "requestBody": {
           "content": {
@@ -193,7 +193,7 @@
     "/api/v1/interop/instruments": {
       "post": {
         "summary": "Create Instrument",
-        "description": "Author a new eCOA questionnaire/diary definition.\nEnforces staff role authentication and Part 11 auditing.",
+        "description": "Author a new eCOA questionnaire/diary definition.",
         "operationId": "create_instrument_api_v1_interop_instruments_post",
         "requestBody": {
           "content": {
@@ -232,7 +232,7 @@
     "/api/v1/interop/assignments": {
       "post": {
         "summary": "Create Subject Assignment",
-        "description": "Assign an eCOA instrument to a subject with due/recurrence window data.\nEnforces staff role authorization, validates instrument reference, and logs audit fields.",
+        "description": "Assign an eCOA instrument to a subject with due/recurrence window data.",
         "operationId": "create_subject_assignment_api_v1_interop_assignments_post",
         "requestBody": {
           "content": {
@@ -271,7 +271,7 @@
     "/api/v1/interop/instruments/{id}": {
       "get": {
         "summary": "Get Instrument",
-        "description": "Retrieve an Instrument definition by ID.\nEnforces subject assignment checks for Subject role.",
+        "description": "Retrieve an Instrument definition by ID.",
         "operationId": "get_instrument_api_v1_interop_instruments__id__get",
         "parameters": [
           {
@@ -311,7 +311,7 @@
     "/api/v1/interop/assignments/subject/{subject_id}": {
       "get": {
         "summary": "Get Subject Assignments",
-        "description": "Retrieve all assignments for a given subject.\nEnforces subject-scoped identity boundary (Subject can only view their own assignments).",
+        "description": "Retrieve all assignments for a given subject.",
         "operationId": "get_subject_assignments_api_v1_interop_assignments_subject__subject_id__get",
         "parameters": [
           {
@@ -355,7 +355,7 @@
     "/api/v1/interop/subjects/{subject_id}/instruments": {
       "get": {
         "summary": "Get Subject Assigned Instruments",
-        "description": "Retrieve all unique assigned instruments for a given subject.\nEnforces subject-scoped identity boundary (Subject can only view their own instruments).",
+        "description": "Retrieve all unique assigned instruments for a given subject.",
         "operationId": "get_subject_assigned_instruments_api_v1_interop_subjects__subject_id__instruments_get",
         "parameters": [
           {
@@ -439,7 +439,7 @@
     "/api/v1/interop/reminders/compute": {
       "post": {
         "summary": "Compute Reminders",
-        "description": "Compute due reminders from assignment schedules on demand.\nGenerates notifications for uncompleted assignments whose due window is reached.",
+        "description": "Compute due reminders from assignment schedules on demand.",
         "operationId": "compute_reminders_api_v1_interop_reminders_compute_post",
         "parameters": [
           {
@@ -488,7 +488,7 @@
     "/api/v1/interop/subjects/{subject_id}/notifications": {
       "get": {
         "summary": "Get Subject Notifications",
-        "description": "Retrieve all notifications for a given subject.\nEnforces subject-scoped identity boundary (Subject can only view their own notifications).",
+        "description": "Retrieve all notifications for a given subject.",
         "operationId": "get_subject_notifications_api_v1_interop_subjects__subject_id__notifications_get",
         "parameters": [
           {
@@ -532,7 +532,7 @@
     "/api/v1/interop/notifications/{notification_id}/acknowledge": {
       "post": {
         "summary": "Acknowledge Notification",
-        "description": "Acknowledge/read a notification.\nEnforces subject-scoped authorization and records an audit log.",
+        "description": "Acknowledge/read a notification.",
         "operationId": "acknowledge_notification_api_v1_interop_notifications__notification_id__acknowledge_post",
         "parameters": [
           {
@@ -673,7 +673,7 @@
     "/api/v1/interop/epro/quarantine/{id}/edit": {
       "post": {
         "summary": "Edit Quarantined Submission",
-        "description": "Edit a quarantined ePRO submission payload. Requires an e-signature password verification.",
+        "description": "Edit a quarantined ePRO submission payload.",
         "operationId": "edit_quarantined_submission_api_v1_interop_epro_quarantine__id__edit_post",
         "parameters": [
           {
@@ -723,7 +723,7 @@
     "/api/v1/interop/epro/quarantine/{id}/replay": {
       "post": {
         "summary": "Replay Quarantined Submission",
-        "description": "Replay a corrected quarantined ePRO submission back into the active database.\nRequires password verification for e-signature, and writes an audit log.",
+        "description": "Replay a corrected quarantined ePRO submission back into the active database.",
         "operationId": "replay_quarantined_submission_api_v1_interop_epro_quarantine__id__replay_post",
         "parameters": [
           {

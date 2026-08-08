@@ -1274,6 +1274,8 @@ def main():
         ".mypy_cache",
         "build",
         "dist",
+        "playwright-report",
+        "test-results",
     }
 
     strict = False

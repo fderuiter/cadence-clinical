@@ -118,6 +118,8 @@ def main() -> None:
                         "__pycache__",
                         "dist",
                         "build",
+                        "playwright-report",
+                        "test-results",
                     ]
                 )
             ):
@@ -147,6 +149,8 @@ def main() -> None:
                     "dist",
                     "build",
                     "coverage",
+                    "playwright-report",
+                    "test-results",
                 ]
             ):
                 continue
@@ -223,6 +227,10 @@ def main() -> None:
                             pair_set.issubset(ignored)
                             for ignored in [
                                 {
+                                    "apps/ctms/domain/acl/document_renderer_dto.py",
+                                    "apps/designer/infrastructure/document_renderer.py",
+                                },
+                                {
                                     "apps/ctms/src/domain/acl/document_renderer_dto.py",
                                     "apps/designer/src/domain/document_renderer.py",
                                 },
@@ -260,6 +268,7 @@ def main() -> None:
                                     "apps/tickets/main.py",
                                     "apps/execution/main.py",
                                     "apps/designer/main.py",
+                                    "apps/designer/presentation/routers/designer_routes.py",
                                 },
                                 {
                                     "apps/web/src/api/terminologyClient.js",
@@ -358,6 +367,22 @@ def main() -> None:
                                 {
                                     "apps/ctms/alembic/env.py",
                                     "apps/quality/alembic/env.py",
+                                },
+                                {
+                                    "apps/econsent/main.py",
+                                    "apps/econsent/presentation/routers/econsent.py",
+                                },
+                                {
+                                    "apps/etmf/main.py",
+                                    "apps/etmf/presentation/routers/etmf.py",
+                                },
+                                {
+                                    "apps/etmf/presentation/routers/etmf.py",
+                                    "apps/designer/presentation/routers/designer_routes.py",
+                                },
+                                {
+                                    "apps/designer/presentation/dtos.py",
+                                    "apps/designer/presentation/routers/designer_routes.py",
                                 },
                             ]
                         ):

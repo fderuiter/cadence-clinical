@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2209
-- **Passed:** 2209 🟢
+- **Total Automated Test Cases Run:** 2216
+- **Passed:** 2216 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1574,6 +1574,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_verify_gateway_signature_scope_fallback_restrictions`                        | `apps.gateway.tests.test_security_middleware`                               | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_verify_gateway_signature_tenant_and_multishape_restrictions`                 | `apps.gateway.tests.test_security_middleware`                               | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_verify_sig_token_helper_scenarios`                                           | `apps.gateway.tests.test_security_middleware`                               | Trace-17                                     | 🟢 PASSED | < 1s     |
+| `test_get_gateway_config_endpoint`                                                 | `apps.gateway.tests.test_whitelabel`                                        | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
+| `test_get_gateway_config_endpoint_unrecognized_fallback`                           | `apps.gateway.tests.test_whitelabel`                                        | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
+| `test_resolve_brand_by_host_case_insensitivity_and_port`                           | `apps.gateway.tests.test_whitelabel`                                        | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
+| `test_resolve_brand_by_host_fallback`                                              | `apps.gateway.tests.test_whitelabel`                                        | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
+| `test_resolve_brand_by_host_mappings_env_vars`                                     | `apps.gateway.tests.test_whitelabel`                                        | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
+| `test_resolve_brand_by_host_mappings_json`                                         | `apps.gateway.tests.test_whitelabel`                                        | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
+| `test_skip_branding_validation_on_startup`                                         | `apps.gateway.tests.test_whitelabel`                                        | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_basic_detection_results`                                                     | `apps.interop.tests.test_deid`                                              | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_cli_get_line_and_col`                                                        | `apps.interop.tests.test_deid`                                              | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_cli_load_gitignore_patterns`                                                 | `apps.interop.tests.test_deid`                                              | _Regression/Helper_                          | 🟢 PASSED | < 1s     |

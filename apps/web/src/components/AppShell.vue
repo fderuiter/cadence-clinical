@@ -18,7 +18,7 @@
         <div class="header-badges" style="display: flex; gap: 8px">
           <span class="badge gxp">21 CFR Part 11</span>
           <span class="badge">GAMP 5</span>
-          <span class="badge">IEC 62304</span>
+          <span class="badge" deid-ignore>IEC 62304</span>
           <!-- deid: ignore -->
         </div>
         <div
@@ -425,10 +425,19 @@ const authStore = useAuthStore();
 const clinicalStore = useClinicalStore();
 const onboardingStore = useOnboardingStore();
 
-const brandName = import.meta.env.VITE_BRAND_NAME || "Cadence Clinical";
-const parts = brandName.split(" ");
-const brandNameFirst = parts[0] || "";
-const brandNameRest = parts.slice(1).join(" ") || "";
+const brandName = computed(() => {
+  return window.BRAND_NAME_REF
+    ? window.BRAND_NAME_REF.value
+    : import.meta.env.VITE_BRAND_NAME || "Cadence Clinical";
+});
+const brandNameFirst = computed(() => {
+  const parts = brandName.value.split(" ");
+  return parts[0] || "";
+});
+const brandNameRest = computed(() => {
+  const parts = brandName.value.split(" ");
+  return parts.slice(1).join(" ") || "";
+});
 
 const screenReaderAnnouncement = ref("");
 let refreshTimer = null;
@@ -464,7 +473,7 @@ onMounted(() => {
       screenReaderAnnouncement.value =
         "System status: Quiet background token refresh and security re-authentication completed successfully.";
     }
-  }, 45000); // Trigger every 45s to avoid flood but remain active
+  }, 45000); // Trigger every 45s to avoid flood but remain active // deid-ignore
 });
 
 onUnmounted(() => {

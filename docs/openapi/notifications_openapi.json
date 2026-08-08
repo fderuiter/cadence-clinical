@@ -68,7 +68,7 @@
       },
       "get": {
         "summary": "List Notifications",
-        "description": "Retrieve notification records targeted to the current user's user ID or roles, with optional filtering.",
+        "description": "Retrieve notification records targeted to the current user's user ID or roles.",
         "operationId": "list_notifications_api_v1_notifications_get",
         "parameters": [
           {
@@ -157,7 +157,7 @@
     "/api/v1/notifications/{id}": {
       "get": {
         "summary": "View Notification",
-        "description": "Retrieve a specific notification by ID. Enforces strict role- and recipient-based visibility.",
+        "description": "Retrieve a specific notification by ID.",
         "operationId": "view_notification_api_v1_notifications__id__get",
         "parameters": [
           {
@@ -197,7 +197,7 @@
     "/api/v1/notifications/{id}/acknowledge": {
       "post": {
         "summary": "Acknowledge Notification",
-        "description": "Transition notification state from OPEN to ACKNOWLEDGED.\nRequires a reason for lifecycle transition and checks target-based visibility.",
+        "description": "Transition notification state from OPEN to ACKNOWLEDGED.",
         "operationId": "acknowledge_notification_api_v1_notifications__id__acknowledge_post",
         "parameters": [
           {
@@ -237,7 +237,7 @@
     "/api/v1/notifications/{id}/resolve": {
       "post": {
         "summary": "Resolve Notification",
-        "description": "Transition notification state from OPEN or ACKNOWLEDGED to RESOLVED.\nRequires a reason for lifecycle transition and checks target-based visibility.",
+        "description": "Transition notification state from OPEN or ACKNOWLEDGED to RESOLVED.",
         "operationId": "resolve_notification_api_v1_notifications__id__resolve_post",
         "parameters": [
           {

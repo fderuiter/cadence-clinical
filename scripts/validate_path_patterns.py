@@ -118,6 +118,8 @@ ALLOWED_ROOT_FILES = {
     "SUPPORT.md",
     "LICENSE",
     "Makefile",
+    "PROJECT.md",
+    "TEST_INFRA.md",
     "package.json",
     "pnpm-workspace.yaml",
     "pnpm-lock.yaml",
@@ -132,6 +134,8 @@ ALLOWED_ROOT_FILES = {
     "eslint.config.mjs",
     "duplication_summary.json",
     ".python-version",
+    "PROJECT.md",
+    "TEST_INFRA.md",
 }
 
 # Allowed root-level subdirectories for general file placement
