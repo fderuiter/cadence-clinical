@@ -204,19 +204,6 @@ main {
   align-items: center;
 }
 
-/* Grid splits */
-.grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-}
-
-@media (max-width: 1024px) {
-  .grid-2 {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* JSON Viewer */
 .json-editor-container {
   position: relative;

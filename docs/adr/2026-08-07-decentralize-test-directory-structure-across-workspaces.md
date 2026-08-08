@@ -1,9 +1,9 @@
 # ADR-2163: Decentralize Test Directory Structure Across Workspaces
 
-* **Status:** Accepted
-* **Date:** 2026-08-07
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-07
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -15,9 +15,9 @@ To align with modern monorepo best practices and preserve microservice decouplin
 
 ## 2. Decision Drivers & Constraints
 
-* **Microservice Ownership & Boundary Isolation (PRD-SYS-001)**: Service-specific and package-specific unit tests must reside within their respective workspace boundaries.
-* **Dynamic Pytest Discovery**: Pytest configuration (`pyproject.toml`) must dynamically discover and execute tests across all workspace paths (`apps`, `packages`, `scripts`, `tests`).
-* **GxP Compliance & RTM Traceability**: Requirement annotations (`@req:`) across decentralized tests must continue to be scanned and traced by `scripts/generate_rtm.py` and `scripts/sync_gxp.py`.
+- **Microservice Ownership & Boundary Isolation (PRD-SYS-001)**: Service-specific and package-specific unit tests must reside within their respective workspace boundaries.
+- **Dynamic Pytest Discovery**: Pytest configuration (`pyproject.toml`) must dynamically discover and execute tests across all workspace paths (`apps`, `packages`, `scripts`, `tests`).
+- **GxP Compliance & RTM Traceability**: Requirement annotations (`@req:`) across decentralized tests must continue to be scanned and traced by `scripts/generate_rtm.py` and `scripts/sync_gxp.py`.
 
 ## 3. Options Considered
 
@@ -31,12 +31,12 @@ All microservice tests, package tests, and tooling tests have been migrated into
 
 ## 5. Consequences & Trade-offs
 
-* **Positive**: Clear service boundary isolation, improved developer experience, modular test execution per workspace.
-* **Positive**: Fully automated GxP RTM traceability preserved across all workspace test paths.
-* **Trade-off**: Requires updated relative path calculations in scripts that reference test paths.
+- **Positive**: Clear service boundary isolation, improved developer experience, modular test execution per workspace.
+- **Positive**: Fully automated GxP RTM traceability preserved across all workspace test paths.
+- **Trade-off**: Requires updated relative path calculations in scripts that reference test paths.
 
 ## 6. Implementation & Verification
 
-* **Migrated Directories**: `apps/<name>/tests/`, `packages/<name>/tests/`, `scripts/tests/`.
-* **Configuration Updated**: `pyproject.toml`, `conftest.py`, `scripts/generate_rtm.py`, `scripts/sync_gxp.py`, `.github/workflows/ci.yml`, `AGENTS.md`.
-* **Verification**: `uv run python scripts/sync_gxp.py` passes 100% of test suites and generates updated GxP compliance artifacts.
+- **Migrated Directories**: `apps/<name>/tests/`, `packages/<name>/tests/`, `scripts/tests/`.
+- **Configuration Updated**: `pyproject.toml`, `conftest.py`, `scripts/generate_rtm.py`, `scripts/sync_gxp.py`, `.github/workflows/ci.yml`, `AGENTS.md`.
+- **Verification**: `uv run python scripts/sync_gxp.py` passes 100% of test suites and generates updated GxP compliance artifacts.
