@@ -19,7 +19,7 @@ class EISFFolderNode(BaseModel):
     document_count: int = Field(
         ..., description="Count of documents inside this folder"
     )
-    subfolders: list["EISFFolderNode"] = Field(
+    subfolders: list[EISFFolderNode] = Field(
         default_factory=list, description="List of child folder nodes"
     )
 

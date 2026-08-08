@@ -27,9 +27,7 @@ class USDMImporter:
     def __init__(self, neo4j_driver: Any = None) -> None:
         self.driver = neo4j_driver
 
-    async def import_usdm(
-        self, payload: dict[str, Any]
-    ) -> USDMImportResult:
+    async def import_usdm(self, payload: dict[str, Any]) -> USDMImportResult:
         warnings: list[str] = []
         study_id = payload.get("id") or "study_unknown"
         study_designs = payload.get("studyDesigns") or []
