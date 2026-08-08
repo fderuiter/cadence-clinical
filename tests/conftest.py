@@ -288,18 +288,17 @@ try:
     lock_path = "/tmp/postgres_db_creation.lock"
     with FileLock(lock_path, timeout=120):
         run_sync(create_databases_async(worker_suffix))
+        if os.environ.get("USE_LIVE_DB") == "true" or os.environ.get(
+            "TEST_DATABASE_URL", ""
+        ).startswith(("postgres", "postgresql")):
+            print("[conftest] Initializing all PostgreSQL schemas...")
+            run_sync(create_all_schemas_async(worker_suffix))
     # Override the env var so any standard fallback uses isolated DB too
     os.environ["TEST_DATABASE_URL"] = (
         f"{get_postgres_base_config()}cadence_edc{worker_suffix}"
     )
     patch_init_db()
     databases_pre_created = True
-
-    if os.environ.get("USE_LIVE_DB") == "true" or os.environ.get(
-        "TEST_DATABASE_URL", ""
-    ).startswith(("postgres", "postgresql")):
-        print("[conftest] Initializing all PostgreSQL schemas...")
-        run_sync(create_all_schemas_async(worker_suffix))
 except Exception as e:
     if os.environ.get("GITHUB_ACTIONS") == "true":
         print(f"[conftest] ERROR: Database initialization failed in CI: {e}")
