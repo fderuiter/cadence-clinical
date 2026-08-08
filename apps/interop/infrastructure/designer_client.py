@@ -85,7 +85,9 @@ async def fetch_eligibility_criteria(study_id: str) -> list[EligibilityCriterion
     Uses Gateway signature for secure inter-service authorization.
     """
     designer_url = os.getenv("DESIGNER_URL", "http://localhost:8001")
-    gateway_secret_env = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+    gateway_secret_env = os.getenv(
+        "GATEWAY_SECRET", default="internal-gateway-secret-12345"
+    )
     gateway_secret = (
         gateway_secret_env.encode("utf-8")
         if isinstance(gateway_secret_env, str)

@@ -13,9 +13,9 @@ from apps.designer.main import app
 from packages.security.signing import generate_gateway_signature
 
 client = TestClient(app)
-GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode(
-    "utf-8"
-)  # pragma: allowlist secret
+GATEWAY_SECRET = os.getenv(
+    "GATEWAY_SECRET", default="internal-gateway-secret-12345"
+).encode("utf-8")  # pragma: allowlist secret
 
 
 def _make_auth_headers(

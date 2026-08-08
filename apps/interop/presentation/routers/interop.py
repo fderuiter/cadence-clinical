@@ -199,7 +199,9 @@ async def resolve_and_save_submission(
         metadata=metadata,
     )
 
-    gateway_secret_str = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+    gateway_secret_str = os.getenv(
+        "GATEWAY_SECRET", default="internal-gateway-secret-12345"
+    )
     secret_bytes = gateway_secret_str.encode("utf-8")
 
     signature_status = "SKIPPED"

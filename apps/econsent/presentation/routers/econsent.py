@@ -512,7 +512,9 @@ async def capture_subject_consent(
     from packages.security.sig_token_verifier import verify_and_consume_sig_token
 
     sig_payload = verify_and_consume_sig_token(sig_token, user_id)
-    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
+    secret = os.getenv(
+        "GATEWAY_SECRET", default="internal-gateway-secret-12345"
+    ).encode()
 
     bound_action = sig_payload.get("action", "")
     request_path = request.url.path
