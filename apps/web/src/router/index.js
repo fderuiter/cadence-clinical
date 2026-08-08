@@ -166,6 +166,15 @@ const routes = [
       requiresAuth: true,
     },
   },
+  {
+    path: "/admin",
+    name: "admin",
+    component: () => import("../views/AdminView.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresRole: ["sponsor_admin"],
+    },
+  },
 ];
 
 export const router = createRouter({

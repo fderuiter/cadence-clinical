@@ -177,6 +177,18 @@
                 </button>
               </router-link>
             </li>
+            <li
+              v-if="canViewAdmin"
+              id="tab-btn-admin"
+              class="nav-item"
+              :class="{ active: $route.name === 'admin' }"
+            >
+              <router-link v-slot="{ navigate }" to="/admin" custom>
+                <button type="button" @click="navigate">
+                  <span>🛡️</span> Site Administration
+                </button>
+              </router-link>
+            </li>
           </ul>
         </div>
         <div
@@ -531,6 +543,12 @@ const canViewEtmf = computed(() => {
     "monitor",
     "auditor",
     "tmf_auditor",
+    "sponsor_admin",
+  ]);
+});
+
+const canViewAdmin = computed(() => {
+  return hasRequiredRole(authStore.normalizedRoles, [
     "sponsor_admin",
   ]);
 });
