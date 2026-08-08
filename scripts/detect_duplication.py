@@ -118,6 +118,8 @@ def main() -> None:
                         "__pycache__",
                         "dist",
                         "build",
+                        "playwright-report",
+                        "test-results",
                     ]
                 )
             ):
@@ -147,6 +149,8 @@ def main() -> None:
                     "dist",
                     "build",
                     "coverage",
+                    "playwright-report",
+                    "test-results",
                 ]
             ):
                 continue
