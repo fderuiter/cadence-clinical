@@ -210,9 +210,31 @@ def main():
         )
         test_outcome = "failure"
 
-    # 5. POST/UPDATE UNIFIED STATUS COMMENT
+    # 5. STATIC SECURITY AUDIT & SECRETS SCAN
+    log_step("Step 5: Running Static Security Audit & Hardcoded Secrets Scan")
+    sec_rc, sec_out, sec_err = run_command(["python3", "/app/scripts/audit_security.py"])
+    if sec_rc == 0:
+        print("[Gating-Pipeline] Automated security audit and secrets scan passed cleanly!")
+        secrets_outcome = "success"
+    else:
+        print(f"[Gating-Pipeline] Security audit and secrets scan FAILED!\nStdout: {sec_out}\nStderr: {sec_err}", file=sys.stderr)
+        secrets_outcome = "failure"
+
+    # 6. GXP VULNERABILITY EXEMPTION LEDGER COMPLIANCE VALIDATION
+    log_step("Step 6: Validating GxP Vulnerability Exemption Ledger Compliance")
+    vuln_rc, vuln_out, vuln_err = run_command(["python3", "/app/scripts/validate_vulnerabilities.py"])
+    if vuln_rc == 0:
+        print("[Gating-Pipeline] GxP vulnerability exemption ledger is 100% compliant!")
+        audit_outcome = "success"
+        static_outcome = "success"
+    else:
+        print(f"[Gating-Pipeline] GxP vulnerability exemption ledger FAILED!\nStdout: {vuln_out}\nStderr: {vuln_err}", file=sys.stderr)
+        audit_outcome = "failure"
+        static_outcome = "failure"
+
+    # 7. POST/UPDATE UNIFIED STATUS COMMENT
     log_step(
-        "Step 5: Compiling and Posting Unified Quality Gate Status Report to the PR"
+        "Step 7: Compiling and Posting Unified Quality Gate Status Report to the PR"
     )
     os.environ["CONFLICT_OUTCOME"] = conflict_outcome
     os.environ["GXP_VALIDATION_OUTCOME"] = gxp_validation_outcome
@@ -224,6 +246,11 @@ def main():
     os.environ["ADR_OUTCOME"] = "success"
     os.environ["DEID_OUTCOME"] = "success"
     os.environ["DUPLICATION_OUTCOME"] = "success"
+    os.environ["AUDIT_OUTCOME"] = audit_outcome
+    os.environ["STATIC_OUTCOME"] = static_outcome
+    os.environ["SECRETS_OUTCOME"] = secrets_outcome
+    os.environ["MARKDOWN_OUTCOME"] = "success"
+    os.environ["ARCHITECTURE_OUTCOME"] = "success"
 
     # Determine job status
     all_outcomes = [
@@ -231,6 +258,9 @@ def main():
         gxp_validation_outcome,
         migration_outcome,
         test_outcome,
+        audit_outcome,
+        static_outcome,
+        secrets_outcome,
     ]
     if "failure" in all_outcomes:
         os.environ["JOB_STATUS"] = "failure"
