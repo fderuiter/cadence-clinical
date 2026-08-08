@@ -24,18 +24,7 @@ class OrganizationType(StrEnum):
     SITE = "site"
 
 
-class ClinicalStaffRole(StrEnum):
-    """
-    Standard clinical staff role vocabulary from docs/SDLC/05_Security_Compliance_Audit_Spec.md,
-    reused across organization directory and delegation of authority records. Includes the
-    External Monitor persona aligned to CRO affiliation.
-    """
-
-    PRINCIPAL_INVESTIGATOR = "Principal Investigator"
-    SUB_INVESTIGATOR = "Sub-Investigator"
-    CRC = "CRC"
-    CRA_MONITOR = "CRA/Monitor"
-    EXTERNAL_MONITOR = "External Monitor"
+from packages.security.trial_roles import ClinicalStaffRole
 
 
 class TrialDuty(StrEnum):

@@ -31,7 +31,7 @@ from apps.econsent.models import (
     EtmfArchivalDelivery,
     SubjectConsent,
 )
-from apps.execution.src.domain.localization.models import validate_language_code
+from apps.econsent.src.domain.localization.models import validate_language_code
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.database.audit import AuditFields
 from packages.security import assert_secure_secrets
