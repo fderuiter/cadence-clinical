@@ -19,6 +19,25 @@
   .responsive-grid > * {
     grid-column: span 1 / span 1 !important;
   }
+
+  /* Enforce 48px minimum touch target on mobile viewports for all interactive clinical fields & buttons */
+  .clinical-input input,
+  .clinical-radio-grid .radio-option input,
+  .clinical-radio-grid .radio-option label,
+  .clinical-lookup-container input,
+  .query-flag,
+  .btn-submit-query,
+  .btn-respond-query,
+  .btn-close-query,
+  .btn-reopen-query {
+    min-height: var(--touch-target-min, 48px);
+    box-sizing: border-box;
+  }
+
+  .clinical-radio-grid .radio-option label {
+    display: inline-flex;
+    align-items: center;
+  }
 }
 
 /* Helper to map span classes on grid items */
