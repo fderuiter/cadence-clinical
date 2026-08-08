@@ -73,7 +73,7 @@ jobs:
         if: always()
         run: |
           uv run ruff check . --exclude apps/execution/database/models.py
-          uv run ruff format --check . --exclude apps/execution/database/models.py
+          uv run ruff format --check --target-version py313 . --exclude apps/execution/database/models.py
 
       - name: Run Hadolint on Dockerfiles
         run: |

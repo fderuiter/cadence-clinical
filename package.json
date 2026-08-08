@@ -10,8 +10,8 @@
   "scripts": {
     "test": "pnpm -r test && uv run pytest",
     "lint": "python3 scripts/validate_path_patterns.py --all && pnpm -r lint && uv run ruff check .",
-    "format": "pnpm -r format && uv run ruff format . && pnpm exec prettier --write \"**/*.{json,css,md}\"",
-    "fix": "uv run ruff check . --fix && uv run ruff format .",
+    "format": "pnpm -r format && uv run ruff format --target-version py313 . && pnpm exec prettier --write \"**/*.{json,css,md}\"",
+    "fix": "uv run ruff check . --fix && uv run ruff format --target-version py313 .",
     "db:reset": "uv run python scripts/reset_db.py",
     "db-reset": "uv run python scripts/reset_db.py",
     "check": "concurrently --kill-others-on-fail false -n \"format,lint,secrets,adr,markdown,security,imports,drift\" -c \"magenta,blue,yellow,cyan,gray,red,white,green\" \"pnpm format\" \"pnpm lint\" \"uv run pre-commit run detect-secrets --all-files\" \"python3 scripts/validate_adrs.py\" \"python3 scripts/validate_markdown.py\" \"uv run bandit -c pyproject.toml -ll -ii -r apps packages\" \"python3 scripts/validate_imports.py\" \"python3 scripts/validate_architecture_drift.py\"",
