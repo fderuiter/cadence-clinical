@@ -74,7 +74,7 @@
   --semantic-color-success-bg: var(--color-success-bg);
   --semantic-color-warning: var(--color-warning);
   --semantic-color-warning-bg: var(--color-warning-bg);
-  
+
   /* Unified validation / error tokens (Requirement 1 & 2, Success Metrics) */
   --semantic-color-error: var(--color-error);
   --semantic-color-error-bg: var(--color-error-bg);
@@ -226,4 +226,3 @@ textarea[aria-invalid="true"]:focus-visible {
   font-size: var(--semantic-font-size-base, 15px);
   color: var(--semantic-color-text, #0f172a);
 }
-
