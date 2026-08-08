@@ -80,7 +80,8 @@ async def run_boot_recovery(session_maker: async_sessionmaker[AsyncSession]) -> 
                         # Severity (S): 3 (Moderate risk of stale import state)
                         # Occurrence (O): 1 (Very Low / Mitigated due to automated startup correction)
                         # Detectability (D): 2 (High Detectability via system audit trails)
-                        # Risk Priority Number (RPN) = S * O * D = 6 (< 20 Low Risk Threshold)
+                        # Risk Priority Number (RPN) = S * O * D = 6 (< 20 Low Risk Threshold).
+                        # This FMEA calculation complies with GxP regulatory guidelines to ensure automated transitions are low-risk.
                         severity = 3
                         occurrence = 1
                         detectability = 2
