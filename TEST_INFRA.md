@@ -25,23 +25,23 @@ The Cadence Clinical Research Software Platform operates under stringent GxP (Go
 
 The table below maps all 15 platform features (from `PROJECT.md`) across all four testing tiers, detailing targeted test counts, directory paths, and current status.
 
-| # | Feature | Category | Tier 1 (Unit) | Tier 2 (Boundary) | Tier 3 (Pairwise) | Tier 4 (Scenario) | Target Test Paths | Status |
-|---|---------|----------|---------------|-------------------|-------------------|-------------------|-------------------|--------|
-| 1 | Infrastructure Utilities Migration | Core Package | ≥5 | ≥5 | F1xF15, F1xF9 | Scenario S1 | `packages/database/tests/`, `packages/security/tests/`, `packages/storage/tests/` | Ready |
-| 2 | Designer Domain Models Migration | Authoring | ≥5 | ≥5 | F2xF9, F2xF11 | Scenario S2 | `apps/designer/tests/` | Ready |
-| 3 | Safety Domain Models Migration | Pharmacovigilance | ≥5 | ≥5 | F3xF8, F3xF10 | Scenario S3 | `apps/safety/tests/` | Ready |
-| 4 | CTMS Domain Models Migration | Trial Management | ≥5 | ≥5 | F4xF10, F4xF6 | Scenario S4 | `apps/ctms/tests/` | Ready |
-| 5 | eTMF Domain Models Migration | Master File | ≥5 | ≥5 | F5xF11, F5xF1 | Scenario S5 | `apps/etmf/tests/` | Ready |
-| 6 | Notifications & Org Models Migration | Notif & Org | ≥5 | ≥5 | F6xF14, F6xF4 | Scenario S6 | `apps/notifications/tests/`, `apps/org/tests/` | Ready |
-| 7 | Interop Domain Models Migration | Interoperability | ≥5 | ≥5 | F7xF12, F7xF8 | Scenario S6 | `apps/interop/tests/` | Ready |
-| 8 | Execution Domain Models Migration | EDC Capture | ≥5 | ≥5 | F8xF9, F8xF13 | Scenario S3 | `apps/execution/tests/` | Ready |
-| 9 | Execution Service ACL Implementation | Service ACL | ≥5 | ≥5 | F9xF2, F9xF15 | Scenario S2 | `apps/execution/domain/acl/`, `scripts/tests/` | Ready |
-| 10 | CTMS Service ACL Implementation | Service ACL | ≥5 | ≥5 | F10xF4, F10xF13 | Scenario S4 | `apps/ctms/domain/acl/`, `apps/ctms/tests/` | Ready |
-| 11 | eTMF Service ACL Implementation | Service ACL | ≥5 | ≥5 | F11xF5, F11xF14 | Scenario S5 | `apps/etmf/domain/acl/`, `apps/etmf/tests/` | Ready |
-| 12 | Interop Service ACL Implementation | Service ACL | ≥5 | ≥5 | F12xF7, F12xF15 | Scenario S6 | `apps/interop/domain/acl/`, `apps/interop/tests/` | Ready |
-| 13 | Eradicate `packages/core-models` | Service Cleanup | ≥5 | ≥5 | F13xF14, F13xF15 | Scenario S7 | `scripts/tests/test_validate_imports.py` | Ready |
-| 14 | Pipeline & Config Cleanup | Config / Build | ≥5 | ≥5 | F14xF15, F14xF1 | Scenario S7 | `scripts/tests/test_schema_validation.py` | Ready |
-| 15 | Test Suite & GxP Verification | QA & Compliance | ≥5 | ≥5 | F15xF13, F15xF9-12 | Scenario S7 | `scripts/sync_gxp.py`, `tests/` | Ready |
+| #   | Feature                              | Category          | Tier 1 (Unit) | Tier 2 (Boundary) | Tier 3 (Pairwise)  | Tier 4 (Scenario) | Target Test Paths                                                                 | Status |
+| --- | ------------------------------------ | ----------------- | ------------- | ----------------- | ------------------ | ----------------- | --------------------------------------------------------------------------------- | ------ |
+| 1   | Infrastructure Utilities Migration   | Core Package      | ≥5            | ≥5                | F1xF15, F1xF9      | Scenario S1       | `packages/database/tests/`, `packages/security/tests/`, `packages/storage/tests/` | Ready  |
+| 2   | Designer Domain Models Migration     | Authoring         | ≥5            | ≥5                | F2xF9, F2xF11      | Scenario S2       | `apps/designer/tests/`                                                            | Ready  |
+| 3   | Safety Domain Models Migration       | Pharmacovigilance | ≥5            | ≥5                | F3xF8, F3xF10      | Scenario S3       | `apps/safety/tests/`                                                              | Ready  |
+| 4   | CTMS Domain Models Migration         | Trial Management  | ≥5            | ≥5                | F4xF10, F4xF6      | Scenario S4       | `apps/ctms/tests/`                                                                | Ready  |
+| 5   | eTMF Domain Models Migration         | Master File       | ≥5            | ≥5                | F5xF11, F5xF1      | Scenario S5       | `apps/etmf/tests/`                                                                | Ready  |
+| 6   | Notifications & Org Models Migration | Notif & Org       | ≥5            | ≥5                | F6xF14, F6xF4      | Scenario S6       | `apps/notifications/tests/`, `apps/org/tests/`                                    | Ready  |
+| 7   | Interop Domain Models Migration      | Interoperability  | ≥5            | ≥5                | F7xF12, F7xF8      | Scenario S6       | `apps/interop/tests/`                                                             | Ready  |
+| 8   | Execution Domain Models Migration    | EDC Capture       | ≥5            | ≥5                | F8xF9, F8xF13      | Scenario S3       | `apps/execution/tests/`                                                           | Ready  |
+| 9   | Execution Service ACL Implementation | Service ACL       | ≥5            | ≥5                | F9xF2, F9xF15      | Scenario S2       | `apps/execution/domain/acl/`, `scripts/tests/`                                    | Ready  |
+| 10  | CTMS Service ACL Implementation      | Service ACL       | ≥5            | ≥5                | F10xF4, F10xF13    | Scenario S4       | `apps/ctms/domain/acl/`, `apps/ctms/tests/`                                       | Ready  |
+| 11  | eTMF Service ACL Implementation      | Service ACL       | ≥5            | ≥5                | F11xF5, F11xF14    | Scenario S5       | `apps/etmf/domain/acl/`, `apps/etmf/tests/`                                       | Ready  |
+| 12  | Interop Service ACL Implementation   | Service ACL       | ≥5            | ≥5                | F12xF7, F12xF15    | Scenario S6       | `apps/interop/domain/acl/`, `apps/interop/tests/`                                 | Ready  |
+| 13  | Eradicate `packages/core-models`     | Service Cleanup   | ≥5            | ≥5                | F13xF14, F13xF15   | Scenario S7       | `scripts/tests/test_validate_imports.py`                                          | Ready  |
+| 14  | Pipeline & Config Cleanup            | Config / Build    | ≥5            | ≥5                | F14xF15, F14xF1    | Scenario S7       | `scripts/tests/test_schema_validation.py`                                         | Ready  |
+| 15  | Test Suite & GxP Verification        | QA & Compliance   | ≥5            | ≥5                | F15xF13, F15xF9-12 | Scenario S7       | `scripts/sync_gxp.py`, `tests/`                                                   | Ready  |
 
 ---
 
@@ -112,15 +112,15 @@ To satisfy GxP validation criteria and maintain code quality, the test suite enf
 
 ### Quality Enforcement Matrix
 
-| Metric / Tool | Required Threshold | Action on Violation |
-|---|---|---|
-| Total Code Coverage (`pytest-cov`) | **≥ 80.0%** across `apps/` and `packages/` | Pipeline Fails (`--cov-fail-under=80`) |
-| Ruff Linting (`ruff check`) | **0 Errors / 0 Warnings** | Pipeline Fails |
-| Ruff Formatting (`ruff format`) | **0 Unformatted Files** | Pipeline Fails |
-| Code Duplication (`detect_duplication.py`) | **0 Unwhitelisted blocks ≥15 lines** | Pipeline Fails |
-| SQLAlchemy ORM Boolean Filter (E712) | **100% `.is_(True)` / `.is_(False)` usage** | Ruff E712 Blocking Error |
-| GxP Traceability (`sync_gxp.py`) | **0 Diff in RTM & Execution Reports** | Pipeline Fails |
-| Microservice Boundary Decoupling | **0 Cross-Service Sibling DB Imports** | Path Boundary Linter Fails |
+| Metric / Tool                              | Required Threshold                          | Action on Violation                    |
+| ------------------------------------------ | ------------------------------------------- | -------------------------------------- |
+| Total Code Coverage (`pytest-cov`)         | **≥ 80.0%** across `apps/` and `packages/`  | Pipeline Fails (`--cov-fail-under=80`) |
+| Ruff Linting (`ruff check`)                | **0 Errors / 0 Warnings**                   | Pipeline Fails                         |
+| Ruff Formatting (`ruff format`)            | **0 Unformatted Files**                     | Pipeline Fails                         |
+| Code Duplication (`detect_duplication.py`) | **0 Unwhitelisted blocks ≥15 lines**        | Pipeline Fails                         |
+| SQLAlchemy ORM Boolean Filter (E712)       | **100% `.is_(True)` / `.is_(False)` usage** | Ruff E712 Blocking Error               |
+| GxP Traceability (`sync_gxp.py`)           | **0 Diff in RTM & Execution Reports**       | Pipeline Fails                         |
+| Microservice Boundary Decoupling           | **0 Cross-Service Sibling DB Imports**      | Path Boundary Linter Fails             |
 
 ---
 
@@ -129,6 +129,7 @@ To satisfy GxP validation criteria and maintain code quality, the test suite enf
 Tier 4 tests execute complex, end-to-end clinical workflows that span multiple microservices, security layers, storage backends, and regulatory validation pipelines.
 
 ### Scenario S1: Multi-Tenant Audit & Document Storage Pipeline
+
 - **Description**: Verifies multi-tenant document ingestion, dynamic PDF watermarking (`packages.storage.watermark`), 21 CFR Part 11 electronic signature metadata construction (`packages.security.signature`), and immutable GxP audit logging (`packages.database.audit`).
 - **Workflow**:
   1. User authenticates with tenant context `tenant_alpha` and uploads binary protocol document stream.
@@ -138,6 +139,7 @@ Tier 4 tests execute complex, end-to-end clinical workflows that span multiple m
 - **Verification**: Query audit ledger, download stored document, verify watermark overlay text and signature validity.
 
 ### Scenario S2: Protocol Authoring to eCRF Specification Flow
+
 - **Description**: Simulates clinical trial protocol authoring in Designer (`apps.designer.domain.usdm`), Schedule of Activities (SoA) matrix generation, eligibility criteria rule compilation, OpenAPI schema export, and ACL consumption by EDC Execution.
 - **Workflow**:
   1. Author creates USDM v3.0 protocol definition with 3 arms, 5 visits, and 10 eligibility criteria.
@@ -147,6 +149,7 @@ Tier 4 tests execute complex, end-to-end clinical workflows that span multiple m
 - **Verification**: Confirm zero USDM schema validation errors, verify OpenAPI exported files, test `DesignerEligibilityCriterionDTO` parsing in Execution.
 
 ### Scenario S3: Expedited SAE Reporting & Emergency Unblinding Workflow
+
 - **Description**: Simulates subject adverse event logging in EDC Execution (`apps.execution`), escalation to Serious Adverse Event (SAE), E2B(R3) XML safety report generation in Safety service (`apps.safety.src.domain.sae_icsr`), and emergency treatment unblinding.
 - **Workflow**:
   1. Clinical investigator submits eCRF Adverse Event form for subject `SUBJ-101`.
@@ -156,6 +159,7 @@ Tier 4 tests execute complex, end-to-end clinical workflows that span multiple m
 - **Verification**: Validate E2B(R3) XML schema conformity, verify unblinding audit record (user ID, timestamp, reason), confirm notification dispatch.
 
 ### Scenario S4: Site Activation & Delegation of Authority Management
+
 - **Description**: Tests clinical trial site setup in CTMS (`apps.ctms.src.domain.doa_models`), Delegation of Authority (DOA) matrix assignment, electronic staff signatures, REST-based PDF document rendering via `DocumentRendererDTO`, and eTMF archiving.
 - **Workflow**:
   1. Principal Investigator (PI) sets up site `SITE-001` and delegates tasks to Sub-Investigator and Study Coordinator.
@@ -165,6 +169,7 @@ Tier 4 tests execute complex, end-to-end clinical workflows that span multiple m
 - **Verification**: Inspect CTMS delegation table, verify signature manifests, confirm `DocumentRendererDTO` deserialization, view generated DOA PDF.
 
 ### Scenario S5: Regulatory Inspection Readiness & eTMF Archival
+
 - **Description**: Simulates site closeout and regulatory inspection audit prep. The eTMF service (`apps.etmf.src.domain`) scans binder completeness, checks staff certificate expiration dates, retrieves protocol version via `ProtocolVersionRefDTO` ACL, and locks binder (`HARD_LOCK`).
 - **Workflow**:
   1. Trial coordinator initiates eTMF audit sweep for `SITE-001`.
@@ -175,6 +180,7 @@ Tier 4 tests execute complex, end-to-end clinical workflows that span multiple m
 - **Verification**: Confirm binder state is `HARD_LOCK`, verify 0 document mutation allowed, validate ZIP archive hierarchy and SHA-256 checksum manifest.
 
 ### Scenario S6: Offline eCOA Capture & Asynchronous Interoperability Sync
+
 - **Description**: Simulates offline patient ePRO questionnaire completion on mobile device (`apps.interop.src.domain`), offline payload queuing, network reconnection, sync engine collision resolution, and gateway transport to EDC Execution.
 - **Workflow**:
   1. Mobile app captures subject ePRO questionnaire responses offline and stores encrypted local payload.
@@ -185,6 +191,7 @@ Tier 4 tests execute complex, end-to-end clinical workflows that span multiple m
 - **Verification**: Confirm offline queue state transitions to `SYNCED`, verify `EPROTransportDTO` deserialization, verify eCRF form database insertion.
 
 ### Scenario S7: End-to-End Architecture Eradication & GxP Verification Flow
+
 - **Description**: Full platform structural integrity check: verifies complete eradication of `packages/core-models`, runs AST import linters across all microservices, executes full test suite (`uv run pytest -n auto`), checks code style (`ruff check`/`format`), runs duplication scanner, and executes GxP RTM sync.
 - **Workflow**:
   1. AST scanner verifies zero `import core_models` or `from packages.core_models` statements exist in codebase.
