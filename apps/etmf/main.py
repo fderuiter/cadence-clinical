@@ -14,9 +14,7 @@ from fastapi import (
     Request,
 )
 from fastapi.responses import Response
-from protocol_version_ref import ProtocolVersionRef
 from pydantic import BaseModel, Field, model_validator
-from signature import SigningReason
 
 from apps.etmf.adapters.repository import SQLETMFRepository
 from apps.etmf.database import db_manager, transactional
@@ -36,6 +34,7 @@ from apps.etmf.models import (
 from apps.etmf.ports.repository import ETMFRepositoryPort
 from apps.etmf.routers.archive import router as archive_router
 from apps.etmf.routers.taxonomy import router as taxonomy_router
+from apps.etmf.src.domain.acl import ProtocolVersionRefDTO
 
 # select removed
 # AsyncSession removed
@@ -52,6 +51,9 @@ from packages.deid.transforms import apply_deid_transforms
 from packages.security import assert_secure_secrets
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import Principal, get_principal, has_permission
+from packages.security.signature import SigningReason
+
+ProtocolVersionRef = ProtocolVersionRefDTO
 
 DATABASE_URL = os.getenv("ETMF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
@@ -2628,8 +2630,8 @@ async def sign_document_endpoint(
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import rsa
     from cryptography.x509.oid import NameOID
-    from signature import SignatureManifestation
 
+    from packages.security.signature import SignatureManifestation
     from packages.security.signing import (
         asymmetric_sign,
         capture_certificate_identifiers,

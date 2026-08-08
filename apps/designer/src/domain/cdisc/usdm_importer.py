@@ -11,7 +11,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from cdisc.usdm_models import USDMStudy
+from .usdm_models import USDMStudy
 
 logger = logging.getLogger(__name__)
 

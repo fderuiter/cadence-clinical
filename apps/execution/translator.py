@@ -259,11 +259,11 @@ async def process_translation(
                         import copy
                         import json
 
-                        import usdm_ingestion
-
-                        normalize_usdm_payload = usdm_ingestion.normalize_usdm_payload
-                        resolve_usdm_version = usdm_ingestion.resolve_usdm_version
-                        validate_usdm_payload = usdm_ingestion.validate_usdm_payload
+                        from apps.execution.src.domain.acl.usdm_validation_dto import (
+                            normalize_usdm_payload,
+                            resolve_usdm_version,
+                            validate_usdm_payload,
+                        )
 
                         v_payload = copy.deepcopy(payload)
 
@@ -378,7 +378,7 @@ async def process_translation(
                             raise ValueError(f"Validation Failed: {err_details}")
 
                         # Structurally normalize the payload
-                        resolved_ver, _ = resolve_usdm_version(v_payload)
+                        resolved_ver = resolve_usdm_version(v_payload)[0]
                         normalized_payload = normalize_usdm_payload(
                             v_payload, resolved_ver
                         )

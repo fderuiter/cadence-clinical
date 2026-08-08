@@ -4,15 +4,6 @@ import datetime as dt
 import uuid
 from typing import Any
 
-from protocol_authoring.models import (
-    Comment,
-    CommentThread,
-    SectionReviewStatus,
-    SectionReviewTransition,
-    Suggestion,
-    SuggestionStatus,
-)
-
 from apps.designer import delta
 from apps.designer.delta import (
     MOCK_COLLABORATION_DATA,
@@ -26,6 +17,14 @@ from apps.designer.delta import (
     bump_version,
     verify_version_signature,
     with_transaction_retry,
+)
+from apps.designer.src.domain.protocol_authoring.models import (
+    Comment,
+    CommentThread,
+    SectionReviewStatus,
+    SectionReviewTransition,
+    Suggestion,
+    SuggestionStatus,
 )
 
 

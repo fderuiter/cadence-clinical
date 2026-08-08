@@ -367,7 +367,7 @@ def test_json_block_validation(tmp_path):
     repo_root.mkdir()
 
     # Create a codebase file with a BaseModel
-    packages_dir = repo_root / "packages" / "core-models"
+    packages_dir = repo_root / "packages" / "security"
     packages_dir.mkdir(parents=True)
     cb_file = packages_dir / "signature.py"
     cb_file.write_text("""from pydantic import BaseModel, Field
@@ -406,7 +406,7 @@ def test_skip_and_raw_text_flags(tmp_path):
     repo_root.mkdir()
 
     # Create a codebase file with a BaseModel
-    packages_dir = repo_root / "packages" / "core-models"
+    packages_dir = repo_root / "packages" / "security"
     packages_dir.mkdir(parents=True)
     cb_file = packages_dir / "signature.py"
     cb_file.write_text("""from pydantic import BaseModel, Field
@@ -665,7 +665,7 @@ def test_degraded_linter_warnings_and_fallback(tmp_path, capsys):
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
 
-    packages_dir = repo_root / "packages" / "core-models"
+    packages_dir = repo_root / "packages" / "security"
     packages_dir.mkdir(parents=True)
     cb_file = packages_dir / "failing_model.py"
     cb_file.write_text("""from pydantic import BaseModel, Field
@@ -709,7 +709,7 @@ def test_degraded_linter_warnings_and_fallback_failure(tmp_path, capsys):
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
 
-    packages_dir = repo_root / "packages" / "core-models"
+    packages_dir = repo_root / "packages" / "security"
     packages_dir.mkdir(parents=True)
     cb_file = packages_dir / "failing_model2.py"
     cb_file.write_text("""from pydantic import BaseModel, Field

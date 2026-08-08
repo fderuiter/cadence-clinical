@@ -387,9 +387,8 @@ def test_quality_sentinel_router_endpoint_dependency_override() -> None:
     import time
     from unittest.mock import patch
 
-    from apps.designer.src.domain.cdisc.sentinel_models import ProtocolQualityScore
-
     from apps.designer.dependencies import get_quality_sentinel
+    from apps.designer.src.domain.cdisc.sentinel_models import ProtocolQualityScore
     from packages.security.rbac import Principal, get_principal
 
     class MockProtocolQualitySentinel:

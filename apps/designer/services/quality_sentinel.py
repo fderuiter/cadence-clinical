@@ -4,20 +4,10 @@
 Requirements: PRD-SYS-001
 """
 
-import os
 import re
-import sys
 from typing import Any
 
-# Inject 'core-models' path into sys.path
-_core_models_path = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "..", "packages", "core-models")
-)
-if _core_models_path not in sys.path:
-    sys.path.insert(0, _core_models_path)
-
-
-from cdisc.sentinel_models import (
+from apps.designer.src.domain.cdisc.sentinel_models import (
     AmendmentImpactReport,
     AttritionStep,
     BurdenTraceItem,
@@ -30,8 +20,8 @@ from cdisc.sentinel_models import (
 
 # Try importing the eligibility evaluation tools
 try:
-    from eligibility.evaluator import evaluate_node
-    from eligibility.models import ExpressionNode
+    from apps.designer.src.domain.eligibility.evaluator import evaluate_node
+    from apps.designer.src.domain.eligibility.models import ExpressionNode
 except ImportError as e:
     print("IMPORT ERROR IN SENTINEL:", e)
     evaluate_node = None

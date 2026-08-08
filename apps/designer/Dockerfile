@@ -3,7 +3,6 @@ WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1
 COPY pyproject.toml uv.lock ./
 COPY packages/security ./packages/security
-COPY packages/core-models ./packages/core-models
 COPY apps/designer ./apps/designer
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --no-dev --package apps-designer
@@ -16,7 +15,6 @@ RUN groupadd -g 1000 appuser && \
 
 COPY --chown=1000:1000 --from=builder /app/.venv /app/.venv
 COPY --chown=1000:1000 packages/security /app/packages/security
-COPY --chown=1000:1000 packages/core-models /app/packages/core-models
 COPY --chown=1000:1000 apps/designer /app/apps/designer
 
 RUN chown -R 1000:1000 /app

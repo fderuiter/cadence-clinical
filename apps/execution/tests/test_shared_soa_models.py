@@ -3,7 +3,8 @@ Tests for shared SoA models module in core-models.
 """
 
 import pytest
-from protocol_authoring import (
+
+from apps.designer.src.domain.protocol_authoring import (
     ActivityAssignmentRequest,
     Epoch,
     EpochProperties,

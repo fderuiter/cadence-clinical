@@ -7,7 +7,6 @@ from typing import Any
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
-from sae_icsr import IndividualCaseSafetyReport
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,6 +22,7 @@ from apps.safety.models import (
     write_audit_log,
 )
 from apps.safety.processor import process_sae_reconciliation
+from apps.safety.src.domain.sae_icsr import IndividualCaseSafetyReport
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security import assert_secure_secrets
 from packages.security.middleware import GatewayAuthMiddleware

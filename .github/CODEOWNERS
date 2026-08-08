@@ -20,7 +20,6 @@
 /apps/web/               @clinical-platform/client-ux
 
 # Clinical Domains under packages/
-/packages/core-models/   @clinical-platform/clinical-operations
 /packages/database/      @clinical-platform/clinical-operations
 /packages/deid/          @clinical-platform/security-and-privacy
 /packages/hexagonal/     @clinical-platform/clinical-operations

@@ -17,9 +17,9 @@ def test_linter_positive_cases():
     is_valid, err = validate_file("apps/gateway/main.py", Path("/app"))
     assert is_valid is True, f"Expected apps/gateway/main.py to be valid but got: {err}"
 
-    is_valid, err = validate_file("packages/core-models/audit.py", Path("/app"))
+    is_valid, err = validate_file("packages/database/audit.py", Path("/app"))
     assert is_valid is True, (
-        f"Expected packages/core-models/audit.py to be valid but got: {err}"
+        f"Expected packages/database/audit.py to be valid but got: {err}"
     )
 
     is_valid, err = validate_file("tests/test_foo.py", Path("/app"))

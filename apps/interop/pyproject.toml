@@ -17,7 +17,6 @@ dependencies = [
     "packages-database",
     "packages-security",
     "packages-deid",
-    "packages-core-models",
 ]
 
 [tool.hatch.build.targets.wheel.sources]

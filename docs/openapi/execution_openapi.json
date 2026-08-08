@@ -9225,7 +9225,7 @@
         ],
         "title": "ProblemDetails"
       },
-      "ProtocolVersionRef": {
+      "ProtocolVersionRefDTO": {
         "properties": {
           "study_id": {
             "type": "string",
@@ -9235,16 +9235,16 @@
           "version_tag": {
             "type": "string",
             "title": "Version Tag",
-            "description": "The semantic or alphanumeric version tag representing the protocol version (e.g. '1.0', 'v2.1')."
+            "description": "Semantic or alphanumeric version tag (e.g. '1.0', 'v2.1')."
           },
           "version_index": {
             "type": "integer",
             "title": "Version Index",
-            "description": "Chronological, incrementing index of the protocol version (must be >= 1)."
+            "description": "Chronological, incrementing version index (must be >= 1)."
           },
           "status": {
-            "$ref": "#/components/schemas/ProtocolVersionStatus",
-            "description": "Current controlled status of this protocol version."
+            "$ref": "#/components/schemas/ProtocolVersionStatusEnum",
+            "description": "Current controlled status of protocol version."
           }
         },
         "type": "object",
@@ -9254,10 +9254,10 @@
           "version_index",
           "status"
         ],
-        "title": "ProtocolVersionRef",
-        "description": "Pydantic v2 model representing a reference to a specific clinical trial protocol version.\n\nThis contract is shared between Execution, eTMF, and other services to prevent\nthe duplication of ad-hoc protocol reference fields and ensure consistent cross-service\npayload structures, validation, and serialization."
+        "title": "ProtocolVersionRefDTO",
+        "description": "Local Execution ACL DTO representing a reference to a specific protocol version."
       },
-      "ProtocolVersionStatus": {
+      "ProtocolVersionStatusEnum": {
         "type": "string",
         "enum": [
           "DRAFT",
@@ -9267,8 +9267,8 @@
           "ARCHIVED",
           "FROZEN"
         ],
-        "title": "ProtocolVersionStatus",
-        "description": "Controlled vocabulary of statuses for a clinical protocol or study version."
+        "title": "ProtocolVersionStatusEnum",
+        "description": "Controlled status vocabulary for protocol version references."
       },
       "PublishAmendmentRequest": {
         "properties": {
@@ -10399,7 +10399,7 @@
       "SubjectConsentRequest": {
         "properties": {
           "protocol_version": {
-            "$ref": "#/components/schemas/ProtocolVersionRef"
+            "$ref": "#/components/schemas/ProtocolVersionRefDTO"
           },
           "icf_signed": {
             "type": "boolean",

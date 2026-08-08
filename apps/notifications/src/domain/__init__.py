@@ -1,4 +1,4 @@
-from notifications.event_models import (
+from .event_models import (
     NotificationDispatchJob,
     SystemDomainEvent,
 )

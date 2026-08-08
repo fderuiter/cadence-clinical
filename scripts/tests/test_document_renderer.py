@@ -3,7 +3,6 @@
 Requirements: PRD-SYS-001
 """
 
-import packages  # noqa: F401
 from apps.designer.content_assembly import (
     USDMSynopsisAssembler,
     assemble_rendered_protocol_document,

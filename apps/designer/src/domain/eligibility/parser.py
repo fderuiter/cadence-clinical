@@ -8,7 +8,7 @@ normalized ExpressionNode AST at authoring/design time. Avoids any eval/exec.
 
 import re
 
-from eligibility.models import ExpressionNode, FieldReference
+from .models import ExpressionNode, FieldReference
 
 # Token specification
 TOKEN_SPEC = [

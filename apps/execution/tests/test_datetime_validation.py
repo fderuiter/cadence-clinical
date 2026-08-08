@@ -10,11 +10,12 @@ Ensures that:
 from datetime import UTC, datetime
 
 import pytest
-from audit import AuditFields
-from protocol_authoring.models import Comment
-from protocol_render.models import ExportMetadata
 from pydantic import ValidationError
-from signature import SignatureManifestation, SigningReason
+
+from apps.designer.src.domain.protocol_authoring.models import Comment
+from apps.designer.src.domain.protocol_render.models import ExportMetadata
+from packages.database.audit import AuditFields
+from packages.security.signature import SignatureManifestation, SigningReason
 
 
 def test_reject_timezone_naive_datetime_objects():

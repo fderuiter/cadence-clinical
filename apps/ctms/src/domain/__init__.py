@@ -1,6 +1,6 @@
 """Delegation of Authority (DOA) models package."""
 
-from ctms.doa_models import (
+from .doa_models import (
     DOADelegationRecordCreate,
     DOADelegationRecordResponse,
     SiteStaffMemberCreate,

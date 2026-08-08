@@ -5,12 +5,10 @@ Requirements: PRD-SYS-001
 
 from typing import Any
 
-from cdisc.cascade_models import (
+from apps.designer.src.domain.cdisc.cascade_models import (
     CascadedFormTemplate,
     CascadeSummaryReport,
 )
-
-import packages  # noqa: F401
 
 
 class ArtifactCascadeEngine:

@@ -408,7 +408,7 @@ def test_soa_domain_models_schema_alignment():
     assert arm.reason_for_change == "Initial arm definition"
 
     # Assert model derivations and field-level GxP validations
-    from audit import AuditFields, Part11AuditMixin
+    from packages.database.audit import AuditFields, Part11AuditMixin
 
     assert issubclass(StudyArm, AuditFields)
     assert issubclass(StudyArm, Part11AuditMixin)

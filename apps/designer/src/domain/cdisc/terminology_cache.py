@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from cdisc.cdisc_library_client import CodelistDefinition, CodelistTerm
+from .cdisc_library_client import CodelistDefinition, CodelistTerm
 
 logger = logging.getLogger(__name__)
 

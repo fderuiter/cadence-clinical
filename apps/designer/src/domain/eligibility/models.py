@@ -10,9 +10,10 @@ import re
 from enum import StrEnum
 from typing import Any, Literal
 
-# Import standard GxP audit fields
-from audit import Part11AuditMixin
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+# Import standard GxP audit fields
+from packages.database.audit import Part11AuditMixin
 
 
 class ComparisonOperator(StrEnum):

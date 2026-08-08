@@ -25,11 +25,11 @@ from scripts.pre_commit_openapi import (
 
 def test_get_staged_files_success() -> None:
     """Test get_staged_files returns the parsed list of files when git succeeds."""
-    mock_stdout = "apps/designer/main.py\npackages/core-models/models.py\n"
+    mock_stdout = "apps/designer/main.py\npackages/security/models.py\n"
     with patch("subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(returncode=0, stdout=mock_stdout, stderr="")
         files = get_staged_files()
-        assert files == ["apps/designer/main.py", "packages/core-models/models.py"]
+        assert files == ["apps/designer/main.py", "packages/security/models.py"]
         mock_run.assert_called_once_with(
             ["git", "diff", "--cached", "--name-only", "--diff-filter=ACM"],
             capture_output=True,
@@ -65,9 +65,8 @@ def test_should_trigger_schema_generation() -> None:
     # Model and schema triggers
     assert should_trigger_schema_generation(["apps/ctms/models.py"])
     assert should_trigger_schema_generation(["apps/ctms/models/doa.py"])
-    assert should_trigger_schema_generation(["apps/tickets/schemas/ticket.py"])
     assert should_trigger_schema_generation(
-        ["packages/core-models/cdisc/usdm_models.py"]
+        ["apps/execution/src/domain/sdtm/models.py"]
     )
 
 

@@ -29,10 +29,10 @@
 |---|------|-------|-------------|--------|
 | M1 | Foundational Utilities Migration | Relocate `audit.py`, `datetime_helpers.py`, `signature.py`, `storage/` to core packages | None | DONE |
 | M2 | Primary Services Domain Migration | Relocate domain models for `designer`, `safety`, `ctms`, `etmf`, `notifications`, `org`, `interop` | M1 | DONE |
-| M3 | Execution Service Domain Migration | Relocate domain models for `execution` to `apps/execution/src/domain/` | M1, M2 | PLANNED |
-| M4 | ACL & Cross-Service Refactoring | Create local Pydantic DTOs in `apps/<service>/src/domain/acl/` and replace direct cross-service imports | M2, M3 | PLANNED |
-| M5 | Eradication & Pipeline Cleanup | Delete `packages/core-models`, update `pyproject.toml`, `scripts/validate_schemas.py`, `scripts/detect_duplication.py` | M4 | PLANNED |
-| M_TEST | E2E & GxP Verification | Verify full test suite, ruff check/format, OpenAPI schema export, and sync GxP docs | M1-M5 | PLANNED |
+| M3 | Execution Service Domain Migration | Relocate domain models for `execution` to `apps/execution/src/domain/` | M1, M2 | DONE |
+| M4 | ACL & Cross-Service Refactoring | Create local Pydantic DTOs in `apps/<service>/src/domain/acl/` and replace direct cross-service imports | M2, M3 | DONE |
+| M5 | Eradication & Pipeline Cleanup | Delete `packages/core-models`, update `pyproject.toml`, `scripts/validate_schemas.py`, `scripts/detect_duplication.py` | M4 | DONE |
+| M_TEST | E2E & GxP Verification | Verify full test suite, ruff check/format, OpenAPI schema export, and sync GxP docs | M1-M5 | DONE |
 
 ## Interface Contracts
 ### Inter-Service Communication Contracts

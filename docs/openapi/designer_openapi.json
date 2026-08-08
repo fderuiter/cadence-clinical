@@ -2130,7 +2130,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/protocol_authoring__soa__UpdateVisitRequest"
+                "$ref": "#/components/schemas/apps__designer__src__domain__protocol_authoring__soa__UpdateVisitRequest"
               }
             }
           }
@@ -5349,7 +5349,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/protocol_authoring__soa__CreateVisitRequest"
+                "$ref": "#/components/schemas/apps__designer__src__domain__protocol_authoring__soa__CreateVisitRequest"
               }
             }
           }
@@ -11428,7 +11428,7 @@
         "title": "UpdateVisitRequest",
         "description": "Request model for updating a Visit library object."
       },
-      "protocol_authoring__soa__CreateVisitRequest": {
+      "apps__designer__src__domain__protocol_authoring__soa__CreateVisitRequest": {
         "properties": {
           "id": {
             "type": "string",
@@ -11453,7 +11453,7 @@
         ],
         "title": "CreateVisitRequest"
       },
-      "protocol_authoring__soa__UpdateVisitRequest": {
+      "apps__designer__src__domain__protocol_authoring__soa__UpdateVisitRequest": {
         "properties": {
           "properties": {
             "$ref": "#/components/schemas/VisitProperties"

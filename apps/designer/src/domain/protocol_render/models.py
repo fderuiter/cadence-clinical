@@ -9,8 +9,9 @@ documents in compliance with FDA 21 CFR Part 11 and CDISC USDM.
 from datetime import UTC, datetime
 
 import usdm_model
-from datetime_helpers import AwareDatetime
 from pydantic import BaseModel, Field, model_validator
+
+from packages.database.datetime_helpers import AwareDatetime
 
 
 class ExportMetadata(BaseModel):

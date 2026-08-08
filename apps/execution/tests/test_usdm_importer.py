@@ -4,9 +4,9 @@ Requirements: PRD-SYS-001
 """
 
 import pytest
-from cdisc.usdm_models import USDMStudy
 
 from apps.designer.importers.usdm_importer import USDMImporter, USDMImportResult
+from apps.designer.src.domain.cdisc.usdm_models import USDMStudy
 
 
 @pytest.fixture

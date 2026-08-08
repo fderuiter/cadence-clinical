@@ -1,13 +1,5 @@
 import pytest
 from fastapi.testclient import TestClient
-from protocol_authoring import (
-    CANONICAL_ICH_SKELETON,
-    BlockType,
-    EligibilityBlock,
-    NarrativeBlock,
-    ObjectiveBlock,
-    SoADerivedBlock,
-)
 
 from apps.designer.comparison import compare_payloads
 from apps.designer.db import (
@@ -31,6 +23,14 @@ from apps.designer.delta import (
 from apps.designer.inverse_mapper import map_usdm_to_study
 from apps.designer.main import app
 from apps.designer.mapper import map_study_to_usdm
+from apps.designer.src.domain.protocol_authoring import (
+    CANONICAL_ICH_SKELETON,
+    BlockType,
+    EligibilityBlock,
+    NarrativeBlock,
+    ObjectiveBlock,
+    SoADerivedBlock,
+)
 from packages.security.signing import generate_gateway_signature
 
 

@@ -3,7 +3,10 @@ import uuid
 from datetime import datetime
 
 import pytest
-from protocol_render import (
+from pydantic import ValidationError
+from usdm_model import Study
+
+from apps.designer.src.domain.protocol_render import (
     ExportMetadata,
     NarrativeItemView,
     NarrativeSectionView,
@@ -15,8 +18,6 @@ from protocol_render import (
     SoARowView,
     SynopsisView,
 )
-from pydantic import ValidationError
-from usdm_model import Study
 
 
 def test_export_metadata_valid_initial():

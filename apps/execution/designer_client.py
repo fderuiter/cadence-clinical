@@ -3,9 +3,11 @@ import os
 import time
 
 import httpx
-from eligibility.models import EligibilityCriterion
 from fastapi import HTTPException
 
+from apps.execution.src.domain.acl.designer_eligibility_dto import (
+    DesignerEligibilityCriterionDTO,
+)
 from packages.security.signing import generate_gateway_signature
 
 logger = logging.getLogger("execution-designer-client")
@@ -32,7 +34,7 @@ class DesignerCriteriaClient:
 
     async def get_eligibility_criteria(
         self, study_id: str, client: httpx.AsyncClient | None = None
-    ) -> list[EligibilityCriterion]:
+    ) -> list[DesignerEligibilityCriterionDTO]:
         """Fetch eligibility criteria from Designer service by study ID.
 
         Args:
@@ -40,7 +42,7 @@ class DesignerCriteriaClient:
             client (Optional[httpx.AsyncClient]): Optional shared HTTPX async client.
 
         Returns:
-            List[EligibilityCriterion]: List of deserialized eligibility criteria.
+            List[DesignerEligibilityCriterionDTO]: List of deserialized eligibility criteria.
         """
         gateway_secret_env = os.getenv(
             "GATEWAY_SECRET", "internal-gateway-secret-12345"
@@ -91,9 +93,6 @@ class DesignerCriteriaClient:
             data = response.json()
             criteria = []
             for item in data:
-                # We need to construct EligibilityCriterion from the dict.
-                # In eligibility/models.py, EligibilityCriterion subclasses AuditFields.
-                # GxP fields (created_by, reason_for_change) might need default mapping if absent.
                 if "created_by" not in item:
                     item["created_by"] = item.get("created_by") or "designer"
                 if "reason_for_change" not in item:
@@ -101,8 +100,7 @@ class DesignerCriteriaClient:
                         item.get("reason_for_change") or "Initial definition"
                     )
 
-                # EligibilityCriterion can be constructed via standard pydantic parse
-                criteria.append(EligibilityCriterion(**item))
+                criteria.append(DesignerEligibilityCriterionDTO(**item))
 
             return criteria
 
@@ -125,7 +123,9 @@ class DesignerCriteriaClient:
 
 
 # Module level helper function style modeling etmf/lock_client.py
-async def fetch_study_criteria(study_id: str) -> list[EligibilityCriterion]:
+async def fetch_study_criteria(
+    study_id: str,
+) -> list[DesignerEligibilityCriterionDTO]:
     """Fetch eligibility criteria module-function style."""
     client = DesignerCriteriaClient()
     return await client.get_eligibility_criteria(study_id)

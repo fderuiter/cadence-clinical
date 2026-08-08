@@ -239,7 +239,6 @@ def summarize_components(changed_files: list[str]) -> str:
         "apps/org": "`apps/org/` (Organization & Personnel Management)",
         "packages/security": "`packages/security/` (Security & RBAC Package)",
         "packages/ui": "`packages/ui/` (Shared UI Component Library)",
-        "packages/core-models": "`packages/core-models/` (CDISC USDM, ODM & SDTM Core Models)",
         "packages/deid": "`packages/deid/` (DEID Anonymization Service)",
         "docs": "`docs/` (Workspace Specifications & ADR Documentation)",
         "scripts": "`scripts/` (Automation, Validation & CI Tooling)",
@@ -492,7 +491,6 @@ Ensure your contribution strictly adheres to the **Cadence Clinical Platform** a
 *   **Directory Routing Rules:**
     *   Security, RBAC, cryptographic signing, audit context ──► `packages/security/`
     *   Shared Vue 3 UI components, layout helpers, widgets ──► `packages/ui/`
-    *   CDISC USDM, ODM, SDTM schemas & domain models ──► `packages/core-models/`
     *   Patient DEID anonymization & masking engine ──► `packages/deid/`
     *   Study authoring, MDR & USDM graph logic ──► `apps/designer/`
     *   eCRF Data capture, PostgreSQL audit ledger, TSDV, & SDTM mapping ──► `apps/execution/`

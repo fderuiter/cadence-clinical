@@ -24,7 +24,6 @@ members = [
     "apps-safety",
     "apps-tickets",
     "cadence-clinical",
-    "packages-core-models",
     "packages-database",
     "packages-deid",
     "packages-hexagonal",
@@ -281,7 +280,6 @@ dependencies = [
     { name = "fastapi" },
     { name = "jinja2" },
     { name = "neo4j" },
-    { name = "packages-core-models" },
     { name = "packages-security" },
     { name = "pydantic" },
     { name = "python-docx" },
@@ -295,7 +293,6 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.139.2,<0.140.0" },
     { name = "jinja2", specifier = ">=3.1.6,<4.0.0" },
     { name = "neo4j", specifier = ">=5.18.0" },
-    { name = "packages-core-models", editable = "packages/core-models" },
     { name = "packages-security", editable = "packages/security" },
     { name = "pydantic", specifier = ">=2.6.0" },
     { name = "python-docx", specifier = ">=1.1.0" },
@@ -360,7 +357,6 @@ dependencies = [
     { name = "asyncpg" },
     { name = "cryptography" },
     { name = "fastapi" },
-    { name = "packages-core-models" },
     { name = "packages-database" },
     { name = "packages-deid" },
     { name = "packages-security" },
@@ -375,7 +371,6 @@ requires-dist = [
     { name = "asyncpg", specifier = ">=0.29.0" },
     { name = "cryptography", specifier = ">=4.5.0" },
     { name = "fastapi", specifier = ">=0.139.2,<0.140.0" },
-    { name = "packages-core-models", editable = "packages/core-models" },
     { name = "packages-database", editable = "packages/database" },
     { name = "packages-deid", editable = "packages/deid" },
     { name = "packages-security", editable = "packages/security" },
@@ -398,7 +393,6 @@ dependencies = [
     { name = "fastapi" },
     { name = "jinja2" },
     { name = "jsonschema" },
-    { name = "packages-core-models" },
     { name = "packages-database" },
     { name = "packages-deid" },
     { name = "packages-security" },
@@ -423,7 +417,6 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.139.2,<0.140.0" },
     { name = "jinja2", specifier = ">=3.1.6,<4.0.0" },
     { name = "jsonschema", specifier = ">=4.20.0" },
-    { name = "packages-core-models", editable = "packages/core-models" },
     { name = "packages-database", editable = "packages/database" },
     { name = "packages-deid", editable = "packages/deid" },
     { name = "packages-security", editable = "packages/security" },
@@ -467,7 +460,6 @@ dependencies = [
     { name = "asyncpg" },
     { name = "fastapi" },
     { name = "httpx" },
-    { name = "packages-core-models" },
     { name = "packages-database" },
     { name = "packages-deid" },
     { name = "packages-security" },
@@ -481,7 +473,6 @@ requires-dist = [
     { name = "asyncpg", specifier = ">=0.29.0" },
     { name = "fastapi", specifier = ">=0.139.2,<0.140.0" },
     { name = "httpx", specifier = ">=0.27.0" },
-    { name = "packages-core-models", editable = "packages/core-models" },
     { name = "packages-database", editable = "packages/database" },
     { name = "packages-deid", editable = "packages/deid" },
     { name = "packages-security", editable = "packages/security" },
@@ -1754,35 +1745,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/3d/f9/88d94a75de065ea32619465d2f77b29a0469500e99012523b91cc4141cd1/openpyxl-3.1.5.tar.gz", hash = "sha256:cf0e3cf56142039133628b5acffe8ef0c12bc902d2aadd3e0fe5878dc08d1050", size = 186464, upload-time = "2024-06-28T14:03:44.161Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c0/da/977ded879c29cbd04de313843e76868e6e13408a94ed6b987245dc7c8506/openpyxl-3.1.5-py2.py3-none-any.whl", hash = "sha256:5282c12b107bffeef825f4617dc029afaf41d0ea60823bbb665ef3079dc79de2", size = 250910, upload-time = "2024-06-28T14:03:41.161Z" },
-]
-
-[[package]]
-name = "packages-core-models"
-version = "0.1.0"
-source = { editable = "packages/core-models" }
-dependencies = [
-    { name = "docxcompose" },
-    { name = "docxtpl" },
-    { name = "jinja2" },
-    { name = "pydantic" },
-    { name = "pymupdf" },
-    { name = "python-docx" },
-    { name = "pyyaml" },
-    { name = "usdm" },
-    { name = "weasyprint" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "docxcompose", specifier = ">=2.2.0" },
-    { name = "docxtpl", specifier = ">=0.20.2" },
-    { name = "jinja2", specifier = ">=3.1.6,<4.0.0" },
-    { name = "pydantic", specifier = ">=2.6.0" },
-    { name = "pymupdf", specifier = ">=1.24.0" },
-    { name = "python-docx", specifier = ">=1.1.0" },
-    { name = "pyyaml", specifier = ">=6.0.1" },
-    { name = "usdm", specifier = ">=0.65.0" },
-    { name = "weasyprint", specifier = ">=61.0" },
 ]
 
 [[package]]

@@ -4,7 +4,6 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from jose import jwt
-from signature import SignatureManifestation
 from sqlalchemy import select
 
 from apps.etmf.database import db_manager
@@ -15,6 +14,7 @@ from apps.etmf.sealer import (
     validate_etmf_ledger_integrity,
 )
 from apps.gateway.main import generate_signature
+from packages.security.signature import SignatureManifestation
 
 
 @pytest.fixture(autouse=True)

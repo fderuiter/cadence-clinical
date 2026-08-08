@@ -5,7 +5,6 @@ import httpx
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from sae_icsr import MedDRACoding, SeriousAdverseEvent
 from sqlalchemy import select, text
 
 from apps.gateway.main import generate_signature
@@ -25,6 +24,7 @@ from apps.safety.reconciliation import (
     normalize_edc_ae_to_sae,
     normalize_external_icsr_to_saes,
 )
+from apps.safety.src.domain.sae_icsr import MedDRACoding, SeriousAdverseEvent
 
 # Ensure all tests in this module run on the same xdist worker.
 # The db_manager singleton is reinitialised per-fixture; distributing tests

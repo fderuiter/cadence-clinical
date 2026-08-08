@@ -7,19 +7,18 @@ import base64
 import uuid
 
 import usdm_model
-from designer.synopsis_transport_models import (
-    SynopsisExportRequest,
-    SynopsisExportResponse,
-)
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import HTMLResponse
 
-import packages  # noqa: F401
 from apps.designer.content_assembly import (
     USDMSynopsisAssembler,
     assemble_rendered_protocol_document,
 )
 from apps.designer.renderers.document_renderer import ProtocolDocumentRenderer
+from apps.designer.src.domain.synopsis_transport_models import (
+    SynopsisExportRequest,
+    SynopsisExportResponse,
+)
 from packages.security.middleware import get_current_user
 
 router = APIRouter(prefix="/api/v1/synopsis", tags=["Synopsis"])

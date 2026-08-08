@@ -4,10 +4,18 @@ import time
 from typing import Any
 
 import httpx
-from eligibility import EligibilityCriterion, ExpressionNode, parse_dsl
 from fastapi import HTTPException
 
+from apps.interop.src.domain.acl import (
+    EligibilityCriterionDTO,
+    ExpressionNodeDTO,
+    parse_dsl_dto,
+)
 from packages.security.signing import generate_gateway_signature
+
+EligibilityCriterion = EligibilityCriterionDTO
+ExpressionNode = ExpressionNodeDTO
+parse_dsl = parse_dsl_dto
 
 logger = logging.getLogger("interop-designer-client")
 

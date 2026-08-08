@@ -398,7 +398,7 @@ If you see validation failures indicating a name collision or overlapping model 
 
 1. **Locate the model definition** in the downstream service (usually under `models.py` or a router file).
 2. **Rename the model** to include the correct prefix. For example, if you are working in `apps/tickets/` and define a `CommentCreate` model, you must rename it to `Tickets_CommentCreate`.
-3. If a model is truly shared/common, do not duplicate it across microservices. Instead, define it in a shared package (e.g., in `packages/core-models/`) or use service-specific prefixed copies if isolated domain boundaries are desired.
+3. If data is shared across microservices, use local Anti-Corruption Layer (ACL) DTOs or service-specific prefixed models to maintain isolated domain boundaries.
 
 #### 3. How to run local validation
 

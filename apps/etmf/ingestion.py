@@ -1,10 +1,12 @@
 from typing import Any
 
-from protocol_version_ref import ProtocolVersionRef
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.etmf.ingestion_service import ingest_tmf_document
 from apps.etmf.models import TMFDocument
+from apps.etmf.src.domain.acl import ProtocolVersionRefDTO
+
+ProtocolVersionRef = ProtocolVersionRefDTO
 
 
 async def ingest_document_service(

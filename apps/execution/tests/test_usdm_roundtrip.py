@@ -7,10 +7,9 @@ import json
 from pathlib import Path
 
 import pytest
-from cdisc.usdm_models import USDMStudy
 
-import packages  # noqa: F401
 from apps.designer.importers.usdm_importer import USDMImporter
+from apps.designer.src.domain.cdisc.usdm_models import USDMStudy
 
 FIXTURES_DIR = Path(__file__).resolve().parents[3] / "tests" / "fixtures"
 SAMPLE_USDM_V3_PATH = FIXTURES_DIR / "sample_usdm_v3.json"

@@ -10,7 +10,9 @@ from typing import Any
 
 import usdm_model
 from bs4 import BeautifulSoup
-from protocol_render import (
+from pydantic import BaseModel
+
+from apps.designer.src.domain.protocol_render import (
     ExportMetadata,
     NarrativeItemView,
     NarrativeSectionView,
@@ -22,7 +24,6 @@ from protocol_render import (
     SoARowView,
     SynopsisView,
 )
-from pydantic import BaseModel
 
 
 def find_object_by_id(obj: Any, target_id: str, target_klass: str = None) -> Any:
