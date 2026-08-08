@@ -119,7 +119,7 @@ async def setup_test_databases():
         except asyncio.QueueEmpty:
             break
 
-    # Generate unique temp file-based sqlite databases
+    # Generate unique temp file-based sqlite databases for isolated test execution
     notif_db_path = f"/tmp/notif_memdb_{uuid.uuid4().hex}.db"  # nosec B108
     notifications_db_manager.init_db(
         f"sqlite+aiosqlite:///{notif_db_path}?timeout=60",
