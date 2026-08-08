@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from apps.execution.src.domain.sdtm.enums import (
+from apps.execution.domain.sdtm.enums import (
     AEOutcome,
     AERelationship,
     AESeriousness,
@@ -13,7 +13,7 @@ from apps.execution.src.domain.sdtm.enums import (
     SDTMDomain,
     Sex,
 )
-from apps.execution.src.domain.sdtm.models import (
+from apps.execution.domain.sdtm.models import (
     AE,
     CM,
     DM,
@@ -28,7 +28,7 @@ from apps.execution.src.domain.sdtm.models import (
     VitalSign,
     validate_dtc_format,
 )
-from apps.execution.src.domain.sdtm.terminology import (
+from apps.execution.domain.sdtm.terminology import (
     normalize_race,
     normalize_seriousness,
     normalize_severity,

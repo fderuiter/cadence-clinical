@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 import defusedxml.ElementTree as ET
 
 import packages  # noqa: F401
-from apps.execution.src.domain.safety_models import (
+from apps.execution.domain.safety_models import (
     CausalityEnum,
     SAECaseRecord,
     SeriousnessCriteriaEnum,

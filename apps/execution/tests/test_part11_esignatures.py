@@ -7,11 +7,11 @@ import pytest
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 
-from apps.compliance.services.esignature_verifier import (
+from packages.compliance.services.esignature_verifier import (
     ESignatureVerifier,
     TamperDetectedError,
 )
-from apps.compliance.services.pkcs7_signer import PKCS7Signer
+from packages.compliance.services.pkcs7_signer import PKCS7Signer
 
 
 @pytest.fixture

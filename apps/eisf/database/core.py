@@ -1,3 +1,3 @@
-from packages.database import RelationalDatabaseManager
+from apps.eisf.infrastructure.database import db_manager
 
-db_manager = RelationalDatabaseManager(service_name="eISF")
+__all__ = ["db_manager"]

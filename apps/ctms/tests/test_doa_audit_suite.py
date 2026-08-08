@@ -3,8 +3,8 @@
 Requirements: PRD-SYS-001
 """
 
+from apps.execution.domain.doa_models import DOATaskDelegationEnum, DOATaskRoleEnum
 from apps.execution.services.doa_service import DOAService
-from apps.execution.src.domain.doa_models import DOATaskDelegationEnum, DOATaskRoleEnum
 
 
 def test_doa_historical_audit_trail_logging() -> None:

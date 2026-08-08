@@ -20,10 +20,7 @@ from apps.designer.delta import (
     update_block,
     update_study_arm,
 )
-from apps.designer.inverse_mapper import map_usdm_to_study
-from apps.designer.main import app
-from apps.designer.mapper import map_study_to_usdm
-from apps.designer.src.domain.protocol_authoring import (
+from apps.designer.domain.protocol_authoring import (
     CANONICAL_ICH_SKELETON,
     BlockType,
     EligibilityBlock,
@@ -31,6 +28,9 @@ from apps.designer.src.domain.protocol_authoring import (
     ObjectiveBlock,
     SoADerivedBlock,
 )
+from apps.designer.inverse_mapper import map_usdm_to_study
+from apps.designer.main import app
+from apps.designer.mapper import map_study_to_usdm
 from packages.security.signing import generate_gateway_signature
 
 

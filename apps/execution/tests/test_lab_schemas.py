@@ -8,12 +8,12 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from apps.execution.src.domain.lab_models import (
+from apps.execution.domain.lab_models import (
     LabSourceEnum,
     LabTestMasterRecord,
     LabUnitConversionRecord,
 )
-from apps.execution.src.domain.lab_transport_models import (
+from apps.execution.domain.lab_transport_models import (
     LabRangeRecalculateRequest,
     LabRangeRecalculateResponse,
     LabReferenceRangeCreate,

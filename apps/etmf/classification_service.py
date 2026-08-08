@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from apps.etmf.src.domain.tmf_reference_model import (
+from apps.etmf.domain.tmf_reference_model import (
     get_active_catalog,
     get_catalog,
     resolve_artifact,

@@ -5,12 +5,12 @@ Requirements: PRD-SYS-001
 
 from typing import Any
 
+from apps.execution.domain.sdtm.scrubber_models import DeidentConfig
 from apps.execution.exports.sdtm_json_builder import SDTMJSONBuilder
 from apps.execution.services.deident_scrubber import (
     HIPAADataScrubber,
     scrub_dataset,
 )
-from apps.execution.src.domain.sdtm.scrubber_models import DeidentConfig
 
 
 def test_scrubber_preserves_date_intervals():

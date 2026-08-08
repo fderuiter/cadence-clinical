@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from apps.org.src.domain import (
+from apps.org.domain import (
     AuditFields,
     ClinicalStaffRole,
     OrganizationType,

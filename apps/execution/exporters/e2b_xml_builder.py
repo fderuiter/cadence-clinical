@@ -6,7 +6,7 @@ Requirements: PRD-SYS-001
 import xml.etree.ElementTree as ET
 
 import packages  # noqa: F401
-from apps.execution.src.domain.safety_models import SAECaseRecord
+from apps.execution.domain.safety_models import SAECaseRecord
 
 
 class E2BR3XMLBuilder:

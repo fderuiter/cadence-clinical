@@ -84,6 +84,9 @@ from apps.execution.demographics import (
     get_safe_demographics as get_safe_demographics,
 )
 from apps.execution.dependencies import verify_change_justification
+from apps.execution.domain.acl.protocol_version_ref_dto import (
+    ProtocolVersionRefDTO,
+)
 from apps.execution.edit_checks import (
     run_asynchronous_edit_checks,
     run_synchronous_edit_checks,
@@ -115,9 +118,6 @@ from apps.execution.rtsm_supply import (
     InsufficientStockError,
     SiteInventoryNotFoundError,
     dispense_kit_transaction,
-)
-from apps.execution.src.domain.acl.protocol_version_ref_dto import (
-    ProtocolVersionRefDTO,
 )
 from apps.execution.subject_lifecycle import InvalidStateTransitionError
 from apps.execution.translator import process_translation

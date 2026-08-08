@@ -87,7 +87,7 @@ def test_artifact_cascade_router_endpoint_dependency_override() -> None:
 
     class MockCascadeEngine:
         def cascade_protocol_to_downstream(self, study_payload, amendment_version):
-            from apps.designer.src.domain.cdisc.cascade_models import (
+            from apps.designer.domain.cdisc.cascade_models import (
                 CascadeSummaryReport,
             )
 

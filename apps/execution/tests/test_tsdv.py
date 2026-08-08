@@ -709,7 +709,7 @@ def test_evaluate_bulk_tsdv():
 
 def test_sdv_transport_schemas():
     """Verify Pydantic v2 schemas from sdv_transport_models execute properly."""
-    from apps.execution.src.domain.sdv_transport_models import (
+    from apps.execution.domain.sdv_transport_models import (
         BulkQueryGenerationRequest,
         BulkQueryGenerationResponse,
         BulkSdvSignOffRequest,

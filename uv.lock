@@ -9,7 +9,6 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "apps-compliance",
     "apps-ctms",
     "apps-designer",
     "apps-econsent",
@@ -24,6 +23,7 @@ members = [
     "apps-safety",
     "apps-tickets",
     "cadence-clinical",
+    "packages-compliance",
     "packages-database",
     "packages-deid",
     "packages-hexagonal",
@@ -224,25 +224,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/61/cc/a381afa6efea9f496eff839d4a6a1aed3bfafc7b3ab4b0d1b243a12573dd/anyio-4.14.2.tar.gz", hash = "sha256:cfa139f3ed1a23ee8f88a145ddb5ac7605b8bbfd8592baacd7ce3d8bb4313c7f", size = 260176, upload-time = "2026-07-12T20:29:07.082Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/da/35/f2287558c17e29fafc8ef3daf819bb9834061cfa43bff8014f7df7f63bdc/anyio-4.14.2-py3-none-any.whl", hash = "sha256:9f505dda5ac9f0c8309b5e8bd445a8c2bf7246f3ce950121e45ea15bc41d1494", size = 125813, upload-time = "2026-07-12T20:29:05.763Z" },
-]
-
-[[package]]
-name = "apps-compliance"
-version = "0.1.0"
-source = { editable = "apps/compliance" }
-dependencies = [
-    { name = "cryptography" },
-    { name = "fastapi" },
-    { name = "packages-security" },
-    { name = "pydantic" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "cryptography", specifier = ">=4.5.0" },
-    { name = "fastapi", specifier = ">=0.139.2,<0.140.0" },
-    { name = "packages-security", editable = "packages/security" },
-    { name = "pydantic", specifier = ">=2.6.0" },
 ]
 
 [[package]]
@@ -1748,6 +1729,25 @@ wheels = [
 ]
 
 [[package]]
+name = "packages-compliance"
+version = "0.1.0"
+source = { editable = "packages/compliance" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "fastapi" },
+    { name = "packages-security" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cryptography", specifier = ">=4.5.0" },
+    { name = "fastapi", specifier = ">=0.139.2,<0.140.0" },
+    { name = "packages-security", editable = "packages/security" },
+    { name = "pydantic", specifier = ">=2.6.0" },
+]
+
+[[package]]
 name = "packages-database"
 version = "0.1.0"
 source = { editable = "packages/database" }
@@ -1789,12 +1789,6 @@ requires-dist = [
 name = "packages-hexagonal"
 version = "0.1.0"
 source = { editable = "packages/hexagonal" }
-dependencies = [
-    { name = "sqlalchemy" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "sqlalchemy", specifier = ">=2.0.28" }]
 
 [[package]]
 name = "packages-security"

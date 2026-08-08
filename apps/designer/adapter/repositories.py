@@ -18,7 +18,7 @@ from apps.designer.delta import (
     verify_version_signature,
     with_transaction_retry,
 )
-from apps.designer.src.domain.protocol_authoring.models import (
+from apps.designer.domain.protocol_authoring.models import (
     Comment,
     CommentThread,
     SectionReviewStatus,

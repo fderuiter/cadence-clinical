@@ -8,14 +8,14 @@ from datetime import UTC, datetime
 import pytest
 
 import packages  # noqa: F401
-from apps.execution.services.lock_enforcement import (
-    DataLockEnforcer,
-    FormLockedError,
-)
-from apps.execution.src.domain.lock_models import (
+from apps.execution.domain.lock_models import (
     DataLockRecord,
     LockScopeEnum,
     LockStatusEnum,
+)
+from apps.execution.services.lock_enforcement import (
+    DataLockEnforcer,
+    FormLockedError,
 )
 
 

@@ -12,8 +12,8 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from apps.designer.src.domain.protocol_authoring.models import Comment
-from apps.designer.src.domain.protocol_render.models import ExportMetadata
+from apps.designer.domain.protocol_authoring.models import Comment
+from apps.designer.domain.protocol_render.models import ExportMetadata
 from packages.database.audit import AuditFields
 from packages.security.signature import SignatureManifestation, SigningReason
 

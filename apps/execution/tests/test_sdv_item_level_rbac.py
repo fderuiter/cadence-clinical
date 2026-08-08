@@ -6,7 +6,7 @@ Requirements: PRD-SYS-001, GxP, 21 CFR Part 11
 import pytest
 from pydantic import ValidationError
 
-from apps.execution.src.domain.sdv_transport_models import (
+from apps.execution.domain.sdv_transport_models import (
     FlagTargetDescriptor,
     SdvFlagRequest,
     SdvFlagResponse,

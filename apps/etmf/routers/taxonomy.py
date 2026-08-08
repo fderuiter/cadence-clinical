@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from apps.etmf.classification_service import classify_tmf_document
-from apps.etmf.src.domain.tmf_reference_model import (
+from apps.etmf.domain.tmf_reference_model import (
     get_active_catalog,
     get_catalog,
 )

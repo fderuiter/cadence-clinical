@@ -3,8 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from apps.etmf.models import is_site_level_artifact
-from apps.etmf.src.domain.tmf_reference_model import (
+from apps.etmf.domain.tmf_reference_model import (
     MILESTONE_MANDATORY_ARTIFACTS,
     get_active_catalog,
     get_catalog,
@@ -12,6 +11,7 @@ from apps.etmf.src.domain.tmf_reference_model import (
     resolve_artifact,
     validate_hierarchy,
 )
+from apps.etmf.models import is_site_level_artifact
 
 # Documented legacy allow-list constant for site-level artifacts
 # "site signature page" is a legacy/unassigned artifact name that is not

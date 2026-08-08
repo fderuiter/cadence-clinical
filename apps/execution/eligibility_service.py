@@ -11,12 +11,12 @@ import logging
 from typing import Any
 
 from apps.execution.designer_client import fetch_study_criteria
-from apps.execution.eligibility_context import build_eligibility_context
-from apps.execution.exceptions import SubjectEligibilityError
-from apps.execution.src.domain.acl.designer_eligibility_dto import (
+from apps.execution.domain.acl.designer_eligibility_dto import (
     AggregateEligibilityResultDTO,
     evaluate_eligibility_dto,
 )
+from apps.execution.eligibility_context import build_eligibility_context
+from apps.execution.exceptions import SubjectEligibilityError
 
 logger = logging.getLogger("execution-eligibility-service")
 

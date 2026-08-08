@@ -1,3 +1,3 @@
-from packages.database import RelationalDatabaseManager
+from apps.interop.infrastructure.database import db_manager
 
-db_manager = RelationalDatabaseManager(service_name="Interop")
+__all__ = ["db_manager"]

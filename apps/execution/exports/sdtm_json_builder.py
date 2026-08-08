@@ -6,8 +6,8 @@ Requirements: PRD-SYS-001
 from typing import Any
 
 from apps.execution.biostat.serializer import serialize_to_dataset_json
+from apps.execution.domain.sdtm.scrubber_models import DeidentConfig
 from apps.execution.services.deident_scrubber import HIPAADataScrubber, scrub_dataset
-from apps.execution.src.domain.sdtm.scrubber_models import DeidentConfig
 
 
 class SDTMJSONBuilder:

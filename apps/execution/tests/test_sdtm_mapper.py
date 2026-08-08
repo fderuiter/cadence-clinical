@@ -17,6 +17,18 @@ from apps.execution.database.models import (
     SDTMDomainRecord,
 )
 from apps.execution.demographics import encrypt_demographics
+from apps.execution.domain.sdtm.enums import (
+    AEOutcome,
+    AERelationship,
+    AESeriousness,
+    AESeverity,
+    Race,
+    Sex,
+)
+from apps.execution.domain.sdtm.sdtm_models import (
+    SDTMRecordAE,
+    SDTMRecordVS,
+)
 from apps.execution.sdtm_mapper import (
     compute_age,
     get_demographics,
@@ -32,18 +44,6 @@ from apps.execution.services.sdtm_mapper import (
     CDASHToSDTMMapper,
     map_cdash_to_sdtm,
     persist_sdtm_records,
-)
-from apps.execution.src.domain.sdtm.enums import (
-    AEOutcome,
-    AERelationship,
-    AESeriousness,
-    AESeverity,
-    Race,
-    Sex,
-)
-from apps.execution.src.domain.sdtm.sdtm_models import (
-    SDTMRecordAE,
-    SDTMRecordVS,
 )
 
 

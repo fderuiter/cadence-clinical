@@ -8,11 +8,11 @@ from pathlib import Path
 
 import pytest
 
-from apps.designer.src.domain.cdisc.cdisc_library_client import (
+from apps.designer.infrastructure.cdisc.cdisc_library_client import (
     CodelistDefinition,
     CodelistTerm,
 )
-from apps.designer.src.domain.cdisc.terminology_cache import CdiscTerminologyCache
+from apps.designer.infrastructure.cdisc.terminology_cache import CdiscTerminologyCache
 
 
 @pytest.mark.asyncio

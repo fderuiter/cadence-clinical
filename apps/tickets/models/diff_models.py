@@ -2,29 +2,6 @@
 Pydantic schemas for automated setting diff analyzer and clinical impact assessment.
 """
 
-from typing import Literal
+from apps.tickets.presentation.dtos import RegulatoryRiskAssessment, SettingDiffEntry
 
-from pydantic import BaseModel
-
-
-class SettingDiffEntry(BaseModel):
-    """
-    Schema representing a configuration setting difference entry.
-    """
-
-    setting_key: str
-    old_value: str
-    new_value: str
-    data_type: str = ""
-
-
-class RegulatoryRiskAssessment(BaseModel):
-    """
-    Schema representing a clinical and regulatory risk assessment for a setting change.
-    """
-
-    risk_level: Literal["HIGH_RISK", "MEDIUM_RISK", "LOW_RISK"]
-    affected_gxp_clauses: list[str]
-    requires_qa_signoff: bool
-    summary: str
-    risk_summary: str
+__all__ = ["RegulatoryRiskAssessment", "SettingDiffEntry"]

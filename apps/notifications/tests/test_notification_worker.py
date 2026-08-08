@@ -7,6 +7,7 @@ import pytest_asyncio
 from sqlalchemy import select
 
 from apps.notifications.database import db_manager as notifications_db_manager
+from apps.notifications.domain.event_models import SystemDomainEvent
 from apps.notifications.models import (
     Base as NotificationsBase,
 )
@@ -14,7 +15,6 @@ from apps.notifications.models import (
     Notification,
     NotificationDelivery,
 )
-from apps.notifications.src.domain.event_models import SystemDomainEvent
 from apps.notifications.workers.notification_worker import (
     NotificationWorker,
     publish_domain_event,

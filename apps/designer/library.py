@@ -272,11 +272,6 @@ class LibraryObjectTransitionRequest(BaseModel):
         ..., description="Mandatory reason for change / audit trail justification."
     )
 
-    @field_validator("change_reason")
-    @classmethod
-    def validate_change_reason_non_empty(cls, v: str) -> str:
-        return validate_non_empty_string(v)
-
 
 # ==========================================
 # Response / Output Models

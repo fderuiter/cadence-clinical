@@ -1,3 +1,4 @@
+import functools
 import json
 from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
@@ -5,7 +6,33 @@ from typing import Any
 
 from fastapi import FastAPI
 from sqlalchemy import event
+from sqlalchemy.exc import IntegrityError, NoResultFound, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from packages.hexagonal import (
+    DatabaseError,
+    EntityAlreadyExistsError,
+    EntityNotFoundError,
+)
+
+
+def map_database_exceptions(func: Callable) -> Callable:
+    """Decorator to translate SQLAlchemy database errors to clean domain exceptions."""
+
+    @functools.wraps(func)
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        try:
+            return await func(*args, **kwargs)
+        except NoResultFound as e:
+            raise EntityNotFoundError(f"Requested entity not found: {e}") from e
+        except IntegrityError as e:
+            raise EntityAlreadyExistsError(
+                f"Database constraint violation or duplicate key: {e}"
+            ) from e
+        except SQLAlchemyError as e:
+            raise DatabaseError(f"Database operational or schema error: {e}") from e
+
+    return wrapper
 
 
 class RelationalDatabaseManager:

@@ -11,11 +11,11 @@ from apps.execution.database.models import (
     ConsentFormRecord,
     ConsentSignature,
 )
+from apps.execution.domain.econsent_models import EConsentSignRequest
 from apps.execution.services.econsent_capture_service import (
     EConsentWorkflowEngine,
     process_econsent_signature,
 )
-from apps.execution.src.domain.econsent_models import EConsentSignRequest
 from packages.security.audit_logger import audit_logger_engine
 
 

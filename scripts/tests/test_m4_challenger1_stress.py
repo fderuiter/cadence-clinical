@@ -13,12 +13,12 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from apps.ctms.src.domain.acl.document_renderer_dto import (
+from apps.ctms.domain.acl.document_renderer_dto import (
     CTMSDocumentRendererACL,
     DocumentRenderRequestDTO,
     DocumentRenderResponseDTO,
 )
-from apps.ctms.src.domain.acl.sync_engine_dto import (
+from apps.ctms.domain.acl.sync_engine_dto import (
     CTMSSignatureValidationError,
     CTMSSyncMetadataDTO,
     CTMSSyncRecordDTO,
@@ -26,18 +26,18 @@ from apps.ctms.src.domain.acl.sync_engine_dto import (
     reconcile_ctms_records,
     verify_ctms_record_signature,
 )
-from apps.execution.src.domain.acl.designer_eligibility_dto import (
+from apps.execution.domain.acl.designer_eligibility_dto import (
     DesignerEligibilityCriterionDTO,
     DesignerExpressionNodeDTO,
     FieldReferenceDTO,
     evaluate_eligibility_dto,
     evaluate_node_dto,
 )
-from apps.execution.src.domain.acl.protocol_version_ref_dto import (
+from apps.execution.domain.acl.protocol_version_ref_dto import (
     ProtocolVersionRefDTO,
     ProtocolVersionStatusEnum,
 )
-from apps.execution.src.domain.acl.usdm_validation_dto import (
+from apps.execution.domain.acl.usdm_validation_dto import (
     normalize_usdm_payload,
     validate_usdm_payload,
 )

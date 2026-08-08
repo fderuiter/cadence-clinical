@@ -384,7 +384,7 @@ All data models/schemas defined in downstream microservices must start with thei
 | Safety & Pharmacovigilance        | `apps/safety/`        | Capitalized name        | `Safety_`        |
 | Support Ticketing                 | `apps/tickets/`       | Capitalized name        | `Tickets_`       |
 
-_Note: The `apps/gateway` aggregator service, the shared packages under `packages/`, the `apps/compliance` utility library, and frontend single-page web applications (`apps/web`, `apps/subject-portal`) are excluded from prefix enforcement._
+_Note: The `apps/gateway` aggregator service, the shared packages under `packages/` (including `packages/compliance`), and frontend single-page web applications (`apps/web`, `apps/subject-portal`) are excluded from prefix enforcement._
 
 ### Troubleshooting Schema Validation Issues
 

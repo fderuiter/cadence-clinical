@@ -7,7 +7,7 @@ relationships, audit metadata, and projection cells.
 
 from pydantic import BaseModel, Field, model_validator
 
-from apps.designer.src.domain.protocol_authoring import (
+from apps.designer.domain.protocol_authoring import (
     ActivityAssignmentRequest,
     AuditMetadata,
     CreateEpochRequest,
@@ -40,7 +40,7 @@ from apps.designer.src.domain.protocol_authoring import (
     VisitReorderItem,
     VisitReorderRequest,
 )
-from apps.designer.src.domain.protocol_authoring import (
+from apps.designer.domain.protocol_authoring import (
     TimingWindow as CoreTimingWindow,  # Subclassed below to add validation rules
 )
 

@@ -6,7 +6,7 @@ import pytest
 from pydantic import ValidationError
 from usdm_model import Study
 
-from apps.designer.src.domain.protocol_render import (
+from apps.designer.domain.protocol_render import (
     ExportMetadata,
     NarrativeItemView,
     NarrativeSectionView,

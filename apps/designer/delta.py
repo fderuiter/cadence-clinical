@@ -8,7 +8,7 @@ import functools
 import re
 from typing import Any
 
-from apps.designer.src.domain.protocol_authoring.models import (
+from apps.designer.domain.protocol_authoring.models import (
     CommentThread,
     SectionReviewStatus,
     SectionReviewTransition,
