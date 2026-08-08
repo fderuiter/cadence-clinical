@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-To satisfy strict service boundary isolation rules and modularity within our FastAPI applications, we must prevent direct compile-time package imports across the `apps/` microservices packages (e.g. `apps/etmf` directly importing from `apps/compliance`). Direct dependencies violate the domain-driven design principles of the Cadence Clinical platform.
+To satisfy strict service boundary isolation rules and modularity within our FastAPI applications, we must prevent direct compile-time package imports across the `apps/` microservices packages (e.g. `apps/etmf` directly importing from `packages/compliance`). Direct dependencies violate the domain-driven design principles of the Cadence Clinical platform.
 
 Additionally, architectural changes made to `packages/security/rbac.py` must have an associated ADR to satisfy the platform's compliance verification check.
 

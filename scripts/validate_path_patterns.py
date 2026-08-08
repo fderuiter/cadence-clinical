@@ -116,6 +116,8 @@ ALLOWED_ROOT_FILES = {
     "README.md",
     "AGENTS.md",
     "SUPPORT.md",
+    "PROJECT.md",
+    "TEST_INFRA.md",
     "LICENSE",
     "Makefile",
     "package.json",
