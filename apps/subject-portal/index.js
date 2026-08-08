@@ -10,8 +10,6 @@ import {
   initHoverDetection,
   createClinicalInput,
   createClinicalRadioGrid,
-  createClinicalQueryFlag,
-  createQueryPanel,
 } from "ui";
 import {
   queueSubmission,
