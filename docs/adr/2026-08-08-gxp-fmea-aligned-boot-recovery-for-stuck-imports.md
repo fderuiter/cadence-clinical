@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-In clinical trial dictionary management, server crashes or reboots during dictionary uploads previously left imports permanently stuck in `PENDING` or `PROCESSING` states. This created a split-brain state where clinical data managers saw perpetual active tasks, blocking them from initiating clean re-uploads without manual database interventions. 
+In clinical trial dictionary management, server crashes or reboots during dictionary uploads previously left imports permanently stuck in `PENDING` or `PROCESSING` states. This created a split-brain state where clinical data managers saw perpetual active tasks, blocking them from initiating clean re-uploads without manual database interventions.
 
 Furthermore, under GxP regulatory guidelines, any automated state transition or mitigation must be fully auditable, traceable to a system/background identity, and evaluated under a Failure Mode and Effects Analysis (FMEA) framework to ensure the automated correction does not introduce new risks, in compliance with `PRD-SYS-001` and `PRD-SYS-003`.
 
