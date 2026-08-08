@@ -12,7 +12,7 @@ import usdm_model
 from bs4 import BeautifulSoup
 from pydantic import BaseModel
 
-from apps.designer.src.domain.protocol_render import (
+from apps.designer.domain.protocol_render import (
     ExportMetadata,
     NarrativeItemView,
     NarrativeSectionView,

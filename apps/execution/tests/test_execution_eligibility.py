@@ -25,11 +25,11 @@ from apps.execution.database.models import (
 )
 from apps.execution.demographics import encrypt_demographics
 from apps.execution.designer_client import DesignerCriteriaClient
-from apps.execution.eligibility_context import build_eligibility_context
-from apps.execution.main import app
-from apps.execution.src.domain.acl.designer_eligibility_dto import (
+from apps.execution.domain.acl.designer_eligibility_dto import (
     DesignerEligibilityCriterionDTO,
 )
+from apps.execution.eligibility_context import build_eligibility_context
+from apps.execution.main import app
 
 GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
 

@@ -21,14 +21,14 @@ from pydantic import ValidationError
 ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
-from apps.etmf.src.domain.acl.protocol_version_ref import (  # noqa: E402
+from apps.etmf.domain.acl.protocol_version_ref import (  # noqa: E402
     ProtocolVersionRef,
     ProtocolVersionRefDTO,
     ProtocolVersionStatus,
     ProtocolVersionStatusDTO,
 )
 from apps.etmf.watermark import apply_watermark  # noqa: E402
-from apps.interop.src.domain.acl.eligibility_dto import (  # noqa: E402
+from apps.interop.domain.acl.eligibility_dto import (  # noqa: E402
     EligibilityCriterion,
     EligibilityCriterionDTO,
     ExpressionNode,
@@ -37,7 +37,7 @@ from apps.interop.src.domain.acl.eligibility_dto import (  # noqa: E402
     evaluate_eligibility,
     parse_dsl,
 )
-from apps.interop.src.domain.acl.epro_transport_dto import (  # noqa: E402
+from apps.interop.domain.acl.epro_transport_dto import (  # noqa: E402
     AssignmentComplianceDetail,
     AssignmentComplianceDetailDTO,
     InstrumentCreate,

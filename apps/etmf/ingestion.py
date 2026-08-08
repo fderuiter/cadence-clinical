@@ -2,9 +2,9 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.etmf.domain.acl import ProtocolVersionRefDTO
 from apps.etmf.ingestion_service import ingest_tmf_document
 from apps.etmf.models import TMFDocument
-from apps.etmf.src.domain.acl import ProtocolVersionRefDTO
 
 ProtocolVersionRef = ProtocolVersionRefDTO
 

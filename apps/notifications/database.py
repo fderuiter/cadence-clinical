@@ -1,3 +1,3 @@
-from packages.database import RelationalDatabaseManager
+from apps.notifications.infrastructure.database import db_manager
 
-db_manager = RelationalDatabaseManager(service_name="Notifications")
+__all__ = ["db_manager"]

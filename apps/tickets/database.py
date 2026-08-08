@@ -2,6 +2,6 @@
 Database manager configuration for the Tickets service.
 """
 
-from packages.database import RelationalDatabaseManager
+from apps.tickets.infrastructure.database import db_manager, get_db_session
 
-db_manager = RelationalDatabaseManager(service_name="Tickets")
+__all__ = ["db_manager", "get_db_session"]

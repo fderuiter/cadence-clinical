@@ -10,7 +10,7 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from apps.designer.src.domain.protocol_version_ref import (
+from apps.designer.domain.protocol_version_ref import (
     ProtocolVersionRef,
     ProtocolVersionStatus,
 )

@@ -8,7 +8,7 @@ from apps.designer.content_assembly import (
     assemble_rendered_protocol_document,
     assemble_soa_matrix,
 )
-from apps.designer.src.domain.protocol_render import RenderedProtocolDocument
+from apps.designer.domain.protocol_render import RenderedProtocolDocument
 
 
 @pytest.fixture

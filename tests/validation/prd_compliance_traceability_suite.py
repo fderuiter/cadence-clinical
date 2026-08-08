@@ -8,8 +8,8 @@ from datetime import datetime
 import fitz
 
 from apps.designer.renderers.document_renderer import ProtocolDocumentRenderer
+from apps.execution.domain.econsent_models import EConsentSignRequest
 from apps.execution.services.econsent_capture_service import _render_pdf_certificate
-from apps.execution.src.domain.econsent_models import EConsentSignRequest
 
 
 def test_spreadsheet_ingestion_sheet_structure():

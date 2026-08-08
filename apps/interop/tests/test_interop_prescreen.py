@@ -9,13 +9,13 @@ from sqlalchemy import select
 
 from apps.gateway.main import generate_signature
 from apps.interop.database import db_manager
-from apps.interop.fhir_adapter import FHIRAdapter, pseudonymize_identifier
-from apps.interop.main import app
-from apps.interop.models import Base, InteropAuditLog
-from apps.interop.src.domain.acl import (
+from apps.interop.domain.acl import (
     EligibilityCriterionDTO,
     parse_dsl_dto,
 )
+from apps.interop.fhir_adapter import FHIRAdapter, pseudonymize_identifier
+from apps.interop.main import app
+from apps.interop.models import Base, InteropAuditLog
 
 EligibilityCriterion = EligibilityCriterionDTO
 parse_dsl = parse_dsl_dto

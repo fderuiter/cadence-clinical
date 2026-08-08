@@ -259,7 +259,7 @@ async def process_translation(
                         import copy
                         import json
 
-                        from apps.execution.src.domain.acl.usdm_validation_dto import (
+                        from apps.execution.domain.acl.usdm_validation_dto import (
                             normalize_usdm_payload,
                             resolve_usdm_version,
                             validate_usdm_payload,

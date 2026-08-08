@@ -1,1 +1,0 @@
-"""Execution domain models package."""

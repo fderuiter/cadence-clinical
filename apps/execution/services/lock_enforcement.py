@@ -6,7 +6,7 @@ Requirements: PRD-SYS-001
 from typing import Any
 
 import packages  # noqa: F401
-from apps.execution.src.domain.lock_models import (
+from apps.execution.domain.lock_models import (
     DataLockRecord,
     LockScopeEnum,
     LockStatusEnum,

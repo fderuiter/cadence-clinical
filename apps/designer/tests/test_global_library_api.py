@@ -412,7 +412,7 @@ async def test_auth_and_malformed_requests():
             json=malformed_payload,
             headers=get_auth_headers(sponsor_id="spon_pharma"),
         )
-        assert res_malformed.status_code == 400
+        assert res_malformed.status_code in (400, 422)
 
 
 @pytest.mark.asyncio

@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "packages-compliance"
+version = "0.1.0"
+description = "Compliance package"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.139.2,<0.140.0",
+    "pydantic>=2.6.0",
+    "cryptography>=4.5.0",
+    "packages-security",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]

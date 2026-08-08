@@ -5,7 +5,7 @@ import time
 import httpx
 from fastapi import HTTPException
 
-from apps.execution.src.domain.acl.designer_eligibility_dto import (
+from apps.execution.domain.acl.designer_eligibility_dto import (
     DesignerEligibilityCriterionDTO,
 )
 from packages.security.signing import generate_gateway_signature

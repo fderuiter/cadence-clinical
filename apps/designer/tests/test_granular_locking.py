@@ -7,12 +7,12 @@ from fastapi.testclient import TestClient
 
 import packages  # noqa: F401
 from apps.designer.tests.test_lock_router import _make_auth_headers
+from apps.execution.domain.lock_models import DataLockRecord, LockStatusEnum
 from apps.execution.main import app
 from apps.execution.services.lock_enforcement import (
     DataLockEnforcer,
     FormLockedError,
 )
-from apps.execution.src.domain.lock_models import DataLockRecord, LockStatusEnum
 
 client = TestClient(app)
 

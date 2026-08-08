@@ -12,7 +12,7 @@ from apps.execution.database.models import (
     ConsentFormRecord,
     ConsentSignature,
 )
-from apps.execution.src.domain.econsent_models import (
+from apps.execution.domain.econsent_models import (
     EConsentSignRequest,
     EConsentSignResponse,
 )

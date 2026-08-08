@@ -6,19 +6,21 @@ import os
 import sys
 from typing import Any
 
-from apps.notifications.database import db_manager as notifications_db_manager
-from apps.notifications.models import (
+from apps.notifications.application.services.email_renderer import (
+    get_template_name_for_event,
+    render_email_template,
+)
+from apps.notifications.domain.event_models import SystemDomainEvent
+from apps.notifications.infrastructure.database import (
+    db_manager as notifications_db_manager,
+)
+from apps.notifications.infrastructure.models import (
     Notification,
     NotificationCategory,
     NotificationDelivery,
     NotificationPriority,
     NotificationStatus,
 )
-from apps.notifications.services.email_renderer import (
-    get_template_name_for_event,
-    render_email_template,
-)
-from apps.notifications.src.domain.event_models import SystemDomainEvent
 from packages.security.gateway_client import (
     GatewayBaseClient,
     create_service_auth_headers,
@@ -33,7 +35,11 @@ def _get_auth_headers() -> dict[str, str]:
 
 logger = logging.getLogger("notification_worker")
 
-# In-memory mock subscription queue for local testing / non-Redis fallbacks
+
+def _get_logger():
+    return logger
+
+
 _mock_queue: asyncio.Queue | None = None
 _mock_queue_loop: asyncio.AbstractEventLoop | None = None
 
@@ -62,11 +68,6 @@ class NotificationWorker:
     async def resolve_recipients(
         self, event_type: str, study_id: str, payload: dict[str, Any]
     ) -> list[dict[str, str]]:
-        """
-        Queries the Org microservice database to resolve target clinical users based on
-        study, site, and role assignments. Falls back to deterministic mock values if database is empty.
-        """
-        # Determine roles based on event type
         roles_to_find = []
         site_id = payload.get("site_id")
 
@@ -106,7 +107,6 @@ class NotificationWorker:
 
         resolved = []
 
-        # Try database-driven resolution via secure REST HTTP call
         try:
             client = GatewayBaseClient(base_url=ORG_URL)
             params = {}
@@ -143,7 +143,6 @@ class NotificationWorker:
                 f"Failed to query org service via REST for recipient resolution: {e}. Falling back."
             )
 
-        # Fallback to deterministic mock values if no matches found in database
         if not resolved:
             logger.info(
                 f"No database assignments found. Using deterministic fallback for {event_type}."
@@ -180,7 +179,6 @@ class NotificationWorker:
                     }
                 )
 
-        # Remove duplicates
         unique_resolved = []
         seen = set()
         for res in resolved:
@@ -191,18 +189,15 @@ class NotificationWorker:
         return unique_resolved
 
     async def process_domain_event(self, event: SystemDomainEvent) -> int:
-        """Process domain event and dispatch notifications to target users.
-
-        Requirements: PRD-SYS-001
-        """
         dispatched_count = 0
-        logger.info(f"Processing event {event.event_id} of type {event.event_type}.")
+        _get_logger().info(
+            f"Processing event {event.event_id} of type {event.event_type}."
+        )
 
         recipients = await self.resolve_recipients(
             event.event_type, event.study_id, event.payload
         )
 
-        # Map event type to priority and category
         category = NotificationCategory.SYSTEM
         priority = NotificationPriority.MEDIUM
 
@@ -227,7 +222,6 @@ class NotificationWorker:
         else:
             summary_message = f"Event received: {event.event_type}"
 
-        # Render GxP Compliant HTML template
         template_name = get_template_name_for_event(event.event_type)
         context = {
             "study_id": event.study_id,
@@ -238,24 +232,20 @@ class NotificationWorker:
         rendered_html = render_email_template(template_name, context)
         logger.debug(f"Rendered GxP HTML body: {len(rendered_html)} chars.")
 
-        # Persist notification in Notifications DB for each recipient and trigger delivery
         for recipient in recipients:
             user_id = recipient["user_id"]
             email_addr = recipient["email"]
             logger.info(f"Target email resolved: {email_addr}")
 
-            # 1. Dispatch WebSocket notification (simulation)
             logger.info(
                 f"[WebSocket] Dispatching live in-app alert to user {user_id}: '{summary_message}'"
             )
 
-            # 2. Write to relational Notifications DB
             if notifications_db_manager.session_maker:
                 try:
                     async with (
                         notifications_db_manager.get_session_maker()() as session
                     ):
-                        # Create central notification record
                         notif = Notification(
                             recipient_user_id=user_id,
                             category=category,
@@ -272,7 +262,6 @@ class NotificationWorker:
                         session.add(notif)
                         await session.flush()
 
-                        # Enqueue delivery jobs
                         delivery_in_app = NotificationDelivery(
                             notification_id=notif.id,
                             channel="IN_APP",
@@ -297,30 +286,21 @@ class NotificationWorker:
                 except Exception as e:
                     logger.error(f"Failed to persist notification in database: {e}")
             else:
-                # If DB not initialized, still count as mock-dispatched for testing/flexibility
                 dispatched_count += 1
 
         return dispatched_count
 
 
 async def publish_domain_event(event: SystemDomainEvent) -> None:
-    """
-    Client helper to publish an event onto the mock queue or Redis channel.
-    """
     message_str = event.model_dump_json()
-    # Try publishing to mock queue first
     await _get_mock_queue().put(message_str)
 
 
-# Control flags for background worker lifespan
 _worker_task: asyncio.Task | None = None
 _should_run: bool = False
 
 
 async def start_notification_worker() -> None:
-    """
-    Starts the background worker loop, subscribing to the Redis or mock pubsub channel.
-    """
     global _worker_task, _should_run
     if _worker_task and not _worker_task.done():
         return
@@ -333,18 +313,15 @@ async def start_notification_worker() -> None:
         logger.info("Notification Background Consumer Worker loop initiated.")
         while _should_run:
             try:
-                # Retrieve from mock in-memory queue
                 try:
                     message_str = await asyncio.wait_for(queue.get(), timeout=1.0)
                 except TimeoutError:
                     continue
 
-                # Process retrieved domain event with error retry & DLQ logic
                 try:
                     event_data = json.loads(message_str)
                     event = SystemDomainEvent.model_validate(event_data)
 
-                    # Exponential backoff retry loop for GxP reliability
                     max_attempts = 3
                     attempt = 0
                     success = False
@@ -357,7 +334,7 @@ async def start_notification_worker() -> None:
                             success = True
                         except Exception as ex:
                             last_err = ex
-                            logger.warning(
+                            _get_logger().warning(
                                 f"Attempt {attempt}/{max_attempts} failed to process event {event.event_id}: {ex}"
                             )
                             if attempt < max_attempts:
@@ -367,27 +344,25 @@ async def start_notification_worker() -> None:
                                 await asyncio.sleep(delay)
 
                     if not success:
-                        # Exceeded max attempts, write to GxP Dead-Letter Queue (DLQ)
-                        logger.error(
+                        _get_logger().error(
                             f"[DLQ] Event processing exhausted. EVENT_ID: {event.event_id}, EVENT_TYPE: {event.event_type}. ERROR: {last_err}"
                         )
 
                 except Exception as parse_ex:
-                    logger.error(
+                    _get_logger().error(
                         f"Malformed event received on channel. Failed to parse: {parse_ex}"
                     )
 
             except Exception as loop_ex:
-                logger.error(f"Error in background notification worker loop: {loop_ex}")
+                _get_logger().error(
+                    f"Error in background notification worker loop: {loop_ex}"
+                )
                 await asyncio.sleep(1.0)
 
     _worker_task = asyncio.create_task(worker_loop())
 
 
 async def stop_notification_worker() -> None:
-    """
-    Cleans up and cancels the running background worker loop.
-    """
     global _worker_task, _should_run
     _should_run = False
     if _worker_task:

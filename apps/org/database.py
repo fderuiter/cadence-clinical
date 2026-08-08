@@ -1,3 +1,3 @@
-from packages.database import RelationalDatabaseManager
+from apps.org.infrastructure.database import db_manager
 
-db_manager = RelationalDatabaseManager(service_name="Org")
+__all__ = ["db_manager"]

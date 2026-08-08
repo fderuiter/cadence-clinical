@@ -2,10 +2,12 @@
 Abstract Ports for the Medical Coding Service (Hexagonal Decoupling).
 """
 
-from typing import Any, Protocol
+from typing import Any
+
+from packages.hexagonal import RepositoryPort
 
 
-class CodingRepositoryPort(Protocol):
+class CodingRepositoryPort(RepositoryPort[Any]):
     """Port defining persistence and dictionary validation operations for Medical Coding."""
 
     async def get_assignment(self, assignment_id: str) -> Any:

@@ -8,7 +8,7 @@ import uuid
 from datetime import UTC, datetime
 
 import packages  # noqa: F401
-from apps.execution.src.domain.eisf_models import (
+from apps.execution.domain.eisf_models import (
     EISFDocumentRecord,
     EISFTaxonomyCategoryEnum,
 )

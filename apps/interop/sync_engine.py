@@ -1,4 +1,4 @@
-from apps.interop.src.domain.sync_engine import (
+from apps.interop.domain.sync_engine import (
     SignatureValidationError,
     SyncMetadata,
     SyncRecord,

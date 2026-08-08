@@ -26,11 +26,11 @@ from apps.designer.delta import (
     transition_section_status,
     update_block,
 )
-from apps.designer.main import app
-from apps.designer.src.domain.protocol_authoring.models import (
+from apps.designer.domain.protocol_authoring.models import (
     SectionReviewStatus,
     SuggestionStatus,
 )
+from apps.designer.main import app
 from packages.security.signing import generate_gateway_signature
 
 

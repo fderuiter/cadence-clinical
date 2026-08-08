@@ -9,7 +9,7 @@ from docx.opc.exceptions import PackageNotFoundError
 from docxtpl import DocxTemplate
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from apps.designer.src.domain.protocol_render import (
+from apps.designer.domain.protocol_render import (
     RenderedProtocolDocument,
     SoAMatrixView,
 )

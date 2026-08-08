@@ -7,13 +7,13 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.safety.adapter import SafetyDatabaseAdapter
-from apps.safety.execution_client import ExecutionClient
-from apps.safety.models import SAEDiscrepancy, SAEReconciliationRun
-from apps.safety.src.domain.sae_icsr import (
+from apps.safety.domain.sae_icsr import (
     IndividualCaseSafetyReport,
     MedDRACoding,
     SeriousAdverseEvent,
 )
+from apps.safety.execution_client import ExecutionClient
+from apps.safety.models import SAEDiscrepancy, SAEReconciliationRun
 
 logger = logging.getLogger("safety-reconciliation")
 

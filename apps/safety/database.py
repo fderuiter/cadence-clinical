@@ -1,13 +1,3 @@
-from packages.database import RelationalDatabaseManager
+from apps.safety.infrastructure.database import db_manager
 
-
-class SafetyDatabaseManager(RelationalDatabaseManager):
-    """
-    Service-local database manager for the Safety microservice,
-    inheriting from RelationalDatabaseManager to follow consistent GxP architecture.
-    """
-
-    pass
-
-
-db_manager = SafetyDatabaseManager(service_name="Safety")
+__all__ = ["db_manager"]

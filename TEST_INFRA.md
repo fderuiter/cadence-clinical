@@ -138,7 +138,7 @@ Tier 4 tests execute complex, end-to-end clinical workflows that span multiple m
 - **Verification**: Query audit ledger, download stored document, verify watermark overlay text and signature validity.
 
 ### Scenario S2: Protocol Authoring to eCRF Specification Flow
-- **Description**: Simulates clinical trial protocol authoring in Designer (`apps.designer.src.domain.usdm`), Schedule of Activities (SoA) matrix generation, eligibility criteria rule compilation, OpenAPI schema export, and ACL consumption by EDC Execution.
+- **Description**: Simulates clinical trial protocol authoring in Designer (`apps.designer.domain.usdm`), Schedule of Activities (SoA) matrix generation, eligibility criteria rule compilation, OpenAPI schema export, and ACL consumption by EDC Execution.
 - **Workflow**:
   1. Author creates USDM v3.0 protocol definition with 3 arms, 5 visits, and 10 eligibility criteria.
   2. Designer compiles protocol narrative template into Jinja2/HTML/PDF via `DocumentRenderer`.

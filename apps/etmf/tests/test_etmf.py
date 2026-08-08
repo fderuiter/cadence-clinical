@@ -895,7 +895,7 @@ async def test_completeness_from_catalog():
     and accurately handle changes to the shared catalog metadata.
     """
     # @req:PRD-TMF-004
-    from apps.etmf.src.domain.tmf_reference_model import MILESTONE_MANDATORY_ARTIFACTS
+    from apps.etmf.domain.tmf_reference_model import MILESTONE_MANDATORY_ARTIFACTS
 
     client = TestClient(app)
     admin_headers = get_auth_headers(roles="admin", change_reason="Completeness test")
@@ -1897,7 +1897,7 @@ async def test_explicit_and_default_taxonomy_version_roundtrip_and_legacy_interp
     assert doc_complete_data["artifact_code"] == "01.01.01"
 
     # 4. Assert a legacy v3.2.0-tagged document remains resolvable via resolve_artifact
-    from apps.etmf.src.domain.tmf_reference_model import resolve_artifact
+    from apps.etmf.domain.tmf_reference_model import resolve_artifact
 
     resolved_legacy = resolve_artifact(version="v3.2.0", code="01.01.01")
     assert resolved_legacy["artifact"].name == "Clinical Trial Protocol"
@@ -2610,11 +2610,11 @@ def test_informed_consent_form_taxonomy_and_idempotency():
     """
     from fastapi.testclient import TestClient
 
-    from apps.etmf.main import app
-    from apps.etmf.src.domain.tmf_reference_model import (
+    from apps.etmf.domain.tmf_reference_model import (
         get_active_catalog,
         resolve_artifact,
     )
+    from apps.etmf.main import app
 
     # 1. Assert taxonomy resolution of "Informed Consent Form"
     active_version = get_active_catalog().version

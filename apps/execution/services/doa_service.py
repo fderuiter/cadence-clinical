@@ -7,7 +7,7 @@ import uuid
 from datetime import UTC, datetime
 
 import packages  # noqa: F401
-from apps.execution.src.domain.doa_models import (
+from apps.execution.domain.doa_models import (
     DOAAssignmentRecord,
     DOATaskDelegationEnum,
     DOATaskRoleEnum,

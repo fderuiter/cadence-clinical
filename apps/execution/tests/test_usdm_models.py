@@ -5,7 +5,7 @@ Requirements: PRD-SYS-001
 
 import pytest
 
-from apps.designer.src.domain.cdisc.usdm_models import (
+from apps.designer.domain.cdisc.usdm_models import (
     Activity,
     EligibilityCriterion,
     Encounter,

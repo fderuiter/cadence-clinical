@@ -1,3 +1,7 @@
+"""
+SLA escalation background worker and application services for Tickets microservice.
+"""
+
 import asyncio
 import contextlib
 import logging
@@ -8,7 +12,7 @@ from typing import Any
 
 from sqlalchemy import and_, or_, select
 
-from apps.tickets.models import TERMINAL_STATES, Ticket
+from apps.tickets.infrastructure.models import TERMINAL_STATES, Ticket
 
 logger = logging.getLogger("tickets_escalation")
 
@@ -47,12 +51,8 @@ async def dispatch_escalation_notification(
     Swallows and logs failures, returning a boolean indicating success.
     """
     try:
-        # Build payload: recipient = assignee/role, priority matching ticket priority,
-        # category="ACTION_ITEMS", related_entity_type="ticket", related_entity_id as token
         recipient_user_id = assignee_user
         recipient_role = None if assignee_user else assignee_role
-
-        # related_entity_id follows `{ticket_id}:{event_type}:{version_index}`
         related_entity_id = f"{ticket_id}:escalation:{version_index}"
 
         payload = {
@@ -66,9 +66,9 @@ async def dispatch_escalation_notification(
             "related_entity_type": "ticket",
         }
 
-        from apps.tickets.notifications_client import publish_notification
+        import apps.tickets.notifications_client as nc
 
-        return await publish_notification(payload)
+        return await nc.publish_notification(payload)
     except Exception as e:
         logger.error(
             "Exception in dispatch_escalation_notification for ticket %s: %s",
@@ -91,15 +91,12 @@ async def execute_ticket_escalation_cycle(session_maker: Any) -> None:
     )
     cooldown_cutoff = now - timedelta(seconds=cooldown_seconds)
 
-    # Map TERMINAL_STATES to string representations
     terminal_state_strs = [
         s.value if hasattr(s, "value") else str(s) for s in TERMINAL_STATES
     ]
 
     async with session_maker() as db:
         try:
-            # Query candidate conditions:
-            # 1. Escalation eligible
             escalation_eligible_clause = and_(
                 Ticket.due_date.is_not(None),
                 Ticket.due_date <= now,
@@ -110,7 +107,6 @@ async def execute_ticket_escalation_cycle(session_maker: Any) -> None:
                 Ticket.priority.in_(["LOW", "MEDIUM", "HIGH"]),
             )
 
-            # 2. Or notification is owed (gap retry)
             notification_owed_clause = and_(
                 Ticket.last_escalated_at.is_not(None),
                 or_(
@@ -119,7 +115,6 @@ async def execute_ticket_escalation_cycle(session_maker: Any) -> None:
                 ),
             )
 
-            # Query candidate tickets
             stmt = select(Ticket).where(
                 Ticket.status.not_in(terminal_state_strs),
                 Ticket.is_deleted.is_(False),
@@ -137,7 +132,6 @@ async def execute_ticket_escalation_cycle(session_maker: Any) -> None:
 
         for cand in candidates:
             try:
-                # Re-fetch candidate with pessimistic write-lock (with_for_update)
                 lock_stmt = select(Ticket).where(Ticket.id == cand.id).with_for_update()
                 lock_res = await db.execute(lock_stmt)
                 ticket = lock_res.scalars().first()
@@ -145,13 +139,11 @@ async def execute_ticket_escalation_cycle(session_maker: Any) -> None:
                 if not ticket:
                     continue
 
-                # Re-verify general conditions inside the lock
                 if ticket.status in TERMINAL_STATES:
                     continue
                 if ticket.is_deleted:
                     continue
 
-                # Re-verify escalation eligibility
                 escalation_eligible = (
                     ticket.due_date is not None
                     and ticket.due_date <= now
@@ -164,13 +156,11 @@ async def execute_ticket_escalation_cycle(session_maker: Any) -> None:
                 )
 
                 if escalation_eligible:
-                    # Capture necessary details before commit
                     ticket_id = ticket.id
                     reference = ticket.reference
                     old_priority = ticket.priority
                     new_priority = NEXT_PRIORITY[old_priority]
 
-                    # Update the ticket priority and escalation metadata
                     ticket.priority = new_priority
                     ticket.last_escalated_at = now
                     ticket.escalation_count += 1
@@ -182,8 +172,7 @@ async def execute_ticket_escalation_cycle(session_maker: Any) -> None:
 
                     await db.flush()
 
-                    # Write to the immutable Ticket audit ledger
-                    from apps.tickets.main import (
+                    from apps.tickets.infrastructure.repositories import (
                         TICKET_ESCALATE,
                         write_ticket_audit_log,
                     )
@@ -208,10 +197,7 @@ async def execute_ticket_escalation_cycle(session_maker: Any) -> None:
                         new_priority,
                     )
 
-                # Now check post-commit notification flow
                 if is_notification_owed(ticket):
-                    # We might need to refresh attributes or use local captures if ticket is expired,
-                    # but with expire_on_commit=False, ticket object attributes are fully preserved.
                     success = await dispatch_escalation_notification(
                         ticket_id=ticket.id,
                         reference=ticket.reference,
@@ -254,7 +240,7 @@ async def start_background_ticket_escalation() -> None:
         )
         return
 
-    from apps.tickets.database import db_manager
+    from apps.tickets.infrastructure.database import db_manager
 
     session_maker = db_manager.get_session_maker()
 
@@ -276,7 +262,6 @@ async def start_background_ticket_escalation() -> None:
                     exc_info=True,
                 )
 
-            # Responsive shutdown sleep
             total_sleep = poll_interval
             while total_sleep > 0 and _should_run:
                 sleep_chunk = min(0.1, total_sleep)

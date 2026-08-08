@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from apps.safety.src.domain.sae_icsr import (
+from apps.safety.domain.sae_icsr import (
     ICSRHeader,
     ICSRPatient,
     ICSRReactionEvent,

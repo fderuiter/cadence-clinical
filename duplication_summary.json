@@ -1,3 +1,17 @@
 {
-  "duplicates": []
+  "duplicates": [
+    {
+      "loc1": {
+        "file": "apps/serviceA/file1.js",
+        "start": 1,
+        "end": 15
+      },
+      "loc2": {
+        "file": "packages/libB/file2.js",
+        "start": 1,
+        "end": 15
+      },
+      "preview": "identical_logic_line 1\nidentical_logic_line 2\nidentical_logic_line 3\n..."
+    }
+  ]
 }

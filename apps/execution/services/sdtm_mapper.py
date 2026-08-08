@@ -14,7 +14,7 @@ from typing import Any
 
 from sqlalchemy import select
 
-from apps.execution.src.domain.sdtm.sdtm_models import (
+from apps.execution.domain.sdtm.sdtm_models import (
     SDTMRecordAE,
     SDTMRecordCM,
     SDTMRecordDM,

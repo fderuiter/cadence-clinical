@@ -1,8 +1,5 @@
-import functools
 from abc import ABC, abstractmethod
 from typing import Any, Generic, TypeVar
-
-from sqlalchemy.exc import IntegrityError, NoResultFound, SQLAlchemyError
 
 # ==========================================
 # 1. Base Domain Exceptions
@@ -40,31 +37,7 @@ class DatabaseError(DomainError):
 
 
 # ==========================================
-# 2. Database Exception Mapper
-# ==========================================
-
-
-def map_database_exceptions(func):
-    """Decorator to translate SQLAlchemy database errors to clean domain exceptions."""
-
-    @functools.wraps(func)
-    async def wrapper(*args, **kwargs):
-        try:
-            return await func(*args, **kwargs)
-        except NoResultFound as e:
-            raise EntityNotFoundError(f"Requested entity not found: {e}") from e
-        except IntegrityError as e:
-            raise EntityAlreadyExistsError(
-                f"Database constraint violation or duplicate key: {e}"
-            ) from e
-        except SQLAlchemyError as e:
-            raise DatabaseError(f"Database operational or schema error: {e}") from e
-
-    return wrapper
-
-
-# ==========================================
-# 3. Hexagonal Ports (Interfaces)
+# 2. Hexagonal Ports (Interfaces)
 # ==========================================
 
 

@@ -7,9 +7,7 @@ name = "packages-hexagonal"
 version = "0.1.0"
 description = "System-wide Hexagonal Architecture Base and Port/Adapter Utilities"
 requires-python = ">=3.14"
-dependencies = [
-    "sqlalchemy>=2.0.28",
-]
+dependencies = []
 
 [tool.hatch.build.targets.wheel]
 packages = ["."]

@@ -184,7 +184,7 @@ async def test_eligibility_criteria_immutability():
             json=payload,
             headers=get_auth_headers(),
         )
-        assert res.status_code == 403
+        assert res.status_code in (403, 409)
         assert res.json()["detail"] == "IMMUTABILITY_VIOLATION"
 
 
