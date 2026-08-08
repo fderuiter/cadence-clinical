@@ -628,8 +628,6 @@ body {
   border-color: var(--color-accent) !important;
 }
 
-
-
 /* Hide query flags and panels in subject portal as these are staff console concepts */
 .query-flag,
 .query-panel {

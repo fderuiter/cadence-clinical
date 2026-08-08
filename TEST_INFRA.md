@@ -35,10 +35,10 @@ The table below maps all 15 platform features (from `PROJECT.md`) across all fou
 | 6 | Notifications & Org Models Migration | Notif & Org | ≥5 | ≥5 | F6xF14, F6xF4 | Scenario S6 | `apps/notifications/tests/`, `apps/org/tests/` | Ready |
 | 7 | Interop Domain Models Migration | Interoperability | ≥5 | ≥5 | F7xF12, F7xF8 | Scenario S6 | `apps/interop/tests/` | Ready |
 | 8 | Execution Domain Models Migration | EDC Capture | ≥5 | ≥5 | F8xF9, F8xF13 | Scenario S3 | `apps/execution/tests/` | Ready |
-| 9 | Execution Service ACL Implementation | Service ACL | ≥5 | ≥5 | F9xF2, F9xF15 | Scenario S2 | `apps/execution/src/domain/acl/`, `scripts/tests/` | Ready |
-| 10 | CTMS Service ACL Implementation | Service ACL | ≥5 | ≥5 | F10xF4, F10xF13 | Scenario S4 | `apps/ctms/src/domain/acl/`, `apps/ctms/tests/` | Ready |
-| 11 | eTMF Service ACL Implementation | Service ACL | ≥5 | ≥5 | F11xF5, F11xF14 | Scenario S5 | `apps/etmf/src/domain/acl/`, `apps/etmf/tests/` | Ready |
-| 12 | Interop Service ACL Implementation | Service ACL | ≥5 | ≥5 | F12xF7, F12xF15 | Scenario S6 | `apps/interop/src/domain/acl/`, `apps/interop/tests/` | Ready |
+| 9 | Execution Service ACL Implementation | Service ACL | ≥5 | ≥5 | F9xF2, F9xF15 | Scenario S2 | `apps/execution/domain/acl/`, `scripts/tests/` | Ready |
+| 10 | CTMS Service ACL Implementation | Service ACL | ≥5 | ≥5 | F10xF4, F10xF13 | Scenario S4 | `apps/ctms/domain/acl/`, `apps/ctms/tests/` | Ready |
+| 11 | eTMF Service ACL Implementation | Service ACL | ≥5 | ≥5 | F11xF5, F11xF14 | Scenario S5 | `apps/etmf/domain/acl/`, `apps/etmf/tests/` | Ready |
+| 12 | Interop Service ACL Implementation | Service ACL | ≥5 | ≥5 | F12xF7, F12xF15 | Scenario S6 | `apps/interop/domain/acl/`, `apps/interop/tests/` | Ready |
 | 13 | Eradicate `packages/core-models` | Service Cleanup | ≥5 | ≥5 | F13xF14, F13xF15 | Scenario S7 | `scripts/tests/test_validate_imports.py` | Ready |
 | 14 | Pipeline & Config Cleanup | Config / Build | ≥5 | ≥5 | F14xF15, F14xF1 | Scenario S7 | `scripts/tests/test_schema_validation.py` | Ready |
 | 15 | Test Suite & GxP Verification | QA & Compliance | ≥5 | ≥5 | F15xF13, F15xF9-12 | Scenario S7 | `scripts/sync_gxp.py`, `tests/` | Ready |
