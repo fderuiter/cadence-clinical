@@ -20,7 +20,7 @@ def deidentify_free_text(
 
 
 def pseudonymize_identifier(identifier: str) -> str:
-    salt = os.getenv("PSEUDONYMIZATION_SALT", "secure-clinical-salt-98765")
+    salt = os.getenv("PSEUDONYMIZATION_SALT", default="secure-clinical-salt-98765")
     return hmac.new(salt.encode(), identifier.encode(), hashlib.sha256).hexdigest()
 
 
@@ -123,7 +123,7 @@ class FHIRAdapter:
 
                 current_year = datetime.now().year
                 ecrf_context["eCRF.DM.AGE"] = current_year - birth_year
-            except ValueError, IndexError:
+            except (ValueError, IndexError):
                 pass
 
         for vs in parsed_result.get("clinical_records", {}).get("vital_signs", []):

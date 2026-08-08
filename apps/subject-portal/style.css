@@ -4,21 +4,21 @@
 /* eCOA Subject Portal failure styles */
 
 :root {
-  --primary: var(--color-primary);
-  --primary-dark: var(--color-primary-dark);
-  --primary-light: var(--color-primary-light);
-  --text-main: var(--color-text);
-  --text-muted: var(--color-text-muted);
-  --bg-main: var(--color-surface-muted);
-  --bg-card: var(--color-surface);
-  --border: var(--color-border);
-  --success: var(--color-success);
-  --success-bg: var(--color-success-bg);
-  --warning: var(--color-warning);
-  --warning-bg: var(--color-warning-bg);
-  --danger: var(--color-error);
-  --danger-bg: var(--color-error-bg);
-  --accent: var(--color-accent);
+  --primary: var(--semantic-color-primary);
+  --primary-dark: var(--semantic-color-primary-dark);
+  --primary-light: var(--semantic-color-primary-light);
+  --text-main: var(--semantic-color-text);
+  --text-muted: var(--semantic-color-text-muted);
+  --bg-main: var(--semantic-color-surface-muted);
+  --bg-card: var(--semantic-color-surface);
+  --border: var(--semantic-color-border);
+  --success: var(--semantic-color-success);
+  --success-bg: var(--semantic-color-success-bg);
+  --warning: var(--semantic-color-warning);
+  --warning-bg: var(--semantic-color-warning-bg);
+  --danger: var(--semantic-color-error);
+  --danger-bg: var(--semantic-color-error-bg);
+  --accent: var(--semantic-color-accent);
 }
 
 * {
@@ -626,81 +626,6 @@ body {
   outline: 2px solid var(--color-accent) !important;
   outline-offset: 2px !important;
   border-color: var(--color-accent) !important;
-}
-
-/* Programmatic validation flags on patient portal inputs display the standard visual error border */
-/* Invalid inputs retain their red error border when receiving keyboard focus instead of displaying a conflicting blue or teal ring */
-.has-error input,
-input[aria-invalid="true"],
-select[aria-invalid="true"],
-textarea[aria-invalid="true"] {
-  border: 1px solid var(--color-error) !important;
-  background-color: var(--color-error-bg) !important;
-}
-
-.has-error input:focus,
-.has-error input:focus-visible,
-input[aria-invalid="true"]:focus,
-input[aria-invalid="true"]:focus-visible,
-select[aria-invalid="true"]:focus,
-select[aria-invalid="true"]:focus-visible,
-textarea[aria-invalid="true"]:focus,
-textarea[aria-invalid="true"]:focus-visible {
-  border: 1px solid var(--color-error) !important;
-  background-color: var(--color-error-bg) !important;
-  box-shadow: none !important;
-  outline: 2px solid var(--color-error) !important;
-  outline-offset: 2px !important;
-}
-
-/* Clinical forms rendering adjustments */
-.clinical-input,
-.clinical-radio-grid {
-  margin-bottom: 16px;
-  border: none;
-  padding: 0;
-}
-
-.clinical-input label,
-.clinical-radio-grid legend {
-  display: block;
-  font-weight: 600;
-  font-size: 14px;
-  margin-bottom: 6px;
-  color: var(--text-main);
-}
-
-.clinical-input input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 14px;
-}
-
-.radio-options-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.radio-options {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.radio-option {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-}
-
-.input-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 10px;
 }
 
 /* Hide query flags and panels in subject portal as these are staff console concepts */

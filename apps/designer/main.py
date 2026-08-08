@@ -241,7 +241,7 @@ async def startup() -> None:
     uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
     auth = (
         os.getenv("NEO4J_USER", "neo4j"),
-        os.getenv("NEO4J_PASSWORD", "cadence_secret_pass"),
+        os.getenv("NEO4J_PASSWORD", default="cadence_secret_pass"),
     )
 
     try:

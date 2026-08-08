@@ -52,4 +52,177 @@
 
   /* Touch Target Minimums */
   --touch-target-min: 48px;
+
+  /* CENTRALIZED SEMANTIC CONTRACT (Requirement 1) */
+  /* Semantic Colors - Brand & Accents */
+  --semantic-color-primary: var(--color-primary);
+  --semantic-color-primary-dark: var(--color-primary-dark);
+  --semantic-color-primary-light: var(--color-primary-light);
+  --semantic-color-accent: var(--color-accent);
+  --semantic-color-accent-light: var(--color-primary-light);
+  --semantic-color-accent-bg: var(--color-primary-light);
+
+  /* Semantic Colors - Neutral & Layout */
+  --semantic-color-text: var(--color-text);
+  --semantic-color-text-muted: var(--color-text-muted);
+  --semantic-color-surface: var(--color-surface);
+  --semantic-color-surface-muted: var(--color-surface-muted);
+  --semantic-color-border: var(--color-border);
+
+  /* Semantic Colors - Validation States */
+  --semantic-color-success: var(--color-success);
+  --semantic-color-success-bg: var(--color-success-bg);
+  --semantic-color-warning: var(--color-warning);
+  --semantic-color-warning-bg: var(--color-warning-bg);
+
+  /* Unified validation / error tokens (Requirement 1 & 2, Success Metrics) */
+  --semantic-color-error: var(--color-error);
+  --semantic-color-error-bg: var(--color-error-bg);
+
+  /* Semantic Typography */
+  --semantic-font-family: var(--font-sans);
+  --semantic-font-size-base: var(--font-size-base);
+
+  /* Semantic Spacing Scale */
+  --semantic-spacing-2xs: var(--spacing-2xs);
+  --semantic-spacing-xs: var(--spacing-xs);
+  --semantic-spacing-sm: var(--spacing-sm);
+  --semantic-spacing-md: var(--spacing-md);
+  --semantic-spacing-lg: var(--spacing-lg);
+  --semantic-spacing-xl: var(--spacing-xl);
+  --semantic-spacing-2xl: var(--spacing-2xl);
+  --semantic-spacing-3xl: var(--spacing-3xl);
+  --semantic-spacing-4xl: var(--spacing-4xl);
+
+  /* Touch Target */
+  --semantic-touch-target-min: var(--touch-target-min);
+}
+
+/* Centralized Component Styles (Zero duplicate component rules maintained separately) */
+
+.clinical-input,
+.clinical-radio-grid {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--semantic-spacing-md, 16px);
+  font-family: var(--semantic-font-family, sans-serif);
+}
+
+.clinical-input label,
+.clinical-radio-grid legend {
+  display: block;
+  font-weight: 600;
+  font-size: var(--semantic-font-size-base, 15px);
+  margin-bottom: var(--semantic-spacing-xs, 8px);
+  color: var(--semantic-color-text-muted, #475569);
+}
+
+.clinical-input .input-wrapper {
+  display: flex;
+  gap: var(--semantic-spacing-xs, 8px);
+  position: relative;
+  align-items: center;
+}
+
+/* Centralized styles maintain WCAG 2.1 minimum target dimensions of 48px for interactive elements */
+.clinical-input input[type="text"] {
+  flex: 1;
+  padding: 12px 14px;
+  min-height: var(--semantic-touch-target-min, 48px);
+  border: 1px solid var(--semantic-color-border, #e2e8f0);
+  border-radius: 6px;
+  font-family: var(--semantic-font-family, sans-serif);
+  font-size: var(--semantic-font-size-base, 15px);
+  background-color: var(--semantic-color-surface, #ffffff);
+  color: var(--semantic-color-text, #0f172a);
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.clinical-input input[type="text"]:focus {
+  outline: none;
+  box-shadow: none;
+  border-color: var(--semantic-color-border, #e2e8f0);
+}
+
+.clinical-input input[type="text"]:focus-visible {
+  outline: 3px solid var(--semantic-color-accent, #4338ca) !important;
+  outline-offset: 2px !important;
+  border-color: var(--semantic-color-accent, #4338ca) !important;
+}
+
+/* Form validation states use unified error variables */
+.clinical-input.has-error input[type="text"],
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border: 1px solid var(--semantic-color-error, #b91c1c) !important;
+  background-color: var(--semantic-color-error-bg, #fee2e2) !important;
+}
+
+.clinical-input.has-error input[type="text"]:focus,
+.clinical-input.has-error input[type="text"]:focus-visible,
+input[aria-invalid="true"]:focus,
+input[aria-invalid="true"]:focus-visible,
+select[aria-invalid="true"]:focus,
+select[aria-invalid="true"]:focus-visible,
+textarea[aria-invalid="true"]:focus,
+textarea[aria-invalid="true"]:focus-visible {
+  border: 1px solid var(--semantic-color-error, #b91c1c) !important;
+  background-color: var(--semantic-color-error-bg, #fee2e2) !important;
+  box-shadow: none !important;
+  outline: 3px solid var(--semantic-color-error, #b91c1c) !important;
+  outline-offset: 2px !important;
+}
+
+.validation-error-msg {
+  color: var(--semantic-color-error, #b91c1c);
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: var(--semantic-spacing-2xs, 4px);
+}
+
+/* Radio buttons grid */
+.clinical-radio-grid {
+  border: 1px solid var(--semantic-color-border, #e2e8f0);
+  border-radius: 8px;
+  padding: var(--semantic-spacing-md, 16px);
+  background-color: var(--semantic-color-surface, #ffffff);
+}
+
+.radio-options-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--semantic-spacing-xs, 8px);
+}
+
+.radio-options {
+  display: flex;
+  gap: var(--semantic-spacing-xl, 24px);
+  flex-wrap: wrap;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: var(--semantic-spacing-xs, 8px);
+  cursor: pointer;
+  /* Centralized styles maintain WCAG 2.1 minimum target dimensions of 48px for interactive elements */
+  min-height: var(--semantic-touch-target-min, 48px);
+}
+
+.radio-option input[type="radio"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--semantic-color-accent, #4338ca);
+  cursor: pointer;
+}
+
+.radio-option label {
+  cursor: pointer;
+  font-weight: 500;
+  font-size: var(--semantic-font-size-base, 15px);
+  color: var(--semantic-color-text, #0f172a);
 }

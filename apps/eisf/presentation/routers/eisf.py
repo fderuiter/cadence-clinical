@@ -1101,7 +1101,9 @@ async def propagate_to_etmf(
     user_id = "eisf_sync_service"
     roles = "system"
     timestamp = str(time.time())
-    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
+    secret = os.getenv(
+        "GATEWAY_SECRET", default="internal-gateway-secret-12345"
+    ).encode()
 
     resolved_change_reason = reason_for_change
     if not resolved_change_reason:

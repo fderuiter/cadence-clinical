@@ -1,9 +1,9 @@
 # ADR-2165: Hexagonal Architecture Standard
 
-* **Status:** Accepted
-* **Date:** 2026-08-08
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-08
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -15,15 +15,16 @@ Prior to standardizing, microservices exhibited mixed responsibilities, direct d
 
 ## 2. Decision Drivers & Constraints
 
-* **GxP Immutability & Auditability (PRD-SYS-001):** Domain business logic must be decoupled from ORM infrastructure to guarantee testability and eliminate unintended side effects.
-* **Pure Domain Layer Isolation:** Domain models and business rules must remain pure Python with zero framework dependencies (no SQLAlchemy, no FastAPI, no Pydantic ORM bindings).
-* **Standardized Port Interfaces:** All service-specific repository ports must inherit from `packages.hexagonal.RepositoryPort` to ensure type safety and interface consistency.
-* **Shared Exception Translation:** Infrastructure adapters must map database operational exceptions (e.g. SQLAlchemy `NoResultFound`, `IntegrityError`) to clean domain exceptions (`EntityNotFoundError`, `EntityAlreadyExistsError`, `DatabaseError`) via `@map_database_exceptions` in `packages.database`.
-* **Programmatic Boundary Enforcement:** Layer dependencies must be validated in CI via `pytest-archon` static architecture tests.
+- **GxP Immutability & Auditability (PRD-SYS-001):** Domain business logic must be decoupled from ORM infrastructure to guarantee testability and eliminate unintended side effects.
+- **Pure Domain Layer Isolation:** Domain models and business rules must remain pure Python with zero framework dependencies (no SQLAlchemy, no FastAPI, no Pydantic ORM bindings).
+- **Standardized Port Interfaces:** All service-specific repository ports must inherit from `packages.hexagonal.RepositoryPort` to ensure type safety and interface consistency.
+- **Shared Exception Translation:** Infrastructure adapters must map database operational exceptions (e.g. SQLAlchemy `NoResultFound`, `IntegrityError`) to clean domain exceptions (`EntityNotFoundError`, `EntityAlreadyExistsError`, `DatabaseError`) via `@map_database_exceptions` in `packages.database`.
+- **Programmatic Boundary Enforcement:** Layer dependencies must be validated in CI via `pytest-archon` static architecture tests.
 
 ## 3. Options Considered
 
 ### Option A: Standardized 4-Layer Flat Hexagonal Architecture (Chosen)
+
 Every microservice in `apps/` follows a standardized 4-layer flat directory hierarchy:
 
 ```
@@ -60,17 +61,16 @@ Chosen option: **Standardized 4-Layer Flat Hexagonal Architecture**.
 
 ## 5. Consequences & Trade-offs
 
-* **Positive:**
+- **Positive:**
   - Clear architectural boundaries across all microservices.
   - Complete decoupling of core clinical logic from database engines and web frameworks.
   - Enhanced unit testability using lightweight in-memory repository implementations.
   - Automated verification of architectural constraints via `pytest-archon`.
-* **Negative:**
+- **Negative:**
   - Additional boilerplate when creating new domain entities and mapping to persistence models.
 
 ## 6. Implementation & Verification
 
-* **Base Framework:** Updated `packages/hexagonal` to be pure Python and moved `@map_database_exceptions` to `packages/database`.
-* **Shared Library Migration:** Extracted `apps/compliance` into `packages/compliance`.
-* **Automated Enforcement:** Verified via `pytest-archon` test suite in `packages/hexagonal/tests/test_hexagonal_architecture.py`.
-
+- **Base Framework:** Updated `packages/hexagonal` to be pure Python and moved `@map_database_exceptions` to `packages/database`.
+- **Shared Library Migration:** Extracted `packages/compliance` from the previous application.
+- **Automated Enforcement:** Verified via `pytest-archon` test suite in `packages/hexagonal/tests/test_hexagonal_architecture.py`.

@@ -52,7 +52,7 @@ The previous implementation of the HIPAA redactor inside Cadence Clinical suffer
 
 - **Affected Repositories / Services:**
   - `packages/security/ner_scrubber.py`
-  - `apps/compliance/services/phi_redactor.py`
+  - `packages/compliance/services/phi_redactor.py`
   - `apps/etmf/services/eisf_service.py`
   - `apps/execution/services/pdf_redactor.py`
 - **Verification Plan:**
