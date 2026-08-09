@@ -979,7 +979,7 @@ async def clean_neo4j_graph():
         print(f"[conftest] Error clearing live Neo4j graph database: {e}")
 
 
-async def clean_postgres_databases():
+async def clean_postgres_databases(target_prefixes: set[str] = None):
     from sqlalchemy import text
     from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -1016,6 +1016,8 @@ async def clean_postgres_databases():
     base_postgres_url = get_postgres_base_config()
     is_mocked = isinstance(create_async_engine, unittest.mock.Mock)
     for db_prefix, base in service_bases.items():
+        if target_prefixes is not None and db_prefix not in target_prefixes:
+            continue
         if (
             os.environ.get("USE_LIVE_DB") != "true"
             and not is_mocked
@@ -1075,7 +1077,7 @@ async def clean_postgres_databases():
 
 
 @pytest_asyncio.fixture(autouse=True)
-async def cleanup_databases_fixture():
+async def cleanup_databases_fixture(request):
     """
     Autouse fixture that clears live Neo4j and PostgreSQL databases
     before and after every single test case when USE_LIVE_DB=true is active.
@@ -1089,14 +1091,42 @@ async def cleanup_databases_fixture():
         yield
         return
 
+    target_prefixes = None
+    if not is_live_db:
+        # Determine the target database prefix based on the test path/nodeid to minimize connections and truncations
+        nodeid = request.node.nodeid
+        target_prefixes = set()
+
+        # Mapping from app folders to database prefixes
+        app_to_db = {
+            "apps/ctms": {"cadence_ctms"},
+            "apps/etmf": {"cadence_etmf"},
+            "apps/eisf": {"cadence_eisf"},
+            "apps/execution": {"cadence_edc"},
+            "apps/interop": {"cadence_interop"},
+            "apps/quality": {"cadence_quality"},
+            "apps/safety": {"cadence_safety"},
+            "apps/tickets": {"cadence_tickets"},
+            "apps/notifications": {"cadence_notifications"},
+            "apps/econsent": {"cadence_econsent"},
+            "apps/org": {"cadence_org"},
+        }
+        for app_path, dbs in app_to_db.items():
+            if app_path in nodeid:
+                target_prefixes.update(dbs)
+                break
+        else:
+            # If the test is outside of standard apps (e.g. package level or cross-service in tests/), clean all active databases
+            target_prefixes = None
+
     if is_live_db or is_postgres:
-        await clean_postgres_databases()
+        await clean_postgres_databases(target_prefixes)
     if is_live_db:
         await clean_neo4j_graph()
 
     yield
 
     if is_live_db or is_postgres:
-        await clean_postgres_databases()
+        await clean_postgres_databases(target_prefixes)
     if is_live_db:
         await clean_neo4j_graph()
