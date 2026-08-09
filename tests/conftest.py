@@ -285,9 +285,14 @@ databases_pre_created = False
 try:
     from filelock import FileLock
 
+    # Create databases sequentially using a file lock to avoid conflicts/deadlocks on template1/postgres db.
     lock_path = "/tmp/postgres_db_creation.lock"
     with FileLock(lock_path, timeout=120):
         run_sync(create_databases_async(worker_suffix))
+
+    # Initialize schemas concurrently (outside the lock). Since each parallel xdist worker
+    # has a separate isolated database (e.g. cadence_edc_gw0), migrating them concurrently
+    # is completely safe and avoids serialization bottlenecks / timeouts.
     if os.environ.get("USE_LIVE_DB") == "true" or os.environ.get(
         "TEST_DATABASE_URL", ""
     ).startswith(("postgres", "postgresql")):
