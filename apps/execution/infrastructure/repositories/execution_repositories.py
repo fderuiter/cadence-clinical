@@ -51,8 +51,8 @@ class SQLAlchemyExecutionDOARepository(IExecutionDOARepository):
         self, site_id: str, staff_user_id: str
     ) -> ExecutionStaffEntity | None:
         stmt = select(SiteStaffMember).where(
-            SiteStaffMember.site_id.is_(site_id),
-            SiteStaffMember.staff_user_id.is_(staff_user_id),
+            SiteStaffMember.site_id == site_id,
+            SiteStaffMember.staff_user_id == staff_user_id,
         )
         res = await self.session.execute(stmt)
         model = res.scalar_one_or_none()
@@ -72,7 +72,7 @@ class SQLAlchemyExecutionDOARepository(IExecutionDOARepository):
         self, staff_user_id: str
     ) -> ExecutionStaffEntity | None:
         stmt = select(SiteStaffMember).where(
-            SiteStaffMember.staff_user_id.is_(staff_user_id)
+            SiteStaffMember.staff_user_id == staff_user_id
         )
         res = await self.session.execute(stmt)
         model = res.scalar_one_or_none()
@@ -90,7 +90,7 @@ class SQLAlchemyExecutionDOARepository(IExecutionDOARepository):
     @map_database_exceptions
     async def save_staff(self, staff: ExecutionStaffEntity) -> ExecutionStaffEntity:
         if staff.id:
-            stmt = select(SiteStaffMember).where(SiteStaffMember.id.is_(staff.id))
+            stmt = select(SiteStaffMember).where(SiteStaffMember.id == staff.id)
             res = await self.session.execute(stmt)
             model = res.scalar_one_or_none()
             if model:
@@ -120,7 +120,7 @@ class SQLAlchemyExecutionDOARepository(IExecutionDOARepository):
         self, delegation_id: str
     ) -> ExecutionDelegationEntity | None:
         stmt = select(DOADelegationRecord).where(
-            DOADelegationRecord.id.is_(delegation_id),
+            DOADelegationRecord.id == delegation_id,
             DOADelegationRecord.is_active.is_(True),
         )
         res = await self.session.execute(stmt)
@@ -147,7 +147,7 @@ class SQLAlchemyExecutionDOARepository(IExecutionDOARepository):
     ) -> ExecutionDelegationEntity:
         if delegation.id:
             stmt = select(DOADelegationRecord).where(
-                DOADelegationRecord.id.is_(delegation.id)
+                DOADelegationRecord.id == delegation.id
             )
             res = await self.session.execute(stmt)
             model = res.scalar_one_or_none()
@@ -246,7 +246,7 @@ class SQLAlchemySubjectRepository(ISubjectRepository):
         self.session = session
 
     async def get_by_id(self, entity_id: str) -> ClinicalSubjectDomain | None:
-        stmt = select(ClinicalSubject).where(ClinicalSubject.id.is_(entity_id))
+        stmt = select(ClinicalSubject).where(ClinicalSubject.id == entity_id)
         result = await self.session.execute(stmt)
         db_obj = result.scalars().first()
         if not db_obj:
@@ -277,7 +277,7 @@ class SQLAlchemySubjectRepository(ISubjectRepository):
         )
 
     async def save(self, entity: ClinicalSubjectDomain) -> ClinicalSubjectDomain:
-        stmt = select(ClinicalSubject).where(ClinicalSubject.id.is_(entity.id))
+        stmt = select(ClinicalSubject).where(ClinicalSubject.id == entity.id)
         result = await self.session.execute(stmt)
         db_obj = result.scalars().first()
         if not db_obj:
@@ -323,7 +323,7 @@ class SQLAlchemyConsentRepository(IConsentRepository):
     async def get_signature_by_id(
         self, record_id: str
     ) -> ConsentSignatureDomain | None:
-        stmt = select(ConsentSignature).where(ConsentSignature.id.is_(record_id))
+        stmt = select(ConsentSignature).where(ConsentSignature.id == record_id)
         result = await self.session.execute(stmt)
         db_obj = result.scalars().first()
         if not db_obj:
@@ -351,7 +351,7 @@ class SQLAlchemyConsentRepository(IConsentRepository):
         )
 
     async def save_signature(self, signature: ConsentSignatureDomain) -> None:
-        stmt = select(ConsentSignature).where(ConsentSignature.id.is_(signature.id))
+        stmt = select(ConsentSignature).where(ConsentSignature.id == signature.id)
         result = await self.session.execute(stmt)
         db_obj = result.scalars().first()
         if not db_obj:
@@ -379,7 +379,7 @@ class SQLAlchemyConsentRepository(IConsentRepository):
     async def get_form_record_by_id(
         self, record_id: str
     ) -> ConsentFormRecordDomain | None:
-        stmt = select(ConsentFormRecord).where(ConsentFormRecord.id.is_(record_id))
+        stmt = select(ConsentFormRecord).where(ConsentFormRecord.id == record_id)
         result = await self.session.execute(stmt)
         db_obj = result.scalars().first()
         if not db_obj:
@@ -403,7 +403,7 @@ class SQLAlchemyConsentRepository(IConsentRepository):
     async def save_form_record(
         self, record: ConsentFormRecordDomain
     ) -> ConsentFormRecordDomain:
-        stmt = select(ConsentFormRecord).where(ConsentFormRecord.id.is_(record.id))
+        stmt = select(ConsentFormRecord).where(ConsentFormRecord.id == record.id)
         result = await self.session.execute(stmt)
         db_obj = result.scalars().first()
         if not db_obj:
@@ -431,7 +431,7 @@ class SQLAlchemyAuditRepository(IAuditRepository):
         self.session = session
 
     async def get_by_id(self, entity_id: str) -> AuditLogDomain | None:
-        stmt = select(AuditLog).where(AuditLog.id.is_(entity_id))
+        stmt = select(AuditLog).where(AuditLog.id == entity_id)
         result = await self.session.execute(stmt)
         db_obj = result.scalars().first()
         if not db_obj:
@@ -452,7 +452,7 @@ class SQLAlchemyAuditRepository(IAuditRepository):
         )
 
     async def save(self, entity: AuditLogDomain) -> AuditLogDomain:
-        stmt = select(AuditLog).where(AuditLog.id.is_(entity.id))
+        stmt = select(AuditLog).where(AuditLog.id == entity.id)
         result = await self.session.execute(stmt)
         db_obj = result.scalars().first()
         if not db_obj:
