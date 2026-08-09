@@ -232,6 +232,29 @@ _initialized_databases = set()
 _test_case_accessed_databases = set()
 
 
+def _safe_register_checkout_listener(engine, base_name):
+    if engine is None:
+        return
+    import unittest.mock
+
+    if isinstance(engine, unittest.mock.Mock):
+        return
+    if hasattr(engine, "sync_engine"):
+        sync_eng = engine.sync_engine
+        if isinstance(sync_eng, unittest.mock.Mock):
+            return
+        try:
+            from sqlalchemy import event
+
+            @event.listens_for(sync_eng, "checkout")
+            def track_checkout(*args, **kwargs):
+                _test_case_accessed_databases.add(base_name)
+        except Exception as e:
+            print(
+                f"[conftest] Warning: Failed to register checkout listener on {base_name}: {e}"
+            )
+
+
 def patch_init_db():
     from apps.execution.database.core import DatabaseSessionManager
     from packages.database import RelationalDatabaseManager
@@ -263,13 +286,7 @@ def patch_init_db():
             _initialized_databases.add("cadence_edc")
             new_url = f"{base_postgres_url}{db_name}"
             res = original_exec_init_db(self, new_url, **kwargs)
-            if self.engine is not None:
-                from sqlalchemy import event
-
-                @event.listens_for(self.engine.sync_engine, "checkout")
-                def track_checkout(*args, **kwargs):
-                    _test_case_accessed_databases.add("cadence_edc")
-
+            _safe_register_checkout_listener(self.engine, "cadence_edc")
             return res
         return original_exec_init_db(self, database_url, **kwargs)
 
@@ -282,13 +299,7 @@ def patch_init_db():
             _initialized_databases.add(base_name)
             new_url = f"{base_postgres_url}{db_name}"
             res = original_rel_init_db(self, new_url, **kwargs)
-            if self.engine is not None:
-                from sqlalchemy import event
-
-                @event.listens_for(self.engine.sync_engine, "checkout")
-                def track_checkout(*args, **kwargs):
-                    _test_case_accessed_databases.add(base_name)
-
+            _safe_register_checkout_listener(self.engine, base_name)
             return res
         return original_rel_init_db(self, database_url, **kwargs)
 
