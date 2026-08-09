@@ -229,6 +229,7 @@ if os.environ.get("USE_LIVE_DB") == "true":
 
 # Patch and create databases
 _initialized_databases = set()
+_test_case_accessed_databases = set()
 
 
 def patch_init_db():
@@ -261,7 +262,15 @@ def patch_init_db():
             db_name = f"cadence_edc{worker_suffix}"
             _initialized_databases.add("cadence_edc")
             new_url = f"{base_postgres_url}{db_name}"
-            return original_exec_init_db(self, new_url, **kwargs)
+            res = original_exec_init_db(self, new_url, **kwargs)
+            if self.engine is not None:
+                from sqlalchemy import event
+
+                @event.listens_for(self.engine.sync_engine, "checkout")
+                def track_checkout(*args, **kwargs):
+                    _test_case_accessed_databases.add("cadence_edc")
+
+            return res
         return original_exec_init_db(self, database_url, **kwargs)
 
     def patched_rel_init_db(self, database_url: str, **kwargs):
@@ -272,7 +281,15 @@ def patch_init_db():
             db_name = f"{base_name}{worker_suffix}"
             _initialized_databases.add(base_name)
             new_url = f"{base_postgres_url}{db_name}"
-            return original_rel_init_db(self, new_url, **kwargs)
+            res = original_rel_init_db(self, new_url, **kwargs)
+            if self.engine is not None:
+                from sqlalchemy import event
+
+                @event.listens_for(self.engine.sync_engine, "checkout")
+                def track_checkout(*args, **kwargs):
+                    _test_case_accessed_databases.add(base_name)
+
+            return res
         return original_rel_init_db(self, database_url, **kwargs)
 
     DatabaseSessionManager.init_db = patched_exec_init_db
@@ -1091,6 +1108,9 @@ async def cleanup_databases_fixture(request):
         yield
         return
 
+    # Clear accessed databases for this test case
+    _test_case_accessed_databases.clear()
+
     target_prefixes = None
     if not is_live_db:
         # Determine the target database prefix based on the test path/nodeid to minimize connections and truncations
@@ -1119,14 +1139,26 @@ async def cleanup_databases_fixture(request):
             # If the test is outside of standard apps (e.g. package level or cross-service in tests/), clean all active databases
             target_prefixes = None
 
+        # Pre-populate accessed databases with the mapped path targets so they are guaranteed to be cleaned
+        if target_prefixes is not None:
+            _test_case_accessed_databases.update(target_prefixes)
+
+    # Use _test_case_accessed_databases if target_prefixes is not None, otherwise None to clean all initialized databases
+    active_targets = (
+        _test_case_accessed_databases if target_prefixes is not None else None
+    )
+
     if is_live_db or is_postgres:
-        await clean_postgres_databases(target_prefixes)
+        await clean_postgres_databases(active_targets)
     if is_live_db:
         await clean_neo4j_graph()
 
     yield
 
     if is_live_db or is_postgres:
-        await clean_postgres_databases(target_prefixes)
+        await clean_postgres_databases(active_targets)
     if is_live_db:
         await clean_neo4j_graph()
+
+    # Clear accessed databases at the end of the test case
+    _test_case_accessed_databases.clear()
