@@ -29,7 +29,7 @@ Chosen option: **Option A** because it formally separates the clinical engine's 
 Key implementations:
 
 - Establishment of `packages/hexagonal` containing foundational types (e.g., `RepositoryPort`, `UseCasePort`), domain exceptions, and a `@map_database_exceptions` translator.
-- Separation of `apps/ctms/` and `apps/execution/` into explicit `domain/`, `application/`, and `adapter/` packages.
+- Separation of `apps/ctms/` and `apps/execution/` into explicit `domain/`, `application/`, and `adapters/` packages.
 - Enforcement of import rules using `pytest-archon` to programmatically assert boundary logic during unit tests, ensuring violations fail the build automatically.
 
 ## 5. Consequences & Trade-offs
