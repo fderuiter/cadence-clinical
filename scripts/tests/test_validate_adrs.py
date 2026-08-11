@@ -340,3 +340,108 @@ def test_get_changed_files_bypasses_merge_commits_and_parses_status(mock_run_git
         assert "new_file.py" in changed
         assert "untracked_file.py" in changed
         assert "should/not/be/here.py" not in changed
+
+
+def test_parse_adr_content_valid_front_matter():
+    from scripts.validate_adrs import parse_adr_content
+
+    # 1. Valid front-matter, whitespace, and correctly positioned H1
+    content = """---
+layout: adr
+title: Test Title
+---
+
+# ADR-[NUMBER]: Correctly Positioned H1
+## 1. Context & Problem Statement
+"""
+    is_valid, err_msg, raw_title, is_new = parse_adr_content(content)
+    assert is_valid is True
+    assert err_msg == ""
+    assert raw_title == "ADR-[NUMBER]: Correctly Positioned H1"
+    assert is_new is True
+
+
+def test_parse_adr_content_content_before_h1():
+    from scripts.validate_adrs import parse_adr_content
+
+    # 2. Content (other than whitespace) before the H1 header (should fail validation)
+    content = """---
+layout: adr
+---
+Some unauthorized text here.
+# ADR-[NUMBER]: Mispositioned H1
+"""
+    is_valid, err_msg, raw_title, is_new = parse_adr_content(content)
+    assert is_valid is False
+    assert "Expected H1 header immediately following" in err_msg
+
+
+def test_parse_adr_content_unclosed_front_matter():
+    from scripts.validate_adrs import parse_adr_content
+
+    # 3. Unclosed front-matter
+    content = """---
+layout: adr
+title: No closing delimiter
+
+# ADR-123: H1 Header
+"""
+    is_valid, err_msg, raw_title, is_new = parse_adr_content(content)
+    assert is_valid is False
+    assert "Unclosed front-matter block" in err_msg
+
+
+def test_parse_adr_content_no_front_matter_with_leading_whitespace():
+    from scripts.validate_adrs import parse_adr_content
+
+    # 4. No front-matter but containing optional leading whitespace and valid H1 header
+    content = """
+    
+# ADR-456: Valid Title Without Front Matter
+## 1. Context & Problem Statement
+"""
+    is_valid, err_msg, raw_title, is_new = parse_adr_content(content)
+    assert is_valid is True
+    assert err_msg == ""
+    assert raw_title == "ADR-456: Valid Title Without Front Matter"
+    assert is_new is True
+
+
+def test_fix_unindexed_adrs_prefix_cleaning():
+    from scripts.validate_adrs import fix_unindexed_adrs
+
+    # Let's mock open/write to verify that fix_unindexed_adrs correctly cleans prefixes
+    unindexed = ["2026-08-20-test-adr.md"]
+    mock_adr_content = """---
+layout: adr
+---
+
+# ADR-[NUMBER]: Pristine Document Title
+## 1. Context & Problem Statement
+"""
+
+    written_to_index = []
+
+    def mock_open_fn(filepath, mode="r", *args, **kwargs):
+        m = MagicMock()
+        m.__enter__.return_value = m
+        m.__exit__.return_value = False
+        if "index.md" in filepath and "a" in mode:
+            m.write.side_effect = lambda data: written_to_index.append(data)
+            return m
+        if "index.md" in filepath:
+            m.read.return_value = "Existing Index Content\n"
+            return m
+        m.read.return_value = mock_adr_content
+        return m
+
+    with patch("builtins.open", side_effect=mock_open_fn):
+        fix_unindexed_adrs(unindexed, "Existing Index Content\n")
+
+    assert len(written_to_index) > 0
+    # Ensure ADR-[NUMBER]: is cleaned!
+    # Expected output entry should be: "- [2026-08-20: Pristine Document Title](2026-08-20-test-adr.md)\n"
+    combined_write = "".join(written_to_index)
+    assert "Pristine Document Title" in combined_write
+    assert "ADR-[NUMBER]" not in combined_write
+    assert "2026-08-20-test-adr.md" in combined_write

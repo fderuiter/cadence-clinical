@@ -322,6 +322,102 @@ def check_architectural_changes_require_adr(changed_files: set[str]) -> bool:
     return True
 
 
+def parse_adr_content(content: str) -> tuple[bool, str, str, bool]:
+    """
+    Parses ADR content, handles optional YAML front-matter, and validates H1 header.
+
+    Returns:
+        is_valid (bool): True if structure is valid.
+        error_msg (str): Error message if invalid, or empty.
+        extracted_title (str): The raw extracted H1 line itself (excluding the '# ').
+        is_new_format (bool): True if the extracted H1 line matches TITLE_PATTERN_NEW.
+    """
+    lines = content.split("\n")
+
+    # 1. Find the first non-whitespace line of the document
+    first_non_empty_idx = -1
+    for idx, line in enumerate(lines):
+        if line.strip():
+            first_non_empty_idx = idx
+            break
+
+    if first_non_empty_idx == -1:
+        return False, "Error: The file is empty.", "", False
+
+    first_line = lines[first_non_empty_idx].strip()
+    has_front_matter = False
+    closing_fm_idx = -1
+
+    # 2. Check for optional front-matter block
+    if first_line.startswith("---"):
+        # Search downwards to locate the matching closing '---' line
+        for idx in range(first_non_empty_idx + 1, len(lines)):
+            if lines[idx].strip().startswith("---"):
+                closing_fm_idx = idx
+                has_front_matter = True
+                break
+        if not has_front_matter:
+            return (
+                False,
+                "Error: Unclosed front-matter block at the start of the document.",
+                "",
+                False,
+            )
+
+    # 3. Locate and validate the H1 header
+    if has_front_matter:
+        # Search for the first non-whitespace line following the closing delimiter
+        h1_idx = -1
+        for idx in range(closing_fm_idx + 1, len(lines)):
+            if lines[idx].strip():
+                h1_idx = idx
+                break
+        if h1_idx == -1:
+            return (
+                False,
+                "Error: Missing H1 header after front-matter block.",
+                "",
+                False,
+            )
+
+        # Verify that the H1 tag immediately follows the closing delimiter (no other content)
+        h1_line_candidate = lines[h1_idx].strip()
+        if not h1_line_candidate.startswith("# "):
+            return (
+                False,
+                f"Error: Expected H1 header immediately following the front-matter block, but found: '{h1_line_candidate}'",
+                "",
+                False,
+            )
+    else:
+        # Backwards compatibility: the first non-whitespace line must be the H1 header
+        h1_idx = first_non_empty_idx
+        h1_line_candidate = lines[h1_idx].strip()
+        if not h1_line_candidate.startswith("# "):
+            return (
+                False,
+                f"Error: First non-whitespace line of the document must be an H1 header, but found: '{h1_line_candidate}'",
+                "",
+                False,
+            )
+
+    # 4. Check prefix and format matching
+    is_new_format = False
+    if TITLE_PATTERN_NEW.match(h1_line_candidate):
+        is_new_format = True
+    elif not TITLE_PATTERN_OLD.match(h1_line_candidate):
+        return (
+            False,
+            f"Error: Title header '{h1_line_candidate}' does not contain the correct format (old or new).",
+            "",
+            False,
+        )
+
+    # Extract raw title (strip leading '# ' and any extra outer space)
+    raw_title = h1_line_candidate[2:].strip()
+    return True, "", raw_title, is_new_format
+
+
 def validate_existing_adrs(targets: list[str] = None) -> bool:
     """Validates structure, filenames, and index alignment of existing ADRs."""
     if not os.path.isdir(ADR_DIR):
@@ -387,16 +483,10 @@ def validate_existing_adrs(targets: list[str] = None) -> bool:
                 all_passed = False
                 continue
 
-            lines = content.split("\n")
-
-            # Check title
-            is_new_format = False
-            if lines and TITLE_PATTERN_NEW.match(lines[0]):
-                is_new_format = True
-            elif not lines or not TITLE_PATTERN_OLD.match(lines[0]):
-                print(
-                    f"Error: File '{filename}' title (first line) does not contain the correct format (old or new)."
-                )
+            # Check title using the robust parser
+            is_valid, error_msg, raw_title, is_new_format = parse_adr_content(content)
+            if not is_valid:
+                print(f"Error: File '{filename}' title validation failed: {error_msg}")
                 all_passed = False
 
             # Check required sections
@@ -470,16 +560,10 @@ def validate_existing_adrs(targets: list[str] = None) -> bool:
                 all_passed = False
                 continue
 
-            lines = content.split("\n")
-
-            # Check title
-            is_new_format = False
-            if lines and TITLE_PATTERN_NEW.match(lines[0]):
-                is_new_format = True
-            elif not lines or not TITLE_PATTERN_OLD.match(lines[0]):
-                print(
-                    f"Error: File '{filename}' title (first line) does not contain the correct format (old or new)."
-                )
+            # Check title using the robust parser
+            is_valid, error_msg, raw_title, is_new_format = parse_adr_content(content)
+            if not is_valid:
+                print(f"Error: File '{filename}' title validation failed: {error_msg}")
                 all_passed = False
 
             # Check required sections
@@ -516,14 +600,15 @@ def fix_unindexed_adrs(unindexed: list[str], index_content: str) -> None:
         title = filename
         try:
             with open(filepath) as f:
-                first_line = f.readline().strip()
-                if first_line.startswith("# "):
-                    title = first_line[2:].strip()
+                content = f.read()
+            is_valid, error_msg, raw_title, is_new_format = parse_adr_content(content)
+            if is_valid:
+                title = raw_title
         except Exception:
             pass
         date_match = DATE_PATTERN.search(filename)
         date_str = date_match.group(0) if date_match else "2026-08-20"
-        clean_title = re.sub(r"^ADR-\d+:\s*", "", title)
+        clean_title = re.sub(r"^ADR-(?:\d+|\[NUMBER\]):\s*", "", title)
         entry = f"- [{date_str}: {clean_title}]({filename})"
         new_entries.append(entry)
 
