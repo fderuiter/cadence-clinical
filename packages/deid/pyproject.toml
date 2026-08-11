@@ -11,6 +11,7 @@ dependencies = [
     "pydantic>=2.6.0",
     "pyyaml>=6.0.1",
     "rapidfuzz>=3.14.5",
+    "packages-security",
 ]
 
 [tool.hatch.build.targets.wheel]

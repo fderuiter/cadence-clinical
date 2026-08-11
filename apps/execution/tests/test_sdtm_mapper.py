@@ -794,3 +794,289 @@ async def test_persist_sdtm_records_pipeline():
         assert records[0].record_data["AESEV"] == "C49487"
 
     await db_manager.close()
+
+
+@pytest.mark.asyncio
+async def test_persist_sdtm_records_cm_ds_mh():
+    """Verify CM, DS, and MH domains are compiled and persisted properly in persist_sdtm_records."""
+    db_manager.init_db("sqlite+aiosqlite:///:memory:")
+    async with db_manager.engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async with db_manager.get_session_maker()() as session:
+        # Create ClinicalSubject
+        subj = ClinicalSubject(
+            subject_id="SUBJ-102",
+            study_id="STUDY-002",
+            site_id="SITE-01",
+        )
+        session.add(subj)
+
+        # 1. Create CM Observation
+        o_cm = ClinicalObservation(
+            subject_id="SUBJ-102",
+            study_id="STUDY-002",
+            domain="CM",
+            page_id="cm_page_1",
+            test_code="CMTRT",
+            test_name="Concomitant Medications",
+            value_string="Aspirin",
+        )
+        # 2. Create DS Observation
+        o_ds_term = ClinicalObservation(
+            subject_id="SUBJ-102",
+            study_id="STUDY-002",
+            domain="DS",
+            page_id="ds_page_1",
+            test_code="DSTERM",
+            test_name="Disposition Term",
+            value_string="Completed",
+        )
+        o_ds_decod = ClinicalObservation(
+            subject_id="SUBJ-102",
+            study_id="STUDY-002",
+            domain="DS",
+            page_id="ds_page_1",
+            test_code="DSDECOD",
+            test_name="Disposition Standard Term",
+            value_string="COMPLETED",
+        )
+        # 3. Create MH Observation
+        o_mh = ClinicalObservation(
+            subject_id="SUBJ-102",
+            study_id="STUDY-002",
+            domain="MH",
+            page_id="mh_page_1",
+            test_code="MHTERM",
+            test_name="Medical History Term",
+            value_string="Asthma",
+        )
+
+        session.add_all([o_cm, o_ds_term, o_ds_decod, o_mh])
+        await session.commit()
+
+        # Run persistence for CM
+        persisted_cm = await persist_sdtm_records(session, "STUDY-002", "CM")
+        assert len(persisted_cm) == 1
+        assert persisted_cm[0].domain == "CM"
+        assert persisted_cm[0].record_data["CMTRT"] == "ASPIRIN"
+
+        # Run persistence for DS
+        persisted_ds = await persist_sdtm_records(session, "STUDY-002", "DS")
+        assert len(persisted_ds) == 1
+        assert persisted_ds[0].domain == "DS"
+        assert persisted_ds[0].record_data["DSTERM"] == "COMPLETED"
+
+        # Run persistence for MH
+        persisted_mh = await persist_sdtm_records(session, "STUDY-002", "MH")
+        assert len(persisted_mh) == 1
+        assert persisted_mh[0].domain == "MH"
+        assert persisted_mh[0].record_data["MHTERM"] == "ASTHMA"
+
+    await db_manager.close()
+
+
+@pytest.mark.asyncio
+async def test_persist_sdtm_records_ae_domain_reclassification():
+    """Verify that AE records stored with domain='DM' by mistake are correctly compiled under 'AE' and excluded from 'DM'."""
+    db_manager.init_db("sqlite+aiosqlite:///:memory:")
+    async with db_manager.engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async with db_manager.get_session_maker()() as session:
+        # Create ClinicalSubject
+        subj = ClinicalSubject(
+            subject_id="SUBJ-103",
+            study_id="STUDY-003",
+            site_id="SITE-01",
+        )
+        session.add(subj)
+
+        # Misclassified AE observation under 'DM' domain
+        o_ae_term = ClinicalObservation(
+            subject_id="SUBJ-103",
+            study_id="STUDY-003",
+            domain="DM",
+            page_id="dm_demographics_page",
+            test_code="AETERM",
+            test_name="Adverse Event Term",
+            value_string="Nausea",
+        )
+        o_ae_ser = ClinicalObservation(
+            subject_id="SUBJ-103",
+            study_id="STUDY-003",
+            domain="DM",
+            page_id="dm_demographics_page",
+            test_code="AESER",
+            test_name="Adverse Event Serious",
+            value_string="YES",
+        )
+
+        session.add_all([o_ae_term, o_ae_ser])
+        await session.commit()
+
+        # Compiling DM should NOT persist any records for these misclassified AE observations
+        persisted_dm = await persist_sdtm_records(session, "STUDY-003", "DM")
+        # Since subjects exist, a DM record is still generated but we must make sure no AE info is in it and it didn't crash
+        assert len(persisted_dm) == 1
+        assert "AETERM" not in persisted_dm[0].record_data
+
+        # Compiling AE should pull these misclassified observations and persist an AE record
+        persisted_ae = await persist_sdtm_records(session, "STUDY-003", "AE")
+        assert len(persisted_ae) == 1
+        assert persisted_ae[0].domain == "AE"
+        assert persisted_ae[0].record_data["AETERM"] == "NAUSEA"
+        assert persisted_ae[0].record_data["AESER"] == "C48450"
+
+    await db_manager.close()
+
+
+def test_visit_records_require_start_date():
+    """Verify that SV records lacking SVSTDTC fail compilation and return a validation error."""
+    from pydantic import ValidationError
+
+    from apps.execution.domain.sdtm.sdtm_models import SDTMRecordSV
+
+    # 1. Direct validation via SDTMRecordSV model
+    with pytest.raises(ValidationError) as exc_info:
+        SDTMRecordSV(
+            STUDYID="STUDY-004",
+            DOMAIN="SV",
+            USUBJID="STUDY-004-SUBJ-104",
+            SVSEQ=1,
+            VISIT="Baseline Visit",
+            SVSTDTC=None,  # Missing!
+            created_by="system",
+            reason_for_change="UnitTest",
+        )
+    assert (
+        "SVSTDTC" in str(exc_info.value)
+        or "Field cannot be empty" in str(exc_info.value)
+        or "missing" in str(exc_info.value)
+    )
+
+    # 2. Validation after mapping via map_cdash_to_sdtm
+    mapped = map_cdash_to_sdtm("SV", [{"visit_name": "Baseline Visit"}])
+    assert len(mapped) == 1
+    assert mapped[0]["SVSTDTC"] is None
+
+    with pytest.raises(ValidationError) as exc_info:
+        SDTMRecordSV(created_by="system", reason_for_change="UnitTest", **mapped[0])
+
+
+@pytest.mark.asyncio
+async def test_chronological_date_validation():
+    """Verify that records with chronologically impossible dates are blocked and raise ValidationError."""
+    from pydantic import ValidationError
+
+    db_manager.init_db("sqlite+aiosqlite:///:memory:")
+    async with db_manager.engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async with db_manager.get_session_maker()() as session:
+        subj = ClinicalSubject(
+            subject_id="SUBJ-105",
+            study_id="STUDY-005",
+            site_id="SITE-01",
+        )
+        session.add(subj)
+
+        # AE record where end date is before start date
+        o_term = ClinicalObservation(
+            subject_id="SUBJ-105",
+            study_id="STUDY-005",
+            domain="AE",
+            page_id="ae_page_1",
+            test_code="AETERM",
+            test_name="Adverse Event Term",
+            value_string="Rash",
+        )
+        o_ser = ClinicalObservation(
+            subject_id="SUBJ-105",
+            study_id="STUDY-005",
+            domain="AE",
+            page_id="ae_page_1",
+            test_code="AESER",
+            test_name="Adverse Event Serious",
+            value_string="NO",
+        )
+        o_start = ClinicalObservation(
+            subject_id="SUBJ-105",
+            study_id="STUDY-005",
+            domain="AE",
+            page_id="ae_page_1",
+            test_code="AESTDTC",
+            test_name="Adverse Event Start Date",
+            value_string="2026-08-05",
+        )
+        o_end = ClinicalObservation(
+            subject_id="SUBJ-105",
+            study_id="STUDY-005",
+            domain="AE",
+            page_id="ae_page_1",
+            test_code="AEENDTC",
+            test_name="Adverse Event End Date",
+            value_string="2026-08-01",  # Impossible: before start date!
+        )
+        session.add_all([o_term, o_ser, o_start, o_end])
+        await session.commit()
+
+        with pytest.raises(ValidationError) as exc_info:
+            await persist_sdtm_records(session, "STUDY-005", "AE")
+
+        assert "AEENDTC" in str(exc_info.value) or "earlier than" in str(exc_info.value)
+
+    await db_manager.close()
+
+
+def test_mapper_dedicated_helpers():
+    """Verify that dedicated mapper helpers function correctly on raw CDASH entries."""
+    mapper = CDASHToSDTMMapper()
+
+    # 1. CM helper
+    raw_cm = [
+        {
+            "cmtrt": "Ibuprofen",
+            "cmdecod": "IBUPROFEN",
+            "cmstdtc": "2026-01-01",
+            "cmendtc": "2026-01-10",
+        }
+    ]
+    res_cm = mapper.map_concomitant_medications("STUDY-001", "SUBJ-001", raw_cm)
+    assert len(res_cm) == 1
+    assert res_cm[0]["CMTRT"] == "IBUPROFEN"
+    assert res_cm[0]["CMDECOD"] == "IBUPROFEN"
+    assert res_cm[0]["CMSTDTC"] == "2026-01-01"
+    assert res_cm[0]["CMENDTC"] == "2026-01-10"
+
+    # 2. DS helper
+    raw_ds = [
+        {
+            "dsterm": "Adverse Event",
+            "dsdecod": "ADVERSE EVENT",
+            "dscat": "DISPOSITION EVENT",
+            "dsstdtc": "2026-02-01",
+        }
+    ]
+    res_ds = mapper.map_dispositions("STUDY-001", "SUBJ-001", raw_ds)
+    assert len(res_ds) == 1
+    assert res_ds[0]["DSTERM"] == "ADVERSE EVENT"
+    assert res_ds[0]["DSDECOD"] == "ADVERSE EVENT"
+    assert res_ds[0]["DSCAT"] == "DISPOSITION EVENT"
+    assert res_ds[0]["DSSTDTC"] == "2026-02-01"
+
+    # 3. MH helper
+    raw_mh = [
+        {
+            "mhterm": "Diabetes",
+            "mhdecod": "DIABETES",
+            "mhcat": "MEDICAL HISTORY",
+            "mhdtc": "2015-05-15",
+        }
+    ]
+    res_mh = mapper.map_medical_history("STUDY-001", "SUBJ-001", raw_mh)
+    assert len(res_mh) == 1
+    assert res_mh[0]["MHTERM"] == "DIABETES"
+    assert res_mh[0]["MHDECOD"] == "DIABETES"
+    assert res_mh[0]["MHCAT"] == "MEDICAL HISTORY"
+    assert res_mh[0]["MHDTC"] == "2015-05-15"

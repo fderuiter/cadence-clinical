@@ -394,29 +394,6 @@
         }
       }
     },
-    "/health": {
-      "get": {
-        "summary": "Health Check",
-        "description": "Service health check endpoint.\n\nReturns a basic JSON payload indicating the service is operational.\n\nReturns:\n    Dict[str, str]: The health status payload.",
-        "operationId": "health_check_health_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "type": "object",
-                  "title": "Response Health Check Health Get"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/studies/{study_id}": {
       "get": {
         "summary": "Get Legacy Study",
@@ -2130,7 +2107,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/apps__designer__src__domain__protocol_authoring__soa__UpdateVisitRequest"
+                "$ref": "#/components/schemas/apps__designer__domain__protocol_authoring__soa__UpdateVisitRequest"
               }
             }
           }
@@ -5349,7 +5326,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/apps__designer__src__domain__protocol_authoring__soa__CreateVisitRequest"
+                "$ref": "#/components/schemas/apps__designer__domain__protocol_authoring__soa__CreateVisitRequest"
               }
             }
           }
@@ -6329,6 +6306,29 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Service health check endpoint.\n\nReturns a basic JSON payload indicating the service is operational.\n\nReturns:\n    Dict[str, str]: The health status payload.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
                 }
               }
             }
@@ -11355,6 +11355,49 @@
         ],
         "title": "VisitToEpochAssignmentRequest"
       },
+      "apps__designer__domain__protocol_authoring__soa__CreateVisitRequest": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Id",
+            "description": "Unique identifier for the visit."
+          },
+          "properties": {
+            "$ref": "#/components/schemas/VisitProperties"
+          },
+          "change_reason": {
+            "type": "string",
+            "title": "Change Reason",
+            "description": "Change reason for audit trail",
+            "default": "Created visit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "properties"
+        ],
+        "title": "CreateVisitRequest"
+      },
+      "apps__designer__domain__protocol_authoring__soa__UpdateVisitRequest": {
+        "properties": {
+          "properties": {
+            "$ref": "#/components/schemas/VisitProperties"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Reason for change for audit trail",
+            "default": "Updated visit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "properties"
+        ],
+        "title": "UpdateVisitRequest"
+      },
       "apps__designer__library__CreateVisitRequest": {
         "properties": {
           "id": {
@@ -11427,49 +11470,6 @@
         ],
         "title": "UpdateVisitRequest",
         "description": "Request model for updating a Visit library object."
-      },
-      "apps__designer__src__domain__protocol_authoring__soa__CreateVisitRequest": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Id",
-            "description": "Unique identifier for the visit."
-          },
-          "properties": {
-            "$ref": "#/components/schemas/VisitProperties"
-          },
-          "change_reason": {
-            "type": "string",
-            "title": "Change Reason",
-            "description": "Change reason for audit trail",
-            "default": "Created visit"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "properties"
-        ],
-        "title": "CreateVisitRequest"
-      },
-      "apps__designer__src__domain__protocol_authoring__soa__UpdateVisitRequest": {
-        "properties": {
-          "properties": {
-            "$ref": "#/components/schemas/VisitProperties"
-          },
-          "reason_for_change": {
-            "type": "string",
-            "title": "Reason For Change",
-            "description": "Reason for change for audit trail",
-            "default": "Updated visit"
-          }
-        },
-        "type": "object",
-        "required": [
-          "properties"
-        ],
-        "title": "UpdateVisitRequest"
       }
     }
   }
