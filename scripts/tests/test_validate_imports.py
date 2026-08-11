@@ -149,3 +149,76 @@ def test_check_file_imports_invalid_syntax(tmp_path):
         assert "Failed to parse file" in violations[0]
     finally:
         scripts.validate_imports.APPS_DIR = original_apps_dir
+
+
+def test_check_file_imports_package_to_package_declared(tmp_path):
+    # Set up a mock structure: packages/compliance/phi.py
+    compliance_dir = tmp_path / "packages" / "compliance"
+    compliance_dir.mkdir(parents=True, exist_ok=True)
+
+    # Write a pyproject.toml with declared dependency packages-security
+    pyproject_file = compliance_dir / "pyproject.toml"
+    pyproject_file.write_text(
+        '[project]\nname = "packages-compliance"\ndependencies = ["packages-security"]\n',
+        encoding="utf-8",
+    )
+
+    file_path = compliance_dir / "phi.py"
+    file_path.write_text(
+        "from packages.security.signing import generate_gateway_signature\n",
+        encoding="utf-8",
+    )
+
+    import scripts.validate_imports
+
+    original_packages_dir = scripts.validate_imports.PACKAGES_DIR
+    original_root_dir = scripts.validate_imports.ROOT_DIR
+    scripts.validate_imports.PACKAGES_DIR = tmp_path / "packages"
+    scripts.validate_imports.ROOT_DIR = tmp_path
+    # Clear cache to force parsing of our mock file
+    scripts.validate_imports._PACKAGE_DEPS_CACHE.clear()
+
+    try:
+        violations = check_file_imports(file_path)
+        assert len(violations) == 0
+    finally:
+        scripts.validate_imports.PACKAGES_DIR = original_packages_dir
+        scripts.validate_imports.ROOT_DIR = original_root_dir
+        scripts.validate_imports._PACKAGE_DEPS_CACHE.clear()
+
+
+def test_check_file_imports_package_to_package_undeclared(tmp_path):
+    # Set up a mock structure: packages/compliance/phi.py
+    compliance_dir = tmp_path / "packages" / "compliance"
+    compliance_dir.mkdir(parents=True, exist_ok=True)
+
+    # Write a pyproject.toml without packages-deid dependency
+    pyproject_file = compliance_dir / "pyproject.toml"
+    pyproject_file.write_text(
+        '[project]\nname = "packages-compliance"\ndependencies = ["packages-security"]\n',
+        encoding="utf-8",
+    )
+
+    file_path = compliance_dir / "phi.py"
+    file_path.write_text(
+        "from packages.deid.ner_scrubber import PHINameEntityScrubber\n",
+        encoding="utf-8",
+    )
+
+    import scripts.validate_imports
+
+    original_packages_dir = scripts.validate_imports.PACKAGES_DIR
+    original_root_dir = scripts.validate_imports.ROOT_DIR
+    scripts.validate_imports.PACKAGES_DIR = tmp_path / "packages"
+    scripts.validate_imports.ROOT_DIR = tmp_path
+    scripts.validate_imports._PACKAGE_DEPS_CACHE.clear()
+
+    try:
+        violations = check_file_imports(file_path)
+        assert len(violations) == 1
+        assert "Package dependency boundary violation" in violations[0]
+        assert "packages-deid" in violations[0]
+    finally:
+        scripts.validate_imports.PACKAGES_DIR = original_packages_dir
+        scripts.validate_imports.ROOT_DIR = original_root_dir
+        scripts.validate_imports._PACKAGE_DEPS_CACHE.clear()

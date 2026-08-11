@@ -13,6 +13,8 @@ dependencies = [
     "fastapi>=0.139.2,<0.140.0",
     "pydantic>=2.6.0",
     "sqlalchemy>=2.0.28",
+    "packages-hexagonal",
+    "packages-security",
 ]
 
 [tool.hatch.build.targets.wheel]
