@@ -41,4 +41,4 @@ Chosen option: Option A because it completely eliminates environment drift, fulf
 ## 6. Implementation & Verification
 
 - Target files/packages modified: `pyproject.toml`, `package.json`, `Makefile`, `.python-version`, `.github/workflows/ci.yml`, `.github/workflows/project-automation.yml`, `docker/Dockerfile`.
-- Verification tests added or updated under `apps/eisf/tests/test_eisf_compliance.py` to assert a minimum Python runtime version of `>= (3, 12)`.
+- Verification tests added or updated under `apps/gateway/tests/test_gateway_compliance.py` to assert a minimum Python runtime version of `>= (3, 12)`.

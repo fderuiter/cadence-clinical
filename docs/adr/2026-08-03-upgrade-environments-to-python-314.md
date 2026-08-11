@@ -46,5 +46,5 @@ Chosen option: **Option A** because it enforces strict, predictable GxP environm
   - Runtime specification: `.python-version`, `Makefile`
   - Developer and system guidelines: `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `docs/LOCAL_DEV_ENVIRONMENT.md`, `docs/SDLC/07_Operations_Deployment_Guide.md`
 - **Verification tests:**
-  - System-level environment asserts under `apps/eisf/tests/test_eisf_compliance.py` updated to verify a minimum Python runtime version of `>= (3, 14)`.
+  - System-level environment asserts under `apps/gateway/tests/test_gateway_compliance.py` updated to verify a minimum Python runtime version of `>= (3, 14)`.
   - Style and lint validation: All codebase files formatted and lint-checked cleanly using target runtime syntax.
