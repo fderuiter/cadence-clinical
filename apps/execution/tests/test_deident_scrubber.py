@@ -154,3 +154,42 @@ def test_sdtm_json_builder_integration():
     usubjid_val = item_data[0][usubjid_idx]
     assert usubjid_val != "SUBJ-101"
     assert "SUBJ-101" not in usubjid_val
+
+
+def test_address_redos_prevention():
+    """Verify that clinical text with many consecutive spaces does not cause ReDoS.
+
+    An automated test uses Python's standard time module to verify that a malicious
+    string with over 1000 spaces is processed in under 1 millisecond.
+    """
+    import time
+
+    from apps.execution.services.deident_scrubber import scrub_free_text_pii
+
+    # String with more than 1000 consecutive spaces
+    malicious_input = "Patient lives at 123 " + " " * 1100 + "Street"
+
+    start_time = time.perf_counter()
+    result_no_match = scrub_free_text_pii(malicious_input)
+    duration_no_match = time.perf_counter() - start_time
+
+    # Also test matching with many spaces
+    input_with_match = "Patient lives at 123 Main " + " " * 1100 + "Street."
+    start_time_match = time.perf_counter()
+    result_with_match = scrub_free_text_pii(input_with_match)
+    duration_with_match = time.perf_counter() - start_time_match
+
+    # Assert that both complete in under 1 millisecond (0.001 seconds)
+    assert duration_no_match < 0.001, (
+        f"Address redaction (no match) took too long: {duration_no_match * 1000:.3f} ms"
+    )
+    assert duration_with_match < 0.001, (
+        f"Address redaction (with match) took too long: {duration_with_match * 1000:.3f} ms"
+    )
+
+    # Verify matching/redaction behavior
+    assert "123" in result_no_match
+    assert "[REDACTED_ADDRESS]" not in result_no_match
+
+    assert "123 Main" not in result_with_match
+    assert "[REDACTED_ADDRESS]" in result_with_match
