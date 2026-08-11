@@ -20,6 +20,7 @@ import packages  # noqa: F401
 from apps.gateway.routers.cdisc import router as cdisc_router
 from apps.gateway.routers.ecoa import router as ecoa_router
 from apps.gateway.routers.usdm import router as usdm_router
+from packages.security import validate_branding
 
 
 def validate_environment() -> None:
@@ -56,45 +57,9 @@ def validate_environment() -> None:
 
 validate_environment()
 
-BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
-BRAND_DOMAIN = os.getenv("BRAND_DOMAIN", "cadenceclinical.com")
+BRAND_NAME, BRAND_DOMAIN = validate_branding("gateway", check_auth_keys=True)
 KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM", "cadence")
 KEYCLOAK_CLIENT_ID = os.getenv("KEYCLOAK_CLIENT_ID", "cadence-clinical")
-
-
-def validate_branding_and_auth() -> None:
-    """
-    Validate mandatory branding/domain and authentication configurations.
-    Halts the boot sequence if secure fallbacks are missing or default
-    identity is left unconfigured in production/staging environments.
-    """
-    app_env = os.getenv("APP_ENV", "").strip().lower()
-    is_prod_or_staging = app_env not in ("development", "dev", "test", "")
-
-    if is_prod_or_staging:
-        invalid = []
-        if not os.getenv("BRAND_NAME") or os.getenv("BRAND_NAME") == "Cadence Clinical":
-            invalid.append("BRAND_NAME")
-        if (
-            not os.getenv("BRAND_DOMAIN")
-            or os.getenv("BRAND_DOMAIN") == "cadenceclinical.com"
-        ):
-            invalid.append("BRAND_DOMAIN")
-        if not os.getenv("KEYCLOAK_REALM") or os.getenv("KEYCLOAK_REALM") == "cadence":
-            invalid.append("KEYCLOAK_REALM")
-        if (
-            not os.getenv("KEYCLOAK_CLIENT_ID")
-            or os.getenv("KEYCLOAK_CLIENT_ID") == "cadence-clinical"
-        ):
-            invalid.append("KEYCLOAK_CLIENT_ID")
-
-        if invalid:
-            error_msg = f"STARTUP ERROR: Outdated default 'Cadence' branding or missing secure configurations detected in environment '{app_env}' for variables: {', '.join(invalid)}. Halting boot sequence."
-            print(error_msg, file=sys.stderr)
-            sys.exit(1)
-
-
-validate_branding_and_auth()
 
 app = FastAPI(
     title=f"{BRAND_NAME} - API Gateway",

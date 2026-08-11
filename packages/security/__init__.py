@@ -5,6 +5,11 @@ from packages.security.audit_logger import (
     CentralAuditLogger,
     audit_logger_engine,
 )
+from packages.security.branding import (
+    get_brand_domain,
+    get_brand_name,
+    validate_branding,
+)
 from packages.security.context import (
     audit_context,
     audit_context_decorator,
@@ -180,4 +185,7 @@ __all__ = [
     "SignatureVerificationResult",
     "verify_electronic_signature",
     "assert_secure_secrets",
+    "validate_branding",
+    "get_brand_name",
+    "get_brand_domain",
 ]

@@ -6,7 +6,6 @@ This module handles the design and management of clinical studies and MDR compon
 """
 
 import os
-import sys
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.encoders import jsonable_encoder
@@ -43,33 +42,11 @@ from apps.designer.presentation.routers.quality_sentinel import (
 )
 from apps.designer.presentation.routers.synopsis import router as synopsis_router
 from apps.designer.rendering import TemplateRenderingError
-from packages.security import assert_secure_secrets
+from packages.security import assert_secure_secrets, validate_branding
 
-BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
-
-
-def validate_branding_and_domain() -> None:
-    app_env = os.getenv("APP_ENV", "").strip().lower()
-    is_prod_or_staging = app_env not in ("development", "dev", "test", "")
-    if is_prod_or_staging:
-        invalid = []
-        if not os.getenv("BRAND_NAME") or os.getenv("BRAND_NAME") == "Cadence Clinical":
-            invalid.append("BRAND_NAME")
-        if (
-            not os.getenv("BRAND_DOMAIN")
-            or os.getenv("BRAND_DOMAIN") == "cadenceclinical.com"
-        ):
-            invalid.append("BRAND_DOMAIN")
-        if invalid:
-            error_msg = f"STARTUP ERROR: Outdated default 'Cadence' branding or missing secure configurations detected in environment '{app_env}' for variables: {', '.join(invalid)}. Halting boot sequence."
-            print(error_msg, file=sys.stderr)
-            sys.exit(1)
-
+BRAND_NAME, BRAND_DOMAIN = validate_branding("designer")
 
 from packages.security.middleware import GatewayAuthMiddleware
-
-validate_branding_and_domain()
-
 
 app = FastAPI(title=f"{BRAND_NAME} - Designer (MDR/SDR)", version="0.1.0")
 
