@@ -443,21 +443,54 @@ def generate_rtm_md(
                 all_passed = True
                 any_unverified = False
                 for m in mapped:
-                    test_key = (
-                        f"tests.{os.path.splitext(os.path.basename(m['file']))[0]}",
-                        m["test_name"],
+                    # Resolve parameterized tests by matching prefix or base name
+                    matching_results = []
+                    rel_parts = os.path.splitext(m["file"])[0].split(os.sep)
+                    calculated_classname = ".".join(
+                        p for p in rel_parts if p and p != "."
                     )
-                    test_res = test_results.get(test_key)
-                    if not test_res:
+                    fallback_classname = (
+                        f"tests.{os.path.splitext(os.path.basename(m['file']))[0]}"
+                    )
+
+                    for (c, n), r in test_results.items():
+                        # Classname match (exact or fallback)
+                        class_matches = (
+                            c in (calculated_classname, fallback_classname)
+                            or c.endswith(calculated_classname)
+                            or calculated_classname.endswith(c)
+                        )
+                        # Test name match (exact, or starts with test_name + '[')
+                        name_matches = n == m["test_name"] or n.startswith(
+                            m["test_name"] + "["
+                        )
+                        if class_matches and name_matches:
+                            matching_results.append(r)
+
+                    if not matching_results:
                         # Fallback match by test_name only
                         for (c, n), r in test_results.items():
-                            if n == m["test_name"]:
-                                test_res = r
-                                break
+                            if n == m["test_name"] or n.startswith(
+                                m["test_name"] + "["
+                            ):
+                                matching_results.append(r)
 
-                    test_status = (
-                        test_res.get("status", "UNTESTED") if test_res else "UNTESTED"
-                    )
+                    if matching_results:
+                        statuses = [
+                            r.get("status", "UNTESTED") for r in matching_results
+                        ]
+                        if any(s in ("FAILED", "ERROR") for s in statuses):
+                            test_status = "FAILED"
+                        elif any(s == "PASSED" for s in statuses):
+                            test_status = "PASSED"
+                        elif any(s == "SKIPPED" for s in statuses):
+                            test_status = "SKIPPED"
+                        elif any(s == "UNVERIFIED" for s in statuses):
+                            test_status = "UNVERIFIED"
+                        else:
+                            test_status = "UNTESTED"
+                    else:
+                        test_status = "UNTESTED"
 
                     if test_status != "PASSED":
                         all_passed = False
