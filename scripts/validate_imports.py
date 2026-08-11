@@ -62,6 +62,7 @@ LEGACY_TESTS_EXEMPT_FROM_IMPORT_BOUNDARIES = {
     "apps/etmf/tests/test_etmf_qc.py",
     "apps/etmf/tests/test_etmf_site_scope.py",
     "apps/etmf/tests/test_etmf_sync_provenance.py",
+    "apps/etmf/tests/conftest.py",
     "apps/econsent/tests/test_econsent_capture.py",
     "apps/econsent/tests/test_econsent_translations.py",
     "apps/econsent/tests/test_econsent_archival.py",
