@@ -205,3 +205,69 @@ def test_label_based_backlog_gating(
     assert edit_by_item_id.get("item_bug_and_triage_id") == "e18bf179"
     assert edit_by_item_id.get("item_bug_triage_enhancement_id") == "f75ad846"
     assert edit_by_item_id.get("item_task_triage_only_id") == "f75ad846"
+
+
+@patch("scripts.sync_github_project.run_gql")
+@patch("scripts.sync_github_project.run_cmd")
+def test_sync_with_unsupported_relationships(
+    mock_run_cmd, mock_run_gql, mock_gh_project_list
+):
+    """Verify that the sync tool handles unsupported relationship fields gracefully.
+
+    @req:Trace-34
+    """
+    import scripts.sync_github_project
+
+    # Reset any cached state from other tests
+    scripts.sync_github_project.RELATIONSHIPS_SUPPORTED = True
+
+    calls = []
+
+    def mock_run_gql_side_effect(query, variables=None):
+        calls.append(query)
+        if "parent" in query or "subIssues" in query:
+            # First query, containing relationships, simulated to fail/unsupported
+            return None
+        # Fallback query
+        return {
+            "data": {
+                "repository": {
+                    "issues": {
+                        "nodes": [
+                            {
+                                "id": "issue_101",
+                                "databaseId": 1001,
+                                "number": 101,
+                                "title": "Fallback issue",
+                                "state": "OPEN",
+                                "url": "https://github.com/fderuiter/cadence-clinical/issues/101",
+                                "body": "Fallback body",
+                                "labels": {"nodes": []},
+                                "milestone": None,
+                            }
+                        ],
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    }
+                }
+            }
+        }
+
+    mock_run_gql.side_effect = mock_run_gql_side_effect
+
+    def mock_run_cmd_side_effect(args):
+        if "item-list" in args:
+            return mock_gh_project_list
+        return "{}"
+
+    mock_run_cmd.side_effect = mock_run_cmd_side_effect
+
+    # Run main logic
+    scripts.sync_github_project.main()
+
+    # Assert that RELATIONSHIPS_SUPPORTED became False
+    assert scripts.sync_github_project.RELATIONSHIPS_SUPPORTED is False
+
+    # Check that at least two queries were made (the relationship query and the fallback query)
+    assert len(calls) >= 2
+    assert "subIssues" in calls[0]
+    assert "subIssues" not in calls[1]

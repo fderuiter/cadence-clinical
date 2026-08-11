@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2226
-- **Passed:** 2221 🟢
+- **Total Automated Test Cases Run:** 2227
+- **Passed:** 2222 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
 - **Overall Operational Pass Rate:** 99.78%
@@ -2341,6 +2341,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_persona_builders_contain_correct_claims`                                     | `scripts.tests.test_shared_rbac_harness`                                    | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_shared_sqlite_dbs_and_clients`                                               | `scripts.tests.test_shared_rbac_harness`                                    | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_label_based_backlog_gating`                                                  | `scripts.tests.test_sync_github_project`                                    | Trace-34                                     | 🟢 PASSED  | < 1s     |
+| `test_sync_with_unsupported_relationships`                                         | `scripts.tests.test_sync_github_project`                                    | Trace-34                                     | 🟢 PASSED  | < 1s     |
 | `test_get_repository_fallback`                                                     | `scripts.tests.test_sync_ruleset`                                           | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_get_repository_from_env`                                                     | `scripts.tests.test_sync_ruleset`                                           | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_get_repository_from_git_https`                                               | `scripts.tests.test_sync_ruleset`                                           | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |

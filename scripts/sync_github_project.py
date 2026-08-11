@@ -46,6 +46,8 @@ SIZE_OPTIONS = {
     "XL": "2d0801e2",
 }
 
+RELATIONSHIPS_SUPPORTED = True
+
 
 def handle_permission_error(stderr_msg):
     combined = stderr_msg.lower()
@@ -114,11 +116,13 @@ def run_gql(query, variables=None):
 
 
 def fetch_all_issues_gql():
+    global RELATIONSHIPS_SUPPORTED
     cursor = None
     all_nodes = []
     while True:
         c_str = f', after: "{cursor}"' if cursor else ""
-        query = f"""
+        if RELATIONSHIPS_SUPPORTED:
+            query = f"""
 query {{
   repository(owner: "{OWNER}", name: "cadence-clinical") {{
     issues(first: 100{c_str}) {{
@@ -142,10 +146,44 @@ query {{
   }}
 }}
 """
+        else:
+            query = f"""
+query {{
+  repository(owner: "{OWNER}", name: "cadence-clinical") {{
+    issues(first: 100{c_str}) {{
+      nodes {{
+        id
+        databaseId
+        number
+        title
+        state
+        url
+        body
+        labels(first: 50) {{ nodes {{ name }} }}
+        milestone {{ number title description }}
+      }}
+      pageInfo {{ hasNextPage endCursor }}
+    }}
+  }}
+}}
+"""
         data = run_gql(query)
-        if not data or "data" not in data:
+        if not data or "data" not in data or not data["data"]:
+            if RELATIONSHIPS_SUPPORTED:
+                print(
+                    "WARNING: Repository native relationships (blockedBy, subIssues, parent) are not supported or accessible. Falling back to basic issue queries.",
+                    file=sys.stderr,
+                )
+                RELATIONSHIPS_SUPPORTED = False
+                continue
             break
         res = data["data"]["repository"]["issues"]
+        for node in res["nodes"]:
+            if not RELATIONSHIPS_SUPPORTED:
+                node["parent"] = None
+                node["subIssues"] = {"nodes": []}
+                node["blockedBy"] = {"nodes": []}
+                node["blocking"] = {"nodes": []}
         all_nodes.extend(res["nodes"])
         if not res["pageInfo"]["hasNextPage"]:
             break
@@ -414,73 +452,81 @@ def main():
             epics.add(num)
 
     # 2. Smart Migration: Parse explicit body declarations and ensure native GraphQL relations exist
-    print(
-        "2. Auditing explicit body text declarations and migrating to native GraphQL relationships...",
-        flush=True,
-    )
-    relations_added = 0
-
-    for num, i in issue_by_num.items():
-        if i["state"] != "OPEN":
-            continue
-
-        body = i.get("body") or ""
-        i_id = i["id"]
-
-        # Parse explicit "Blocked by:", "Depends on:", "Native blockers:"
-        explicit_prereqs = set()
-        for line in body.splitlines():
-            l_str = line.strip()
-            for pattern in [
-                r"Blocked by:\s*([^\.\n]+)",
-                r"Depends on:\s*([^\.\n]+)",
-                r"Native blockers:\s*([^\.\n]+)",
-            ]:
-                m = re.search(pattern, l_str, re.IGNORECASE)
-                if m:
-                    for ref in re.findall(r"#(\d+)", m.group(1)):
-                        ref_num = int(ref)
-                        if ref_num in issue_by_num and ref_num != num:
-                            explicit_prereqs.add(ref_num)
-
-        # Sync native blockedBy
-        existing_blocked_by = {
-            b["number"] for b in i.get("blockedBy", {}).get("nodes", [])
-        }
-        for p_num in explicit_prereqs:
-            if p_num not in existing_blocked_by:
-                p_issue = issue_by_num[p_num]
-                print(
-                    f"Adding native relationship: #{num} blockedBy #{p_num}",
-                    flush=True,
-                )
-                add_blocked_by(i_id, p_issue["id"])
-                relations_added += 1
-
-        # Parse explicit "Parent: #X" or "Epic: #X"
-        parent_match = re.search(
-            r"(?:Parent(?: coordination issue)?|Epic):\s*#(\d+)", body, re.IGNORECASE
-        )
-        if parent_match:
-            parent_num = int(parent_match.group(1))
-            current_parent = i.get("parent")
-            if parent_num in issue_by_num and (
-                not current_parent or current_parent["number"] != parent_num
-            ):
-                parent_issue = issue_by_num[parent_num]
-                print(
-                    f"Adding native parent relationship: #{parent_num} subIssue #{num}",
-                    flush=True,
-                )
-                add_sub_issue(parent_issue["id"], i_id)
-                relations_added += 1
-
-    if relations_added > 0:
+    if RELATIONSHIPS_SUPPORTED:
         print(
-            f"Added {relations_added} native relationships. Re-fetching issues...",
+            "2. Auditing explicit body text declarations and migrating to native GraphQL relationships...",
             flush=True,
         )
-        issue_by_num = fetch_all_issues_gql()
+        relations_added = 0
+
+        for num, i in issue_by_num.items():
+            if i["state"] != "OPEN":
+                continue
+
+            body = i.get("body") or ""
+            i_id = i["id"]
+
+            # Parse explicit "Blocked by:", "Depends on:", "Native blockers:"
+            explicit_prereqs = set()
+            for line in body.splitlines():
+                l_str = line.strip()
+                for pattern in [
+                    r"Blocked by:\s*([^\.\n]+)",
+                    r"Depends on:\s*([^\.\n]+)",
+                    r"Native blockers:\s*([^\.\n]+)",
+                ]:
+                    m = re.search(pattern, l_str, re.IGNORECASE)
+                    if m:
+                        for ref in re.findall(r"#(\d+)", m.group(1)):
+                            ref_num = int(ref)
+                            if ref_num in issue_by_num and ref_num != num:
+                                explicit_prereqs.add(ref_num)
+
+            # Sync native blockedBy
+            existing_blocked_by = {
+                b["number"] for b in i.get("blockedBy", {}).get("nodes", [])
+            }
+            for p_num in explicit_prereqs:
+                if p_num not in existing_blocked_by:
+                    p_issue = issue_by_num[p_num]
+                    print(
+                        f"Adding native relationship: #{num} blockedBy #{p_num}",
+                        flush=True,
+                    )
+                    add_blocked_by(i_id, p_issue["id"])
+                    relations_added += 1
+
+            # Parse explicit "Parent: #X" or "Epic: #X"
+            parent_match = re.search(
+                r"(?:Parent(?: coordination issue)?|Epic):\s*#(\d+)",
+                body,
+                re.IGNORECASE,
+            )
+            if parent_match:
+                parent_num = int(parent_match.group(1))
+                current_parent = i.get("parent")
+                if parent_num in issue_by_num and (
+                    not current_parent or current_parent["number"] != parent_num
+                ):
+                    parent_issue = issue_by_num[parent_num]
+                    print(
+                        f"Adding native parent relationship: #{parent_num} subIssue #{num}",
+                        flush=True,
+                    )
+                    add_sub_issue(parent_issue["id"], i_id)
+                    relations_added += 1
+
+        if relations_added > 0:
+            print(
+                f"Added {relations_added} native relationships. Re-fetching issues...",
+                flush=True,
+            )
+            issue_by_num = fetch_all_issues_gql()
+    else:
+        print(
+            "2. Skipping auditing of explicit body text declarations (native relationships not supported).",
+            flush=True,
+        )
 
     # 3. Synchronize Issue Labels and Descriptions using Native Relationships
     print(
@@ -509,14 +555,15 @@ def main():
             lbl for lbl in ["blocked", "status: blocked"] if lbl not in current_labels
         ]
 
-        if open_native_blockers and labels_to_add:
-            for lbl in labels_to_add:
-                run_cmd(["gh", "issue", "edit", str(num), "--add-label", lbl])
-            blocked_count += 1
-        elif not open_native_blockers and labels_to_remove:
-            for lbl in labels_to_remove:
-                run_cmd(["gh", "issue", "edit", str(num), "--remove-label", lbl])
-            unblocked_count += 1
+        if RELATIONSHIPS_SUPPORTED:
+            if open_native_blockers and labels_to_add:
+                for lbl in labels_to_add:
+                    run_cmd(["gh", "issue", "edit", str(num), "--add-label", lbl])
+                blocked_count += 1
+            elif not open_native_blockers and labels_to_remove:
+                for lbl in labels_to_remove:
+                    run_cmd(["gh", "issue", "edit", str(num), "--remove-label", lbl])
+                unblocked_count += 1
 
         if was_changed:
             with open(tmp_file, "w") as f:
