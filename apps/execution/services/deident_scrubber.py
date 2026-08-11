@@ -19,7 +19,7 @@ PHONE_PATTERN = re.compile(r"\b(?:\+?1[-. ]?)?\(?\d{3}\)?[-. ]?\d{3}[-. ]?\d{4}\
 EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 ZIP_PATTERN = re.compile(r"\b\d{5}(?:-\d{4})?\b")
 ADDRESS_PATTERN = re.compile(
-    r"\b\d+\s+[A-Za-z0-9\s.,]+?\s+(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Boulevard|Blvd|Lane|Ln|Way|Court|Ct|Circle|Cir|Box|PO\s+Box)\b",
+    r"\b\d+\s+[A-Za-z0-9.,]+(?:\s+[A-Za-z0-9.,]+)*?\s+(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Boulevard|Blvd|Lane|Ln|Way|Court|Ct|Circle|Cir|Box|PO\s+Box)\b",
     re.IGNORECASE,
 )
 
