@@ -155,7 +155,10 @@ beforeEach(async () => {
       const req = globalThis.indexedDB.open("SubjectPortalSyncDB", 2);
       req.onsuccess = (event) => {
         const db = event.target.result;
-        const tx = db.transaction(["submissions", "config", "instruments", "assignments"], "readwrite");
+        const tx = db.transaction(
+          ["submissions", "config", "instruments", "assignments"],
+          "readwrite"
+        );
         tx.objectStore("submissions").clear();
         tx.objectStore("config").clear();
         tx.objectStore("instruments").clear();
