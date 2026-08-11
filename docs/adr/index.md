@@ -128,6 +128,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-26: Durable Dictionary-Import Worker and Recovery Contract](2026-08-26-durable-dictionary-import-worker.md)
 - [2026-08-09: E2B(R3) ICSR XML Export and Structural Validation](2026-08-09-safety-e2b-icsr-xml-export-pipeline.md)
 - [2026-08-11: Bidirectional Field Parity and RFC 7807 Validation Schemas](2026-08-11-bidirectional-field-parity-and-rfc7807-validation-schemas.md)
+- [2026-08-11: Chronological Date Validation and Visit Date Constraints in SDTM Models](2026-08-11-chronological-sdtm-date-validation.md)
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
