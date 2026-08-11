@@ -54,7 +54,9 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
 
 ### 2. API Gateway, Security & Identity
+- [2026-08-11: Unified Ports and Adapters Architecture, Transaction Propagation, and Gateway Connection Pooling](2026-08-11-unified-ports-and-adapters-architecture-transaction-propagation-and-gateway-connection-pooling.md)
 
+- [2026-08-11: Centralized Brand and Domain Validation Guardrail](2026-08-11-centralized-brand-and-domain-validation.md)
 - [2026-08-06: Parameterized Branding and Dynamic Domain Configurations](2026-08-06-parameterized-branding-and-dynamic-domain-configurations.md)
 - [2026-08-06: Part 11 Electronic Signature Compliance Engine Improvements](2026-08-06-part-11-electronic-signature-compliance-engine-improvements.md)
 
@@ -219,6 +221,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-17: Interactive Mermaid Diagrams and Responsive Layout Controls](2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md)
 
 ### 7. DevOps, Tooling & CI/CD
+- [2026-08-11: Standardize Hatch build configurations for clean namespace wheels](2026-08-11-standardize-hatch-build-configurations-for-clean-namespace-wheels.md)
 
 - [2026-08-03: Implement native uv workspaces with service-specific Dockerfiles](2026-08-03-implement-native-uv-workspaces-with-service-specific-dockerfiles.md)
 - [2026-08-03: Lightweight Path Pattern Boundary Linter](2026-08-03-lightweight-path-pattern-boundary-linter.md)
@@ -293,3 +296,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-05: ADR-2026-08-05: Global Prettier Formatting and Pre-commit Checks](2026-08-05-global-prettier-formatting-and-pre-commit-checks.md)
 - [2026-08-06: ADR-[NUMBER]: Global Monorepo Security Scanning and Fail-Fast Startup Assertions](2026-08-06-monorepo-security-scanning-and-fail-fast-assertions.md)
 - [2026-08-10: Dynamic Dependency Matching and Clinical De-identification Consolidation](2026-08-10-dynamic-dependency-matching-and-clinical-deid-consolidation.md)
+- [2026-08-11: Browser-Native Layout-Skipping for eCRF Virtualization](2026-08-11-browser-native-layout-skipping-for-ecrf-virtualization.md)

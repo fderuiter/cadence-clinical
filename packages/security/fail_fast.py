@@ -54,3 +54,48 @@ def assert_secure_secrets(
             # Write to stderr
             print(error_msg, file=sys.stderr)
             raise RuntimeError(error_msg)
+
+
+def validate_branding(service_name: str, is_gateway: bool = False) -> None:
+    """
+    Validate branding, domain, and authentication configurations on startup.
+    Halts the boot sequence by raising a RuntimeError if legacy or default domain
+    or unconfigured values are detected in production or staging environments.
+    """
+    app_env = os.getenv("APP_ENV", "").strip().lower()
+    is_prod_or_staging = app_env not in ("development", "dev", "test", "")
+
+    if is_prod_or_staging:
+        invalid = []
+        brand_name = os.getenv("BRAND_NAME")
+        if not brand_name or brand_name.strip() == "Cadence Clinical":
+            invalid.append("BRAND_NAME")
+
+        brand_domain = os.getenv("BRAND_DOMAIN")
+        if (
+            not brand_domain
+            or brand_domain.strip() == "cadenceclinical.com"
+            or brand_domain.strip() == "cadence-clinical.com"
+        ):
+            invalid.append("BRAND_DOMAIN")
+
+        if is_gateway:
+            keycloak_realm = os.getenv("KEYCLOAK_REALM")
+            if not keycloak_realm or keycloak_realm.strip() == "cadence":
+                invalid.append("KEYCLOAK_REALM")
+
+            keycloak_client_id = os.getenv("KEYCLOAK_CLIENT_ID")
+            if (
+                not keycloak_client_id
+                or keycloak_client_id.strip() == "cadence-clinical"
+            ):
+                invalid.append("KEYCLOAK_CLIENT_ID")
+
+        if invalid:
+            error_msg = (
+                f"STARTUP ERROR: [{service_name}] Outdated default/legacy 'Cadence' branding, domain or "
+                f"missing secure configurations detected in environment '{app_env}' for variables: "
+                f"{', '.join(invalid)}. Halting boot sequence."
+            )
+            print(error_msg, file=sys.stderr)
+            raise RuntimeError(error_msg)

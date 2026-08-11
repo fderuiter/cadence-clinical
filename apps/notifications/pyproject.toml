@@ -1,5 +1,7 @@
 [build-system]
-requires = ["hatchling"]
+requires = [
+    "hatchling",
+]
 build-backend = "hatchling.build"
 
 [project]
@@ -16,6 +18,14 @@ dependencies = [
     "aiosmtplib>=3.0.1",
     "packages-database",
     "packages-security",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    ".",
+]
+exclude = [
+    "tests",
 ]
 
 [tool.hatch.build.targets.wheel.sources]

@@ -242,6 +242,11 @@ def create_transactional_decorator(
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         async def wrapper(*args, **kwargs) -> Any:
+            existing_session = current_session_var.get()
+            if existing_session is not None:
+                # Reuse the existing session in the context (nested transaction)
+                return await func(*args, **kwargs)
+
             session_maker = db_manager.get_session_maker()
             async with session_maker() as session:
                 async with session.begin():

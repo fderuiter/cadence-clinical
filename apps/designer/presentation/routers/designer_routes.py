@@ -24,7 +24,6 @@ the top-level structure of the delivered JSON payload includes:
 """
 
 import os
-import sys
 import time
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -166,7 +165,12 @@ from apps.designer.validator import (
     validate_study_terminology,
 )
 from apps.designer.xml_mapping import validate_mapping_csv
-from packages.security import ROLE_ALIASES, assert_secure_secrets, get_normalized_roles
+from packages.security import (
+    ROLE_ALIASES,
+    assert_secure_secrets,
+    get_normalized_roles,
+    validate_branding,
+)
 from packages.security.context import audit_context
 from packages.security.org_client import is_sponsor_known_to_org_directory
 from packages.security.rbac import (
@@ -270,27 +274,7 @@ class ProblemDetails(BaseModel):
 BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
 
 
-def validate_branding_and_domain() -> None:
-    app_env = os.getenv("APP_ENV", "").strip().lower()
-    is_prod_or_staging = app_env not in ("development", "dev", "test", "")
-    if is_prod_or_staging:
-        invalid = []
-        if not os.getenv("BRAND_NAME") or os.getenv("BRAND_NAME") == "Cadence Clinical":
-            invalid.append("BRAND_NAME")
-        if (
-            not os.getenv("BRAND_DOMAIN")
-            or os.getenv("BRAND_DOMAIN") == "cadenceclinical.com"
-        ):
-            invalid.append("BRAND_DOMAIN")
-        if invalid:
-            error_msg = f"STARTUP ERROR: Outdated default 'Cadence' branding or missing secure configurations detected in environment '{app_env}' for variables: {', '.join(invalid)}. Halting boot sequence."
-            print(error_msg, file=sys.stderr)
-            sys.exit(1)
-
-
-validate_branding_and_domain()
-
-
+validate_branding("designer")
 app = FastAPI(title=f"{BRAND_NAME} - Designer (MDR/SDR)", version="0.1.0")
 
 assert_secure_secrets("designer", {"SIGNING_SECRET": os.getenv("SIGNING_SECRET")})

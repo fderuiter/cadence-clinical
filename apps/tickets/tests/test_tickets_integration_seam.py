@@ -87,6 +87,10 @@ def route_tickets_to_notifications():
     notifications service in-process using ASGITransport.
     Supports simulated route failures for retry testing.
     """
+    from packages.security.gateway_client import GatewayBaseClient
+
+    GatewayBaseClient._shared_client = None
+
     transport = httpx.ASGITransport(app=notifications_app)
     original_init = httpx.AsyncClient.__init__
 
@@ -111,6 +115,7 @@ def route_tickets_to_notifications():
 
     with patch.object(httpx.AsyncClient, "__init__", patched_init):
         yield
+        GatewayBaseClient._shared_client = None
 
 
 @pytest.mark.asyncio
