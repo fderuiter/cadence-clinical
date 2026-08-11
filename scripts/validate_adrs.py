@@ -67,7 +67,9 @@ def is_safe_arg(arg: str) -> bool:
     # For non-option arguments, ensure they don't contain shell metacharacters
     # and match a safe pattern (allowing alphanumeric, forward slash, backslash, hyphen, underscore, dot, colon, percentage, and dots/ranges)
     # E.g., branch_point can be commit-hash, origin/main, or a range like commit..HEAD
-    return bool(re.match(r"^[a-zA-Z0-9_/.:%#~-]+(?:\.\.\.?[a-zA-Z0-9_/.:%#~-]+)?$", arg))
+    return bool(
+        re.match(r"^[a-zA-Z0-9_/.:%#~-]+(?:\.\.\.?[a-zA-Z0-9_/.:%#~-]+)?$", arg)
+    )
 
 
 def run_git_command(args: list[str]) -> tuple[str, str]:
