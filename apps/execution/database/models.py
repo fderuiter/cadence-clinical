@@ -1677,3 +1677,11 @@ class ProcessedOfflineBatch(Base):
     client_batch_id: Mapped[str] = mapped_column(String(255), primary_key=True)
     device_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     synced_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+
+from packages.database import IntegrationOutboxMixin
+
+class IntegrationOutbox(Base, IntegrationOutboxMixin):
+    """Concrete integration outbox table for the Execution service."""
+    __tablename__ = "integration_outbox"
+

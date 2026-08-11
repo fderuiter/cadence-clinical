@@ -188,9 +188,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
             start_background_query_escalation,
             stop_background_query_escalation,
         )
+        from apps.execution.workers.outbox_worker import (
+            start_outbox_worker,
+            stop_outbox_worker,
+        )
 
         await start_background_sealer(db_manager.get_session_maker())
         await start_background_query_escalation(db_manager.get_session_maker())
+        start_outbox_worker()
 
     yield
 
@@ -199,6 +204,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         await stop_background_sealer()
         # Stop background query escalation
         await stop_background_query_escalation()
+        # Stop background outbox worker
+        stop_outbox_worker()
         # Cleanup database connection
         await db_manager.close()
 
@@ -5241,7 +5248,29 @@ async def lock_trial_endpoint(
 ) -> dict[str, str]:
     """Locks or freezes the trial/study."""
     reason = request.headers.get("X-Change-Reason", "Sponsor Lock")
+    user_id = request.headers.get("X-User-Id", "admin_user")
+    
+    # 1. Update in-memory state
     TrialLockManager.lock_trial(reason=reason)
+    
+    # 2. Commit status change and write an outbox record inside a single relational transaction
+    import uuid
+    from apps.execution.database.models import IntegrationOutbox
+    
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            outbox_entry = IntegrationOutbox(
+                id=str(uuid.uuid4()),
+                event_type="TRIAL_LOCK",
+                payload={"trial_locked": True, "reason": reason},
+                status="PENDING",
+                attempts=0,
+                correlation_id=f"lock-{uuid.uuid4().hex[:12]}",
+                created_by=user_id,
+                reason_for_change=reason,
+            )
+            session.add(outbox_entry)
+            
     return {"status": "success", "message": "Trial is locked/frozen."}
 
 
@@ -6072,3 +6101,42 @@ async def export_biostat_bundle(
             raise HTTPException(
                 status_code=500, detail=f"Export execution failed: {scrubbed_msg}"
             )
+
+
+@app.get("/api/v1/admin/outbox")
+async def execution_admin_outbox_endpoint(
+    status: str | None = None,
+    event_type: str | None = None,
+) -> list[dict]:
+    from apps.execution.database.models import IntegrationOutbox
+    from sqlalchemy import select
+    
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(IntegrationOutbox)
+        if status:
+            stmt = stmt.where(IntegrationOutbox.status == status)
+        if event_type:
+            stmt = stmt.where(IntegrationOutbox.event_type == event_type)
+        stmt = stmt.order_by(IntegrationOutbox.created_at.desc())
+        res = await session.execute(stmt)
+        records = res.scalars().all()
+        
+        return [
+            {
+                "id": r.id,
+                "event_type": r.event_type,
+                "payload": r.payload,
+                "status": r.status,
+                "attempts": r.attempts,
+                "last_error": r.last_error,
+                "next_retry_at": r.next_retry_at.isoformat() if r.next_retry_at else None,
+                "completed_at": r.completed_at.isoformat() if r.completed_at else None,
+                "retry_eligible": r.retry_eligible,
+                "correlation_id": r.correlation_id,
+                "created_at": r.created_at.isoformat(),
+                "created_by": r.created_by,
+                "reason_for_change": r.reason_for_change,
+            }
+            for r in records
+        ]
+

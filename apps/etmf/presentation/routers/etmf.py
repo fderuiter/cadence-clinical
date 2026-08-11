@@ -1892,6 +1892,28 @@ async def sign_document_endpoint(
         details=f"Successfully approved document '{doc.filename}' (ID: {doc.id}) with reason '{payload.signing_reason.value}'.",
     )
 
+    # Write outbox archival record within the service transaction
+    from apps.etmf.infrastructure.models import IntegrationOutbox
+    import uuid
+    
+    outbox_entry = IntegrationOutbox(
+        id=str(uuid.uuid4()),
+        event_type="DOCUMENT_ARCHIVAL",
+        payload={
+            "document_id": doc.id,
+            "filename": doc.filename,
+            "content": doc.content,
+            "study_id": doc.study_id,
+            "site_id": doc.site_id,
+        },
+        status="PENDING",
+        attempts=0,
+        correlation_id=f"archive-{uuid.uuid4().hex[:12]}",
+        created_by=user_id,
+        reason_for_change=payload.signing_reason.value,
+    )
+    session.add(outbox_entry)
+
     await session.flush()
 
     return to_document_response(doc)
@@ -2626,3 +2648,59 @@ async def get_document_qc_history(
         )
         for t in transitions
     ]
+
+
+@router.post("/api/v1/etmf/locks/trial/lock")
+async def etmf_lock_trial_endpoint(request: Request) -> dict[str, str]:
+    from apps.etmf.infrastructure import lock_client
+    lock_client.trial_lock_override = True
+    return {"status": "success", "message": "Trial lock propagated to eTMF."}
+
+
+@router.post("/api/v1/etmf/locks/trial/unlock")
+async def etmf_unlock_trial_endpoint(request: Request) -> dict[str, str]:
+    from apps.etmf.infrastructure import lock_client
+    lock_client.trial_lock_override = False
+    return {"status": "success", "message": "Trial unlock propagated to eTMF."}
+
+
+@router.get("/api/v1/admin/outbox")
+async def etmf_admin_outbox_endpoint(
+    status: str | None = None,
+    event_type: str | None = None,
+) -> list[dict]:
+    from apps.etmf.infrastructure.database import db_manager
+    from apps.etmf.infrastructure.models import IntegrationOutbox
+    from sqlalchemy import select
+    
+    session_maker = db_manager.get_session_maker()
+    async with session_maker() as session:
+        stmt = select(IntegrationOutbox)
+        if status:
+            stmt = stmt.where(IntegrationOutbox.status == status)
+        if event_type:
+            stmt = stmt.where(IntegrationOutbox.event_type == event_type)
+        stmt = stmt.order_by(IntegrationOutbox.created_at.desc())
+        res = await session.execute(stmt)
+        records = res.scalars().all()
+        
+        return [
+            {
+                "id": r.id,
+                "event_type": r.event_type,
+                "payload": r.payload,
+                "status": r.status,
+                "attempts": r.attempts,
+                "last_error": r.last_error,
+                "next_retry_at": r.next_retry_at.isoformat() if r.next_retry_at else None,
+                "completed_at": r.completed_at.isoformat() if r.completed_at else None,
+                "retry_eligible": r.retry_eligible,
+                "correlation_id": r.correlation_id,
+                "created_at": r.created_at.isoformat(),
+                "created_by": r.created_by,
+                "reason_for_change": r.reason_for_change,
+            }
+            for r in records
+        ]
+
+
