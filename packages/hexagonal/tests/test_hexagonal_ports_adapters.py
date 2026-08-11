@@ -10,7 +10,6 @@ import os
 
 import pytest
 
-from packages.hexagonal.tests.test_hexagonal_architecture import SERVICES
 from apps.designer.db import (
     MOCK_RULES,
     MOCK_STUDY_VERSIONS,
@@ -38,6 +37,7 @@ from apps.execution.domain.models import (
 from apps.execution.subject_lifecycle import (
     InvalidStateTransitionError,
 )
+from packages.hexagonal.tests.test_hexagonal_architecture import SERVICES
 
 # =====================================================================
 # Criterion 1: Zero relational ORM/graph database dependencies in Domain
@@ -53,7 +53,7 @@ def test_domain_models_contain_zero_database_imports(service: str):
     repo_root = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "..", "..")
     )
-    
+
     # Dynamically find all domain files in the service directory
     service_dir = os.path.join(repo_root, "apps", service)
     domain_paths = []
@@ -172,7 +172,7 @@ def test_api_routers_contain_no_direct_db_calls(service: str):
     repo_root = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "..", "..")
     )
-    
+
     # Dynamically find all decoupled router files inside the service
     service_dir = os.path.join(repo_root, "apps", service)
     router_paths = []

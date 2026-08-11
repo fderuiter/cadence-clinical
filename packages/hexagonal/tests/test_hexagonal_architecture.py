@@ -15,7 +15,11 @@ def discover_services() -> list[str]:
     services = []
     if apps_dir.exists():
         for p in apps_dir.iterdir():
-            if p.is_dir() and p.name not in LEGACY_EXCLUDED_DIRECTORIES and p.name != "__pycache__":
+            if (
+                p.is_dir()
+                and p.name not in LEGACY_EXCLUDED_DIRECTORIES
+                and p.name != "__pycache__"
+            ):
                 if (
                     (p / "pyproject.toml").exists()
                     or (p / "main.py").exists()
@@ -126,9 +130,7 @@ def test_main_entrypoint_is_thin(service: str):
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef):
             for dec in node.decorator_list:
-                if isinstance(dec, ast.Call) and isinstance(
-                    dec.func, ast.Attribute
-                ):
+                if isinstance(dec, ast.Call) and isinstance(dec.func, ast.Attribute):
                     if dec.func.attr in (
                         "get",
                         "post",
@@ -136,7 +138,7 @@ def test_main_entrypoint_is_thin(service: str):
                         "delete",
                         "patch",
                         "api_route",
-                      ):
+                    ):
                         route_handlers.append(f"{node.name} (line {node.lineno})")
 
     assert not route_handlers, (
