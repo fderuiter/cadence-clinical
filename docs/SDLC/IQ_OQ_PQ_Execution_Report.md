@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2232
-- **Passed:** 2227 🟢
+- **Total Automated Test Cases Run:** 2234
+- **Passed:** 2229 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
 - **Overall Operational Pass Rate:** 99.78%
@@ -2287,12 +2287,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_json_block_validation`                                                       | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_main_with_arguments`                                                         | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_mock_environment_variables`                                                  | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_nested_code_blocks_in_html_comments`                                         | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_process_markdown_file_e2e`                                                   | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_python_block_validation`                                                     | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_reference_style_link_validation`                                             | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_resolve_path`                                                                | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_skip_and_raw_text_flags`                                                     | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_sys_path_append`                                                             | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_uncommented_code_block_errors_maintained`                                    | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_validate_cli_command_flag_checks`                                            | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_validate_cli_command_python_and_pytest`                                      | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_validate_docker_compose_scenarios`                                           | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |

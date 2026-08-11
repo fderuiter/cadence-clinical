@@ -71,7 +71,9 @@ export function openDatabase() {
       request.onupgradeneeded = (event) => {
         try {
           const db = event.target.result;
-          console.log(`[IndexedDB] Upgrading SubjectPortalSyncDB from version ${event.oldVersion} to ${event.newVersion}`);
+          console.log(
+            `[IndexedDB] Upgrading SubjectPortalSyncDB from version ${event.oldVersion} to ${event.newVersion}`
+          );
           if (!db.objectStoreNames.contains("submissions")) {
             db.createObjectStore("submissions", { keyPath: "sequence_number" });
           }
@@ -86,34 +88,57 @@ export function openDatabase() {
           }
         } catch (upgradeErr) {
           console.error("IndexedDB upgrade error:", upgradeErr);
-          if (typeof window !== "undefined" && typeof window.alert === "function") {
-            window.alert("Database upgrade failed. Please ensure you have sufficient disk space.");
+          if (
+            typeof window !== "undefined" &&
+            typeof window.alert === "function"
+          ) {
+            window.alert(
+              "Database upgrade failed. Please ensure you have sufficient disk space."
+            );
           }
         }
       };
       /* v8 ignore stop */
       request.onsuccess = (event) => {
         const db = event.target.result;
-        console.log(`[IndexedDB] Opened SubjectPortalSyncDB at version ${db.version} containing stores:`, Array.from(db.objectStoreNames));
+        console.log(
+          `[IndexedDB] Opened SubjectPortalSyncDB at version ${db.version} containing stores:`,
+          Array.from(db.objectStoreNames)
+        );
         resolve(db);
       };
       /* v8 ignore start */
       request.onerror = (event) => {
         const err = event.target.error;
-        console.error("IndexedDB open failed (disk limits, private window, or quota exceeded):", err);
-        if (typeof window !== "undefined" && typeof window.alert === "function") {
-          window.alert("Offline storage initialization failed. Please check your disk space or privacy settings.");
+        console.error(
+          "IndexedDB open failed (disk limits, private window, or quota exceeded):",
+          err
+        );
+        if (
+          typeof window !== "undefined" &&
+          typeof window.alert === "function"
+        ) {
+          window.alert(
+            "Offline storage initialization failed. Please check your disk space or privacy settings."
+          );
         } else if (typeof alert === "function") {
-          alert("Offline storage initialization failed. Please check your disk space or privacy settings.");
+          alert(
+            "Offline storage initialization failed. Please check your disk space or privacy settings."
+          );
         }
         reject(err);
       };
       /* v8 ignore stop */
     } catch (err) {
       /* v8 ignore start */
-      console.error("Failed to call indexedDB.open due to a critical error:", err);
+      console.error(
+        "Failed to call indexedDB.open due to a critical error:",
+        err
+      );
       if (typeof window !== "undefined" && typeof window.alert === "function") {
-        window.alert("Offline storage initialization failed due to a critical browser error.");
+        window.alert(
+          "Offline storage initialization failed due to a critical browser error."
+        );
       }
       reject(err);
       /* v8 ignore stop */
