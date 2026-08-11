@@ -120,7 +120,7 @@ const wrapperStyle = computed(() => {
     width: "100%",
     boxSizing: "border-box",
     contentVisibility: "auto",
-    containIntrinsicSize: `auto ${measuredHeight.value ? measuredHeight.value + 'px' : '44px'}`,
+    containIntrinsicSize: `auto ${measuredHeight.value ? measuredHeight.value + "px" : "44px"}`,
   };
   return styles;
 });
