@@ -514,6 +514,7 @@ def is_whitelisted(method: str, path: str) -> bool:
         return True
     # Wildcard checks for newly added execution and designer features
     wildcards = [
+        "/api/v1/admin/outbox",
         "/api/v1/archive",
         "/api/v1/designer/cascade",
         "/api/v1/designer/export",
