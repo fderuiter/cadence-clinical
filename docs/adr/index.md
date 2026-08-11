@@ -55,6 +55,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 2. API Gateway, Security & Identity
 
+- [2026-08-11: Decouple Shared Test Signing RBAC Helpers from Gateway](2026-08-11-decoupling-shared-test-signing-rbac-helpers-from-gateway.md)
+
 - [2026-08-11: Unified Ports and Adapters Architecture, Transaction Propagation, and Gateway Connection Pooling](2026-08-11-unified-ports-and-adapters-architecture-transaction-propagation-and-gateway-connection-pooling.md)
 
 - [2026-08-11: Centralized Brand and Domain Validation Guardrail](2026-08-11-centralized-brand-and-domain-validation.md)
