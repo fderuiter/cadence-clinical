@@ -107,6 +107,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-01: Cryptographic Signature Verification Engine for Part 11 eSignatures](2026-08-01-cryptographic-signature-verification-engine-for-esignatures.md)
 
 ### 3. Clinical Data Interoperability & Standards
+
 - [2026-08-11: Key-Based Sync Reconciliation](2026-08-11-key-based-sync-reconciliation.md)
 
 - [2026-08-04: Thread-Safe In-Memory Terminology Search Cache](2026-08-04-in-memory-terminology-search-cache.md)
@@ -296,3 +297,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-06: ADR-[NUMBER]: Global Monorepo Security Scanning and Fail-Fast Startup Assertions](2026-08-06-monorepo-security-scanning-and-fail-fast-assertions.md)
 - [2026-08-10: Dynamic Dependency Matching and Clinical De-identification Consolidation](2026-08-10-dynamic-dependency-matching-and-clinical-deid-consolidation.md)
 - [2026-08-11: Browser-Native Layout-Skipping for eCRF Virtualization](2026-08-11-browser-native-layout-skipping-for-ecrf-virtualization.md)
+- [2026-08-11: ADR-[NUMBER]: Persistent Local PIN Wrapper and Secure Offline IndexedDB Encryption](2026-08-11-persistent-local-pin-wrapper-and-indexeddb-security.md)

@@ -528,3 +528,34 @@ export async function deriveSessionKey(sessionMaterial, salt, info) {
 
   return new Uint8Array(derivedBits);
 }
+
+/**
+ * Derives a 256-bit key-wrapping key from a PIN and a salt using PBKDF2-HMAC-SHA256.
+ *
+ * @param {string} pin - The numeric PIN.
+ * @param {Uint8Array} salt - The PBKDF2 salt.
+ * @param {number} [iterations=100000] - PBKDF2 iteration count.
+ * @returns {Promise<Uint8Array>} 256-bit derived key bytes.
+ */
+export async function deriveKeyFromPIN(pin, salt, iterations = 100000) {
+  const encoder = new TextEncoder();
+  const pinBytes = encoder.encode(pin);
+  const baseKey = await globalThis.crypto.subtle.importKey(
+    "raw",
+    pinBytes,
+    "PBKDF2",
+    false,
+    ["deriveBits"]
+  );
+  const derivedBits = await globalThis.crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: salt,
+      iterations: iterations,
+      hash: "SHA-256",
+    },
+    baseKey,
+    256
+  );
+  return new Uint8Array(derivedBits);
+}
