@@ -100,6 +100,9 @@ async def setup_dual_dbs(monkeypatch):
         await conn.run_sync(ExecBase.metadata.create_all)
 
     # 3. Monkeypatch httpx.AsyncClient in packages.security.gateway_client to route to notifications_app
+    from packages.security.gateway_client import GatewayBaseClient
+    GatewayBaseClient._shared_client = None
+
     original_async_client = httpx.AsyncClient
 
     def mock_async_client(*args, **kwargs):
@@ -115,6 +118,8 @@ async def setup_dual_dbs(monkeypatch):
     yield
 
     # Cleanup
+    GatewayBaseClient._shared_client = None
+
     async with notif_db_manager.engine.begin() as conn:
         await conn.run_sync(NotifBase.metadata.drop_all)
     await notif_db_manager.close()
