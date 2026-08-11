@@ -8,7 +8,7 @@
     tag="div"
     extra-class="clinical-lookup-container"
   >
-    <template #default="{ id: slotId }">
+    <template #default="{ id: slotId, errorId, hasError }">
       <input
         :id="slotId"
         type="text"
@@ -17,9 +17,14 @@
         autocomplete="off"
         v-bind="attributes"
         :aria-describedby="
-          status !== 'none' ? `lookup-status-${id}` : undefined
+          [
+            status !== 'none' ? `lookup-status-${id}` : '',
+            hasError ? errorId : '',
+          ]
+            .filter(Boolean)
+            .join(' ') || undefined
         "
-        :aria-invalid="status === 'invalid' ? 'true' : undefined"
+        :aria-invalid="status === 'invalid' || hasError ? 'true' : undefined"
         @input="
           $emit('update:modelValue', $event.target.value);
           $emit('input', $event.target.value);

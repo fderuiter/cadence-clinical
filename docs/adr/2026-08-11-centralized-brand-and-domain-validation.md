@@ -23,13 +23,15 @@ Prior to this decision, duplicate boot-time brand name, Keycloak realms, and dom
 ### Option 1: Distributed Local Validation (Status Quo)
 
 Keep local boot-time loops inside each `main.py`.
+
 - **Pros:** No shared security package dependency.
 - **Cons:** High code duplication and maintenance friction; drift prone.
 
 ### Option 2: Centralized Validation Utility in `packages/security` (Selected)
 
 Implement `validate_branding` helper in the security package and import/call it at service startup.
-- **Pros:** 
+
+- **Pros:**
   - ✅ Consolidates duplicate logic into a single testable helper.
   - ✅ Restricts default and legacy domains/branding across all microservices uniformly.
   - ✅ Uses catchable `RuntimeError` allowing easy mock and testing.

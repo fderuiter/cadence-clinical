@@ -54,6 +54,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
 
 ### 2. API Gateway, Security & Identity
+
 - [2026-08-11: Unified Ports and Adapters Architecture, Transaction Propagation, and Gateway Connection Pooling](2026-08-11-unified-ports-and-adapters-architecture-transaction-propagation-and-gateway-connection-pooling.md)
 
 - [2026-08-11: Centralized Brand and Domain Validation Guardrail](2026-08-11-centralized-brand-and-domain-validation.md)
@@ -217,10 +218,12 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-28: Hybrid ESLint and In-Memory Accessibility Auditing](2026-07-28-hybrid-eslint-and-in-memory-accessibility-auditing.md)
 - [2026-08-10: Debounced Clinical Code Lookup UI Primitive](2026-08-10-debounced-clinical-code-lookup-ui-primitive.md)
 - [2026-08-11: Standardize PR Templates and Centralize Shared Hashing & Radio Grid Layouts](2026-08-11-standardize-pr-templates-and-centralize-hashing-grid-layout.md)
+- [2026-08-11: Implement slot-driven dynamic accessibility context in Vue 3 SPA components](2026-08-11-slot-driven-dynamic-accessibility-context.md)
 - [2026-08-17: Frontend Standardization, CSS Grid Layouts, and Centralized UI Utilities](2026-08-17-frontend-standardization-css-grid-and-centralized-utilities.md)
 - [2026-08-17: Interactive Mermaid Diagrams and Responsive Layout Controls](2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md)
 
 ### 7. DevOps, Tooling & CI/CD
+
 - [2026-08-11: Standardize Hatch build configurations for clean namespace wheels](2026-08-11-standardize-hatch-build-configurations-for-clean-namespace-wheels.md)
 
 - [2026-08-03: Implement native uv workspaces with service-specific Dockerfiles](2026-08-03-implement-native-uv-workspaces-with-service-specific-dockerfiles.md)

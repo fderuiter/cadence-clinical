@@ -4,6 +4,7 @@
     :label="label"
     :query="query"
     :grid-span="gridSpan"
+    :error="error"
     tag="fieldset"
   >
     <template #default="{ id: slotId }">
@@ -59,6 +60,10 @@ const props = defineProps({
   gridSpan: {
     type: [Number, String],
     default: 12,
+  },
+  error: {
+    type: String,
+    default: null,
   },
 });
 

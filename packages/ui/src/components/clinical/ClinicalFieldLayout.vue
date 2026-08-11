@@ -18,7 +18,14 @@
     <div
       :class="tag === 'fieldset' ? 'radio-options-wrapper' : 'input-wrapper'"
     >
-      <slot :id="id"></slot>
+      <slot
+        :id="id"
+        :error="error"
+        :errorId="`validation-error-${id}`"
+        :error-id="`validation-error-${id}`"
+        :hasError="showError"
+        :has-error="showError"
+      ></slot>
 
       <!-- Query Flag -->
       <ClinicalQueryFlag
@@ -33,7 +40,13 @@
     <slot name="after-input"></slot>
 
     <!-- Validation Error -->
-    <div v-if="showError" class="validation-error-msg">
+    <div
+      v-if="showError"
+      :id="`validation-error-${id}`"
+      class="validation-error-msg"
+      role="status"
+      aria-live="polite"
+    >
       {{ error }}
     </div>
 
