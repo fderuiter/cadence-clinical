@@ -6,6 +6,7 @@ entirely avoiding eval/exec. It tracks fine-grained node-level traceability
 explanations and aggregates individual criteria into a final eligibility report.
 """
 
+import contextlib
 from typing import Any
 
 from .models import (
@@ -198,15 +199,11 @@ def evaluate_node(node: ExpressionNode, context: dict[str, Any]) -> NodeEvaluati
         r_coerced = r_val
 
         if isinstance(l_val, str):
-            try:
+            with contextlib.suppress(ValueError, TypeError):
                 l_coerced = float(l_val)
-            except (ValueError, TypeError):
-                pass
         if isinstance(r_val, str):
-            try:
+            with contextlib.suppress(ValueError, TypeError):
                 r_coerced = float(r_val)
-            except (ValueError, TypeError):
-                pass
 
         try:
             if node.operator == "==":

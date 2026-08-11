@@ -1,5 +1,6 @@
 """Anti-Corruption Layer DTOs for eligibility criteria received from Designer Service."""
 
+import contextlib
 from datetime import datetime
 from typing import Any, Literal
 
@@ -326,15 +327,11 @@ def evaluate_node_dto(
         r_coerced = r_val
 
         if isinstance(l_val, str):
-            try:
+            with contextlib.suppress(ValueError, TypeError):
                 l_coerced = float(l_val)
-            except (ValueError, TypeError):
-                pass
         if isinstance(r_val, str):
-            try:
+            with contextlib.suppress(ValueError, TypeError):
                 r_coerced = float(r_val)
-            except (ValueError, TypeError):
-                pass
 
         try:
             res = False

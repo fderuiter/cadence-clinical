@@ -226,7 +226,9 @@ def test_smart_type_coercion_and_localized_guards():
     eval_res_3 = evaluate_node(node_designer, {"eCRF.DM.AGE": "normal"})
     assert eval_res_3.is_indeterminate is True
     assert eval_res_3.value is None
-    assert "Comparison failed due to incompatible operand types" in eval_res_3.explanation
+    assert (
+        "Comparison failed due to incompatible operand types" in eval_res_3.explanation
+    )
 
     # 3. Test execution-side DTO evaluator parity
     from apps.execution.domain.acl.designer_eligibility_dto import (
@@ -256,5 +258,3 @@ def test_smart_type_coercion_and_localized_guards():
     detail = res_dto_2.criteria_evaluations["INC01"].evaluation_detail
     assert detail.is_indeterminate is True
     assert "Comparison failed due to incompatible operand types" in detail.explanation
-
-
