@@ -2,7 +2,7 @@
   "id": "cadence",
   "realm": "cadence",
   "enabled": true,
-  "displayName": "Cadence Clinical Platform",
+  "displayName": "${env.BRAND_NAME}",
   "roles": {
     "realm": [
       {
