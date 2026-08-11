@@ -1,4 +1,4 @@
-# ADR-2167: Browser-Native Layout-Skipping for eCRF Virtualization
+# ADR-2168: Browser-Native Layout-Skipping for eCRF Virtualization
 
 - **Status:** Accepted
 - **Date:** 2026-08-11
