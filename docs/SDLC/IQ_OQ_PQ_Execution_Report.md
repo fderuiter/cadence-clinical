@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2232
-- **Passed:** 2227 🟢
+- **Total Automated Test Cases Run:** 2242
+- **Passed:** 2237 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
 - **Overall Operational Pass Rate:** 99.78%
@@ -2287,12 +2287,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_json_block_validation`                                                       | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_main_with_arguments`                                                         | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_mock_environment_variables`                                                  | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_nested_code_blocks_in_html_comments`                                         | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_process_markdown_file_e2e`                                                   | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_python_block_validation`                                                     | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_reference_style_link_validation`                                             | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_resolve_path`                                                                | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_skip_and_raw_text_flags`                                                     | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_sys_path_append`                                                             | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_uncommented_code_block_errors_maintained`                                    | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_validate_cli_command_flag_checks`                                            | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_validate_cli_command_python_and_pytest`                                      | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_validate_docker_compose_scenarios`                                           | `scripts.tests.test_markdown_validator`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
@@ -2341,6 +2343,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_mock_designer_driver`                                                        | `scripts.tests.test_shared_rbac_harness`                                    | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_persona_builders_contain_correct_claims`                                     | `scripts.tests.test_shared_rbac_harness`                                    | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_shared_sqlite_dbs_and_clients`                                               | `scripts.tests.test_shared_rbac_harness`                                    | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_find_migration_script`                                                       | `scripts.tests.test_start`                                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_main_designer_service`                                                       | `scripts.tests.test_start`                                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_main_execution_service`                                                      | `scripts.tests.test_start`                                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_run_pre_boot_migrations_failure`                                             | `scripts.tests.test_start`                                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_run_pre_boot_migrations_success`                                             | `scripts.tests.test_start`                                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_run_web_server_nt`                                                           | `scripts.tests.test_start`                                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_run_web_server_posix_fallback`                                               | `scripts.tests.test_start`                                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_run_web_server_posix_success`                                                | `scripts.tests.test_start`                                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_label_based_backlog_gating`                                                  | `scripts.tests.test_sync_github_project`                                    | Trace-34                                     | 🟢 PASSED  | < 1s     |
 | `test_get_repository_fallback`                                                     | `scripts.tests.test_sync_ruleset`                                           | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_get_repository_from_env`                                                     | `scripts.tests.test_sync_ruleset`                                           | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
