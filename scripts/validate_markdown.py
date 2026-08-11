@@ -1027,9 +1027,9 @@ def process_markdown_file(
     for line_idx, raw_line in enumerate(lines, 1):
         line = raw_line.strip()
 
-        # Code Block Boundaries Detection
-        if line.startswith("```"):
-            if in_code_block:
+        # If we are inside an active code block:
+        if in_code_block:
+            if line.startswith("```"):
                 if is_bash_block:
                     # Process collected code block lines
                     current_cmd_parts = []
@@ -1157,18 +1157,8 @@ def process_markdown_file(
                 is_skip_block = False
                 code_block_lines = []
             else:
-                in_code_block = True
-                lang_line = line[3:].strip().lower()
-                is_bash_block = lang_line in ("bash", "sh", "shell")
-                is_python_block = lang_line.startswith("python") or lang_line == "py"
-                is_json_block = lang_line.startswith("json")
-                is_skip_block = any(w in lang_line for w in ("skip", "raw-text", "raw"))
-                code_block_start_line = line_idx
-            continue
-
-        if in_code_block:
-            if is_bash_block or is_python_block or is_json_block:
-                code_block_lines.append((line_idx, raw_line))
+                if is_bash_block or is_python_block or is_json_block:
+                    code_block_lines.append((line_idx, raw_line))
             continue
 
         # --- OUTSIDE CODE BLOCKS ---
@@ -1187,7 +1177,19 @@ def process_markdown_file(
                 in_html_comment = True
                 line_to_process = line_to_process.split("<!--", 1)[0]
 
-        if not line_to_process.strip():
+        # Check if code block starts on this uncommented line portion
+        stripped_to_process = line_to_process.strip()
+        if stripped_to_process.startswith("```"):
+            in_code_block = True
+            lang_line = stripped_to_process[3:].strip().lower()
+            is_bash_block = lang_line in ("bash", "sh", "shell")
+            is_python_block = lang_line.startswith("python") or lang_line == "py"
+            is_json_block = lang_line.startswith("json")
+            is_skip_block = any(w in lang_line for w in ("skip", "raw-text", "raw"))
+            code_block_start_line = line_idx
+            continue
+
+        if not stripped_to_process:
             continue
 
         # 2. Outside Code Blocks: Extract Reference-Style Links
