@@ -53,4 +53,4 @@ By standardizing all workspaces, build pipelines, and container execution enviro
 ## 6. Implementation & Verification
 
 - **Affected Repositories / Services:** Workspace configurations, container files (`docker/Dockerfile`), local developer tooling (`package.json`, `pyproject.toml`), and CI/CD pipelines (`.github/workflows/`).
-- **Verification Plan:** Verified via the automated validation suite running environment integrity checks (`tests/validation/environment_integrity_suite.py`), which assert a minimum Python version of `>= (3, 14)`, and standard linting checks.
+- **Verification Plan:** Verified via the automated validation suite running environment integrity checks (`apps/gateway/tests/test_gateway_compliance.py`), which assert a minimum Python version of `>= (3, 14)`, and standard linting checks.

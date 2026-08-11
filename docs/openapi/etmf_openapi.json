@@ -312,8 +312,10 @@
     },
     "/health": {
       "get": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Health Check",
-        "description": "Service health check endpoint.",
         "operationId": "health_check_health_get",
         "responses": {
           "200": {
@@ -335,8 +337,10 @@
     },
     "/api/v1/etmf/ingest": {
       "post": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Ingest Document",
-        "description": "Listen to and ingest system publication events or manual document archives.\nAutomatically assigns DIA TMF Zone and Section taxonomy, and indexes the content.",
         "operationId": "ingest_document_api_v1_etmf_ingest_post",
         "requestBody": {
           "content": {
@@ -376,8 +380,10 @@
     },
     "/events/publish": {
       "post": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Ingest Document",
-        "description": "Listen to and ingest system publication events or manual document archives.\nAutomatically assigns DIA TMF Zone and Section taxonomy, and indexes the content.",
         "operationId": "ingest_document_events_publish_post",
         "requestBody": {
           "content": {
@@ -417,8 +423,10 @@
     },
     "/api/v1/etmf/documents": {
       "get": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "List Documents",
-        "description": "Retrieve and search indexed, searchable eTMF document records.\nAll views are logged to the immutable audit ledger.",
         "operationId": "list_documents_api_v1_etmf_documents_get",
         "parameters": [
           {
@@ -524,8 +532,10 @@
     },
     "/api/v1/etmf/documents/{document_id}": {
       "get": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "View Document",
-        "description": "View metadata for a specific eTMF document.\nAll views are logged to the immutable audit ledger.",
         "operationId": "view_document_api_v1_etmf_documents__document_id__get",
         "parameters": [
           {
@@ -564,8 +574,10 @@
     },
     "/api/v1/etmf/documents/{document_id}/versions": {
       "get": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Get Document Versions",
-        "description": "Retrieve all versions/revisions of a document's lineage and their QC transition histories.",
         "operationId": "get_document_versions_api_v1_etmf_documents__document_id__versions_get",
         "parameters": [
           {
@@ -604,8 +616,10 @@
     },
     "/api/v1/etmf/documents/{document_id}/download": {
       "get": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Download Document",
-        "description": "Download/stream indexed content for a specific eTMF document.\nAll downloads are logged to the immutable audit ledger.",
         "operationId": "download_document_api_v1_etmf_documents__document_id__download_get",
         "parameters": [
           {
@@ -654,8 +668,10 @@
     },
     "/api/v1/etmf/documents/{document_id}/watermark": {
       "get": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Download Watermarked Document",
-        "description": "Dedicated watermarked view/download path for external auditors.\nAccess is strictly auditor-role-gated.",
         "operationId": "download_watermarked_document_api_v1_etmf_documents__document_id__watermark_get",
         "parameters": [
           {
@@ -692,8 +708,10 @@
     },
     "/api/v1/etmf/audit-logs": {
       "get": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Get Audit Trail",
-        "description": "Retrieve audit trail of all eTMF interactions.\nRestricted to authorized roles like regulatory inspectors.",
         "operationId": "get_audit_trail_api_v1_etmf_audit_logs_get",
         "parameters": [
           {
@@ -842,8 +860,10 @@
     },
     "/api/v1/etmf/edl": {
       "get": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "List Expectations",
-        "description": "List expected documents for a study, optionally filtered by site and milestone.",
         "operationId": "list_expectations_api_v1_etmf_edl_get",
         "parameters": [
           {
@@ -922,8 +942,10 @@
         }
       },
       "post": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Create Expectation",
-        "description": "CREATE a new Expected Document List (EDL) expectation.",
         "operationId": "create_expectation_api_v1_etmf_edl_post",
         "requestBody": {
           "required": true,
@@ -961,8 +983,10 @@
     },
     "/api/v1/etmf/edl/{edl_id}": {
       "put": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Update Expectation",
-        "description": "UPDATE an existing Expected Document List (EDL) expectation.",
         "operationId": "update_expectation_api_v1_etmf_edl__edl_id__put",
         "parameters": [
           {
@@ -1011,8 +1035,10 @@
     },
     "/api/v1/etmf/completeness": {
       "get": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Check Completeness",
-        "description": "Completeness checking dashboard to verify mandatory artifacts\nbefore study milestone transitions.",
         "operationId": "check_completeness_api_v1_etmf_completeness_get",
         "parameters": [
           {
@@ -1082,8 +1108,10 @@
     },
     "/api/v1/etmf/documents/{document_id}/redact": {
       "post": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Redact Document Endpoint",
-        "description": "Perform controlled redaction on an existing unredacted eTMF document, producing a new\nredacted document version linked to the source.\nAll redactions are logged to the immutable audit trail and block auditor/inspector personas.",
         "operationId": "redact_document_endpoint_api_v1_etmf_documents__document_id__redact_post",
         "parameters": [
           {
@@ -1132,8 +1160,10 @@
     },
     "/api/v1/etmf/documents/{document_id}/auto-redact": {
       "post": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Auto Redact Document Endpoint",
-        "description": "Perform controlled automated redaction on an existing unredacted eTMF document, producing a new\nredacted document version linked to the source.\nAll redactions are logged to the immutable audit trail and block auditor/inspector personas.",
         "operationId": "auto_redact_document_endpoint_api_v1_etmf_documents__document_id__auto_redact_post",
         "parameters": [
           {
@@ -1182,8 +1212,10 @@
     },
     "/api/v1/etmf/documents/{document_id}/manual-redact": {
       "post": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Manual Redact Document Endpoint",
-        "description": "Perform controlled manual redaction on an existing unredacted eTMF document using specified character spans and literal terms.\nProduces a new redacted document version linked to the source.\nAll redactions are logged to the immutable audit trail and block auditor/inspector personas.",
         "operationId": "manual_redact_document_endpoint_api_v1_etmf_documents__document_id__manual_redact_post",
         "parameters": [
           {
@@ -1232,8 +1264,10 @@
     },
     "/api/v1/etmf/test-exception": {
       "get": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Test Exception Route",
-        "description": "Test-only endpoint to trigger a database session exception and rollback.",
         "operationId": "test_exception_route_api_v1_etmf_test_exception_get",
         "responses": {
           "200": {
@@ -1249,8 +1283,10 @@
     },
     "/api/v1/etmf/documents/{document_id}/transition": {
       "post": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Transition Document Status Endpoint",
-        "description": "Perform a secure, 21 CFR Part 11 compliant Quality Control (QC) status transition on an eTMF document.\nEnforces role-based access gates and logs an append-only state transition history record.",
         "operationId": "transition_document_status_endpoint_api_v1_etmf_documents__document_id__transition_post",
         "parameters": [
           {
@@ -1301,8 +1337,10 @@
     },
     "/api/v1/etmf/documents/{document_id}/expiration": {
       "put": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Update Document Expiration Endpoint",
-        "description": "UPDATE expiration-related metadata for an eTMF document.\nEnforces the etmf_document:manage_expiration permission and checks trial locks.",
         "operationId": "update_document_expiration_endpoint_api_v1_etmf_documents__document_id__expiration_put",
         "parameters": [
           {
@@ -1351,8 +1389,10 @@
     },
     "/api/v1/etmf/documents/{document_id}/approve": {
       "post": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Sign Document Endpoint",
-        "description": "Approve and cryptographically sign an eTMF document, producing a 21 CFR Part 11 compliant\npersisted signature manifestation, recording immutable audit actions (SIGN & APPROVE),\nand transitioning the record to SIGNED.",
         "operationId": "sign_document_endpoint_api_v1_etmf_documents__document_id__approve_post",
         "parameters": [
           {
@@ -1401,8 +1441,10 @@
     },
     "/api/v1/etmf/documents/{document_id}/sign-off": {
       "post": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Sign Document Endpoint",
-        "description": "Approve and cryptographically sign an eTMF document, producing a 21 CFR Part 11 compliant\npersisted signature manifestation, recording immutable audit actions (SIGN & APPROVE),\nand transitioning the record to SIGNED.",
         "operationId": "sign_document_endpoint_api_v1_etmf_documents__document_id__sign_off_post",
         "parameters": [
           {
@@ -1451,8 +1493,10 @@
     },
     "/api/v1/etmf/studies/{study_id}/artifacts/{artifact_type}/history": {
       "get": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Get Artifact History",
-        "description": "Retrieve the chronological, ordered version history of a specific artifact type within a study.\nAll views are logged to the immutable audit trail.",
         "operationId": "get_artifact_history_api_v1_etmf_studies__study_id__artifacts__artifact_type__history_get",
         "parameters": [
           {
@@ -1504,8 +1548,10 @@
     },
     "/api/v1/etmf/documents/{document_id}/transitions": {
       "get": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Get Document Transition History",
-        "description": "Retrieve the append-only Quality Control (QC) transition history for a specific eTMF document.",
         "operationId": "get_document_transition_history_api_v1_etmf_documents__document_id__transitions_get",
         "parameters": [
           {
@@ -1548,9 +1594,11 @@
     },
     "/api/v1/etmf/inbound-email": {
       "post": {
-        "summary": "Inbound Email Webhook",
-        "description": "Inbound-email webhook that validates provider requests, resolves a target study/binder location,\nand routes message content and attachments into the shared eTMF ingestion service.",
-        "operationId": "inbound_email_webhook_api_v1_etmf_inbound_email_post",
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Receive Inbound Email",
+        "operationId": "receive_inbound_email_api_v1_etmf_inbound_email_post",
         "responses": {
           "201": {
             "description": "Successful Response",
@@ -1559,7 +1607,7 @@
                 "schema": {
                   "additionalProperties": true,
                   "type": "object",
-                  "title": "Response Inbound Email Webhook Api V1 Etmf Inbound Email Post"
+                  "title": "Response Receive Inbound Email Api V1 Etmf Inbound Email Post"
                 }
               }
             }
@@ -1569,8 +1617,10 @@
     },
     "/api/v1/etmf/studies/{study_id}/binder/structure": {
       "get": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Get Binder Structure",
-        "description": "Expose the structured Zone -> Section -> Artifact tree for a study binder,\nannotated with expected/present/missing status.",
         "operationId": "get_binder_structure_api_v1_etmf_studies__study_id__binder_structure_get",
         "parameters": [
           {
@@ -1645,8 +1695,10 @@
     },
     "/api/v1/etmf/studies/{study_id}/binder": {
       "get": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Export Regulatory Binder",
-        "description": "Generate an inspection-ready ZIP binder for an eTMF study.",
         "operationId": "export_regulatory_binder_api_v1_etmf_studies__study_id__binder_get",
         "parameters": [
           {
@@ -1695,8 +1747,10 @@
     },
     "/api/v1/etmf/studies/{study_id}/archive": {
       "post": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Bulk Archive Study Documents",
-        "description": "Perform authorized bulk study-level document archival transitioning eligible eTMF documents to\nthe terminal ARCHIVED status under 21 CFR Part 11 requirements.",
         "operationId": "bulk_archive_study_documents_api_v1_etmf_studies__study_id__archive_post",
         "parameters": [
           {
@@ -1745,8 +1799,10 @@
     },
     "/api/v1/etmf/documents/{document_id}/qc-history": {
       "get": {
+        "tags": [
+          "eTMF"
+        ],
         "summary": "Get Document Qc History",
-        "description": "Retrieve the append-only Quality Control (QC) review history for a specific eTMF document.",
         "operationId": "get_document_qc_history_api_v1_etmf_documents__document_id__qc_history_get",
         "parameters": [
           {
@@ -1874,8 +1930,7 @@
           "scope",
           "status"
         ],
-        "title": "ArtifactDetail",
-        "description": "Enriched per-artifact completeness detail."
+        "title": "ArtifactDetail"
       },
       "AuditLogResponse": {
         "properties": {
@@ -1925,8 +1980,7 @@
           "document_id",
           "details"
         ],
-        "title": "AuditLogResponse",
-        "description": "Representation of an eTMF audit trail log."
+        "title": "AuditLogResponse"
       },
       "AutoFileRequest": {
         "properties": {
@@ -2063,8 +2117,7 @@
           }
         },
         "type": "object",
-        "title": "AutomatedRedactRequest",
-        "description": "Payload for requesting automated redaction on an eTMF document."
+        "title": "AutomatedRedactRequest"
       },
       "AutomatedRedactResponse": {
         "properties": {
@@ -2112,8 +2165,7 @@
           "categories_counts",
           "manifest"
         ],
-        "title": "AutomatedRedactResponse",
-        "description": "Response detailing the automated redaction operation outcomes.\nCrucially, it never exposes raw matched PII/PHI identifiers."
+        "title": "AutomatedRedactResponse"
       },
       "BinderArtifactNode": {
         "properties": {
@@ -2158,8 +2210,7 @@
           "artifact_name",
           "status"
         ],
-        "title": "BinderArtifactNode",
-        "description": "Representation of an artifact node in the binder structure."
+        "title": "BinderArtifactNode"
       },
       "BinderSectionNode": {
         "properties": {
@@ -2185,8 +2236,7 @@
           "section_name",
           "artifacts"
         ],
-        "title": "BinderSectionNode",
-        "description": "Representation of a section node in the binder structure."
+        "title": "BinderSectionNode"
       },
       "BinderStructureResponse": {
         "properties": {
@@ -2245,8 +2295,7 @@
           "present_artifacts",
           "missing_artifacts"
         ],
-        "title": "BinderStructureResponse",
-        "description": "Top-level binder structure response."
+        "title": "BinderStructureResponse"
       },
       "BinderZoneNode": {
         "properties": {
@@ -2272,8 +2321,7 @@
           "zone_name",
           "sections"
         ],
-        "title": "BinderZoneNode",
-        "description": "Representation of a zone node in the binder structure."
+        "title": "BinderZoneNode"
       },
       "CompletenessResponse": {
         "properties": {
@@ -2336,8 +2384,7 @@
           "missing_artifacts",
           "per_artifact_detail"
         ],
-        "title": "CompletenessResponse",
-        "description": "Completeness dashboard check response."
+        "title": "CompletenessResponse"
       },
       "ComplianceProfile": {
         "type": "string",
@@ -2391,8 +2438,7 @@
           }
         },
         "type": "object",
-        "title": "DocumentExpirationUpdate",
-        "description": "Payload for patching the date-range and ownership metadata of an eTMF document.\n\nAll fields are optional; only the supplied fields are applied.  The\n``validate_dates`` validator enforces chronological ordering when both\n``issue_date`` and ``expiration_date`` are provided together."
+        "title": "DocumentExpirationUpdate"
       },
       "DocumentResponse": {
         "properties": {
@@ -2666,8 +2712,7 @@
           "taxonomy_version",
           "artifact_code"
         ],
-        "title": "DocumentResponse",
-        "description": "Representation of an eTMF document."
+        "title": "DocumentResponse"
       },
       "DocumentVersionEntry": {
         "properties": {
@@ -2745,8 +2790,7 @@
           "artifact_code",
           "transitions"
         ],
-        "title": "DocumentVersionEntry",
-        "description": "Representation of a specific document version lineage entry."
+        "title": "DocumentVersionEntry"
       },
       "DocumentVersionsResponse": {
         "properties": {
@@ -2772,8 +2816,7 @@
           "artifact_code",
           "versions"
         ],
-        "title": "DocumentVersionsResponse",
-        "description": "Response containing all versions and transitions for a document's lineage."
+        "title": "DocumentVersionsResponse"
       },
       "ExpectedDocumentCreate": {
         "properties": {
@@ -2856,8 +2899,7 @@
           "artifact_type",
           "reason_for_change"
         ],
-        "title": "ExpectedDocumentCreate",
-        "description": "Payload to create/update an Expected Document List (EDL) expectation."
+        "title": "ExpectedDocumentCreate"
       },
       "ExpectedDocumentResponse": {
         "properties": {
@@ -2950,8 +2992,7 @@
           "reason_for_change",
           "version_index"
         ],
-        "title": "ExpectedDocumentResponse",
-        "description": "Representation of an EDL expectation record."
+        "title": "ExpectedDocumentResponse"
       },
       "HTTPValidationError": {
         "properties": {
@@ -3172,8 +3213,7 @@
           "content",
           "mime_type"
         ],
-        "title": "IngestionRequest",
-        "description": "Payload for system event or manual ingestion of TMF documents."
+        "title": "IngestionRequest"
       },
       "ManualRedactRequest": {
         "properties": {
@@ -3221,8 +3261,7 @@
           }
         },
         "type": "object",
-        "title": "ManualRedactRequest",
-        "description": "Payload for submitting manual redaction parameters (spans and/or terms)."
+        "title": "ManualRedactRequest"
       },
       "ManualRedactResponse": {
         "properties": {
@@ -3270,8 +3309,7 @@
           "categories_counts",
           "manifest"
         ],
-        "title": "ManualRedactResponse",
-        "description": "Response detailing the manual redaction operation outcomes.\nCrucially, it never exposes raw matched PII/PHI identifiers."
+        "title": "ManualRedactResponse"
       },
       "PaginatedAuditLogResponse": {
         "properties": {
@@ -3329,8 +3367,7 @@
           "offset",
           "has_more"
         ],
-        "title": "PaginatedAuditLogResponse",
-        "description": "Paginated representation of eTMF audit trail logs."
+        "title": "PaginatedAuditLogResponse"
       },
       "ProtocolVersionRefDTO": {
         "properties": {
@@ -3362,7 +3399,7 @@
           "status"
         ],
         "title": "ProtocolVersionRefDTO",
-        "description": "Pydantic v2 ACL model representing a reference to a specific clinical trial protocol version.\n\nOwned by eTMF service to prevent cross-service imports from Designer database or domain models."
+        "description": "Pydantic v2 ACL model representing a reference to a specific clinical trial protocol version."
       },
       "ProtocolVersionStatusDTO": {
         "type": "string",
@@ -3408,8 +3445,7 @@
           "redacted_content",
           "manifest"
         ],
-        "title": "RedactRequest",
-        "description": "Payload for submitting redacted content as a new version."
+        "title": "RedactRequest"
       },
       "SignDocumentRequest": {
         "properties": {
@@ -3422,8 +3458,7 @@
         "required": [
           "signing_reason"
         ],
-        "title": "SignDocumentRequest",
-        "description": "Payload for submitting a signing and approval request."
+        "title": "SignDocumentRequest"
       },
       "SigningReason": {
         "type": "string",
@@ -3476,8 +3511,7 @@
           "start",
           "end"
         ],
-        "title": "SpanItem",
-        "description": "Explicit character span to redact in manual redaction."
+        "title": "SpanItem"
       },
       "StudyArchiveItemResult": {
         "properties": {
@@ -3521,8 +3555,7 @@
           "to_status",
           "status"
         ],
-        "title": "StudyArchiveItemResult",
-        "description": "Detailed result for an individual document's archival attempt."
+        "title": "StudyArchiveItemResult"
       },
       "StudyArchiveRequest": {
         "properties": {
@@ -3544,8 +3577,7 @@
         "required": [
           "reason_for_change"
         ],
-        "title": "StudyArchiveRequest",
-        "description": "Payload to request bulk study-level document archival."
+        "title": "StudyArchiveRequest"
       },
       "StudyArchiveResponse": {
         "properties": {
@@ -3591,8 +3623,7 @@
           "skipped_count",
           "results"
         ],
-        "title": "StudyArchiveResponse",
-        "description": "Response model for bulk study archive operation."
+        "title": "StudyArchiveResponse"
       },
       "TaxonomyArtifactNode": {
         "properties": {
@@ -3709,8 +3740,7 @@
           "to_status",
           "reason_for_change"
         ],
-        "title": "TransitionRequest",
-        "description": "Payload to request a secure 21 CFR Part 11 compliant QC transition on a document."
+        "title": "TransitionRequest"
       },
       "TransitionResponse": {
         "properties": {
@@ -3758,8 +3788,7 @@
           "reason_for_change",
           "timestamp"
         ],
-        "title": "TransitionResponse",
-        "description": "Representation of an immutable append-only DocumentQCTransition log record."
+        "title": "TransitionResponse"
       },
       "ValidationError": {
         "properties": {

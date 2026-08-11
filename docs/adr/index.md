@@ -128,6 +128,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-26: Durable Dictionary-Import Worker and Recovery Contract](2026-08-26-durable-dictionary-import-worker.md)
 - [2026-08-09: E2B(R3) ICSR XML Export and Structural Validation](2026-08-09-safety-e2b-icsr-xml-export-pipeline.md)
 - [2026-08-11: Bidirectional Field Parity and RFC 7807 Validation Schemas](2026-08-11-bidirectional-field-parity-and-rfc7807-validation-schemas.md)
+- [2026-08-11: Chronological Date Validation and Visit Date Constraints in SDTM Models](2026-08-11-chronological-sdtm-date-validation.md)
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
@@ -289,3 +290,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-09: RSA Signature Verification Fallback to PKCS1v15](2026-09-09-rsa-signature-verification-fallback-pkcs1v15.md)
 - [2026-08-05: ADR-2026-08-05: Global Prettier Formatting and Pre-commit Checks](2026-08-05-global-prettier-formatting-and-pre-commit-checks.md)
 - [2026-08-06: ADR-[NUMBER]: Global Monorepo Security Scanning and Fail-Fast Startup Assertions](2026-08-06-monorepo-security-scanning-and-fail-fast-assertions.md)
+- [2026-08-10: Dynamic Dependency Matching and Clinical De-identification Consolidation](2026-08-10-dynamic-dependency-matching-and-clinical-deid-consolidation.md)

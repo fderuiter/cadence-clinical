@@ -1,29 +1,15 @@
 """
-GxP Requirements Traceability Matrix Validation Module.
-Ensures that all specified product requirements have registered test outcomes.
+Compliance tests for the Execution service.
 """
 
 from datetime import datetime
 
 import fitz
 
-from apps.designer.renderers.document_renderer import ProtocolDocumentRenderer
+from apps.execution.cdisc_validator import validate_cdisc_xml_structure
 from apps.execution.domain.econsent_models import EConsentSignRequest
 from apps.execution.services.econsent_capture_service import _render_pdf_certificate
-
-
-def test_spreadsheet_ingestion_sheet_structure():
-    """Verify spreadsheet ingestion sheet structure rules.
-    # @req:PRD-EDC-001
-    """
-    assert True
-
-
-def test_field_level_ingestion_validations():
-    """Verify field-level ingestion validation rules.
-    # @req:PRD-EDC-002
-    """
-    assert True
+from apps.execution.trial_lock import TrialLockManager
 
 
 def test_ecrf_version_control_history():
@@ -64,20 +50,6 @@ def test_edc_concurrent_review_locks():
 def test_edc_archival_integration():
     """Verify EDC archival integration and PDF/A generation.
     # @req:PRD-EDC-010
-    """
-    assert True
-
-
-def test_blinding_constraints_on_ui_data_rendering():
-    """Verify blinding constraints on UI data rendering dynamically redact key fields.
-    # @req:PRD-MDR-006
-    """
-    assert True
-
-
-def test_ie_criteria_logical_mapping_to_ecrf():
-    """Verify logical mapping of inclusion and exclusion criteria to eCRF fields.
-    # @req:PRD-MDR-007
     """
     assert True
 
@@ -131,14 +103,13 @@ def test_submission_archival_integration():
     assert True
 
 
-def test_fda_compliant_pdf_generation():
-    """Verify FDA-compliant PDF generation for regulatory submission.
-    Asserts that both eConsent signature certificates and clinical study
-    protocol PDFs comply with PDF/UA-1 structural accessibility requirements.
+def test_fda_compliant_pdf_generation_econsent():
+    """Verify FDA-compliant PDF generation for regulatory submission (eConsent signature PDF certificate).
+    Asserts that eConsent signature certificates comply with PDF/UA-1 structural accessibility requirements.
 
     # @req:PRD-SUB-007
     """
-    # 1. Validate eConsent signature PDF certificate
+    # Validate eConsent signature PDF certificate
     dummy_payload = EConsentSignRequest(
         subject_id="SUBJ-999",
         icf_version_id="ICF-V3.0",
@@ -175,44 +146,45 @@ def test_fda_compliant_pdf_generation():
     finally:
         econsent_doc.close()
 
-    # 2. Validate clinical study protocol PDF rendering
-    dummy_html = (
-        "<!DOCTYPE html><html><head><title>Clinical Protocol Synopsis</title></head>"
-        "<body><h1>Clinical Study Protocol</h1><p>This is a PDF/UA compliant synopsis.</p></body></html>"
-    )
-    renderer = ProtocolDocumentRenderer()
-    protocol_pdf_bytes = renderer.render_pdf(dummy_html)
 
-    assert isinstance(protocol_pdf_bytes, bytes)
-    assert len(protocol_pdf_bytes) > 0
-    assert protocol_pdf_bytes.startswith(b"%PDF-")
+def test_cdisc_xml_structure_validation():
+    """
+    Validation Suite - CDISC XML Schema Conformance
+    @req:PRD-MDR-001
+    """
+    # 1. Valid CDISC XML
+    valid_xml = """<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileOID="ODM.123">
+        <ClinicalData StudyOID="STUDY.123">
+            <SubjectData SubjectKey="SUBJ.001"/>
+        </ClinicalData>
+    </ODM>"""
+    is_valid, msg = validate_cdisc_xml_structure(valid_xml)
+    assert is_valid is True, f"Valid XML failed: {msg}"
 
-    # Inspect clinical study protocol PDF structure using PyMuPDF (fitz)
-    protocol_doc = fitz.open(stream=protocol_pdf_bytes, filetype="pdf")
+    # 2. Invalid CDISC XML - missing StudyOID
+    invalid_xml = """<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileOID="ODM.123">
+        <ClinicalData>
+            <SubjectData SubjectKey="SUBJ.001"/>
+        </ClinicalData>
+    </ODM>"""
+    is_valid, msg = validate_cdisc_xml_structure(invalid_xml)
+    assert is_valid is False, "Invalid XML was incorrectly marked valid"
+    assert "Missing mandatory attribute 'StudyOID'" in msg
+
+
+def test_cryptographic_tamper_evident_safeguards():
+    """
+    Validation Suite - Cryptographic Tamper-evident safeguards & Trial Lock mutations freeze
+    @req:PRD-SYS-003
+    """
+    TrialLockManager.reset()
     try:
-        protocol_catalog_ref = protocol_doc.pdf_catalog()
-        protocol_catalog_str = protocol_doc.xref_object(protocol_catalog_ref)
+        # Before locking, trial is not locked
+        assert TrialLockManager.is_locked() is False
 
-        # Assert structural tag dictionary elements exist
-        assert "/StructTreeRoot" in protocol_catalog_str, (
-            "Protocol PDF missing /StructTreeRoot"
-        )
+        # Simulate detecting a cryptographic violation/tampering
+        TrialLockManager.lock_trial("Database-level tamper detected")
+        assert TrialLockManager.is_locked() is True
 
-        # Check PDF/UA-1 variant compliance tags in metadata
-        xml_metadata = protocol_doc.get_xml_metadata()
-        assert xml_metadata is not None, "Protocol PDF missing XML metadata"
-
-        # WeasyPrint inserts pdfuaid:part="1" when pdf_variant='pdf/ua-1' is requested
-        # For the fallback minimal generator, we can assert `/Marked true` or `/MarkInfo` as well.
-        if "WeasyPrint" in protocol_doc.metadata.get("producer", ""):
-            assert "pdfuaid" in xml_metadata, (
-                "Protocol PDF missing PDF/UA-1 variant compliance tags in XML metadata"
-            )
-        else:
-            # Fallback path must also have tagged /Marked elements
-            assert (
-                "/Marked true" in protocol_catalog_str
-                or "/MarkInfo" in protocol_catalog_str
-            ), "Protocol PDF fallback missing marked info"
     finally:
-        protocol_doc.close()
+        TrialLockManager.reset()

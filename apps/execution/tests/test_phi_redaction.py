@@ -5,7 +5,7 @@ Requirements: PRD-SYS-001
 
 import packages  # noqa: F401
 from apps.execution.services.pdf_redactor import PDFRedactorService
-from packages.security.ner_scrubber import PHINameEntityScrubber
+from packages.deid.ner_scrubber import PHINameEntityScrubber
 
 
 def test_zero_phi_leak_in_redacted_pdf() -> None:

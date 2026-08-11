@@ -9,12 +9,43 @@ Requirements: PRD-SYS-001
 
 import ast
 import os
+import re
 import sys
+import tomllib
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 APPS_DIR = ROOT_DIR / "apps"
 PACKAGES_DIR = ROOT_DIR / "packages"
+
+_PACKAGE_DEPS_CACHE = {}
+
+
+def get_package_dependencies(package_name: str) -> set[str]:
+    """Reads and parses dependencies declared in a package's pyproject.toml."""
+    if package_name in _PACKAGE_DEPS_CACHE:
+        return _PACKAGE_DEPS_CACHE[package_name]
+
+    pyproject_path = PACKAGES_DIR / package_name / "pyproject.toml"
+    if not pyproject_path.exists():
+        _PACKAGE_DEPS_CACHE[package_name] = set()
+        return set()
+
+    try:
+        with open(pyproject_path, "rb") as f:
+            data = tomllib.load(f)
+            deps = data.get("project", {}).get("dependencies", [])
+            clean_deps = set()
+            for dep in deps:
+                # Extract clean package name (alphanumeric/hyphen/underscore before operators/version)
+                parts = re.split(r"[>=<!\[\s@]", dep)
+                if parts:
+                    clean_deps.add(parts[0].strip())
+            _PACKAGE_DEPS_CACHE[package_name] = clean_deps
+            return clean_deps
+    except Exception:
+        _PACKAGE_DEPS_CACHE[package_name] = set()
+        return set()
 
 
 def get_service_name(file_path: Path) -> str:
@@ -78,6 +109,19 @@ def check_file_imports(file_path: Path) -> list[str]:
                     f"Line {lineno}: Package boundary violation! Package '{entity_name}' is importing "
                     f"from app service '{imported_service}' via '{mod_name}'."
                 )
+        elif len(parts) >= 2 and parts[0] == "packages":
+            imported_package = parts[1]
+            if is_package:
+                if imported_package != entity_name:
+                    declared_deps = get_package_dependencies(entity_name)
+                    required_dep = f"packages-{imported_package.replace('_', '-')}"
+                    if required_dep not in declared_deps:
+                        violations.append(
+                            f"Line {lineno}: Package dependency boundary violation! "
+                            f"Package '{entity_name}' imports from package '{imported_package}' via '{mod_name}', "
+                            f"but '{required_dep}' is not declared in the dependencies of "
+                            f"'{entity_name}''s package configuration (pyproject.toml)."
+                        )
 
     for node in ast.walk(tree):
         # 1. Standard "import apps.foo"

@@ -31,7 +31,6 @@
     "/api/v1/quality/deviations": {
       "post": {
         "summary": "Create Deviation",
-        "description": "Create a new clinical protocol deviation or quality deviation event.",
         "operationId": "create_deviation_api_v1_quality_deviations_post",
         "requestBody": {
           "required": true,
@@ -68,7 +67,6 @@
       },
       "get": {
         "summary": "List Deviations",
-        "description": "Retrieve clinical deviation records with optional filtering.",
         "operationId": "list_deviations_api_v1_quality_deviations_get",
         "parameters": [
           {
@@ -157,7 +155,6 @@
     "/api/v1/quality/deviations/{id}": {
       "get": {
         "summary": "View Deviation",
-        "description": "Retrieve a specific clinical deviation by ID.",
         "operationId": "view_deviation_api_v1_quality_deviations__id__get",
         "parameters": [
           {
@@ -197,7 +194,6 @@
     "/api/v1/quality/deviations/{id}/rca": {
       "put": {
         "summary": "Create Or Update Rca",
-        "description": "CREATE or UPDATE Root Cause Analysis (RCA) linked to a specific deviation.\nTransitions the deviation status to RCA_COMPLETE.",
         "operationId": "create_or_update_rca_api_v1_quality_deviations__id__rca_put",
         "parameters": [
           {
@@ -245,7 +241,6 @@
       },
       "post": {
         "summary": "Create Or Update Rca",
-        "description": "CREATE or UPDATE Root Cause Analysis (RCA) linked to a specific deviation.\nTransitions the deviation status to RCA_COMPLETE.",
         "operationId": "create_or_update_rca_api_v1_quality_deviations__id__rca_post",
         "parameters": [
           {
@@ -295,7 +290,6 @@
     "/api/v1/quality/capas": {
       "post": {
         "summary": "Create Capa",
-        "description": "CREATE a new Corrective and Preventive Action (CAPA) record linked to a deviation.",
         "operationId": "create_capa_api_v1_quality_capas_post",
         "requestBody": {
           "content": {
@@ -334,7 +328,6 @@
     "/api/v1/quality/capas/{id}/transition": {
       "post": {
         "summary": "Transition Capa",
-        "description": "Perform a secure, 21 CFR Part 11 compliant status transition on a CAPA record.",
         "operationId": "transition_capa_api_v1_quality_capas__id__transition_post",
         "parameters": [
           {
@@ -384,7 +377,6 @@
     "/api/v1/quality/capas/{id}": {
       "put": {
         "summary": "Update Capa",
-        "description": "UPDATE non-status attributes of a CAPA record. Disallowed once terminal (CLOSED/CANCELLED).",
         "operationId": "update_capa_api_v1_quality_capas__id__put",
         "parameters": [
           {
@@ -434,7 +426,6 @@
     "/api/v1/quality/audit-logs": {
       "get": {
         "summary": "List Audit Logs",
-        "description": "Retrieve quality audit logs in descending chronological order.",
         "operationId": "list_audit_logs_api_v1_quality_audit_logs_get",
         "responses": {
           "200": {

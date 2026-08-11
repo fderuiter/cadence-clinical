@@ -244,7 +244,7 @@
           "USDM Data Flow"
         ],
         "summary": "Export Usdm Protocol Spec",
-        "description": "Export study protocol graph specification as CDISC USDM JSON.\n\nRequirements: PRD-SYS-001",
+        "description": "Export study specification from Neo4j into CDISC USDM v3.0 JSON.\n\nRequirements: PRD-SYS-001",
         "operationId": "export_usdm_protocol_spec_api_v1_usdm_export__study_id__get",
         "parameters": [
           {
@@ -861,46 +861,10 @@
       }
     },
     "/{path}": {
-      "options": {
+      "delete": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__options",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__options",
+        "operationId": "proxy_requests__path__delete",
         "parameters": [
           {
             "name": "path",
@@ -936,43 +900,7 @@
       "put": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__options",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__options",
+        "operationId": "proxy_requests__path__delete",
         "parameters": [
           {
             "name": "path",
@@ -1008,7 +936,43 @@
       "head": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__options",
+        "operationId": "proxy_requests__path__delete",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__delete",
         "parameters": [
           {
             "name": "path",
@@ -1044,7 +1008,7 @@
       "get": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__options",
+        "operationId": "proxy_requests__path__delete",
         "parameters": [
           {
             "name": "path",
@@ -1077,10 +1041,46 @@
           }
         }
       },
-      "delete": {
+      "post": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__options",
+        "operationId": "proxy_requests__path__delete",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__delete",
         "parameters": [
           {
             "name": "path",
@@ -1121,16 +1121,14 @@
         "properties": {
           "reason_for_change": {
             "type": "string",
-            "title": "Reason For Change",
-            "description": "21 CFR Part 11 compliant reason for change"
+            "title": "Reason For Change"
           }
         },
         "type": "object",
         "required": [
           "reason_for_change"
         ],
-        "title": "AcknowledgeNotificationRequest",
-        "description": "Request schema for acknowledging a notification.\n\nRequirements: PRD-SYS-001"
+        "title": "AcknowledgeNotificationRequest"
       },
       "AssignmentComplianceDetail": {
         "properties": {
@@ -1231,8 +1229,7 @@
           "domain_code",
           "name"
         ],
-        "title": "CdashDomainDefinition",
-        "description": "CDASH domain specification definition."
+        "title": "CdashDomainDefinition"
       },
       "CdiscProductSummary": {
         "properties": {
@@ -1272,8 +1269,7 @@
           "title",
           "version"
         ],
-        "title": "CdiscProductSummary",
-        "description": "Summary metadata of a CDISC product catalog entry."
+        "title": "CdiscProductSummary"
       },
       "CodelistDefinition": {
         "properties": {
@@ -1303,8 +1299,7 @@
           "codelist_code",
           "name"
         ],
-        "title": "CodelistDefinition",
-        "description": "Controlled terminology codelist definition."
+        "title": "CodelistDefinition"
       },
       "CodelistTerm": {
         "properties": {
@@ -1338,8 +1333,7 @@
           "submission_value",
           "preferred_term"
         ],
-        "title": "CodelistTerm",
-        "description": "Controlled terminology codelist term item."
+        "title": "CodelistTerm"
       },
       "ConflictStrategyEnum": {
         "type": "string",
@@ -1348,8 +1342,7 @@
           "SERVER_WINS",
           "MERGE"
         ],
-        "title": "ConflictStrategyEnum",
-        "description": "Explicit validated conflict resolution strategies.\n\nRequirements: PRD-SYS-001"
+        "title": "ConflictStrategyEnum"
       },
       "DemoSessionRequest": {
         "properties": {
@@ -1400,56 +1393,47 @@
               "$ref": "#/components/schemas/EPROOfflineEntry"
             },
             "type": "array",
-            "title": "Submissions",
-            "description": "A list of queued ePRO submissions"
+            "title": "Submissions"
           }
         },
         "type": "object",
         "required": [
           "submissions"
         ],
-        "title": "EPROBulkSyncRequest",
-        "description": "A bulk list of ePRO submissions for offline queue reconciliation.\n\nRequirements: PRD-SYS-001"
+        "title": "EPROBulkSyncRequest"
       },
       "EPROBulkSyncResponse": {
         "properties": {
           "status": {
             "type": "string",
-            "title": "Status",
-            "description": "Bulk processing overall status"
+            "title": "Status"
           },
           "processed_count": {
             "type": "integer",
-            "title": "Processed Count",
-            "description": "Number of submissions processed"
+            "title": "Processed Count"
           },
           "created_count": {
             "type": "integer",
-            "title": "Created Count",
-            "description": "Number of created records"
+            "title": "Created Count"
           },
           "updated_count": {
             "type": "integer",
-            "title": "Updated Count",
-            "description": "Number of updated records"
+            "title": "Updated Count"
           },
           "ignored_count": {
             "type": "integer",
-            "title": "Ignored Count",
-            "description": "Number of ignored records"
+            "title": "Ignored Count"
           },
           "conflict_count": {
             "type": "integer",
-            "title": "Conflict Count",
-            "description": "Number of conflicts encountered"
+            "title": "Conflict Count"
           },
           "results": {
             "items": {
               "$ref": "#/components/schemas/EPROSubmitResponse"
             },
             "type": "array",
-            "title": "Results",
-            "description": "Per-item processing results"
+            "title": "Results"
           }
         },
         "type": "object",
@@ -1462,36 +1446,30 @@
           "conflict_count",
           "results"
         ],
-        "title": "EPROBulkSyncResponse",
-        "description": "Response payload for bulk list of ePRO offline sync submissions.\n\nRequirements: PRD-SYS-001"
+        "title": "EPROBulkSyncResponse"
       },
       "EPROOfflineEntry": {
         "properties": {
           "subject_id": {
             "type": "string",
-            "title": "Subject Id",
-            "description": "Pseudonymized identifier of the subject"
+            "title": "Subject Id"
           },
           "diary_id": {
             "type": "string",
-            "title": "Diary Id",
-            "description": "Unique identifier for the diary or survey"
+            "title": "Diary Id"
           },
           "device_timestamp": {
             "type": "string",
             "format": "date-time",
-            "title": "Device Timestamp",
-            "description": "ISO 8601 timestamp when the entry was created on device"
+            "title": "Device Timestamp"
           },
           "answers": {
             "additionalProperties": true,
             "type": "object",
-            "title": "Answers",
-            "description": "The questionnaire response key-values"
+            "title": "Answers"
           },
           "offline_sync_markers": {
-            "$ref": "#/components/schemas/EPROOfflineMarker",
-            "description": "The offline sync queue conflict tracking parameters"
+            "$ref": "#/components/schemas/EPROOfflineMarker"
           }
         },
         "type": "object",
@@ -1502,24 +1480,20 @@
           "answers",
           "offline_sync_markers"
         ],
-        "title": "EPROOfflineEntry",
-        "description": "A single participant ePRO/eCOA diary submission.\n\nRequirements: PRD-SYS-001"
+        "title": "EPROOfflineEntry"
       },
       "EPROOfflineMarker": {
         "properties": {
           "sequence_number": {
             "type": "integer",
-            "title": "Sequence Number",
-            "description": "The queue order sequence from device"
+            "title": "Sequence Number"
           },
           "client_id": {
             "type": "string",
-            "title": "Client Id",
-            "description": "Unique identifier for the mobile device"
+            "title": "Client Id"
           },
           "conflict_strategy": {
             "$ref": "#/components/schemas/ConflictStrategyEnum",
-            "description": "Conflict strategy to resolve duplicate submissions",
             "default": "CLIENT_WINS"
           },
           "signature": {
@@ -1531,8 +1505,7 @@
                 "type": "null"
               }
             ],
-            "title": "Signature",
-            "description": "Optional HMAC-SHA256 signature of the payload for integrity"
+            "title": "Signature"
           },
           "timestamps": {
             "anyOf": [
@@ -1547,8 +1520,7 @@
                 "type": "null"
               }
             ],
-            "title": "Timestamps",
-            "description": "Optional per-field UTC timestamps"
+            "title": "Timestamps"
           }
         },
         "type": "object",
@@ -1556,15 +1528,13 @@
           "sequence_number",
           "client_id"
         ],
-        "title": "EPROOfflineMarker",
-        "description": "Offline queue reconciliation and conflict resolution parameters.\n\nRequirements: PRD-SYS-001"
+        "title": "EPROOfflineMarker"
       },
       "EPROSubmitResponse": {
         "properties": {
           "status": {
             "type": "string",
-            "title": "Status",
-            "description": "Sync resolution status"
+            "title": "Status"
           },
           "id": {
             "anyOf": [
@@ -1575,8 +1545,7 @@
                 "type": "null"
               }
             ],
-            "title": "Id",
-            "description": "Unique record identifier"
+            "title": "Id"
           },
           "subject_id": {
             "anyOf": [
@@ -1587,8 +1556,7 @@
                 "type": "null"
               }
             ],
-            "title": "Subject Id",
-            "description": "Pseudonymized identifier of the subject"
+            "title": "Subject Id"
           },
           "diary_id": {
             "anyOf": [
@@ -1599,8 +1567,7 @@
                 "type": "null"
               }
             ],
-            "title": "Diary Id",
-            "description": "Unique identifier for the diary or survey"
+            "title": "Diary Id"
           },
           "answers": {
             "anyOf": [
@@ -1612,8 +1579,7 @@
                 "type": "null"
               }
             ],
-            "title": "Answers",
-            "description": "The questionnaire response key-values"
+            "title": "Answers"
           },
           "sync_status": {
             "anyOf": [
@@ -1624,8 +1590,7 @@
                 "type": "null"
               }
             ],
-            "title": "Sync Status",
-            "description": "Sync resolution status"
+            "title": "Sync Status"
           },
           "version_index": {
             "anyOf": [
@@ -1636,8 +1601,7 @@
                 "type": "null"
               }
             ],
-            "title": "Version Index",
-            "description": "The current version of the record"
+            "title": "Version Index"
           },
           "query": {
             "anyOf": [
@@ -1649,8 +1613,7 @@
                 "type": "null"
               }
             ],
-            "title": "Query",
-            "description": "Optional clinical query detail"
+            "title": "Query"
           },
           "signature_validation": {
             "anyOf": [
@@ -1662,8 +1625,7 @@
                 "type": "null"
               }
             ],
-            "title": "Signature Validation",
-            "description": "Signature validation status"
+            "title": "Signature Validation"
           },
           "reconciliation_result": {
             "anyOf": [
@@ -1675,8 +1637,7 @@
                 "type": "null"
               }
             ],
-            "title": "Reconciliation Result",
-            "description": "Reconciliation details"
+            "title": "Reconciliation Result"
           },
           "audit_details": {
             "anyOf": [
@@ -1688,16 +1649,14 @@
                 "type": "null"
               }
             ],
-            "title": "Audit Details",
-            "description": "Audit entry details"
+            "title": "Audit Details"
           }
         },
         "type": "object",
         "required": [
           "status"
         ],
-        "title": "EPROSubmitResponse",
-        "description": "Response payload for a single participant ePRO submission.\n\nRequirements: PRD-SYS-001"
+        "title": "EPROSubmitResponse"
       },
       "HTTPValidationError": {
         "properties": {
@@ -1886,8 +1845,7 @@
         "required": [
           "domain_code"
         ],
-        "title": "SdtmDomainDefinition",
-        "description": "SDTM domain specification definition."
+        "title": "SdtmDomainDefinition"
       },
       "SignatureVerificationRequest": {
         "properties": {
@@ -2142,13 +2100,11 @@
         "properties": {
           "id": {
             "type": "string",
-            "title": "Id",
-            "description": "Unique notification identifier"
+            "title": "Id"
           },
           "subject_id": {
             "type": "string",
-            "title": "Subject Id",
-            "description": "Unique subject identifier"
+            "title": "Subject Id"
           },
           "assignment_id": {
             "anyOf": [
@@ -2159,29 +2115,24 @@
                 "type": "null"
               }
             ],
-            "title": "Assignment Id",
-            "description": "Optional associated assignment identifier"
+            "title": "Assignment Id"
           },
           "due_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Due At",
-            "description": "The timestamp when the assignment is due"
+            "title": "Due At"
           },
           "channel": {
             "type": "string",
-            "title": "Channel",
-            "description": "The channel of delivery"
+            "title": "Channel"
           },
           "delivery_status": {
             "type": "string",
-            "title": "Delivery Status",
-            "description": "The status of delivery"
+            "title": "Delivery Status"
           },
           "is_read": {
             "type": "boolean",
-            "title": "Is Read",
-            "description": "Flag indicating if the notification is read"
+            "title": "Is Read"
           },
           "read_at": {
             "anyOf": [
@@ -2193,29 +2144,24 @@
                 "type": "null"
               }
             ],
-            "title": "Read At",
-            "description": "The timestamp when the notification was read"
+            "title": "Read At"
           },
           "created_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Created At",
-            "description": "The timestamp when the record was created"
+            "title": "Created At"
           },
           "created_by": {
             "type": "string",
-            "title": "Created By",
-            "description": "The identity of the user who created the record"
+            "title": "Created By"
           },
           "reason_for_change": {
             "type": "string",
-            "title": "Reason For Change",
-            "description": "The 21 CFR Part 11 reason for change"
+            "title": "Reason For Change"
           },
           "version_index": {
             "type": "integer",
-            "title": "Version Index",
-            "description": "The current version of the record"
+            "title": "Version Index"
           }
         },
         "type": "object",
@@ -2231,8 +2177,7 @@
           "reason_for_change",
           "version_index"
         ],
-        "title": "SubjectNotificationResponse",
-        "description": "Subject notification response schema.\n\nRequirements: PRD-SYS-001"
+        "title": "SubjectNotificationResponse"
       },
       "UsdmExportResponse": {
         "properties": {
@@ -2251,8 +2196,7 @@
           "study_id",
           "usdm_json"
         ],
-        "title": "UsdmExportResponse",
-        "description": "Response payload for exported USDM protocol graph specification."
+        "title": "UsdmExportResponse"
       },
       "UsdmImportRequest": {
         "properties": {
@@ -2285,8 +2229,7 @@
         "required": [
           "raw_usdm_json"
         ],
-        "title": "UsdmImportRequest",
-        "description": "Request payload for importing a CDISC USDM protocol JSON specification."
+        "title": "UsdmImportRequest"
       },
       "UsdmImportResponse": {
         "properties": {
@@ -2316,8 +2259,7 @@
           "nodes_created",
           "relationships_created"
         ],
-        "title": "UsdmImportResponse",
-        "description": "Response payload returned after USDM protocol import."
+        "title": "UsdmImportResponse"
       },
       "ValidationError": {
         "properties": {
