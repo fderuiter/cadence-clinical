@@ -5,10 +5,32 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Service health check endpoint.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/eisf/sites/{site_id}/binder": {
       "get": {
         "summary": "Get Site Eisf Binder",
-        "description": "Retrieve eISF regulatory binder folder taxonomy with document counts.\n\nRequirements: PRD-SYS-001",
         "operationId": "get_site_eisf_binder_api_v1_eisf_sites__site_id__binder_get",
         "parameters": [
           {
@@ -52,7 +74,6 @@
     "/api/v1/eisf/sites/{site_id}/documents/{doc_id}": {
       "get": {
         "summary": "Get Site Document Detail",
-        "description": "Fetch metadata details for a specific clinical site eISF document.\n\nRequirements: PRD-SYS-001",
         "operationId": "get_site_document_detail_api_v1_eisf_sites__site_id__documents__doc_id__get",
         "parameters": [
           {
@@ -101,7 +122,6 @@
     "/api/v1/eisf/sites/{site_id}/documents/{doc_id}/download": {
       "get": {
         "summary": "Download Site Document",
-        "description": "Download/stream file content for a specific eISF document.\n\nRequirements: PRD-SYS-001",
         "operationId": "download_site_document_api_v1_eisf_sites__site_id__documents__doc_id__download_get",
         "parameters": [
           {
@@ -148,7 +168,6 @@
     "/api/v1/eisf/sites/{site_id}/documents/upload": {
       "post": {
         "summary": "Upload Site Document",
-        "description": "Upload a new clinical site document to the eISF binder structure.\n\nRequirements: PRD-SYS-001",
         "operationId": "upload_site_document_api_v1_eisf_sites__site_id__documents_upload_post",
         "parameters": [
           {
@@ -195,33 +214,9 @@
         }
       }
     },
-    "/health": {
-      "get": {
-        "summary": "Health Check",
-        "description": "Service health check endpoint.\nExempt from gateway authentication checks.",
-        "operationId": "health_check_health_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "type": "object",
-                  "title": "Response Health Check Health Get"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/eisf/binders/{site_id}": {
       "get": {
         "summary": "Get Site Binder Endpoint",
-        "description": "Retrieve site-isolated regulatory binder documents for specified site.\nEnforces site isolation strictly.",
         "operationId": "get_site_binder_endpoint_api_v1_eisf_binders__site_id__get",
         "parameters": [
           {
@@ -265,7 +260,6 @@
     "/api/v1/eisf/documents": {
       "get": {
         "summary": "List Documents",
-        "description": "List site-scoped, binder-classified documents. Constrains by the authenticated Principal scope.",
         "operationId": "list_documents_api_v1_eisf_documents_get",
         "parameters": [
           {
@@ -480,7 +474,6 @@
     "/api/v1/eisf/documents/{document_id}": {
       "get": {
         "summary": "Get Document",
-        "description": "View metadata for a specific eISF document. Constrains by the authenticated site claim.",
         "operationId": "get_document_api_v1_eisf_documents__document_id__get",
         "parameters": [
           {
@@ -610,7 +603,6 @@
     "/api/v1/eisf/documents/{document_id}/download": {
       "get": {
         "summary": "Download Document",
-        "description": "Download/stream file content for a specific eISF document. Constrains by the authenticated site claim.",
         "operationId": "download_document_api_v1_eisf_documents__document_id__download_get",
         "parameters": [
           {
@@ -648,7 +640,6 @@
     "/api/v1/eisf/completeness": {
       "get": {
         "summary": "Get Binder Completeness",
-        "description": "Check completeness of the electronic Investigator Site File (eISF) binder.\nCompares filed artifacts for the study and site against a required artifact list by section.\nEnforces site isolation strictly.",
         "operationId": "get_binder_completeness_api_v1_eisf_completeness_get",
         "parameters": [
           {

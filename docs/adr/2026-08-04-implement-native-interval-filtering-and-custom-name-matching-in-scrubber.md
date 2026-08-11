@@ -52,6 +52,6 @@ To comply with HIPAA 18 Protected Health Information (PHI) identifier regulation
 ## 6. Implementation & Verification
 
 - **Affected Repositories / Services:**
-  - Shared package `packages/security/ner_scrubber.py` containing the `PHINameEntityScrubber` class.
+  - Shared package `packages/deid/ner_scrubber.py` containing the `PHINameEntityScrubber` class.
 - **Verification Plan:**
   - Unit tests are implemented under `tests/test_ner_scrubber.py` to assert correct detection and scrubbing of SSN, EMAIL, PHONE, MRN, DOB, custom names, overlapping intervals, and word boundary behaviors.

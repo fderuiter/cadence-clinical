@@ -4,7 +4,7 @@ Requirements: PRD-SYS-001
 """
 
 import packages  # noqa: F401
-from packages.security.ner_scrubber import PHINameEntityScrubber
+from packages.deid.ner_scrubber import PHINameEntityScrubber
 
 
 def test_detect_phi_patterns() -> None:

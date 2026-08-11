@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2210
-- **Passed:** 2210 🟢
+- **Total Automated Test Cases Run:** 2214
+- **Passed:** 2214 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1255,6 +1255,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_cdash_ae_mapping`                                                            | `apps.execution.tests.test_sdtm_mapper`                                     | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_cdash_generic_orchestrator`                                                  | `apps.execution.tests.test_sdtm_mapper`                                     | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_cdash_vs_unit_conversion_and_study_day`                                      | `apps.execution.tests.test_sdtm_mapper`                                     | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
+| `test_chronological_date_validation`                                               | `apps.execution.tests.test_sdtm_mapper`                                     | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_compute_age`                                                                 | `apps.execution.tests.test_sdtm_mapper`                                     | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_get_demographics`                                                            | `apps.execution.tests.test_sdtm_mapper`                                     | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_map_ae_flat_structure`                                                       | `apps.execution.tests.test_sdtm_mapper`                                     | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
@@ -1266,8 +1267,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_map_lb`                                                                      | `apps.execution.tests.test_sdtm_mapper`                                     | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_map_to_sdtm_orchestrator`                                                    | `apps.execution.tests.test_sdtm_mapper`                                     | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_map_vs`                                                                      | `apps.execution.tests.test_sdtm_mapper`                                     | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
+| `test_mapper_dedicated_helpers`                                                    | `apps.execution.tests.test_sdtm_mapper`                                     | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
+| `test_persist_sdtm_records_ae_domain_reclassification`                             | `apps.execution.tests.test_sdtm_mapper`                                     | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
+| `test_persist_sdtm_records_cm_ds_mh`                                               | `apps.execution.tests.test_sdtm_mapper`                                     | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_persist_sdtm_records_pipeline`                                               | `apps.execution.tests.test_sdtm_mapper`                                     | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_to_dtc`                                                                      | `apps.execution.tests.test_sdtm_mapper`                                     | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
+| `test_visit_records_require_start_date`                                            | `apps.execution.tests.test_sdtm_mapper`                                     | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_bulk_query_generation_deduplication`                                         | `apps.execution.tests.test_sdv`                                             | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_bulk_query_generation_happy_path`                                            | `apps.execution.tests.test_sdv`                                             | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_bulk_query_generation_input_validation`                                      | `apps.execution.tests.test_sdv`                                             | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
@@ -2376,6 +2381,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_validate_existing_adrs_with_targets_valid`                                   | `scripts.tests.test_validate_adrs`                                          | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_check_file_imports_cross_service_violation`                                  | `scripts.tests.test_validate_imports`                                       | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_check_file_imports_invalid_syntax`                                           | `scripts.tests.test_validate_imports`                                       | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
+| `test_check_file_imports_package_to_package_declared`                              | `scripts.tests.test_validate_imports`                                       | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
+| `test_check_file_imports_package_to_package_undeclared`                            | `scripts.tests.test_validate_imports`                                       | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_check_file_imports_relative_cross_service`                                   | `scripts.tests.test_validate_imports`                                       | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_check_file_imports_relative_same_service`                                    | `scripts.tests.test_validate_imports`                                       | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_check_file_imports_same_service`                                             | `scripts.tests.test_validate_imports`                                       | _Regression/Helper_                          | 🟢 PASSED | < 1s     |

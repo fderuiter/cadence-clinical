@@ -7,8 +7,10 @@
   "paths": {
     "/health": {
       "get": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Health Check",
-        "description": "Health check endpoint to verify microservice availability.\n\nBypasses standard API Gateway headers validation.",
         "operationId": "health_check_health_get",
         "responses": {
           "200": {
@@ -30,8 +32,10 @@
     },
     "/api/v1/org/organizations": {
       "post": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Create Organization",
-        "description": "Create a new organization record.",
         "operationId": "create_organization_api_v1_org_organizations_post",
         "requestBody": {
           "required": true,
@@ -67,8 +71,10 @@
         }
       },
       "get": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "List Organizations",
-        "description": "List all organizations. Applies filters on partial name or exact type and returns the latest version of each.",
         "operationId": "list_organizations_api_v1_org_organizations_get",
         "parameters": [
           {
@@ -138,8 +144,10 @@
     },
     "/api/v1/org/organizations/{id}": {
       "get": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Get Organization",
-        "description": "Retrieve details for an organization by ID. Returns the latest version by default or a specific historical version.",
         "operationId": "get_organization_api_v1_org_organizations__id__get",
         "parameters": [
           {
@@ -194,8 +202,10 @@
         }
       },
       "put": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Update Organization",
-        "description": "Soft-update an existing organization, appending a new version with incremented version_index.",
         "operationId": "update_organization_api_v1_org_organizations__id__put",
         "parameters": [
           {
@@ -244,8 +254,10 @@
     },
     "/api/v1/org/organizations/{id}/history": {
       "get": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Get Organization History",
-        "description": "Retrieve chronological version history for an organization.",
         "operationId": "get_organization_history_api_v1_org_organizations__id__history_get",
         "parameters": [
           {
@@ -288,8 +300,10 @@
     },
     "/api/v1/org/delegations": {
       "post": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Create Delegation",
-        "description": "Grant delegation of authority. Only a Principal Investigator at the matching site may perform this operation.",
         "operationId": "create_delegation_api_v1_org_delegations_post",
         "requestBody": {
           "required": true,
@@ -325,8 +339,10 @@
         }
       },
       "get": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "List Delegations",
-        "description": "List all delegation records, returning only the latest version of each unique record.",
         "operationId": "list_delegations_api_v1_org_delegations_get",
         "parameters": [
           {
@@ -450,8 +466,10 @@
     },
     "/api/v1/org/delegations/{id}/sign-off": {
       "post": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Sign Delegation",
-        "description": "Approve and electronically sign a Delegation of Authority (DOA) record.\nRequires Part 11 re-authentication (enforced via X-Sig-Token header check in gateway middleware).",
         "operationId": "sign_delegation_api_v1_org_delegations__id__sign_off_post",
         "parameters": [
           {
@@ -500,8 +518,10 @@
     },
     "/api/v1/org/delegations/{id}/revoke": {
       "post": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Revoke Delegation",
-        "description": "Revoke an existing Delegation of Authority (DOA) record.",
         "operationId": "revoke_delegation_api_v1_org_delegations__id__revoke_post",
         "parameters": [
           {
@@ -550,8 +570,10 @@
     },
     "/api/v1/org/delegations/{id}": {
       "get": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Get Delegation",
-        "description": "Retrieve details of a specific Delegation of Authority record by ID (latest by default or specific historical version).",
         "operationId": "get_delegation_api_v1_org_delegations__id__get",
         "parameters": [
           {
@@ -608,8 +630,10 @@
     },
     "/api/v1/org/delegations/{id}/history": {
       "get": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Get Delegation History",
-        "description": "Retrieve chronological version history for a specific Delegation of Authority record.",
         "operationId": "get_delegation_history_api_v1_org_delegations__id__history_get",
         "parameters": [
           {
@@ -652,8 +676,10 @@
     },
     "/api/v1/org/audit-logs": {
       "get": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "List Org Audit Logs",
-        "description": "Retrieve organization audit logs in descending chronological order.",
         "operationId": "list_org_audit_logs_api_v1_org_audit_logs_get",
         "responses": {
           "200": {
@@ -675,8 +701,10 @@
     },
     "/api/v1/org/sites": {
       "post": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Create Site",
-        "description": "Create a new site record.",
         "operationId": "create_site_api_v1_org_sites_post",
         "requestBody": {
           "required": true,
@@ -712,8 +740,10 @@
         }
       },
       "get": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "List Sites",
-        "description": "List all sites. Applies filters and returns the latest version of each unique site.",
         "operationId": "list_sites_api_v1_org_sites_get",
         "parameters": [
           {
@@ -801,8 +831,10 @@
     },
     "/api/v1/org/sites/{id}": {
       "get": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Get Site",
-        "description": "Retrieve details for a site by ID. Returns latest version or specific historical version.",
         "operationId": "get_site_api_v1_org_sites__id__get",
         "parameters": [
           {
@@ -857,8 +889,10 @@
         }
       },
       "put": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Update Site",
-        "description": "Soft-update an existing site, appending a new version with incremented version_index.",
         "operationId": "update_site_api_v1_org_sites__id__put",
         "parameters": [
           {
@@ -907,8 +941,10 @@
     },
     "/api/v1/org/sites/{id}/history": {
       "get": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Get Site History",
-        "description": "Retrieve chronological version history for a site.",
         "operationId": "get_site_history_api_v1_org_sites__id__history_get",
         "parameters": [
           {
@@ -951,8 +987,10 @@
     },
     "/api/v1/org/personnel": {
       "post": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Create Personnel",
-        "description": "Create a new personnel record.",
         "operationId": "create_personnel_api_v1_org_personnel_post",
         "requestBody": {
           "required": true,
@@ -988,8 +1026,10 @@
         }
       },
       "get": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "List Personnel",
-        "description": "List all personnel. Applies filters and returns the latest version of each unique staff member.",
         "operationId": "list_personnel_api_v1_org_personnel_get",
         "parameters": [
           {
@@ -1113,8 +1153,10 @@
     },
     "/api/v1/org/personnel/{id}": {
       "get": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Get Personnel",
-        "description": "Retrieve details for personnel by ID. Returns latest version or specific historical version.",
         "operationId": "get_personnel_api_v1_org_personnel__id__get",
         "parameters": [
           {
@@ -1169,8 +1211,10 @@
         }
       },
       "put": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Update Personnel",
-        "description": "Soft-update an existing personnel record, appending a new version with incremented version_index.",
         "operationId": "update_personnel_api_v1_org_personnel__id__put",
         "parameters": [
           {
@@ -1219,8 +1263,10 @@
     },
     "/api/v1/org/personnel/{id}/history": {
       "get": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Get Personnel History",
-        "description": "Retrieve chronological version history for personnel.",
         "operationId": "get_personnel_history_api_v1_org_personnel__id__history_get",
         "parameters": [
           {
@@ -1263,6 +1309,9 @@
     },
     "/api/v1/org/personnel/{personnel_id}/assignments": {
       "post": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Create Personnel Assignment",
         "operationId": "create_personnel_assignment_api_v1_org_personnel__personnel_id__assignments_post",
         "parameters": [
@@ -1310,6 +1359,9 @@
         }
       },
       "get": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "List Personnel Assignments",
         "operationId": "list_personnel_assignments_api_v1_org_personnel__personnel_id__assignments_get",
         "parameters": [
@@ -1353,6 +1405,9 @@
     },
     "/api/v1/org/personnel/assignments/{id}": {
       "put": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Update Personnel Assignment",
         "operationId": "update_personnel_assignment_api_v1_org_personnel_assignments__id__put",
         "parameters": [
@@ -1402,6 +1457,9 @@
     },
     "/api/v1/org/personnel/assignments/{id}/history": {
       "get": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Get Personnel Assignment History",
         "operationId": "get_personnel_assignment_history_api_v1_org_personnel_assignments__id__history_get",
         "parameters": [
@@ -1445,8 +1503,10 @@
     },
     "/api/v1/org/assignments/resolve": {
       "get": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Resolve Assignments",
-        "description": "Gateway-authenticated service-to-service endpoint to resolve active site and study assignments for personnel.",
         "operationId": "resolve_assignments_api_v1_org_assignments_resolve_get",
         "parameters": [
           {
@@ -1487,8 +1547,10 @@
     },
     "/api/v1/org/training-logs": {
       "post": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Create Training Log",
-        "description": "Creates a new training log record with version history.\n\nArgs:\n    request (Request): The incoming request context.\n    payload (TrainingLogCreate): Data required to create the training log.\n    session (AsyncSession): Relational database session.\n    principal (Principal): Security principal.\n\nReturns:\n    TrainingLogResponse: The created training log record.\n\nRaises:\n    HTTPException: If justification is empty.",
         "operationId": "create_training_log_api_v1_org_training_logs_post",
         "requestBody": {
           "required": true,
@@ -1524,8 +1586,10 @@
         }
       },
       "get": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "List Training Logs",
-        "description": "List all training logs, returning the latest version of each.\n\nArgs:\n    request (Request): The incoming request context.\n    personnel_id (str | None): Optional personnel ID filter.\n    site_id (str | None): Optional site ID filter.\n    study_id (str | None): Optional study ID filter.\n    session (AsyncSession): Relational database session.\n    principal (Principal): Security principal.\n\nReturns:\n    list[TrainingLogResponse]: Filtered training log list of latest versions.",
         "operationId": "list_training_logs_api_v1_org_training_logs_get",
         "parameters": [
           {
@@ -1613,8 +1677,10 @@
     },
     "/api/v1/org/training-logs/{id}": {
       "get": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Get Training Log",
-        "description": "Retrieve details for a training log by ID.\n\nArgs:\n    request (Request): The incoming request context.\n    id (str): The training log ID.\n    version_index (int | None): Optional version filter.\n    session (AsyncSession): Relational database session.\n    principal (Principal): Security principal.\n\nReturns:\n    TrainingLogResponse: The specified training log record.\n\nRaises:\n    HTTPException: If training log not found.",
         "operationId": "get_training_log_api_v1_org_training_logs__id__get",
         "parameters": [
           {
@@ -1669,8 +1735,10 @@
         }
       },
       "put": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Update Training Log",
-        "description": "Soft-update an existing training log, appending a new version with incremented version_index.\n\nArgs:\n    request (Request): The incoming request context.\n    id (str): The training log ID to update.\n    payload (TrainingLogUpdate): Updated training log values.\n    session (AsyncSession): Relational database session.\n    principal (Principal): Security principal.\n\nReturns:\n    TrainingLogResponse: The updated/new training log version.\n\nRaises:\n    HTTPException: If training log is signed/locked or justification is empty.",
         "operationId": "update_training_log_api_v1_org_training_logs__id__put",
         "parameters": [
           {
@@ -1719,8 +1787,10 @@
     },
     "/api/v1/org/training-logs/{id}/history": {
       "get": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Get Training Log History",
-        "description": "Retrieve chronological version history for a training log.\n\nArgs:\n    request (Request): The incoming request context.\n    id (str): The training log ID.\n    session (AsyncSession): Relational database session.\n    principal (Principal): Security principal.\n\nReturns:\n    list[TrainingLogResponse]: List of versions for the training log.\n\nRaises:\n    HTTPException: If training log not found.",
         "operationId": "get_training_log_history_api_v1_org_training_logs__id__history_get",
         "parameters": [
           {
@@ -1763,8 +1833,10 @@
     },
     "/api/v1/org/training-logs/{id}/sign": {
       "post": {
+        "tags": [
+          "Organization Directory"
+        ],
         "summary": "Sign Training Log",
-        "description": "Approve and electronically sign a Training Log record.\n\nArgs:\n    request (Request): The incoming request context.\n    id (str): The training log ID to sign.\n    payload (TrainingLogSignRequest): Signer credentials/signature and canonical data.\n    session (AsyncSession): Relational database session.\n    principal (Principal): Security principal.\n\nReturns:\n    TrainingLogResponse: The signed and locked training log version.\n\nRaises:\n    HTTPException: If signature verification fails or data payload mismatch occurs.",
         "operationId": "sign_training_log_api_v1_org_training_logs__id__sign_post",
         "parameters": [
           {

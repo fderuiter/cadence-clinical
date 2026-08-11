@@ -8,7 +8,7 @@
     "/health": {
       "get": {
         "summary": "Health Check",
-        "description": "Service health check endpoint.\nExempt from gateway authentication checks.",
+        "description": "Service health check endpoint.",
         "operationId": "health_check_health_get",
         "responses": {
           "200": {
@@ -31,7 +31,6 @@
     "/api/v1/econsent/documents": {
       "post": {
         "summary": "Create Consent Document",
-        "description": "Create a new clinical trial eConsent document.\nEnforces Part 11 validation and logs access to the immutable audit trail.",
         "operationId": "create_consent_document_api_v1_econsent_documents_post",
         "requestBody": {
           "content": {
@@ -70,7 +69,6 @@
     "/api/v1/econsent/documents/{id}": {
       "get": {
         "summary": "Get Consent Document",
-        "description": "Retrieve an existing eConsent document by its unique identifier.\nLogs access to the audit trail.",
         "operationId": "get_consent_document_api_v1_econsent_documents__id__get",
         "parameters": [
           {
@@ -110,7 +108,6 @@
     "/api/v1/econsent/clauses": {
       "post": {
         "summary": "Create Consent Clause",
-        "description": "CREATE/ingest a new ICF clause version (starts at version_index = 1).",
         "operationId": "create_consent_clause_api_v1_econsent_clauses_post",
         "requestBody": {
           "required": true,
@@ -147,7 +144,6 @@
       },
       "get": {
         "summary": "List Consent Clauses",
-        "description": "List clauses, optionally filtering by study_id and/or clause_id.\nBy default, returns only the latest version of each unique clause.",
         "operationId": "list_consent_clauses_api_v1_econsent_clauses_get",
         "parameters": [
           {
@@ -224,7 +220,6 @@
     "/api/v1/econsent/clauses/{clause_id}": {
       "put": {
         "summary": "Update Consent Clause",
-        "description": "Create a new version of an existing ICF clause with incremented version_index.\nEnsures prior versions are preserved unchanged.",
         "operationId": "update_consent_clause_api_v1_econsent_clauses__clause_id__put",
         "parameters": [
           {
@@ -272,7 +267,6 @@
       },
       "get": {
         "summary": "Get Consent Clause",
-        "description": "Retrieve a single clause by its clause_id. Returns the latest version by default\nunless version_index is specified.",
         "operationId": "get_consent_clause_api_v1_econsent_clauses__clause_id__get",
         "parameters": [
           {
@@ -328,7 +322,6 @@
     "/api/v1/econsent/templates": {
       "post": {
         "summary": "Create Consent Template",
-        "description": "CREATE/ingest a new consent template (starts at version_index = 1 and is_published = False).",
         "operationId": "create_consent_template_api_v1_econsent_templates_post",
         "requestBody": {
           "required": true,
@@ -365,7 +358,6 @@
       },
       "get": {
         "summary": "List Consent Templates",
-        "description": "List templates, optionally filtering by study_id and/or template_id.\nBy default, returns only the latest version of each unique template.",
         "operationId": "list_consent_templates_api_v1_econsent_templates_get",
         "parameters": [
           {
@@ -442,7 +434,6 @@
     "/api/v1/econsent/archival-status/{correlation_id}": {
       "get": {
         "summary": "Get Archival Status Endpoint",
-        "description": "Retrieve eTMF archival delivery status by correlation ID.",
         "operationId": "get_archival_status_endpoint_api_v1_econsent_archival_status__correlation_id__get",
         "parameters": [
           {
@@ -482,7 +473,6 @@
     "/api/v1/econsent/archival-status": {
       "get": {
         "summary": "Get Archival Status Query Endpoint",
-        "description": "Retrieve eTMF archival delivery status by correlation ID, or by template_id, version_index, and subject_pseudonym.",
         "operationId": "get_archival_status_query_endpoint_api_v1_econsent_archival_status_get",
         "parameters": [
           {
@@ -577,7 +567,6 @@
     "/api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent": {
       "post": {
         "summary": "Capture Subject Consent",
-        "description": "Canonically capture electronic signed subject consent after re-authentication.\nEnforces that template version exists and is published, comprehension checks passed,\nand step-up X-Sig-Token re-authentication was successfully processed.",
         "operationId": "capture_subject_consent_api_v1_econsent_templates__template_id__versions__version_index__capture_consent_post",
         "parameters": [
           {
@@ -636,7 +625,6 @@
     "/api/v1/econsent/subjects/{subject_pseudonym}/consent-status": {
       "get": {
         "summary": "Get Subject Consent Status Endpoint",
-        "description": "Retrieve the latest, highest-version signed SubjectConsent status for Execution gating.",
         "operationId": "get_subject_consent_status_endpoint_api_v1_econsent_subjects__subject_pseudonym__consent_status_get",
         "parameters": [
           {
@@ -692,7 +680,6 @@
     "/api/v1/econsent/templates/{template_id}/versions/{version_index}/comprehension-checks": {
       "post": {
         "summary": "Create Or Update Comprehension Check",
-        "description": "Create or update the comprehension check definition for a specific template version.\nRecords a Part 11 compliant audit log entry.",
         "operationId": "create_or_update_comprehension_check_api_v1_econsent_templates__template_id__versions__version_index__comprehension_checks_post",
         "parameters": [
           {
@@ -749,7 +736,6 @@
       },
       "get": {
         "summary": "Get Comprehension Check",
-        "description": "Retrieve the comprehension check definition for a specific template version.",
         "operationId": "get_comprehension_check_api_v1_econsent_templates__template_id__versions__version_index__comprehension_checks_get",
         "parameters": [
           {
@@ -798,7 +784,6 @@
     "/api/v1/econsent/templates/{template_id}/versions/{version_index}/submit-answers": {
       "post": {
         "summary": "Submit Comprehension Answers Endpoint",
-        "description": "Submit subject answers for comprehension checks, evaluate them, persist the append-only results,\nand return a UI-ready progression state.",
         "operationId": "submit_comprehension_answers_endpoint_api_v1_econsent_templates__template_id__versions__version_index__submit_answers_post",
         "parameters": [
           {
@@ -857,7 +842,6 @@
     "/api/v1/econsent/templates/{template_id}/versions/{version_index}/sign": {
       "post": {
         "summary": "Sign Consent Template Endpoint",
-        "description": "Electronic signature endpoint that requires all defined/required checks to pass for the exact template version.",
         "operationId": "sign_consent_template_endpoint_api_v1_econsent_templates__template_id__versions__version_index__sign_post",
         "parameters": [
           {
@@ -916,7 +900,6 @@
     "/api/v1/econsent/translations": {
       "post": {
         "summary": "Create Consent Translation",
-        "description": "CREATE/ingest a new translation draft (starts at version_index = 1, status = DRAFT).\nValidates that the source clause or template exists.",
         "operationId": "create_consent_translation_api_v1_econsent_translations_post",
         "requestBody": {
           "required": true,
@@ -953,7 +936,6 @@
       },
       "get": {
         "summary": "List Consent Translations",
-        "description": "List translations, optionally filtering by source_id, source_type, language_code, and/or status.\nBy default, returns only the latest version of each unique translation.",
         "operationId": "list_consent_translations_api_v1_econsent_translations_get",
         "parameters": [
           {
@@ -1062,7 +1044,6 @@
     "/api/v1/econsent/translations/{translation_id}": {
       "put": {
         "summary": "Update Consent Translation",
-        "description": "Create a new version of an existing translation with incremented version_index.",
         "operationId": "update_consent_translation_api_v1_econsent_translations__translation_id__put",
         "parameters": [
           {
@@ -1110,7 +1091,6 @@
       },
       "get": {
         "summary": "Get Consent Translation",
-        "description": "Retrieve a single translation by translation_id. Returns the latest version by default\nunless version_index is specified.",
         "operationId": "get_consent_translation_api_v1_econsent_translations__translation_id__get",
         "parameters": [
           {
@@ -1166,7 +1146,6 @@
     "/api/v1/econsent/translations/{translation_id}/transition": {
       "post": {
         "summary": "Transition Consent Translation",
-        "description": "Transition translation status: DRAFT -> IN_REVIEW -> APPROVED.\nInvalid transitions are rejected with HTTP 400.",
         "operationId": "transition_consent_translation_api_v1_econsent_translations__translation_id__transition_post",
         "parameters": [
           {
@@ -1216,7 +1195,6 @@
     "/api/v1/econsent/templates/{template_id}/approved-content": {
       "get": {
         "summary": "Get Approved Composed Template",
-        "description": "Patient-facing endpoint to retrieve composed approved template content in a specific language.\nUses the thread-safe read-through cache with TTL and stale-on-error behavior.",
         "operationId": "get_approved_composed_template_api_v1_econsent_templates__template_id__approved_content_get",
         "parameters": [
           {
@@ -1283,7 +1261,6 @@
     "/api/v1/econsent/templates/{template_id}": {
       "put": {
         "summary": "Update Consent Template",
-        "description": "Create a new version of an existing consent template with incremented version_index.\nEnsures prior versions are preserved unchanged.",
         "operationId": "update_consent_template_api_v1_econsent_templates__template_id__put",
         "parameters": [
           {
@@ -1331,7 +1308,6 @@
       },
       "get": {
         "summary": "Get Consent Template",
-        "description": "Retrieve a single template by its template_id. Returns the latest version by default\nunless version_index is specified.",
         "operationId": "get_consent_template_api_v1_econsent_templates__template_id__get",
         "parameters": [
           {
@@ -1387,7 +1363,6 @@
     "/api/v1/econsent/templates/{template_id}/compose": {
       "get": {
         "summary": "Compose Consent Template",
-        "description": "Retrieve a template and fully resolve/hydrate all its referenced clauses.",
         "operationId": "compose_consent_template_api_v1_econsent_templates__template_id__compose_get",
         "parameters": [
           {
@@ -1443,7 +1418,6 @@
     "/api/v1/econsent/templates/{template_id}/publish": {
       "post": {
         "summary": "Publish Consent Template",
-        "description": "Publish a consent template after validating that referenced clauses exist\nand required workflow steps (comprehension check and signature placeholder) are present.",
         "operationId": "publish_consent_template_api_v1_econsent_templates__template_id__publish_post",
         "parameters": [
           {
@@ -1608,8 +1582,7 @@
           "subject_pseudonym",
           "study_id"
         ],
-        "title": "ArchivalDeliveryResponse",
-        "description": "Schema for retrieving the archival delivery status."
+        "title": "ArchivalDeliveryResponse"
       },
       "ComposedClauseResponse": {
         "properties": {
@@ -1637,8 +1610,7 @@
           "text",
           "version_index"
         ],
-        "title": "ComposedClauseResponse",
-        "description": "Schema for a resolved clause inside a composed template."
+        "title": "ComposedClauseResponse"
       },
       "ComposedTemplateResponse": {
         "properties": {
@@ -1719,8 +1691,7 @@
           "created_by",
           "reason_for_change"
         ],
-        "title": "ComposedTemplateResponse",
-        "description": "Schema for a composed template with fully resolved clause texts."
+        "title": "ComposedTemplateResponse"
       },
       "ComprehensionCheckCreate": {
         "properties": {
@@ -1778,8 +1749,7 @@
           "expected_answers",
           "threshold_policy"
         ],
-        "title": "ComprehensionCheckCreate",
-        "description": "Schema for creating/configuring a new comprehension check for a template version."
+        "title": "ComprehensionCheckCreate"
       },
       "ComprehensionCheckResponse": {
         "properties": {
@@ -1842,8 +1812,7 @@
           "expected_answers",
           "threshold_policy"
         ],
-        "title": "ComprehensionCheckResponse",
-        "description": "Schema for retrieving comprehension check configurations."
+        "title": "ComprehensionCheckResponse"
       },
       "ComprehensionSubmissionRequest": {
         "properties": {
@@ -1872,8 +1841,7 @@
           "submitted_answers",
           "reason_for_change"
         ],
-        "title": "ComprehensionSubmissionRequest",
-        "description": "Schema for submitting answers for evaluation."
+        "title": "ComprehensionSubmissionRequest"
       },
       "ComprehensionSubmissionResponse": {
         "properties": {
@@ -1916,8 +1884,7 @@
           "next_step",
           "message"
         ],
-        "title": "ComprehensionSubmissionResponse",
-        "description": "Schema for the UI-ready progression state after submitting answers."
+        "title": "ComprehensionSubmissionResponse"
       },
       "ConsentClauseCreate": {
         "properties": {
@@ -1980,8 +1947,7 @@
           "title",
           "text"
         ],
-        "title": "ConsentClauseCreate",
-        "description": "Schema for creating/ingesting a new eConsent clause."
+        "title": "ConsentClauseCreate"
       },
       "ConsentClauseResponse": {
         "properties": {
@@ -2042,8 +2008,7 @@
           "title",
           "text"
         ],
-        "title": "ConsentClauseResponse",
-        "description": "Schema for retrieving an eConsent clause version."
+        "title": "ConsentClauseResponse"
       },
       "ConsentClauseUpdate": {
         "properties": {
@@ -2094,8 +2059,7 @@
           "title",
           "text"
         ],
-        "title": "ConsentClauseUpdate",
-        "description": "Schema for updating/versioning an existing eConsent clause."
+        "title": "ConsentClauseUpdate"
       },
       "ConsentDocumentCreate": {
         "properties": {
@@ -2152,8 +2116,7 @@
           "document_name",
           "content"
         ],
-        "title": "ConsentDocumentCreate",
-        "description": "Schema for creating a new eConsent document.\nReuses the shared 21 CFR Part 11 AuditFields base."
+        "title": "ConsentDocumentCreate"
       },
       "ConsentDocumentResponse": {
         "properties": {
@@ -2214,8 +2177,7 @@
           "document_name",
           "content"
         ],
-        "title": "ConsentDocumentResponse",
-        "description": "Schema for eConsent document response.\nReuses the shared 21 CFR Part 11 AuditFields base."
+        "title": "ConsentDocumentResponse"
       },
       "ConsentSignatureRequest": {
         "properties": {
@@ -2259,8 +2221,7 @@
           "subject_pseudonym",
           "reason_for_change"
         ],
-        "title": "ConsentSignatureRequest",
-        "description": "Schema for submitting an electronic signature on a template version."
+        "title": "ConsentSignatureRequest"
       },
       "ConsentSignatureResponse": {
         "properties": {
@@ -2323,8 +2284,7 @@
           "signature_data",
           "signed_at"
         ],
-        "title": "ConsentSignatureResponse",
-        "description": "Schema for signature response."
+        "title": "ConsentSignatureResponse"
       },
       "ConsentTemplateCreate": {
         "properties": {
@@ -2411,8 +2371,7 @@
           "template_name",
           "protocol_version"
         ],
-        "title": "ConsentTemplateCreate",
-        "description": "Schema for creating/ingesting a new eConsent template."
+        "title": "ConsentTemplateCreate"
       },
       "ConsentTemplateResponse": {
         "properties": {
@@ -2502,8 +2461,7 @@
           "is_published",
           "requires_reconsent"
         ],
-        "title": "ConsentTemplateResponse",
-        "description": "Schema for retrieving an eConsent template version."
+        "title": "ConsentTemplateResponse"
       },
       "ConsentTemplateUpdate": {
         "properties": {
@@ -2578,8 +2536,7 @@
           "template_name",
           "protocol_version"
         ],
-        "title": "ConsentTemplateUpdate",
-        "description": "Schema for updating/versioning an existing eConsent template."
+        "title": "ConsentTemplateUpdate"
       },
       "ConsentTranslationCreate": {
         "properties": {
@@ -2660,8 +2617,7 @@
           "translated_title",
           "translated_text"
         ],
-        "title": "ConsentTranslationCreate",
-        "description": "Schema for creating/ingesting a new consent translation."
+        "title": "ConsentTranslationCreate"
       },
       "ConsentTranslationResponse": {
         "properties": {
@@ -2746,8 +2702,7 @@
           "translated_text",
           "status"
         ],
-        "title": "ConsentTranslationResponse",
-        "description": "Schema for retrieving an eConsent translation version."
+        "title": "ConsentTranslationResponse"
       },
       "ConsentTranslationUpdate": {
         "properties": {
@@ -2816,8 +2771,7 @@
           "translated_title",
           "translated_text"
         ],
-        "title": "ConsentTranslationUpdate",
-        "description": "Schema for updating/versioning an existing eConsent translation."
+        "title": "ConsentTranslationUpdate"
       },
       "HTTPValidationError": {
         "properties": {
@@ -3048,8 +3002,7 @@
           "status",
           "reason_for_change"
         ],
-        "title": "TranslationTransitionRequest",
-        "description": "Request payload to transition translation status."
+        "title": "TranslationTransitionRequest"
       },
       "ValidationError": {
         "properties": {

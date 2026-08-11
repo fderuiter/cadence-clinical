@@ -31,7 +31,6 @@
     "/api/v1/safety/cases": {
       "post": {
         "summary": "Create Safety Case",
-        "description": "Create and persist a new Safety Case / ICSR record.",
         "operationId": "create_safety_case_api_v1_safety_cases_post",
         "requestBody": {
           "required": true,
@@ -68,7 +67,6 @@
       },
       "get": {
         "summary": "List Safety Cases",
-        "description": "List all safety cases, optionally filtered by patient ID.",
         "operationId": "list_safety_cases_api_v1_safety_cases_get",
         "parameters": [
           {
@@ -119,7 +117,6 @@
     "/api/v1/safety/cases/{id}": {
       "get": {
         "summary": "Get Safety Case",
-        "description": "Retrieve a specific safety case record by its ID.",
         "operationId": "get_safety_case_api_v1_safety_cases__id__get",
         "parameters": [
           {
@@ -159,7 +156,6 @@
     "/api/v1/safety/export-jobs": {
       "get": {
         "summary": "List Export Jobs",
-        "description": "List all safety export jobs.",
         "operationId": "list_export_jobs_api_v1_safety_export_jobs_get",
         "responses": {
           "200": {
@@ -180,7 +176,6 @@
       },
       "post": {
         "summary": "Create Export Job",
-        "description": "Create a new safety ICSR export job.",
         "operationId": "create_export_job_api_v1_safety_export_jobs_post",
         "requestBody": {
           "content": {
@@ -219,7 +214,6 @@
     "/api/v1/safety/export-jobs/{id}": {
       "get": {
         "summary": "Get Export Job",
-        "description": "Retrieve details of a specific export job by ID.",
         "operationId": "get_export_job_api_v1_safety_export_jobs__id__get",
         "parameters": [
           {
@@ -259,7 +253,6 @@
     "/api/v1/safety/audit-logs": {
       "get": {
         "summary": "List Safety Audit Logs",
-        "description": "Retrieve safety audit logs in descending chronological order.",
         "operationId": "list_safety_audit_logs_api_v1_safety_audit_logs_get",
         "responses": {
           "200": {
@@ -282,7 +275,6 @@
     "/api/v1/safety/export": {
       "post": {
         "summary": "Export Safety Case",
-        "description": "Expose validated E2B export and outbound safety/PV transmission.\nAccepts SAE/ICSR data, renders and validates E2B XML, pseudonymizes patient PII\nfollowing the HMAC approach, transmits to configured safety gateway,\npersists a SafetyExportJob, and writes GxP-compliant audit events.",
         "operationId": "export_safety_case_api_v1_safety_export_post",
         "requestBody": {
           "content": {
@@ -321,7 +313,6 @@
     "/api/v1/safety/reconciliation/runs": {
       "get": {
         "summary": "List Reconciliation Runs",
-        "description": "List all safety reconciliation runs.",
         "operationId": "list_reconciliation_runs_api_v1_safety_reconciliation_runs_get",
         "responses": {
           "200": {
@@ -342,7 +333,6 @@
       },
       "post": {
         "summary": "Trigger Sae Reconciliation",
-        "description": "Triggers deterministic SAE reconciliation, comparing EDC observations\nwith external safety PV database, and persisting results safely (no direct patient PII).",
         "operationId": "trigger_sae_reconciliation_api_v1_safety_reconciliation_runs_post",
         "requestBody": {
           "content": {
@@ -381,7 +371,6 @@
     "/api/v1/safety/reconciliation/jobs": {
       "post": {
         "summary": "Trigger Sae Reconciliation Job",
-        "description": "Triggers asynchronous SAE reconciliation job. Returns HTTP 202 Accepted.\n\nGated to sponsor_medical_monitor or safety_reviewer roles per GxP RBAC policy.",
         "operationId": "trigger_sae_reconciliation_job_api_v1_safety_reconciliation_jobs_post",
         "requestBody": {
           "required": true,
@@ -418,7 +407,6 @@
       },
       "get": {
         "summary": "List Reconciliation Jobs",
-        "description": "List safety reconciliation jobs with pagination.\n\nArgs:\n    limit: Maximum number of jobs to return (default 50).\n    offset: Number of jobs to skip (default 0).",
         "operationId": "list_reconciliation_jobs_api_v1_safety_reconciliation_jobs_get",
         "parameters": [
           {
@@ -473,7 +461,6 @@
     "/api/v1/safety/reconciliation/jobs/{job_id}": {
       "get": {
         "summary": "Get Reconciliation Job",
-        "description": "Retrieve a specific safety reconciliation job by ID (polling).\n\nArgs:\n    job_id: The UUID of the reconciliation job to retrieve.",
         "operationId": "get_reconciliation_job_api_v1_safety_reconciliation_jobs__job_id__get",
         "parameters": [
           {
@@ -513,7 +500,6 @@
     "/api/v1/safety/reconciliation/runs/{id}": {
       "get": {
         "summary": "Get Reconciliation Run",
-        "description": "Retrieve a specific safety reconciliation run.",
         "operationId": "get_reconciliation_run_api_v1_safety_reconciliation_runs__id__get",
         "parameters": [
           {

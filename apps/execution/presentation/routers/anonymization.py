@@ -11,8 +11,8 @@ from pydantic import BaseModel, Field
 
 import packages  # noqa: F401
 from apps.execution.services.pdf_redactor import PDFRedactorService
+from packages.deid.ner_scrubber import PHINameEntityScrubber
 from packages.security.middleware import get_current_user
-from packages.security.ner_scrubber import PHINameEntityScrubber
 
 router = APIRouter(prefix="/api/v1/execution/anonymization", tags=["Anonymization"])
 
