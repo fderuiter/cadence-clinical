@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2209
-- **Passed:** 2204 🟢
+- **Total Automated Test Cases Run:** 2211
+- **Passed:** 2206 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
 - **Overall Operational Pass Rate:** 99.77%
@@ -2353,6 +2353,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_validate_existing_adrs_with_targets_valid`                                   | `scripts.tests.test_validate_adrs`                                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_check_file_imports_cross_service_violation`                                  | `scripts.tests.test_validate_imports`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_check_file_imports_invalid_syntax`                                           | `scripts.tests.test_validate_imports`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_check_file_imports_package_to_package_declared`                              | `scripts.tests.test_validate_imports`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_check_file_imports_package_to_package_undeclared`                            | `scripts.tests.test_validate_imports`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_check_file_imports_relative_cross_service`                                   | `scripts.tests.test_validate_imports`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_check_file_imports_relative_same_service`                                    | `scripts.tests.test_validate_imports`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_check_file_imports_same_service`                                             | `scripts.tests.test_validate_imports`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
