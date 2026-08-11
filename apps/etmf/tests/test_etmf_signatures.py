@@ -201,6 +201,7 @@ async def test_completeness_signature_lifecycle_distinction():
         "/api/v1/etmf/edl",
         json={
             "study_id": study_id,
+            "site_id": "site_alpha",
             "milestone": "INITIATION",
             "artifact_type": "FDA Form 1572",
             "reason_for_change": "FDA Form 1572 is required for Initiation",
@@ -209,23 +210,41 @@ async def test_completeness_signature_lifecycle_distinction():
     )
     assert exp_resp.status_code == 201
 
+    # Ingest Clinical Trial Protocol to satisfy the default study-wide expectation
+    client.post(
+        "/api/v1/etmf/ingest",
+        json={
+            "study_id": study_id,
+            "artifact_type": "Clinical Trial Protocol",
+            "filename": "protocol.pdf",
+            "content": "Protocol Content",
+            "mime_type": "application/pdf",
+        },
+        headers=admin_headers,
+    )
+
     # 2. Check completeness before any document is uploaded -> status should be ABSENT
     comp_resp_absent = client.get(
-        f"/api/v1/etmf/completeness?study_id={study_id}&milestone=INITIATION",
+        f"/api/v1/etmf/completeness?study_id={study_id}&milestone=INITIATION&site_id=site_alpha",
         headers=inspector_headers,
     )
     assert comp_resp_absent.status_code == 200
     data_absent = comp_resp_absent.json()
     assert data_absent["is_complete"] is False
     assert "FDA Form 1572" in data_absent["missing_artifacts"]
-    assert len(data_absent["per_artifact_detail"]) == 1
-    assert data_absent["per_artifact_detail"][0]["status"] == "ABSENT"
+    fda_detail_absent = next(
+        d
+        for d in data_absent["per_artifact_detail"]
+        if d["artifact_type"] == "FDA Form 1572"
+    )
+    assert fda_detail_absent["status"] == "ABSENT"
 
     # 3. Ingest an UNSIGNED Form 1572 (explicitly bypassed so ingestion succeeds, but approval_status remains PENDING)
     client.post(
         "/api/v1/etmf/ingest",
         json={
             "study_id": study_id,
+            "site_id": "site_alpha",
             "artifact_type": "FORM_1572",
             "filename": "form1572_unsigned.pdf",
             "content": "Unsigned investigator qualification document",
@@ -237,14 +256,19 @@ async def test_completeness_signature_lifecycle_distinction():
 
     # 4. Check completeness again -> status should be UNSIGNED, and milestone remains incomplete!
     comp_resp_unsigned = client.get(
-        f"/api/v1/etmf/completeness?study_id={study_id}&milestone=INITIATION",
+        f"/api/v1/etmf/completeness?study_id={study_id}&milestone=INITIATION&site_id=site_alpha",
         headers=inspector_headers,
     )
     assert comp_resp_unsigned.status_code == 200
     data_unsigned = comp_resp_unsigned.json()
     assert data_unsigned["is_complete"] is False
     assert "FDA Form 1572" in data_unsigned["missing_artifacts"]
-    assert data_unsigned["per_artifact_detail"][0]["status"] == "UNSIGNED"
+    fda_detail_unsigned = next(
+        d
+        for d in data_unsigned["per_artifact_detail"]
+        if d["artifact_type"] == "FDA Form 1572"
+    )
+    assert fda_detail_unsigned["status"] == "UNSIGNED"
 
     # 5. Ingest a SIGNED Form 1572 (increments version index to 2)
     signed_content = (
@@ -256,6 +280,7 @@ async def test_completeness_signature_lifecycle_distinction():
         "/api/v1/etmf/ingest",
         json={
             "study_id": study_id,
+            "site_id": "site_alpha",
             "artifact_type": "FORM_1572",
             "filename": "form1572_signed.pdf",
             "content": signed_content,
@@ -266,12 +291,17 @@ async def test_completeness_signature_lifecycle_distinction():
 
     # 6. Check completeness again -> status should be SIGNED, and milestone should be COMPLETE!
     comp_resp_signed = client.get(
-        f"/api/v1/etmf/completeness?study_id={study_id}&milestone=INITIATION",
+        f"/api/v1/etmf/completeness?study_id={study_id}&milestone=INITIATION&site_id=site_alpha",
         headers=inspector_headers,
     )
     assert comp_resp_signed.status_code == 200
     data_signed = comp_resp_signed.json()
     assert data_signed["is_complete"] is True
     assert "FDA Form 1572" not in data_signed["missing_artifacts"]
-    assert data_signed["per_artifact_detail"][0]["status"] == "SIGNED"
-    assert data_signed["per_artifact_detail"][0]["version_index"] == 2
+    fda_detail_signed = next(
+        d
+        for d in data_signed["per_artifact_detail"]
+        if d["artifact_type"] == "FDA Form 1572"
+    )
+    assert fda_detail_signed["status"] == "SIGNED"
+    assert fda_detail_signed["version_index"] == 2

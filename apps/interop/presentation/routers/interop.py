@@ -126,6 +126,22 @@ async def resolve_and_save_submission(
     user_role: str = "system",
     change_reason: str | None = None,
 ) -> dict[str, Any]:
+    resolved = await _resolve_and_save_submission(
+        session, payload, user_id, user_role, change_reason
+    )
+    resolved["offline_sync_markers"] = payload.offline_sync_markers.model_dump(
+        mode="json"
+    )
+    return resolved
+
+
+async def _resolve_and_save_submission(
+    session: AsyncSession,
+    payload: EPROSubmissionPayload,
+    user_id: str = "system",
+    user_role: str = "system",
+    change_reason: str | None = None,
+) -> dict[str, Any]:
     """Save a new ePRO submission or reconcile existing ones based on conflict strategy."""
     validation_errors = validate_epro_payload(payload.answers)
     if validation_errors:
