@@ -5,7 +5,7 @@ Defines schemas with GxP audit metadata (inheriting from AuditableModel)
 for storing transformed SDTM domain data.
 """
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from .models import AuditableModel, validate_dtc_format
 
@@ -86,6 +86,20 @@ class SDTMRecordAE(AuditableModel):
     @classmethod
     def validate_dates(cls, v: str | None) -> str | None:
         return validate_dtc_format(v)
+
+    @model_validator(mode="after")
+    def validate_ae_dates(self) -> "SDTMRecordAE":
+        import re
+        if self.AESTDTC and self.AEENDTC:
+            s_clean = re.sub(r"[^\d]", "", self.AESTDTC)
+            e_clean = re.sub(r"[^\d]", "", self.AEENDTC)
+            min_len = min(len(s_clean), len(e_clean))
+            if min_len > 0:
+                if e_clean[:min_len] < s_clean[:min_len]:
+                    raise ValueError(
+                        f"AEENDTC ({self.AEENDTC}) cannot be earlier than AESTDTC ({self.AESTDTC})"
+                    )
+        return self
 
 
 class SDTMRecordVS(AuditableModel):
@@ -192,13 +206,13 @@ class SDTMRecordSV(AuditableModel):
     USUBJID: str = Field(..., description="Unique Subject Identifier (Required)")
     SVSEQ: int = Field(..., description="Sequence Number (Required)")
     VISIT: str = Field(..., description="Visit Name (Required)")
-    SVSTDTC: str | None = Field(None, description="Start Date/Time of Visit (Required)")
+    SVSTDTC: str = Field(..., description="Start Date/Time of Visit (Required)")
     SVENDTC: str | None = Field(
         None, description="End Date/Time of Visit (Permissible)"
     )
     SVDY: int | None = Field(None, description="Study Day of Visit")
 
-    @field_validator("STUDYID", "DOMAIN", "USUBJID", "VISIT")
+    @field_validator("STUDYID", "DOMAIN", "USUBJID", "VISIT", "SVSTDTC")
     @classmethod
     def validate_non_empty_strings(cls, v: str) -> str:
         if not isinstance(v, str) or not v.strip():
@@ -216,6 +230,20 @@ class SDTMRecordSV(AuditableModel):
     @classmethod
     def validate_dates(cls, v: str | None) -> str | None:
         return validate_dtc_format(v)
+
+    @model_validator(mode="after")
+    def validate_sv_dates(self) -> "SDTMRecordSV":
+        import re
+        if self.SVSTDTC and self.SVENDTC:
+            s_clean = re.sub(r"[^\d]", "", self.SVSTDTC)
+            e_clean = re.sub(r"[^\d]", "", self.SVENDTC)
+            min_len = min(len(s_clean), len(e_clean))
+            if min_len > 0:
+                if e_clean[:min_len] < s_clean[:min_len]:
+                    raise ValueError(
+                        f"SVENDTC ({self.SVENDTC}) cannot be earlier than SVSTDTC ({self.SVSTDTC})"
+                    )
+        return self
 
 
 class SDTMRecordCM(AuditableModel):
@@ -250,6 +278,20 @@ class SDTMRecordCM(AuditableModel):
     @classmethod
     def validate_dates(cls, v: str | None) -> str | None:
         return validate_dtc_format(v)
+
+    @model_validator(mode="after")
+    def validate_cm_dates(self) -> "SDTMRecordCM":
+        import re
+        if self.CMSTDTC and self.CMENDTC:
+            s_clean = re.sub(r"[^\d]", "", self.CMSTDTC)
+            e_clean = re.sub(r"[^\d]", "", self.CMENDTC)
+            min_len = min(len(s_clean), len(e_clean))
+            if min_len > 0:
+                if e_clean[:min_len] < s_clean[:min_len]:
+                    raise ValueError(
+                        f"CMENDTC ({self.CMENDTC}) cannot be earlier than CMSTDTC ({self.CMSTDTC})"
+                    )
+        return self
 
 
 class SDTMRecordDS(AuditableModel):
