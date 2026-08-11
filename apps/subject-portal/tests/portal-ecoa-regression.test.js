@@ -123,7 +123,7 @@ beforeEach(async () => {
     })
   );
 
-  // Reset state
+  // Reset state and clear IndexedDB stores
   try {
     const portal = await import("../index.js");
     portal.state.session.userId = "subject_001";
@@ -138,14 +138,54 @@ beforeEach(async () => {
     portal.state.compliance = null;
     portal.state.tasksLoading = false;
     portal.state.tasksError = null;
+    portal.state.assignmentsError = false;
     portal.state.instrumentsLoading = false;
     portal.state.instrumentsError = null;
     portal.state.complianceLoading = false;
     portal.state.complianceError = null;
     portal.state.notificationsLoading = false;
     portal.state.notificationsError = null;
+    portal.state.submissions = [];
   } catch (err) {
     console.error("State reset failed in beforeEach:", err);
+  }
+
+  if (globalThis.indexedDB) {
+    await new Promise((resolve) => {
+      const req = globalThis.indexedDB.open("SubjectPortalSyncDB", 2);
+      req.onsuccess = (event) => {
+        const db = event.target.result;
+        const tx = db.transaction(["submissions", "config", "instruments", "assignments"], "readwrite");
+        tx.objectStore("submissions").clear();
+        tx.objectStore("config").clear();
+        tx.objectStore("instruments").clear();
+        tx.objectStore("assignments").clear();
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        tx.onerror = () => {
+          db.close();
+          resolve();
+        };
+      };
+      req.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains("submissions")) {
+          db.createObjectStore("submissions", { keyPath: "sequence_number" });
+        }
+        if (!db.objectStoreNames.contains("config")) {
+          db.createObjectStore("config", { keyPath: "key" });
+        }
+        if (!db.objectStoreNames.contains("instruments")) {
+          db.createObjectStore("instruments", { keyPath: "id" });
+        }
+        if (!db.objectStoreNames.contains("assignments")) {
+          db.createObjectStore("assignments", { keyPath: "id" });
+        }
+      };
+      req.onerror = () => resolve();
+    });
   }
 });
 

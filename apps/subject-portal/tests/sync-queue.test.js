@@ -16,6 +16,12 @@ import {
   setInMemorySessionKey,
   getWrappedMasterKeyConfig,
   saveWrappedMasterKeyConfig,
+  saveAssignmentsToDB,
+  getAssignmentsFromDB,
+  saveInstrumentsToDB,
+  getInstrumentsFromDB,
+  getInstrumentFromDB,
+  bulkUpdateSubmissionStatuses,
 } from "../sync-queue.js";
 
 describe("sync-queue secure storage and sync capabilities", () => {
@@ -202,5 +208,67 @@ describe("sync-queue secure storage and sync capabilities", () => {
     const retrieved = await getWrappedMasterKeyConfig();
     expect(retrieved.wrappedKey).toBeNull();
     expect(retrieved.salt).toBeNull();
+  });
+
+  it("should save and retrieve assignments correctly", async () => {
+    const mockAssignments = [
+      { id: "assign_1", instrument_id: "inst_1", status: "PENDING" },
+      { id: "assign_2", instrument_id: "inst_2", status: "COMPLETED" },
+    ];
+    await saveAssignmentsToDB(mockAssignments);
+
+    const retrieved = await getAssignmentsFromDB();
+    expect(retrieved.length).toBe(2);
+    expect(retrieved[0].id).toBe("assign_1");
+    expect(retrieved[1].status).toBe("COMPLETED");
+  });
+
+  it("should save, retrieve and find instruments correctly", async () => {
+    const mockInstruments = [
+      { id: "inst_1", name: "Instrument One", items: {} },
+      { id: "inst_2", name: "Instrument Two", items: {} },
+    ];
+    await saveInstrumentsToDB(mockInstruments);
+
+    const retrievedList = await getInstrumentsFromDB();
+    expect(retrievedList.length).toBe(2);
+
+    const foundInstrument = await getInstrumentFromDB("inst_2");
+    expect(foundInstrument).not.toBeNull();
+    expect(foundInstrument.name).toBe("Instrument Two");
+
+    const notFoundInstrument = await getInstrumentFromDB("inst_non_existent");
+    expect(notFoundInstrument).toBeNull();
+  });
+
+  it("should bulk update submission statuses correctly", async () => {
+    const rawMaterial = new Uint8Array(32);
+    for (let i = 0; i < 32; i++) rawMaterial[i] = i;
+    await initSessionKey(rawMaterial);
+
+    await queueSubmission({
+      subject_id: "subject_1",
+      diary_id: "inst_1",
+      assignment_id: "assign_1",
+      answers: { val: 1 },
+      change_reason: "reason",
+      username: "user1",
+    });
+
+    const emptyRes = await bulkUpdateSubmissionStatuses([]);
+    expect(emptyRes).toEqual([]);
+
+    const res = await bulkUpdateSubmissionStatuses([
+      { sequence_number: 1, status: "SUBMITTED", additionalFields: { extra: "test" } },
+    ]);
+    expect(res.length).toBe(1);
+    expect(res[0].status).toBe("SUBMITTED");
+    expect(res[0].extra).toBe("test");
+
+    await expect(
+      bulkUpdateSubmissionStatuses([
+        { sequence_number: 999, status: "SUBMITTED" }
+      ])
+    ).rejects.toThrow("Submission 999 not found");
   });
 });
