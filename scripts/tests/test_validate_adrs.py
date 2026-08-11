@@ -4,6 +4,7 @@ from scripts.validate_adrs import (
     check_architectural_changes_require_adr,
     get_changed_files,
     is_architectural_file,
+    run_git_command,
     validate_existing_adrs,
 )
 
@@ -30,6 +31,35 @@ def test_is_architectural_file():
     assert is_architectural_file("apps/designer/tests/test_designer.py") is False
     assert is_architectural_file("apps/designer/orchestration.py") is False
     assert is_architectural_file("README.md") is False
+
+
+def test_run_git_command_hardening():
+    # 1. Non-git command should be rejected
+    out, err = run_git_command(["ls", "-la"])
+    assert out == ""
+    assert "Invalid command" in err
+
+    # 2. Command with unwhitelisted option injection should be rejected
+    out, err = run_git_command(["git", "diff", "--unsafe-option"])
+    assert out == ""
+    assert "Unsafe or unauthorized argument" in err
+
+    # 3. Command with special characters / shell metacharacters should be rejected
+    out, err = run_git_command(["git", "diff", "branch; echo malicious"])
+    assert out == ""
+    assert "Unsafe or unauthorized argument" in err
+
+    # 4. Command with branch name starting with hyphen (simulated option injection) should be rejected
+    out, err = run_git_command(["git", "diff", "-r-option"])
+    assert out == ""
+    assert "Unsafe or unauthorized argument" in err
+
+    # 5. Whitelisted options should be allowed and run safely
+    # Note: running it with HEAD to actually run a fast query on the repository
+    out, err = run_git_command(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+    # We expect this to run successfully on a real repo
+    assert err == ""
+    assert out != ""
 
 
 def test_check_architectural_changes_require_adr_no_changes():
@@ -61,9 +91,34 @@ def test_check_architectural_changes_require_adr_with_deleted_adr():
         assert check_architectural_changes_require_adr(changed_files) is False
 
 
-def test_get_changed_files_from_txt():
-    # If changed_files.txt exists, it should read from it
+@patch("scripts.validate_adrs.run_git_command")
+def test_get_changed_files_ignores_txt_override(mock_run_git):
+    # Even if changed_files.txt exists, we should ignore it and use git
     mock_content = "pyproject.toml\n\napps/gateway/main.py\n"
+
+    def mock_run_git_side_effect(args):
+        cmd_str = " ".join(args)
+        if "rev-parse --abbrev-ref" in cmd_str:
+            return "feature-branch\n", ""
+        if "rev-parse HEAD" in cmd_str:
+            return "commit-head-sha\n", ""
+        if "branch" in cmd_str and "--format" in cmd_str:
+            return "main\nfeature-branch\n", ""
+        if "merge-base" in cmd_str:
+            return "commit-base-sha\n", ""
+        if "rev-list --count" in cmd_str:
+            return "1\n", ""
+        if "rev-list --first-parent" in cmd_str:
+            return "commit-head-sha\n", ""
+        if "log --pretty=%P" in cmd_str:
+            return "commit-base-sha\n", ""
+        if "diff-tree" in cmd_str:
+            return "packages/security/model.py\n", ""
+        if "--porcelain" in cmd_str:
+            return "", ""
+        return "", ""
+
+    mock_run_git.side_effect = mock_run_git_side_effect
 
     with (
         patch("os.path.exists", return_value=True),
@@ -77,8 +132,11 @@ def test_get_changed_files_from_txt():
         ),
     ):
         changed = get_changed_files()
-        assert "pyproject.toml" in changed
-        assert "apps/gateway/main.py" in changed
+        # It should NOT contain files from changed_files.txt
+        assert "pyproject.toml" not in changed
+        assert "apps/gateway/main.py" not in changed
+        # It should contain files from git instead
+        assert "packages/security/model.py" in changed
 
 
 @patch("scripts.validate_adrs.run_git_command")
