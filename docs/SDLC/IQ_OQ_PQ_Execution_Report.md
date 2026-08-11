@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2231
-- **Passed:** 2226 🟢
+- **Total Automated Test Cases Run:** 2232
+- **Passed:** 2227 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
 - **Overall Operational Pass Rate:** 99.78%
@@ -1925,6 +1925,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_crypto_verifier_valid_signature`                                             | `packages.compliance.tests.test_compliance_security`                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_gateway_raises_runtime_error_if_secret_missing`                              | `packages.compliance.tests.test_compliance_security`                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_global_scanner_with_opt_out`                                                 | `packages.compliance.tests.test_compliance_security`                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_mock_signature_and_key_detection`                                            | `packages.compliance.tests.test_compliance_security`                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_security_audit_exclusions`                                                   | `packages.compliance.tests.test_compliance_security`                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_security_audit_scanner_detection_and_bypass`                                 | `packages.compliance.tests.test_compliance_security`                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_security_audit_script`                                                       | `packages.compliance.tests.test_compliance_security`                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
