@@ -301,3 +301,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-10: Dynamic Dependency Matching and Clinical De-identification Consolidation](2026-08-10-dynamic-dependency-matching-and-clinical-deid-consolidation.md)
 - [2026-08-11: Browser-Native Layout-Skipping for eCRF Virtualization](2026-08-11-browser-native-layout-skipping-for-ecrf-virtualization.md)
 - [2026-08-11: ADR-[NUMBER]: Persistent Local PIN Wrapper and Secure Offline IndexedDB Encryption](2026-08-11-persistent-local-pin-wrapper-and-indexeddb-security.md)
+- [2026-08-11: AST-based Offline Schema Drift Detection and Babel Parser Dependency](2026-08-11-ast-based-offline-schema-drift-detection.md)
