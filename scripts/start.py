@@ -32,10 +32,10 @@ def run_pre_boot_migrations(service: str, migrate_path: str) -> None:
     """
     print(f"[{service.upper()}] Pre-boot: Relational database detected.")
     print(f"[{service.upper()}] Pre-boot: Running migrations via '{migrate_path}'...")
-    
+
     # Run using current virtual env Python
     res = subprocess.run([sys.executable, migrate_path])
-    
+
     if res.returncode != 0:
         print(
             f"[{service.upper()}] Pre-boot: Migration failed with exit code {res.returncode}. "
@@ -43,7 +43,7 @@ def run_pre_boot_migrations(service: str, migrate_path: str) -> None:
             file=sys.stderr,
         )
         sys.exit(res.returncode)
-        
+
     print(f"[{service.upper()}] Pre-boot: Migrations completed successfully.")
 
 
@@ -54,7 +54,7 @@ def run_web_server(service: str, host: str, port: int, extra_args: list[str]) ->
     subprocess.run.
     """
     print(f"[{service.upper()}] Launching web server on {host}:{port}...")
-    
+
     uvicorn_cmd = [
         "uvicorn",
         f"apps.{service}.main:app",
@@ -113,9 +113,9 @@ def main(args_list: list[str] | None = None) -> None:
         default=8000,
         help="Port to bind the web server to (default: 8000)",
     )
-    
+
     parsed, extra_args = parser.parse_known_args(args_list)
-    
+
     service = parsed.service
     host = parsed.host
     port = parsed.port
