@@ -329,6 +329,68 @@ export async function updateSubmissionStatus(
   });
 }
 
+export async function bulkUpdateSubmissionStatuses(updates) {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("submissions", "readwrite");
+    const store = tx.objectStore("submissions");
+    const subsToDecrypt = [];
+
+    let completedCount = 0;
+    if (updates.length === 0) {
+      resolve([]);
+      return;
+    }
+
+    for (const update of updates) {
+      const { sequence_number, status, additionalFields = {} } = update;
+      const getReq = store.get(sequence_number);
+
+      getReq.onsuccess = () => {
+        const sub = getReq.result;
+        if (!sub) {
+          tx.abort();
+          reject(new Error(`Submission ${sequence_number} not found`));
+          return;
+        }
+        sub.status = status;
+        sub.resolved_at = new Date().toISOString();
+        Object.assign(sub, additionalFields);
+
+        const putReq = store.put(sub);
+        putReq.onsuccess = () => {
+          subsToDecrypt.push(sub);
+          completedCount++;
+        };
+        putReq.onerror = () => {
+          reject(putReq.error);
+        };
+      };
+
+      getReq.onerror = () => {
+        reject(getReq.error);
+      };
+    }
+
+    tx.oncomplete = async () => {
+      try {
+        const decrypted = await Promise.all(subsToDecrypt.map(decryptRecord));
+        resolve(decrypted);
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    tx.onerror = () => {
+      reject(tx.error);
+    };
+
+    tx.onabort = () => {
+      reject(new Error("Transaction aborted"));
+    };
+  });
+}
+
 export async function clearAllSubmissions() {
   const db = await openDatabase();
   return new Promise((resolve, reject) => {
