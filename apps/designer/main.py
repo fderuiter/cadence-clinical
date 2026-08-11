@@ -13,8 +13,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from neo4j import AsyncGraphDatabase
 
-import apps.designer.adapter.repositories  # noqa: F401
-from apps.designer.adapter.safety_gateway import QuerySafetyError  # noqa: F401
+import apps.designer.adapters.repositories  # noqa: F401
+from apps.designer.adapters.safety_gateway import QuerySafetyError  # noqa: F401
 from apps.designer.delta import (
     ConcurrentLockingError,
     ImmutabilityViolationError,

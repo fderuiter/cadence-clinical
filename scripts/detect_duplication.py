@@ -448,7 +448,7 @@ def main() -> None:
                                     "apps/execution/domain/watermark.py",
                                 },
                                 {
-                                    "apps/execution/adapter/repositories.py",
+                                    "apps/execution/adapters/repositories.py",
                                     "apps/execution/infrastructure/repositories/__init__.py",
                                 },
                                 {

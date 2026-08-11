@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from apps.designer.adapter.safety_gateway import (
+from apps.designer.adapters.safety_gateway import (
     QuerySafetyError,
     SafeDriver,
     validate_query_safety,

@@ -106,10 +106,112 @@ def validate_document(file_path: Path, active_services: list[str]) -> bool:
     return False
 
 
+def validate_feature_matrix(matrix_path: Path, active_services: list[str]) -> bool:
+    """
+    Validates that every active user-facing microservice in docker-compose.yml
+    has at least one corresponding entry mapping in docs/FEATURE_MATRIX.md.
+    """
+    if not matrix_path.exists():
+        print(f"Error: Feature Matrix file not found at {matrix_path}")
+        return False
+
+    # Define mapping of service key in compose file to valid names/substrings in the "Sub-system" column
+    service_to_doc_names = {
+        "designer": ["Designer"],
+        "execution": ["Execution"],
+        "org": ["Organization Service"],
+        "eisf": ["eISF Service"],
+        "etmf": ["eTMF Service"],
+        "ctms": ["CTMS Service"],
+        "quality": ["Quality Service"],
+        "interop": ["Interop Service"],
+        "tickets": ["Tickets Service"],
+        "safety": ["Clinical Safety"],
+        "notifications": ["Notifications Service"],
+        "econsent": ["Electronic Consent"],
+        "subject-portal": ["Subject Portal"],
+    }
+
+    # Filter out active services to only include those that have an application folder
+    # and are not excluded (e.g. gateway)
+    repo_root = matrix_path.resolve().parent.parent
+    services_to_check = []
+    for s in active_services:
+        apps_folder = repo_root / "apps" / s
+        if apps_folder.is_dir() and s != "gateway":
+            services_to_check.append(s)
+
+    print(
+        f"Filtered active services to validate in Feature Matrix: {services_to_check}"
+    )
+
+    # Read and parse docs/FEATURE_MATRIX.md
+    with open(matrix_path, encoding="utf-8") as f:
+        content = f.read()
+
+    # Find Section 2: Clinical Entities Mapping table
+    lines = content.splitlines()
+    in_section_2 = False
+    subsystems_found = set()
+
+    for line in lines:
+        if "## 2. Clinical Entities Mapping" in line:
+            in_section_2 = True
+            continue
+        if in_section_2:
+            if line.startswith("## ") or line.startswith("---"):
+                if line.startswith("## "):
+                    break
+            stripped = line.strip()
+            if stripped.startswith("|") and stripped.endswith("|"):
+                parts = [p.strip() for p in stripped.split("|")]
+                if len(parts) >= 3:
+                    sub_system = parts[2]
+                    # Skip header and separator rows
+                    if (
+                        sub_system
+                        and "Sub-system" not in sub_system
+                        and not all(c in "-: " for c in sub_system)
+                    ):
+                        subsystems_found.add(sub_system)
+
+    print(
+        f"Sub-systems found in Feature Matrix Clinical Entities table: {subsystems_found}"
+    )
+
+    missing_services = []
+    for s in services_to_check:
+        doc_names = service_to_doc_names.get(s, [])
+        found = False
+        for doc_name in doc_names:
+            for subsystem in subsystems_found:
+                if doc_name.lower() in subsystem.lower():
+                    found = True
+                    break
+            if found:
+                break
+        if not found:
+            missing_services.append(s)
+
+    if missing_services:
+        print(
+            f"[FEATURE MATRIX] Failed: Active service(s) {missing_services} are missing from docs/FEATURE_MATRIX.md."
+        )
+        print(
+            f"Please add appropriate Clinical Entity mappings for {missing_services} in docs/FEATURE_MATRIX.md."
+        )
+        return False
+
+    print(
+        "[FEATURE MATRIX] Success: All active services have corresponding mappings in the Feature Matrix."
+    )
+    return True
+
+
 def main():
     print("Running Automated Architecture Drift Gating Linter...")
 
-    # 1. Get the 16 active local services from docker-compose
+    # 1. Get the active local services from docker-compose
     active_services = get_active_services(COMPOSE_PATH)
     print(
         f"Detected {len(active_services)} active services in local configuration: {active_services}"
@@ -125,18 +227,27 @@ def main():
     # 3. Validate 02_Technical_Design_Document_TDD.md
     tdd_valid = validate_document(TDD_PATH, active_services)
 
-    if not arch_valid or not tdd_valid:
-        print("\n[GATE KEEPER] Failure: Architectural documentation drift detected!")
+    # 4. Validate docs/FEATURE_MATRIX.md
+    matrix_path = REPO_ROOT / "docs" / "FEATURE_MATRIX.md"
+    matrix_valid = validate_feature_matrix(matrix_path, active_services)
+
+    if not arch_valid or not tdd_valid or not matrix_valid:
+        print(
+            "\n[GATE KEEPER] Failure: Architectural or Feature Matrix documentation drift detected!"
+        )
         print("Please ensure that your service topology Mermaid diagrams in both:")
         print("  - ARCHITECTURE.md")
         print("  - docs/SDLC/02_Technical_Design_Document_TDD.md")
         print(
-            "accurately represent all 16 active services in the docker-compose.yml orchestrator."
+            "accurately represent all active services in the docker-compose.yml orchestrator,"
+        )
+        print(
+            "and that every active microservice has a corresponding mapping in docs/FEATURE_MATRIX.md."
         )
         sys.exit(1)
 
     print(
-        "\n[GATE KEEPER] Success: No architectural documentation drift detected. All active services are mapped."
+        "\n[GATE KEEPER] Success: No architectural or Feature Matrix documentation drift detected. All active services are mapped."
     )
     sys.exit(0)
 
