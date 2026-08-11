@@ -1,4 +1,4 @@
-import { apiClient, getBaseUrl } from "./apiClient";
+import { apiClient } from "./apiClient";
 
 export const ingestionClient = {
   uploadProtocol(file, options = {}) {

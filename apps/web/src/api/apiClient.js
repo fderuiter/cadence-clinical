@@ -6,7 +6,7 @@ apiConfig.setTokenProvider(() => {
   try {
     const authStore = useAuthStore();
     return authStore?.token || authStore?.accessToken;
-  } catch (e) {
+  } catch {
     return null;
   }
 });

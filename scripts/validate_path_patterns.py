@@ -38,6 +38,7 @@ RULES = {
             "apps/web/**/*.ts",
             "apps/subject-portal/**/*.ts",
             "packages/ui/**/*.ts",
+            "packages/shared-api-client/**/*.ts",
             "tests/**/*.ts",
         ],
         "description": "TypeScript files (*.ts) must reside inside frontend structures or tests (e.g., apps/web/, apps/subject-portal/, packages/ui/, tests/).",

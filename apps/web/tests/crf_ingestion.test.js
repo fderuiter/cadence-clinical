@@ -37,9 +37,7 @@ describe("Protocol Ingestion / CRF Builder Frontend Tests", () => {
       expect(apiClient.post).toHaveBeenCalledTimes(1);
       const [url, body, options] = apiClient.post.mock.calls[0];
       expect(url).toContain("/api/v1/designer/ingestion/upload");
-      expect(options.changeReason).toBe(
-        "Ingesting trial blueprint"
-      );
+      expect(options.changeReason).toBe("Ingesting trial blueprint");
       expect(body).toBeInstanceOf(FormData);
       expect(result).toEqual(mockResponse);
     });

@@ -25,6 +25,10 @@ export const executionService = {
     return apiClient.post(`/api/v1/execution/form-submissions`, body, options);
   },
   syncQueries(blocks, options = {}) {
-    return apiClient.post(`/api/v1/execution/queries/sync`, { blocks }, options);
+    return apiClient.post(
+      `/api/v1/execution/queries/sync`,
+      { blocks },
+      options
+    );
   },
 };

@@ -55,7 +55,8 @@ export const terminologyClient = {
     if (!studyId) {
       throw new Error("Study ID cannot be empty.");
     }
-    const changeReason = options.changeReason || "Get study terminology validation";
+    const changeReason =
+      options.changeReason || "Get study terminology validation";
     try {
       return await apiClient.get(
         `/api/v1/studies/${encodeURIComponent(studyId)}/terminology-validation`,

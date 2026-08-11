@@ -31,13 +31,24 @@ export const etmfService = {
     return apiClient.get(path, rest);
   },
   verifySignature(payload, options = {}) {
-    return apiClient.post("/api/v1/auth/signature-verification", payload, options);
+    return apiClient.post(
+      "/api/v1/auth/signature-verification",
+      payload,
+      options
+    );
   },
   signOff(documentId, payload, options = {}) {
-    return apiClient.post(`/api/v1/etmf/documents/${documentId}/sign-off`, payload, options);
+    return apiClient.post(
+      `/api/v1/etmf/documents/${documentId}/sign-off`,
+      payload,
+      options
+    );
   },
   getArchivalStatus(correlationId, options = {}) {
-    return apiClient.get(`/api/v1/econsent/archival-status/${correlationId}`, options);
+    return apiClient.get(
+      `/api/v1/econsent/archival-status/${correlationId}`,
+      options
+    );
   },
   getArchivalStatuses(options = {}) {
     const { limit, offset, ...rest } = options;
@@ -51,13 +62,19 @@ export const etmfService = {
     return apiClient.get(path, rest);
   },
   getTaxonomy(version, options = {}) {
-    const path = version ? `/api/v1/etmf/taxonomy?version=${version}` : "/api/v1/etmf/taxonomy";
+    const path = version
+      ? `/api/v1/etmf/taxonomy?version=${version}`
+      : "/api/v1/etmf/taxonomy";
     return apiClient.get(path, options);
   },
   autoFile(payload, options = {}) {
     return apiClient.post("/api/v1/etmf/classify", payload, options);
   },
   tagDocument(documentId, payload, options = {}) {
-    return apiClient.post(`/api/v1/etmf/documents/${documentId}/classify`, payload, options);
+    return apiClient.post(
+      `/api/v1/etmf/documents/${documentId}/classify`,
+      payload,
+      options
+    );
   },
 };
