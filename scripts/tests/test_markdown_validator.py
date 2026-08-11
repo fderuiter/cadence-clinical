@@ -748,3 +748,74 @@ class BrokenModel2(BaseModel):
         in vm.errors[0]["message"]
     )
     assert "Missing required fields: ['name']" in vm.errors[0]["message"]
+
+
+def test_nested_code_blocks_in_html_comments(tmp_path):
+    """Verifies that nested code blocks inside single-line and multi-line HTML comments are ignored."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    md_content = """# Nested Code Blocks in Comments
+
+Please ignore this single-line comment containing code block start: <!-- ```python def ignored(): pass ``` -->
+
+<!--
+```python
+def commented_out_syntax_error():
+    this is invalid python syntax and has a mismatched signature!
+```
+-->
+
+This is a valid section after comments.
+"""
+    md_file = repo_root / "test_comments.md"
+    md_file.write_text(md_content, encoding="utf-8")
+
+    vm.process_markdown_file(md_file, repo_root, set(), set(), {})
+    assert len(vm.errors) == 0
+
+
+def test_uncommented_code_block_errors_maintained(tmp_path):
+    """Verifies that uncommented code blocks with syntax errors are still correctly caught with accurate line numbers."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    # Line 1: # Document
+    # Line 2: (empty)
+    # Line 3: <!--
+    # Line 4: ```python
+    # Line 5: def commented_error():
+    # Line 6:     !!!
+    # Line 7: ```
+    # Line 8: -->
+    # Line 9: (empty)
+    # Line 10: Below is an active code block with a syntax error
+    # Line 11: ```python
+    # Line 12: def active_syntax_error():
+    # Line 13:     this is invalid python
+    # Line 14: ```
+    md_content = """# Document
+
+<!--
+```python
+def commented_error():
+    !!!
+```
+-->
+
+Below is an active code block with a syntax error
+```python
+def active_syntax_error():
+    this is invalid python
+```
+"""
+    md_file = repo_root / "test_uncommented.md"
+    md_file.write_text(md_content, encoding="utf-8")
+
+    vm.process_markdown_file(md_file, repo_root, set(), set(), {})
+
+    # We expect exactly 1 error on line 12 (due to existing start_line + e.lineno - 1 formula)
+    assert len(vm.errors) == 1
+    err = vm.errors[0]
+    assert err["line"] == 12
+    assert "Python SyntaxError" in err["message"]

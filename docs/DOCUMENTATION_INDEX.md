@@ -68,6 +68,8 @@ Guidelines for setting up, building, running, and contributing code to Cadence C
 - **[AI Agent & Development Instructions](AGENTS.md)** (`AGENTS.md`): Architectural guardrails, coding standards, directory targeting rules, and PR verification gates.
 - **[Contributing Guidelines](../CONTRIBUTING.md)** (`CONTRIBUTING.md`): Workspace development standards, code style, formatting tools, and the Issue-to-Doc Sync Workflow.
 - **[Operations & Deployment Guide](SDLC/07_Operations_Deployment_Guide.md)** (`07_Operations_Deployment_Guide.md`): Production deployment topology, Docker orchestration, monitoring, and database backup protocols.
+- **[Lab Reference Ranges Guide](OPERATIONAL_LAB_RANGES.md)** (`OPERATIONAL_LAB_RANGES.md`): Outlines the technical and regulatory mechanisms used to manage, validate, and update laboratory reference ranges, including multi-dimensional scoring and deterministic tie-breaking.
+- **[Inbound Email Ingestion Guide](OPERATIONAL_INBOUND_EMAIL.md)** (`OPERATIONAL_INBOUND_EMAIL.md`): Details security protocols and configurations for the eTMF inbound-email webhook, including HMAC signature validation and attachment processing.
 
 ---
 
@@ -79,6 +81,8 @@ GxP audit readiness, requirement traceability, and automated verification report
 - **[Security, Compliance & Audit Spec](SDLC/05_Security_Compliance_Audit_Spec.md)** (`05_Security_Compliance_Audit_Spec.md`): 21 CFR Part 11 compliance matrix, encryption standards, and security vulnerability exclusion ledger.
 - **[QA Validation Plan](SDLC/06_QA_Validation_Plan.md)** (`06_QA_Validation_Plan.md`): GAMP 5 validation strategy, testing tiers, and qualification execution standards.
 - **[IQ/OQ/PQ Qualification Execution Report](SDLC/IQ_OQ_PQ_Execution_Report.md)** (`IQ_OQ_PQ_Execution_Report.md`): Automated qualification build outputs and release state signatures.
+- **[Feature and Environment Matrix](FEATURE_MATRIX.md)** (`FEATURE_MATRIX.md`): Maps compliance features to designer/execution services and inventories persistence engines and auditing mechanisms.
+- **[Data Lifecycle Guide](DATA_LIFECYCLE.md)** (`DATA_LIFECYCLE.md`): Specifies the electronic Trial Master File (eTMF) Quality Control review lifecycle and data transitions from draft to archive.
 
 ---
 
