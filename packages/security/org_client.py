@@ -1,70 +1,60 @@
 import logging
 import os
 import sys
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from packages.security.gateway_client import GatewayBaseClient
 
 logger = logging.getLogger("packages.security.org_client")
 
+# Clean registration/override hooks for Port-and-Adapter standardization
+_personnel_assignments_resolver: Callable[[str], Awaitable[dict[str, Any]]] | None = (
+    None
+)
+_sponsor_known_resolver: Callable[[str], Awaitable[bool]] | None = None
+
+
+def register_personnel_assignments_resolver(
+    resolver: Callable[[str], Awaitable[dict[str, Any]]] | None,
+) -> None:
+    """
+    Registers an authoritative adapter for personnel assignment resolution.
+    Used by microservice integration tests or custom deployment profiles
+    to avoid in-memory system module injection hacks.
+    """
+    global _personnel_assignments_resolver
+    _personnel_assignments_resolver = resolver
+
+
+def register_sponsor_known_resolver(
+    resolver: Callable[[str], Awaitable[bool]] | None,
+) -> None:
+    """
+    Registers an authoritative adapter for sponsor verification.
+    Used by microservice integration tests or custom deployment profiles
+    to avoid in-memory system module injection hacks.
+    """
+    global _sponsor_known_resolver
+    _sponsor_known_resolver = resolver
+
 
 async def resolve_personnel_assignments(keycloak_user_id: str) -> dict[str, Any]:
     """
     Enriches Principal with authoritative site and study assignments from apps/org service.
     """
+    # 1. Check for registered adapter hook (Port and Adapter pattern)
+    if _personnel_assignments_resolver is not None:
+        try:
+            return await _personnel_assignments_resolver(keycloak_user_id)
+        except Exception as e:
+            logger.error("Error in registered personnel assignments resolver: %s", e)
+
+    # 2. Check for environment-specific fallbacks or testing defaults if no resolver is registered
     is_testing = "pytest" in sys.modules or "PYTEST_CURRENT_TEST" in os.environ
     if is_testing:
-        try:
-            org_db_name = "apps.org.database"
-            org_models_name = "apps.org.models"
-            if org_db_name in sys.modules and org_models_name in sys.modules:
-                from sqlalchemy import select
-                from sqlalchemy.orm import desc
-
-                db_mgr = sys.modules[org_db_name].db_manager
-                personnel_cls = sys.modules[org_models_name].Personnel
-                personnel_assignment_cls = sys.modules[
-                    org_models_name
-                ].PersonnelAssignment
-
-                session_maker = db_mgr.get_session_maker()
-                async with session_maker() as session:
-                    stmt = (
-                        select(personnel_cls)
-                        .where(personnel_cls.keycloak_user_id == keycloak_user_id)
-                        .order_by(desc(personnel_cls.version_index))
-                    )
-                    person = (await session.execute(stmt)).scalars().first()
-                    if person:
-                        stmt_assign = (
-                            select(personnel_assignment_cls)
-                            .where(personnel_assignment_cls.personnel_id == person.id)
-                            .order_by(
-                                personnel_assignment_cls.id,
-                                desc(personnel_assignment_cls.version_index),
-                            )
-                        )
-                        all_assigns = (
-                            (await session.execute(stmt_assign)).scalars().all()
-                        )
-                        latest_assigns = {}
-                        for a in all_assigns:
-                            if a.id not in latest_assigns:
-                                latest_assigns[a.id] = a
-                        active_assigns = [
-                            a for a in latest_assigns.values() if a.is_active
-                        ]
-                        assigned_sites = list(set(a.site_id for a in active_assigns))
-                        assigned_studies = list(set(a.study_id for a in active_assigns))
-                        return {
-                            "personnel_id": person.id,
-                            "roles": ["external_monitor"],
-                            "assigned_sites": assigned_sites,
-                            "assigned_studies": assigned_studies,
-                        }
-        except Exception:
-            pass
-        # Default test fallback
+        # Avoid direct database/sibling model access via sys.modules hacks.
+        # Fall back to a standard test response
         return {
             "personnel_id": "test_personnel_id",
             "roles": ["external_monitor"],
@@ -122,27 +112,16 @@ async def is_sponsor_known_to_org_directory(sponsor_id: str) -> bool:
     Checks if a sponsor_id is registered as an Organization in the Organization Directory.
     Fails safely / returns True if the Org directory database is not initialized or accessible.
     """
-    is_testing = "pytest" in sys.modules or "PYTEST_CURRENT_TEST" in os.environ
-    if is_testing:
+    # 1. Check for registered adapter hook (Port and Adapter pattern)
+    if _sponsor_known_resolver is not None:
         try:
-            org_db_name = "apps.org.database"
-            org_models_name = "apps.org.models"
-            if org_db_name in sys.modules and org_models_name in sys.modules:
-                from sqlalchemy import select
+            return await _sponsor_known_resolver(sponsor_id)
+        except Exception as e:
+            logger.error("Error in registered sponsor known resolver: %s", e)
 
-                db_mgr = sys.modules[org_db_name].db_manager
-                org_cls = sys.modules[org_models_name].Organization
-
-                if db_mgr.engine is not None:
-                    session_maker = db_mgr.get_session_maker()
-                    async with session_maker() as session:
-                        stmt = select(org_cls).where(org_cls.id == sponsor_id)
-                        res = await session.execute(stmt)
-                        org = res.scalars().first()
-                        return org is not None
-        except Exception:
-            pass
-    else:
+    # 2. Check for environment-specific fallbacks or testing defaults if no resolver is registered
+    is_testing = "pytest" in sys.modules or "PYTEST_CURRENT_TEST" in os.environ
+    if not is_testing:
         try:
             org_url = (os.getenv("ORG_URL") or "http://localhost:8010").rstrip("/")
             client = GatewayBaseClient(base_url=org_url)
