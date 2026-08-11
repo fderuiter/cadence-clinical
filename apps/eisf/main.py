@@ -1,5 +1,4 @@
 import os
-import sys
 
 from fastapi import FastAPI
 
@@ -49,7 +48,7 @@ from apps.eisf.presentation.routers.eisf import (
     router as eisf_router,
 )
 from packages.database import get_relational_db_lifespan
-from packages.security import assert_secure_secrets
+from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("EISF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -59,27 +58,7 @@ assert_secure_secrets("eisf", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
 BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
 
 
-def validate_branding_and_domain() -> None:
-    app_env = os.getenv("APP_ENV", "").strip().lower()
-    is_prod_or_staging = app_env not in ("development", "dev", "test", "")
-    if is_prod_or_staging:
-        invalid = []
-        if not os.getenv("BRAND_NAME") or os.getenv("BRAND_NAME") == "Cadence Clinical":
-            invalid.append("BRAND_NAME")
-        if (
-            not os.getenv("BRAND_DOMAIN")
-            or os.getenv("BRAND_DOMAIN") == "cadenceclinical.com"
-        ):
-            invalid.append("BRAND_DOMAIN")
-        if invalid:
-            error_msg = f"STARTUP ERROR: Outdated default 'Cadence' branding or missing secure configurations detected in environment '{app_env}' for variables: {', '.join(invalid)}. Halting boot sequence."
-            print(error_msg, file=sys.stderr)
-            sys.exit(1)
-
-
-validate_branding_and_domain()
-
-
+validate_branding("eisf")
 app = FastAPI(
     title=f"{BRAND_NAME} - eISF Service",
     version="0.1.0",

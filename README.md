@@ -1,7 +1,7 @@
 # Cadence Clinical Research Software
 
 > [!WARNING]
-> **Pre-Demo Sandbox Status:** This repository represents an active pre-demo sandbox environment. It is intended strictly for evaluation and development walkthroughs, and is not ready for production use or public integration inquiries. For official, production-ready product access and inquiries, please visit [cadence-clinical.com](https://cadence-clinical.com).
+> **Pre-Demo Sandbox Status:** This repository represents an active pre-demo sandbox environment. It is intended strictly for evaluation and development walkthroughs, and is not ready for production use or public integration inquiries. For official, production-ready product access and inquiries, please visit [ccrsoft.com](https://ccrsoft.com).
 
 # Cadence Clinical
 
@@ -89,7 +89,7 @@ For deployment, the Notifications Service depends on several environment variabl
 - **`SMTP_PASSWORD`**: SMTP server password for authentication (non-secret development placeholder is `dev_password`).
 - **`SMTP_USE_TLS`**: Enforce TLS protocol (defaults to `false` for development).
 - **`SMTP_USE_SSL`**: Enforce SSL protocol (defaults to `false` for development).
-- **`SMTP_SENDER`**: Originating email address (defaults to `no-reply@cadence-clinical.com`).
+- **`SMTP_SENDER`**: Originating email address (defaults to `no-reply@ccrsoft.com`).
 - **`WEBHOOK_URL`**: Target endpoint for outbound event webhooks (defaults to `http://webhooks.local/receiver`).
 - **`WEBHOOK_SIGNING_SECRET`**: HMAC secret used to canonically sign outgoing webhook payloads to ensure integrity (defaults to `dev_webhook_secret_key_12345`).
 - **`WEBHOOK_TIMEOUT`**: Timeout duration in seconds for dispatching a webhook request (defaults to `5.0`).

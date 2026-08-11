@@ -28,7 +28,7 @@ from packages.security.delegation import (
     validate_request_staff_roles,
     verify_delegation_scope,
 )
-from packages.security.fail_fast import assert_secure_secrets
+from packages.security.fail_fast import assert_secure_secrets, validate_branding
 from packages.security.gateway_client import (
     GatewayBaseClient,
     run_async,
@@ -180,4 +180,5 @@ __all__ = [
     "SignatureVerificationResult",
     "verify_electronic_signature",
     "assert_secure_secrets",
+    "validate_branding",
 ]
