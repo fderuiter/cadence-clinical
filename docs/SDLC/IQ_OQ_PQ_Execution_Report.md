@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2219
-- **Passed:** 2214 🟢
+- **Total Automated Test Cases Run:** 2222
+- **Passed:** 2217 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
 - **Overall Operational Pass Rate:** 99.77%
@@ -640,8 +640,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_deterministic_and_complete_binder_export`                                    | `apps.etmf.tests.test_etmf`                                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_edl_definitions_and_crud`                                                    | `apps.etmf.tests.test_etmf`                                                 | PRD-EDL-001, Trace-4                         | 🟢 PASSED  | < 1s     |
 | `test_etmf_audit_logs_filtering_and_pagination`                                    | `apps.etmf.tests.test_etmf`                                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_etmf_completeness_rejects_quarantined`                                       | `apps.etmf.tests.test_etmf`                                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_etmf_completeness_site_segregation_and_study_wide`                           | `apps.etmf.tests.test_etmf`                                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_etmf_edge_cases_for_coverage`                                                | `apps.etmf.tests.test_etmf`                                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_etmf_qc_lifecycle_and_audit`                                                 | `apps.etmf.tests.test_etmf`                                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_etmf_repository_rule_deduplication`                                          | `apps.etmf.tests.test_etmf`                                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_explicit_and_default_taxonomy_version_roundtrip_and_legacy_interpretability` | `apps.etmf.tests.test_etmf`                                                 | PRD-TMF-003                                  | 🟢 PASSED  | < 1s     |
 | `test_informed_consent_form_taxonomy_and_idempotency`                              | `apps.etmf.tests.test_etmf`                                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_inspector_portal_read_only_access_limits`                                    | `apps.etmf.tests.test_etmf`                                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
