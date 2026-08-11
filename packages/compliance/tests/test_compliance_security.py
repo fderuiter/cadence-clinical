@@ -130,6 +130,55 @@ def test_crypto_verifier_invalid_signature():
     assert result.error_code == "SIGNATURE_MISMATCH"
 
 
+def test_mock_signature_and_key_detection():
+    """Verify refined mock signature and key detection handles short mock names and long real signatures correctly.
+
+    Requirements: PRD-SYS-001, 21 CFR Part 11
+    """
+    import base64
+
+    from packages.security.crypto_verifier import is_mock_key, is_mock_signature
+
+    # 1. Short mock strings should be detected
+    assert is_mock_signature("mock_signature") is True
+    assert is_mock_signature("mock") is True
+    assert is_mock_key("MOCK_KEY_DATA") is True
+    assert is_mock_key("mock") is True
+
+    # 2. Long base64 signature containing "mock" purely by chance (collision)
+    # "mock" in b64 but decoded bytes: b64decode("mock") = b"\x9a\x27\x28", which does not contain b"mock".
+    collision_sig = "AAAA" * 15 + "mock" + "AAAA"
+    assert len(collision_sig) >= 64
+    assert is_mock_signature(collision_sig) is False
+
+    # Same for is_mock_key:
+    collision_key = (
+        "-----BEGIN PUBLIC KEY-----\n"
+        + "AAAA" * 25
+        + "mock"
+        + "AAAA"
+        + "\n-----END PUBLIC KEY-----"
+    )
+    assert len(collision_key) >= 100
+    assert is_mock_key(collision_key) is False
+
+    # 3. Explicitly mocked long signature (base64-encoded string containing "mock" inside its decoded bytes):
+    mock_payload = b"this is a mock signature" + b" A" * 30
+    mock_b64 = base64.b64encode(mock_payload).decode("utf-8")
+    assert len(mock_b64) >= 64
+    assert is_mock_signature(mock_b64) is True
+
+    # Same for mock key:
+    mock_key_payload = b"this is a mock key certificate" + b" A" * 40
+    mock_key_pem = (
+        "-----BEGIN CERTIFICATE-----\n"
+        + base64.b64encode(mock_key_payload).decode("utf-8")
+        + "\n-----END CERTIFICATE-----"
+    )
+    assert len(mock_key_pem) >= 100
+    assert is_mock_key(mock_key_pem) is True
+
+
 def test_security_audit_script():
     """Verify automated security audit script runs and reports clean codebase.
 

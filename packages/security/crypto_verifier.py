@@ -194,45 +194,35 @@ def parse_signature_format(sig_str: str) -> str:
 def is_mock_signature(signature_b64: str | None) -> bool:
     if not signature_b64:
         return False
-    sig_lower = signature_b64.lower()
-    if "mock" in sig_lower:
-        # If it's a short human-readable string like "mock_signature", "mock", "MOCK_SIG_DATA", etc.
-        if len(signature_b64) < 64:
+    if len(signature_b64) < 64:
+        return "mock" in signature_b64.lower()
+    try:
+        cleaned = "".join(signature_b64.split())
+        decoded = base64.b64decode(cleaned)
+        if b"mock" in decoded.lower():
             return True
-        # If it's longer, it could be a valid base64 signature that contains "mock" by chance.
-        # Check if the base64-decoded bytes contain "mock".
-        try:
-            cleaned = "".join(signature_b64.split())
-            decoded = base64.b64decode(cleaned)
-            if b"mock" in decoded.lower():
-                return True
-        except Exception:
-            return True
+    except Exception:
+        return "mock" in signature_b64.lower()
     return False
 
 
 def is_mock_key(public_key_pem: str | None) -> bool:
     if not public_key_pem:
         return False
-    pk_lower = public_key_pem.lower()
-    if "mock" in pk_lower:
-        # A mock key/cert is usually a short string like "MOCK_XML_CERT", "MOCK_SIGNATURE", etc.
-        # But a real public key PEM is hundreds of characters.
-        if len(public_key_pem) < 100:
+    if len(public_key_pem) < 100:
+        return "mock" in public_key_pem.lower()
+    try:
+        lines = [
+            line.strip()
+            for line in public_key_pem.splitlines()
+            if line.strip() and not line.startswith("-----")
+        ]
+        cleaned = "".join(lines)
+        decoded = base64.b64decode(cleaned)
+        if b"mock" in decoded.lower():
             return True
-        # Decode the PEM content and check if it contains "mock"
-        try:
-            lines = [
-                line.strip()
-                for line in public_key_pem.splitlines()
-                if line.strip() and not line.startswith("-----")
-            ]
-            cleaned = "".join(lines)
-            decoded = base64.b64decode(cleaned)
-            if b"mock" in decoded.lower():
-                return True
-        except Exception:
-            return True
+    except Exception:
+        return "mock" in public_key_pem.lower()
     return False
 
 
