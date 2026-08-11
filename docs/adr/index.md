@@ -293,3 +293,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-05: ADR-2026-08-05: Global Prettier Formatting and Pre-commit Checks](2026-08-05-global-prettier-formatting-and-pre-commit-checks.md)
 - [2026-08-06: ADR-[NUMBER]: Global Monorepo Security Scanning and Fail-Fast Startup Assertions](2026-08-06-monorepo-security-scanning-and-fail-fast-assertions.md)
 - [2026-08-10: Dynamic Dependency Matching and Clinical De-identification Consolidation](2026-08-10-dynamic-dependency-matching-and-clinical-deid-consolidation.md)
+- [2026-08-11: Browser-Native Layout-Skipping for eCRF Virtualization](2026-08-11-browser-native-layout-skipping-for-ecrf-virtualization.md)
