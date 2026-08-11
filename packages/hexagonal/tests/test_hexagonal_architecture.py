@@ -5,6 +5,9 @@ from pathlib import Path
 import pytest
 from pytest_archon import archrule
 
+# Centralized pre-approved legacy directories excluded from verification checks
+LEGACY_EXCLUDED_DIRECTORIES = {"web", "subject-portal"}
+
 
 def discover_services() -> list[str]:
     root_dir = Path(__file__).resolve().parent.parent.parent.parent
@@ -12,7 +15,7 @@ def discover_services() -> list[str]:
     services = []
     if apps_dir.exists():
         for p in apps_dir.iterdir():
-            if p.is_dir() and p.name not in ("web", "subject-portal", "__pycache__"):
+            if p.is_dir() and p.name not in LEGACY_EXCLUDED_DIRECTORIES and p.name != "__pycache__":
                 if (
                     (p / "pyproject.toml").exists()
                     or (p / "main.py").exists()
@@ -70,34 +73,23 @@ def test_presentation_layer_driver_isolation(service: str):
     rule.check("apps", only_direct_imports=True)
 
 
-def test_decoupled_api_routers_have_no_direct_db_imports():
+@pytest.mark.parametrize("service", SERVICES)
+def test_decoupled_api_routers_have_no_direct_db_imports(service: str):
     """Ensure decoupled API router layers do not directly import ORM queries, database drivers, or legacy models."""
-    (
-        archrule("CTMS DOA Router DB Isolation")
-        .match("apps.ctms.routers.doa")
+    root_dir = Path(__file__).resolve().parent.parent.parent.parent
+    routers_dir = root_dir / "apps" / service / "routers"
+    if not routers_dir.exists() or not list(routers_dir.glob("*.py")):
+        pytest.skip(f"Service {service} does not have any decoupled routers.")
+
+    rule = (
+        archrule(f"{service.title()} Router DB Isolation")
+        .match(f"apps.{service}.routers*")
         .should_not_import("sqlalchemy*")
-        .should_not_import("apps.ctms.models*")
-        .check("apps", only_direct_imports=True)
-    )
-    (
-        archrule("Execution DOA Router DB Isolation")
-        .match("apps.execution.routers.doa")
-        .should_not_import("sqlalchemy*")
-        .should_not_import("apps.execution.database.models*")
-        .check("apps", only_direct_imports=True)
-    )
-    (
-        archrule("Designer Router DB Driver Isolation")
-        .match("apps.designer.presentation*")
         .should_not_import("neo4j*")
-        .check("apps", only_direct_imports=True)
+        .should_not_import(f"apps.{service}.models*")
+        .should_not_import(f"apps.{service}.database.models*")
     )
-    (
-        archrule("Gateway Router DB Driver Isolation")
-        .match("apps.gateway.presentation*")
-        .should_not_import("sqlalchemy*")
-        .check("apps", only_direct_imports=True)
-    )
+    rule.check("apps", only_direct_imports=True)
 
 
 def test_designer_core_isolation():
@@ -110,51 +102,87 @@ def test_designer_core_isolation():
     )
 
 
-def test_all_main_entrypoints_are_thin():
-    """Ensure main.py entrypoints contain only FastAPI setup and router inclusions, with no inline route handlers."""
+def test_main_entrypoints_count_integrity():
+    """Ensure we have at least 13 main.py files across services to prevent accidental omissions."""
     root_dir = Path(__file__).resolve().parent.parent.parent.parent
     main_files = sorted(glob.glob(str(root_dir / "apps" / "*" / "main.py")))
     assert len(main_files) >= 13, (
         f"Expected at least 13 main.py files, found {len(main_files)}"
     )
 
-    for main_file in main_files:
-        service_name = Path(main_file).parent.name
-        content = Path(main_file).read_text(encoding="utf-8")
-        tree = ast.parse(content, filename=main_file)
 
-        route_handlers = []
-        for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef):
-                for dec in node.decorator_list:
-                    if isinstance(dec, ast.Call) and isinstance(
-                        dec.func, ast.Attribute
-                    ):
-                        if dec.func.attr in (
-                            "get",
-                            "post",
-                            "put",
-                            "delete",
-                            "patch",
-                            "api_route",
-                        ):
-                            route_handlers.append(f"{node.name} (line {node.lineno})")
+@pytest.mark.parametrize("service", SERVICES)
+def test_main_entrypoint_is_thin(service: str):
+    """Ensure main.py entrypoint contains only FastAPI setup and router inclusions, with no inline route handlers."""
+    root_dir = Path(__file__).resolve().parent.parent.parent.parent
+    main_file = root_dir / "apps" / service / "main.py"
+    if not main_file.exists():
+        return
 
-        assert not route_handlers, (
-            f"Service '{service_name}' main.py contains inline route handlers: {route_handlers}"
-        )
+    content = main_file.read_text(encoding="utf-8")
+    tree = ast.parse(content, filename=str(main_file))
+
+    route_handlers = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef):
+            for dec in node.decorator_list:
+                if isinstance(dec, ast.Call) and isinstance(
+                    dec.func, ast.Attribute
+                ):
+                    if dec.func.attr in (
+                        "get",
+                        "post",
+                        "put",
+                        "delete",
+                        "patch",
+                        "api_route",
+                      ):
+                        route_handlers.append(f"{node.name} (line {node.lineno})")
+
+    assert not route_handlers, (
+        f"Service '{service}' main.py contains inline route handlers: {route_handlers}"
+    )
 
 
-def test_all_service_repository_ports_subclass_base():
-    """Ensure all service-specific repository ports subclass packages.hexagonal.RepositoryPort."""
+def test_repository_ports_count_integrity():
+    """Ensure some repository ports are found across the entire repository to guard against total deletion."""
     root_dir = Path(__file__).resolve().parent.parent.parent.parent
     port_files = sorted(
         glob.glob(str(root_dir / "apps" / "**" / "ports.py"), recursive=True)
         + glob.glob(str(root_dir / "apps" / "**" / "ports" / "*.py"), recursive=True)
     )
     port_files = [f for f in port_files if "tests" not in f]
-
     repo_ports_found = 0
+    for port_file in port_files:
+        content = Path(port_file).read_text(encoding="utf-8")
+        tree = ast.parse(content, filename=port_file)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef) and (
+                "Repository" in node.name or "Port" in node.name
+            ):
+                if (
+                    "RepositoryPort" in node.name
+                    or node.name.startswith("I")
+                    or node.name.endswith("Repository")
+                ):
+                    repo_ports_found += 1
+    assert repo_ports_found > 0, "No repository ports were evaluated"
+
+
+@pytest.mark.parametrize("service", SERVICES)
+def test_service_repository_ports_subclass_base(service: str):
+    """Ensure all service-specific repository ports subclass packages.hexagonal.RepositoryPort."""
+    root_dir = Path(__file__).resolve().parent.parent.parent.parent
+    service_dir = root_dir / "apps" / service
+    port_files = sorted(
+        glob.glob(str(service_dir / "ports.py"))
+        + glob.glob(str(service_dir / "ports" / "*.py"))
+        + glob.glob(str(service_dir / "ports" / "**" / "*.py"), recursive=True)
+        + glob.glob(str(service_dir / "domain" / "ports.py"))
+        + glob.glob(str(service_dir / "application" / "ports.py"))
+    )
+    port_files = [f for f in port_files if "tests" not in f]
+
     for port_file in port_files:
         content = Path(port_file).read_text(encoding="utf-8")
         tree = ast.parse(content, filename=port_file)
@@ -180,46 +208,41 @@ def test_all_service_repository_ports_subclass_base():
                     or node.name.startswith("I")
                     or node.name.endswith("Repository")
                 ):
-                    repo_ports_found += 1
                     assert "RepositoryPort" in base_names, (
                         f"Class {node.name} in {port_file} does not inherit from RepositoryPort (bases: {base_names})"
                     )
 
-    assert repo_ports_found > 0, "No repository ports were evaluated"
 
-
-def test_no_singular_adapter_directory():
+@pytest.mark.parametrize("service", SERVICES)
+def test_no_singular_adapter_directory(service: str):
     """Ensure that no microservice contains a singular 'adapter' directory, and instead conforms to plural 'adapters'.
 
     @req:PRD-SYS-001
     """
     root_dir = Path(__file__).resolve().parent.parent.parent.parent
-    apps_dir = root_dir / "apps"
-    for p in apps_dir.iterdir():
-        if p.is_dir() and p.name not in ("web", "subject-portal", "__pycache__"):
-            singular_adapter_dir = p / "adapter"
-            assert not singular_adapter_dir.exists(), (
-                f"Microservice '{p.name}' contains a singular 'adapter' directory. "
-                "All services must use plural 'adapters' to maintain layout convergence."
-            )
+    p = root_dir / "apps" / service
+    singular_adapter_dir = p / "adapter"
+    assert not singular_adapter_dir.exists(), (
+        f"Microservice '{service}' contains a singular 'adapter' directory. "
+        "All services must use plural 'adapters' to maintain layout convergence."
+    )
 
 
-def test_all_services_have_ports():
+@pytest.mark.parametrize("service", SERVICES)
+def test_all_services_have_ports(service: str):
     """Ensure all microservices contain a 'ports' directory or a 'ports.py' file.
 
     @req:PRD-SYS-001
     """
     root_dir = Path(__file__).resolve().parent.parent.parent.parent
-    apps_dir = root_dir / "apps"
-    for p in apps_dir.iterdir():
-        if p.is_dir() and p.name not in ("web", "subject-portal", "__pycache__"):
-            ports_exist = (
-                (p / "ports").is_dir()
-                or (p / "ports.py").exists()
-                or (p / "domain" / "ports.py").exists()
-                or (p / "application" / "ports.py").exists()
-            )
-            assert ports_exist, (
-                f"Microservice '{p.name}' does not contain a 'ports' directory or a 'ports.py' file. "
-                "All microservices must have standard port definitions to follow the converged hexagonal layout."
-            )
+    p = root_dir / "apps" / service
+    ports_exist = (
+        (p / "ports").is_dir()
+        or (p / "ports.py").exists()
+        or (p / "domain" / "ports.py").exists()
+        or (p / "application" / "ports.py").exists()
+    )
+    assert ports_exist, (
+        f"Microservice '{service}' does not contain a 'ports' directory or a 'ports.py' file. "
+        "All microservices must have standard port definitions to follow the converged hexagonal layout."
+    )
