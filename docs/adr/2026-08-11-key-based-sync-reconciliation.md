@@ -1,9 +1,9 @@
 # ADR-2167: Key-Based Sync Reconciliation
 
-* **Status:** Accepted
-* **Date:** 2026-08-11
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-11
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -13,9 +13,9 @@ In the Subject Portal offline synchronization workflow, mismatch vulnerabilities
 
 ## 2. Decision Drivers & Constraints
 
-* **Clinical History Integrity (PRD-SYS-001):** High-reliability offline queues must reconcile state deterministically with the backend ledger.
-* **Backward Compatibility:** Legacy backend responses without tracking keys must still match chronologically by array index position.
-* **IndexedDB Transaction Life Cycle:** Avoid automatic IndexedDB transaction commits by de-coupling asynchronous cryptographic processes from database write transactions.
+- **Clinical History Integrity (PRD-SYS-001):** High-reliability offline queues must reconcile state deterministically with the backend ledger.
+- **Backward Compatibility:** Legacy backend responses without tracking keys must still match chronologically by array index position.
+- **IndexedDB Transaction Life Cycle:** Avoid automatic IndexedDB transaction commits by de-coupling asynchronous cryptographic processes from database write transactions.
 
 ## 3. Options Considered
 
@@ -35,17 +35,17 @@ Chosen option: **Option 1** because it perfectly guarantees clinical history int
 
 ## 5. Consequences & Trade-offs
 
-* **Positive:** Perfect out-of-order resilience, batch atomic updates via `bulkUpdateSubmissionStatuses(updates)`, secure cryptographic separation.
-* **Negative:** Requires sync marker tracking on both client and server schemas.
+- **Positive:** Perfect out-of-order resilience, batch atomic updates via `bulkUpdateSubmissionStatuses(updates)`, secure cryptographic separation.
+- **Negative:** Requires sync marker tracking on both client and server schemas.
 
 ## 6. Implementation & Verification
 
-* **Frontend Target Files:**
+- **Frontend Target Files:**
   - `apps/subject-portal/sync-queue.js` (bulk IndexedDB updates)
   - `apps/subject-portal/index.js` (synchronization reconciliation engine)
-* **Backend Target Files:**
+- **Backend Target Files:**
   - `apps/execution/domain/offline_models.py`
   - `apps/gateway/domain/acl/ecoa_dto.py`
   - `apps/interop/presentation/routers/interop.py`
-* **Verification Tests:**
+- **Verification Tests:**
   - `apps/subject-portal/tests/key-based-reconciliation.test.js`
