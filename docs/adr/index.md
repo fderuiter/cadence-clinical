@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+
 - [2026-08-11: Subclass DatabaseSessionManager and Align Repository Exception Handlers](2026-08-11-subclass-databasesessionmanager-and-align-repository-exception-handlers.md)
 
 - [2026-08-08: Hexagonal Architecture Standard](2026-08-08-hexagonal-architecture-standard.md)
