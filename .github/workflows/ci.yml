@@ -258,6 +258,11 @@ jobs:
   unit-tests:
     name: Frontend & Backend Unit Tests
     runs-on: ubuntu-latest
+    env:
+      BRAND_NAME: "Cadence Clinical"
+      BRAND_DOMAIN: "ccrsoft.com"
+      KEYCLOAK_REALM: "cadence"
+      KEYCLOAK_CLIENT_ID: "cadence-clinical"
     permissions:
       contents: read
     services:
