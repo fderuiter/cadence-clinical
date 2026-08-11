@@ -194,19 +194,33 @@ def evaluate_node(node: ExpressionNode, context: dict[str, Any]) -> NodeEvaluati
         l_val = left_eval.value
         r_val = right_eval.value
 
+        l_coerced = l_val
+        r_coerced = r_val
+
+        if isinstance(l_val, str):
+            try:
+                l_coerced = float(l_val)
+            except (ValueError, TypeError):
+                pass
+        if isinstance(r_val, str):
+            try:
+                r_coerced = float(r_val)
+            except (ValueError, TypeError):
+                pass
+
         try:
             if node.operator == "==":
-                res = l_val == r_val
+                res = l_coerced == r_coerced
             elif node.operator == "!=":
-                res = l_val != r_val
+                res = l_coerced != r_coerced
             elif node.operator == "<":
-                res = l_val < r_val
+                res = l_coerced < r_coerced
             elif node.operator == "<=":
-                res = l_val <= r_val
+                res = l_coerced <= r_coerced
             elif node.operator == ">":
-                res = l_val > r_val
+                res = l_coerced > r_coerced
             elif node.operator == ">=":
-                res = l_val >= r_val
+                res = l_coerced >= r_coerced
             else:
                 return NodeEvaluation(
                     node_type="comparison",
