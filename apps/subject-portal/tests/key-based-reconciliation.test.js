@@ -6,7 +6,6 @@ import {
   initSessionKey,
   openDatabase,
   queueSubmission,
-  getQueuedSubmissions,
   getAllSubmissions,
   bulkUpdateSubmissionStatuses,
   clearAllSubmissions,
@@ -185,7 +184,7 @@ describe("Key-Based Sync Reconciliation Integration Tests", () => {
       change_reason: "initial",
       username: "user1",
     });
-    const sub2 = await queueSubmission({
+    await queueSubmission({
       subject_id: "subj_01",
       diary_id: "diary_b",
       assignment_id: "assign_02",
@@ -193,7 +192,7 @@ describe("Key-Based Sync Reconciliation Integration Tests", () => {
       change_reason: "initial",
       username: "user1",
     });
-    const sub3 = await queueSubmission({
+    await queueSubmission({
       subject_id: "subj_01",
       diary_id: "diary_c",
       assignment_id: "assign_03",
