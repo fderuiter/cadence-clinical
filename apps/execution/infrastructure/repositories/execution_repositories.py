@@ -245,6 +245,7 @@ class SQLAlchemySubjectRepository(ISubjectRepository):
     def __init__(self, session: AsyncSession):
         self.session = session
 
+    @map_database_exceptions
     async def get_by_id(self, entity_id: str) -> ClinicalSubjectDomain | None:
         stmt = select(ClinicalSubject).where(ClinicalSubject.id == entity_id)
         result = await self.session.execute(stmt)
@@ -276,6 +277,7 @@ class SQLAlchemySubjectRepository(ISubjectRepository):
             is_deleted=db_obj.is_deleted,
         )
 
+    @map_database_exceptions
     async def save(self, entity: ClinicalSubjectDomain) -> ClinicalSubjectDomain:
         stmt = select(ClinicalSubject).where(ClinicalSubject.id == entity.id)
         result = await self.session.execute(stmt)
@@ -313,13 +315,16 @@ class SQLAlchemyConsentRepository(IConsentRepository):
     def __init__(self, session: AsyncSession):
         self.session = session
 
+    @map_database_exceptions
     async def get_by_id(self, entity_id: str) -> ConsentSignatureDomain | None:
         return await self.get_signature_by_id(entity_id)
 
+    @map_database_exceptions
     async def save(self, entity: ConsentSignatureDomain) -> ConsentSignatureDomain:
         await self.save_signature(entity)
         return entity
 
+    @map_database_exceptions
     async def get_signature_by_id(
         self, record_id: str
     ) -> ConsentSignatureDomain | None:
@@ -350,6 +355,7 @@ class SQLAlchemyConsentRepository(IConsentRepository):
             reason_for_change=db_obj.reason_for_change,
         )
 
+    @map_database_exceptions
     async def save_signature(self, signature: ConsentSignatureDomain) -> None:
         stmt = select(ConsentSignature).where(ConsentSignature.id == signature.id)
         result = await self.session.execute(stmt)
@@ -376,6 +382,7 @@ class SQLAlchemyConsentRepository(IConsentRepository):
         db_obj.reason_for_change = signature.reason_for_change
         await self.session.flush()
 
+    @map_database_exceptions
     async def get_form_record_by_id(
         self, record_id: str
     ) -> ConsentFormRecordDomain | None:
@@ -400,6 +407,7 @@ class SQLAlchemyConsentRepository(IConsentRepository):
             is_deleted=db_obj.is_deleted,
         )
 
+    @map_database_exceptions
     async def save_form_record(
         self, record: ConsentFormRecordDomain
     ) -> ConsentFormRecordDomain:
@@ -430,6 +438,7 @@ class SQLAlchemyAuditRepository(IAuditRepository):
     def __init__(self, session: AsyncSession):
         self.session = session
 
+    @map_database_exceptions
     async def get_by_id(self, entity_id: str) -> AuditLogDomain | None:
         stmt = select(AuditLog).where(AuditLog.id == entity_id)
         result = await self.session.execute(stmt)
@@ -451,6 +460,7 @@ class SQLAlchemyAuditRepository(IAuditRepository):
             cryptographic_seal=db_obj.cryptographic_seal,
         )
 
+    @map_database_exceptions
     async def save(self, entity: AuditLogDomain) -> AuditLogDomain:
         stmt = select(AuditLog).where(AuditLog.id == entity.id)
         result = await self.session.execute(stmt)
