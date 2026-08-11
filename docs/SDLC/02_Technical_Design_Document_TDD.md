@@ -222,6 +222,23 @@ The electronic Trial Master File (eTMF) and electronic Investigator Site File (e
 - **The Cutover Decision:** The platform has cut over to `v3.2.0-complete` as the active default catalog version to prevent taxonomy drift. Legacy `v3.2.0` is fully retained for backward compatibility and reproducible pre-cutover record interpretation. Extended namespaces register Cadence-specific custom extensions in `v3.2.0-extended` with `is_extension=True`.
 - **Validation & Propagation:** Strict hierarchical integrity checks are performed centrally during ingestion using `resolve_artifact` and `validate_hierarchy`, rejecting invalid classifications with HTTP 422, while supporting automated/manual document redactions signed with symmetrically cryptographed manifests (HMAC-SHA256). The system is fully synchronized and GxP compliant.
 
+#### 2.3.5 Electronic Consent Service (`apps/econsent`)
+
+The Electronic Consent (eConsent) Service is an independent, specialized microservice designed to facilitate patient onboarding and compliance validation.
+
+- **Service Boundary:** Integrates directly with the API Gateway for all incoming participant interactions.
+- **OIDC Tokens & Security Validation:** All requests must carry a valid OIDC bearer token. The service extracts and validates claims to authenticate both subjects (signing patients) and clinical staff (witnesses/investigators).
+- **Electronic Signature Controls:** Enforces Part 11 compliant signature capture. It secures signed consent logs by generating and embedding cryptographic hashes of the signed document combined with the user's OIDC context.
+
+#### 2.3.6 Notifications & Webhooks Dispatcher (`apps/notifications`)
+
+The Notifications Dispatcher is an event-driven background service that handles clinical alerting across the ecosystem.
+
+- **Service Boundary:** Interacts asynchronously via internal messaging channels or direct webhook triggers from authorized internal services.
+- **Delivery Modes:** Dispatches alert payloads across four primary channels: `EMAIL`, `SMS`, `WEBHOOK`, and `IN_APP`.
+- **Retry Queues:** Implements a SQLite-backed queue with exponential backoff and localized queue monitoring, ensuring delivery under intermittent network failures.
+- **Integration with the Main Platform:** Acts as the primary mechanism for eTMF sync events, query alerts, compliance notifications, and patient portal reminders.
+
 ### 2.4 Distributed Caching Layer
 
 Redis is deployed as a highly-available clustered setup in the isolated subnet tier. Its primary functions include:
@@ -394,6 +411,27 @@ CREATE TRIGGER audit_ecrf_trigger
 CREATE TRIGGER audit_queries_trigger
     AFTER INSERT OR UPDATE OR DELETE ON clinical.queries
     FOR EACH ROW EXECUTE FUNCTION shadow_audit.audit_trigger_handler();
+
+-- RTSM Direct Tampering Protection Triggers
+-- Allocation sequences and randomization blocks are highly sensitive GxP data.
+-- Direct updates or deletes on these tables are strictly forbidden.
+CREATE OR REPLACE FUNCTION shadow_audit.prevent_rtsm_tampering_handler()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'UPDATE' OR TG_OP = 'DELETE') THEN
+        RAISE EXCEPTION 'DIRECT MUTATION OF BLINDED RTSM ALLOCATION KEYS OR RANDOMIZATION BLOCKS IS STRICTLY PROHIBITED (Table: %). TAMPER ALERT TRIGGERED.', TG_TABLE_NAME;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER prevent_rtsm_blocks_tampering
+    BEFORE UPDATE OR DELETE ON clinical.rtsm_blocks
+    FOR EACH ROW EXECUTE FUNCTION shadow_audit.prevent_rtsm_tampering_handler();
+
+CREATE TRIGGER prevent_rtsm_allocations_tampering
+    BEFORE UPDATE OR DELETE ON clinical.rtsm_allocations
+    FOR EACH ROW EXECUTE FUNCTION shadow_audit.prevent_rtsm_tampering_handler();
 ```
 
 ---
@@ -562,6 +600,155 @@ def compute_graph_diff(tx, old_version_id: str, new_version_id: str) -> dict:
             diff_results["deleted_nodes"].append({"type": "Form", "key": form_key})
 
     return diff_results
+```
+
+### 3.7 eConsent Schema & Data Models
+
+The Electronic Consent service utilizes a local, performant SQLite file database to cache templates and securely manage patient consent signatures in accordance with 21 CFR Part 11.
+
+```sql
+-- SQLite Schema for apps/econsent
+CREATE TABLE econsent_templates (
+    id TEXT PRIMARY KEY,
+    study_version TEXT NOT NULL,
+    title TEXT NOT NULL,
+    document_content TEXT NOT NULL,
+    version_tag TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by TEXT NOT NULL,
+    is_active INTEGER DEFAULT 1
+);
+
+CREATE TABLE econsent_translations (
+    id TEXT PRIMARY KEY,
+    template_id TEXT NOT NULL,
+    locale TEXT NOT NULL,
+    translated_title TEXT NOT NULL,
+    translated_content TEXT NOT NULL,
+    cached_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (template_id) REFERENCES econsent_templates(id)
+);
+
+CREATE TABLE signed_consent_forms (
+    id TEXT PRIMARY KEY,
+    subject_id TEXT NOT NULL,
+    template_id TEXT NOT NULL,
+    oidc_subject_id TEXT NOT NULL, -- OIDC Reference Field for the signing subject
+    signature_svg TEXT NOT NULL, -- Digitally captured signature
+    cryptographic_hash TEXT NOT NULL, -- SHA-256 seal of consent text and signature metadata
+    signed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    witness_oidc_id TEXT,
+    witness_signature_svg TEXT,
+    reason_for_change TEXT NOT NULL,
+    version_index INTEGER NOT NULL DEFAULT 1,
+    FOREIGN KEY (template_id) REFERENCES econsent_templates(id)
+);
+```
+
+### 3.8 Notifications Dispatcher Schema
+
+The Notifications & Webhooks Dispatcher service manages event queues and dispatch history utilizing an isolated SQLite database designed to survive system downtime and support reliable retries.
+
+```sql
+-- SQLite Schema for apps/notifications
+CREATE TABLE notification_dispatch_queue (
+    id TEXT PRIMARY KEY,
+    triggering_event TEXT NOT NULL, -- eTMF sync event, compliance notification, etc.
+    payload TEXT NOT NULL, -- JSON notification payload
+    channel TEXT NOT NULL, -- 'EMAIL', 'SMS', 'WEBHOOK', 'IN_APP'
+    recipient_target TEXT NOT NULL,
+    retry_count INTEGER DEFAULT 0,
+    max_retries INTEGER DEFAULT 5,
+    next_attempt_at TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'PENDING' -- 'PENDING', 'PROCESSING', 'FAILED', 'DISPATCHED'
+);
+
+CREATE TABLE notification_dispatch_logs (
+    id TEXT PRIMARY KEY,
+    queue_item_id TEXT NOT NULL,
+    channel TEXT NOT NULL,
+    recipient_target TEXT NOT NULL,
+    dispatched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status TEXT NOT NULL, -- 'SUCCESS', 'FAILED'
+    error_message TEXT,
+    attempt_number INTEGER NOT NULL,
+    response_payload TEXT
+);
+
+CREATE TABLE subscription_preferences (
+    id TEXT PRIMARY KEY,
+    user_oidc_id TEXT NOT NULL,
+    channel TEXT NOT NULL, -- 'EMAIL', 'SMS', 'WEBHOOK', 'IN_APP'
+    event_type TEXT NOT NULL,
+    is_enabled INTEGER DEFAULT 1,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### 3.9 RTSM Schema & Database Configurations
+
+The Randomization Trial Supply Management module integrates with the core PostgreSQL instance of the Execution service. This allows it to leverage foreign keys to core clinical models while preserving transactional guarantees and complete blinding controls.
+
+```sql
+-- PostgreSQL Schema for apps/execution (RTSM)
+CREATE TABLE clinical.rtsm_blinding_configs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    study_version VARCHAR(20) NOT NULL,
+    is_double_blind BOOLEAN DEFAULT TRUE,
+    unblinding_role VARCHAR(50) DEFAULT 'UNBLINDED_MONITOR',
+    unblinding_key_hash VARCHAR(64) NOT NULL, -- Secret verification hash for unblinding
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_by VARCHAR(100) NOT NULL,
+    reason_for_change TEXT NOT NULL,
+    version_index INT NOT NULL DEFAULT 1
+);
+
+CREATE TABLE clinical.rtsm_blocks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    study_version VARCHAR(20) NOT NULL,
+    site_id VARCHAR(50) NOT NULL,
+    block_size INT NOT NULL,
+    randomization_sequence JSONB NOT NULL, -- Ordered array of treatment arm assignments (e.g. ["A", "B", "A", "B"])
+    is_exhausted BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_by VARCHAR(100) NOT NULL,
+    reason_for_change TEXT NOT NULL,
+    version_index INT NOT NULL DEFAULT 1
+);
+
+CREATE TABLE clinical.rtsm_allocations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    subject_id UUID UNIQUE NOT NULL REFERENCES clinical.subjects(id) ON DELETE RESTRICT,
+    block_id UUID NOT NULL REFERENCES clinical.rtsm_blocks(id) ON DELETE RESTRICT,
+    sequence_number INT NOT NULL,
+    treatment_arm_id VARCHAR(50) NOT NULL,
+    allocated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    allocated_by VARCHAR(100) NOT NULL,
+    reason_for_change TEXT NOT NULL,
+    version_index INT NOT NULL DEFAULT 1
+);
+
+CREATE TABLE clinical.rtsm_kits (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    kit_number VARCHAR(100) UNIQUE NOT NULL,
+    treatment_arm_id VARCHAR(50) NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'AVAILABLE', -- 'AVAILABLE', 'DISPENSED', 'QUARANTINED', 'LOST'
+    site_id VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_by VARCHAR(100) NOT NULL,
+    reason_for_change TEXT NOT NULL,
+    version_index INT NOT NULL DEFAULT 1
+);
+
+CREATE TABLE clinical.rtsm_dispense_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    subject_id UUID NOT NULL REFERENCES clinical.subjects(id) ON DELETE RESTRICT,
+    kit_id UUID NOT NULL REFERENCES clinical.rtsm_kits(id) ON DELETE RESTRICT,
+    dispensed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    dispensed_by VARCHAR(100) NOT NULL,
+    reason_for_change TEXT NOT NULL,
+    version_index INT NOT NULL DEFAULT 1
+);
 ```
 
 ---
@@ -923,14 +1110,16 @@ The clinical execution service acts as the GxP-regulated enforcement gate during
 #### 6.3.2 Transition Guard State Machine
 
 - When a screening request is POSTed to the screening endpoint, the execution service runs the aggregated eligibility engine.
-- **Pass (Transition to `ENROLLED`):** If all criteria evaluate to `True`, the state machine transitions the subject to `ENROLLED` and issues an auditable GxP certificate.
+- **eConsent Gating:** Before a subject can transition to any active state or any eCRF data observations can be captured, the subject's signature on the eConsent form must occur and be validated. The system queries the `signed_consent_forms` table in `apps/econsent` to verify a cryptographically valid consent signature exists for the corresponding subject ID. This check serves as an absolute gate blocking subsequent clinical data entry or workflow progress.
+- **Pass (Transition to `ENROLLED`):** If all criteria evaluate to `True` and the eConsent verification passes, the state machine transitions the subject to `ENROLLED` and issues an auditable GxP certificate.
 - **Fail (Transition to `SCREEN_FAILED`):** If any criteria evaluates to `False`, the subject is transitioned immediately to `SCREEN_FAILED`. This state is locked; subsequent modifications are blocked.
 - **Indeterminate (No Transition):** If any criteria evaluates to `Indeterminate`, the subject remains in the `SCREENING` state. Transition is blocked until all required values are captured.
 
 #### 6.3.3 Randomization Allocation Guard
 
-- The treatment allocation endpoint `/api/v1/execution/rtsm/dispense` enforces a physical verification gate.
-- Any attempt to randomise or allocate kits to a subject who is not in the `ENROLLED` state is strictly rejected with a `PermissionError` and an HTTP 403 Forbidden response.
+- The treatment allocation endpoint `/api/v1/execution/rtsm/dispense` enforces a physical verification gate and handles kit allocation.
+- **RTSM Validations & Kit Assignment Rules:** Kit assignment follows strict double-blind protocols. The module pulls available kits from the `clinical.rtsm_kits` table that match the randomized treatment arm assigned to the block sequence. It maps the kit number to the subject and updates the kit status to `DISPENSED`, recording the transaction inside `clinical.rtsm_dispense_history`.
+- **Subject State Gate:** Any attempt to randomize or allocate kits to a subject who is not in the `ENROLLED` state is strictly rejected. The guard validates the subject's status first; if not `ENROLLED`, it throws a `PermissionError` and returns an HTTP 403 Forbidden response. This ensures only properly screened and fully consented subjects receive randomized treatments.
 
 ---
 

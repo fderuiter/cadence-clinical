@@ -259,7 +259,11 @@ describe("sync-queue secure storage and sync capabilities", () => {
     expect(emptyRes).toEqual([]);
 
     const res = await bulkUpdateSubmissionStatuses([
-      { sequence_number: 1, status: "SUBMITTED", additionalFields: { extra: "test" } },
+      {
+        sequence_number: 1,
+        status: "SUBMITTED",
+        additionalFields: { extra: "test" },
+      },
     ]);
     expect(res.length).toBe(1);
     expect(res[0].status).toBe("SUBMITTED");
@@ -267,7 +271,7 @@ describe("sync-queue secure storage and sync capabilities", () => {
 
     await expect(
       bulkUpdateSubmissionStatuses([
-        { sequence_number: 999, status: "SUBMITTED" }
+        { sequence_number: 999, status: "SUBMITTED" },
       ])
     ).rejects.toThrow("Submission 999 not found");
   });

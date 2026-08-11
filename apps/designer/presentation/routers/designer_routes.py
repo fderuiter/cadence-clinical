@@ -44,8 +44,8 @@ from fastapi import (
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, TypeAdapter
 
-import apps.designer.adapter.repositories  # noqa: F401
-from apps.designer.adapter.safety_gateway import QuerySafetyError  # noqa: F401
+import apps.designer.adapters.repositories  # noqa: F401
+from apps.designer.adapters.safety_gateway import QuerySafetyError  # noqa: F401
 from apps.designer.db import (
     assert_mock_study_mutable,
     create_mock_rule,

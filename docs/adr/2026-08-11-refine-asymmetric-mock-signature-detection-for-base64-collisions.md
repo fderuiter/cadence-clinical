@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-To prevent mock signatures and mock certificates from bypassing cryptographic signature verification in non-production environments under **PRD-SYS-001**, the platform previously implemented a strict check rejecting any inputs (payloads, signatures, or public keys) that contained the substring `"mock"`. 
+To prevent mock signatures and mock certificates from bypassing cryptographic signature verification in non-production environments under **PRD-SYS-001**, the platform previously implemented a strict check rejecting any inputs (payloads, signatures, or public keys) that contained the substring `"mock"`.
 
 However, because real asymmetric signatures and public keys are long base64-encoded binary payloads (often hundreds of bytes), they can occasionally contain the sequence of letters `"m"`, `"o"`, `"c"`, `"k"` purely by chance (a false-positive collision). When a collision occurred, legitimate electronic signatures were incorrectly rejected, resulting in random failures in production and integration test environments. We need a more resilient and precise detection method that distinguishes actual mock strings from random base64 collisions.
 
