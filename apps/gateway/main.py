@@ -77,6 +77,151 @@ app.include_router(cdisc_router, prefix="/api/v1/cdisc", tags=["CDISC Standards"
 app.include_router(usdm_router, prefix="/api/v1/usdm", tags=["USDM Data Flow"])
 app.include_router(ecoa_router, prefix="/api/v1/ecoa", tags=["eCOA"])
 
+
+def custom_openapi() -> dict[str, Any]:
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    # Pre-load safe environment variables before importing microservices or validating schemas offline
+    os.environ.setdefault(
+        "AUDIT_LOG_SECRET_KEY",
+        "test-gxp-audit-secret-key-placeholder-abc",  # pragma: allowlist secret
+    )
+    os.environ.setdefault(
+        "INBOUND_EMAIL_HMAC_SECRET",
+        "test-email-hmac-secret-placeholder-xyz",  # pragma: allowlist secret
+    )
+    os.environ.setdefault(
+        "GATEWAY_SECRET",
+        "test-gateway-secret-placeholder-123",  # pragma: allowlist secret
+    )
+
+    from fastapi.openapi.utils import get_openapi
+
+    native_openapi = get_openapi(
+        title=f"{BRAND_NAME} - API Gateway",
+        version="0.1.0",
+        routes=app.routes,
+    )
+
+    merged = {
+        "openapi": "3.1.0",
+        "info": {"title": f"{BRAND_NAME} - Unified API", "version": "0.1.0"},
+        "paths": {},
+        "components": {"schemas": {}},
+    }
+
+    # Copy native paths and schemas
+    for path_str, path_item in native_openapi.get("paths", {}).items():
+        merged["paths"][path_str] = path_item
+    for schema_name, schema_val in (
+        native_openapi.get("components", {}).get("schemas", {}).items()
+    ):
+        merged["components"]["schemas"][schema_name] = schema_val
+
+    # Discover and load downstream services offline
+    import importlib
+
+    gateway_dir = os.path.dirname(os.path.abspath(__file__))
+    app_root = os.path.abspath(os.path.join(gateway_dir, "..", ".."))
+
+    import sys
+
+    if app_root not in sys.path:
+        sys.path.insert(0, app_root)
+
+    apps_dir = os.path.join(app_root, "apps")
+
+    services_config = {}
+    if os.path.isdir(apps_dir):
+        for name in sorted(os.listdir(apps_dir)):
+            dir_path = os.path.join(apps_dir, name)
+            if name == "gateway" or name.startswith(".") or not os.path.isdir(dir_path):
+                continue
+            main_path = os.path.join(dir_path, "main.py")
+            if not os.path.isfile(main_path):
+                continue
+            try:
+                module = importlib.import_module(f"apps.{name}.main")
+                service_app = getattr(module, "app", None)
+                if service_app is not None:
+                    prefix = "ETMF_" if name == "etmf" else f"{name.capitalize()}_"
+                    services_config[name] = {"app": service_app, "prefix": prefix}
+            except Exception:
+                pass
+
+    def is_valid_openapi_spec(spec: Any) -> bool:
+        if not isinstance(spec, dict):
+            return False
+        if "paths" in spec and not isinstance(spec["paths"], dict):
+            return False
+        if "components" in spec:
+            if not isinstance(spec["components"], dict):
+                return False
+            if "schemas" in spec["components"] and not isinstance(
+                spec["components"]["schemas"], dict
+            ):
+                return False
+        return True
+
+    def rewrite_references(data: Any, prefix: str, visited: set | None = None) -> Any:
+        if visited is None:
+            visited = set()
+
+        if id(data) in visited:
+            return {
+                "type": "object",
+                "description": "Circular reference detected and isolated",
+            }
+
+        if isinstance(data, dict):
+            visited.add(id(data))
+            new_data = {}
+            for k, v in data.items():
+                if (
+                    k == "$ref"
+                    and isinstance(v, str)
+                    and v.startswith("#/components/schemas/")
+                ):
+                    ref_name = v[len("#/components/schemas/") :]
+                    new_data[k] = f"#/components/schemas/{prefix}{ref_name}"
+                else:
+                    new_data[k] = rewrite_references(v, prefix, visited)
+            visited.remove(id(data))
+            return new_data
+        if isinstance(data, list):
+            visited.add(id(data))
+            new_list = [rewrite_references(item, prefix, visited) for item in data]
+            visited.remove(id(data))
+            return new_list
+        return data
+
+    for service_name, config in services_config.items():
+        try:
+            spec = config["app"].openapi()
+            if not is_valid_openapi_spec(spec):
+                continue
+
+            prefix = config["prefix"]
+            spec = rewrite_references(spec, prefix)
+
+            path_prefix = f"/{service_name}"
+            for path_str, path_item in spec.get("paths", {}).items():
+                merged["paths"][f"{path_prefix}{path_str}"] = path_item
+
+            for schema_name, schema_val in (
+                spec.get("components", {}).get("schemas", {}).items()
+            ):
+                merged["components"]["schemas"][f"{prefix}{schema_name}"] = schema_val
+        except Exception:
+            pass
+
+    app.openapi_schema = merged
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
+
 # CORS configuration
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 app.add_middleware(
