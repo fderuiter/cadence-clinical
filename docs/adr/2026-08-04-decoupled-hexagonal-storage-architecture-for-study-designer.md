@@ -37,7 +37,7 @@ To resolve this, we have refactored the Study Designer using a hexagonal archite
 
 ### Option 2: Decoupled Hexagonal Storage with Dynamic Registry (Selected)
 
-- **Overview:** Refactor the persistence mechanics into a separate adapter layer (`apps/designer/adapter/repositories.py`) and establish a dynamic registry where the concrete database adapter registers its implementation callbacks to the domain facade on startup.
+- **Overview:** Refactor the persistence mechanics into a separate adapter layer (`apps/designer/adapters/repositories.py`) and establish a dynamic registry where the concrete database adapter registers its implementation callbacks to the domain facade on startup.
 - **Pros:**
   - ✅ Absolute isolation of the core domain from Neo4j.
   - ✅ Programmatic import protection via static analysis and architectural tests.
@@ -60,7 +60,7 @@ To resolve this, we have refactored the Study Designer using a hexagonal archite
 
 - **Affected Repositories / Services:**
   - `apps/designer/delta.py` (Domain Facade - zero neo4j imports)
-  - `apps/designer/adapter/repositories.py` (Concrete persistence adapter and Cypher queries)
+  - `apps/designer/adapters/repositories.py` (Concrete persistence adapter and Cypher queries)
   - `apps/designer/main.py` (Startup registration of adapter callbacks)
 - **Verification Plan:**
   - Enforced programmatically using `pytest-archon` inside `tests/test_hexagonal_architecture.py` (`test_designer_core_isolation`).
