@@ -191,6 +191,41 @@ def parse_signature_format(sig_str: str) -> str:
     return sig_str
 
 
+def is_mock_signature(signature_b64: str | None) -> bool:
+    if not signature_b64:
+        return False
+    if len(signature_b64) < 64:
+        return "mock" in signature_b64.lower()
+    try:
+        cleaned = "".join(signature_b64.split())
+        decoded = base64.b64decode(cleaned)
+        if b"mock" in decoded.lower():
+            return True
+    except Exception:
+        return "mock" in signature_b64.lower()
+    return False
+
+
+def is_mock_key(public_key_pem: str | None) -> bool:
+    if not public_key_pem:
+        return False
+    if len(public_key_pem) < 100:
+        return "mock" in public_key_pem.lower()
+    try:
+        lines = [
+            line.strip()
+            for line in public_key_pem.splitlines()
+            if line.strip() and not line.startswith("-----")
+        ]
+        cleaned = "".join(lines)
+        decoded = base64.b64decode(cleaned)
+        if b"mock" in decoded.lower():
+            return True
+    except Exception:
+        return "mock" in public_key_pem.lower()
+    return False
+
+
 def verify_asymmetric_signature(
     payload_str: str,
     signature_b64: str,
@@ -204,8 +239,8 @@ def verify_asymmetric_signature(
     # Reject mock signatures / certificates
     if (
         "mock" in payload_str.lower()
-        or "mock" in signature_b64.lower()
-        or "mock" in public_key_pem.lower()
+        or is_mock_signature(signature_b64)
+        or is_mock_key(public_key_pem)
     ):
         return (
             False,
@@ -402,9 +437,11 @@ def verify_electronic_signature(
 
     # Check mock for both asymmetric and symmetric paths
     req_payload_lower = (request.payload_hash or "").lower()
-    req_sig_lower = (request.signature_bytes_b64 or "").lower()
-    req_pk_lower = (public_key_pem or "").lower()
-    if "mock" in req_payload_lower or "mock" in req_sig_lower or "mock" in req_pk_lower:
+    if (
+        "mock" in req_payload_lower
+        or is_mock_signature(request.signature_bytes_b64)
+        or is_mock_key(public_key_pem)
+    ):
         return SignatureVerificationResult(
             is_valid=False,
             error_code="MOCK_SIGNATURE_DETECTED",
