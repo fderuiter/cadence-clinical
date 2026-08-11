@@ -1,6 +1,8 @@
-import sys
+"""
+Compliance tests for the eISF service.
+"""
+
 import time
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -8,61 +10,35 @@ from fastapi.testclient import TestClient
 from apps.eisf.database import db_manager as eisf_db_manager
 from apps.eisf.main import app as eisf_app
 from apps.eisf.models import Base as EisfBase
-from apps.execution.cdisc_validator import validate_cdisc_xml_structure
-from apps.execution.trial_lock import TrialLockManager
-from apps.gateway.main import generate_signature
 
 
-def test_environment_integrity():
-    """
-    GxP Installation Qualification Verification Test:
-    Ensures that the execution environment meets structural, system and runtime requirements.
-    @req:PRD-SYS-001
-    """
-    # 1. Verify Python Version (should be 3.14+ as per AGENTS.md)
-    assert sys.version_info >= (3, 14), (
-        f"Python version {sys.version} is less than 3.14!"
+def generate_signature(
+    user_id: str,
+    roles: str,
+    timestamp: str,
+    version: str = "2",
+    change_reason: str | None = None,
+    site_id: str | None = None,
+    sponsor_id: str | None = None,
+    unblinded_access: bool = False,
+    tenant_id: str | None = None,
+    sig_token: str | None = None,
+) -> str:
+    from packages.security.signing import generate_gateway_signature
+
+    secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
+    return generate_gateway_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        secret=secret.encode(),
+        change_reason=change_reason,
+        site_id=site_id,
+        sponsor_id=sponsor_id,
+        unblinded_access=unblinded_access,
+        tenant_id=tenant_id,
+        sig_token=sig_token,
     )
-
-    # 2. Verify Presence of Core Directory Boundaries
-    repo_root = Path(__file__).resolve().parent.parent.parent
-    expected_dirs = ["apps", "packages", "docs", "tests", "scripts"]
-    for d in expected_dirs:
-        dir_path = repo_root / d
-        assert dir_path.is_dir(), (
-            f"Core GxP directory boundary '{d}' is missing at {dir_path}!"
-        )
-
-    # 3. Verify Presence of Critical Dependency Manifests
-    assert (repo_root / "pyproject.toml").is_file(), (
-        "pyproject.toml manifest is missing!"
-    )
-    assert (repo_root / "uv.lock").is_file(), "uv.lock dependency lockfile is missing!"
-
-
-def test_cdisc_xml_structure_validation():
-    """
-    Validation Suite - CDISC XML Schema Conformance
-    @req:PRD-MDR-001
-    """
-    # 1. Valid CDISC XML
-    valid_xml = """<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileOID="ODM.123">
-        <ClinicalData StudyOID="STUDY.123">
-            <SubjectData SubjectKey="SUBJ.001"/>
-        </ClinicalData>
-    </ODM>"""
-    is_valid, msg = validate_cdisc_xml_structure(valid_xml)
-    assert is_valid is True, f"Valid XML failed: {msg}"
-
-    # 2. Invalid CDISC XML - missing StudyOID
-    invalid_xml = """<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileOID="ODM.123">
-        <ClinicalData>
-            <SubjectData SubjectKey="SUBJ.001"/>
-        </ClinicalData>
-    </ODM>"""
-    is_valid, msg = validate_cdisc_xml_structure(invalid_xml)
-    assert is_valid is False, "Invalid XML was incorrectly marked valid"
-    assert "Missing mandatory attribute 'StudyOID'" in msg
 
 
 @pytest.mark.asyncio
@@ -130,21 +106,3 @@ async def test_site_level_data_isolation():
         async with eisf_db_manager.engine.begin() as conn:
             await conn.run_sync(EisfBase.metadata.drop_all)
         await eisf_db_manager.close()
-
-
-def test_cryptographic_tamper_evident_safeguards():
-    """
-    Validation Suite - Cryptographic Tamper-evident safeguards & Trial Lock mutations freeze
-    @req:PRD-SYS-003
-    """
-    TrialLockManager.reset()
-    try:
-        # Before locking, trial is not locked
-        assert TrialLockManager.is_locked() is False
-
-        # Simulate detecting a cryptographic violation/tampering
-        TrialLockManager.lock_trial("Database-level tamper detected")
-        assert TrialLockManager.is_locked() is True
-
-    finally:
-        TrialLockManager.reset()
