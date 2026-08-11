@@ -123,12 +123,13 @@ export function openDatabase() {
 
 export async function saveAssignmentsToDB(assignments) {
   try {
+    const plainAssignments = JSON.parse(JSON.stringify(assignments));
     const db = await openDatabase();
     return new Promise((resolve, reject) => {
       const tx = db.transaction("assignments", "readwrite");
       const store = tx.objectStore("assignments");
       store.clear();
-      for (const assignment of assignments) {
+      for (const assignment of plainAssignments) {
         store.put(assignment);
       }
       tx.oncomplete = () => {
@@ -173,11 +174,12 @@ export async function getAssignmentsFromDB() {
 
 export async function saveInstrumentsToDB(instruments) {
   try {
+    const plainInstruments = JSON.parse(JSON.stringify(instruments));
     const db = await openDatabase();
     return new Promise((resolve, reject) => {
       const tx = db.transaction("instruments", "readwrite");
       const store = tx.objectStore("instruments");
-      for (const instrument of instruments) {
+      for (const instrument of plainInstruments) {
         store.put(instrument);
       }
       tx.oncomplete = () => {
