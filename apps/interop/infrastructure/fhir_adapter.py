@@ -123,7 +123,9 @@ class FHIRAdapter:
 
                 current_year = datetime.now().year
                 ecrf_context["eCRF.DM.AGE"] = current_year - birth_year
-            except (ValueError, IndexError):
+            except ValueError:
+                pass
+            except IndexError:
                 pass
 
         for vs in parsed_result.get("clinical_records", {}).get("vital_signs", []):
