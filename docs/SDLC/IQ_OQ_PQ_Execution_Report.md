@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2209
-- **Passed:** 2209 🟢
+- **Total Automated Test Cases Run:** 2210
+- **Passed:** 2210 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -2344,10 +2344,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_compliance_utility_parsing`                                                  | `scripts.tests.test_validate_adrs`                                          | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_get_changed_files_bypasses_merge_commits_and_parses_status`                  | `scripts.tests.test_validate_adrs`                                          | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_get_changed_files_from_git_fallbacks`                                        | `scripts.tests.test_validate_adrs`                                          | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
-| `test_get_changed_files_from_txt`                                                  | `scripts.tests.test_validate_adrs`                                          | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
+| `test_get_changed_files_ignores_txt_override`                                      | `scripts.tests.test_validate_adrs`                                          | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_get_closest_local_branch_point_fallback_to_root`                             | `scripts.tests.test_validate_adrs`                                          | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_get_closest_local_branch_point_multiple_branches`                            | `scripts.tests.test_validate_adrs`                                          | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_is_architectural_file`                                                       | `scripts.tests.test_validate_adrs`                                          | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
+| `test_run_git_command_hardening`                                                   | `scripts.tests.test_validate_adrs`                                          | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_validate_existing_adrs_valid_case`                                           | `scripts.tests.test_validate_adrs`                                          | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_validate_existing_adrs_with_targets_outside_folder`                          | `scripts.tests.test_validate_adrs`                                          | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
 | `test_validate_existing_adrs_with_targets_valid`                                   | `scripts.tests.test_validate_adrs`                                          | _Regression/Helper_                          | 🟢 PASSED | < 1s     |
