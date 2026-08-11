@@ -19,7 +19,7 @@ from apps.designer.db import (
     get_mock_rules,
     update_mock_rule,
 )
-from apps.execution.adapter.repositories import (
+from apps.execution.adapters.repositories import (
     InMemoryAuditRepository,
     InMemoryConsentRepository,
     InMemorySubjectRepository,
