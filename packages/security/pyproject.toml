@@ -14,6 +14,7 @@ dependencies = [
     "ecdsa>=0.19.2",
     "cryptography>=4.5.0",
     "redis>=5.0.0",
+    "packages-database",
 ]
 
 [tool.hatch.build.targets.wheel.sources]
