@@ -10,6 +10,7 @@
 ## 1. Context & Problem Statement
 
 To prevent silent clinical data loss and maintain strict compliance with GxP and FDA standards, the clinical dataset transformation pipeline must robustly validate temporal relationships between dates. Specifically:
+
 1. Subject Visit start dates (`SVSTDTC` in `SDTMRecordSV`) must be strictly required, and non-empty.
 2. In domains with start and end dates (such as Adverse Events `AE`, Concomitant Medications `CM`, and Subject Visits `SV`), the end date must not chronologically precede the start date if both are provided.
 3. Observations must be correctly partitioned between domains (e.g. Adverse Events `AE` must not be misclassified as Demographics `DM`).
