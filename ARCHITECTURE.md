@@ -143,6 +143,33 @@ Traditional clinical trial builds require manual, error-prone translation of pro
   - **Consolidated UI Components:** `packages/ui` provides the shared `debounce` utility and `createClinicalLookupInput` helper function, which are consumed by Vue interfaces like `EcrfView.vue` and `MdrView.vue` to achieve responsive typing validation, stale response guards, and accessible ARIA live-region feedback (ADR-065).
   - **GxP Scope & Auditing:** Features a deliberate **no-persistent-audit-trail** architectural design. Since lookups are stateless, read-only queries with signed headers, they do not mutate clinical record states and thus bypass persistent audit trailing, ensuring optimal performance and minimizing database footprints while maintaining transit integrity in accordance with GxP and 21 CFR Part 11 requirements.
 
+### N. Electronic Consent Service (`apps/econsent`)
+
+- **Role:** Electronic signature capture, patient enrollment consent, and regulatory signature storage.
+- **Datastore:** local `sqlite_econsent` (`econsent.db`) in local development.
+- **Core Responsibilities:**
+  - Enforce Keyclock OIDC authenticated routing via the API Gateway.
+  - Manage secure electronic signatures in accordance with Part 11.
+  - Generate digitally sealed consent logs for audit trials.
+
+### O. Notifications & Webhooks Dispatcher (`apps/notifications`)
+
+- **Role:** Centralized clinical event-driven background alerting and delivery system.
+- **Datastore:** local `sqlite_notifications` (`notifications.db`) in local development.
+- **Core Responsibilities:**
+  - Ingest notification triggers from external microservices (such as eTMF sync events or compliance notifications).
+  - Dispatch payloads across channels including `EMAIL`, `SMS`, `WEBHOOK`, and `IN_APP`.
+  - Maintain an immutable, chronologically logged database of dispatch attempts and delivery statuses.
+
+### P. Randomization Trial Supply Management (RTSM) Module (`apps/execution`)
+
+- **Role:** Blinded kit randomization, treatment allocation, and trial supply dispensing logic.
+- **Datastore:** PostgreSQL (sharing/leveraging the execution engine's transactional database).
+- **Core Responsibilities:**
+  - Exposure of treatment allocation endpoints, specifically `/api/v1/execution/rtsm/dispense`.
+  - Enforcement of strict execution validation gates, specifically throwing a `PermissionError` and an HTTP 403 Forbidden status if a subject allocation request is made for a subject not in the `ENROLLED` state.
+  - Preservation of trial blinding integrity during randomized treatment allocation.
+
 ---
 
 ## 2.2 Local Developer Runtime Topology
