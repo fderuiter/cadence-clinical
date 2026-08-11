@@ -109,15 +109,7 @@ const isIntersecting = ref(true); // Default to true so initial render compiles 
 const measuredHeight = ref(0);
 const hasEnteredViewport = ref(false);
 
-const shouldRender = computed(() => {
-  if (isIntersecting.value) return true;
-  // Guarded unmounting: prevent unmounting/recycling until a valid, non-zero height is measured and stored,
-  // or until the component has actually been onscreen.
-  if (!hasEnteredViewport.value && measuredHeight.value === 0) {
-    return true;
-  }
-  return false;
-});
+const shouldRender = computed(() => true);
 
 let io = null;
 let ro = null;
@@ -127,13 +119,9 @@ const wrapperStyle = computed(() => {
     minHeight: "44px",
     width: "100%",
     boxSizing: "border-box",
+    contentVisibility: "auto",
+    containIntrinsicSize: `auto ${measuredHeight.value ? measuredHeight.value + 'px' : '44px'}`,
   };
-  if (!shouldRender.value) {
-    styles.height = measuredHeight.value ? `${measuredHeight.value}px` : "44px";
-    styles.overflow = "hidden";
-  } else {
-    styles.height = "auto";
-  }
   return styles;
 });
 
