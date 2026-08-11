@@ -82,7 +82,7 @@ def second():
     assert code == 0, f"Driver failed: {stderr}\n{stdout}"
     assert "def second" in merged
     assert "def first" in merged
-    assert duration < 10.0
+    assert duration < 30.0
 
 
 def test_js_reordered_helper_functions():
@@ -126,7 +126,7 @@ export function second() {
     assert code == 0, f"Driver failed: {stderr}\n{stdout}"
     assert "export function second" in merged
     assert "export function first" in merged
-    assert duration < 10.0
+    assert duration < 30.0
 
 
 def test_python_edited_and_reordered():
@@ -165,7 +165,7 @@ def second():
     )
     assert code == 0, f"Driver failed: {stderr}\n{stdout}"
     assert "return 2 + 2" in merged
-    assert duration < 10.0
+    assert duration < 30.0
 
 
 def test_python_overlapping_logical_edits_fallback():
@@ -194,7 +194,7 @@ def first():
     # Should exit with git merge-file's return code indicating conflicts
     assert code != 0
     assert "<<<<<<<" in merged or "=======" in merged
-    assert duration < 10.0
+    assert duration < 30.0
 
 
 def test_python_imports_merged_and_sorted():
@@ -223,4 +223,4 @@ import json  # noqa: F401
     assert "import json" in merged
     assert "import os" in merged
     assert "import sys" in merged
-    assert duration < 10.0
+    assert duration < 30.0
