@@ -100,6 +100,7 @@ export {
   encryptAESGCM,
   decryptAESGCM,
   deriveSessionKey,
+  deriveKeyFromPIN,
 } from "./signing.js";
 
 /**

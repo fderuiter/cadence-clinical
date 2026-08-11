@@ -405,3 +405,56 @@ export async function clearAllSubmissions() {
     /* v8 ignore stop */
   });
 }
+
+export function getInMemorySessionKey() {
+  return inMemorySessionKey;
+}
+
+export function setInMemorySessionKey(key) {
+  inMemorySessionKey = key;
+}
+
+export async function getWrappedMasterKeyConfig() {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction("config", "readonly");
+    const store = transaction.objectStore("config");
+    const reqKey = store.get("wrapped_master_key");
+    reqKey.onsuccess = () => {
+      const wrappedKey = reqKey.result ? reqKey.result.value : null;
+      const reqSalt = store.get("pbkdf2_salt");
+      reqSalt.onsuccess = () => {
+        const salt = reqSalt.result ? reqSalt.result.value : null;
+        resolve({ wrappedKey, salt });
+      };
+      /* v8 ignore start */
+      reqSalt.onerror = () => {
+        reject(reqSalt.error);
+      };
+      /* v8 ignore stop */
+    };
+    /* v8 ignore start */
+    reqKey.onerror = () => {
+      reject(reqKey.error);
+    };
+    /* v8 ignore stop */
+  });
+}
+
+export async function saveWrappedMasterKeyConfig(wrappedKey, salt) {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction("config", "readwrite");
+    const store = transaction.objectStore("config");
+    store.put({ key: "wrapped_master_key", value: wrappedKey });
+    store.put({ key: "pbkdf2_salt", value: salt });
+    transaction.oncomplete = () => {
+      resolve();
+    };
+    /* v8 ignore start */
+    transaction.onerror = () => {
+      reject(transaction.error);
+    };
+    /* v8 ignore stop */
+  });
+}
