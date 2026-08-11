@@ -364,6 +364,90 @@ class CDASHToSDTMMapper:
             )
         return sdtm_sv_records
 
+    def map_concomitant_medications(
+        self, study_id: str, subject_id: str, raw_cm_forms: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """
+        Transform raw Concomitant Medications data into SDTM Record CM.
+        """
+        sdtm_cm_records = []
+        for idx, form in enumerate(raw_cm_forms, start=1):
+            sdtm_cm_records.append(
+                {
+                    "STUDYID": study_id,
+                    "DOMAIN": "CM",
+                    "USUBJID": f"{study_id}-{subject_id}",
+                    "CMSEQ": idx,
+                    "CMTRT": str(form.get("cmtrt") or form.get("CMTRT") or "").upper(),
+                    "CMDECOD": str(
+                        form.get("cmdecod") or form.get("CMDECOD") or ""
+                    ).upper(),
+                    "CMSTDTC": standardize_iso_datetime(
+                        form.get("cmstdtc") or form.get("CMSTDTC")
+                    ),
+                    "CMENDTC": standardize_iso_datetime(
+                        form.get("cmendtc") or form.get("CMENDTC")
+                    ),
+                }
+            )
+        return sdtm_cm_records
+
+    def map_dispositions(
+        self, study_id: str, subject_id: str, raw_ds_forms: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """
+        Transform raw Dispositions data into SDTM Record DS.
+        """
+        sdtm_ds_records = []
+        for idx, form in enumerate(raw_ds_forms, start=1):
+            sdtm_ds_records.append(
+                {
+                    "STUDYID": study_id,
+                    "DOMAIN": "DS",
+                    "USUBJID": f"{study_id}-{subject_id}",
+                    "DSSEQ": idx,
+                    "DSTERM": str(
+                        form.get("dsterm") or form.get("DSTERM") or ""
+                    ).upper(),
+                    "DSDECOD": str(
+                        form.get("dsdecod") or form.get("DSDECOD") or ""
+                    ).upper(),
+                    "DSCAT": str(form.get("dscat") or form.get("DSCAT") or "").upper(),
+                    "DSSTDTC": standardize_iso_datetime(
+                        form.get("dsstdtc") or form.get("DSSTDTC")
+                    ),
+                }
+            )
+        return sdtm_ds_records
+
+    def map_medical_history(
+        self, study_id: str, subject_id: str, raw_mh_forms: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """
+        Transform raw Medical History data into SDTM Record MH.
+        """
+        sdtm_mh_records = []
+        for idx, form in enumerate(raw_mh_forms, start=1):
+            sdtm_mh_records.append(
+                {
+                    "STUDYID": study_id,
+                    "DOMAIN": "MH",
+                    "USUBJID": f"{study_id}-{subject_id}",
+                    "MHSEQ": idx,
+                    "MHTERM": str(
+                        form.get("mhterm") or form.get("MHTERM") or ""
+                    ).upper(),
+                    "MHDECOD": str(
+                        form.get("mhdecod") or form.get("MHDECOD") or ""
+                    ).upper(),
+                    "MHCAT": str(form.get("mhcat") or form.get("MHCAT") or "").upper(),
+                    "MHDTC": standardize_iso_datetime(
+                        form.get("mhdtc") or form.get("MHDTC")
+                    ),
+                }
+            )
+        return sdtm_mh_records
+
 
 def map_cdash_to_sdtm(domain_code: str, ecrf_data: list[dict]) -> list[dict]:
     """
@@ -399,8 +483,11 @@ def map_cdash_to_sdtm(domain_code: str, ecrf_data: list[dict]) -> list[dict]:
 
     results = []
     if domain == "DM":
-        # Group raw inputs and map them
+        # Group raw inputs and map them, excluding any AE records
         for item in ecrf_data:
+            item_domain = str(item.get("domain") or item.get("DOMAIN") or "").upper()
+            if item_domain == "AE" or "AETERM" in item or "ae_term" in item:
+                continue
             sid = item.get("subject_id") or item.get("SUBJID") or subject_id
             st_id = item.get("study_id") or item.get("STUDYID") or study_id
             mapped = mapper.map_demographics(st_id, sid, item)
@@ -444,73 +531,31 @@ def map_cdash_to_sdtm(domain_code: str, ecrf_data: list[dict]) -> list[dict]:
             results.extend(mapper.map_subject_visits(study_id, sid, forms, rfstdtc))
 
     elif domain == "CM":
-        for idx, item in enumerate(ecrf_data, start=1):
+        subjects_cm: dict[str, list[dict]] = {}
+        for item in ecrf_data:
             sid = item.get("subject_id") or item.get("SUBJID") or subject_id
-            st_id = item.get("study_id") or item.get("STUDYID") or study_id
-            results.append(
-                {
-                    "STUDYID": st_id,
-                    "DOMAIN": "CM",
-                    "USUBJID": f"{st_id}-{sid}",
-                    "CMSEQ": idx,
-                    "CMTRT": str(item.get("cmtrt") or item.get("CMTRT") or "").upper(),
-                    "CMDECOD": str(
-                        item.get("cmdecod") or item.get("CMDECOD") or ""
-                    ).upper(),
-                    "CMSTDTC": standardize_iso_datetime(
-                        item.get("cmstdtc") or item.get("CMSTDTC")
-                    ),
-                    "CMENDTC": standardize_iso_datetime(
-                        item.get("cmendtc") or item.get("CMENDTC")
-                    ),
-                }
-            )
+            subjects_cm.setdefault(sid, []).append(item)
+
+        for sid, forms in subjects_cm.items():
+            results.extend(mapper.map_concomitant_medications(study_id, sid, forms))
 
     elif domain == "DS":
-        for idx, item in enumerate(ecrf_data, start=1):
+        subjects_ds: dict[str, list[dict]] = {}
+        for item in ecrf_data:
             sid = item.get("subject_id") or item.get("SUBJID") or subject_id
-            st_id = item.get("study_id") or item.get("STUDYID") or study_id
-            results.append(
-                {
-                    "STUDYID": st_id,
-                    "DOMAIN": "DS",
-                    "USUBJID": f"{st_id}-{sid}",
-                    "DSSEQ": idx,
-                    "DSTERM": str(
-                        item.get("dsterm") or item.get("DSTERM") or ""
-                    ).upper(),
-                    "DSDECOD": str(
-                        item.get("dsdecod") or item.get("DSDECOD") or ""
-                    ).upper(),
-                    "DSCAT": str(item.get("dscat") or item.get("DSCAT") or "").upper(),
-                    "DSSTDTC": standardize_iso_datetime(
-                        item.get("dsstdtc") or item.get("DSSTDTC")
-                    ),
-                }
-            )
+            subjects_ds.setdefault(sid, []).append(item)
+
+        for sid, forms in subjects_ds.items():
+            results.extend(mapper.map_dispositions(study_id, sid, forms))
 
     elif domain == "MH":
-        for idx, item in enumerate(ecrf_data, start=1):
+        subjects_mh: dict[str, list[dict]] = {}
+        for item in ecrf_data:
             sid = item.get("subject_id") or item.get("SUBJID") or subject_id
-            st_id = item.get("study_id") or item.get("STUDYID") or study_id
-            results.append(
-                {
-                    "STUDYID": st_id,
-                    "DOMAIN": "MH",
-                    "USUBJID": f"{st_id}-{sid}",
-                    "MHSEQ": idx,
-                    "MHTERM": str(
-                        item.get("mhterm") or item.get("MHTERM") or ""
-                    ).upper(),
-                    "MHDECOD": str(
-                        item.get("mhdecod") or item.get("MHDECOD") or ""
-                    ).upper(),
-                    "MHCAT": str(item.get("mhcat") or item.get("MHCAT") or "").upper(),
-                    "MHDTC": standardize_iso_datetime(
-                        item.get("mhdtc") or item.get("MHDTC")
-                    ),
-                }
-            )
+            subjects_mh.setdefault(sid, []).append(item)
+
+        for sid, forms in subjects_mh.items():
+            results.extend(mapper.map_medical_history(study_id, sid, forms))
 
     else:
         raise ValueError(f"Domain mapping code '{domain_code}' not supported.")
@@ -547,11 +592,31 @@ async def persist_sdtm_records(
     subjects = res_subj.scalars().all()
 
     # Load observations for this domain
-    stmt_obs = select(ClinicalObservation).where(
-        ClinicalObservation.study_id == study_id,
-        ClinicalObservation.domain == domain,
-        ClinicalObservation.is_deleted.is_(False),
-    )
+    # If compiling AE, we also pull any AE observations that were misclassified as DM
+    # If compiling DM, we exclude any AE observations that were misclassified as DM
+    ae_test_codes = ["AETERM", "AESEV", "AESER", "AESTDTC", "AEENDTC", "AEDECOD", "AELOC", "AELDTC", "AEREL", "AEOUT"]
+    if domain == "AE":
+        stmt_obs = select(ClinicalObservation).where(
+            ClinicalObservation.study_id == study_id,
+            (ClinicalObservation.domain == "AE") | (
+                (ClinicalObservation.domain == "DM") &
+                (ClinicalObservation.test_code.in_(ae_test_codes))
+            ),
+            ClinicalObservation.is_deleted.is_(False),
+        )
+    elif domain == "DM":
+        stmt_obs = select(ClinicalObservation).where(
+            ClinicalObservation.study_id == study_id,
+            ClinicalObservation.domain == "DM",
+            ~ClinicalObservation.test_code.in_(ae_test_codes),
+            ClinicalObservation.is_deleted.is_(False),
+        )
+    else:
+        stmt_obs = select(ClinicalObservation).where(
+            ClinicalObservation.study_id == study_id,
+            ClinicalObservation.domain == domain,
+            ClinicalObservation.is_deleted.is_(False),
+        )
     res_obs = await session.execute(stmt_obs)
     observations = res_obs.scalars().all()
 
@@ -684,6 +749,90 @@ async def persist_sdtm_records(
             mapped_list = mapper.map_subject_visits(
                 study_id, sid, sv_list, rfstdtc=None
             )
+            raw_records.extend(mapped_list)
+
+    elif domain == "CM":
+        from collections import defaultdict
+
+        cm_by_page = defaultdict(dict)
+        for obs in observations:
+            page_key = obs.page_id or f"raw_{obs.id}"
+            cm_by_page[page_key]["subject_id"] = obs.subject_id
+            
+            tc = (obs.test_code or "").upper()
+            if tc == "CMTRT":
+                cm_by_page[page_key]["cmtrt"] = obs.value_string
+            elif tc == "CMDECOD":
+                cm_by_page[page_key]["cmdecod"] = obs.value_string
+            elif tc in ("CMSTDTC", "CM_START_DATE"):
+                cm_by_page[page_key]["cmstdtc"] = obs.value_string
+            elif tc in ("CMENDTC", "CM_END_DATE"):
+                cm_by_page[page_key]["cmendtc"] = obs.value_string
+
+        subj_cm = defaultdict(list)
+        for page_key, cm_dict in cm_by_page.items():
+            sid = cm_dict.get("subject_id")
+            if sid:
+                subj_cm[sid].append(cm_dict)
+
+        for sid, cm_list in subj_cm.items():
+            mapped_list = mapper.map_concomitant_medications(study_id, sid, cm_list)
+            raw_records.extend(mapped_list)
+
+    elif domain == "DS":
+        from collections import defaultdict
+
+        ds_by_page = defaultdict(dict)
+        for obs in observations:
+            page_key = obs.page_id or f"raw_{obs.id}"
+            ds_by_page[page_key]["subject_id"] = obs.subject_id
+            
+            tc = (obs.test_code or "").upper()
+            if tc == "DSTERM":
+                ds_by_page[page_key]["dsterm"] = obs.value_string
+            elif tc == "DSDECOD":
+                ds_by_page[page_key]["dsdecod"] = obs.value_string
+            elif tc == "DSCAT":
+                ds_by_page[page_key]["dscat"] = obs.value_string
+            elif tc in ("DSSTDTC", "DS_START_DATE"):
+                ds_by_page[page_key]["dsstdtc"] = obs.value_string
+
+        subj_ds = defaultdict(list)
+        for page_key, ds_dict in ds_by_page.items():
+            sid = ds_dict.get("subject_id")
+            if sid:
+                subj_ds[sid].append(ds_dict)
+
+        for sid, ds_list in subj_ds.items():
+            mapped_list = mapper.map_dispositions(study_id, sid, ds_list)
+            raw_records.extend(mapped_list)
+
+    elif domain == "MH":
+        from collections import defaultdict
+
+        mh_by_page = defaultdict(dict)
+        for obs in observations:
+            page_key = obs.page_id or f"raw_{obs.id}"
+            mh_by_page[page_key]["subject_id"] = obs.subject_id
+            
+            tc = (obs.test_code or "").upper()
+            if tc == "MHTERM":
+                mh_by_page[page_key]["mhterm"] = obs.value_string
+            elif tc == "MHDECOD":
+                mh_by_page[page_key]["mhdecod"] = obs.value_string
+            elif tc == "MHCAT":
+                mh_by_page[page_key]["mhcat"] = obs.value_string
+            elif tc in ("MHDTC", "MH_DATE"):
+                mh_by_page[page_key]["mhdtc"] = obs.value_string
+
+        subj_mh = defaultdict(list)
+        for page_key, mh_dict in mh_by_page.items():
+            sid = mh_dict.get("subject_id")
+            if sid:
+                subj_mh[sid].append(mh_dict)
+
+        for sid, mh_list in subj_mh.items():
+            mapped_list = mapper.map_medical_history(study_id, sid, mh_list)
             raw_records.extend(mapped_list)
 
     # For any mapped raw record, instantiate/validate using Pydantic Record schemas
