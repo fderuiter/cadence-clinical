@@ -12,6 +12,10 @@ import {
   getAllSubmissions,
   updateSubmissionStatus,
   clearAllSubmissions,
+  getInMemorySessionKey,
+  setInMemorySessionKey,
+  getWrappedMasterKeyConfig,
+  saveWrappedMasterKeyConfig,
 } from "../sync-queue.js";
 
 describe("sync-queue secure storage and sync capabilities", () => {
@@ -176,5 +180,27 @@ describe("sync-queue secure storage and sync capabilities", () => {
       configurable: true,
       writable: true,
     });
+  });
+
+  it("should get and set in-memory session key", () => {
+    const mockKey = new Uint8Array([1, 2, 3]);
+    setInMemorySessionKey(mockKey);
+    expect(getInMemorySessionKey()).toBe(mockKey);
+  });
+
+  it("should save and retrieve wrapped master key config", async () => {
+    const wrappedKey = "mockWrappedKeyBase64String";
+    const salt = new Uint8Array([9, 8, 7, 6]);
+    await saveWrappedMasterKeyConfig(wrappedKey, salt);
+
+    const retrieved = await getWrappedMasterKeyConfig();
+    expect(retrieved.wrappedKey).toBe(wrappedKey);
+    expect(Array.from(retrieved.salt)).toEqual(Array.from(salt));
+  });
+
+  it("should return nulls if wrapped master key config is not set", async () => {
+    const retrieved = await getWrappedMasterKeyConfig();
+    expect(retrieved.wrappedKey).toBeNull();
+    expect(retrieved.salt).toBeNull();
   });
 });

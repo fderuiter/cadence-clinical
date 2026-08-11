@@ -829,6 +829,141 @@
       </div>
     </div>
 
+    <!-- Local Security PIN Setup Modal -->
+    <div
+      v-if="state.pinSetup.isOpen"
+      id="portal-pin-setup-modal"
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pin-setup-title"
+      tabindex="-1"
+      @keydown="handleSetupModalKeyDown"
+    >
+      <div class="modal">
+        <div id="pin-setup-title" class="modal-header">
+          Configure Security PIN
+        </div>
+        <div class="modal-body">
+          <p>
+            To secure your offline clinical data, please choose a numeric local
+            security PIN. This PIN will wrap and encrypt your offline database
+            encryption key.
+          </p>
+          <div
+            v-if="state.pinSetup.error"
+            class="error-state"
+            style="
+              color: var(--danger);
+              font-weight: bold;
+              font-size: 14px;
+              margin-bottom: 12px;
+            "
+            role="status"
+            aria-live="polite"
+          >
+            {{ state.pinSetup.error }}
+          </div>
+          <div class="form-group mb-12">
+            <label for="setup-pin">Choose Numeric PIN</label>
+            <input
+              id="setup-pin"
+              type="password"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              placeholder="••••"
+              v-model="state.pinSetup.pin"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="confirm-setup-pin">Confirm Numeric PIN</label>
+            <input
+              id="confirm-setup-pin"
+              type="password"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              placeholder="••••"
+              v-model="state.pinSetup.confirmPin"
+              required
+            />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            id="btn-pin-setup-confirm"
+            type="button"
+            class="btn btn-primary"
+            @click="handlePINSetupSubmit"
+          >
+            Save and Configure
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Local Security PIN Unlock Modal -->
+    <div
+      v-if="state.pinUnlock.isOpen"
+      id="portal-pin-unlock-modal"
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pin-unlock-title"
+      tabindex="-1"
+      @keydown="handleUnlockModalKeyDown"
+    >
+      <div class="modal">
+        <div id="pin-unlock-title" class="modal-header">
+          Device Locked - Enter Security PIN
+        </div>
+        <div class="modal-body">
+          <p>
+            Please enter your numeric security PIN to access the clinical portal
+            and decrypt your offline data.
+          </p>
+          <div
+            v-if="state.pinUnlock.error"
+            id="pin-unlock-error"
+            class="error-state"
+            style="
+              color: var(--danger);
+              font-weight: bold;
+              font-size: 14px;
+              margin-bottom: 12px;
+            "
+            role="status"
+            aria-live="polite"
+          >
+            {{ state.pinUnlock.error }}
+          </div>
+          <div class="form-group">
+            <label for="unlock-pin">Security PIN</label>
+            <input
+              id="unlock-pin"
+              type="password"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              placeholder="••••"
+              v-model="state.pinUnlock.pin"
+              required
+              @keydown.enter="handlePINUnlockSubmit"
+            />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            id="btn-pin-unlock-confirm"
+            type="button"
+            class="btn btn-primary"
+            @click="handlePINUnlockSubmit"
+          >
+            Unlock
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Activity log at the bottom for patient transparency & 21 CFR compliance review -->
     <footer class="portal-footer">
       <div class="footer-title">
@@ -843,7 +978,62 @@
 
 <script setup>
 import { onMounted, nextTick, computed } from "vue";
-import { state, showView, logout, syncOfflineQueue } from "./index.js";
+import {
+  state,
+  showView,
+  logout,
+  syncOfflineQueue,
+  handlePINSetupSubmit,
+  handlePINUnlockSubmit,
+} from "./index.js";
+
+function handleSetupModalKeyDown(e) {
+  if (e.key !== "Tab") return;
+  const modal = document.getElementById("portal-pin-setup-modal");
+  if (!modal) return;
+  const selectors = ["input", "button"]
+    .map((tag) => `${tag}:not([disabled])`)
+    .join(", ");
+  const elList = Array.from(modal.querySelectorAll(selectors));
+  if (!elList.length) return;
+  const firstEl = elList[0];
+  const lastEl = elList[elList.length - 1];
+  if (e.shiftKey) {
+    if (document.activeElement === firstEl) {
+      lastEl.focus();
+      e.preventDefault();
+    }
+  } else {
+    if (document.activeElement === lastEl) {
+      firstEl.focus();
+      e.preventDefault();
+    }
+  }
+}
+
+function handleUnlockModalKeyDown(e) {
+  if (e.key !== "Tab") return;
+  const modal = document.getElementById("portal-pin-unlock-modal");
+  if (!modal) return;
+  const selectors = ["input", "button"]
+    .map((tag) => `${tag}:not([disabled])`)
+    .join(", ");
+  const elList = Array.from(modal.querySelectorAll(selectors));
+  if (!elList.length) return;
+  const firstEl = elList[0];
+  const lastEl = elList[elList.length - 1];
+  if (e.shiftKey) {
+    if (document.activeElement === firstEl) {
+      lastEl.focus();
+      e.preventDefault();
+    }
+  } else {
+    if (document.activeElement === lastEl) {
+      firstEl.focus();
+      e.preventDefault();
+    }
+  }
+}
 
 const brandName = computed(() => import.meta.env.VITE_BRAND_NAME || "Cadence");
 
