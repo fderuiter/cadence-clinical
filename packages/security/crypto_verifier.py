@@ -191,6 +191,51 @@ def parse_signature_format(sig_str: str) -> str:
     return sig_str
 
 
+def is_mock_signature(signature_b64: str | None) -> bool:
+    if not signature_b64:
+        return False
+    sig_lower = signature_b64.lower()
+    if "mock" in sig_lower:
+        # If it's a short human-readable string like "mock_signature", "mock", "MOCK_SIG_DATA", etc.
+        if len(signature_b64) < 64:
+            return True
+        # If it's longer, it could be a valid base64 signature that contains "mock" by chance.
+        # Check if the base64-decoded bytes contain "mock".
+        try:
+            cleaned = "".join(signature_b64.split())
+            decoded = base64.b64decode(cleaned)
+            if b"mock" in decoded.lower():
+                return True
+        except Exception:
+            return True
+    return False
+
+
+def is_mock_key(public_key_pem: str | None) -> bool:
+    if not public_key_pem:
+        return False
+    pk_lower = public_key_pem.lower()
+    if "mock" in pk_lower:
+        # A mock key/cert is usually a short string like "MOCK_XML_CERT", "MOCK_SIGNATURE", etc.
+        # But a real public key PEM is hundreds of characters.
+        if len(public_key_pem) < 100:
+            return True
+        # Decode the PEM content and check if it contains "mock"
+        try:
+            lines = [
+                line.strip()
+                for line in public_key_pem.splitlines()
+                if line.strip() and not line.startswith("-----")
+            ]
+            cleaned = "".join(lines)
+            decoded = base64.b64decode(cleaned)
+            if b"mock" in decoded.lower():
+                return True
+        except Exception:
+            return True
+    return False
+
+
 def verify_asymmetric_signature(
     payload_str: str,
     signature_b64: str,
@@ -204,8 +249,8 @@ def verify_asymmetric_signature(
     # Reject mock signatures / certificates
     if (
         "mock" in payload_str.lower()
-        or "mock" in signature_b64.lower()
-        or "mock" in public_key_pem.lower()
+        or is_mock_signature(signature_b64)
+        or is_mock_key(public_key_pem)
     ):
         return (
             False,
@@ -402,9 +447,11 @@ def verify_electronic_signature(
 
     # Check mock for both asymmetric and symmetric paths
     req_payload_lower = (request.payload_hash or "").lower()
-    req_sig_lower = (request.signature_bytes_b64 or "").lower()
-    req_pk_lower = (public_key_pem or "").lower()
-    if "mock" in req_payload_lower or "mock" in req_sig_lower or "mock" in req_pk_lower:
+    if (
+        "mock" in req_payload_lower
+        or is_mock_signature(request.signature_bytes_b64)
+        or is_mock_key(public_key_pem)
+    ):
         return SignatureVerificationResult(
             is_valid=False,
             error_code="MOCK_SIGNATURE_DETECTED",
