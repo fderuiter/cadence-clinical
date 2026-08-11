@@ -16,6 +16,7 @@ RUN groupadd -g 1000 appuser && \
 COPY --chown=1000:1000 --from=builder /app/.venv /app/.venv
 COPY --chown=1000:1000 packages/security /app/packages/security
 COPY --chown=1000:1000 apps/designer /app/apps/designer
+COPY --chown=1000:1000 scripts/start.py /app/scripts/start.py
 
 RUN chown -R 1000:1000 /app
 
@@ -24,4 +25,4 @@ EXPOSE 8000
 
 USER 1000
 
-CMD ["uvicorn", "apps.designer.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "scripts/start.py", "designer", "--host", "0.0.0.0", "--port", "8000"]
