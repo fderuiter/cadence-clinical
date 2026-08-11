@@ -336,7 +336,6 @@ export async function bulkUpdateSubmissionStatuses(updates) {
     const store = tx.objectStore("submissions");
     const subsToDecrypt = [];
 
-    let completedCount = 0;
     if (updates.length === 0) {
       resolve([]);
       return;
@@ -360,7 +359,6 @@ export async function bulkUpdateSubmissionStatuses(updates) {
         const putReq = store.put(sub);
         putReq.onsuccess = () => {
           subsToDecrypt.push(sub);
-          completedCount++;
         };
         putReq.onerror = () => {
           reject(putReq.error);

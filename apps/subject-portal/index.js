@@ -13,7 +13,6 @@ import {
   queueSubmission,
   getQueuedSubmissions,
   getAllSubmissions,
-  updateSubmissionStatus,
   bulkUpdateSubmissionStatuses,
   clearAllSubmissions,
   initSessionKey,
