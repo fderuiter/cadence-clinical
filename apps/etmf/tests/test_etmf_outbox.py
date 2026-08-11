@@ -71,7 +71,7 @@ async def test_document_signing_writes_outbox() -> None:
 
     from jose import jwt
 
-    gateway_secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+    gateway_secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # nosec B105: mock fallback secret for testing
     user_id = "test_user"
     sig_payload = {
         "sub": user_id,
