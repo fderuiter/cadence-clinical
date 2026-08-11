@@ -180,7 +180,11 @@ class TestOfflineSchemaDrift:
         Returns:
             Dictionary containing extracted schemas.
         """
-        parser_script = Path("/app/scripts/parse_frontend_ast.js")
+        parser_script = (
+            Path(__file__).parent.parent.parent.resolve()
+            / "scripts"
+            / "parse_frontend_ast.js"
+        )
         assert parser_script.exists(), "Frontend AST parser helper script is missing!"
 
         res = subprocess.run(
