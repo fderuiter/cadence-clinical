@@ -1893,9 +1893,10 @@ async def sign_document_endpoint(
     )
 
     # Write outbox archival record within the service transaction
-    from apps.etmf.infrastructure.models import IntegrationOutbox
     import uuid
-    
+
+    from apps.etmf.infrastructure.models import IntegrationOutbox
+
     outbox_entry = IntegrationOutbox(
         id=str(uuid.uuid4()),
         event_type="DOCUMENT_ARCHIVAL",
@@ -2653,6 +2654,7 @@ async def get_document_qc_history(
 @router.post("/api/v1/etmf/locks/trial/lock")
 async def etmf_lock_trial_endpoint(request: Request) -> dict[str, str]:
     from apps.etmf.infrastructure import lock_client
+
     lock_client.trial_lock_override = True
     return {"status": "success", "message": "Trial lock propagated to eTMF."}
 
@@ -2660,6 +2662,7 @@ async def etmf_lock_trial_endpoint(request: Request) -> dict[str, str]:
 @router.post("/api/v1/etmf/locks/trial/unlock")
 async def etmf_unlock_trial_endpoint(request: Request) -> dict[str, str]:
     from apps.etmf.infrastructure import lock_client
+
     lock_client.trial_lock_override = False
     return {"status": "success", "message": "Trial unlock propagated to eTMF."}
 
@@ -2669,10 +2672,11 @@ async def etmf_admin_outbox_endpoint(
     status: str | None = None,
     event_type: str | None = None,
 ) -> list[dict]:
+    from sqlalchemy import select
+
     from apps.etmf.infrastructure.database import db_manager
     from apps.etmf.infrastructure.models import IntegrationOutbox
-    from sqlalchemy import select
-    
+
     session_maker = db_manager.get_session_maker()
     async with session_maker() as session:
         stmt = select(IntegrationOutbox)
@@ -2683,7 +2687,7 @@ async def etmf_admin_outbox_endpoint(
         stmt = stmt.order_by(IntegrationOutbox.created_at.desc())
         res = await session.execute(stmt)
         records = res.scalars().all()
-        
+
         return [
             {
                 "id": r.id,
@@ -2692,7 +2696,9 @@ async def etmf_admin_outbox_endpoint(
                 "status": r.status,
                 "attempts": r.attempts,
                 "last_error": r.last_error,
-                "next_retry_at": r.next_retry_at.isoformat() if r.next_retry_at else None,
+                "next_retry_at": r.next_retry_at.isoformat()
+                if r.next_retry_at
+                else None,
                 "completed_at": r.completed_at.isoformat() if r.completed_at else None,
                 "retry_eligible": r.retry_eligible,
                 "correlation_id": r.correlation_id,
@@ -2702,5 +2708,3 @@ async def etmf_admin_outbox_endpoint(
             }
             for r in records
         ]
-
-

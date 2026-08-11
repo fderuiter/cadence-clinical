@@ -1,18 +1,18 @@
-import asyncio
 import os
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, patch
+
 import httpx
 import pytest
 import pytest_asyncio
-from unittest.mock import patch, AsyncMock
-from datetime import datetime, UTC
 from sqlalchemy import select
 
 from apps.etmf.database import db_manager
-from apps.etmf.main import app
-from apps.etmf.models import Base, TMFDocument
 from apps.etmf.infrastructure.models import IntegrationOutbox
-from apps.etmf.workers.outbox_worker import poll_and_dispatch
+from apps.etmf.main import app
+from apps.etmf.models import Base
 from apps.etmf.tests.test_etmf import get_auth_headers
+from apps.etmf.workers.outbox_worker import poll_and_dispatch
 
 
 @pytest.fixture(autouse=True)
@@ -39,7 +39,9 @@ def get_headers(roles: str = "admin", change_reason: str = "Testing outbox") -> 
 @pytest.mark.asyncio
 async def test_document_signing_writes_outbox() -> None:
     """Verify that signing a document writes a DOCUMENT_ARCHIVAL outbox record atomically."""
-    client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
+    client = httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    )
     headers = get_headers()
 
     # 1. Ingest an unsigned document first
@@ -64,11 +66,12 @@ async def test_document_signing_writes_outbox() -> None:
         assert len(res.scalars().all()) == 0
 
     # 2. Sign the document (this should trigger outbox entry creation atomically)
-    from jose import jwt
     import time
     import uuid
-    
-    GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+
+    from jose import jwt
+
+    gateway_secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
     user_id = "test_user"
     sig_payload = {
         "sub": user_id,
@@ -77,12 +80,14 @@ async def test_document_signing_writes_outbox() -> None:
         "exp": time.time() + 300.0,
         "jti": str(uuid.uuid4()),
     }
-    sig_token = jwt.encode(sig_payload, GATEWAY_SECRET, algorithm="HS256")
-    
-    sign_headers = get_headers(roles="admin", change_reason="Form 1572 Investigator Sign-off")
+    sig_token = jwt.encode(sig_payload, gateway_secret, algorithm="HS256")
+
+    sign_headers = get_headers(
+        roles="admin", change_reason="Form 1572 Investigator Sign-off"
+    )
     sign_headers["X-Sig-Token"] = sig_token
     sign_headers["X-User-Id"] = user_id
-    
+
     sign_resp = await client.post(
         f"/api/v1/etmf/documents/{doc_id}/sign-off",
         json={"signing_reason": "APPROVAL"},
@@ -180,11 +185,16 @@ async def test_etmf_outbox_worker_retry_and_backoff() -> None:
         record_id = record.id
 
     # Mock outbound archival POST to raise an exception
-    with patch("httpx.AsyncClient.post", side_effect=httpx.ConnectError("Archival system offline")):
+    with patch(
+        "httpx.AsyncClient.post",
+        side_effect=httpx.ConnectError("Archival system offline"),
+    ):
         for attempt in range(1, 6):
             # Reset next_retry_at to None to allow the worker to pick it up on subsequent attempts
             async with db_manager.get_session_maker()() as session:
-                stmt = select(IntegrationOutbox).where(IntegrationOutbox.id == record_id)
+                stmt = select(IntegrationOutbox).where(
+                    IntegrationOutbox.id == record_id
+                )
                 res = await session.execute(stmt)
                 rec = res.scalars().first()
                 rec.next_retry_at = None
@@ -194,7 +204,9 @@ async def test_etmf_outbox_worker_retry_and_backoff() -> None:
 
             # Verify incrementing attempts and backoff
             async with db_manager.get_session_maker()() as session:
-                stmt = select(IntegrationOutbox).where(IntegrationOutbox.id == record_id)
+                stmt = select(IntegrationOutbox).where(
+                    IntegrationOutbox.id == record_id
+                )
                 res = await session.execute(stmt)
                 updated = res.scalars().first()
                 assert updated is not None
@@ -243,7 +255,9 @@ async def test_etmf_admin_visibility_endpoint() -> None:
         session.add_all([rec1, rec2, rec3])
         await session.commit()
 
-    client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
+    client = httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    )
     headers = get_headers()
 
     # 1. Fetch all records
@@ -253,7 +267,9 @@ async def test_etmf_admin_visibility_endpoint() -> None:
     assert len(data) == 3
 
     # 2. Query with status filter
-    resp_failed = await client.get("/api/v1/admin/outbox?status=FAILED", headers=headers)
+    resp_failed = await client.get(
+        "/api/v1/admin/outbox?status=FAILED", headers=headers
+    )
     assert resp_failed.status_code == 200
     data_failed = resp_failed.json()
     assert len(data_failed) == 1
@@ -261,7 +277,9 @@ async def test_etmf_admin_visibility_endpoint() -> None:
     assert data_failed[0]["attempts"] == 4
 
     # 3. Query with event_type filter
-    resp_event = await client.get("/api/v1/admin/outbox?event_type=OTHER_EVENT", headers=headers)
+    resp_event = await client.get(
+        "/api/v1/admin/outbox?event_type=OTHER_EVENT", headers=headers
+    )
     assert resp_event.status_code == 200
     data_event = resp_event.json()
     assert len(data_event) == 1
@@ -295,6 +313,15 @@ async def test_etmf_outbox_no_unencrypted_pii() -> None:
         res = await session.execute(stmt)
         retrieved = res.scalars().first()
         payload_keys = retrieved.payload.keys()
-        forbidden_pii_keywords = ["ssn", "birth_date", "dob", "home_address", "phone_number", "email_address", "patient_name", "subject_name"]
+        forbidden_pii_keywords = [
+            "ssn",
+            "birth_date",
+            "dob",
+            "home_address",
+            "phone_number",
+            "email_address",
+            "patient_name",
+            "subject_name",
+        ]
         for key in payload_keys:
             assert not any(pii_kw in key.lower() for pii_kw in forbidden_pii_keywords)

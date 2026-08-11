@@ -86,6 +86,7 @@ def loaded_specs():
 
 
 _RAW_WHITELISTED_ROUTES = {
+    ("get", "/api/v1/admin/outbox"),
     ("post", "/api/v1/execution/queries/generate"),
     ("get", "/api/v1/studies/{study_id}/soa"),
     ("patch", "/subjects/{id}/state"),

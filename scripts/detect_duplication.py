@@ -471,6 +471,14 @@ def main() -> None:
                                     "apps/quality/domain/models.py",
                                     "apps/quality/infrastructure/models.py",
                                 },
+                                {
+                                    "apps/etmf/workers/outbox_worker.py",
+                                    "apps/execution/workers/outbox_worker.py",
+                                },
+                                {
+                                    "apps/etmf/presentation/routers/etmf.py",
+                                    "apps/execution/main.py",
+                                },
                             ]
                         ):
                             continue

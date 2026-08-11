@@ -5249,14 +5249,15 @@ async def lock_trial_endpoint(
     """Locks or freezes the trial/study."""
     reason = request.headers.get("X-Change-Reason", "Sponsor Lock")
     user_id = request.headers.get("X-User-Id", "admin_user")
-    
+
     # 1. Update in-memory state
     TrialLockManager.lock_trial(reason=reason)
-    
+
     # 2. Commit status change and write an outbox record inside a single relational transaction
     import uuid
+
     from apps.execution.database.models import IntegrationOutbox
-    
+
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
             outbox_entry = IntegrationOutbox(
@@ -5270,7 +5271,7 @@ async def lock_trial_endpoint(
                 reason_for_change=reason,
             )
             session.add(outbox_entry)
-            
+
     return {"status": "success", "message": "Trial is locked/frozen."}
 
 
@@ -6108,9 +6109,10 @@ async def execution_admin_outbox_endpoint(
     status: str | None = None,
     event_type: str | None = None,
 ) -> list[dict]:
-    from apps.execution.database.models import IntegrationOutbox
     from sqlalchemy import select
-    
+
+    from apps.execution.database.models import IntegrationOutbox
+
     async with db_manager.get_session_maker()() as session:
         stmt = select(IntegrationOutbox)
         if status:
@@ -6120,7 +6122,7 @@ async def execution_admin_outbox_endpoint(
         stmt = stmt.order_by(IntegrationOutbox.created_at.desc())
         res = await session.execute(stmt)
         records = res.scalars().all()
-        
+
         return [
             {
                 "id": r.id,
@@ -6129,7 +6131,9 @@ async def execution_admin_outbox_endpoint(
                 "status": r.status,
                 "attempts": r.attempts,
                 "last_error": r.last_error,
-                "next_retry_at": r.next_retry_at.isoformat() if r.next_retry_at else None,
+                "next_retry_at": r.next_retry_at.isoformat()
+                if r.next_retry_at
+                else None,
                 "completed_at": r.completed_at.isoformat() if r.completed_at else None,
                 "retry_eligible": r.retry_eligible,
                 "correlation_id": r.correlation_id,
@@ -6139,4 +6143,3 @@ async def execution_admin_outbox_endpoint(
             }
             for r in records
         ]
-

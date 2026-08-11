@@ -4,9 +4,10 @@ import os
 import sys
 import time
 from datetime import UTC, datetime, timedelta
-import httpx
 
+import httpx
 from sqlalchemy import select
+
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import IntegrationOutbox
 from packages.security.signing import generate_gateway_signature
@@ -33,28 +34,29 @@ async def poll_and_dispatch() -> None:
         records = res.scalars().all()
 
         for record in records:
-            if (
-                record.status not in ("PENDING", "FAILED")
-                or not record.retry_eligible
-            ):
+            if record.status not in ("PENDING", "FAILED") or not record.retry_eligible:
                 continue
 
             try:
                 if record.event_type == "TRIAL_LOCK":
                     # Propagate trial lock to eTMF
-                    etmf_url = os.getenv("ETMF_URL", "http://localhost:8003").rstrip("/")
-                    gateway_secret_env = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+                    etmf_url = os.getenv("ETMF_URL", "http://localhost:8003").rstrip(
+                        "/"
+                    )
+                    gateway_secret_env = os.getenv(
+                        "GATEWAY_SECRET", "internal-gateway-secret-12345"
+                    )
                     gateway_secret = (
                         gateway_secret_env.encode("utf-8")
                         if isinstance(gateway_secret_env, str)
                         else gateway_secret_env
                     )
-                    
+
                     user_id = "execution-outbox-worker"
                     roles = "Data Manager"
                     timestamp = str(time.time())
                     reason = record.payload.get("reason", "Outbox Lock Propagation")
-                    
+
                     signature = generate_gateway_signature(
                         user_id=user_id,
                         roles=roles,
@@ -62,7 +64,7 @@ async def poll_and_dispatch() -> None:
                         secret=gateway_secret,
                         change_reason=reason,
                     )
-                    
+
                     headers = {
                         "X-User-Id": user_id,
                         "X-User-Roles": roles,
@@ -71,13 +73,15 @@ async def poll_and_dispatch() -> None:
                         "X-Signature-Version": "2",
                         "X-Change-Reason": reason,
                     }
-                    
+
                     url = f"{etmf_url}/api/v1/etmf/locks/trial/lock"
-                    
+
                     async with httpx.AsyncClient(timeout=5.0) as client:
-                        resp = await client.post(url, headers=headers, json={"reason": reason})
+                        resp = await client.post(
+                            url, headers=headers, json={"reason": reason}
+                        )
                         resp.raise_for_status()
-                
+
                 # Mark as success
                 record.status = "SUCCESS"
                 record.completed_at = datetime.now(UTC)

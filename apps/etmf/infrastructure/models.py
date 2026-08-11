@@ -19,6 +19,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from packages.database import IntegrationOutboxMixin
+
 
 class Base(DeclarativeBase):
     pass
@@ -403,9 +405,7 @@ def prevent_qc_transition_delete(mapper, connection, target):
     )
 
 
-from packages.database import IntegrationOutboxMixin
-
 class IntegrationOutbox(Base, IntegrationOutboxMixin):
     """Concrete integration outbox table for the eTMF service."""
-    __tablename__ = "integration_outbox"
 
+    __tablename__ = "integration_outbox"

@@ -1,13 +1,13 @@
-import asyncio
 import hashlib
 import hmac
 import os
 import time
 from datetime import datetime
+from unittest.mock import AsyncMock, patch
+
 import httpx
 import pytest
 import pytest_asyncio
-from unittest.mock import patch, AsyncMock
 from sqlalchemy import select
 
 from apps.execution.database.core import db_manager
@@ -26,6 +26,7 @@ def get_auth_headers(
 ):
     """Generate Gateway signature-compliant authentication headers."""
     import json
+
     timestamp = str(time.time())
     header_payload = {
         "change_reason": change_reason,
@@ -37,7 +38,7 @@ def get_auth_headers(
     signature = hmac.new(
         GATEWAY_SECRET.encode(), serialized.encode(), hashlib.sha256
     ).hexdigest()
-    headers = {
+    return {
         "X-User-Id": user_id,
         "X-User-Roles": roles,
         "X-Gateway-Timestamp": timestamp,
@@ -45,7 +46,6 @@ def get_auth_headers(
         "X-Signature-Version": "2",
         "X-Change-Reason": change_reason,
     }
-    return headers
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -54,6 +54,7 @@ async def setup_test_db():
     db_manager.init_db("sqlite+aiosqlite:///:memory:")
     async with db_manager.engine.begin() as conn:
         from sqlalchemy import text
+
         if db_manager.engine.dialect.name == "postgresql":
             await conn.execute(text("CREATE SCHEMA IF NOT EXISTS audit_schema;"))
         await conn.run_sync(Base.metadata.create_all)
@@ -163,12 +164,16 @@ async def test_outbox_worker_retry_and_backoff() -> None:
         record_id = record.id
 
     # Simulate 5 failures to ensure retry limit and backoff logic
-    with patch("httpx.AsyncClient.post", side_effect=httpx.ConnectError("Connection refused")):
+    with patch(
+        "httpx.AsyncClient.post", side_effect=httpx.ConnectError("Connection refused")
+    ):
         # We will loop 5 times to execute poll_and_dispatch
         for attempt in range(1, 6):
             # Reset next_retry_at to None to allow the worker to pick it up on subsequent attempts
             async with db_manager.get_session_maker()() as session:
-                stmt = select(IntegrationOutbox).where(IntegrationOutbox.id == record_id)
+                stmt = select(IntegrationOutbox).where(
+                    IntegrationOutbox.id == record_id
+                )
                 res = await session.execute(stmt)
                 rec = res.scalars().first()
                 rec.next_retry_at = None
@@ -178,7 +183,9 @@ async def test_outbox_worker_retry_and_backoff() -> None:
 
             # Verify incrementing attempts and backoff
             async with db_manager.get_session_maker()() as session:
-                stmt = select(IntegrationOutbox).where(IntegrationOutbox.id == record_id)
+                stmt = select(IntegrationOutbox).where(
+                    IntegrationOutbox.id == record_id
+                )
                 res = await session.execute(stmt)
                 updated = res.scalars().first()
                 assert updated is not None
@@ -247,7 +254,9 @@ async def test_admin_visibility_endpoint() -> None:
             assert "correlation_id" in item
 
         # 2. Query with status filter
-        resp_failed = await client.get("/api/v1/admin/outbox?status=FAILED", headers=get_auth_headers())
+        resp_failed = await client.get(
+            "/api/v1/admin/outbox?status=FAILED", headers=get_auth_headers()
+        )
         assert resp_failed.status_code == 200
         data_failed = resp_failed.json()
         assert len(data_failed) == 1
@@ -255,7 +264,9 @@ async def test_admin_visibility_endpoint() -> None:
         assert data_failed[0]["attempts"] == 3
 
         # 3. Query with event_type filter
-        resp_event = await client.get("/api/v1/admin/outbox?event_type=OTHER_EVENT", headers=get_auth_headers())
+        resp_event = await client.get(
+            "/api/v1/admin/outbox?event_type=OTHER_EVENT", headers=get_auth_headers()
+        )
         assert resp_event.status_code == 200
         data_event = resp_event.json()
         assert len(data_event) == 1
@@ -286,6 +297,16 @@ async def test_outbox_no_unencrypted_pii() -> None:
         retrieved = res.scalars().first()
         payload_keys = retrieved.payload.keys()
         # Verify no PII fields exist
-        forbidden_pii_keywords = ["name", "ssn", "birth", "dob", "address", "phone", "email", "patient", "subject_name"]
+        forbidden_pii_keywords = [
+            "name",
+            "ssn",
+            "birth",
+            "dob",
+            "address",
+            "phone",
+            "email",
+            "patient",
+            "subject_name",
+        ]
         for key in payload_keys:
             assert not any(pii_kw in key.lower() for pii_kw in forbidden_pii_keywords)

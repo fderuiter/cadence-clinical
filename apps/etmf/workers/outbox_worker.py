@@ -3,9 +3,10 @@ import logging
 import os
 import sys
 from datetime import UTC, datetime, timedelta
-import httpx
 
+import httpx
 from sqlalchemy import select
+
 from apps.etmf.infrastructure.database import db_manager
 from apps.etmf.infrastructure.models import IntegrationOutbox
 
@@ -31,19 +32,18 @@ async def poll_and_dispatch() -> None:
         records = res.scalars().all()
 
         for record in records:
-            if (
-                record.status not in ("PENDING", "FAILED")
-                or not record.retry_eligible
-            ):
+            if record.status not in ("PENDING", "FAILED") or not record.retry_eligible:
                 continue
 
             try:
                 if record.event_type == "DOCUMENT_ARCHIVAL":
                     # Send document to the external archival system
-                    external_archival_url = os.getenv("EXTERNAL_ARCHIVAL_URL", "http://localhost:8004").rstrip("/")
+                    external_archival_url = os.getenv(
+                        "EXTERNAL_ARCHIVAL_URL", "http://localhost:8004"
+                    ).rstrip("/")
                     url = f"{external_archival_url}/archive"
                     payload = record.payload
-                    
+
                     async with httpx.AsyncClient(timeout=5.0) as client:
                         resp = await client.post(url, json=payload)
                         resp.raise_for_status()
@@ -78,9 +78,7 @@ async def outbox_lifecycle_worker() -> None:
         except asyncio.CancelledError:
             break
         except Exception as e:
-            logger.error(
-                "Error in eTMF outbox dispatcher loop: %s", e, exc_info=True
-            )
+            logger.error("Error in eTMF outbox dispatcher loop: %s", e, exc_info=True)
         await asyncio.sleep(poll_interval)
 
 
