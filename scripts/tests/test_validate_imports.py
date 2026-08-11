@@ -222,3 +222,45 @@ def test_check_file_imports_package_to_package_undeclared(tmp_path):
         scripts.validate_imports.PACKAGES_DIR = original_packages_dir
         scripts.validate_imports.ROOT_DIR = original_root_dir
         scripts.validate_imports._PACKAGE_DEPS_CACHE.clear()
+
+
+def test_check_file_imports_test_files_enforced_unless_exempt(tmp_path):
+    # Set up a mock structure: apps/etmf/tests/test_foo.py (non-exempt) and apps/etmf/tests/test_exempt.py (exempt)
+    etmf_tests_dir = tmp_path / "apps" / "etmf" / "tests"
+    etmf_tests_dir.mkdir(parents=True, exist_ok=True)
+
+    non_exempt_file = etmf_tests_dir / "test_foo.py"
+    non_exempt_file.write_text("import apps.execution.trial_lock\n", encoding="utf-8")
+
+    exempt_file = etmf_tests_dir / "test_exempt.py"
+    exempt_file.write_text("import apps.execution.trial_lock\n", encoding="utf-8")
+
+    import scripts.validate_imports
+
+    original_apps_dir = scripts.validate_imports.APPS_DIR
+    original_root_dir = scripts.validate_imports.ROOT_DIR
+    original_exempt_set = (
+        scripts.validate_imports.LEGACY_TESTS_EXEMPT_FROM_IMPORT_BOUNDARIES
+    )
+
+    scripts.validate_imports.APPS_DIR = tmp_path / "apps"
+    scripts.validate_imports.ROOT_DIR = tmp_path
+    scripts.validate_imports.LEGACY_TESTS_EXEMPT_FROM_IMPORT_BOUNDARIES = {
+        "apps/etmf/tests/test_exempt.py"
+    }
+
+    try:
+        # Non-exempt test file must trigger a violation because tests are now scanned!
+        violations_non_exempt = check_file_imports(non_exempt_file)
+        assert len(violations_non_exempt) == 1
+        assert "Direct import of service 'execution'" in violations_non_exempt[0]
+
+        # Exempt test file must NOT trigger any violations
+        violations_exempt = check_file_imports(exempt_file)
+        assert len(violations_exempt) == 0
+    finally:
+        scripts.validate_imports.APPS_DIR = original_apps_dir
+        scripts.validate_imports.ROOT_DIR = original_root_dir
+        scripts.validate_imports.LEGACY_TESTS_EXEMPT_FROM_IMPORT_BOUNDARIES = (
+            original_exempt_set
+        )

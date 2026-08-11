@@ -519,6 +519,7 @@ async def test_site_aware_completeness():
     # 7. Ingest Site Feasibility Survey
     payload_sig = {
         "study_id": "study_site_test",
+        "site_id": "site_alpha",
         "artifact_type": "Site Feasibility Survey",
         "filename": "site_sig.pdf",
         "content": "Site feasibility survey text",
@@ -2656,3 +2657,225 @@ def test_informed_consent_form_taxonomy_and_idempotency():
     assert data2["status"] == "success"
     assert data2["document_id"] == doc1_id
     assert data2["version_index"] == 1  # version should not have incremented!
+
+
+@pytest.mark.asyncio
+async def test_etmf_completeness_site_segregation_and_study_wide():
+    """
+    Test site segregation and study-wide document matching behavior.
+    """
+    client = TestClient(app)
+    admin_headers = get_auth_headers(
+        roles="admin", change_reason="Setup site aware test"
+    )
+    inspector_headers = get_auth_headers(roles="regulatory_inspector")
+    study_id = "study_site_seg_test"
+
+    # 1. Create a study-wide expectation and a site-specific expectation (site_alpha)
+    # Both are under CONDUCT milestone
+    client.post(
+        "/api/v1/etmf/edl",
+        json={
+            "study_id": study_id,
+            "milestone": "CONDUCT",
+            "artifact_type": "Clinical Trial Protocol",  # Study-wide
+            "reason_for_change": "Study-wide protocol expectation",
+        },
+        headers=admin_headers,
+    )
+    client.post(
+        "/api/v1/etmf/edl",
+        json={
+            "study_id": study_id,
+            "site_id": "site_alpha",
+            "milestone": "CONDUCT",
+            "artifact_type": "Site Feasibility Survey",  # Site-specific
+            "reason_for_change": "Site-specific survey expectation",
+        },
+        headers=admin_headers,
+    )
+
+    # 2. Check study-wide completeness -> only "Clinical Trial Protocol" should be expected, which is ABSENT
+    res_study = client.get(
+        f"/api/v1/etmf/completeness?study_id={study_id}&milestone=CONDUCT",
+        headers=inspector_headers,
+    )
+    assert res_study.status_code == 200
+    data_study = res_study.json()
+    assert "Clinical Trial Protocol" in data_study["missing_artifacts"]
+    assert "Site Feasibility Survey" not in data_study["missing_artifacts"]
+
+    # 3. Check site-level completeness for site_alpha -> BOTH should be expected, and both are ABSENT
+    res_site = client.get(
+        f"/api/v1/etmf/completeness?study_id={study_id}&milestone=CONDUCT&site_id=site_alpha",
+        headers=inspector_headers,
+    )
+    assert res_site.status_code == 200
+    data_site = res_site.json()
+    assert "Clinical Trial Protocol" in data_site["missing_artifacts"]
+    assert "Site Feasibility Survey" in data_site["missing_artifacts"]
+
+    # 4. Ingest a document for Site Beta (non-matching) for "Site Feasibility Survey"
+    # This document should be ignored for site_alpha completeness check!
+    client.post(
+        "/api/v1/etmf/ingest",
+        json={
+            "study_id": study_id,
+            "site_id": "site_beta",
+            "artifact_type": "Site Feasibility Survey",
+            "filename": "beta_survey.pdf",
+            "content": "Beta survey content",
+            "mime_type": "application/pdf",
+        },
+        headers=admin_headers,
+    )
+
+    # Verify site_alpha check still lists "Site Feasibility Survey" as ABSENT
+    res_site = client.get(
+        f"/api/v1/etmf/completeness?study_id={study_id}&milestone=CONDUCT&site_id=site_alpha",
+        headers=inspector_headers,
+    )
+    assert "Site Feasibility Survey" in res_site.json()["missing_artifacts"]
+
+    # 5. Ingest a study-wide Clinical Trial Protocol document (site_id=None)
+    client.post(
+        "/api/v1/etmf/ingest",
+        json={
+            "study_id": study_id,
+            "artifact_type": "Clinical Trial Protocol",
+            "filename": "protocol_wide.pdf",
+            "content": "Protocol wide content",
+            "mime_type": "application/pdf",
+        },
+        headers=admin_headers,
+    )
+
+    # Now study-wide completeness should show Protocol is present (no longer missing)
+    res_study_2 = client.get(
+        f"/api/v1/etmf/completeness?study_id={study_id}&milestone=CONDUCT",
+        headers=inspector_headers,
+    )
+    assert "Clinical Trial Protocol" not in res_study_2.json()["missing_artifacts"]
+
+    # 6. Ingest "Site Feasibility Survey" specifically for site_alpha
+    client.post(
+        "/api/v1/etmf/ingest",
+        json={
+            "study_id": study_id,
+            "site_id": "site_alpha",
+            "artifact_type": "Site Feasibility Survey",
+            "filename": "alpha_survey.pdf",
+            "content": "Alpha survey content",
+            "mime_type": "application/pdf",
+        },
+        headers=admin_headers,
+    )
+
+    # Now site_alpha completeness should show both are present and complete!
+    res_site_2 = client.get(
+        f"/api/v1/etmf/completeness?study_id={study_id}&milestone=CONDUCT&site_id=site_alpha",
+        headers=inspector_headers,
+    )
+    assert res_site_2.json()["is_complete"] is True
+
+
+@pytest.mark.asyncio
+async def test_etmf_completeness_rejects_quarantined():
+    """
+    Test that quarantined documents are excluded from matching.
+    """
+    client = TestClient(app)
+    admin_headers = get_auth_headers(
+        roles="admin", change_reason="Setup quarantined test"
+    )
+    inspector_headers = get_auth_headers(roles="regulatory_inspector")
+    study_id = "study_quarantine_match_test"
+
+    # 1. Create a site_alpha expectation for Investigator CV under CONDUCT milestone
+    client.post(
+        "/api/v1/etmf/edl",
+        json={
+            "study_id": study_id,
+            "site_id": "site_alpha",
+            "milestone": "CONDUCT",
+            "artifact_type": "Investigator CV",
+            "reason_for_change": "Investigator CV required",
+        },
+        headers=admin_headers,
+    )
+
+    # 2. Ingest "Investigator CV" without site_id so it gets automatically quarantined
+    ingest_res = client.post(
+        "/api/v1/etmf/ingest",
+        json={
+            "study_id": study_id,
+            "artifact_type": "Investigator CV",
+            "filename": "quarantined_cv.pdf",
+            "content": "CV content",
+            "mime_type": "application/pdf",
+        },
+        headers=admin_headers,
+    )
+    assert ingest_res.status_code == 201
+
+    # Verify site_id is "QUARANTINED" in DB
+    from apps.etmf.infrastructure.repositories import SQLETMFRepository
+
+    async with db_manager.get_session_maker()() as session:
+        repo = SQLETMFRepository(session=session)
+        doc = await repo.get_document_by_id(ingest_res.json()["document_id"])
+        assert doc.site_id == "QUARANTINED"
+
+    # 3. Check completeness for site_alpha -> "Investigator CV" must remain ABSENT because the document is quarantined
+    res_site = client.get(
+        f"/api/v1/etmf/completeness?study_id={study_id}&milestone=CONDUCT&site_id=site_alpha",
+        headers=inspector_headers,
+    )
+    assert "Investigator CV" in res_site.json()["missing_artifacts"]
+    assert res_site.json()["is_complete"] is False
+
+
+@pytest.mark.asyncio
+async def test_etmf_repository_rule_deduplication():
+    """
+    Test repository-level expected document sorting and deduplication.
+    """
+    from apps.etmf.infrastructure.repositories import SQLETMFRepository
+
+    async with db_manager.get_session_maker()() as session:
+        repo = SQLETMFRepository(session=session)
+        study_id = "study_dedup_test"
+
+        # Save two duplicate expected documents with different version_index and created_by
+        from apps.etmf.infrastructure.models import ExpectedDocument
+
+        doc1 = ExpectedDocument(
+            study_id=study_id,
+            site_id="site_alpha",
+            milestone="CONDUCT",
+            artifact_type="Investigator CV",
+            created_by="user_1",
+            reason_for_change="Version 1 of rule",
+            version_index=1,
+        )
+        doc2 = ExpectedDocument(
+            study_id=study_id,
+            site_id="site_alpha",
+            milestone="CONDUCT",
+            artifact_type="Investigator CV",
+            created_by="user_2",
+            reason_for_change="Version 2 of rule",
+            version_index=2,
+        )
+
+        await repo.save_expected_document(doc1)
+        await repo.save_expected_document(doc2)
+        await session.flush()
+
+        # Retrieve expected documents -> should only return 1 and it should be doc2 (highest version index)
+        docs = await repo.get_expected_documents_by_study_and_site(
+            study_id, "site_alpha"
+        )
+        assert len(docs) == 1
+        assert docs[0].version_index == 2
+        assert docs[0].created_by == "user_2"

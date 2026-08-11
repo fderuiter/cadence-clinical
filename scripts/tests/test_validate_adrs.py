@@ -22,6 +22,12 @@ def test_is_architectural_file():
     assert is_architectural_file("apps/designer/db.py") is True
     assert is_architectural_file("apps/designer/soa_models.py") is True
 
+    # Auxiliary services (e.g. ctms, econsent, etmf, safety) database/schema/model/migration files
+    assert is_architectural_file("apps/ctms/models.py") is True
+    assert is_architectural_file("apps/econsent/database/setup.py") is True
+    assert is_architectural_file("apps/etmf/migrations/env.py") is True
+    assert is_architectural_file("apps/safety/schemas/report.py") is True
+
     # Non-architectural files
     assert is_architectural_file("tests/test_validate_adrs.py") is False
     assert is_architectural_file("docs/SRS.md") is False

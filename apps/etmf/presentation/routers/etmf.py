@@ -931,6 +931,14 @@ async def check_completeness(
 
         matched_doc = None
         for arch in archived_docs:
+            if arch.site_id is not None and str(arch.site_id).upper() == "QUARANTINED":
+                continue
+
+            arch_site = arch.site_id if arch.site_id else None
+            exp_site = exp.site_id if exp.site_id else None
+            if arch_site != exp_site:
+                continue
+
             is_match = False
             if exp_code and arch.artifact_code:
                 is_match = arch.artifact_code == exp_code
