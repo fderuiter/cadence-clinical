@@ -91,23 +91,14 @@ def is_architectural_file(filepath: str) -> bool:
     if filepath.startswith("packages/security/") or filepath.startswith("packages/ui/"):
         return True
 
-    # 4. Storage model changes or migrations under execution
-    if (
-        filepath.startswith("apps/execution/database/")
-        or "migrations" in filepath
-        or "models" in filepath
-    ) and filepath.startswith("apps/execution/"):
-        return True
-
-    # 5. Storage model changes or database schemas/models under study designer (Requirement 5)
-    if filepath.startswith("apps/designer/"):
-        filename = os.path.basename(filepath)
-        if (
-            filename == "db.py"
-            or "model" in filename
-            or "schema" in filename
-            or "migration" in filename
-        ):
+    # 4. Unified database, schema, model, and migration pattern matching across all service directories (apps/)
+    if filepath.startswith("apps/"):
+        # Detect database, schema, model, and migration files based on generic string naming patterns.
+        # This prevents silent structural changes in any auxiliary service folder.
+        structural_pattern = re.compile(
+            r"(?:database|schema|model|migration|\bdb\b)", re.IGNORECASE
+        )
+        if structural_pattern.search(filepath):
             return True
 
     return False
