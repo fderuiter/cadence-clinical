@@ -125,11 +125,12 @@ def custom_openapi() -> dict[str, Any]:
 
     gateway_dir = os.path.dirname(os.path.abspath(__file__))
     app_root = os.path.abspath(os.path.join(gateway_dir, "..", ".."))
-    
+
     import sys
+
     if app_root not in sys.path:
         sys.path.insert(0, app_root)
-        
+
     apps_dir = os.path.join(app_root, "apps")
 
     services_config = {}
