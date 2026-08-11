@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-When internet connectivity is lost, the eCOA Subject Portal (`apps/subject-portal`) transitions seamlessly into Offline Capture Mode. During this time, user inputs and clinical diary data must be preserved securely in local browser storage. Per **PRD-EDC-007**, this data must be encrypted locally in IndexedDB using AES-GCM. 
+When internet connectivity is lost, the eCOA Subject Portal (`apps/subject-portal`) transitions seamlessly into Offline Capture Mode. During this time, user inputs and clinical diary data must be preserved securely in local browser storage. Per **PRD-EDC-007**, this data must be encrypted locally in IndexedDB using AES-GCM.
 To achieve secure key-wrapping, key derivation, and multi-user isolation on shared devices without exposing raw master keys or session keys to local storage, we require a persistent local PIN wrapper mechanism.
 
 ## 2. Decision Drivers & Constraints
@@ -24,6 +24,7 @@ To achieve secure key-wrapping, key derivation, and multi-user isolation on shar
 ### Option 1: Plaintext Local Key Storage
 
 Store the derived AES-GCM session key directly in local storage.
+
 - **Pros:**
   - Simple to implement and requires no PIN interaction.
 - **Cons:**
@@ -33,6 +34,7 @@ Store the derived AES-GCM session key directly in local storage.
 ### Option 2: PIN-Wrapped Persistent Local Key Storage (Selected)
 
 Leverage a 4-digit user PIN to wrap the cryptographic master key, storing only the wrapped key and verification salt in browser persistent storage.
+
 - **Pros:**
   - ✅ Securely derives the decryption key from PIN on-demand.
   - ✅ Eliminates the risk of plain-text cryptographic keys being exposed in persistent storage.
