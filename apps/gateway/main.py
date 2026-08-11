@@ -2,21 +2,6 @@ import asyncio
 import logging
 import os
 import sys
-
-# Pre-load safe environment variables before importing microservices or validating schemas
-os.environ.setdefault(
-    "AUDIT_LOG_SECRET_KEY",
-    "test-gxp-audit-secret-key-placeholder-abc",  # pragma: allowlist secret
-)
-os.environ.setdefault(
-    "INBOUND_EMAIL_HMAC_SECRET",
-    "test-email-hmac-secret-placeholder-xyz",  # pragma: allowlist secret
-)
-os.environ.setdefault(
-    "GATEWAY_SECRET",
-    "test-gateway-secret-placeholder-123",  # pragma: allowlist secret
-)
-
 import time
 import uuid
 from collections.abc import Awaitable, Callable
@@ -96,6 +81,20 @@ app.include_router(ecoa_router, prefix="/api/v1/ecoa", tags=["eCOA"])
 def custom_openapi() -> dict[str, Any]:
     if app.openapi_schema:
         return app.openapi_schema
+
+    # Pre-load safe environment variables before importing microservices or validating schemas offline
+    os.environ.setdefault(
+        "AUDIT_LOG_SECRET_KEY",
+        "test-gxp-audit-secret-key-placeholder-abc",  # pragma: allowlist secret
+    )
+    os.environ.setdefault(
+        "INBOUND_EMAIL_HMAC_SECRET",
+        "test-email-hmac-secret-placeholder-xyz",  # pragma: allowlist secret
+    )
+    os.environ.setdefault(
+        "GATEWAY_SECRET",
+        "test-gateway-secret-placeholder-123",  # pragma: allowlist secret
+    )
 
     from fastapi.openapi.utils import get_openapi
 
