@@ -25,6 +25,11 @@ import {
   setInMemorySessionKey,
   getWrappedMasterKeyConfig,
   saveWrappedMasterKeyConfig,
+  saveAssignmentsToDB,
+  getAssignmentsFromDB,
+  saveInstrumentsToDB,
+  getInstrumentsFromDB,
+  getInstrumentFromDB,
 } from "./sync-queue.js";
 
 // Mock Data fallbacks for high-fidelity offline/sandbox usage
@@ -538,11 +543,38 @@ async function startQuestionnaire(assignmentId) {
     try {
       instrument = await fetchInstrument(assignment.instrument_id);
       state.instruments[assignment.instrument_id] = instrument;
+      if (instrument) {
+        try {
+          await saveInstrumentsToDB([instrument]);
+        } catch (dbErr) {
+          console.warn("Could not cache instrument to IndexedDB:", dbErr);
+        }
+      }
     } catch (err) {
-      alert(
-        "Failed to retrieve questionnaire definition: " + (err.message || err)
-      );
-      return;
+      try {
+        instrument = await getInstrumentFromDB(assignment.instrument_id);
+      } catch (dbErr) {
+        console.warn("Could not read instrument from IndexedDB:", dbErr);
+      }
+      if (instrument) {
+        state.instruments[assignment.instrument_id] = instrument;
+      } else {
+        alert(
+          "Failed to retrieve questionnaire definition: " + (err.message || err)
+        );
+        return;
+      }
+    }
+  }
+
+  if (!instrument) {
+    try {
+      instrument = await getInstrumentFromDB(assignment.instrument_id);
+    } catch (dbErr) {
+      console.warn("Could not read instrument from IndexedDB:", dbErr);
+    }
+    if (instrument) {
+      state.instruments[assignment.instrument_id] = instrument;
     }
   }
 
@@ -1913,10 +1945,25 @@ async function initializeApp() {
     try {
       state.assignments = await fetchAssignments(userId);
       state.assignmentsError = false;
+      try {
+        await saveAssignmentsToDB(state.assignments);
+      } catch (dbErr) {
+        console.warn("Could not cache assignments to IndexedDB:", dbErr);
+      }
     } catch (err) {
       state.tasksError = err.message || err;
       state.assignments = [];
       state.assignmentsError = true;
+      try {
+        const cachedAssignments = await getAssignmentsFromDB();
+        if (cachedAssignments && cachedAssignments.length > 0) {
+          state.assignments = cachedAssignments;
+          state.tasksError = null;
+          state.assignmentsError = false;
+        }
+      } catch (dbErr) {
+        console.warn("Could not read assignments from IndexedDB:", dbErr);
+      }
     } finally {
       state.tasksLoading = false;
     }
@@ -1930,9 +1977,25 @@ async function initializeApp() {
       insts.forEach((inst) => {
         state.instruments[inst.id] = inst;
       });
+      try {
+        await saveInstrumentsToDB(insts);
+      } catch (dbErr) {
+        console.warn("Could not cache instruments to IndexedDB:", dbErr);
+      }
     } catch (err) {
       state.instrumentsError = err.message || err;
       state.instruments = {};
+      try {
+        const cachedInstruments = await getInstrumentsFromDB();
+        if (cachedInstruments && cachedInstruments.length > 0) {
+          cachedInstruments.forEach((inst) => {
+            state.instruments[inst.id] = inst;
+          });
+          state.instrumentsError = null;
+        }
+      } catch (dbErr) {
+        console.warn("Could not read instruments from IndexedDB:", dbErr);
+      }
     } finally {
       state.instrumentsLoading = false;
     }
@@ -2097,6 +2160,11 @@ async function initializeApp() {
     try {
       state.assignments = await fetchAssignments(state.session.userId);
       state.assignmentsError = false;
+      try {
+        await saveAssignmentsToDB(state.assignments);
+      } catch (dbErr) {
+        console.warn("Could not cache assignments to IndexedDB:", dbErr);
+      }
       if (isAuthenticatedSession()) {
         try {
           const insts = await fetchAssignedInstruments(state.session.userId);
@@ -2104,6 +2172,11 @@ async function initializeApp() {
           insts.forEach((inst) => {
             state.instruments[inst.id] = inst;
           });
+          try {
+            await saveInstrumentsToDB(insts);
+          } catch (dbErr) {
+            console.warn("Could not cache instruments to IndexedDB:", dbErr);
+          }
         } catch (e) {
           console.warn("Could not refetch instruments during retry:", e);
         }
@@ -2112,6 +2185,26 @@ async function initializeApp() {
       state.tasksError = err.message || err;
       state.assignmentsError = true;
       state.assignments = [];
+      try {
+        const cachedAssignments = await getAssignmentsFromDB();
+        if (cachedAssignments && cachedAssignments.length > 0) {
+          state.assignments = cachedAssignments;
+          state.tasksError = null;
+          state.assignmentsError = false;
+        }
+      } catch (dbErr) {
+        console.warn("Could not read assignments from IndexedDB:", dbErr);
+      }
+      try {
+        const cachedInstruments = await getInstrumentsFromDB();
+        if (cachedInstruments && cachedInstruments.length > 0) {
+          cachedInstruments.forEach((inst) => {
+            state.instruments[inst.id] = inst;
+          });
+        }
+      } catch (dbErr) {
+        console.warn("Could not read instruments from IndexedDB:", dbErr);
+      }
     } finally {
       state.tasksLoading = false;
       renderTasks();

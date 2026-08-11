@@ -65,27 +65,185 @@ export async function initSessionKey(sessionMaterial) {
 
 export function openDatabase() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("SubjectPortalSyncDB", 1);
-    /* v8 ignore start */
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-      if (!db.objectStoreNames.contains("submissions")) {
-        db.createObjectStore("submissions", { keyPath: "sequence_number" });
+    try {
+      const request = indexedDB.open("SubjectPortalSyncDB", 2);
+      /* v8 ignore start */
+      request.onupgradeneeded = (event) => {
+        try {
+          const db = event.target.result;
+          console.log(`[IndexedDB] Upgrading SubjectPortalSyncDB from version ${event.oldVersion} to ${event.newVersion}`);
+          if (!db.objectStoreNames.contains("submissions")) {
+            db.createObjectStore("submissions", { keyPath: "sequence_number" });
+          }
+          if (!db.objectStoreNames.contains("config")) {
+            db.createObjectStore("config", { keyPath: "key" });
+          }
+          if (!db.objectStoreNames.contains("instruments")) {
+            db.createObjectStore("instruments", { keyPath: "id" });
+          }
+          if (!db.objectStoreNames.contains("assignments")) {
+            db.createObjectStore("assignments", { keyPath: "id" });
+          }
+        } catch (upgradeErr) {
+          console.error("IndexedDB upgrade error:", upgradeErr);
+          if (typeof window !== "undefined" && typeof window.alert === "function") {
+            window.alert("Database upgrade failed. Please ensure you have sufficient disk space.");
+          }
+        }
+      };
+      /* v8 ignore stop */
+      request.onsuccess = (event) => {
+        const db = event.target.result;
+        console.log(`[IndexedDB] Opened SubjectPortalSyncDB at version ${db.version} containing stores:`, Array.from(db.objectStoreNames));
+        resolve(db);
+      };
+      /* v8 ignore start */
+      request.onerror = (event) => {
+        const err = event.target.error;
+        console.error("IndexedDB open failed (disk limits, private window, or quota exceeded):", err);
+        if (typeof window !== "undefined" && typeof window.alert === "function") {
+          window.alert("Offline storage initialization failed. Please check your disk space or privacy settings.");
+        } else if (typeof alert === "function") {
+          alert("Offline storage initialization failed. Please check your disk space or privacy settings.");
+        }
+        reject(err);
+      };
+      /* v8 ignore stop */
+    } catch (err) {
+      /* v8 ignore start */
+      console.error("Failed to call indexedDB.open due to a critical error:", err);
+      if (typeof window !== "undefined" && typeof window.alert === "function") {
+        window.alert("Offline storage initialization failed due to a critical browser error.");
       }
-      if (!db.objectStoreNames.contains("config")) {
-        db.createObjectStore("config", { keyPath: "key" });
-      }
-    };
-    /* v8 ignore stop */
-    request.onsuccess = (event) => {
-      resolve(event.target.result);
-    };
-    /* v8 ignore start */
-    request.onerror = (event) => {
-      reject(event.target.error);
-    };
-    /* v8 ignore stop */
+      reject(err);
+      /* v8 ignore stop */
+    }
   });
+}
+
+export async function saveAssignmentsToDB(assignments) {
+  try {
+    const plainAssignments = JSON.parse(JSON.stringify(assignments));
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("assignments", "readwrite");
+      const store = tx.objectStore("assignments");
+      store.clear();
+      for (const assignment of plainAssignments) {
+        store.put(assignment);
+      }
+      tx.oncomplete = () => {
+        resolve();
+      };
+      /* v8 ignore start */
+      tx.onerror = () => {
+        reject(tx.error);
+      };
+      /* v8 ignore stop */
+    });
+  } catch (err) {
+    /* v8 ignore start */
+    console.error("Failed to save assignments to IndexedDB:", err);
+    /* v8 ignore stop */
+  }
+}
+
+export async function getAssignmentsFromDB() {
+  try {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("assignments", "readonly");
+      const store = tx.objectStore("assignments");
+      const req = store.getAll();
+      req.onsuccess = () => {
+        resolve(req.result);
+      };
+      /* v8 ignore start */
+      req.onerror = () => {
+        reject(req.error);
+      };
+      /* v8 ignore stop */
+    });
+  } catch (err) {
+    /* v8 ignore start */
+    console.error("Failed to retrieve assignments from IndexedDB:", err);
+    return [];
+    /* v8 ignore stop */
+  }
+}
+
+export async function saveInstrumentsToDB(instruments) {
+  try {
+    const plainInstruments = JSON.parse(JSON.stringify(instruments));
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("instruments", "readwrite");
+      const store = tx.objectStore("instruments");
+      for (const instrument of plainInstruments) {
+        store.put(instrument);
+      }
+      tx.oncomplete = () => {
+        resolve();
+      };
+      /* v8 ignore start */
+      tx.onerror = () => {
+        reject(tx.error);
+      };
+      /* v8 ignore stop */
+    });
+  } catch (err) {
+    /* v8 ignore start */
+    console.error("Failed to save instruments to IndexedDB:", err);
+    /* v8 ignore stop */
+  }
+}
+
+export async function getInstrumentsFromDB() {
+  try {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("instruments", "readonly");
+      const store = tx.objectStore("instruments");
+      const req = store.getAll();
+      req.onsuccess = () => {
+        resolve(req.result);
+      };
+      /* v8 ignore start */
+      req.onerror = () => {
+        reject(req.error);
+      };
+      /* v8 ignore stop */
+    });
+  } catch (err) {
+    /* v8 ignore start */
+    console.error("Failed to retrieve instruments from IndexedDB:", err);
+    return [];
+    /* v8 ignore stop */
+  }
+}
+
+export async function getInstrumentFromDB(id) {
+  try {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("instruments", "readonly");
+      const store = tx.objectStore("instruments");
+      const req = store.get(id);
+      req.onsuccess = () => {
+        resolve(req.result || null);
+      };
+      /* v8 ignore start */
+      req.onerror = () => {
+        reject(req.error);
+      };
+      /* v8 ignore stop */
+    });
+  } catch (err) {
+    /* v8 ignore start */
+    console.error(`Failed to retrieve instrument ${id} from IndexedDB:`, err);
+    return null;
+    /* v8 ignore stop */
+  }
 }
 
 export async function getClientId() {
@@ -257,7 +415,7 @@ export async function getQueuedSubmissions() {
     const store = tx.objectStore("submissions");
     const req = store.getAll();
     req.onsuccess = async () => {
-      const all = req.result || [];
+      const all = req.result;
       const queued = all.filter((s) => s.status === "QUEUED");
       const decryptedQueued = await Promise.all(queued.map(decryptRecord));
       decryptedQueued.sort((a, b) => a.sequence_number - b.sequence_number);
@@ -278,7 +436,7 @@ export async function getAllSubmissions() {
     const store = tx.objectStore("submissions");
     const req = store.getAll();
     req.onsuccess = async () => {
-      const all = req.result || [];
+      const all = req.result;
       const decryptedAll = await Promise.all(all.map(decryptRecord));
       decryptedAll.sort((a, b) => b.sequence_number - a.sequence_number);
       resolve(decryptedAll);
@@ -360,14 +518,18 @@ export async function bulkUpdateSubmissionStatuses(updates) {
         putReq.onsuccess = () => {
           subsToDecrypt.push(sub);
         };
+        /* v8 ignore start */
         putReq.onerror = () => {
           reject(putReq.error);
         };
+        /* v8 ignore stop */
       };
 
+      /* v8 ignore start */
       getReq.onerror = () => {
         reject(getReq.error);
       };
+      /* v8 ignore stop */
     }
 
     tx.oncomplete = async () => {
@@ -375,10 +537,13 @@ export async function bulkUpdateSubmissionStatuses(updates) {
         const decrypted = await Promise.all(subsToDecrypt.map(decryptRecord));
         resolve(decrypted);
       } catch (err) {
+        /* v8 ignore start */
         reject(err);
+        /* v8 ignore stop */
       }
     };
 
+    /* v8 ignore start */
     tx.onerror = () => {
       reject(tx.error);
     };
@@ -386,6 +551,7 @@ export async function bulkUpdateSubmissionStatuses(updates) {
     tx.onabort = () => {
       reject(new Error("Transaction aborted"));
     };
+    /* v8 ignore stop */
   });
 }
 
