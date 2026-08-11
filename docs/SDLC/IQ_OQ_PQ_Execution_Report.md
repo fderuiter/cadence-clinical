@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2223
-- **Passed:** 2218 🟢
+- **Total Automated Test Cases Run:** 2227
+- **Passed:** 2222 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
 - **Overall Operational Pass Rate:** 99.78%
@@ -262,7 +262,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_ctms_doa_rbac_violations`                                                    | `apps.ctms.tests.test_doa_router`                                           | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_doa_manager_service_class_interface`                                         | `apps.ctms.tests.test_doa_service`                                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_doa_task_delegation_and_esignature_lifecycle`                                | `apps.ctms.tests.test_doa_service`                                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
-| `test_complete_doa_workflow_lifecycle`                                             | `apps.ctms.tests.test_doa_workflow`                                         | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_compare_usdm_snapshots_added_removed_modified`                               | `apps.designer.tests.test_amendment_diff`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_backward_compatible_form_rehydration_lifecycle`                              | `apps.designer.tests.test_amendment_rehydration`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_get_amendment_summary_endpoint`                                              | `apps.designer.tests.test_amendment_router`                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
@@ -576,8 +575,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_econsent_signature_audit_compliance`                                         | `apps.econsent.tests.test_econsent_workflow`                                | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_econsent_signature_capture_success`                                          | `apps.econsent.tests.test_econsent_workflow`                                | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_protocol_amendment_triggers_reconsent`                                       | `apps.econsent.tests.test_econsent_workflow`                                | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
-| `test_subject_consent_blocking_and_reconsent_lifecycle`                            | `apps.econsent.tests.test_reconsent_blocking`                               | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
-| `test_subject_consent_endpoint_lifecycle`                                          | `apps.econsent.tests.test_reconsent_blocking`                               | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_classify_incoming_document_changed_dict`                                     | `apps.eisf.tests.test_eisf_adapter`                                         | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_classify_incoming_document_changed_object`                                   | `apps.eisf.tests.test_eisf_adapter`                                         | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_classify_incoming_document_duplicate_dict`                                   | `apps.eisf.tests.test_eisf_adapter`                                         | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
@@ -643,8 +640,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_deterministic_and_complete_binder_export`                                    | `apps.etmf.tests.test_etmf`                                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_edl_definitions_and_crud`                                                    | `apps.etmf.tests.test_etmf`                                                 | PRD-EDL-001, Trace-4                         | 🟢 PASSED  | < 1s     |
 | `test_etmf_audit_logs_filtering_and_pagination`                                    | `apps.etmf.tests.test_etmf`                                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_etmf_completeness_rejects_quarantined`                                       | `apps.etmf.tests.test_etmf`                                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_etmf_completeness_site_segregation_and_study_wide`                           | `apps.etmf.tests.test_etmf`                                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_etmf_edge_cases_for_coverage`                                                | `apps.etmf.tests.test_etmf`                                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_etmf_qc_lifecycle_and_audit`                                                 | `apps.etmf.tests.test_etmf`                                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_etmf_repository_rule_deduplication`                                          | `apps.etmf.tests.test_etmf`                                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_explicit_and_default_taxonomy_version_roundtrip_and_legacy_interpretability` | `apps.etmf.tests.test_etmf`                                                 | PRD-TMF-003                                  | 🟢 PASSED  | < 1s     |
 | `test_informed_consent_form_taxonomy_and_idempotency`                              | `apps.etmf.tests.test_etmf`                                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_inspector_portal_read_only_access_limits`                                    | `apps.etmf.tests.test_etmf`                                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
@@ -1219,6 +1219,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_randomization_entities_audit_trail_and_soft_delete`                          | `apps.execution.tests.test_randomization_persistence`                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_randomization_entities_hard_delete_prevented`                                | `apps.execution.tests.test_randomization_persistence`                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_randomization_entities_trial_lock_conformity`                                | `apps.execution.tests.test_randomization_persistence`                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_subject_consent_blocking_and_reconsent_lifecycle`                            | `apps.execution.tests.test_reconsent_blocking`                              | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_subject_consent_endpoint_lifecycle`                                          | `apps.execution.tests.test_reconsent_blocking`                              | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_get_subject_api_blinding_and_isolation`                                      | `apps.execution.tests.test_role_redaction_and_access`                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_get_visit_api_blinding_and_isolation`                                        | `apps.execution.tests.test_role_redaction_and_access`                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_site_isolation_guard_and_audit`                                              | `apps.execution.tests.test_role_redaction_and_access`                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
@@ -1705,6 +1707,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_notifications_negative_security_paths`                                       | `apps.notifications.tests.test_notifications`                               | PRD-SYS-004                                  | 🟢 PASSED  | < 1s     |
 | `test_webhook_delivery_channel_failure_and_retry_backoff`                          | `apps.notifications.tests.test_notifications`                               | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_webhook_delivery_channel_success`                                            | `apps.notifications.tests.test_notifications`                               | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_complete_doa_workflow_lifecycle`                                             | `apps.org.tests.test_doa_workflow`                                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_doa_signoff_automatic_archival_handoff`                                      | `apps.org.tests.test_org_integration_e2e`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_doa_signoff_tampered_payload_rejected`                                       | `apps.org.tests.test_org_integration_e2e`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_eisf_completeness_participation`                                             | `apps.org.tests.test_org_integration_e2e`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
@@ -2393,6 +2396,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_check_file_imports_relative_same_service`                                    | `scripts.tests.test_validate_imports`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_check_file_imports_same_service`                                             | `scripts.tests.test_validate_imports`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_check_file_imports_shared_packages`                                          | `scripts.tests.test_validate_imports`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_check_file_imports_test_files_enforced_unless_exempt`                        | `scripts.tests.test_validate_imports`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_get_service_name`                                                            | `scripts.tests.test_validate_imports`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_designer_validation_error_rfc7807`                                           | `scripts.tests.test_validation_problem_details`                             | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_execution_validation_error_rfc7807`                                          | `scripts.tests.test_validation_problem_details`                             | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
