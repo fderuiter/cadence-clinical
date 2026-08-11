@@ -1,0 +1,14 @@
+{
+  "name": "shared-api-client",
+  "version": "1.0.0",
+  "description": "Centralized, auto-generated, and fully typed API client for Cadence Clinical portal systems.",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "node ../../scripts/generate_api_client.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

@@ -16,7 +16,8 @@ members = [
 exclude = [
     "apps/web",
     "apps/subject-portal",
-    "packages/ui"
+    "packages/ui",
+    "packages/shared-api-client"
 ]
 
 [tool.uv.sources]

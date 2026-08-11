@@ -1,19 +1,12 @@
 import { apiClient } from "./apiClient";
 
-/**
- * Service module for the eConsent microservice.
- * Interfaces with templates, clauses, comprehension checks, and translations.
- */
 export const econsentService = {
-  // --- Clauses ---
   createClause(body, options = {}) {
     return apiClient.post("/api/v1/econsent/clauses", body, options);
   },
-
   updateClause(clauseId, body, options = {}) {
     return apiClient.put(`/api/v1/econsent/clauses/${clauseId}`, body, options);
   },
-
   listClauses(params = {}, options = {}) {
     const query = new URLSearchParams();
     if (params.study_id) query.append("study_id", params.study_id);
@@ -25,7 +18,6 @@ export const econsentService = {
       : "/api/v1/econsent/clauses";
     return apiClient.get(path, options);
   },
-
   getClause(clauseId, params = {}, options = {}) {
     const query = new URLSearchParams();
     if (params.version_index !== undefined)
@@ -36,12 +28,9 @@ export const econsentService = {
       : `/api/v1/econsent/clauses/${clauseId}`;
     return apiClient.get(path, options);
   },
-
-  // --- Templates ---
   createTemplate(body, options = {}) {
     return apiClient.post("/api/v1/econsent/templates", body, options);
   },
-
   updateTemplate(templateId, body, options = {}) {
     return apiClient.put(
       `/api/v1/econsent/templates/${templateId}`,
@@ -49,7 +38,6 @@ export const econsentService = {
       options
     );
   },
-
   listTemplates(params = {}, options = {}) {
     const query = new URLSearchParams();
     if (params.study_id) query.append("study_id", params.study_id);
@@ -61,7 +49,6 @@ export const econsentService = {
       : "/api/v1/econsent/templates";
     return apiClient.get(path, options);
   },
-
   getTemplate(templateId, params = {}, options = {}) {
     const query = new URLSearchParams();
     if (params.version_index !== undefined)
@@ -72,7 +59,6 @@ export const econsentService = {
       : `/api/v1/econsent/templates/${templateId}`;
     return apiClient.get(path, options);
   },
-
   composeTemplate(templateId, params = {}, options = {}) {
     const query = new URLSearchParams();
     if (params.version_index !== undefined)
@@ -83,7 +69,6 @@ export const econsentService = {
       : `/api/v1/econsent/templates/${templateId}/compose`;
     return apiClient.get(path, options);
   },
-
   publishTemplate(templateId, options = {}) {
     return apiClient.post(
       `/api/v1/econsent/templates/${templateId}/publish`,
@@ -91,8 +76,6 @@ export const econsentService = {
       options
     );
   },
-
-  // --- Comprehension Checks ---
   defineComprehensionCheck(templateId, versionIndex, body, options = {}) {
     return apiClient.post(
       `/api/v1/econsent/templates/${templateId}/versions/${versionIndex}/comprehension-checks`,
@@ -100,19 +83,15 @@ export const econsentService = {
       options
     );
   },
-
   getComprehensionCheck(templateId, versionIndex, options = {}) {
     return apiClient.get(
       `/api/v1/econsent/templates/${templateId}/versions/${versionIndex}/comprehension-checks`,
       options
     );
   },
-
-  // --- Translations ---
   createTranslation(body, options = {}) {
     return apiClient.post("/api/v1/econsent/translations", body, options);
   },
-
   updateTranslation(translationId, body, options = {}) {
     return apiClient.put(
       `/api/v1/econsent/translations/${translationId}`,
@@ -120,7 +99,6 @@ export const econsentService = {
       options
     );
   },
-
   listTranslations(params = {}, options = {}) {
     const query = new URLSearchParams();
     if (params.source_id) query.append("source_id", params.source_id);
@@ -135,7 +113,6 @@ export const econsentService = {
       : "/api/v1/econsent/translations";
     return apiClient.get(path, options);
   },
-
   getTranslation(translationId, params = {}, options = {}) {
     const query = new URLSearchParams();
     if (params.version_index !== undefined)
@@ -146,7 +123,6 @@ export const econsentService = {
       : `/api/v1/econsent/translations/${translationId}`;
     return apiClient.get(path, options);
   },
-
   transitionTranslation(translationId, body, options = {}) {
     return apiClient.post(
       `/api/v1/econsent/translations/${translationId}/transition`,
@@ -154,8 +130,6 @@ export const econsentService = {
       options
     );
   },
-
-  // --- Approved Composed Content (Participant) ---
   getApprovedContent(templateId, params = {}, options = {}) {
     const query = new URLSearchParams();
     if (params.language_code)

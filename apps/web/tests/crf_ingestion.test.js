@@ -24,10 +24,8 @@ describe("Protocol Ingestion / CRF Builder Frontend Tests", () => {
   describe("ingestionClient.js API Methods", () => {
     it("uploadProtocol constructs FormData and includes authorization and reasoning headers", async () => {
       const mockResponse = { id: "cand_123", status: "PENDING_REVIEW" };
-      global.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      const { apiClient } = await import("../src/api/apiClient");
+      apiClient.post.mockResolvedValueOnce(mockResponse);
 
       const file = new File(["dummy protocol pdf"], "protocol.pdf", {
         type: "application/pdf",
@@ -36,14 +34,13 @@ describe("Protocol Ingestion / CRF Builder Frontend Tests", () => {
         changeReason: "Ingesting trial blueprint",
       });
 
-      expect(global.fetch).toHaveBeenCalledTimes(1);
-      const [url, options] = global.fetch.mock.calls[0];
+      expect(apiClient.post).toHaveBeenCalledTimes(1);
+      const [url, body, options] = apiClient.post.mock.calls[0];
       expect(url).toContain("/api/v1/designer/ingestion/upload");
-      expect(options.method).toBe("POST");
-      expect(options.headers["X-Change-Reason"]).toBe(
+      expect(options.changeReason).toBe(
         "Ingesting trial blueprint"
       );
-      expect(options.body).toBeInstanceOf(FormData);
+      expect(body).toBeInstanceOf(FormData);
       expect(result).toEqual(mockResponse);
     });
 
