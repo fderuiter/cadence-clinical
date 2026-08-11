@@ -149,10 +149,12 @@ def test_get_swagger_ui() -> None:
 
     Ensures the /docs route returns a 200 OK status and contains the correct HTML title.
     """
+    from apps.gateway.main import BRAND_NAME
+
     with TestClient(app) as client:
         response = client.get("/docs")
         assert response.status_code == 200
-        assert "Cadence Clinical - Unified API Docs" in response.text
+        assert f"{BRAND_NAME} - Unified API Docs" in response.text
 
 
 def test_proxy_requests_paths(monkeypatch: pytest.MonkeyPatch) -> None:
