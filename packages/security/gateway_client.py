@@ -64,6 +64,19 @@ class GatewayBaseClient:
     header formatting, and consistent logging of failed requests.
     """
 
+    _shared_client: httpx.AsyncClient | None = None
+
+    @classmethod
+    def get_shared_client(cls) -> httpx.AsyncClient:
+        if cls._shared_client is None:
+            limits = httpx.Limits(
+                max_connections=100,
+                max_keepalive_connections=20,
+                keepalive_expiry=30.0,
+            )
+            cls._shared_client = httpx.AsyncClient(limits=limits)
+        return cls._shared_client
+
     def __init__(self, base_url: str = "", timeout: float = 5.0):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
@@ -159,32 +172,32 @@ class GatewayBaseClient:
             kwargs["timeout"] = self.timeout
 
         try:
-            async with httpx.AsyncClient() as client:
-                method_lower = method.lower()
-                if method_lower == "get":
-                    response = await client.get(url, headers=gw_headers, **kwargs)
-                elif method_lower == "post":
-                    response = await client.post(url, headers=gw_headers, **kwargs)
-                elif method_lower == "put":
-                    response = await client.put(url, headers=gw_headers, **kwargs)
-                elif method_lower == "delete":
-                    response = await client.delete(url, headers=gw_headers, **kwargs)
-                elif method_lower == "patch":
-                    response = await client.patch(url, headers=gw_headers, **kwargs)
-                else:
-                    response = await client.request(
-                        method, url, headers=gw_headers, **kwargs
-                    )
+            client = self.get_shared_client()
+            method_lower = method.lower()
+            if method_lower == "get":
+                response = await client.get(url, headers=gw_headers, **kwargs)
+            elif method_lower == "post":
+                response = await client.post(url, headers=gw_headers, **kwargs)
+            elif method_lower == "put":
+                response = await client.put(url, headers=gw_headers, **kwargs)
+            elif method_lower == "delete":
+                response = await client.delete(url, headers=gw_headers, **kwargs)
+            elif method_lower == "patch":
+                response = await client.patch(url, headers=gw_headers, **kwargs)
+            else:
+                response = await client.request(
+                    method, url, headers=gw_headers, **kwargs
+                )
 
-                # Check if the response is a failure (not 2xx)
-                if response.status_code < 200 or response.status_code >= 300:
-                    logger.error(
-                        "Failed request to %s: HTTP status code %s. Response content: %s",
-                        url,
-                        response.status_code,
-                        response.text,
-                    )
-                return response
+            # Check if the response is a failure (not 2xx)
+            if response.status_code < 200 or response.status_code >= 300:
+                logger.error(
+                    "Failed request to %s: HTTP status code %s. Response content: %s",
+                    url,
+                    response.status_code,
+                    response.text,
+                )
+            return response
         except Exception as e:
             logger.error(
                 "Exception occurred during request to %s: %s",
