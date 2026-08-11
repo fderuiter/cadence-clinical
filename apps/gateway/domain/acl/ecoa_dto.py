@@ -121,6 +121,7 @@ class EPROSubmitResponse(BaseModel):
     signature_validation: dict[str, Any] | None = None
     reconciliation_result: dict[str, Any] | None = None
     audit_details: dict[str, Any] | None = None
+    offline_sync_markers: EPROOfflineMarker | None = None
 
 
 class EPROBulkSyncResponse(BaseModel):

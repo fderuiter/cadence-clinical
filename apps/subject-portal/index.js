@@ -13,7 +13,7 @@ import {
   queueSubmission,
   getQueuedSubmissions,
   getAllSubmissions,
-  updateSubmissionStatus,
+  bulkUpdateSubmissionStatuses,
   clearAllSubmissions,
   initSessionKey,
   clearSessionKey,
@@ -1652,15 +1652,55 @@ async function syncOfflineQueue() {
     });
 
     if (response && response.results) {
-      for (let i = 0; i < queued.length; i++) {
-        const item = queued[i];
-        const res = response.results[i];
-        if (res) {
-          await updateSubmissionStatus(item.sequence_number, res.status, {
-            resolved_answers: res.answers,
-            resolved_at: new Date().toISOString(),
-          });
+      const updates = [];
+      const hasKeys = response.results.some((res) => {
+        return (
+          (res.offline_sync_markers?.sequence_number !== undefined &&
+            res.offline_sync_markers?.client_id !== undefined) ||
+          (res.sequence_number !== undefined && res.client_id !== undefined)
+        );
+      });
+
+      if (hasKeys) {
+        for (const res of response.results) {
+          const resSeq =
+            res.offline_sync_markers?.sequence_number ?? res.sequence_number;
+          const resClientId =
+            res.offline_sync_markers?.client_id ?? res.client_id;
+          const item = queued.find(
+            (q) => q.sequence_number === resSeq && q.client_id === resClientId
+          );
+          if (item) {
+            updates.push({
+              sequence_number: item.sequence_number,
+              status: res.status,
+              additionalFields: {
+                resolved_answers: res.answers,
+                resolved_at: new Date().toISOString(),
+              },
+            });
+          }
         }
+      } else {
+        // Graceful fallback to index matching
+        for (let i = 0; i < queued.length; i++) {
+          const item = queued[i];
+          const res = response.results[i];
+          if (res) {
+            updates.push({
+              sequence_number: item.sequence_number,
+              status: res.status,
+              additionalFields: {
+                resolved_answers: res.answers,
+                resolved_at: new Date().toISOString(),
+              },
+            });
+          }
+        }
+      }
+
+      if (updates.length > 0) {
+        await bulkUpdateSubmissionStatuses(updates);
       }
     }
 

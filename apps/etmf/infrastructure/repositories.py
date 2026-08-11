@@ -21,6 +21,19 @@ class SQLETMFRepository(ETMFRepositoryPort):
     def __init__(self, session: AsyncSession | None = None) -> None:
         self._session = session
 
+    def _deduplicate_rules(
+        self, docs: Sequence[ExpectedDocument]
+    ) -> list[ExpectedDocument]:
+        seen = set()
+        deduped = []
+        for doc in docs:
+            site_key = doc.site_id if doc.site_id else None
+            key = (doc.artifact_type, doc.milestone, site_key)
+            if key not in seen:
+                seen.add(key)
+                deduped.append(doc)
+        return deduped
+
     @property
     def session(self) -> AsyncSession:
         if self._session is not None:
@@ -68,9 +81,20 @@ class SQLETMFRepository(ETMFRepositoryPort):
     async def get_expected_documents_by_study(
         self, study_id: str
     ) -> Sequence[ExpectedDocument]:
-        stmt = select(ExpectedDocument).where(ExpectedDocument.study_id == study_id)
+        stmt = (
+            select(ExpectedDocument)
+            .where(ExpectedDocument.study_id == study_id)
+            .order_by(
+                ExpectedDocument.artifact_type.asc(),
+                ExpectedDocument.milestone.asc(),
+                ExpectedDocument.site_id.asc(),
+                ExpectedDocument.version_index.desc(),
+                ExpectedDocument.created_at.desc(),
+            )
+        )
         result = await self.session.execute(stmt)
-        return result.scalars().all()
+        raw_docs = result.scalars().all()
+        return self._deduplicate_rules(raw_docs)
 
     @map_database_exceptions
     async def get_expected_documents_by_study_and_site(
@@ -84,8 +108,16 @@ class SQLETMFRepository(ETMFRepositoryPort):
             )
         else:
             stmt = stmt.where(ExpectedDocument.site_id.is_(None))
+        stmt = stmt.order_by(
+            ExpectedDocument.artifact_type.asc(),
+            ExpectedDocument.milestone.asc(),
+            ExpectedDocument.site_id.asc(),
+            ExpectedDocument.version_index.desc(),
+            ExpectedDocument.created_at.desc(),
+        )
         result = await self.session.execute(stmt)
-        return result.scalars().all()
+        raw_docs = result.scalars().all()
+        return self._deduplicate_rules(raw_docs)
 
     @map_database_exceptions
     async def save_expected_document(self, edl: ExpectedDocument) -> ExpectedDocument:
@@ -299,8 +331,16 @@ class SQLETMFRepository(ETMFRepositoryPort):
             stmt = stmt.where(
                 ExpectedDocument.milestone == normalize_milestone(milestone)
             )
+        stmt = stmt.order_by(
+            ExpectedDocument.artifact_type.asc(),
+            ExpectedDocument.milestone.asc(),
+            ExpectedDocument.site_id.asc(),
+            ExpectedDocument.version_index.desc(),
+            ExpectedDocument.created_at.desc(),
+        )
         result = await self.session.execute(stmt)
-        return result.scalars().all()
+        raw_docs = result.scalars().all()
+        return self._deduplicate_rules(raw_docs)
 
     @map_database_exceptions
     async def get_document_history(
