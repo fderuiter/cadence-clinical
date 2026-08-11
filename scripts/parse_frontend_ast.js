@@ -6,7 +6,7 @@
  * @req:PRD-SYS-001
  */
 
-const parser = require("../node_modules/.pnpm/@babel+parser@7.29.7/node_modules/@babel/parser");
+const parser = require("@babel/parser");
 const fs = require("fs");
 const path = require("path");
 
