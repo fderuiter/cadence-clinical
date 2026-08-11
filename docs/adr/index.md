@@ -56,6 +56,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ### 2. API Gateway, Security & Identity
 - [2026-08-11: Unified Ports and Adapters Architecture, Transaction Propagation, and Gateway Connection Pooling](2026-08-11-unified-ports-and-adapters-architecture-transaction-propagation-and-gateway-connection-pooling.md)
 
+- [2026-08-11: Centralized Brand and Domain Validation Guardrail](2026-08-11-centralized-brand-and-domain-validation.md)
 - [2026-08-06: Parameterized Branding and Dynamic Domain Configurations](2026-08-06-parameterized-branding-and-dynamic-domain-configurations.md)
 - [2026-08-06: Part 11 Electronic Signature Compliance Engine Improvements](2026-08-06-part-11-electronic-signature-compliance-engine-improvements.md)
 
