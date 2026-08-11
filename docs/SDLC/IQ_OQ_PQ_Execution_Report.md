@@ -10,11 +10,11 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2222
-- **Passed:** 2217 🟢
+- **Total Automated Test Cases Run:** 2226
+- **Passed:** 2221 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
-- **Overall Operational Pass Rate:** 99.77%
+- **Overall Operational Pass Rate:** 99.78%
 
 ## 2. Installation Qualification (IQ)
 
@@ -2073,6 +2073,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_encryption_tamper_rejection`                                                 | `packages.security.tests.test_encryption`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_hkdf_determinism`                                                            | `packages.security.tests.test_encryption`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_rejection_of_invalid_key_material`                                           | `packages.security.tests.test_encryption`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_validate_branding_dev_bypass`                                                | `packages.security.tests.test_fail_fast_branding`                           | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_validate_branding_gateway_failures`                                          | `packages.security.tests.test_fail_fast_branding`                           | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_validate_branding_prod_failures`                                             | `packages.security.tests.test_fail_fast_branding`                           | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_validate_branding_success`                                                   | `packages.security.tests.test_fail_fast_branding`                           | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_can_access_site`                                                             | `packages.security.tests.test_rbac`                                         | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_cross_site_query_read_isolation`                                             | `packages.security.tests.test_rbac`                                         | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_cross_site_unblind_denied_with_alert`                                        | `packages.security.tests.test_rbac`                                         | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
