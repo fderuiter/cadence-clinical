@@ -8,12 +8,14 @@
     :attributes="attributes"
     tag="div"
   >
-    <template #default="{ id: slotId }">
+    <template #default="{ id: slotId, errorId, hasError }">
       <input
         :id="slotId"
         type="text"
         :name="slotId"
         :value="modelValue"
+        :aria-describedby="hasError ? errorId : undefined"
+        :aria-invalid="hasError ? 'true' : undefined"
         @input="$emit('update:modelValue', $event.target.value)"
         @change="$emit('change', $event.target.value, $event.target)"
       />

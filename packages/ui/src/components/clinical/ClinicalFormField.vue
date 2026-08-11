@@ -9,6 +9,7 @@
         :model-value="modelValue"
         :query="query"
         :grid-span="field.gridSpan || 12"
+        :error="error"
         @update:model-value="$emit('update:modelValue', $event)"
         @change="(val, target) => $emit('change', val, target)"
         @create-query="$emit('create-query', $event)"
