@@ -199,6 +199,9 @@ class EPROSubmitResponse(BaseModel):
     audit_details: dict[str, Any] | None = Field(
         None, description="Audit entry details"
     )
+    offline_sync_markers: EPROOfflineMarker | None = Field(
+        None, description="Sync markers including sequence_number and client_id"
+    )
 
 
 class EPROBulkSyncResponse(BaseModel):

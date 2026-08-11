@@ -20,6 +20,122 @@ PACKAGES_DIR = ROOT_DIR / "packages"
 
 _PACKAGE_DEPS_CACHE = {}
 
+LEGACY_TESTS_EXEMPT_FROM_IMPORT_BOUNDARIES = {
+    "apps/org/tests/test_org_integration_e2e.py",
+    "apps/safety/tests/test_safety_gateway.py",
+    "apps/safety/tests/test_emergency_unblinding.py",
+    "apps/safety/tests/test_sae_reconciliation.py",
+    "apps/safety/tests/test_sae_reconciliation_jobs.py",
+    "apps/safety/tests/test_e2b_parser.py",
+    "apps/safety/tests/test_safety_service.py",
+    "apps/safety/tests/test_safety_router.py",
+    "apps/safety/tests/test_sae_reconciler.py",
+    "apps/ctms/tests/test_doa_router.py",
+    "apps/ctms/tests/test_doa_audit_suite.py",
+    "apps/ctms/tests/test_doa_service.py",
+    "apps/ctms/tests/test_ctms.py",
+    "apps/ctms/tests/test_delegation.py",
+    "apps/ctms/tests/test_doa_models.py",
+    "apps/notifications/tests/test_notification_worker.py",
+    "apps/notifications/tests/test_clinical_workflow_notifications.py",
+    "apps/notifications/tests/test_clinical_workflow_notifications_integration.py",
+    "apps/notifications/tests/test_notifications.py",
+    "apps/tickets/tests/test_tickets_integration_seam.py",
+    "apps/tickets/tests/test_tickets_notifications_seam.py",
+    "apps/tickets/tests/test_tickets_notifications_integration.py",
+    "apps/tickets/tests/test_tickets_service.py",
+    "apps/interop/tests/test_interop_prescreen.py",
+    "apps/interop/tests/test_ecoa_coverage.py",
+    "apps/interop/tests/test_interop_defeated.py",
+    "apps/interop/tests/test_offline_sync.py",
+    "apps/interop/tests/test_offline_router.py",
+    "apps/interop/tests/test_interop_quarantine.py",
+    "apps/interop/tests/test_interop.py",
+    "apps/etmf/tests/test_etmf_redaction.py",
+    "apps/etmf/tests/test_etmf_signing_lifecycle.py",
+    "apps/etmf/tests/test_etmf_compliance.py",
+    "apps/etmf/tests/test_etmf_taxonomy.py",
+    "apps/etmf/tests/test_etmf_bulk_archival.py",
+    "apps/etmf/tests/test_etmf_binder_structure_and_history.py",
+    "apps/etmf/tests/test_etmf_eisf_expiration_metadata.py",
+    "apps/etmf/tests/test_etmf.py",
+    "apps/etmf/tests/test_etmf_qc.py",
+    "apps/etmf/tests/test_etmf_site_scope.py",
+    "apps/etmf/tests/test_etmf_sync_provenance.py",
+    "apps/econsent/tests/test_econsent_capture.py",
+    "apps/econsent/tests/test_econsent_translations.py",
+    "apps/econsent/tests/test_econsent_archival.py",
+    "apps/econsent/tests/test_econsent_service.py",
+    "apps/econsent/tests/test_econsent.py",
+    "apps/econsent/tests/test_econsent_workflow.py",
+    "apps/quality/tests/test_quality.py",
+    "apps/quality/tests/test_quality_sentinel.py",
+    "apps/quality/tests/test_quality_workflow.py",
+    "apps/eisf/tests/test_eisf_adapter.py",
+    "apps/eisf/tests/test_eisf_isolation.py",
+    "apps/eisf/tests/test_eisf_service.py",
+    "apps/eisf/tests/test_eisf_router.py",
+    "apps/eisf/tests/test_eisf_api.py",
+    "apps/eisf/tests/test_eisf_site_scope.py",
+    "apps/eisf/tests/test_eisf_models.py",
+    "apps/eisf/tests/test_eisf_binder.py",
+    "apps/gateway/tests/test_gateway.py",
+    "apps/gateway/tests/test_auditor_router.py",
+    "apps/designer/tests/test_crf_requirements_mapping.py",
+    "apps/designer/tests/test_lock_router.py",
+    "apps/designer/tests/test_protocol_amendments_validation_suite.py",
+    "apps/designer/tests/test_lock_enforcement.py",
+    "apps/designer/tests/test_granular_locking.py",
+    "apps/designer/tests/test_granular_locks_api.py",
+    "apps/designer/tests/test_concept_locks.py",
+    "apps/designer/tests/test_crf_builder_compliance.py",
+    "apps/designer/tests/test_evaluator.py",
+    "apps/designer/tests/test_lock_models.py",
+    "apps/designer/tests/test_amendment_rehydration.py",
+    "apps/designer/tests/test_amendment_router.py",
+    "apps/designer/tests/test_designer_rules.py",
+    "apps/designer/tests/test_amendment_diff.py",
+    "apps/designer/tests/test_terminology_validation.py",
+    "apps/designer/tests/test_trial_lock.py",
+    "apps/execution/tests/test_terminology_cache.py",
+    "apps/execution/tests/test_cdisc_openapi_contract.py",
+    "apps/execution/tests/test_clinical_engine.py",
+    "apps/execution/tests/test_terminology_integration.py",
+    "apps/execution/tests/test_double_auth.py",
+    "apps/execution/tests/test_anonymization_router.py",
+    "apps/execution/tests/test_usdm_importer.py",
+    "apps/execution/tests/test_study_versions.py",
+    "apps/execution/tests/test_role_redaction_and_access.py",
+    "apps/execution/tests/test_usdm_roundtrip.py",
+    "apps/execution/tests/test_part11_compliance_engine.py",
+    "apps/execution/tests/test_datetime_validation.py",
+    "apps/execution/tests/test_inverse_mapper.py",
+    "apps/execution/tests/test_shared_soa_models.py",
+    "apps/execution/tests/test_cdisc_library_client.py",
+    "apps/execution/tests/test_soa_endpoints.py",
+    "apps/execution/tests/test_medical_coding.py",
+    "apps/execution/tests/test_usdm_models.py",
+    "apps/execution/tests/test_soa_persistence.py",
+    "apps/execution/tests/test_cdisc_cache.py",
+    "apps/execution/tests/test_usdm_ingestion.py",
+    "apps/execution/tests/test_query_safety_gateway.py",
+    "apps/execution/tests/test_full_usdm_v2_phase_2.py",
+    "apps/execution/tests/test_usdm_serialization.py",
+    "packages/storage/tests/test_safe_binary_storage_watermark.py",
+    "packages/compliance/tests/test_compliance_change_request.py",
+    "packages/compliance/tests/test_compliance_security.py",
+    "packages/database/tests/test_delta.py",
+    "packages/database/tests/test_migrate.py",
+    "packages/database/tests/test_ledger_and_triggers.py",
+    "packages/security/tests/test_rbac_enforcement.py",
+    "packages/security/tests/test_cryptography.py",
+    "packages/security/tests/test_rbac.py",
+    "packages/security/tests/test_rbac_e2e.py",
+    "packages/security/tests/test_audit.py",
+    "packages/hexagonal/tests/test_hexagonal_domain.py",
+    "packages/hexagonal/tests/test_hexagonal_ports_adapters.py",
+}
+
 
 def get_package_dependencies(package_name: str) -> set[str]:
     """Reads and parses dependencies declared in a package's pyproject.toml."""
@@ -64,6 +180,13 @@ def check_file_imports(file_path: Path) -> list[str]:
     """Parses a Python file using AST and returns a list of import violations."""
     violations = []
 
+    try:
+        rel_path = str(file_path.relative_to(ROOT_DIR)).replace("\\", "/")
+        if rel_path in LEGACY_TESTS_EXEMPT_FROM_IMPORT_BOUNDARIES:
+            return violations
+    except ValueError:
+        pass
+
     # 1. Determine if file is under apps/ or packages/
     is_app = False
     is_package = False
@@ -80,9 +203,6 @@ def check_file_imports(file_path: Path) -> list[str]:
             entity_name = relative_to_packages.parts[0]
         except ValueError:
             return violations
-
-    if "tests" in file_path.parts:
-        return violations
 
     if not entity_name or entity_name == "__pycache__":
         return violations
