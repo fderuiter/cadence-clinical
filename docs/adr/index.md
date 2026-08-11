@@ -105,6 +105,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-01: Cryptographic Signature Verification Engine for Part 11 eSignatures](2026-08-01-cryptographic-signature-verification-engine-for-esignatures.md)
 
 ### 3. Clinical Data Interoperability & Standards
+
 - [2026-08-11: Key-Based Sync Reconciliation](2026-08-11-key-based-sync-reconciliation.md)
 
 - [2026-08-04: Thread-Safe In-Memory Terminology Search Cache](2026-08-04-in-memory-terminology-search-cache.md)
