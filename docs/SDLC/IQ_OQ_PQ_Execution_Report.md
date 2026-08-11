@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2234
-- **Passed:** 2229 🟢
+- **Total Automated Test Cases Run:** 2239
+- **Passed:** 2234 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 5 ⚪
 - **Overall Operational Pass Rate:** 99.78%
@@ -1995,6 +1995,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_word_boundaries_custom_terms`                                                | `packages.deid.tests.test_ner_scrubber`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_all_main_entrypoints_are_thin`                                               | `packages.hexagonal.tests.test_hexagonal_architecture`                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_all_service_repository_ports_subclass_base`                                  | `packages.hexagonal.tests.test_hexagonal_architecture`                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_all_services_have_ports`                                                     | `packages.hexagonal.tests.test_hexagonal_architecture`                      | PRD-SYS-001                                  | 🟢 PASSED  | < 1s     |
 | `test_application_layer_isolation[ctms]`                                           | `packages.hexagonal.tests.test_hexagonal_architecture`                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_application_layer_isolation[designer]`                                       | `packages.hexagonal.tests.test_hexagonal_architecture`                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_application_layer_isolation[econsent]`                                       | `packages.hexagonal.tests.test_hexagonal_architecture`                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
@@ -2023,6 +2024,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_domain_layer_isolation[quality]`                                             | `packages.hexagonal.tests.test_hexagonal_architecture`                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_domain_layer_isolation[safety]`                                              | `packages.hexagonal.tests.test_hexagonal_architecture`                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_domain_layer_isolation[tickets]`                                             | `packages.hexagonal.tests.test_hexagonal_architecture`                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_no_singular_adapter_directory`                                               | `packages.hexagonal.tests.test_hexagonal_architecture`                      | PRD-SYS-001                                  | 🟢 PASSED  | < 1s     |
 | `test_presentation_layer_driver_isolation[ctms]`                                   | `packages.hexagonal.tests.test_hexagonal_architecture`                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_presentation_layer_driver_isolation[designer]`                               | `packages.hexagonal.tests.test_hexagonal_architecture`                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_presentation_layer_driver_isolation[econsent]`                               | `packages.hexagonal.tests.test_hexagonal_architecture`                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
@@ -2445,6 +2447,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_milestone_mandatory_artifacts`                                               | `tests.validation.dia_tmf_validation_suite`                                 | PRD-TMF-004                                  | 🟢 PASSED  | < 1s     |
 | `test_site_level_classification_drift`                                             | `tests.validation.dia_tmf_validation_suite`                                 | PRD-TMF-001, PRD-TMF-003                     | 🟢 PASSED  | < 1s     |
 | `test_gxp_compliance_drifts_identified`                                            | `tests.validation.gxp_compliance_suite`                                     | PRD-SYS-001                                  | 🟢 PASSED  | < 1s     |
+| `test_feature_matrix_validation_ignoring_helper_and_excluded_services`             | `tests.validation.test_feature_matrix_gating`                               | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_feature_matrix_validation_missing_service`                                   | `tests.validation.test_feature_matrix_gating`                               | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_feature_matrix_validation_success`                                           | `tests.validation.test_feature_matrix_gating`                               | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_formatting_and_whitespace_immunity`                                          | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift`         | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_pending_delta_schema_drift`                                                  | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift`         | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_simulated_field_name_rename_drift`                                           | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift`         | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
