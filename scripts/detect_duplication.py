@@ -356,6 +356,10 @@ def main() -> None:
                                     "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
                                 },
                                 {
+                                    "packages/ui/src/components/clinical/ClinicalInput.vue",
+                                    "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
+                                },
+                                {
                                     "apps/web/src/composables/useFocusTrap.js",
                                     "packages/ui/src/composables/useFocusTrap.js",
                                 },

@@ -210,6 +210,48 @@ describe("ClinicalInput.vue", () => {
       "must be between 50 and 250 mmHg"
     );
   });
+
+  it("attaches aria-describedby and aria-invalid dynamically and validates accessibility", async () => {
+    const id = "systolic";
+    const wrapper = mount(ClinicalInput, {
+      props: {
+        id,
+        label: "Systolic BP",
+        modelValue: "280",
+        error: "Systolic Blood Pressure must be between 50 and 250 mmHg",
+      },
+    });
+
+    const input = wrapper.find("input");
+    expect(input.attributes("aria-describedby")).toBe(`validation-error-${id}`);
+    expect(input.attributes("aria-invalid")).toBe("true");
+
+    const errorMsg = wrapper.find(".validation-error-msg");
+    expect(errorMsg.attributes("id")).toBe(`validation-error-${id}`);
+    expect(errorMsg.attributes("role")).toBe("status");
+    expect(errorMsg.attributes("aria-live")).toBe("polite");
+
+    // Verify it passes accessibility audit
+    await expect(wrapper).toBeAccessible();
+  });
+
+  it("does not attach aria-describedby or aria-invalid when there is no error", async () => {
+    const wrapper = mount(ClinicalInput, {
+      props: {
+        id: "systolic",
+        label: "Systolic BP",
+        modelValue: "120",
+        error: null,
+      },
+    });
+
+    const input = wrapper.find("input");
+    expect(input.attributes("aria-describedby")).toBeUndefined();
+    expect(input.attributes("aria-invalid")).toBeUndefined();
+
+    // Verify it passes accessibility audit
+    await expect(wrapper).toBeAccessible();
+  });
 });
 
 describe("ClinicalRadioGroup.vue", () => {
@@ -236,6 +278,33 @@ describe("ClinicalRadioGroup.vue", () => {
 
     expect(wrapper.emitted("update:modelValue")).toBeTruthy();
     expect(wrapper.emitted("update:modelValue")[0]).toEqual(["M"]);
+  });
+
+  it("renders validation errors below choices and passes accessibility audit", async () => {
+    const options = [
+      { value: "M", label: "Male" },
+      { value: "F", label: "Female" },
+    ];
+    const id = "gender";
+    const wrapper = mount(ClinicalRadioGroup, {
+      props: {
+        id,
+        label: "Gender Selection",
+        options,
+        modelValue: "",
+        error: "Gender selection is required",
+      },
+    });
+
+    expect(wrapper.classes()).toContain("has-error");
+    const errorMsg = wrapper.find(".validation-error-msg");
+    expect(errorMsg.exists()).toBe(true);
+    expect(errorMsg.text()).toContain("Gender selection is required");
+    expect(errorMsg.attributes("id")).toBe(`validation-error-${id}`);
+    expect(errorMsg.attributes("role")).toBe("status");
+    expect(errorMsg.attributes("aria-live")).toBe("polite");
+
+    await expect(wrapper).toBeAccessible();
   });
 });
 
@@ -394,6 +463,32 @@ describe("ClinicalLookupInput.vue", () => {
         expect(vueText).toBe(vanillaText);
       }
     }
+  });
+
+  it("combines lookup status and validation error in aria-describedby", async () => {
+    const id = "conceptCode";
+    const wrapper = mount(ClinicalLookupInput, {
+      props: {
+        id,
+        label: "Concept Code",
+        modelValue: "C123",
+        status: "loading",
+        error: "Invalid concept code range",
+      },
+    });
+
+    const input = wrapper.find("input");
+    const describedBy = input.attributes("aria-describedby");
+    expect(describedBy).toContain(`lookup-status-${id}`);
+    expect(describedBy).toContain(`validation-error-${id}`);
+    expect(input.attributes("aria-invalid")).toBe("true");
+
+    const errorMsg = wrapper.find(".validation-error-msg");
+    expect(errorMsg.exists()).toBe(true);
+    expect(errorMsg.attributes("role")).toBe("status");
+    expect(errorMsg.attributes("aria-live")).toBe("polite");
+
+    await expect(wrapper).toBeAccessible();
   });
 });
 
