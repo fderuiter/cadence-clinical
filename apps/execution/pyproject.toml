@@ -1,5 +1,7 @@
 [build-system]
-requires = ["hatchling"]
+requires = [
+    "hatchling",
+]
 build-backend = "hatchling.build"
 
 [project]
@@ -28,6 +30,14 @@ dependencies = [
     "packages-security",
     "packages-deid",
     "packages-storage",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    ".",
+]
+exclude = [
+    "tests",
 ]
 
 [tool.hatch.build.targets.wheel.sources]

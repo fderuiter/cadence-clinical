@@ -1,5 +1,7 @@
 [build-system]
-requires = ["hatchling"]
+requires = [
+    "hatchling",
+]
 build-backend = "hatchling.build"
 
 [project]
@@ -17,6 +19,14 @@ dependencies = [
     "docxtpl>=0.20.2",
     "docxcompose>=2.2.0",
     "packages-security",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    ".",
+]
+exclude = [
+    "tests",
 ]
 
 [tool.hatch.build.targets.wheel.sources]
