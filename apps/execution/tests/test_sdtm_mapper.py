@@ -934,6 +934,7 @@ async def test_persist_sdtm_records_ae_domain_reclassification():
 def test_visit_records_require_start_date():
     """Verify that SV records lacking SVSTDTC fail compilation and return a validation error."""
     from pydantic import ValidationError
+
     from apps.execution.domain.sdtm.sdtm_models import SDTMRecordSV
 
     # 1. Direct validation via SDTMRecordSV model
@@ -948,7 +949,11 @@ def test_visit_records_require_start_date():
             created_by="system",
             reason_for_change="UnitTest",
         )
-    assert "SVSTDTC" in str(exc_info.value) or "Field cannot be empty" in str(exc_info.value) or "missing" in str(exc_info.value)
+    assert (
+        "SVSTDTC" in str(exc_info.value)
+        or "Field cannot be empty" in str(exc_info.value)
+        or "missing" in str(exc_info.value)
+    )
 
     # 2. Validation after mapping via map_cdash_to_sdtm
     mapped = map_cdash_to_sdtm("SV", [{"visit_name": "Baseline Visit"}])
@@ -956,11 +961,7 @@ def test_visit_records_require_start_date():
     assert mapped[0]["SVSTDTC"] is None
 
     with pytest.raises(ValidationError) as exc_info:
-        SDTMRecordSV(
-            created_by="system",
-            reason_for_change="UnitTest",
-            **mapped[0]
-        )
+        SDTMRecordSV(created_by="system", reason_for_change="UnitTest", **mapped[0])
 
 
 @pytest.mark.asyncio
@@ -1031,10 +1032,15 @@ async def test_chronological_date_validation():
 def test_mapper_dedicated_helpers():
     """Verify that dedicated mapper helpers function correctly on raw CDASH entries."""
     mapper = CDASHToSDTMMapper()
-    
+
     # 1. CM helper
     raw_cm = [
-        {"cmtrt": "Ibuprofen", "cmdecod": "IBUPROFEN", "cmstdtc": "2026-01-01", "cmendtc": "2026-01-10"}
+        {
+            "cmtrt": "Ibuprofen",
+            "cmdecod": "IBUPROFEN",
+            "cmstdtc": "2026-01-01",
+            "cmendtc": "2026-01-10",
+        }
     ]
     res_cm = mapper.map_concomitant_medications("STUDY-001", "SUBJ-001", raw_cm)
     assert len(res_cm) == 1
@@ -1045,7 +1051,12 @@ def test_mapper_dedicated_helpers():
 
     # 2. DS helper
     raw_ds = [
-        {"dsterm": "Adverse Event", "dsdecod": "ADVERSE EVENT", "dscat": "DISPOSITION EVENT", "dsstdtc": "2026-02-01"}
+        {
+            "dsterm": "Adverse Event",
+            "dsdecod": "ADVERSE EVENT",
+            "dscat": "DISPOSITION EVENT",
+            "dsstdtc": "2026-02-01",
+        }
     ]
     res_ds = mapper.map_dispositions("STUDY-001", "SUBJ-001", raw_ds)
     assert len(res_ds) == 1
@@ -1056,7 +1067,12 @@ def test_mapper_dedicated_helpers():
 
     # 3. MH helper
     raw_mh = [
-        {"mhterm": "Diabetes", "mhdecod": "DIABETES", "mhcat": "MEDICAL HISTORY", "mhdtc": "2015-05-15"}
+        {
+            "mhterm": "Diabetes",
+            "mhdecod": "DIABETES",
+            "mhcat": "MEDICAL HISTORY",
+            "mhdtc": "2015-05-15",
+        }
     ]
     res_mh = mapper.map_medical_history("STUDY-001", "SUBJ-001", raw_mh)
     assert len(res_mh) == 1

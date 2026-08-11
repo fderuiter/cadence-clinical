@@ -594,13 +594,25 @@ async def persist_sdtm_records(
     # Load observations for this domain
     # If compiling AE, we also pull any AE observations that were misclassified as DM
     # If compiling DM, we exclude any AE observations that were misclassified as DM
-    ae_test_codes = ["AETERM", "AESEV", "AESER", "AESTDTC", "AEENDTC", "AEDECOD", "AELOC", "AELDTC", "AEREL", "AEOUT"]
+    ae_test_codes = [
+        "AETERM",
+        "AESEV",
+        "AESER",
+        "AESTDTC",
+        "AEENDTC",
+        "AEDECOD",
+        "AELOC",
+        "AELDTC",
+        "AEREL",
+        "AEOUT",
+    ]
     if domain == "AE":
         stmt_obs = select(ClinicalObservation).where(
             ClinicalObservation.study_id == study_id,
-            (ClinicalObservation.domain == "AE") | (
-                (ClinicalObservation.domain == "DM") &
-                (ClinicalObservation.test_code.in_(ae_test_codes))
+            (ClinicalObservation.domain == "AE")
+            | (
+                (ClinicalObservation.domain == "DM")
+                & (ClinicalObservation.test_code.in_(ae_test_codes))
             ),
             ClinicalObservation.is_deleted.is_(False),
         )
@@ -758,7 +770,7 @@ async def persist_sdtm_records(
         for obs in observations:
             page_key = obs.page_id or f"raw_{obs.id}"
             cm_by_page[page_key]["subject_id"] = obs.subject_id
-            
+
             tc = (obs.test_code or "").upper()
             if tc == "CMTRT":
                 cm_by_page[page_key]["cmtrt"] = obs.value_string
@@ -786,7 +798,7 @@ async def persist_sdtm_records(
         for obs in observations:
             page_key = obs.page_id or f"raw_{obs.id}"
             ds_by_page[page_key]["subject_id"] = obs.subject_id
-            
+
             tc = (obs.test_code or "").upper()
             if tc == "DSTERM":
                 ds_by_page[page_key]["dsterm"] = obs.value_string
@@ -814,7 +826,7 @@ async def persist_sdtm_records(
         for obs in observations:
             page_key = obs.page_id or f"raw_{obs.id}"
             mh_by_page[page_key]["subject_id"] = obs.subject_id
-            
+
             tc = (obs.test_code or "").upper()
             if tc == "MHTERM":
                 mh_by_page[page_key]["mhterm"] = obs.value_string

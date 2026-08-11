@@ -88,8 +88,9 @@ class SDTMRecordAE(AuditableModel):
         return validate_dtc_format(v)
 
     @model_validator(mode="after")
-    def validate_ae_dates(self) -> "SDTMRecordAE":
+    def validate_ae_dates(self) -> SDTMRecordAE:
         import re
+
         if self.AESTDTC and self.AEENDTC:
             s_clean = re.sub(r"[^\d]", "", self.AESTDTC)
             e_clean = re.sub(r"[^\d]", "", self.AEENDTC)
@@ -232,8 +233,9 @@ class SDTMRecordSV(AuditableModel):
         return validate_dtc_format(v)
 
     @model_validator(mode="after")
-    def validate_sv_dates(self) -> "SDTMRecordSV":
+    def validate_sv_dates(self) -> SDTMRecordSV:
         import re
+
         if self.SVSTDTC and self.SVENDTC:
             s_clean = re.sub(r"[^\d]", "", self.SVSTDTC)
             e_clean = re.sub(r"[^\d]", "", self.SVENDTC)
@@ -280,8 +282,9 @@ class SDTMRecordCM(AuditableModel):
         return validate_dtc_format(v)
 
     @model_validator(mode="after")
-    def validate_cm_dates(self) -> "SDTMRecordCM":
+    def validate_cm_dates(self) -> SDTMRecordCM:
         import re
+
         if self.CMSTDTC and self.CMENDTC:
             s_clean = re.sub(r"[^\d]", "", self.CMSTDTC)
             e_clean = re.sub(r"[^\d]", "", self.CMENDTC)
