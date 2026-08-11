@@ -88,6 +88,7 @@ def route_tickets_to_notifications():
     Supports simulated route failures for retry testing.
     """
     from packages.security.gateway_client import GatewayBaseClient
+
     GatewayBaseClient._shared_client = None
 
     transport = httpx.ASGITransport(app=notifications_app)

@@ -101,6 +101,7 @@ async def setup_dual_dbs(monkeypatch):
 
     # 3. Monkeypatch httpx.AsyncClient in packages.security.gateway_client to route to notifications_app
     from packages.security.gateway_client import GatewayBaseClient
+
     GatewayBaseClient._shared_client = None
 
     original_async_client = httpx.AsyncClient
