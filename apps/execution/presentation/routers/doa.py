@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.params import Depends as DependsClass
 from pydantic import BaseModel, Field
 
-from apps.execution.adapter.repositories import (
+from apps.execution.adapters.repositories import (
     SQLAlchemExecutionDOARepository,
     get_execution_doa_repository,
 )

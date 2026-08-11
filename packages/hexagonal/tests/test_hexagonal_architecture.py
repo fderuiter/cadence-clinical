@@ -5,21 +5,24 @@ from pathlib import Path
 import pytest
 from pytest_archon import archrule
 
-SERVICES = [
-    "gateway",
-    "interop",
-    "notifications",
-    "org",
-    "safety",
-    "econsent",
-    "quality",
-    "eisf",
-    "etmf",
-    "ctms",
-    "execution",
-    "designer",
-    "tickets",
-]
+
+def discover_services() -> list[str]:
+    root_dir = Path(__file__).resolve().parent.parent.parent.parent
+    apps_dir = root_dir / "apps"
+    services = []
+    if apps_dir.exists():
+        for p in apps_dir.iterdir():
+            if p.is_dir() and p.name not in ("web", "subject-portal", "__pycache__"):
+                if (
+                    (p / "pyproject.toml").exists()
+                    or (p / "main.py").exists()
+                    or (p / "domain").exists()
+                ):
+                    services.append(p.name)
+    return sorted(services)
+
+
+SERVICES = discover_services()
 
 
 @pytest.mark.parametrize("service", SERVICES)
@@ -183,3 +186,40 @@ def test_all_service_repository_ports_subclass_base():
                     )
 
     assert repo_ports_found > 0, "No repository ports were evaluated"
+
+
+def test_no_singular_adapter_directory():
+    """Ensure that no microservice contains a singular 'adapter' directory, and instead conforms to plural 'adapters'.
+
+    @req:PRD-SYS-001
+    """
+    root_dir = Path(__file__).resolve().parent.parent.parent.parent
+    apps_dir = root_dir / "apps"
+    for p in apps_dir.iterdir():
+        if p.is_dir() and p.name not in ("web", "subject-portal", "__pycache__"):
+            singular_adapter_dir = p / "adapter"
+            assert not singular_adapter_dir.exists(), (
+                f"Microservice '{p.name}' contains a singular 'adapter' directory. "
+                "All services must use plural 'adapters' to maintain layout convergence."
+            )
+
+
+def test_all_services_have_ports():
+    """Ensure all microservices contain a 'ports' directory or a 'ports.py' file.
+
+    @req:PRD-SYS-001
+    """
+    root_dir = Path(__file__).resolve().parent.parent.parent.parent
+    apps_dir = root_dir / "apps"
+    for p in apps_dir.iterdir():
+        if p.is_dir() and p.name not in ("web", "subject-portal", "__pycache__"):
+            ports_exist = (
+                (p / "ports").is_dir()
+                or (p / "ports.py").exists()
+                or (p / "domain" / "ports.py").exists()
+                or (p / "application" / "ports.py").exists()
+            )
+            assert ports_exist, (
+                f"Microservice '{p.name}' does not contain a 'ports' directory or a 'ports.py' file. "
+                "All microservices must have standard port definitions to follow the converged hexagonal layout."
+            )
