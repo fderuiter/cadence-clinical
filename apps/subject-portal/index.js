@@ -2309,7 +2309,9 @@ async function initializeApp() {
 
   if (typeof window !== "undefined") {
     window.addEventListener("offline", async () => {
-      console.log("[App] Network offline detected. Verifying security PIN wrapper...");
+      console.log(
+        "[App] Network offline detected. Verifying security PIN wrapper..."
+      );
       state.session.isOfflineMode = true;
       clearInMemoryKey();
       await checkPINWrapper();
@@ -2361,7 +2363,10 @@ async function handlePINSetupSubmit() {
     const masterKey = globalThis.crypto.getRandomValues(new Uint8Array(32));
     const salt = globalThis.crypto.getRandomValues(new Uint8Array(16));
     const kwk = await deriveKeyFromPIN(pin, salt);
-    const wrappedKeyStr = await encryptAESGCM({ masterKey: Array.from(masterKey) }, kwk);
+    const wrappedKeyStr = await encryptAESGCM(
+      { masterKey: Array.from(masterKey) },
+      kwk
+    );
     await saveWrappedMasterKeyConfig(wrappedKeyStr, salt);
     setInMemorySessionKey(masterKey);
     state.pinSetup.isOpen = false;
@@ -2397,7 +2402,7 @@ async function handlePINUnlockSubmit() {
     setInMemorySessionKey(masterKey);
     state.pinUnlock.isOpen = false;
     state.pinUnlock.error = "";
-  } catch (err) {
+  } catch {
     state.pinUnlock.error = "Incorrect security PIN. Access denied.";
   } finally {
     state.pinUnlock.pin = "";

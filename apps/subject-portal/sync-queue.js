@@ -1,4 +1,4 @@
-import { deriveSessionKey, encryptAESGCM, decryptAESGCM, deriveKeyFromPIN } from "ui";
+import { deriveSessionKey, encryptAESGCM, decryptAESGCM } from "ui";
 
 let inMemorySessionKey = null;
 
@@ -458,4 +458,3 @@ export async function saveWrappedMasterKeyConfig(wrappedKey, salt) {
     /* v8 ignore stop */
   });
 }
-

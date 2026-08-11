@@ -1,19 +1,16 @@
 import "fake-indexeddb/auto";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { deriveKeyFromPIN } from "ui";
 import {
   state,
   handlePINSetupSubmit,
   handlePINUnlockSubmit,
-  checkPINWrapper,
 } from "../index.js";
 import {
   clearSessionKey,
   clearInMemoryKey,
   getInMemorySessionKey,
-  setInMemorySessionKey,
   getWrappedMasterKeyConfig,
-  saveWrappedMasterKeyConfig,
   openDatabase,
 } from "../sync-queue.js";
 
@@ -156,7 +153,9 @@ describe("Persistent Local PIN Wrapper Cryptographic & Flow Tests", () => {
     state.pinUnlock.pin = "1111";
     await handlePINUnlockSubmit();
 
-    expect(state.pinUnlock.error).toBe("Incorrect security PIN. Access denied.");
+    expect(state.pinUnlock.error).toBe(
+      "Incorrect security PIN. Access denied."
+    );
     expect(getInMemorySessionKey()).toBeNull();
 
     // Field must be cleared

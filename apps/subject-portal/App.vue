@@ -846,13 +846,19 @@
         </div>
         <div class="modal-body">
           <p>
-            To secure your offline clinical data, please choose a numeric local security PIN.
-            This PIN will wrap and encrypt your offline database encryption key.
+            To secure your offline clinical data, please choose a numeric local
+            security PIN. This PIN will wrap and encrypt your offline database
+            encryption key.
           </p>
           <div
             v-if="state.pinSetup.error"
             class="error-state"
-            style="color: var(--danger); font-weight: bold; font-size: 14px; margin-bottom: 12px;"
+            style="
+              color: var(--danger);
+              font-weight: bold;
+              font-size: 14px;
+              margin-bottom: 12px;
+            "
             role="status"
             aria-live="polite"
           >
@@ -884,7 +890,12 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button id="btn-pin-setup-confirm" type="button" class="btn btn-primary" @click="handlePINSetupSubmit">
+          <button
+            id="btn-pin-setup-confirm"
+            type="button"
+            class="btn btn-primary"
+            @click="handlePINSetupSubmit"
+          >
             Save and Configure
           </button>
         </div>
@@ -908,13 +919,19 @@
         </div>
         <div class="modal-body">
           <p>
-            Please enter your numeric security PIN to access the clinical portal and decrypt your offline data.
+            Please enter your numeric security PIN to access the clinical portal
+            and decrypt your offline data.
           </p>
           <div
             v-if="state.pinUnlock.error"
             id="pin-unlock-error"
             class="error-state"
-            style="color: var(--danger); font-weight: bold; font-size: 14px; margin-bottom: 12px;"
+            style="
+              color: var(--danger);
+              font-weight: bold;
+              font-size: 14px;
+              margin-bottom: 12px;
+            "
             role="status"
             aria-live="polite"
           >
@@ -935,7 +952,12 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button id="btn-pin-unlock-confirm" type="button" class="btn btn-primary" @click="handlePINUnlockSubmit">
+          <button
+            id="btn-pin-unlock-confirm"
+            type="button"
+            class="btn btn-primary"
+            @click="handlePINUnlockSubmit"
+          >
             Unlock
           </button>
         </div>
@@ -969,7 +991,9 @@ function handleSetupModalKeyDown(e) {
   if (e.key !== "Tab") return;
   const modal = document.getElementById("portal-pin-setup-modal");
   if (!modal) return;
-  const selectors = ["input", "button"].map((tag) => `${tag}:not([disabled])`).join(", ");
+  const selectors = ["input", "button"]
+    .map((tag) => `${tag}:not([disabled])`)
+    .join(", ");
   const elList = Array.from(modal.querySelectorAll(selectors));
   if (!elList.length) return;
   const firstEl = elList[0];
@@ -991,7 +1015,9 @@ function handleUnlockModalKeyDown(e) {
   if (e.key !== "Tab") return;
   const modal = document.getElementById("portal-pin-unlock-modal");
   if (!modal) return;
-  const selectors = ["input", "button"].map((tag) => `${tag}:not([disabled])`).join(", ");
+  const selectors = ["input", "button"]
+    .map((tag) => `${tag}:not([disabled])`)
+    .join(", ");
   const elList = Array.from(modal.querySelectorAll(selectors));
   if (!elList.length) return;
   const firstEl = elList[0];

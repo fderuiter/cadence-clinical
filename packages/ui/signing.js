@@ -559,4 +559,3 @@ export async function deriveKeyFromPIN(pin, salt, iterations = 100000) {
   );
   return new Uint8Array(derivedBits);
 }
-
