@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2333
-- **Passed:** 2314 🟢
+- **Total Automated Test Cases Run:** 2334
+- **Passed:** 2315 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.19%
@@ -365,6 +365,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_indexed_repeat`                                                              | `apps.designer.tests.test_evaluator`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_is_empty_and_not_empty`                                                      | `apps.designer.tests.test_evaluator`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_literal_and_constant`                                                        | `apps.designer.tests.test_evaluator`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_smart_type_coercion_and_localized_guards`                                    | `apps.designer.tests.test_evaluator`                                        | PRD-ELIGIBILITY-006                          | 🟢 PASSED  | < 1s     |
 | `test_client_configuration_env_vars`                                               | `apps.designer.tests.test_evs_client`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_client_configuration_overrides`                                              | `apps.designer.tests.test_evs_client`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_get_concept_http_status_error_404`                                           | `apps.designer.tests.test_evs_client`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
