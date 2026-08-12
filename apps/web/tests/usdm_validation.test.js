@@ -73,14 +73,23 @@ describe("Shared Zod Schema Client-Side Validation", () => {
 
     // Invalid epoch call should throw an error and set soaError
     await expect(
-      store.pushSoAMutation("epochs", "EP-INV", {
-        // name is missing
-        epochType: "Screening",
-        sequenceNumber: "invalid-int",
-      }, "Compliance change")
-    ).rejects.toThrow("Local payload mutation rejected. Shared Zod Schema violation");
+      store.pushSoAMutation(
+        "epochs",
+        "EP-INV",
+        {
+          // name is missing
+          epochType: "Screening",
+          sequenceNumber: "invalid-int",
+        },
+        "Compliance change"
+      )
+    ).rejects.toThrow(
+      "Local payload mutation rejected. Shared Zod Schema violation"
+    );
 
-    expect(store.soaError).toContain("Local payload mutation rejected. Shared Zod Schema violation");
+    expect(store.soaError).toContain(
+      "Local payload mutation rejected. Shared Zod Schema violation"
+    );
   });
 
   it("should accept valid mutations inside pushSoAMutation", async () => {
@@ -92,10 +101,15 @@ describe("Shared Zod Schema Client-Side Validation", () => {
     vi.spyOn(store, "fetchSoAProjection").mockResolvedValue({});
 
     // Valid call
-    await store.pushSoAMutation("arms", "ARM-NEW", {
-      name: "Arm New Dose",
-      armType: "Treatment",
-    }, "Valid design update");
+    await store.pushSoAMutation(
+      "arms",
+      "ARM-NEW",
+      {
+        name: "Arm New Dose",
+        armType: "Treatment",
+      },
+      "Valid design update"
+    );
 
     expect(store.soaError).toBeNull();
   });

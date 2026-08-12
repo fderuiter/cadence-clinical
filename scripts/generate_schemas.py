@@ -1,21 +1,22 @@
 import os
 import sys
-from typing import Any, get_args, get_origin, Union
 import types
+from typing import Any, Union, get_args, get_origin
+
 from pydantic import BaseModel
 
 # Ensure we can import apps
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from apps.designer.domain.cdisc.usdm_models import (
-    Code,
-    SyntaxTemplate,
-    EligibilityCriterion,
     Activity,
+    Code,
+    EligibilityCriterion,
     Encounter,
     StudyArm,
-    StudyEpoch,
     StudyDesign,
+    StudyEpoch,
+    SyntaxTemplate,
     USDMStudy,
 )
 
@@ -42,12 +43,11 @@ def python_type_to_zod(py_type: Any) -> str:
         if len(non_none_args) == 1:
             zod_base = python_type_to_zod(non_none_args[0])
             return f"{zod_base}.nullable().optional()"
-        else:
-            union_schemas = [python_type_to_zod(arg) for arg in non_none_args]
-            zod_base = f"z.union([{', '.join(union_schemas)}])"
-            if type(None) in args:
-                return f"{zod_base}.nullable().optional()"
-            return zod_base
+        union_schemas = [python_type_to_zod(arg) for arg in non_none_args]
+        zod_base = f"z.union([{', '.join(union_schemas)}])"
+        if type(None) in args:
+            return f"{zod_base}.nullable().optional()"
+        return zod_base
 
     if origin is list or py_type is list:
         if args:
@@ -85,7 +85,9 @@ def main():
     output_file = os.path.join(output_dir, "index.ts")
 
     lines = []
-    lines.append("// This file is auto-generated from Python USDM models. DO NOT EDIT DIRECTLY.")
+    lines.append(
+        "// This file is auto-generated from Python USDM models. DO NOT EDIT DIRECTLY."
+    )
     lines.append('import { z } from "zod";')
     lines.append("")
 
@@ -98,19 +100,25 @@ def main():
             zod_type = python_type_to_zod(field_info.annotation)
 
             # Check if there is a default or default_factory
-            has_default = (field_info.default is not None and field_info.default is not ... ) or field_info.default_factory is not None
-            
+            has_default = (
+                field_info.default is not None and field_info.default is not ...
+            ) or field_info.default_factory is not None
+
             # Special default matching for lists or empty structures if needed
             if zod_type.startswith("z.array"):
                 lines.append(f"  {target_name}: {zod_type}.default([]),")
             elif has_default:
                 default_val = field_info.default
                 if isinstance(default_val, str):
-                    lines.append(f'  {target_name}: {zod_type}.default("{default_val}"),')
+                    lines.append(
+                        f'  {target_name}: {zod_type}.default("{default_val}"),'
+                    )
                 elif isinstance(default_val, bool):
-                    lines.append(f'  {target_name}: {zod_type}.default({str(default_val).lower()}),')
+                    lines.append(
+                        f"  {target_name}: {zod_type}.default({str(default_val).lower()}),"
+                    )
                 elif isinstance(default_val, (int, float)):
-                    lines.append(f'  {target_name}: {zod_type}.default({default_val}),')
+                    lines.append(f"  {target_name}: {zod_type}.default({default_val}),")
                 else:
                     lines.append(f"  {target_name}: {zod_type},")
             else:
