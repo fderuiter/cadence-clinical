@@ -114,3 +114,52 @@ async def test_esignature_tamper_detection_e2e(test_x509_cert, test_private_key)
     tampered_res = verifier.verify_signature(tampered_pdf)
     assert tampered_res.is_valid is False
     assert "TAMPER" in tampered_res.failure_reason
+
+
+def test_esignature_duplicate_serial_rejection(test_x509_cert, test_private_key):
+    """Validate that esignature verifier blocks a signature where the certificate's serial number
+    matches a registered trusted certificate, but its fingerprint/content does not.
+
+    Requirements: PRD-SYS-001
+    """
+    from datetime import UTC, datetime, timedelta
+
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.x509.oid import NameOID
+
+    # Generate a forged key and certificate with the SAME serial number as test_x509_cert
+    forged_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    name = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COMMON_NAME, "Forged User"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Cadence Clinical"),
+        ]
+    )
+    now = datetime.now(UTC)
+    cert_forged = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(forged_key.public_key())
+        .serial_number(test_x509_cert.serial_number)  # duplicate serial number!
+        .not_valid_before(now - timedelta(days=1))
+        .not_valid_after(now + timedelta(days=365))
+        .sign(forged_key, hashes.SHA256())
+    )
+
+    # Both share the same serial number
+    assert test_x509_cert.serial_number == cert_forged.serial_number
+
+    # Sign document with the forged cert and key
+    signer_forged = PKCS7Signer(cert=cert_forged, key=forged_key)
+    original_pdf = b"%PDF-1.4 sample document containing Subject"
+    signed_pdf = signer_forged.sign_pdf(original_pdf)
+
+    # Verification must reject the signature because the fingerprint of the forged certificate
+    # does not match the fingerprint of the registered certificate, even though the serial number is a match.
+    verifier = ESignatureVerifier()
+    res = verifier.verify_pdf(signed_pdf)
+    assert res.is_valid is False
+    assert res.status == "UNTRUSTED_SELF_SIGNED"

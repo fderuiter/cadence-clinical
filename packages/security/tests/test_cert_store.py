@@ -71,3 +71,56 @@ def test_revoke_certificate_status_check() -> None:
     is_valid, status = service.verify_certificate_status(cert_pem)
     assert is_valid is False
     assert "REVOKED: Key compromise reported" in status
+
+
+def _generate_certificate_with_serial(serial: int, common_name: str) -> str:
+    """Generate temporary self-signed X.509 certificate with specific serial number and common name."""
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    name = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COMMON_NAME, common_name),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Cadence Clinical"),
+        ]
+    )
+    now = datetime.now(UTC)
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(key.public_key())
+        .serial_number(serial)
+        .not_valid_before(now - timedelta(days=1))
+        .not_valid_after(now + timedelta(days=365))
+        .sign(key, hashes.SHA256())
+    )
+    return cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+
+
+def test_fingerprint_vs_serial_forgery_rejection() -> None:
+    """Validate that a certificate with a matching serial number but different content/fingerprint is rejected.
+
+    Requirements: PRD-SYS-001
+    """
+    service = CertificateStoreService()
+
+    # Generate two certificates with the SAME serial number but different common names / keys (and hence fingerprints)
+    serial_num = 999999
+    cert_trusted = _generate_certificate_with_serial(serial_num, "Trusted User")
+    cert_forged = _generate_certificate_with_serial(serial_num, "Forged User")
+
+    # Register only the trusted certificate
+    service.register_certificate(user_id="trusted_user", cert_pem=cert_trusted)
+
+    # Both certificates share the exact same serial number
+    cert_t = x509.load_pem_x509_certificate(cert_trusted.encode("utf-8"))
+    cert_f = x509.load_pem_x509_certificate(cert_forged.encode("utf-8"))
+    assert cert_t.serial_number == cert_f.serial_number
+
+    # The trusted certificate MUST be approved
+    assert service.verify_trust(cert_trusted) is True
+    assert service.is_approved(cert_trusted) is True
+
+    # The forged certificate MUST be rejected because its SHA-256 fingerprint does not match,
+    # even though its serial number is identical to the trusted certificate
+    assert service.verify_trust(cert_forged) is False
+    assert service.is_approved(cert_forged) is False

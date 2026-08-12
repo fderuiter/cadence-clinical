@@ -209,8 +209,7 @@ def verify_x509_signature(
 
         is_self_signed = cert.issuer == cert.subject
         if is_self_signed:
-            serial_hex = hex(cert.serial_number)[2:].lower()
-            if serial_hex not in cert_store._cert_registry:
+            if not cert_store.verify_trust(cert_pem):
                 logger.warning("Self-signed certificate is not approved in trust store")
                 return False
 
@@ -395,8 +394,7 @@ def validate_document_signature(
         cert = x509.load_pem_x509_certificate(cert_pem.encode("utf-8"))
         is_self_signed = cert.issuer == cert.subject
         if is_self_signed:
-            serial_hex = hex(cert.serial_number)[2:].lower()
-            if serial_hex not in cert_store._cert_registry:
+            if not cert_store.verify_trust(cert_pem):
                 return False, "Self-signed certificate is not approved in trust store"
     except Exception as e:
         return False, f"Failed to parse certificate: {e}"

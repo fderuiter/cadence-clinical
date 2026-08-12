@@ -177,11 +177,10 @@ class ESignatureVerifier:
 
             cert_store = get_active_cert_store()
 
-            # Check self-signed
+            # Check self-signed using the public trust store validation service
             is_self_signed = cert.issuer == cert.subject
             if is_self_signed:
-                serial_hex = hex(cert.serial_number)[2:].lower()
-                if serial_hex not in cert_store._cert_registry:
+                if not cert_store.verify_trust(cert_pem_str):
                     return VerificationResult(
                         is_valid=False,
                         status="UNTRUSTED_SELF_SIGNED",
