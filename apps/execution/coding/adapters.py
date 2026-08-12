@@ -124,6 +124,9 @@ class SQLCodingRepository:
     async def save_query(self, query: ClinicalQuery) -> None:
         self.session.add(query)
 
+    async def add_outbox_entry(self, entry: Any) -> None:
+        self.session.add(entry)
+
     async def validate_meddra_term(self, version: str, code: str) -> Any:
         stmt_valid = select(MedDRATerm).where(
             MedDRATerm.dictionary_version == version,

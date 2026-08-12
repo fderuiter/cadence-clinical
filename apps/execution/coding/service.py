@@ -446,14 +446,36 @@ async def process_coding_action(
             }
         )
 
-        # Close any open/active SYSTEM_CODING queries for this observation
+        # Transition query closure to an Asynchronous EDC Query Closure via the transactional outbox
         active_queries = await repo.get_active_queries(assignment.observation_id)
         for active_q in active_queries:
-            active_q.status = "CLOSED"
-            active_q.resolver = resolved_actor
-            active_q.resolved_at = datetime.now(UTC).replace(tzinfo=None)
-            active_q.response = f"Resolved via manual coding action: {action_upper} on code {coded_code}."
-            await repo.save_query(active_q)
+            import uuid
+
+            from apps.execution.database.models import IntegrationOutbox
+
+            payload = {
+                "actor": resolved_actor,
+                "timestamp": datetime.now(UTC).isoformat(),
+                "observation_id": assignment.observation_id,
+                "query_id": active_q.id,
+                "justification": reason_for_change
+                or f"Manual decision: {action_upper}",
+                "action": action_upper,
+                "coded_code": coded_code,
+            }
+
+            outbox_entry = IntegrationOutbox(
+                id=str(uuid.uuid4()),
+                event_type="EDC_QUERY_RESOLVE",
+                payload=payload,
+                status="PENDING",
+                attempts=0,
+                correlation_id=f"query-resolve-{active_q.id}-{uuid.uuid4().hex[:8]}",
+                created_by=resolved_actor,
+                reason_for_change=reason_for_change
+                or f"Manual decision: {action_upper}",
+            )
+            await repo.add_outbox_entry(outbox_entry)
 
     return assignment
 

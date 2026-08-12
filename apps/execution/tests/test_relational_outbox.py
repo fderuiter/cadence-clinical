@@ -317,6 +317,87 @@ async def test_outbox_no_unencrypted_pii() -> None:
 
 
 @pytest.mark.asyncio
+async def test_manual_coding_writes_query_resolve_to_outbox() -> None:
+    """Verify that a manual coding action writes an EDC_QUERY_RESOLVE outbox record with full GxP audit parameters."""
+    # Seed data
+    from apps.execution.tests.test_system_coding_queries import seed_data
+
+    await seed_data()
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # 1. Create a query-pending observation
+        await client.post(
+            "/api/v1/execution/observations",
+            json={
+                "subject_id": "SUBJ-001",
+                "study_id": "STUDY-001",
+                "domain": "AE",
+                "test_code": "AETERM",
+                "test_name": "Adverse Event Verbatim",
+                "value_string": "gibberish_term_xyz",
+            },
+            headers=get_auth_headers(),
+        )
+
+        # 2. Retrieve assignment ID
+        resp_list = await client.get(
+            "/api/v1/execution/coding/assignments",
+            headers=get_auth_headers(),
+        )
+        assign_id = resp_list.json()[0]["id"]
+
+        # 3. Perform manual override resolution
+        resp_override = await client.post(
+            f"/api/v1/execution/coding/assignments/{assign_id}/action",
+            json={
+                "action": "OVERRIDE",
+                "code": "10019211",
+                "term": "Headache",
+                "reason_for_change": "Manual classification of uncodable symptom",
+            },
+            headers=get_auth_headers(user_id="manual_coder_bob", roles="Data Manager"),
+        )
+        assert resp_override.status_code == 200
+
+        # Check that outbox record of type EDC_QUERY_RESOLVE is written atomically inside the transaction
+        async with db_manager.get_session_maker()() as session:
+            stmt = select(IntegrationOutbox).where(
+                IntegrationOutbox.event_type == "EDC_QUERY_RESOLVE"
+            )
+            res = await session.execute(stmt)
+            outbox_records = res.scalars().all()
+            assert len(outbox_records) >= 1
+
+            # Find the record for our user/action
+            record = None
+            for r in outbox_records:
+                if r.payload.get("actor") == "manual_coder_bob":
+                    record = r
+                    break
+
+            assert record is not None
+            assert record.status == "PENDING"
+            assert record.attempts == 0
+            assert record.created_by == "manual_coder_bob"
+            assert (
+                record.reason_for_change == "Manual classification of uncodable symptom"
+            )
+
+            payload = record.payload
+            assert payload["actor"] == "manual_coder_bob"
+            assert "timestamp" in payload
+            assert payload["observation_id"] is not None
+            assert payload["query_id"] is not None
+            assert (
+                payload["justification"] == "Manual classification of uncodable symptom"
+            )
+            assert payload["action"] == "OVERRIDE"
+            assert payload["coded_code"] == "10019211"
+
+
+@pytest.mark.asyncio
 async def test_outbox_worker_batch_size_limit(monkeypatch) -> None:
     """Verify that OUTBOX_BATCH_SIZE limits the number of claimed records in one poll."""
     monkeypatch.setenv("OUTBOX_BATCH_SIZE", "2")

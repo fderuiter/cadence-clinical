@@ -160,6 +160,35 @@ async def poll_and_dispatch() -> None:
                         )
                         resp.raise_for_status()
 
+                elif record_data["event_type"] == "EDC_QUERY_RESOLVE":
+                    query_id = record_data["payload"].get("query_id")
+                    if query_id:
+                        from apps.execution.database.models import ClinicalQuery
+
+                        async with session_maker() as resolve_session:
+                            stmt_q = select(ClinicalQuery).where(
+                                ClinicalQuery.id == query_id,
+                                ClinicalQuery.is_deleted.is_(False),
+                            )
+                            res_q = await resolve_session.execute(stmt_q)
+                            query_item = res_q.scalars().first()
+                            if query_item:
+                                actor = record_data["payload"].get("actor", "system")
+                                action = record_data["payload"].get("action", "ACCEPT")
+                                coded_code = record_data["payload"].get("coded_code")
+
+                                query_item.status = "CLOSED"
+                                query_item.resolver = actor
+                                query_item.resolved_at = datetime.now(UTC).replace(
+                                    tzinfo=None
+                                )
+                                query_item.response = (
+                                    f"Resolved via manual coding action: "
+                                    f"{action} on code {coded_code}."
+                                )
+                                resolve_session.add(query_item)
+                                await resolve_session.commit()
+
                 # On completion (success), update standard status fields within a separate transaction
                 await update_record_status(record_data["id"], success=True)
             except Exception as e:
