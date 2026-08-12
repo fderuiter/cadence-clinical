@@ -124,8 +124,9 @@ services:
     container_name: cadence-designer
     command:
       [
-        "uvicorn",
-        "apps.designer.main:app",
+        "python",
+        "scripts/start.py",
+        "designer",
         "--host",
         "0.0.0.0",
         "--port",
@@ -150,9 +151,14 @@ services:
     container_name: cadence-execution
     command:
       [
-        "sh",
-        "-c",
-        "python -m apps.execution.database.migrate && uvicorn apps.execution.main:app --host 0.0.0.0 --port 8002 --reload",
+        "python",
+        "scripts/start.py",
+        "execution",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8002",
+        "--reload",
       ]
     volumes:
       - ..:/app
@@ -175,8 +181,9 @@ services:
     container_name: cadence-org
     command:
       [
-        "uvicorn",
-        "apps.org.main:app",
+        "python",
+        "scripts/start.py",
+        "org",
         "--host",
         "0.0.0.0",
         "--port",
@@ -199,9 +206,14 @@ services:
     container_name: cadence-eisf
     command:
       [
-        "sh",
-        "-c",
-        "python -m apps.eisf.database.migrate && uvicorn apps.eisf.main:app --host 0.0.0.0 --port 8010 --reload",
+        "python",
+        "scripts/start.py",
+        "eisf",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8010",
+        "--reload",
       ]
     volumes:
       - ..:/app
@@ -219,9 +231,14 @@ services:
     container_name: cadence-etmf
     command:
       [
-        "sh",
-        "-c",
-        "python -m apps.etmf.database.migrate && uvicorn apps.etmf.main:app --host 0.0.0.0 --port 8003 --reload",
+        "python",
+        "scripts/start.py",
+        "etmf",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8003",
+        "--reload",
       ]
     volumes:
       - ..:/app
@@ -242,9 +259,14 @@ services:
     container_name: cadence-ctms
     command:
       [
-        "sh",
-        "-c",
-        "python -m apps.ctms.migrate && uvicorn apps.ctms.main:app --host 0.0.0.0 --port 8007 --reload",
+        "python",
+        "scripts/start.py",
+        "ctms",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8007",
+        "--reload",
       ]
     volumes:
       - ..:/app
@@ -262,9 +284,14 @@ services:
     container_name: cadence-quality
     command:
       [
-        "sh",
-        "-c",
-        "python -m apps.quality.migrate && uvicorn apps.quality.main:app --host 0.0.0.0 --port 8005 --reload",
+        "python",
+        "scripts/start.py",
+        "quality",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8005",
+        "--reload",
       ]
     volumes:
       - ..:/app
@@ -282,8 +309,9 @@ services:
     container_name: cadence-interop
     command:
       [
-        "uvicorn",
-        "apps.interop.main:app",
+        "python",
+        "scripts/start.py",
+        "interop",
         "--host",
         "0.0.0.0",
         "--port",
@@ -306,8 +334,9 @@ services:
     container_name: cadence-tickets
     command:
       [
-        "uvicorn",
-        "apps.tickets.main:app",
+        "python",
+        "scripts/start.py",
+        "tickets",
         "--host",
         "0.0.0.0",
         "--port",
@@ -330,8 +359,9 @@ services:
     container_name: cadence-safety
     command:
       [
-        "uvicorn",
-        "apps.safety.main:app",
+        "python",
+        "scripts/start.py",
+        "safety",
         "--host",
         "0.0.0.0",
         "--port",
@@ -355,8 +385,9 @@ services:
     container_name: cadence-notifications
     command:
       [
-        "uvicorn",
-        "apps.notifications.main:app",
+        "python",
+        "scripts/start.py",
+        "notifications",
         "--host",
         "0.0.0.0",
         "--port",
@@ -389,8 +420,9 @@ services:
     container_name: cadence-econsent
     command:
       [
-        "uvicorn",
-        "apps.econsent.main:app",
+        "python",
+        "scripts/start.py",
+        "econsent",
         "--host",
         "0.0.0.0",
         "--port",
@@ -433,8 +465,9 @@ services:
     container_name: cadence-gateway
     command:
       [
-        "uvicorn",
-        "apps.gateway.main:app",
+        "python",
+        "scripts/start.py",
+        "gateway",
         "--host",
         "0.0.0.0",
         "--port",
