@@ -7,11 +7,81 @@ This module handles the design and management of clinical studies and MDR compon
 
 import os
 
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import FastAPI, HTTPException, Request, status, Depends
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from neo4j import AsyncGraphDatabase
+
+from packages.security.context import audit_context
+
+DEFAULT_JUSTIFICATIONS = {
+    "system_operation",
+    "system",
+    "automated system operation",
+    "automated system",
+    "default",
+    "none",
+    "system-operation",
+    "system operation",
+    "unknown",
+    "n/a",
+    "na",
+    "null",
+    "undefined",
+}
+
+async def gxp_audit_enforcement_filter(request: Request):
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        yield
+        return
+
+    # Extract user ID and change reason
+    user_id = getattr(request.state, "user_id", None) or request.headers.get("X-User-Id") or "system"
+    change_reason = request.headers.get("X-Change-Reason") or getattr(request.state, "change_reason", None)
+
+    # Check request body if change_reason is missing
+    if not change_reason:
+        try:
+            body_bytes = await request.body()
+            if body_bytes:
+                import json
+                body_json = json.loads(body_bytes)
+                change_reason = body_json.get("change_reason") or body_json.get("reason_for_change")
+                
+                # Restore body receive for Starlette downstream
+                async def receive():
+                    return {
+                        "type": "http.request",
+                        "body": body_bytes,
+                        "more_body": False,
+                    }
+                request._receive = receive
+        except Exception:
+            pass
+
+    # Check if this is a schema modification path (arms, epochs, visits, procedures, blocks, rules)
+    path = request.url.path.lower()
+    is_schema_mod = any(item in path for item in ("/arms", "/epochs", "/visits", "/procedures", "/blocks", "/rules", "/assignments"))
+
+    # Validate that every state-altering request provides a non-default, user-supplied change justification
+    is_invalid = False
+    if not change_reason or not change_reason.strip():
+        is_invalid = True
+    elif is_schema_mod and user_id not in ("system", "service"):
+        norm_reason = change_reason.strip().lower()
+        if norm_reason in DEFAULT_JUSTIFICATIONS:
+            is_invalid = True
+            
+    if is_invalid:
+        raise HTTPException(
+            status_code=400,
+            detail="Missing change justification reason"
+        )
+
+    # Wrap the route execution inside the audit_context context manager
+    with audit_context(user_id=user_id, change_reason=change_reason.strip()):
+        yield
 
 import apps.designer.adapters.repositories  # noqa: F401
 from apps.designer.adapters.safety_gateway import QuerySafetyError  # noqa: F401
@@ -49,7 +119,11 @@ BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
 
 
 validate_branding("designer")
-app = FastAPI(title=f"{BRAND_NAME} - Designer (MDR/SDR)", version="0.1.0")
+app = FastAPI(
+    title=f"{BRAND_NAME} - Designer (MDR/SDR)",
+    version="0.1.0",
+    dependencies=[Depends(gxp_audit_enforcement_filter)]
+)
 
 app.add_middleware(GatewayAuthMiddleware)
 

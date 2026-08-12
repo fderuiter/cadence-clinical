@@ -446,9 +446,33 @@ async def import_usdm_study(
                 "changeReason"
             )
 
+    DEFAULT_JUSTIFICATIONS = {
+        "system_operation",
+        "system",
+        "automated system operation",
+        "automated system",
+        "default",
+        "none",
+        "system-operation",
+        "system operation",
+        "unknown",
+        "n/a",
+        "na",
+        "null",
+        "undefined",
+    }
+
+    is_invalid = False
     if not change_reason or not str(change_reason).strip():
+        is_invalid = True
+    elif user_id not in ("system", "service"):
+        norm_reason = str(change_reason).strip().lower()
+        if norm_reason in DEFAULT_JUSTIFICATIONS:
+            is_invalid = True
+
+    if is_invalid:
         raise HTTPException(
-            status_code=403, detail="Missing change justification reason"
+            status_code=400, detail="Missing change justification reason"
         )
     change_reason = change_reason.strip()
 
@@ -4126,7 +4150,39 @@ def resolve_change_reason(request: Request, body_reason: str | None = None) -> s
         reason = request.headers.get("X-Change-Reason")
     if not reason:
         reason = body_reason
+
+    # Enforce non-default and user-supplied check
+    user_id = getattr(request.state, "user_id", None) or request.headers.get("X-User-Id") or "system"
+
+    # Define standard GxP system default values that are prohibited for user-driven actions
+    DEFAULT_JUSTIFICATIONS = {
+        "system_operation",
+        "system",
+        "automated system operation",
+        "automated system",
+        "default",
+        "none",
+        "system-operation",
+        "system operation",
+        "unknown",
+        "n/a",
+        "na",
+        "null",
+        "undefined",
+    }
+
+    path = request.url.path.lower()
+    is_schema_mod = any(item in path for item in ("/arms", "/epochs", "/visits", "/procedures", "/blocks", "/rules", "/assignments"))
+
+    is_invalid = False
     if not reason or not reason.strip():
+        is_invalid = True
+    elif is_schema_mod and user_id not in ("system", "service"):
+        norm_reason = reason.strip().lower()
+        if norm_reason in DEFAULT_JUSTIFICATIONS:
+            is_invalid = True
+
+    if is_invalid:
         raise HTTPException(
             status_code=400, detail="Missing change justification reason"
         )

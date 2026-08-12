@@ -82,3 +82,120 @@ def test_fda_compliant_pdf_generation_protocol():
             ), "Protocol PDF fallback missing marked info"
     finally:
         protocol_doc.close()
+
+
+import os
+import time
+from fastapi.testclient import TestClient
+from apps.designer.main import app
+from packages.security.signing import generate_gateway_signature
+
+GATEWAY_SECRET = os.getenv(
+    "GATEWAY_SECRET", default="internal-gateway-secret-12345"
+).encode("utf-8")
+
+
+def _make_auth_headers_comp(
+    user_id: str = "designer_test_user",
+    roles: str = "STUDY_DESIGNER",
+    change_reason: str = "Valid Change Justification Reason",
+) -> dict:
+    """Generate signed Gateway authentication headers for testing apps/designer endpoints."""
+    timestamp = str(time.time())
+    signature = generate_gateway_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        secret=GATEWAY_SECRET,
+        change_reason=change_reason,
+        tenant_id="tenant_default",
+    )
+    return {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": signature,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+        "X-Tenant-Id": "tenant_default",
+    }
+
+
+def test_gxp_audit_enforcement_missing_justification():
+    """Verify that a state-altering request without a justification is rejected."""
+    client = TestClient(app)
+    headers = _make_auth_headers_comp(change_reason="")
+    # Remove header
+    headers.pop("X-Change-Reason", None)
+
+    # Attempt to create a block with missing justification
+    payload = {
+        "id": "test_block_gxp_1",
+        "block_type": "NARRATIVE",
+        "order": 1,
+        "properties": {"title": "Test Title"}
+    }
+    response = client.post(
+        "/api/v1/studies/study_123/versions/version_123/blocks",
+        json=payload,
+        headers=headers
+    )
+    # The gateway middleware or our filter will reject
+    assert response.status_code in (400, 403)
+    assert "Missing change justification reason" in response.json()["detail"]
+
+
+def test_gxp_audit_enforcement_default_justification():
+    """Verify that user-driven interactions with a default justification are rejected."""
+    client = TestClient(app)
+    # Prohibited default value
+    headers = _make_auth_headers_comp(user_id="user_123", change_reason="system_operation")
+
+    payload = {
+        "id": "test_block_gxp_2",
+        "block_type": "NARRATIVE",
+        "order": 2,
+        "properties": {"title": "Test Title 2"}
+    }
+    response = client.post(
+        "/api/v1/studies/study_123/versions/version_123/blocks",
+        json=payload,
+        headers=headers
+    )
+    assert response.status_code == 400
+    assert "Missing change justification reason" in response.json()["detail"]
+
+
+def test_gxp_audit_enforcement_system_user_bypass():
+    """Verify that a system/service identity can execute with system_operation."""
+    client = TestClient(app)
+    headers = _make_auth_headers_comp(user_id="system", change_reason="system_operation")
+
+    payload = {
+        "id": "test_block_gxp_3",
+        "block_type": "NARRATIVE",
+        "order": 3,
+        "properties": {"title": "Test Title 3"}
+    }
+    response = client.post(
+        "/api/v1/studies/study_123/versions/version_123/blocks",
+        json=payload,
+        headers=headers
+    )
+    # Since it's a system user, it bypasses the default check
+    # The database call might fail if mock DB is not setup, but it should NOT fail with validation 400/403 missing reason
+    assert response.status_code != 400 or "Missing change justification reason" not in response.json().get("detail", "")
+
+
+def test_gxp_audit_enforcement_read_only_bypass():
+    """Verify that read-only GET queries are exempt from justification checks."""
+    client = TestClient(app)
+    # GET request with no change reason header
+    headers = _make_auth_headers_comp(change_reason="")
+    headers.pop("X-Change-Reason", None)
+
+    response = client.get(
+        "/health",
+        headers=headers
+    )
+    assert response.status_code == 200
