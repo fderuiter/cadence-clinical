@@ -213,7 +213,7 @@ async def test_site_freeze_blocking_writes():
 
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
-    from packages.database import register_site_lock_checker, _SITE_LOCK_CHECKERS
+    from packages.database import _SITE_LOCK_CHECKERS, register_site_lock_checker
 
     # Lock site-101 via mock callback
     locked_sites = {"site-101"}

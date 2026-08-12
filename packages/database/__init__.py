@@ -77,42 +77,27 @@ def register_form_lock_checker(checker: Callable[[str], bool]) -> None:
 
 def is_trial_locked() -> bool:
     """Check if any registered lock checker is active."""
-    for checker in _TRIAL_LOCK_CHECKERS:
-        if checker():
-            return True
-    return False
+    return any(checker() for checker in _TRIAL_LOCK_CHECKERS)
 
 
 def is_site_locked(site_id: str) -> bool:
     """Check if any registered site lock checker is active."""
-    for checker in _SITE_LOCK_CHECKERS:
-        if checker(site_id):
-            return True
-    return False
+    return any(checker(site_id) for checker in _SITE_LOCK_CHECKERS)
 
 
 def is_visit_locked(visit_id: str) -> bool:
     """Check if any registered visit lock checker is active."""
-    for checker in _VISIT_LOCK_CHECKERS:
-        if checker(visit_id):
-            return True
-    return False
+    return any(checker(visit_id) for checker in _VISIT_LOCK_CHECKERS)
 
 
 def is_subject_locked(subject_id: str) -> bool:
     """Check if any registered subject lock checker is active."""
-    for checker in _SUBJECT_LOCK_CHECKERS:
-        if checker(subject_id):
-            return True
-    return False
+    return any(checker(subject_id) for checker in _SUBJECT_LOCK_CHECKERS)
 
 
 def is_form_locked(form_id: str) -> bool:
     """Check if any registered form lock checker is active."""
-    for checker in _FORM_LOCK_CHECKERS:
-        if checker(form_id):
-            return True
-    return False
+    return any(checker(form_id) for checker in _FORM_LOCK_CHECKERS)
 
 
 @event.listens_for(Session, "before_flush")
