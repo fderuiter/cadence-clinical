@@ -140,6 +140,14 @@ The system governs all resource mutations via strict Role-Based Access Control (
 
 Site users (PIs, Study Coordinators) must be mathematically restricted to subject data belonging specifically to their assigned `site_uuid`. Any API call attempting to read or write to a subject belonging to another site must return a `403 Forbidden` error and write a security alert containing the user's UUID and IP address to the audit log.
 
+#### PRD-SYS-102: Centralized Database-level Background Loop Coordination
+
+The system must coordinate all recurring background processing loops (such as audit sealing, daily unresolved query escalations, and outbox event dispatching) across multiple application server instances. This coordination must utilize database-level advisory locking (specifically transaction-level advisory locks under PostgreSQL) with distinct advisory lock IDs to guarantee that exactly one worker instance can execute any given background cycle.
+
+#### PRD-SYS-103: Asynchronous and Non-blocking Cryptographic Integrity Verification
+
+To protect system responsiveness and prevent blocking user-facing HTTP request lifecycles, heavy cryptographic and ledger verification tasks (such as validation of GxP clinical execution ledger integrity) must run asynchronously as background tasks (specifically within FastAPI background tasks). The system must expose the status of the last executed verification task in a non-blocking query endpoint.
+
 #### PRD-EDL-001: Data-Driven Expected Document Lists (EDLs) & Completeness Tracking
 
 The system must implement a data-driven Expected Document List (EDL) reference data model and endpoints (`/api/v1/etmf/edl` and `/api/v1/etmf/completeness`) to track required study-scope and site-scope documents against clinical milestones. This replaces hardcoded milestone mappings with a data-driven configuration. Each `ExpectedDocument` record must include the four standard Part 11 audit fields as defined in `PRD-SYS-001` (specifically `created_at`, `created_by`, `reason_for_change`, and `version_index`).
