@@ -10,6 +10,7 @@ from apps.execution.presentation.routers import (
     safety_router,
     sdv_router,
     signatures_router,
+    exports_router,
 )
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "safety_router",
     "sdv_router",
     "signatures_router",
+    "exports_router",
 ]

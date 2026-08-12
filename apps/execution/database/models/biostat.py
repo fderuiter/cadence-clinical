@@ -1,6 +1,7 @@
 from datetime import datetime
+from typing import Optional
 
-from sqlalchemy import JSON, DateTime, Index, String, func
+from sqlalchemy import JSON, DateTime, Index, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .audit import AuditedModel
@@ -35,3 +36,30 @@ class SDTMDomainRecord(AuditedModel):
     domain: Mapped[str] = mapped_column(String(50), nullable=False)
     usubjid: Mapped[str] = mapped_column(String(255), nullable=False)
     record_data: Mapped[dict] = mapped_column(JSON, nullable=False)
+
+
+class DatasetExportJob(AuditedModel):
+    """Represents an asynchronous dataset export and validation job.
+
+    Inherits from AuditedModel to maintain audit logs.
+
+    Attributes:
+        status (str): PENDING, PROCESSING, COMPLETED, FAILED.
+        progress (int): Percentage completed (0 to 100).
+        study_id (str): Identifying clinical trial ID.
+        dataset_name (str): Identifying dataset name.
+        download_url (str): The URL/path to retrieve the file.
+        file_path (str): The server file path where the export is stored.
+        error_message (str): Exception details for failed/interrupted jobs.
+    """
+
+    __tablename__ = "dataset_export_jobs"
+
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="PENDING")
+    progress: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    study_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    dataset_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    download_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    file_path: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    error_message: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    initiated_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)

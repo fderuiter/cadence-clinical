@@ -512,6 +512,13 @@ def validate_dataset_json(
         if ds_name_upper.startswith("SUPP"):
             parent_domain_name = ds_name_upper[4:]
             parent_records = get_dataset_records(parent_domain_name)
+            parent_by_usubjid = {}
+            if parent_records is not None:
+                for p_rec in parent_records:
+                    u = p_rec.get("USUBJID")
+                    if u not in parent_by_usubjid:
+                        parent_by_usubjid[u] = []
+                    parent_by_usubjid[u].append(p_rec)
 
             for i, row in enumerate(local_datasets[ds_name_upper], start=1):
                 # Check RDOMAIN matches parent domain name
@@ -536,9 +543,7 @@ def validate_dataset_json(
 
                 if parent_records is not None:
                     # Find parent records with matching USUBJID
-                    matching_parents = [
-                        r for r in parent_records if r.get("USUBJID") == usubjid
-                    ]
+                    matching_parents = parent_by_usubjid.get(usubjid, [])
                     if not matching_parents:
                         errors.append(
                             f"[{SUPPLEMENTAL_QUALIFIER_VIOLATION}] [{ds_name_upper}] Row {i}: Parent record not found for USUBJID='{usubjid}' in {parent_domain_name}."

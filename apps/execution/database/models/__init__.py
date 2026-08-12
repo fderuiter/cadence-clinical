@@ -64,6 +64,7 @@ _submodule_mappings = {
     # biostat
     "BiostatExport": "biostat",
     "SDTMDomainRecord": "biostat",
+    "DatasetExportJob": "biostat",
     # designer
     "TranslationJob": "designer",
     "StudyAuthoredRule": "designer",

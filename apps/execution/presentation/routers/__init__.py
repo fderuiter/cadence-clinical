@@ -11,6 +11,7 @@ from apps.execution.presentation.routers.offline import router as offline_router
 from apps.execution.presentation.routers.safety import router as safety_router
 from apps.execution.presentation.routers.sdv import router as sdv_router
 from apps.execution.presentation.routers.signatures import router as signatures_router
+from apps.execution.presentation.routers.exports import router as exports_router
 
 __all__ = [
     "amendments_router",
@@ -24,4 +25,5 @@ __all__ = [
     "safety_router",
     "sdv_router",
     "signatures_router",
+    "exports_router",
 ]
