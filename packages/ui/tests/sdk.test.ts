@@ -18,8 +18,13 @@ describe("ComplianceSDK TS Wrapper Client", () => {
 
     it("handles Date objects and undefined values correctly", () => {
       const d = new Date("2026-08-03T12:00:00.000Z");
-      const payload = { timestamp: d, value: undefined, list: [1, undefined, 3] };
-      const expected = '{"list":[1,null,3],"timestamp":"2026-08-03T12:00:00.000Z"}';
+      const payload = {
+        timestamp: d,
+        value: undefined,
+        list: [1, undefined, 3],
+      };
+      const expected =
+        '{"list":[1,null,3],"timestamp":"2026-08-03T12:00:00.000Z"}';
       expect(sdk.serialize(payload)).toBe(expected);
     });
   });
