@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import hmac
 import os
@@ -313,3 +314,149 @@ async def test_outbox_no_unencrypted_pii() -> None:
         ]
         for key in payload_keys:
             assert not any(pii_kw in key.lower() for pii_kw in forbidden_pii_keywords)
+
+
+@pytest.mark.asyncio
+async def test_outbox_worker_batch_size_limit(monkeypatch) -> None:
+    """Verify that OUTBOX_BATCH_SIZE limits the number of claimed records in one poll."""
+    monkeypatch.setenv("OUTBOX_BATCH_SIZE", "2")
+
+    # Create 5 pending records
+    async with db_manager.get_session_maker()() as session:
+        for i in range(5):
+            record = IntegrationOutbox(
+                event_type="TRIAL_LOCK",
+                payload={"trial_locked": True, "reason": f"Lock {i}"},
+                status="PENDING",
+                attempts=0,
+                correlation_id=f"corr-batch-{i}",
+                created_by="system",
+                reason_for_change=f"Reason {i}",
+            )
+            session.add(record)
+        await session.commit()
+
+    with patch("httpx.AsyncClient.post") as mock_post:
+        from unittest.mock import MagicMock
+
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.raise_for_status = MagicMock()
+        mock_post.return_value = mock_resp
+
+        await poll_and_dispatch()
+
+        # Verify only 2 records were processed
+        assert mock_post.call_count == 2
+
+    # Check updated and remaining outbox entries in DB
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(IntegrationOutbox)
+        res = await session.execute(stmt)
+        all_records = res.scalars().all()
+
+        success_count = sum(1 for r in all_records if r.status == "SUCCESS")
+        pending_count = sum(1 for r in all_records if r.status == "PENDING")
+
+        assert success_count == 2
+        assert pending_count == 3
+
+
+@pytest.mark.asyncio
+async def test_outbox_worker_dialect_aware_locking_pg() -> None:
+    """Verify that PostgreSQL dialect appends skip_locked=True to the select query."""
+    with patch.object(db_manager.engine.dialect, "name", "postgresql"):
+        from sqlalchemy.ext.asyncio import AsyncSession
+
+        captured_stmt = None
+
+        async def mock_execute(self, stmt, *args, **kwargs):
+            nonlocal captured_stmt
+            captured_stmt = stmt
+            # Return empty list to prevent further execution
+            from unittest.mock import MagicMock
+
+            mock_res = MagicMock()
+            mock_res.scalars.return_value.all.return_value = []
+            return mock_res
+
+        with patch.object(AsyncSession, "execute", mock_execute):
+            await poll_and_dispatch()
+
+        assert captured_stmt is not None
+        # Check that with_for_update parameter skip_locked is True
+        assert captured_stmt._for_update_arg is not None
+        assert captured_stmt._for_update_arg.skip_locked is True
+
+
+@pytest.mark.asyncio
+async def test_outbox_worker_dialect_aware_locking_sqlite() -> None:
+    """Verify that SQLite dialect appends with_for_update without skip_locked."""
+    with patch.object(db_manager.engine.dialect, "name", "sqlite"):
+        from sqlalchemy.ext.asyncio import AsyncSession
+
+        captured_stmt = None
+
+        async def mock_execute(self, stmt, *args, **kwargs):
+            nonlocal captured_stmt
+            captured_stmt = stmt
+            from unittest.mock import MagicMock
+
+            mock_res = MagicMock()
+            mock_res.scalars.return_value.all.return_value = []
+            return mock_res
+
+        with patch.object(AsyncSession, "execute", mock_execute):
+            await poll_and_dispatch()
+
+        assert captured_stmt is not None
+        assert captured_stmt._for_update_arg is not None
+        assert captured_stmt._for_update_arg.skip_locked is False
+
+
+@pytest.mark.asyncio
+async def test_outbox_worker_concurrent_dispatch(monkeypatch) -> None:
+    """Verify that multiple records are processed concurrently."""
+    monkeypatch.setenv("OUTBOX_BATCH_SIZE", "5")
+    monkeypatch.setenv("OUTBOX_MAX_CONCURRENCY", "3")
+
+    # Create 3 records
+    async with db_manager.get_session_maker()() as session:
+        for i in range(3):
+            record = IntegrationOutbox(
+                event_type="TRIAL_LOCK",
+                payload={"trial_locked": True, "reason": f"Lock {i}"},
+                status="PENDING",
+                attempts=0,
+                correlation_id=f"corr-concurrent-{i}",
+                created_by="system",
+                reason_for_change=f"Reason {i}",
+            )
+            session.add(record)
+        await session.commit()
+
+    active_tasks = 0
+    max_active_tasks = 0
+    task_lock = asyncio.Lock()
+
+    async def mock_post(client_self, url, **kwargs):
+        nonlocal active_tasks, max_active_tasks
+        async with task_lock:
+            active_tasks += 1
+            if active_tasks > max_active_tasks:
+                max_active_tasks = active_tasks
+        await asyncio.sleep(0.1)
+        async with task_lock:
+            active_tasks -= 1
+        from unittest.mock import MagicMock
+
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.raise_for_status = MagicMock()
+        return mock_resp
+
+    with patch("httpx.AsyncClient.post", mock_post):
+        await poll_and_dispatch()
+
+    # If concurrency is working, max_active_tasks should be 3
+    assert max_active_tasks == 3
