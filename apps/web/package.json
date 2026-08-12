@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "prebuild": "pnpm --filter ui build && node src/types/generate-types.js",
-    "pretest": "pnpm --filter ui build && node src/types/generate-types.js",
+    "prebuild": "pnpm --filter usdm-schemas build && pnpm --filter ui build && node src/types/generate-types.js",
+    "pretest": "pnpm --filter usdm-schemas build && pnpm --filter ui build && node src/types/generate-types.js",
     "pretypecheck": "node src/types/generate-types.js",
     "dev": "vite",
     "build": "vite build --base=/cadence-clinical/ && node ../../scripts/build-docs.js",
@@ -24,6 +24,7 @@
     "keycloak-js": "^26.2.4",
     "pinia": "^4.0.2",
     "ui": "workspace:*",
+    "usdm-schemas": "workspace:*",
     "vue": "^3.5.40",
     "vue-router": "^5.2.0",
     "vuedraggable": "4.1.0"

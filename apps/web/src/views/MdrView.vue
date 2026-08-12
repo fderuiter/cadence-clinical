@@ -1444,6 +1444,39 @@ function updateSoa() {
 
 // Interactive Creator Handlers
 function queueMutation(mutation) {
+  // Validate instantly on the spot before opening the justification modal!
+  let payloadToValidate = null;
+  let validationType = mutation.type;
+
+  if (mutation.type === "arms") {
+    payloadToValidate = { id: mutation.id, ...mutation.properties };
+  } else if (mutation.type === "epochs") {
+    payloadToValidate = { id: mutation.id, ...mutation.properties };
+  } else if (mutation.type === "visits") {
+    payloadToValidate = { id: mutation.id, ...mutation.properties };
+  } else if (mutation.type === "procedures") {
+    payloadToValidate = { id: mutation.id, ...mutation.properties };
+  } else if (mutation.type === "concept") {
+    payloadToValidate = {
+      code: mutation.id,
+      codeSystem: mutation.properties.codeSystem || "NCI_Thesaurus",
+      codeSystemVersion: mutation.properties.codeSystemVersion || "24.03d",
+      decode: mutation.properties.decode || mutation.properties.preferred_name || ""
+    };
+  }
+
+  if (payloadToValidate) {
+    const validation = store.validateModel(validationType, payloadToValidate);
+    if (!validation.success) {
+      const errorMsg = `Instant Schema Validation Error: ${validation.error.errors
+        .map((e) => `${e.path.join(".") || "field"}: ${e.message}`)
+        .join(", ")}`;
+      alert(errorMsg);
+      console.error(errorMsg);
+      return; // Do not proceed to showReasonModal or save
+    }
+  }
+
   pendingMutation.value = mutation;
   showReasonModal.value = true;
 }
