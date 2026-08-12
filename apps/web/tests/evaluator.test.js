@@ -8,7 +8,7 @@ import {
   renderFormFromJSON,
   validateField as indexValidateField,
 } from "../src/evaluator.js";
-import { useClinicalStore } from "../src/stores/clinical.js";
+import { useClinicalStore } from "../src/stores/clinical";
 
 describe("Client-side AST Evaluator & Cascading Nullification", () => {
   beforeEach(() => {

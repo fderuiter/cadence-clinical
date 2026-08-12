@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
-import { useClinicalStore } from "../src/stores/clinical.js";
+import { useClinicalStore } from "../src/stores/clinical";
 import { soaClient } from "../src/api/soaClient.js";
 import { useAuthStore } from "../src/stores/auth.js";
 import { apiClient } from "../src/api/apiClient.js";
