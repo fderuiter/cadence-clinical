@@ -181,3 +181,80 @@ def test_cascading_dependent_nullification_parity():
     }
     assert evaluate_ast(rule, {"pulse": 105}) is True
     assert evaluate_ast(rule, {"pulse": 90}) is False
+
+
+def test_smart_type_coercion_and_localized_guards():
+    """Verify smart type coercion and localized comparison guards for eligibility.
+
+    @req:PRD-ELIGIBILITY-006
+    """
+    from apps.designer.domain.eligibility.evaluator import evaluate_node
+    from apps.designer.domain.eligibility.models import ExpressionNode
+
+    node_dict = {
+        "type": "comparison",
+        "operator": ">=",
+        "operands": [
+            {
+                "type": "field_ref",
+                "field_ref": {
+                    "raw_reference": "eCRF.DM.AGE",
+                    "domain": "DM",
+                    "variable": "AGE",
+                },
+            },
+            {"type": "constant", "value": 18},
+        ],
+    }
+
+    # Setup expression node
+    node_designer = ExpressionNode(**node_dict)
+
+    # 1. Test coercible string in Designer evaluator
+    # "21" (string) gets coerced to float (21.0) and compared against 18 -> True
+    eval_res_1 = evaluate_node(node_designer, {"eCRF.DM.AGE": "21"})
+    assert eval_res_1.is_indeterminate is False
+    assert eval_res_1.value is True
+
+    # "15" (string) gets coerced to float (15.0) and compared against 18 -> False
+    eval_res_2 = evaluate_node(node_designer, {"eCRF.DM.AGE": "15"})
+    assert eval_res_2.is_indeterminate is False
+    assert eval_res_2.value is False
+
+    # 2. Test uncoercible string in Designer evaluator
+    # "normal" string cannot be coerced to float, so comparison raises TypeError, handled safely to indeterminate
+    eval_res_3 = evaluate_node(node_designer, {"eCRF.DM.AGE": "normal"})
+    assert eval_res_3.is_indeterminate is True
+    assert eval_res_3.value is None
+    assert (
+        "Comparison failed due to incompatible operand types" in eval_res_3.explanation
+    )
+
+    # 3. Test execution-side DTO evaluator parity
+    from apps.execution.domain.acl.designer_eligibility_dto import (
+        DesignerEligibilityCriterionDTO,
+        evaluate_eligibility_dto,
+    )
+
+    crit_dto = DesignerEligibilityCriterionDTO(
+        id="INC01",
+        criterion_id="INC01",
+        criterion_type="inclusion",
+        description="Must be adult.",
+        dsl_source="eCRF.DM.AGE >= 18",
+        structured_expression_tree=node_dict,
+        expected_outcome=True,
+    )
+
+    # Coercible numeric string on execution side
+    res_dto_1 = evaluate_eligibility_dto([crit_dto], {"eCRF.DM.AGE": "21"})
+    assert res_dto_1.eligible is True
+    assert len(res_dto_1.indeterminate_criteria) == 0
+
+    # Uncoercible string on execution side
+    res_dto_2 = evaluate_eligibility_dto([crit_dto], {"eCRF.DM.AGE": "normal"})
+    assert res_dto_2.eligible is None
+    assert "INC01" in res_dto_2.indeterminate_criteria
+    detail = res_dto_2.criteria_evaluations["INC01"].evaluation_detail
+    assert detail.is_indeterminate is True
+    assert "Comparison failed due to incompatible operand types" in detail.explanation
