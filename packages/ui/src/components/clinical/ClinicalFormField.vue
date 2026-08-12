@@ -58,62 +58,59 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from "vue";
 import ClinicalInput from "./ClinicalInput.vue";
 import ClinicalRadioGroup from "./ClinicalRadioGroup.vue";
 import ClinicalLookupInput from "./ClinicalLookupInput.vue";
+import type { CdashField } from "../../types/cdash";
 
-const props = defineProps({
-  field: {
-    type: Object,
-    required: true,
-  },
-  modelValue: {
-    type: [String, Number],
-    default: "",
-  },
-  query: {
-    type: Object,
-    default: null,
-  },
-  error: {
-    type: String,
-    default: null,
-  },
-  lookupStatus: {
-    type: Object,
-    default: null,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    field: CdashField;
+    modelValue?: string | number;
+    query?: any;
+    error?: string | null;
+    lookupStatus?: {
+      status: "none" | "loading" | "valid" | "invalid" | "degraded";
+      message?: string;
+    } | null;
+  }>(),
+  {
+    modelValue: "",
+    query: null,
+    error: null,
+    lookupStatus: null,
+  }
+);
 
-defineEmits([
-  "update:modelValue",
-  "change",
-  "input",
-  "create-query",
-  "respond-query",
-  "close-query",
-  "reopen-query",
-]);
+const emit = defineEmits<{
+  (e: "update:modelValue", value: string | number): void;
+  (e: "change", value: string | number, target: any): void;
+  (e: "input", value: string | number): void;
+  (e: "create-query", event: any): void;
+  (e: "respond-query", event: any): void;
+  (e: "close-query"): void;
+  (e: "reopen-query"): void;
+}>();
 
 const customAttributes = computed(() => {
-  const attrs = {};
+  const attrs: Record<string, string> = {};
   if (props.field.cdash) {
     attrs["data-cdash"] = props.field.cdash;
   }
   return attrs;
 });
 
-const elRef = ref(null);
+const elRef = ref<HTMLElement | null>(null);
 const isIntersecting = ref(true); // Default to true so initial render compiles inside the DOM, then gets intersected
 const measuredHeight = ref(0);
 const hasEnteredViewport = ref(false);
 
 const shouldRender = computed(() => true);
 
-let io = null;
-let ro = null;
+let io: IntersectionObserver | null = null;
+let ro: ResizeObserver | null = null;
 
 const wrapperStyle = computed(() => {
   const styles = {
@@ -121,7 +118,7 @@ const wrapperStyle = computed(() => {
     width: "100%",
     boxSizing: "border-box",
     contentVisibility: "auto",
-    containIntrinsicSize: `auto ${measuredHeight.value ? measuredHeight.value + "px" : "44px"}`,
+    containIntrinsicSize: `auto ${measuredHeight.value ? measuredHeight.value + "px" : "44px"}` as any,
   };
   return styles;
 });

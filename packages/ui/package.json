@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "types": "./index.d.ts",
   "exports": {
     ".": "./index.js",
     "./tokens.css": "./tokens.css",
@@ -10,7 +11,7 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "vite build",
+    "build": "node scripts/generate-types.js && vite build",
     "test": "vitest run --testTimeout=30000",
     "lint": "eslint .",
     "format": "prettier --write ."

@@ -60,59 +60,46 @@
   </ClinicalFieldLayout>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from "vue";
 import ClinicalFieldLayout from "./ClinicalFieldLayout.vue";
 
-const props = defineProps({
+interface Props {
   // Status message explanation helper
-  statusMessage: {
-    type: String,
-    default: "",
-  },
+  statusMessage?: string;
   // Active lookup status
-  status: {
-    type: String,
-    default: "none", // 'none', 'loading', 'valid', 'invalid', 'degraded'
-  },
+  status?: "none" | "loading" | "valid" | "invalid" | "degraded";
   // Field identifier
-  id: {
-    type: String,
-    required: true,
-  },
+  id: string;
   // Label for field
-  label: {
-    type: String,
-    required: true,
-  },
+  label: string;
   // Active model value
-  modelValue: {
-    type: [String, Number],
-    default: "",
-  },
+  modelValue?: string | number;
   // Validation error string
-  error: {
-    type: String,
-    default: null,
-  },
+  error?: string | null;
   // Grid width span
-  gridSpan: {
-    type: [Number, String],
-    default: 12,
-  },
+  gridSpan?: number | string;
   // Query details
-  query: {
-    type: Object,
-    default: null,
-  },
+  query?: any;
   // Custom element attributes mapping
-  attributes: {
-    type: Object,
-    default: () => ({}),
-  },
+  attributes?: Record<string, any>;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  statusMessage: "",
+  status: "none",
+  modelValue: "",
+  error: null,
+  gridSpan: 12,
+  query: null,
+  attributes: () => ({}),
 });
 
-defineEmits(["update:modelValue", "input", "change"]);
+defineEmits<{
+  (e: "update:modelValue", value: string | number): void;
+  (e: "input", value: string | number): void;
+  (e: "change", value: string | number, target: any): void;
+}>();
 
 const stateClass = computed(() => {
   if (props.status === "loading") return "lookup-loading";
