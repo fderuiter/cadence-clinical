@@ -1,28 +1,25 @@
 import hashlib
 import hmac
+import json
 import os
 import time
-import json
+from datetime import datetime
+
+import httpx
 import pytest
 import pytest_asyncio
-import httpx
-from datetime import datetime
-from sqlalchemy import select
 
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import (
     Base,
-    ClinicalSubject,
     ClinicalObservation,
-    DatasetExportJob,
+    ClinicalSubject,
 )
 from apps.execution.demographics import encrypt_demographics
 from apps.execution.main import app
 from apps.execution.trial_lock import TrialLockManager
 
-GATEWAY_SECRET = os.getenv(
-    "GATEWAY_SECRET", "internal-gateway-secret-12345"
-)
+GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
 
 
 def get_auth_headers(
@@ -157,7 +154,7 @@ async def test_async_export_bundle_success(populate_test_data) -> None:
                 assert status_data["progress"] == 100
                 assert status_data["download_url"] is not None
                 break
-            elif status_data["status"] == "FAILED":
+            if status_data["status"] == "FAILED":
                 pytest.fail(f"Job failed with error: {status_data['error_message']}")
             time.sleep(0.5)
 
@@ -170,7 +167,12 @@ async def test_async_export_bundle_success(populate_test_data) -> None:
         )
         assert res_download.status_code == 200
         download_data = res_download.json()
-        assert "clinicalData" in download_data or "clinical_data" in download_data or "studyOID" in download_data or "datasetJSON" in download_data
+        assert (
+            "clinicalData" in download_data
+            or "clinical_data" in download_data
+            or "studyOID" in download_data
+            or "datasetJSON" in download_data
+        )
 
 
 @pytest.mark.asyncio
