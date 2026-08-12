@@ -55,6 +55,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
 
 ### 2. API Gateway, Security & Identity
+
 - [2026-08-11: Offline and Synchronous OpenAPI Schema Generation for 15 Platform Services](2026-08-11-offline-and-synchronous-openapi-schema-generation-for-15-platform-services.md)
 
 - [2026-08-11: Decouple Shared Test Signing RBAC Helpers from Gateway](2026-08-11-decoupling-shared-test-signing-rbac-helpers-from-gateway.md)

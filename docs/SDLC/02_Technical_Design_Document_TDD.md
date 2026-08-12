@@ -216,11 +216,11 @@ The Execution Service manages subject data capture (EDC) and clinical transactio
 
 #### 2.3.4 eTMF & eISF Taxonomy Catalog Integration
 
-The electronic Trial Master File (eTMF) and electronic Investigator Site File (eISF) services leverage a unified and immutable reference taxonomy modeling engine.
+The electronic Trial Master File (eTMF) and electronic Investigator Site File (eISF) services leverage a decentralized reference taxonomy modeling engine.
 
-- **Taxonomy Package (`packages/core-models/tmf_reference_model`):** Houses the memory-efficient and frozen Pydantic-typed catalog registry of DIA TMF Reference Model versions.
+- **Taxonomy Catalog Integration:** The taxonomy catalog registry of DIA TMF Reference Model versions is managed locally within individual services, such as the `etmf` microservice boundary (defined in `apps/etmf/models.py` and processed via `apps/etmf/classification_service.py`), ensuring that taxonomy schemas and reference datasets are isolated.
 - **The Cutover Decision:** The platform has cut over to `v3.2.0-complete` as the active default catalog version to prevent taxonomy drift. Legacy `v3.2.0` is fully retained for backward compatibility and reproducible pre-cutover record interpretation. Extended namespaces register Cadence-specific custom extensions in `v3.2.0-extended` with `is_extension=True`.
-- **Validation & Propagation:** Strict hierarchical integrity checks are performed centrally during ingestion using `resolve_artifact` and `validate_hierarchy`, rejecting invalid classifications with HTTP 422, while supporting automated/manual document redactions signed with symmetrically cryptographed manifests (HMAC-SHA256). The system is fully synchronized and GxP compliant.
+- **Validation & Propagation:** Strict hierarchical integrity checks are performed locally during ingestion using `resolve_artifact` and `validate_hierarchy`, rejecting invalid classifications with HTTP 422, while supporting automated/manual document redactions signed with symmetrically cryptographed manifests (HMAC-SHA256). The system is fully synchronized and GxP compliant.
 
 #### 2.3.5 Electronic Consent Service (`apps/econsent`)
 
@@ -1043,7 +1043,7 @@ The Gateway Service detects client compression capabilities via the standard `Ac
 
 ## 6. Eligibility Criteria Evaluation Engine & Advisory Pre-screening
 
-### 6.1 Shared Eligibility Criteria Evaluation Engine
+### 6.1 Decentralized Eligibility Criteria Evaluation Engine
 
 The platform implements a sandboxed, deterministic Abstract Syntax Tree (AST) evaluator for clinical inclusion/exclusion criteria. This architecture guarantees safety by preventing any dynamic code execution (e.g., `eval()` or `exec()`) of user-defined DSL expressions.
 
@@ -1053,14 +1053,14 @@ The platform implements a sandboxed, deterministic Abstract Syntax Tree (AST) ev
 
 #### 6.1.1 Abstract Syntax Tree (AST) & Lexical Parsing
 
-As governed by **ADR-053**, dynamic expressions such as `eCRF.DM.AGE >= 18` are processed using a recursive-descent parser defined in `packages/core-models/eligibility/parser.py`. The parser decomposes expressions into a structured Pydantic `ExpressionNode` AST defined in `packages/core-models/eligibility/models.py`.
+As governed by **ADR-053**, dynamic expressions such as `eCRF.DM.AGE >= 18` are processed using service-local, decentralized recursive-descent parsers, such as the one defined in `apps/designer/domain/eligibility/parser.py`. The parser decomposes expressions into a structured Pydantic `ExpressionNode` AST defined locally in `apps/designer/domain/eligibility/models.py`.
 
 - **Parsing Flow:** Tokenizer parses characters into typed tokens (field references, constants, operators, logical keywords).
 - **AST Generation:** Build recursive comparison or logical nodes. No arbitrary Python execution is permitted, establishing a robust security boundary.
 
 #### 6.1.2 Kleene Three-Valued Logic Evaluator
 
-The runtime evaluation core in `packages/core-models/eligibility/evaluator.py` implements Kleene three-valued logic (`True`, `False`, `None` / Indeterminate).
+The runtime evaluation core, implemented locally in services such as `apps/designer/domain/eligibility/evaluator.py` and `apps/execution/evaluator.py`, implements Kleene three-valued logic (`True`, `False`, `None` / Indeterminate).
 
 - **Indeterminate (null/missing) Propagation:** If any referenced eCRF data point is missing or unresolved (e.g., missing lab result or unborn age), the comparison evaluates to `Indeterminate`.
 - **Short-Circuit Logical Rules:**
