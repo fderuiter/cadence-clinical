@@ -180,7 +180,7 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
           expected: 1,
           actual: rawChildren.length,
           message: `Operator '${operator}' expects exactly 1 operand, but got ${rawChildren.length}.`,
-          node
+          node,
         });
         return null;
       }
@@ -199,7 +199,7 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
           expected: ">= 1",
           actual: 0,
           message: `Operator '${operator}' expects at least 1 operand, but got 0.`,
-          node
+          node,
         });
         return null;
       }
@@ -225,7 +225,7 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
           expected: ">= 1",
           actual: 0,
           message: `Operator '${operator}' expects at least 1 operand, but got 0.`,
-          node
+          node,
         });
         return null;
       }
@@ -250,7 +250,7 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
           expected: 2,
           actual: rawChildren.length,
           message: `Operator '${operator}' expects exactly 2 operands, but got ${rawChildren.length}.`,
-          node
+          node,
         });
         return null;
       }
@@ -274,9 +274,15 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
           nodeType: type,
           name: operator,
           expected: "numeric",
-          actual: isNaN(lNum) ? (leftVal === null ? "null" : typeof leftVal) : (rightVal === null ? "null" : typeof rightVal),
+          actual: isNaN(lNum)
+            ? leftVal === null
+              ? "null"
+              : typeof leftVal
+            : rightVal === null
+              ? "null"
+              : typeof rightVal,
           message: `Arithmetic operator '${operator}' expects numeric operands, but got non-numeric value.`,
-          node
+          node,
         });
         return null;
       }
@@ -300,7 +306,7 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
           expected: 2,
           actual: rawChildren.length,
           message: `Comparison operator '${operator}' expects exactly 2 operands, but got ${rawChildren.length}.`,
-          node
+          node,
         });
         return null;
       }
@@ -361,7 +367,7 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
           expected: 1,
           actual: rawChildren.length,
           message: `Function '${funcName}' expects exactly 1 operand, but got ${rawChildren.length}.`,
-          node
+          node,
         });
         return null;
       }
@@ -382,7 +388,7 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
           expected: 1,
           actual: rawChildren.length,
           message: `Function '${funcName}' expects exactly 1 operand, but got ${rawChildren.length}.`,
-          node
+          node,
         });
         return null;
       }
@@ -403,7 +409,7 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
           expected: 3,
           actual: rawChildren.length,
           message: `Function '${funcName}' expects exactly 3 operands, but got ${rawChildren.length}.`,
-          node
+          node,
         });
         return null;
       }
@@ -430,7 +436,7 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
           expected: "integer",
           actual: typeof indexVal,
           message: `Function '${funcName}' expects integer index for third argument, but got non-integer value '${indexVal}'.`,
-          node
+          node,
         });
         return null;
       }
@@ -447,7 +453,7 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
       nodeType: type,
       name: funcName,
       message: `Unknown function '${funcName}'.`,
-      node
+      node,
     });
     return null;
   }

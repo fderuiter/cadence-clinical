@@ -507,13 +507,15 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
       const resultNot = evaluateAST(invalidNotNode);
       expect(resultNot).toBeNull();
       expect(warnings.length).toBe(1);
-      expect(warnings[0]).toEqual(expect.objectContaining({
-        type: "arity_mismatch",
-        nodeType: "comparison",
-        name: "not",
-        expected: 1,
-        actual: 2,
-      }));
+      expect(warnings[0]).toEqual(
+        expect.objectContaining({
+          type: "arity_mismatch",
+          nodeType: "comparison",
+          name: "not",
+          expected: 1,
+          actual: 2,
+        })
+      );
 
       // 2. Function arity mismatch (is_empty expects 1, but we give 0)
       const invalidIsEmptyNode = {
@@ -525,13 +527,15 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
       const resultIsEmpty = evaluateAST(invalidIsEmptyNode);
       expect(resultIsEmpty).toBeNull();
       expect(warnings.length).toBe(2);
-      expect(warnings[1]).toEqual(expect.objectContaining({
-        type: "arity_mismatch",
-        nodeType: "function",
-        name: "is_empty",
-        expected: 1,
-        actual: 0,
-      }));
+      expect(warnings[1]).toEqual(
+        expect.objectContaining({
+          type: "arity_mismatch",
+          nodeType: "function",
+          name: "is_empty",
+          expected: 1,
+          actual: 0,
+        })
+      );
 
       // 3. indexed-repeat arity mismatch (expects 3, but we give 2)
       const invalidIndexedRepeatNode = {
@@ -546,13 +550,15 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
       const resultIndexedRepeat = evaluateAST(invalidIndexedRepeatNode);
       expect(resultIndexedRepeat).toBeNull();
       expect(warnings.length).toBe(3);
-      expect(warnings[2]).toEqual(expect.objectContaining({
-        type: "arity_mismatch",
-        nodeType: "function",
-        name: "indexed-repeat",
-        expected: 3,
-        actual: 2,
-      }));
+      expect(warnings[2]).toEqual(
+        expect.objectContaining({
+          type: "arity_mismatch",
+          nodeType: "function",
+          name: "indexed-repeat",
+          expected: 3,
+          actual: 2,
+        })
+      );
 
       unsub();
     });
@@ -573,6 +579,28 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
       expect(warnings.length).toBe(1);
 
       unsub(); // unsubscribe
+
+      evaluateAST(invalidIsEmptyNode);
+      expect(warnings.length).toBe(1); // should not increment
+    });
+
+    it("should allow unregistering a listener via unregisterDiagnosticListener", () => {
+      const warnings = [];
+      const listener = (warn) => {
+        warnings.push(warn);
+      };
+      registerDiagnosticListener(listener);
+
+      const invalidIsEmptyNode = {
+        type: "function",
+        operator: "is_empty",
+        operands: [],
+      };
+
+      evaluateAST(invalidIsEmptyNode);
+      expect(warnings.length).toBe(1);
+
+      unregisterDiagnosticListener(listener);
 
       evaluateAST(invalidIsEmptyNode);
       expect(warnings.length).toBe(1); // should not increment
@@ -615,12 +643,14 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
       const res = evaluateAST(invalidArithmeticNode);
       expect(res).toBeNull();
       expect(warnings.length).toBe(1);
-      expect(warnings[0]).toEqual(expect.objectContaining({
-        type: "type_mismatch",
-        nodeType: "comparison",
-        name: "+",
-        expected: "numeric",
-      }));
+      expect(warnings[0]).toEqual(
+        expect.objectContaining({
+          type: "type_mismatch",
+          nodeType: "comparison",
+          name: "+",
+          expected: "numeric",
+        })
+      );
 
       // indexed-repeat third operand expects integer, but we pass non-integer/string
       const invalidIndexedRepeatTypeNode = {
@@ -636,12 +666,14 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
       const res2 = evaluateAST(invalidIndexedRepeatTypeNode);
       expect(res2).toBeNull();
       expect(warnings.length).toBe(2);
-      expect(warnings[1]).toEqual(expect.objectContaining({
-        type: "type_mismatch",
-        nodeType: "function",
-        name: "indexed-repeat",
-        expected: "integer",
-      }));
+      expect(warnings[1]).toEqual(
+        expect.objectContaining({
+          type: "type_mismatch",
+          nodeType: "function",
+          name: "indexed-repeat",
+          expected: "integer",
+        })
+      );
     });
   });
 });
