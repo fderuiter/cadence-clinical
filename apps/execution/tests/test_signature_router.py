@@ -77,7 +77,7 @@ def _make_auth_headers(
 def test_batch_signature_sign_off_success() -> None:
     """Validate POST /api/v1/execution/signatures/batch-sign-off executes PI casebook sign-off.
 
-    Requirements: PRD-SYS-001
+    @req:PRD-SYS-001
     """
     req_body = {
         "study_id": "study_sig_001",
@@ -116,7 +116,7 @@ def test_batch_signature_sign_off_success() -> None:
 def test_batch_signature_missing_password_returns_400() -> None:
     """Validate sign-off without password re-authentication returns 400 Bad Request.
 
-    Requirements: PRD-SYS-001
+    @req:PRD-SYS-001
     """
     req_body = {
         "study_id": "study_sig_002",
@@ -144,7 +144,7 @@ def test_batch_signature_missing_password_returns_400() -> None:
 def test_batch_signature_empty_target_forms_returns_400() -> None:
     """Validate sign-off without target form IDs returns 400 Bad Request.
 
-    Requirements: PRD-SYS-001
+    @req:PRD-SYS-001
     """
     req_body = {
         "study_id": "study_sig_003",
@@ -174,7 +174,7 @@ def test_batch_signature_empty_target_forms_returns_400() -> None:
 def test_signature_sign_and_verify_lifecycle_success() -> None:
     """Validate /sign and /verify endpoints complete successful lifecycle with trust store.
 
-    Requirements: PRD-SYS-001
+    @req:PRD-SYS-001
     """
     raw_payload = '{"a":1,"b":2}'
     headers_sign = _make_auth_headers(action="/api/v1/execution/signatures/sign")
@@ -206,7 +206,7 @@ def test_signature_sign_and_verify_lifecycle_success() -> None:
 def test_signature_verify_tampered_fails() -> None:
     """Validate that /verify rejects tampered payload data.
 
-    Requirements: PRD-SYS-001
+    @req:PRD-SYS-001
     """
     raw_payload = '{"a":1,"b":2}'
     headers_sign = _make_auth_headers(action="/api/v1/execution/signatures/sign")
@@ -235,7 +235,7 @@ def test_signature_verify_tampered_fails() -> None:
 def test_signature_verify_mock_fails() -> None:
     """Validate that /verify rejects mock signature data case-insensitively.
 
-    Requirements: PRD-SYS-001
+    @req:PRD-SYS-001
     """
     headers_verify = _make_auth_headers(action="/api/v1/execution/signatures/verify")
     verify_response = client.post(

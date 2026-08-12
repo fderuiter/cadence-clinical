@@ -9,7 +9,10 @@ from scripts.validate_dependencies import check_package_json
 
 
 def test_validate_dependencies_passes_on_clean_package_json(tmp_path):
-    """Verify check_package_json passes when no forbidden packages are present."""
+    """Verify check_package_json passes when no forbidden packages are present.
+
+    @req:PRD-SYS-001
+    """
     pkg_json_path = tmp_path / "package.json"
     content = {
         "name": "clean-package",
@@ -24,7 +27,10 @@ def test_validate_dependencies_passes_on_clean_package_json(tmp_path):
 
 
 def test_validate_dependencies_fails_on_forbidden_package(tmp_path):
-    """Verify check_package_json fails when a forbidden asymmetric package is present."""
+    """Verify check_package_json fails when a forbidden asymmetric package is present.
+
+    @req:PRD-SYS-001
+    """
     pkg_json_path = tmp_path / "package.json"
     content = {
         "name": "dirty-package",
