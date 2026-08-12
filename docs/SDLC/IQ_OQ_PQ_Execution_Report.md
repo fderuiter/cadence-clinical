@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2325
-- **Passed:** 2311 🟢
+- **Total Automated Test Cases Run:** 2333
+- **Passed:** 2319 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 14 ⚪
 - **Overall Operational Pass Rate:** 99.40%
@@ -2431,6 +2431,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_mock_designer_driver`                                                        | `scripts.tests.test_shared_rbac_harness`                                    | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_persona_builders_contain_correct_claims`                                     | `scripts.tests.test_shared_rbac_harness`                                    | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_shared_sqlite_dbs_and_clients`                                               | `scripts.tests.test_shared_rbac_harness`                                    | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_find_migration_script`                                                       | `scripts.tests.test_start`                                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_main_designer_service`                                                       | `scripts.tests.test_start`                                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_main_execution_service`                                                      | `scripts.tests.test_start`                                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_run_pre_boot_migrations_failure`                                             | `scripts.tests.test_start`                                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_run_pre_boot_migrations_success`                                             | `scripts.tests.test_start`                                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_run_web_server_nt`                                                           | `scripts.tests.test_start`                                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_run_web_server_posix_fallback`                                               | `scripts.tests.test_start`                                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_run_web_server_posix_success`                                                | `scripts.tests.test_start`                                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_label_based_backlog_gating`                                                  | `scripts.tests.test_sync_github_project`                                    | Trace-34                                     | 🟢 PASSED  | < 1s     |
 | `test_get_repository_fallback`                                                     | `scripts.tests.test_sync_ruleset`                                           | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_get_repository_from_env`                                                     | `scripts.tests.test_sync_ruleset`                                           | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
