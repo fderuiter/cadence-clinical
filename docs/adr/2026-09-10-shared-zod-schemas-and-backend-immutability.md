@@ -53,7 +53,7 @@ To enforce high data integrity and ensure alignment with the CDISC Unified Study
 
 - **Affected Repositories / Services:**
   - `apps/designer/domain/cdisc/usdm_models.py`
-  - `apps/web/src/stores/clinical.js`
+  - `apps/web/src/stores/clinical.ts`
   - `pyproject.toml`
 - **Verification Plan:**
   - Backend immutability unit tests: `apps/designer/tests/test_usdm_immutability.py`
