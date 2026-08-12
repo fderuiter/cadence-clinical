@@ -1,24 +1,26 @@
 import pytest
+
+from packages.security.delegation import register_staff_role_normalization
 from packages.security.permissions import (
     PermissionEnum,
     RoleEnum,
     register_role_and_permissions,
 )
 from packages.security.rbac import (
-    register_rbac_role_permissions,
-    register_rbac_role_alias,
-    register_rbac_masking_rule,
-    register_rbac_site_scoped_role,
-    register_rbac_role_unmasked_fields,
     register_rbac_constant,
+    register_rbac_masking_rule,
+    register_rbac_role_alias,
     register_rbac_role_expansion,
+    register_rbac_role_permissions,
+    register_rbac_role_unmasked_fields,
+    register_rbac_site_scoped_role,
 )
 from packages.security.trial_roles import (
-    register_trial_role,
     register_clinical_staff_role,
+    register_trial_role,
     register_trial_role_check_mapping,
 )
-from packages.security.delegation import register_staff_role_normalization
+
 
 @pytest.fixture(autouse=True, scope="session")
 def setup_security_dynamic_registry():
@@ -55,54 +57,188 @@ def setup_security_dynamic_registry():
     PermissionEnum._add_member("EXPERT_UNBLIND", "expert:unblind")
 
     # 2. Register permissions on permissions.py (this handles get_permissions_for_role)
-    register_role_and_permissions("SponsorAdmin", {
-        "study:read", "protocol:author", "global_library:manage", "export:sdtm", "change_request:approve", "esign:execute",
-        "soa:read", "soa:manage", "visit_windowing:read", "visit_windowing:create", "visit_windowing:update",
-        "etmf_document:read", "etmf_document:write", "etmf_document:delete", "etmf_document:sign",
-        "documents:read", "documents:write", "archive:export"
-    }, aliases=["sponsoradmin", "sponsor_admin", "admin", "sponsor administrator"])
+    register_role_and_permissions(
+        "SponsorAdmin",
+        {
+            "study:read",
+            "protocol:author",
+            "global_library:manage",
+            "export:sdtm",
+            "change_request:approve",
+            "esign:execute",
+            "soa:read",
+            "soa:manage",
+            "visit_windowing:read",
+            "visit_windowing:create",
+            "visit_windowing:update",
+            "etmf_document:read",
+            "etmf_document:write",
+            "etmf_document:delete",
+            "etmf_document:sign",
+            "documents:read",
+            "documents:write",
+            "archive:export",
+        },
+        aliases=["sponsoradmin", "sponsor_admin", "admin", "sponsor administrator"],
+    )
 
-    register_role_and_permissions("SponsorDesigner", {
-        "study:read", "protocol:author", "global_library:manage",
-        "visit_windowing:read", "visit_windowing:create", "visit_windowing:update",
-        "soa:read", "soa:manage", "study_design:create", "study_design:read", "study_design:update", "study_design:delete", "etmf_document:read",
-        "documents:read"
-    }, aliases=["sponsordesigner", "sponsor_designer", "designer", "study_designer", "study designer"])
+    register_role_and_permissions(
+        "SponsorDesigner",
+        {
+            "study:read",
+            "protocol:author",
+            "global_library:manage",
+            "visit_windowing:read",
+            "visit_windowing:create",
+            "visit_windowing:update",
+            "soa:read",
+            "soa:manage",
+            "study_design:create",
+            "study_design:read",
+            "study_design:update",
+            "study_design:delete",
+            "etmf_document:read",
+            "documents:read",
+        },
+        aliases=[
+            "sponsordesigner",
+            "sponsor_designer",
+            "designer",
+            "study_designer",
+            "study designer",
+        ],
+    )
 
-    register_role_and_permissions("PrincipalInvestigator", {
-        "study:read", "form:write", "subject:enroll", "esign:execute", "emergency_unblind:execute",
-        "data:read", "data:write", "signature:sign", "ecoa_diary:read", "lab_range:read", "visit_windowing:read", "soa:read",
-        "documents:read", "documents:write"
-    }, aliases=["principalinvestigator", "principal_investigator", "pi", "principal investigator"])
+    register_role_and_permissions(
+        "PrincipalInvestigator",
+        {
+            "study:read",
+            "form:write",
+            "subject:enroll",
+            "esign:execute",
+            "emergency_unblind:execute",
+            "data:read",
+            "data:write",
+            "signature:sign",
+            "ecoa_diary:read",
+            "lab_range:read",
+            "visit_windowing:read",
+            "soa:read",
+            "documents:read",
+            "documents:write",
+        },
+        aliases=[
+            "principalinvestigator",
+            "principal_investigator",
+            "pi",
+            "principal investigator",
+        ],
+    )
 
-    register_role_and_permissions("ClinicalResearchCoordinator", {
-        "study:read", "form:write", "subject:enroll", "esign:execute",
-        "data:read", "data:write", "etmf_document:read", "ecoa_diary:read", "lab_range:read", "visit_windowing:read", "soa:read",
-        "documents:read", "documents:write"
-    }, aliases=["clinicalresearchcoordinator", "clinical_research_coordinator", "crc", "clinical research coordinator"])
+    register_role_and_permissions(
+        "ClinicalResearchCoordinator",
+        {
+            "study:read",
+            "form:write",
+            "subject:enroll",
+            "esign:execute",
+            "data:read",
+            "data:write",
+            "etmf_document:read",
+            "ecoa_diary:read",
+            "lab_range:read",
+            "visit_windowing:read",
+            "soa:read",
+            "documents:read",
+            "documents:write",
+        },
+        aliases=[
+            "clinicalresearchcoordinator",
+            "clinical_research_coordinator",
+            "crc",
+            "clinical research coordinator",
+        ],
+    )
 
-    register_role_and_permissions("ClinicalResearchAssociate", {
-        "study:read", "sdv:verify", "query:manage", "audit:view",
-        "etmf_document:read", "etmf_document:write", "etmf_document:delete", "lab_range:read", "ecoa_diary:read",
-        "lab_range:create", "lab_range:update", "lab_range:delete", "visit_windowing:read", "soa:read",
-        "documents:read", "documents:write"
-    }, aliases=["clinicalresearchassociate", "clinical_research_associate", "cra", "clinical research associate", "monitor"])
+    register_role_and_permissions(
+        "ClinicalResearchAssociate",
+        {
+            "study:read",
+            "sdv:verify",
+            "query:manage",
+            "audit:view",
+            "etmf_document:read",
+            "etmf_document:write",
+            "etmf_document:delete",
+            "lab_range:read",
+            "ecoa_diary:read",
+            "lab_range:create",
+            "lab_range:update",
+            "lab_range:delete",
+            "visit_windowing:read",
+            "soa:read",
+            "documents:read",
+            "documents:write",
+        },
+        aliases=[
+            "clinicalresearchassociate",
+            "clinical_research_associate",
+            "cra",
+            "clinical research associate",
+            "monitor",
+        ],
+    )
 
-    register_role_and_permissions("DataManager", {
-        "study:read", "data:lock", "data:unlock", "export:sdtm", "audit:view",
-        "data:read", "data:write", "etmf_document:read", "ecoa_diary:read", "lab_range:read",
-        "lab_range:create", "lab_range:update", "lab_range:delete", "medical_coding:create", "visit_windowing:read", "soa:read",
-        "documents:read", "documents:write", "archive:export"
-    }, aliases=["datamanager", "data_manager", "dm", "sponsor_dm", "sponsor data manager"])
+    register_role_and_permissions(
+        "DataManager",
+        {
+            "study:read",
+            "data:lock",
+            "data:unlock",
+            "export:sdtm",
+            "audit:view",
+            "data:read",
+            "data:write",
+            "etmf_document:read",
+            "ecoa_diary:read",
+            "lab_range:read",
+            "lab_range:create",
+            "lab_range:update",
+            "lab_range:delete",
+            "medical_coding:create",
+            "visit_windowing:read",
+            "soa:read",
+            "documents:read",
+            "documents:write",
+            "archive:export",
+        },
+        aliases=[
+            "datamanager",
+            "data_manager",
+            "dm",
+            "sponsor_dm",
+            "sponsor data manager",
+        ],
+    )
 
-    register_role_and_permissions("Auditor", {
-        "study:read", "audit:view", "etmf_document:read", "audit_log:read", "visit_windowing:read", "soa:read",
-        "documents:read", "archive:export"
-    }, aliases=["auditor", "inspector", "regulatory_inspector"])
+    register_role_and_permissions(
+        "Auditor",
+        {
+            "study:read",
+            "audit:view",
+            "etmf_document:read",
+            "audit_log:read",
+            "visit_windowing:read",
+            "soa:read",
+            "documents:read",
+            "archive:export",
+        },
+        aliases=["auditor", "inspector", "regulatory_inspector"],
+    )
 
-    register_role_and_permissions("Subject", {
-        "study:read", "ecoa_diary:read"
-    }, aliases=["subject", "patient"])
+    register_role_and_permissions(
+        "Subject", {"study:read", "ecoa_diary:read"}, aliases=["subject", "patient"]
+    )
 
     # 3. Register trial roles on trial_roles.py
     register_trial_role("CRA", "cra")
@@ -149,217 +285,274 @@ def setup_security_dynamic_registry():
     # 4. Register RBAC role permissions in rbac.py
     # Align values with unit tests' expectations, registering for BOTH lowercase and CamelCase names for complete safety!
     for r in ("SponsorAdmin", "sponsor_admin"):
-        register_rbac_role_permissions(r, {
-            "study_design": {"read"},
-            "etmf_document": {"read", "write", "delete", "sign", "create", "manage_expiration", "tag"},
-            "etmf_edl": {"read", "write", "delete", "sign", "create"},
-            "visit_windowing": {"create", "read", "update"},
-            "soa": {"create", "read", "update", "delete"},
-            "lab_range": {"create", "read", "update", "delete", "alert"},
-            "ecoa_diary": {"create", "read", "update", "delete", "alert"},
-            "protocol_export": {"generate", "read"}
-        })
+        register_rbac_role_permissions(
+            r,
+            {
+                "study_design": {"read"},
+                "etmf_document": {
+                    "read",
+                    "write",
+                    "delete",
+                    "sign",
+                    "create",
+                    "manage_expiration",
+                    "tag",
+                },
+                "etmf_edl": {"read", "write", "delete", "sign", "create"},
+                "visit_windowing": {"create", "read", "update"},
+                "soa": {"create", "read", "update", "delete"},
+                "lab_range": {"create", "read", "update", "delete", "alert"},
+                "ecoa_diary": {"create", "read", "update", "delete", "alert"},
+                "protocol_export": {"generate", "read"},
+            },
+        )
 
     for r in ("SponsorDesigner", "sponsor_designer", "study_designer"):
-        register_rbac_role_permissions(r, {
-            "study_design": {"create", "read", "update", "delete"},
-            "etmf_document": {"read"},
-            "visit_windowing": {"create", "read", "update"},
-            "soa": {"create", "read", "update", "delete"},
-            "protocol_export": {"generate", "read"}
-        })
+        register_rbac_role_permissions(
+            r,
+            {
+                "study_design": {"create", "read", "update", "delete"},
+                "etmf_document": {"read"},
+                "visit_windowing": {"create", "read", "update"},
+                "soa": {"create", "read", "update", "delete"},
+                "protocol_export": {"generate", "read"},
+            },
+        )
 
     for r in ("DataManager", "sponsor_dm", "dm"):
-        register_rbac_role_permissions(r, {
-            "data": {"read", "write"},
-            "etmf_document": {"read", "write", "delete", "sign", "create", "manage_expiration", "tag"},
-            "etmf_edl": {"read", "write", "delete", "sign", "create"},
-            "medical_coding": {"create", "read", "update"},
-            "lab_range": {"create", "read", "update", "delete", "alert"},
-            "ecoa_diary": {"create", "read", "update", "delete", "alert"},
-            "visit_windowing": {"read"},
-            "soa": {"read"},
-            "etmf_taxonomy": {"read"},
-            "query_lifecycle": {"create", "read", "update", "delete"},
-            "export_masked": {"create"},
-            "protocol_export": {"generate", "read"}
-        })
+        register_rbac_role_permissions(
+            r,
+            {
+                "data": {"read", "write"},
+                "etmf_document": {
+                    "read",
+                    "write",
+                    "delete",
+                    "sign",
+                    "create",
+                    "manage_expiration",
+                    "tag",
+                },
+                "etmf_edl": {"read", "write", "delete", "sign", "create"},
+                "medical_coding": {"create", "read", "update"},
+                "lab_range": {"create", "read", "update", "delete", "alert"},
+                "ecoa_diary": {"create", "read", "update", "delete", "alert"},
+                "visit_windowing": {"read"},
+                "soa": {"read"},
+                "etmf_taxonomy": {"read"},
+                "query_lifecycle": {"create", "read", "update", "delete"},
+                "export_masked": {"create"},
+                "protocol_export": {"generate", "read"},
+            },
+        )
 
     for r in ("sysadmin", "system_admin"):
-        register_rbac_role_permissions(r, {
-            "system": {"admin"},
-            "medical_coding": {"create", "read", "update"},
-            "lab_range": {"create", "read", "update", "delete", "alert"},
-            "ecoa_diary": {"create", "read", "update", "delete", "alert"},
-            "visit_windowing": {"create", "read", "update"},
-            "soa": {"create", "read", "update", "delete"},
-            "etmf_taxonomy": {"read"},
-            "etmf_document": {"read", "write", "delete", "sign", "create", "manage_expiration", "tag"},
-            "protocol_export": {"generate", "read"}
-        })
+        register_rbac_role_permissions(
+            r,
+            {
+                "system": {"admin"},
+                "medical_coding": {"create", "read", "update"},
+                "lab_range": {"create", "read", "update", "delete", "alert"},
+                "ecoa_diary": {"create", "read", "update", "delete", "alert"},
+                "visit_windowing": {"create", "read", "update"},
+                "soa": {"create", "read", "update", "delete"},
+                "etmf_taxonomy": {"read"},
+                "etmf_document": {
+                    "read",
+                    "write",
+                    "delete",
+                    "sign",
+                    "create",
+                    "manage_expiration",
+                    "tag",
+                },
+                "protocol_export": {"generate", "read"},
+            },
+        )
 
     for r in ("admin",):
-        register_rbac_role_permissions(r, {
-            "study_design": {"read"},
-            "etmf_document": {"read", "write", "delete", "sign", "create", "manage_expiration", "tag"},
-            "etmf_edl": {"read", "write", "delete", "sign", "create"},
-            "visit_windowing": {"create", "read", "update"},
-            "soa": {"create", "read", "update", "delete"},
-            "lab_range": {"create", "read", "update", "delete", "alert"},
-            "ecoa_diary": {"create", "read", "update", "delete", "alert"},
-            "etmf_taxonomy": {"read"},
-            "protocol_export": {"generate", "read"}
-        })
+        register_rbac_role_permissions(
+            r,
+            {
+                "study_design": {"read"},
+                "etmf_document": {
+                    "read",
+                    "write",
+                    "delete",
+                    "sign",
+                    "create",
+                    "manage_expiration",
+                    "tag",
+                },
+                "etmf_edl": {"read", "write", "delete", "sign", "create"},
+                "visit_windowing": {"create", "read", "update"},
+                "soa": {"create", "read", "update", "delete"},
+                "lab_range": {"create", "read", "update", "delete", "alert"},
+                "ecoa_diary": {"create", "read", "update", "delete", "alert"},
+                "etmf_taxonomy": {"read"},
+                "protocol_export": {"generate", "read"},
+            },
+        )
 
     for r in ("ClinicalResearchAssociate", "cra", "monitor"):
-        register_rbac_role_permissions(r, {
-            "data": {"read"},
-            "sdv": {"verify"},
-            "etmf_document": {"read", "write", "delete", "tag"},
-            "lab_range": {"create", "read", "update", "delete", "alert"},
-            "ecoa_diary": {"create", "read", "update", "delete", "alert"},
-            "visit_windowing": {"read"},
-            "soa": {"read"},
-            "etmf_taxonomy": {"read"},
-            "medical_coding": {"read"}
-        })
+        register_rbac_role_permissions(
+            r,
+            {
+                "data": {"read"},
+                "sdv": {"verify"},
+                "etmf_document": {"read", "write", "delete", "tag"},
+                "lab_range": {"create", "read", "update", "delete", "alert"},
+                "ecoa_diary": {"create", "read", "update", "delete", "alert"},
+                "visit_windowing": {"read"},
+                "soa": {"read"},
+                "etmf_taxonomy": {"read"},
+                "medical_coding": {"read"},
+            },
+        )
 
     for r in ("ClinicalResearchCoordinator", "crc"):
-        register_rbac_role_permissions(r, {
-            "data": {"read", "write"},
-            "etmf_document": {"read"},
-            "lab_range": {"read", "alert"},
-            "ecoa_diary": {"create", "read", "update", "delete", "alert"},
-            "visit_windowing": {"read"},
-            "soa": {"read"},
-            "etmf_taxonomy": {"read"},
-            "ecrf_data_entry": {"create", "read", "update"}
-        })
+        register_rbac_role_permissions(
+            r,
+            {
+                "data": {"read", "write"},
+                "etmf_document": {"read"},
+                "lab_range": {"read", "alert"},
+                "ecoa_diary": {"create", "read", "update", "delete", "alert"},
+                "visit_windowing": {"read"},
+                "soa": {"read"},
+                "etmf_taxonomy": {"read"},
+                "ecrf_data_entry": {"create", "read", "update"},
+            },
+        )
 
     for r in ("investigator", "site_investigator"):
-        register_rbac_role_permissions(r, {
-            "data": {"read", "write"},
-            "signature": {"sign"},
-            "etmf_document": {"read"},
-            "lab_range": {"read", "alert"},
-            "ecoa_diary": {"create", "read", "update", "delete", "alert"},
-            "visit_windowing": {"read"},
-            "soa": {"read"},
-            "etmf_taxonomy": {"read"}
-        })
+        register_rbac_role_permissions(
+            r,
+            {
+                "data": {"read", "write"},
+                "signature": {"sign"},
+                "etmf_document": {"read"},
+                "lab_range": {"read", "alert"},
+                "ecoa_diary": {"create", "read", "update", "delete", "alert"},
+                "visit_windowing": {"read"},
+                "soa": {"read"},
+                "etmf_taxonomy": {"read"},
+            },
+        )
 
     for r in ("PrincipalInvestigator", "principal_investigator", "pi"):
-        register_rbac_role_permissions(r, {
-            "data": {"read", "write"},
-            "signature": {"sign"},
-            "emergency_unblind": {"execute"},
-            "etmf_document": {"read"},
-            "lab_range": {"read", "alert"},
-            "ecoa_diary": {"create", "read", "update", "delete", "alert"},
-            "visit_windowing": {"read"},
-            "soa": {"read"},
-            "etmf_taxonomy": {"read"}
-        })
+        register_rbac_role_permissions(
+            r,
+            {
+                "data": {"read", "write"},
+                "signature": {"sign"},
+                "emergency_unblind": {"execute"},
+                "etmf_document": {"read"},
+                "lab_range": {"read", "alert"},
+                "ecoa_diary": {"create", "read", "update", "delete", "alert"},
+                "visit_windowing": {"read"},
+                "soa": {"read"},
+                "etmf_taxonomy": {"read"},
+            },
+        )
 
     for r in ("authorized_er_physician",):
-        register_rbac_role_permissions(r, {
-            "data": {"read", "write"},
-            "signature": {"sign"},
-            "emergency_unblind": {"execute"},
-            "etmf_document": {"read"},
-            "lab_range": {"read", "alert"},
-            "ecoa_diary": {"create", "read", "update", "delete", "alert"},
-            "visit_windowing": {"read"},
-            "soa": {"read"},
-            "etmf_taxonomy": {"read"}
-        })
+        register_rbac_role_permissions(
+            r,
+            {
+                "data": {"read", "write"},
+                "signature": {"sign"},
+                "emergency_unblind": {"execute"},
+                "etmf_document": {"read"},
+                "lab_range": {"read", "alert"},
+                "ecoa_diary": {"create", "read", "update", "delete", "alert"},
+                "visit_windowing": {"read"},
+                "soa": {"read"},
+                "etmf_taxonomy": {"read"},
+            },
+        )
 
     for r in ("lead_investigator",):
-        register_rbac_role_permissions(r, {
-            "data": {"read", "write"},
-            "signature": {"sign"},
-            "emergency_unblind": {"execute"},
-            "etmf_document": {"read"},
-            "lab_range": {"read", "alert"},
-            "ecoa_diary": {"create", "read", "update", "delete", "alert"},
-            "visit_windowing": {"read"},
-            "soa": {"read"},
-            "etmf_taxonomy": {"read"}
-        })
+        register_rbac_role_permissions(
+            r,
+            {
+                "data": {"read", "write"},
+                "signature": {"sign"},
+                "emergency_unblind": {"execute"},
+                "etmf_document": {"read"},
+                "lab_range": {"read", "alert"},
+                "ecoa_diary": {"create", "read", "update", "delete", "alert"},
+                "visit_windowing": {"read"},
+                "soa": {"read"},
+                "etmf_taxonomy": {"read"},
+            },
+        )
 
     for r in ("Auditor", "auditor", "inspector", "regulatory_inspector"):
-        register_rbac_role_permissions(r, {
-            "etmf_document": {"read"},
-            "etmf_edl": {"read"},
-            "etmf_audit_logs": {"read"},
-            "audit_log": {"read"},
-            "visit_windowing": {"read"},
-            "soa": {"read"},
-            "etmf_taxonomy": {"read"}
-        })
+        register_rbac_role_permissions(
+            r,
+            {
+                "etmf_document": {"read"},
+                "etmf_edl": {"read"},
+                "etmf_audit_logs": {"read"},
+                "audit_log": {"read"},
+                "visit_windowing": {"read"},
+                "soa": {"read"},
+                "etmf_taxonomy": {"read"},
+            },
+        )
 
     for r in ("unblinded_statistician",):
-        register_rbac_role_permissions(r, {
-            "rtsm_allocation": {"read"}
-        })
+        register_rbac_role_permissions(r, {"rtsm_allocation": {"read"}})
 
     for r in ("idmc",):
-        register_rbac_role_permissions(r, {
-            "rtsm_allocation": {"read"}
-        })
+        register_rbac_role_permissions(r, {"rtsm_allocation": {"read"}})
 
     for r in ("pharmacist",):
-        register_rbac_role_permissions(r, {
-            "rtsm_kit": {"read", "write"},
-            "rtsm_supply": {"write"}
-        })
+        register_rbac_role_permissions(
+            r, {"rtsm_kit": {"read", "write"}, "rtsm_supply": {"write"}}
+        )
 
     for r in ("emergency_unblinder",):
-        register_rbac_role_permissions(r, {
-            "emergency_unblind": {"execute"},
-            "rtsm_unblind": {"write"}
-        })
+        register_rbac_role_permissions(
+            r, {"emergency_unblind": {"execute"}, "rtsm_unblind": {"write"}}
+        )
 
     for r in ("external_monitor",):
-        register_rbac_role_permissions(r, {
-            "etmf_document": {"read"},
-            "eisf_document": {"read"},
-            "etmf_edl": {"read"},
-            "etmf_audit_logs": {"read"},
-            "etmf_taxonomy": {"read"}
-        })
+        register_rbac_role_permissions(
+            r,
+            {
+                "etmf_document": {"read"},
+                "eisf_document": {"read"},
+                "etmf_edl": {"read"},
+                "etmf_audit_logs": {"read"},
+                "etmf_taxonomy": {"read"},
+            },
+        )
 
     for r in ("anonymous",):
-        register_rbac_role_permissions(r, {
-            "etmf_taxonomy": {"read"}
-        })
+        register_rbac_role_permissions(r, {"etmf_taxonomy": {"read"}})
 
     for r in ("system",):
-        register_rbac_role_permissions(r, {
-            "etmf_taxonomy": {"read"},
-            "ecoa_diary": {"read", "alert"}
-        })
+        register_rbac_role_permissions(
+            r, {"etmf_taxonomy": {"read"}, "ecoa_diary": {"read", "alert"}}
+        )
 
     for r in ("grants_manager", "grants manager"):
-        register_rbac_role_permissions(r, {
-            "etmf_taxonomy": {"read"}
-        })
+        register_rbac_role_permissions(r, {"etmf_taxonomy": {"read"}})
 
     for r in ("Subject", "subject", "patient"):
-        register_rbac_role_permissions(r, {
-            "ecoa_diary": {"read"}
-        })
+        register_rbac_role_permissions(r, {"ecoa_diary": {"read"}})
 
     for r in ("terminology_manager",):
-        register_rbac_role_permissions(r, {
-            "medical_coding": {"create", "read", "update"}
-        })
+        register_rbac_role_permissions(
+            r, {"medical_coding": {"create", "read", "update"}}
+        )
 
     for r in ("sponsor_mm", "sponsor_statistician", "protocol_reviewer", "reviewer"):
-        register_rbac_role_permissions(r, {
-            "visit_windowing": {"read"},
-            "soa": {"read"}
-        })
+        register_rbac_role_permissions(
+            r, {"visit_windowing": {"read"}, "soa": {"read"}}
+        )
 
     # Register RBAC aliases
     register_rbac_role_alias("pi", "PrincipalInvestigator")
@@ -371,7 +564,9 @@ def setup_security_dynamic_registry():
     register_rbac_role_alias("sponsor administrator", "SponsorAdmin")
     register_rbac_role_alias("sponsor admin", "SponsorAdmin")
     register_rbac_role_alias("sponsor_admin", "SponsorAdmin")
-    register_rbac_role_alias("admin", "DataManager")  # Required by test_role_aliases_normalization assert normalize_role("Admin") == ROLE_SPONSOR_DM
+    register_rbac_role_alias(
+        "admin", "DataManager"
+    )  # Required by test_role_aliases_normalization assert normalize_role("Admin") == ROLE_SPONSOR_DM
     register_rbac_role_alias("sponsor designer", "SponsorDesigner")
     register_rbac_role_alias("sponsor_designer", "SponsorDesigner")
     register_rbac_role_alias("designer", "SponsorDesigner")
@@ -388,7 +583,9 @@ def setup_security_dynamic_registry():
     register_rbac_role_alias("cra_monitor", "ClinicalResearchAssociate")
     register_rbac_role_alias("cra-monitor", "ClinicalResearchAssociate")
     register_rbac_role_alias("cra monitor", "ClinicalResearchAssociate")
-    register_rbac_role_alias("clinical research coordinator", "ClinicalResearchCoordinator")
+    register_rbac_role_alias(
+        "clinical research coordinator", "ClinicalResearchCoordinator"
+    )
     register_rbac_role_alias("crc", "ClinicalResearchCoordinator")
     register_rbac_role_alias("unblinded pharmacist", "pharmacist")
     register_rbac_role_alias("unblinded_pharmacist", "pharmacist")
@@ -418,7 +615,10 @@ def setup_security_dynamic_registry():
     register_rbac_site_scoped_role("principal_investigator")
 
     # Register RBAC unmasked fields for RTSM roles
-    register_rbac_role_unmasked_fields("unblinded_statistician", {"treatment_arm_id", "treatment_arm", "unblinded_dose", "randomization_seed"})
+    register_rbac_role_unmasked_fields(
+        "unblinded_statistician",
+        {"treatment_arm_id", "treatment_arm", "unblinded_dose", "randomization_seed"},
+    )
     register_rbac_role_unmasked_fields("pharmacist", {"kit_reference", "drug_code"})
 
     # Register RBAC constants
@@ -448,7 +648,9 @@ def setup_security_dynamic_registry():
     register_rbac_constant("ROLE_LEAD_INVESTIGATOR", "lead_investigator")
 
     # Auditor roles
-    register_rbac_constant("AUDITOR_ROLES", {"Auditor", "auditor", "inspector", "regulatory_inspector"})
+    register_rbac_constant(
+        "AUDITOR_ROLES", {"Auditor", "auditor", "inspector", "regulatory_inspector"}
+    )
 
     # Masking rule
     register_rbac_masking_rule("initials", lambda val: "**")
@@ -462,107 +664,159 @@ def setup_security_dynamic_registry():
     register_rbac_masking_rule("unblinded_dose", lambda val: "BLINDED")
 
     # Role expansions
-    register_rbac_role_expansion("site investigator", {
+    register_rbac_role_expansion(
         "site investigator",
-        "investigator",
-        "site-investigator",
-        "site_investigator",
-        "investigator_user",
+        {
+            "site investigator",
+            "investigator",
+            "site-investigator",
+            "site_investigator",
+            "investigator_user",
+            "PrincipalInvestigator",
+            "principal_investigator",
+            "principal investigator",
+            "pi",
+            "authorized_er_physician",
+            "authorized er physician",
+            "lead_investigator",
+            "lead investigator",
+        },
+    )
+    register_rbac_role_expansion(
         "PrincipalInvestigator",
+        {
+            "PrincipalInvestigator",
+            "principal_investigator",
+            "principal investigator",
+            "pi",
+            "principalinvestigator",
+        },
+    )
+    register_rbac_role_expansion(
         "principal_investigator",
-        "principal investigator",
-        "pi",
+        {
+            "PrincipalInvestigator",
+            "principal_investigator",
+            "principal investigator",
+            "pi",
+            "principalinvestigator",
+        },
+    )
+    register_rbac_role_expansion(
         "authorized_er_physician",
-        "authorized er physician",
+        {
+            "authorized_er_physician",
+            "authorized er physician",
+            "authorized-er-physician",
+        },
+    )
+    register_rbac_role_expansion(
         "lead_investigator",
-        "lead investigator",
-    })
-    register_rbac_role_expansion("PrincipalInvestigator", {
-        "PrincipalInvestigator",
-        "principal_investigator",
-        "principal investigator",
-        "pi",
-        "principalinvestigator",
-    })
-    register_rbac_role_expansion("principal_investigator", {
-        "PrincipalInvestigator",
-        "principal_investigator",
-        "principal investigator",
-        "pi",
-        "principalinvestigator",
-    })
-    register_rbac_role_expansion("authorized_er_physician", {
-        "authorized_er_physician",
-        "authorized er physician",
-        "authorized-er-physician",
-    })
-    register_rbac_role_expansion("lead_investigator", {
-        "lead_investigator",
-        "lead investigator",
-        "lead-investigator",
-    })
-    register_rbac_role_expansion("DataManager", {
+        {
+            "lead_investigator",
+            "lead investigator",
+            "lead-investigator",
+        },
+    )
+    register_rbac_role_expansion(
         "DataManager",
-        "data manager",
-        "data_manager",
-        "data-manager",
+        {
+            "DataManager",
+            "data manager",
+            "data_manager",
+            "data-manager",
+            "sponsor_dm",
+            "dm",
+            "admin",
+        },
+    )
+    register_rbac_role_expansion(
         "sponsor_dm",
-        "dm",
-        "admin",
-    })
-    register_rbac_role_expansion("sponsor_dm", {
-        "DataManager",
+        {
+            "DataManager",
+            "data manager",
+            "data_manager",
+            "data-manager",
+            "sponsor_dm",
+            "dm",
+            "admin",
+        },
+    )
+    register_rbac_role_expansion(
         "data manager",
-        "data_manager",
-        "data-manager",
-        "sponsor_dm",
-        "dm",
-        "admin",
-    })
-    register_rbac_role_expansion("data manager", {
-        "DataManager",
-        "data manager",
-        "data_manager",
-        "data-manager",
-        "sponsor_dm",
-        "dm",
-        "admin",
-    })
+        {
+            "DataManager",
+            "data manager",
+            "data_manager",
+            "data-manager",
+            "sponsor_dm",
+            "dm",
+            "admin",
+        },
+    )
     register_rbac_role_expansion("cra", {"ClinicalResearchAssociate", "cra"})
-    register_rbac_role_expansion("ClinicalResearchAssociate", {"ClinicalResearchAssociate", "cra"})
-    register_rbac_role_expansion("Auditor", {"Auditor", "auditor", "inspector", "regulatory_inspector"})
-    register_rbac_role_expansion("auditor", {"Auditor", "auditor", "inspector", "regulatory_inspector"})
-    register_rbac_role_expansion("SponsorAdmin", {"SponsorAdmin", "sponsor admin", "sponsor_admin", "admin"})
-    register_rbac_role_expansion("sponsor admin", {"SponsorAdmin", "sponsor admin", "sponsor_admin", "admin"})
-    register_rbac_role_expansion("external_monitor", {
+    register_rbac_role_expansion(
+        "ClinicalResearchAssociate", {"ClinicalResearchAssociate", "cra"}
+    )
+    register_rbac_role_expansion(
+        "Auditor", {"Auditor", "auditor", "inspector", "regulatory_inspector"}
+    )
+    register_rbac_role_expansion(
+        "auditor", {"Auditor", "auditor", "inspector", "regulatory_inspector"}
+    )
+    register_rbac_role_expansion(
+        "SponsorAdmin", {"SponsorAdmin", "sponsor admin", "sponsor_admin", "admin"}
+    )
+    register_rbac_role_expansion(
+        "sponsor admin", {"SponsorAdmin", "sponsor admin", "sponsor_admin", "admin"}
+    )
+    register_rbac_role_expansion(
         "external_monitor",
-        "external monitor",
-        "external-monitor",
-        "cro monitor",
-        "cro_monitor",
-        "cro-monitor",
-    })
-    register_rbac_role_expansion("protocol_reviewer", {
+        {
+            "external_monitor",
+            "external monitor",
+            "external-monitor",
+            "cro monitor",
+            "cro_monitor",
+            "cro-monitor",
+        },
+    )
+    register_rbac_role_expansion(
         "protocol_reviewer",
-        "protocol reviewer",
-        "protocol-reviewer",
-        "reviewer",
-    })
-    register_rbac_role_expansion("unblinded_statistician", {
+        {
+            "protocol_reviewer",
+            "protocol reviewer",
+            "protocol-reviewer",
+            "reviewer",
+        },
+    )
+    register_rbac_role_expansion(
         "unblinded_statistician",
-        "unblinded statistician",
-        "lead unblinded statistician",
-    })
-    register_rbac_role_expansion("idmc", {
+        {
+            "unblinded_statistician",
+            "unblinded statistician",
+            "lead unblinded statistician",
+        },
+    )
+    register_rbac_role_expansion(
         "idmc",
-        "dsmb",
-    })
-    register_rbac_role_expansion("pharmacist", {
+        {
+            "idmc",
+            "dsmb",
+        },
+    )
+    register_rbac_role_expansion(
         "pharmacist",
-        "unblinded pharmacist",
-        "unblinded_pharmacist",
-    })
-    register_rbac_role_expansion("emergency_unblinder", {
+        {
+            "pharmacist",
+            "unblinded pharmacist",
+            "unblinded_pharmacist",
+        },
+    )
+    register_rbac_role_expansion(
         "emergency_unblinder",
-        "emergency unblinder",
-    })
+        {
+            "emergency_unblinder",
+            "emergency unblinder",
+        },
+    )

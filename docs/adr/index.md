@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-12: Consolidate style lints and synchronize GxP compliance](2026-08-12-consolidate-style-lints-and-synchronize-gxp-compliance.md)
 
 - [2026-08-11: Pool Connection State Eviction and Checkout Resets](2026-08-11-pool-connection-state-eviction-and-checkout-resets.md)
 - [2026-08-11: Relational Outbox System across Execution and eTMF Services](2026-08-11-relational-outbox-system-across-execution-and-etmf-services.md)

@@ -11,6 +11,7 @@ class DocumentMetadataResponse(BaseModel):
 
     Requirements: PRD-SYS-001
     """
+
     model_config = ConfigDict(extra="allow")
 
     document_id: str
@@ -40,6 +41,7 @@ class ArchiveJobResponse(BaseModel):
 
     Requirements: PRD-SYS-001
     """
+
     model_config = ConfigDict(extra="allow")
 
     job_id: str

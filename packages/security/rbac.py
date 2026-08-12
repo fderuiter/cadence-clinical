@@ -16,7 +16,9 @@ AUDITOR_ROLES: set[str] = set()
 _DYNAMIC_CONSTANTS: dict[str, Any] = {}
 
 
-def register_rbac_role_permissions(role: str, resource_permissions: dict[str, set[str]]):
+def register_rbac_role_permissions(
+    role: str, resource_permissions: dict[str, set[str]]
+):
     """Dynamically register RBAC permissions for a role."""
     if role not in ROLE_PERMISSIONS:
         ROLE_PERMISSIONS[role] = {}
@@ -81,6 +83,7 @@ def __getattr__(name: str) -> Any:
     if name == "AUDITOR_ROLES":
         return AUDITOR_ROLES
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+
 
 # Traceability Note: Principal now captures sponsor scope (sponsor_id) as a contract change per ADR-86.
 class Principal(BaseModel):
@@ -740,7 +743,6 @@ def register_rbac_role_expansion(role: str, expansions: set[str]):
     if role not in ROLE_EXPANSIONS:
         ROLE_EXPANSIONS[role] = set()
     ROLE_EXPANSIONS[role].update(expansions)
-
 
 
 def require_roles(*allowed_roles: str, detail: str | None = None):

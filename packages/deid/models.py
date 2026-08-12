@@ -1,4 +1,5 @@
 from enum import StrEnum
+
 from pydantic import BaseModel, Field
 
 
@@ -34,7 +35,9 @@ class DynamicStrEnumMeta(type):
     def __contains__(cls, item):
         if isinstance(item, cls):
             return item._value_ in cls._members
-        return item in cls._members or item in [m._value_ for m in cls._members.values()]
+        return item in cls._members or item in [
+            m._value_ for m in cls._members.values()
+        ]
 
     def __getitem__(cls, name):
         if name in cls._members:
@@ -74,6 +77,7 @@ class DynamicStrEnum(str, metaclass=DynamicStrEnumMeta):
     @classmethod
     def __get_pydantic_core_schema__(cls, _source_type, _handler):
         from pydantic_core import core_schema
+
         return core_schema.str_schema()
 
     @classmethod
@@ -88,6 +92,7 @@ class ComplianceProfile(DynamicStrEnum):
     """
     Compliance profiles that govern which PII/PHI categories are active.
     """
+
     _members = {}
 
     HIPAA = "HIPAA"

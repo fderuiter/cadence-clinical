@@ -6,11 +6,13 @@ from packages.security.permissions import DynamicStrEnum
 
 class TrialRole(DynamicStrEnum):
     """Dynamically registered trial roles."""
+
     _members = {}
 
 
 class ClinicalStaffRole(DynamicStrEnum):
     """Dynamically registered clinical staff roles."""
+
     _members = {}
 
 
@@ -51,9 +53,10 @@ def get_normalized_request_roles(request: Request) -> list[str]:
         raw_roles = [str(r).strip() for r in roles_val if str(r).strip()]
     else:
         raw_roles = []
-    
+
     # Import normalize_role dynamically to avoid circular import issues
     from packages.security.rbac import normalize_role
+
     return [normalize_role(r) for r in raw_roles]
 
 
@@ -67,9 +70,7 @@ def check_trial_role(request: Request, role: TrialRole) -> bool:
     return any(r in allowed for r in user_roles)
 
 
-def enforce_site_isolation(
-    request: Request, site_id: str, principal: any
-) -> None:
+def enforce_site_isolation(request: Request, site_id: str, principal: any) -> None:
     """
     Site-isolation guard (PRD-SYS-004):
     Raises a 403 Forbidden exception and writes a security audit alert to the audit log
@@ -86,6 +87,7 @@ def enforce_site_isolation(
     if is_site_scoped or principal.assigned_sites:
         # Import can_access_site dynamically to avoid circular import issues
         from packages.security.rbac import can_access_site
+
         if not can_access_site(principal, site_id):
             ip_address = (
                 getattr(request.state, "ip_address", None)

@@ -352,12 +352,20 @@ def main() -> None:
                                     "apps/subject-portal/style.css",
                                 },
                                 {
-                                    "packages/ui/src/components/clinical/ClinicalInput.vue",
-                                    "packages/ui/src/components/clinical/ClinicalFieldLayout.vue",
+                                    "apps/web/src/components/clinical/ClinicalInput.vue",
+                                    "apps/web/src/components/clinical/ClinicalFieldLayout.vue",
                                 },
                                 {
-                                    "packages/ui/src/components/clinical/ClinicalInput.vue",
-                                    "packages/ui/src/components/clinical/ClinicalRadioGroup.vue",
+                                    "apps/web/src/components/clinical/ClinicalInput.vue",
+                                    "apps/web/src/components/clinical/ClinicalRadioGroup.vue",
+                                },
+                                {
+                                    "apps/web/src/utils/econsent.js",
+                                    "apps/subject-portal/econsent.js",
+                                },
+                                {
+                                    "packages/security/permissions.py",
+                                    "packages/deid/models.py",
                                 },
                                 {
                                     "apps/web/src/composables/useFocusTrap.js",

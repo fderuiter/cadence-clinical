@@ -19,7 +19,9 @@ _NORMALIZED_STAFF_ROLES: dict[str, str] = {}
 def register_staff_role_normalization(aliases: list[str], target_role_value: str):
     """Register aliases for a staff role value."""
     for alias in aliases:
-        _NORMALIZED_STAFF_ROLES[alias.strip().lower().replace("_", " ").replace("-", " ")] = target_role_value
+        _NORMALIZED_STAFF_ROLES[
+            alias.strip().lower().replace("_", " ").replace("-", " ")
+        ] = target_role_value
 
 
 def normalize_and_validate_staff_role(role_str: str) -> StaffRole:
@@ -58,6 +60,7 @@ def validate_request_staff_roles(request: Request) -> list[StaffRole]:
     """
     # Import dynamically from rbac to avoid circular imports
     from packages.security.rbac import get_normalized_roles
+
     roles_list = get_normalized_roles(request)
     if not roles_list:
         raise HTTPException(

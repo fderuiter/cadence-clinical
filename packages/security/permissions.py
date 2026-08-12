@@ -6,8 +6,6 @@ AUDIT_VIEW, etc.) and role-to-permission mapping for Cadence Clinical eClinical 
 Requirements: PRD-SYS-001, 21 CFR Part 11
 """
 
-from typing import Any
-
 
 class DynamicStrEnumMeta(type):
     def __getattr__(cls, name):
@@ -24,7 +22,9 @@ class DynamicStrEnumMeta(type):
     def __contains__(cls, item):
         if isinstance(item, cls):
             return item._value_ in cls._members
-        return item in cls._members or item in [m._value_ for m in cls._members.values()]
+        return item in cls._members or item in [
+            m._value_ for m in cls._members.values()
+        ]
 
     def __getitem__(cls, name):
         if name in cls._members:
@@ -64,6 +64,7 @@ class DynamicStrEnum(str, metaclass=DynamicStrEnumMeta):
     @classmethod
     def __get_pydantic_core_schema__(cls, _source_type, _handler):
         from pydantic_core import core_schema
+
         return core_schema.str_schema()
 
     @classmethod
@@ -76,11 +77,13 @@ class DynamicStrEnum(str, metaclass=DynamicStrEnumMeta):
 
 class PermissionEnum(DynamicStrEnum):
     """Granular permission definitions. Starts empty/generic, clinical trial values are dynamically registered."""
+
     _members = {}
 
 
 class RoleEnum(DynamicStrEnum):
     """Canonical system roles. Starts empty/generic, clinical trial values are dynamically registered."""
+
     _members = {}
 
 
@@ -156,25 +159,27 @@ def has_permission(roles: str | list[str], required_permission: PermissionEnum) 
 
 
 # Dynamic registration API for consumer applications to register clinical configurations
-def register_role_and_permissions(role_name: str, permissions: set[str], aliases: list[str] = None):
+def register_role_and_permissions(
+    role_name: str, permissions: set[str], aliases: list[str] = None
+):
     """Dynamically register a role, its associated permissions, and aliases on startup."""
     role_key = role_name.upper().replace(" ", "_")
     if role_key not in RoleEnum.__members__:
         RoleEnum._add_member(role_key, role_name)
-    
+
     for perm in permissions:
         perm_key = perm.upper().replace(":", "_").replace(" ", "_").replace("-", "_")
         if perm_key not in PermissionEnum.__members__:
             PermissionEnum._add_member(perm_key, perm)
-            
+
     canonical_role = RoleEnum[role_key].value
     if canonical_role not in ROLE_PERMISSIONS_MAP:
         ROLE_PERMISSIONS_MAP[canonical_role] = set()
-        
+
     for perm in permissions:
         perm_key = perm.upper().replace(":", "_").replace(" ", "_").replace("-", "_")
         ROLE_PERMISSIONS_MAP[canonical_role].add(PermissionEnum[perm_key])
-        
+
     if aliases:
         for alias in aliases:
             _ROLE_ALIASES_MAP[alias.lower()] = canonical_role

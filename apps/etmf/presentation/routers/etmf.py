@@ -1177,6 +1177,7 @@ async def auto_redact_document_endpoint(
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
     from packages.deid.models import ComplianceProfile
+
     if payload.profile not in ComplianceProfile:
         raise HTTPException(
             status_code=422,
