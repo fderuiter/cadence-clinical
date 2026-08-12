@@ -57,4 +57,3 @@ Maintain a shared schemas or contracts package containing centralized JSON Schem
 
 - **Affected Repositories / Services:** `apps/execution/`, `apps/etmf/`, `apps/interop/`, `apps/ctms/`, and complete eradication of the `packages/core-models` directory.
 - **Verification Plan:** Verify through the full backend test suite (`pytest`) and AST-based static import validation (`validate_imports.py`) to confirm no cross-boundary imports occur.
-
