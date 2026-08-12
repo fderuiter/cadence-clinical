@@ -3544,10 +3544,16 @@ async def transition_library_object_endpoint(
     roles = []
     for r in raw_roles:
         norm_r = r.strip().lower()
+        roles.append(norm_r)
         if norm_r in ("sponsor admin", "sponsor_admin"):
             roles.append("sponsor_admin")
         else:
-            roles.append(ROLE_ALIASES.get(norm_r, norm_r))
+            canonical_r = ROLE_ALIASES.get(norm_r)
+            if canonical_r:
+                roles.append(canonical_r)
+                roles.append(canonical_r.strip().lower())
+            else:
+                roles.append(norm_r)
 
     if not roles:
         raise HTTPException(status_code=403, detail="Missing role credentials.")

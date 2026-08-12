@@ -16,9 +16,10 @@ StaffRole = ClinicalStaffRole
 _NORMALIZED_STAFF_ROLES: dict[str, str] = {}
 
 
-def register_staff_role_normalization(aliases: list[str], target_role_value: str):
+def register_staff_role_normalization(aliases: str | list[str], target_role_value: str):
     """Register aliases for a staff role value."""
-    for alias in aliases:
+    alias_list = [aliases] if isinstance(aliases, str) else aliases
+    for alias in alias_list:
         _NORMALIZED_STAFF_ROLES[
             alias.strip().lower().replace("_", " ").replace("-", " ")
         ] = target_role_value
@@ -38,7 +39,7 @@ def normalize_and_validate_staff_role(role_str: str) -> StaffRole:
     if norm in _NORMALIZED_STAFF_ROLES:
         val = _NORMALIZED_STAFF_ROLES[norm]
         for member in ClinicalStaffRole:
-            if member.value == val:
+            if member.value == val or member.name == val:
                 return member
 
     raise HTTPException(

@@ -242,11 +242,14 @@ def setup_security_dynamic_registry():
 
     # 3. Register trial roles on trial_roles.py
     register_trial_role("CRA", "cra")
+    register_trial_role("CRA_MONITOR", "cra")
     register_trial_role("SPONSOR_DM", "sponsor_dm")
+    register_trial_role("DATA_MANAGER", "sponsor_dm")
     register_trial_role("SPONSOR_DESIGNER", "sponsor_designer")
     register_trial_role("SPONSOR_ADMIN", "sponsor_admin")
     register_trial_role("SYSADMIN", "sysadmin")
     register_trial_role("PRINCIPAL_INVESTIGATOR", "principal_investigator")
+    register_trial_role("SITE_PI", "principal_investigator")
     register_trial_role("SITE_INVESTIGATOR", "site_investigator")
     register_trial_role("CRC", "crc")
     register_trial_role("AUDITOR", "auditor")
@@ -256,11 +259,16 @@ def setup_security_dynamic_registry():
     register_trial_role("EMERGENCY_UNBLINDER", "emergency_unblinder")
     register_trial_role("EXTERNAL_MONITOR", "external_monitor")
 
-    register_clinical_staff_role("PI", "principal_investigator")
-    register_clinical_staff_role("SUB_I", "sub_investigator")
+    register_clinical_staff_role("PI", "Principal Investigator")
+    register_clinical_staff_role("PRINCIPAL_INVESTIGATOR", "Principal Investigator")
+    register_clinical_staff_role("SUB_I", "Sub-Investigator")
+    register_clinical_staff_role("SUB_INVESTIGATOR", "Sub-Investigator")
     register_clinical_staff_role("STUDY_COORDINATOR", "study_coordinator")
     register_clinical_staff_role("NURSE", "study_nurse")
     register_clinical_staff_role("PHARMACIST", "pharmacist")
+    register_clinical_staff_role("CRC", "CRC")
+    register_clinical_staff_role("CRA_MONITOR", "CRA/Monitor")
+    register_clinical_staff_role("EXTERNAL_MONITOR", "External Monitor")
 
     register_trial_role_check_mapping("sponsor_dm", "is_sponsor")
     register_trial_role_check_mapping("sponsor_designer", "is_sponsor")
@@ -281,6 +289,12 @@ def setup_security_dynamic_registry():
     register_staff_role_normalization("nurse", "NURSE")
     register_staff_role_normalization("study nurse", "NURSE")
     register_staff_role_normalization("pharmacist", "PHARMACIST")
+    register_staff_role_normalization("crc", "CRC")
+    register_staff_role_normalization("clinical research coordinator", "CRC")
+    register_staff_role_normalization("cra/monitor", "CRA_MONITOR")
+    register_staff_role_normalization("cra monitor", "CRA_MONITOR")
+    register_staff_role_normalization("cra", "CRA_MONITOR")
+    register_staff_role_normalization("monitor", "CRA_MONITOR")
 
     # 4. Register RBAC role permissions in rbac.py
     # Align values with unit tests' expectations, registering for BOTH lowercase and CamelCase names for complete safety!
@@ -304,6 +318,8 @@ def setup_security_dynamic_registry():
                 "lab_range": {"create", "read", "update", "delete", "alert"},
                 "ecoa_diary": {"create", "read", "update", "delete", "alert"},
                 "protocol_export": {"generate", "read"},
+                "global_library": {"create", "update", "amend", "transition", "instantiate", "read"},
+                "library_object": {"approve", "publish", "release"},
             },
         )
 
@@ -316,6 +332,8 @@ def setup_security_dynamic_registry():
                 "visit_windowing": {"create", "read", "update"},
                 "soa": {"create", "read", "update", "delete"},
                 "protocol_export": {"generate", "read"},
+                "global_library": {"create", "update", "amend", "transition", "instantiate", "read"},
+                "library_object": {"read"},
             },
         )
 
@@ -343,6 +361,8 @@ def setup_security_dynamic_registry():
                 "query_lifecycle": {"create", "read", "update", "delete"},
                 "export_masked": {"create"},
                 "protocol_export": {"generate", "read"},
+                "global_library": {"create", "update", "amend", "transition", "instantiate", "read"},
+                "library_object": {"approve", "publish"},
             },
         )
 
@@ -583,6 +603,61 @@ def setup_security_dynamic_registry():
     for r in ("sponsor_mm", "sponsor_statistician", "protocol_reviewer", "reviewer"):
         register_rbac_role_permissions(
             r, {"visit_windowing": {"read"}, "soa": {"read"}}
+        )
+
+    # Register CTMS specific permissions for individual roles
+    for r in ("cra", "CRA"):
+        register_rbac_role_permissions(
+            r,
+            {
+                "ctms_monitoring_visit": {"create", "update", "read", "sync"},
+                "ctms_recruitment": {"create", "read"},
+                "ctms_site_milestone": {"create", "update", "read"},
+                "ctms_monitoring_letter": {"read", "read_type"},
+            },
+        )
+    for r in ("monitor", "Monitor"):
+        register_rbac_role_permissions(
+            r,
+            {
+                "ctms_study": {"create", "read"},
+                "ctms_monitoring_visit": {"sign_off", "read"},
+                "ctms_monitoring_letter": {"read", "read_type"},
+                "ctms_recruitment": {"read"},
+                "ctms_site_milestone": {"update", "read"},
+                "ctms_cra_workload": {"read"},
+            },
+        )
+    for r in ("grants manager", "Grants Manager", "grants_manager"):
+        register_rbac_role_permissions(
+            r,
+            {
+                "ctms_study": {"read"},
+                "ctms_financial": {"write", "read"},
+                "ctms_financial_budget": {"read"},
+                "ctms_financial_milestone": {"read"},
+                "ctms_financial_payable": {"read"},
+            },
+        )
+    for r in ("auditor", "Auditor"):
+        register_rbac_role_permissions(
+            r,
+            {
+                "ctms_audit_logs": {"read"},
+            },
+        )
+    for r in ("Sponsor Admin", "sponsor admin", "sponsor_admin", "SponsorAdmin"):
+        register_rbac_role_permissions(
+            r,
+            {
+                "ctms_cra_allocation": {"create", "update", "read"},
+                "ctms_cra_workload": {"read"},
+                "ctms_financial": {"write", "read"},
+                "ctms_financial_budget": {"read"},
+                "ctms_financial_milestone": {"read"},
+                "ctms_financial_payable": {"read"},
+                "ctms_study": {"read"},
+            },
         )
 
     # Register RBAC aliases

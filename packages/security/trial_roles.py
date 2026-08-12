@@ -66,8 +66,51 @@ def check_trial_role(request: Request, role: TrialRole) -> bool:
     following the eTMF string-matching/normalization convention.
     """
     user_roles = get_normalized_request_roles(request)
-    allowed = _TRIAL_ROLE_CHECK_MAP.get(role, set())
-    return any(r in allowed for r in user_roles)
+    
+    # Extract string representation or value of the role
+    role_key = getattr(role, "value", str(role))
+    allowed = _TRIAL_ROLE_CHECK_MAP.get(role, None)
+    if allowed is None:
+        allowed = _TRIAL_ROLE_CHECK_MAP.get(role_key, set())
+
+    allowed_roles = set()
+    if isinstance(allowed, str):
+        if allowed == "is_sponsor":
+            allowed_roles = {
+                "sponsor_dm", "data_manager", "dm", "sponsor_admin", "admin", "sponsor_designer", "sponsor_clinical", "cra", 
+                "sponsoradmin", "sponsordesigner", "clinicalresearchassociate", "datamanager", "sponsor_admin", "sponsoradmin",
+                "ClinicalResearchAssociate", "SponsorAdmin", "SponsorDesigner", "DataManager"
+            }
+        elif allowed == "is_site":
+            allowed_roles = {
+                "principal_investigator", "investigator", "lead_investigator", "authorized_er_physician", "crc", "site_investigator", 
+                "principalinvestigator", "clinicalresearchcoordinator", "PrincipalInvestigator", "ClinicalResearchCoordinator",
+                "Site Investigator", "site investigator", "site_investigator"
+            }
+        elif allowed == "is_auditor":
+            allowed_roles = {
+                "auditor", "inspector", "regulatory_inspector", "Auditor", "Inspector"
+            }
+    else:
+        allowed_roles = set(allowed)
+
+    # Lowercase-normalize and hyphen/underscore-strip all user roles to be fully robust
+    normalized_user_roles = []
+    for r in user_roles:
+        normalized_user_roles.append(r)
+        normalized_user_roles.append(r.lower())
+        normalized_user_roles.append(r.strip().lower().replace(" ", "_"))
+        normalized_user_roles.append(r.strip().lower().replace("_", ""))
+
+    # Lowercase-normalize and hyphen/underscore-strip all allowed roles
+    expanded_allowed = set()
+    for a in allowed_roles:
+        expanded_allowed.add(a)
+        expanded_allowed.add(a.lower())
+        expanded_allowed.add(a.strip().lower().replace(" ", "_"))
+        expanded_allowed.add(a.strip().lower().replace("_", ""))
+
+    return any(r in expanded_allowed for r in normalized_user_roles)
 
 
 def enforce_site_isolation(request: Request, site_id: str, principal: any) -> None:

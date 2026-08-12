@@ -127,6 +127,11 @@ def apply_rtsm_blinded_filter(data: dict, roles: Any) -> dict:
         "sponsor_dm",
         "sponsor_mm",
         "admin",
+        "DataManager",
+        "datamanager",
+        "SponsorAdmin",
+        "sponsoradmin",
+        "sponsor_admin",
     }
 
     is_unblinded = any(r in unblinded_roles for r in normalized_roles)
