@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2367
-- **Passed:** 2348 🟢
+- **Total Automated Test Cases Run:** 2371
+- **Passed:** 2352 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.20%
@@ -2364,6 +2364,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_eligibility_criteria_immutability`                                           | `scripts.tests.test_eligibility_mdr`                                        | PRD-MDR-007                                  | 🟢 PASSED  | < 1s     |
 | `test_eligibility_criteria_usdm_projection`                                        | `scripts.tests.test_eligibility_mdr`                                        | PRD-MDR-007                                  | 🟢 PASSED  | < 1s     |
 | `test_eligibility_criteria_validation_failures`                                    | `scripts.tests.test_eligibility_mdr`                                        | PRD-MDR-007                                  | 🟢 PASSED  | < 1s     |
+| `test_generate_schema_documentation_main`                                          | `scripts.tests.test_generate_schema_documentation`                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_get_designer_schema`                                                         | `scripts.tests.test_generate_schema_documentation`                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_parse_sqlalchemy_schema_etmf`                                                | `scripts.tests.test_generate_schema_documentation`                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_parse_sqlalchemy_schema_execution`                                           | `scripts.tests.test_generate_schema_documentation`                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_is_logical_code`                                                             | `scripts.tests.test_git_merge_driver`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_merge_generic_json`                                                          | `scripts.tests.test_git_merge_driver`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_merge_markdown_text`                                                         | `scripts.tests.test_git_merge_driver`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |

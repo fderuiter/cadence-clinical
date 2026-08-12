@@ -176,6 +176,7 @@ try {
   }
   runCommand("python3 scripts/validate_adrs.py");
   runCommand("python3 scripts/validate_markdown.py");
+  runCommand("uv run python scripts/generate_schema_documentation.py");
 
   // 2. Run compliance compiler
   console.log("--- Step 2: Running Compliance Tracer ---");
