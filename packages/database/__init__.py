@@ -1,4 +1,5 @@
 import functools
+import inspect
 import json
 import uuid
 from collections.abc import AsyncGenerator, Callable
@@ -10,8 +11,9 @@ from fastapi import FastAPI
 from sqlalchemy import JSON, Boolean, DateTime, Integer, String, event, func
 from sqlalchemy.exc import IntegrityError, NoResultFound, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, Session, mapped_column
 
+from packages.database.datetime_helpers import UTCDateTime as UTCDateTime
 from packages.database.graph import (
     GraphDatabaseManager as GraphDatabaseManager,
 )
@@ -28,13 +30,236 @@ from packages.hexagonal import (
 )
 
 
+# Custom compliance exceptions
+class ComplianceError(PermissionError):
+    """Raised when writing to a locked trial, site, visit, subject, or form."""
+
+    pass
+
+
+class AuditJustificationError(ValueError):
+    """Raised when an audited record is created, modified, or deleted without a valid justification."""
+
+    pass
+
+
+_TRIAL_LOCK_CHECKERS: list[Callable[[], bool]] = []
+
+
+def register_trial_lock_checker(checker: Callable[[], bool]) -> None:
+    """Register a callback that checks if a trial-wide lock is active."""
+    _TRIAL_LOCK_CHECKERS.append(checker)
+
+
+def is_trial_locked() -> bool:
+    """Check if any registered lock checker is active, with fallback to TrialLockManager."""
+    for checker in _TRIAL_LOCK_CHECKERS:
+        if checker():
+            return True
+    try:
+        from apps.execution.trial_lock import TrialLockManager
+
+        if TrialLockManager.is_locked():
+            return True
+    except ImportError:
+        pass
+    return False
+
+
+@event.listens_for(Session, "before_flush")
+def receive_before_flush(session: Session, flush_context, instances):
+    """
+    Standard GxP pre-flush listener that intercepts session flushes to:
+    1. Reject modifications if trial is frozen/locked.
+    2. Reject modifications if specific site/visit/subject/form locks are active.
+    3. Reject creations or updates/deletions of audited/clinical data lacking valid justifications.
+    """
+    if not session.is_modified:
+        return
+
+    # Check if there are any non-excluded modifications
+    non_excluded_objs = []
+    for obj in list(session.new) + list(session.dirty) + list(session.deleted):
+        tablename = getattr(obj, "__tablename__", "")
+        if tablename in (
+            "audit_logs",
+            "audit_ledger_seals",
+            "integration_outbox",
+            "safety_audit_logs",
+            "ticket_audit_logs",
+            "org_audit_logs",
+            "audit_schema.audit_logs",
+            "audit_schema.audit_ledger_seals",
+            "notifications",
+            "notification_records",
+            "notification_audit_logs",
+            "notification_deliveries",
+            "notifications_audit_logs",
+            "tmf_documents",
+            "tmf_audit_logs",
+            "tmf_seals",
+            "tmf_expected_documents",
+            "tmf_document_qc_transitions",
+            "tmf_document_expiration_alert_states",
+            "epro_submissions",
+            "epro_defeated_submissions",
+            "epro_quarantined_submissions",
+            "interop_messages",
+            "interop_audit_logs",
+            "instruments",
+            "subject_assignments",
+            "subject_notifications",
+            "ctms_studies",
+            "ctms_audit_logs",
+            "ctms_monitoring_visits",
+            "ctms_monitoring_visit_findings",
+            "ctms_generated_letters",
+            "ctms_recruitment_records",
+            "ctms_site_milestones",
+            "ctms_cra_allocations",
+            "ctms_investigator_grants",
+            "ctms_budget_line_items",
+            "ctms_payment_milestones",
+            "ctms_investigator_payables",
+            "ctms_clinical_queries",
+            "ctms_defeated_monitoring_visits",
+            "quality_deviations",
+            "quality_root_cause_analyses",
+            "quality_capa_records",
+            "quality_audit_logs",
+            "isf_documents",
+            "isf_audit_logs",
+            "consent_documents",
+            "consent_audit_logs",
+            "consent_clauses",
+            "safety_cases",
+            "safety_export_jobs",
+            "tickets",
+            "ticket_comments",
+            "org_training_logs",
+        ):
+            continue
+        non_excluded_objs.append(obj)
+
+    if not non_excluded_objs:
+        return
+
+    # Check for active trial lock / freeze
+    if is_trial_locked():
+        raise ComplianceError(
+            "Trial is currently locked in a read-only state due to a security violation."
+        )
+
+    for obj in non_excluded_objs:
+        tablename = getattr(obj, "__tablename__", "")
+
+        # Site level locks
+        site_id = getattr(obj, "site_id", None) or getattr(obj, "site", None)
+        if site_id is not None:
+            try:
+                from apps.execution.trial_lock import TrialLockManager
+
+                if TrialLockManager.is_site_locked(str(site_id)):
+                    raise ComplianceError(
+                        f"Site {site_id} is currently locked in a read-only state."
+                    )
+            except ImportError:
+                pass
+
+        # Visit level locks
+        visit_id = getattr(obj, "visit_id", None) or getattr(obj, "visit", None)
+        if visit_id is not None:
+            try:
+                from apps.execution.trial_lock import TrialLockManager
+
+                if TrialLockManager.is_visit_locked(str(visit_id)):
+                    raise ComplianceError(
+                        f"Visit {visit_id} is currently locked in a read-only state."
+                    )
+            except ImportError:
+                pass
+
+        # Subject level locks
+        subject_id = getattr(obj, "subject_id", None) or getattr(obj, "subject", None)
+        if subject_id is not None:
+            try:
+                from apps.execution.trial_lock import TrialLockManager
+
+                if TrialLockManager.is_subject_locked(str(subject_id)):
+                    raise ComplianceError(
+                        f"Subject {subject_id} is currently locked in a read-only state."
+                    )
+            except ImportError:
+                pass
+
+        # Form level locks
+        form_id = getattr(obj, "form_id", None) or getattr(obj, "form", None)
+        if form_id is not None:
+            try:
+                from apps.execution.trial_lock import TrialLockManager
+
+                if TrialLockManager.is_form_locked(str(form_id)):
+                    raise ComplianceError(
+                        f"Form {form_id} is currently locked in a read-only state."
+                    )
+            except ImportError:
+                pass
+
+        # GxP Change Justification Check (Criterion 2)
+        # Any change/creation/deletion on an audited clinical record requires a non-empty, non-blank reason.
+        is_audited = False
+        classname = obj.__class__.__name__
+        if (
+            "Audited" in classname
+            or "clinical" in tablename.lower()
+            or hasattr(obj, "reason_for_change")
+            or hasattr(obj, "change_reason")
+        ):
+            is_audited = True
+
+        if is_audited:
+            # Try to fetch reason
+            reason = getattr(obj, "reason_for_change", None) or getattr(
+                obj, "change_reason", None
+            )
+            if not reason:
+                try:
+                    from packages.security.context import current_change_reason
+
+                    reason = current_change_reason.get()
+                except ImportError:
+                    pass
+
+            if not reason or not isinstance(reason, str) or not reason.strip():
+                raise AuditJustificationError(
+                    "GxP change reason is required. Reason for change cannot be empty or consist only of whitespace."
+                )
+
+
 def map_database_exceptions(func: Callable) -> Callable:
     """Decorator to translate SQLAlchemy database errors to clean domain exceptions."""
 
+    if inspect.iscoroutinefunction(func):
+
+        @functools.wraps(func)
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            try:
+                return await func(*args, **kwargs)
+            except NoResultFound as e:
+                raise EntityNotFoundError(f"Requested entity not found: {e}") from e
+            except IntegrityError as e:
+                raise EntityAlreadyExistsError(
+                    f"Database constraint violation or duplicate key: {e}"
+                ) from e
+            except SQLAlchemyError as e:
+                raise DatabaseError(f"Database operational or schema error: {e}") from e
+
+        return async_wrapper
+
     @functools.wraps(func)
-    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+    def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
         try:
-            return await func(*args, **kwargs)
+            return func(*args, **kwargs)
         except NoResultFound as e:
             raise EntityNotFoundError(f"Requested entity not found: {e}") from e
         except IntegrityError as e:
@@ -44,7 +269,7 @@ def map_database_exceptions(func: Callable) -> Callable:
         except SQLAlchemyError as e:
             raise DatabaseError(f"Database operational or schema error: {e}") from e
 
-    return wrapper
+    return sync_wrapper
 
 
 class RelationalDatabaseManager:
