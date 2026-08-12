@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2348
-- **Passed:** 2329 🟢
+- **Total Automated Test Cases Run:** 2352
+- **Passed:** 2333 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.19%
@@ -1232,6 +1232,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_subject_consent_endpoint_lifecycle`                                          | `apps.execution.tests.test_reconsent_blocking`                              | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_admin_visibility_endpoint`                                                   | `apps.execution.tests.test_relational_outbox`                               | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_outbox_no_unencrypted_pii`                                                   | `apps.execution.tests.test_relational_outbox`                               | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_outbox_worker_batch_size_limit`                                              | `apps.execution.tests.test_relational_outbox`                               | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_outbox_worker_concurrent_dispatch`                                           | `apps.execution.tests.test_relational_outbox`                               | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_outbox_worker_dialect_aware_locking_pg`                                      | `apps.execution.tests.test_relational_outbox`                               | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_outbox_worker_dialect_aware_locking_sqlite`                                  | `apps.execution.tests.test_relational_outbox`                               | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_outbox_worker_polling_and_dispatch_success`                                  | `apps.execution.tests.test_relational_outbox`                               | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_outbox_worker_retry_and_backoff`                                             | `apps.execution.tests.test_relational_outbox`                               | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_trial_lock_writes_outbox`                                                    | `apps.execution.tests.test_relational_outbox`                               | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |

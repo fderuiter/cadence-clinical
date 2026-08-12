@@ -18,28 +18,103 @@ outbox_task = None
 
 async def poll_and_dispatch() -> None:
     session_maker = db_manager.get_session_maker()
+
+    # Get parameters from environment
+    batch_size = int(os.getenv("OUTBOX_BATCH_SIZE", "20"))
+    max_concurrency = int(os.getenv("OUTBOX_MAX_CONCURRENCY", "10"))
+    attempt_cap = int(os.getenv("OUTBOX_ATTEMPT_CAP", "5"))
+
+    now = datetime.now(UTC)
+
+    # 1. Claiming Phase: open a brief transaction using session_maker()
     async with session_maker() as session:
-        now = datetime.now(UTC)
-        stmt = (
-            select(IntegrationOutbox)
-            .where(
-                IntegrationOutbox.status.in_(("PENDING", "FAILED")),
-                IntegrationOutbox.retry_eligible.is_(True),
-                (IntegrationOutbox.next_retry_at.is_(None))
-                | (IntegrationOutbox.next_retry_at <= now),
-            )
-            .with_for_update()
+        # Construct select statement for records that are eligible for processing
+        stmt = select(IntegrationOutbox).where(
+            IntegrationOutbox.status.in_(("PENDING", "FAILED")),
+            IntegrationOutbox.retry_eligible.is_(True),
+            (IntegrationOutbox.next_retry_at.is_(None))
+            | (IntegrationOutbox.next_retry_at <= now),
         )
+
+        # Dynamically apply dialect-aware locking
+        dialect_name = ""
+        if db_manager.engine and db_manager.engine.dialect:
+            dialect_name = db_manager.engine.dialect.name.lower()
+
+        if "postgresql" in dialect_name:
+            stmt = stmt.with_for_update(skip_locked=True)
+        else:
+            # SQLite or other: dynamically bypass lock-bypass parameters (skip_locked)
+            stmt = stmt.with_for_update()
+
+        # Apply batch size limit
+        stmt = stmt.limit(batch_size)
+
         res = await session.execute(stmt)
         records = res.scalars().all()
 
-        for record in records:
-            if record.status not in ("PENDING", "FAILED") or not record.retry_eligible:
-                continue
+        if not records:
+            return
 
+        # Extract record data for concurrent dispatch before committing/closing session
+        claimed_records_data = []
+        for record in records:
+            # Set their state in-memory to "PROCESSING"
+            record.status = "PROCESSING"
+            claimed_records_data.append(
+                {
+                    "id": record.id,
+                    "event_type": record.event_type,
+                    "payload": record.payload,
+                    "attempts": record.attempts,
+                    "correlation_id": record.correlation_id,
+                    "created_by": record.created_by,
+                    "reason_for_change": record.reason_for_change,
+                }
+            )
+
+        # Commit the transaction immediately and close the session context.
+        # This releases all database locks and connection instances before any network I/O.
+        await session.commit()
+
+    # 2. Dispatching Phase: process the claimed batch concurrently
+    semaphore = asyncio.Semaphore(max_concurrency)
+
+    async def update_record_status(
+        record_id: str, success: bool, error: Exception | None = None
+    ) -> None:
+        async with session_maker() as update_session:
+            update_stmt = select(IntegrationOutbox).where(
+                IntegrationOutbox.id == record_id
+            )
+            update_res = await update_session.execute(update_stmt)
+            rec = update_res.scalars().first()
+            if not rec:
+                return
+
+            if success:
+                rec.status = "SUCCESS"
+                rec.completed_at = datetime.now(UTC)
+                rec.last_error = None
+            else:
+                rec.status = "FAILED"
+                rec.attempts += 1
+                rec.last_error = str(error)
+
+                if rec.attempts >= attempt_cap:
+                    rec.retry_eligible = False
+
+                backoff_seconds = min(60, 2**rec.attempts)
+                rec.next_retry_at = datetime.now(UTC) + timedelta(
+                    seconds=backoff_seconds
+                )
+
+            await update_session.commit()
+
+    async def dispatch_record(record_data: dict) -> None:
+        async with semaphore:
             try:
-                if record.event_type == "TRIAL_LOCK":
-                    # Propagate trial lock to eTMF
+                if record_data["event_type"] == "TRIAL_LOCK":
                     etmf_url = os.getenv("ETMF_URL", "http://localhost:8003").rstrip(
                         "/"
                     )
@@ -54,8 +129,11 @@ async def poll_and_dispatch() -> None:
 
                     user_id = "execution-outbox-worker"
                     roles = "Data Manager"
+                    # Generate cryptographic signatures late right before the HTTP call
                     timestamp = str(time.time())
-                    reason = record.payload.get("reason", "Outbox Lock Propagation")
+                    reason = record_data["payload"].get(
+                        "reason", "Outbox Lock Propagation"
+                    )
 
                     signature = generate_gateway_signature(
                         user_id=user_id,
@@ -82,26 +160,14 @@ async def poll_and_dispatch() -> None:
                         )
                         resp.raise_for_status()
 
-                # Mark as success
-                record.status = "SUCCESS"
-                record.completed_at = datetime.now(UTC)
-                record.last_error = None
-
+                # On completion (success), update standard status fields within a separate transaction
+                await update_record_status(record_data["id"], success=True)
             except Exception as e:
-                record.status = "FAILED"
-                record.attempts += 1
-                record.last_error = str(e)
+                # On failure, update failure counts, error details, and retry schedules in a separate transaction
+                await update_record_status(record_data["id"], success=False, error=e)
 
-                attempt_cap = int(os.getenv("OUTBOX_ATTEMPT_CAP", "5"))
-                if record.attempts >= attempt_cap:
-                    record.retry_eligible = False
-
-                backoff_seconds = min(60, 2**record.attempts)
-                record.next_retry_at = datetime.now(UTC) + timedelta(
-                    seconds=backoff_seconds
-                )
-
-        await session.commit()
+    # Execute all dispatches concurrently using asyncio.gather
+    await asyncio.gather(*(dispatch_record(data) for data in claimed_records_data))
 
 
 async def outbox_lifecycle_worker() -> None:

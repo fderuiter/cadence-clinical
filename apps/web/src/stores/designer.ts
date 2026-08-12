@@ -9,8 +9,41 @@
  */
 import { defineStore } from "pinia";
 
+export interface DesignerField {
+  id: string;
+  label: string;
+  type: string;
+  cdash?: string;
+  gridSpan: number;
+  required?: boolean;
+  [key: string]: any; // Index signature for flexible fields
+}
+
+export interface DesignerSection {
+  id: string;
+  name: string;
+  isCollapsed?: boolean;
+  items: DesignerField[];
+  [key: string]: any;
+}
+
+export interface DesignerForm {
+  id: string;
+  name: string;
+  sections: DesignerSection[];
+  layoutJustification?: string;
+  [key: string]: any;
+}
+
+export interface DesignerState {
+  activeForm: DesignerForm | null;
+  selectedFieldId: string | null;
+  viewport: string;
+  dismissedWarnings: boolean;
+}
+
 export const useDesignerStore = defineStore("designer", {
-  state: () => ({
+  state: (): DesignerState => ({
     activeForm: {
       id: "form-1",
       name: "eCRF Draft Form",
@@ -48,29 +81,30 @@ export const useDesignerStore = defineStore("designer", {
     dismissedWarnings: false,
   }),
   actions: {
-    setViewport(viewport) {
+    setViewport(viewport: string) {
       this.viewport = viewport;
     },
-    setDismissedWarnings(dismissed) {
+    setDismissedWarnings(dismissed: boolean) {
       this.dismissedWarnings = dismissed;
     },
-    setLayoutJustification(justification) {
+    setLayoutJustification(justification: string) {
       if (this.activeForm) {
         this.activeForm.layoutJustification = justification;
       }
     },
-    setSelectedFieldId(id) {
+    setSelectedFieldId(id: string | null) {
       this.selectedFieldId = id;
     },
-    updateActiveForm(form) {
+    updateActiveForm(form: DesignerForm) {
       this.activeForm = form;
     },
-    updateSections(sections) {
+    updateSections(sections: DesignerSection[]) {
       if (this.activeForm) {
         this.activeForm.sections = sections;
       }
     },
-    addFieldToSection(sectionId, field) {
+    addFieldToSection(sectionId: string, field: DesignerField) {
+      if (!this.activeForm) return;
       const section = this.activeForm.sections.find((s) => s.id === sectionId);
       if (section) {
         if (!section.items) {
@@ -79,7 +113,8 @@ export const useDesignerStore = defineStore("designer", {
         section.items.push(field);
       }
     },
-    deleteField(fieldId) {
+    deleteField(fieldId: string) {
+      if (!this.activeForm) return;
       for (const section of this.activeForm.sections) {
         const idx = section.items.findIndex((item) => item.id === fieldId);
         if (idx !== -1) {
@@ -91,13 +126,14 @@ export const useDesignerStore = defineStore("designer", {
         }
       }
     },
-    duplicateField(fieldId) {
+    duplicateField(fieldId: string) {
+      if (!this.activeForm) return;
       for (const section of this.activeForm.sections) {
         const idx = section.items.findIndex((item) => item.id === fieldId);
         if (idx !== -1) {
           const original = section.items[idx];
           const newId = `${original.id}-copy-${Date.now()}`;
-          const copy = {
+          const copy: DesignerField = {
             ...original,
             id: newId,
             label: `${original.label} (Copy)`,
