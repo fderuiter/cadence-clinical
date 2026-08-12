@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2352
-- **Passed:** 2333 🟢
+- **Total Automated Test Cases Run:** 2357
+- **Passed:** 2338 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.19%
@@ -1972,6 +1972,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_reorder_visits_mock`                                                         | `packages.database.tests.test_delta`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_reorder_visits_real`                                                         | `packages.database.tests.test_delta`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_update_study_properties`                                                     | `packages.database.tests.test_delta`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_mock_graph_database_manager`                                                 | `packages.database.tests.test_graph_persistence`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_transaction_retry_decorator`                                                 | `packages.database.tests.test_graph_persistence`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_transaction_retry_failure`                                                   | `packages.database.tests.test_graph_persistence`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_validate_cypher_query_failures`                                              | `packages.database.tests.test_graph_persistence`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_validate_cypher_query_success`                                               | `packages.database.tests.test_graph_persistence`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_ledger_sealing_and_validation`                                               | `packages.database.tests.test_ledger_and_triggers`                          | PRD-SYS-003                                  | 🟢 PASSED  | < 1s     |
 | `test_out_of_band_update_triggers_audit_entry`                                     | `packages.database.tests.test_ledger_and_triggers`                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_prevent_audit_ledger_seals_mutation`                                         | `packages.database.tests.test_ledger_and_triggers`                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
