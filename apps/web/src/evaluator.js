@@ -30,10 +30,68 @@ class SimpleLRUCache {
   has(key) {
     return this.cache.has(key);
   }
+
+  resize(newCapacity) {
+    this.capacity = Math.max(0, newCapacity);
+    while (this.cache.size > this.capacity) {
+      const firstKey = this.cache.keys().next().value;
+      this.cache.delete(firstKey);
+    }
+  }
 }
 
 // Global initialization of compiler Cache
 export const compilerCache = new SimpleLRUCache(200);
+
+export function resizeCompilerCache(capacity) {
+  compilerCache.resize(capacity);
+}
+
+export class DiagnosticRegistry {
+  constructor() {
+    this.listeners = new Set();
+  }
+
+  subscribe(callback) {
+    this.listeners.add(callback);
+    return () => {
+      this.listeners.delete(callback);
+    };
+  }
+
+  unsubscribe(callback) {
+    this.listeners.delete(callback);
+  }
+
+  register(callback) {
+    this.listeners.add(callback);
+  }
+
+  unregister(callback) {
+    this.listeners.delete(callback);
+  }
+
+  emit(event) {
+    for (const listener of this.listeners) {
+      try {
+        listener(event);
+      } catch (err) {
+        // Errors thrown within third-party dynamic listener callbacks must be caught internally to prevent app-level crashes or validation bypasses
+        console.error("Error in diagnostic listener callback:", err);
+      }
+    }
+  }
+}
+
+export const diagnosticRegistry = new DiagnosticRegistry();
+
+export function registerDiagnosticListener(callback) {
+  return diagnosticRegistry.subscribe(callback);
+}
+
+export function unregisterDiagnosticListener(callback) {
+  diagnosticRegistry.unsubscribe(callback);
+}
 
 /**
  * Resolves a potentially relative path.
@@ -114,6 +172,18 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
 
     // Logical operators
     if (operator === "not") {
+      if (rawChildren.length !== 1) {
+        diagnosticRegistry.emit({
+          type: "arity_mismatch",
+          nodeType: type,
+          name: operator,
+          expected: 1,
+          actual: rawChildren.length,
+          message: `Operator '${operator}' expects exactly 1 operand, but got ${rawChildren.length}.`,
+          node
+        });
+        return null;
+      }
       const childVal = evaluateAST(rawChildren[0], context, currentIndices);
       return !childVal;
     }
@@ -121,6 +191,18 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
     if (operator === "and") {
       // Kleene 3-valued logic: if any operand is false, return false.
       // Otherwise if any is null, return null. Else return true.
+      if (rawChildren.length === 0) {
+        diagnosticRegistry.emit({
+          type: "arity_mismatch",
+          nodeType: type,
+          name: operator,
+          expected: ">= 1",
+          actual: 0,
+          message: `Operator '${operator}' expects at least 1 operand, but got 0.`,
+          node
+        });
+        return null;
+      }
       let hasNull = false;
       for (const child of rawChildren) {
         const childVal = evaluateAST(child, context, currentIndices);
@@ -135,6 +217,18 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
     if (operator === "or") {
       // Kleene 3-valued logic: if any operand is true, return true.
       // Otherwise if any is null, return null. Else return false.
+      if (rawChildren.length === 0) {
+        diagnosticRegistry.emit({
+          type: "arity_mismatch",
+          nodeType: type,
+          name: operator,
+          expected: ">= 1",
+          actual: 0,
+          message: `Operator '${operator}' expects at least 1 operand, but got 0.`,
+          node
+        });
+        return null;
+      }
       let hasNull = false;
       for (const child of rawChildren) {
         const childVal = evaluateAST(child, context, currentIndices);
@@ -147,12 +241,23 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
     }
 
     // Arithmetic and Comparison operators
-    if (rawChildren.length < 2) return null;
-    const leftVal = evaluateAST(rawChildren[0], context, currentIndices);
-    const rightVal = evaluateAST(rawChildren[1], context, currentIndices);
-
-    // Null safety for arithmetic
     if (["+", "-", "*", "/"].includes(operator)) {
+      if (rawChildren.length !== 2) {
+        diagnosticRegistry.emit({
+          type: "arity_mismatch",
+          nodeType: type,
+          name: operator,
+          expected: 2,
+          actual: rawChildren.length,
+          message: `Operator '${operator}' expects exactly 2 operands, but got ${rawChildren.length}.`,
+          node
+        });
+        return null;
+      }
+      const leftVal = evaluateAST(rawChildren[0], context, currentIndices);
+      const rightVal = evaluateAST(rawChildren[1], context, currentIndices);
+
+      // Null safety for arithmetic
       if (
         leftVal === null ||
         leftVal === undefined ||
@@ -163,7 +268,18 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
       }
       const lNum = parseFloat(leftVal);
       const rNum = parseFloat(rightVal);
-      if (isNaN(lNum) || isNaN(rNum)) return null;
+      if (isNaN(lNum) || isNaN(rNum)) {
+        diagnosticRegistry.emit({
+          type: "type_mismatch",
+          nodeType: type,
+          name: operator,
+          expected: "numeric",
+          actual: isNaN(lNum) ? (leftVal === null ? "null" : typeof leftVal) : (rightVal === null ? "null" : typeof rightVal),
+          message: `Arithmetic operator '${operator}' expects numeric operands, but got non-numeric value.`,
+          node
+        });
+        return null;
+      }
 
       if (operator === "+") return lNum + rNum;
       if (operator === "-") return lNum - rNum;
@@ -176,6 +292,21 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
 
     // Comparison Operators (null-safe)
     if (["==", "!=", "<", "<=", ">", ">="].includes(operator)) {
+      if (rawChildren.length !== 2) {
+        diagnosticRegistry.emit({
+          type: "arity_mismatch",
+          nodeType: type,
+          name: operator,
+          expected: 2,
+          actual: rawChildren.length,
+          message: `Comparison operator '${operator}' expects exactly 2 operands, but got ${rawChildren.length}.`,
+          node
+        });
+        return null;
+      }
+      const leftVal = evaluateAST(rawChildren[0], context, currentIndices);
+      const rightVal = evaluateAST(rawChildren[1], context, currentIndices);
+
       // Direct equality/inequality is null-safe
       if (operator === "==") {
         const l = leftVal === undefined ? null : leftVal;
@@ -222,7 +353,18 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
     ).toLowerCase();
 
     if (funcName === "is_empty" || funcName === "empty") {
-      if (rawChildren.length !== 1) return null;
+      if (rawChildren.length !== 1) {
+        diagnosticRegistry.emit({
+          type: "arity_mismatch",
+          nodeType: type,
+          name: funcName,
+          expected: 1,
+          actual: rawChildren.length,
+          message: `Function '${funcName}' expects exactly 1 operand, but got ${rawChildren.length}.`,
+          node
+        });
+        return null;
+      }
       const childVal = evaluateAST(rawChildren[0], context, currentIndices);
       return (
         childVal === null ||
@@ -232,7 +374,18 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
     }
 
     if (funcName === "is_not_empty") {
-      if (rawChildren.length !== 1) return null;
+      if (rawChildren.length !== 1) {
+        diagnosticRegistry.emit({
+          type: "arity_mismatch",
+          nodeType: type,
+          name: funcName,
+          expected: 1,
+          actual: rawChildren.length,
+          message: `Function '${funcName}' expects exactly 1 operand, but got ${rawChildren.length}.`,
+          node
+        });
+        return null;
+      }
       const childVal = evaluateAST(rawChildren[0], context, currentIndices);
       return (
         childVal !== null &&
@@ -242,7 +395,18 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
     }
 
     if (funcName === "indexed-repeat") {
-      if (rawChildren.length !== 3) return null;
+      if (rawChildren.length !== 3) {
+        diagnosticRegistry.emit({
+          type: "arity_mismatch",
+          nodeType: type,
+          name: funcName,
+          expected: 3,
+          actual: rawChildren.length,
+          message: `Function '${funcName}' expects exactly 3 operands, but got ${rawChildren.length}.`,
+          node
+        });
+        return null;
+      }
       const targetFieldNode = rawChildren[0];
       const repeatGroupNode = rawChildren[1];
       const indexNode = rawChildren[2];
@@ -258,7 +422,18 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
       const indexVal = evaluateAST(indexNode, context, currentIndices);
 
       const targetIndex = parseInt(indexVal, 10);
-      if (isNaN(targetIndex)) return null;
+      if (isNaN(targetIndex)) {
+        diagnosticRegistry.emit({
+          type: "type_mismatch",
+          nodeType: type,
+          name: funcName,
+          expected: "integer",
+          actual: typeof indexVal,
+          message: `Function '${funcName}' expects integer index for third argument, but got non-integer value '${indexVal}'.`,
+          node
+        });
+        return null;
+      }
 
       const fieldName = targetPath.split("/").pop();
       const indexedPath = `${repeatGroup}[${targetIndex}]/${fieldName}`;
@@ -266,6 +441,14 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
       return context[indexedPath] !== undefined ? context[indexedPath] : null;
     }
 
+    // Unknown function fallback
+    diagnosticRegistry.emit({
+      type: "unknown_function",
+      nodeType: type,
+      name: funcName,
+      message: `Unknown function '${funcName}'.`,
+      node
+    });
     return null;
   }
 

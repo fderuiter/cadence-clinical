@@ -7,6 +7,10 @@ import {
   getCompiledExpression,
   renderFormFromJSON,
   validateField as indexValidateField,
+  resizeCompilerCache,
+  diagnosticRegistry,
+  registerDiagnosticListener,
+  unregisterDiagnosticListener,
 } from "../src/evaluator.js";
 import { useClinicalStore } from "../src/stores/clinical.js";
 
@@ -426,6 +430,218 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
       const res2 = indexValidateField(heightFieldMeta, "0", { height: 0 });
       expect(res2.valid).toBe(false);
       expect(res2.message).toBe("Height must be strictly greater than zero.");
+    });
+  });
+
+  describe("Dynamic Cache Resizing & Diagnostic Event Stream", () => {
+    beforeEach(() => {
+      compilerCache.cache.clear();
+      compilerCache.resize(200); // reset to baseline
+      diagnosticRegistry.listeners.clear();
+    });
+
+    it("should dynamically adjust the compiler cache capacity without clearing existing valid items", () => {
+      resizeCompilerCache(5);
+      expect(compilerCache.capacity).toBe(5);
+
+      // Populate 4 expressions (below capacity)
+      for (let i = 1; i <= 4; i++) {
+        getCompiledExpression({ type: "constant", value: i });
+      }
+
+      expect(compilerCache.cache.size).toBe(4);
+
+      // Add one more (reaches capacity)
+      getCompiledExpression({ type: "constant", value: 5 });
+      expect(compilerCache.cache.size).toBe(5);
+
+      // We expect the first key to still be in the cache
+      const firstKey = JSON.stringify({ type: "constant", value: 1 });
+      expect(compilerCache.cache.has(firstKey)).toBe(true);
+
+      // Resize capacity upwards to 10
+      resizeCompilerCache(10);
+      expect(compilerCache.capacity).toBe(10);
+      expect(compilerCache.cache.size).toBe(5); // all 5 existing items remain
+
+      // Populate some more
+      for (let i = 6; i <= 8; i++) {
+        getCompiledExpression({ type: "constant", value: i });
+      }
+      expect(compilerCache.cache.size).toBe(8);
+
+      // Resize capacity downwards to 3
+      resizeCompilerCache(3);
+      expect(compilerCache.capacity).toBe(3);
+      expect(compilerCache.cache.size).toBe(3);
+
+      // The last evaluated items (6, 7, 8) should be the ones remaining
+      const key6 = JSON.stringify({ type: "constant", value: 6 });
+      const key7 = JSON.stringify({ type: "constant", value: 7 });
+      const key8 = JSON.stringify({ type: "constant", value: 8 });
+      expect(compilerCache.cache.has(key6)).toBe(true);
+      expect(compilerCache.cache.has(key7)).toBe(true);
+      expect(compilerCache.cache.has(key8)).toBe(true);
+
+      // Old ones are evicted
+      const key1 = JSON.stringify({ type: "constant", value: 1 });
+      expect(compilerCache.cache.has(key1)).toBe(false);
+    });
+
+    it("should trigger structured warning payloads delivered to active diagnostic listeners on arity mismatch", () => {
+      const warnings = [];
+      const unsub = registerDiagnosticListener((warn) => {
+        warnings.push(warn);
+      });
+
+      // 1. Operator arity mismatch (not expects 1, but we give 2)
+      const invalidNotNode = {
+        type: "comparison",
+        operator: "not",
+        operands: [
+          { type: "constant", value: true },
+          { type: "constant", value: false },
+        ],
+      };
+
+      const resultNot = evaluateAST(invalidNotNode);
+      expect(resultNot).toBeNull();
+      expect(warnings.length).toBe(1);
+      expect(warnings[0]).toEqual(expect.objectContaining({
+        type: "arity_mismatch",
+        nodeType: "comparison",
+        name: "not",
+        expected: 1,
+        actual: 2,
+      }));
+
+      // 2. Function arity mismatch (is_empty expects 1, but we give 0)
+      const invalidIsEmptyNode = {
+        type: "function",
+        operator: "is_empty",
+        operands: [],
+      };
+
+      const resultIsEmpty = evaluateAST(invalidIsEmptyNode);
+      expect(resultIsEmpty).toBeNull();
+      expect(warnings.length).toBe(2);
+      expect(warnings[1]).toEqual(expect.objectContaining({
+        type: "arity_mismatch",
+        nodeType: "function",
+        name: "is_empty",
+        expected: 1,
+        actual: 0,
+      }));
+
+      // 3. indexed-repeat arity mismatch (expects 3, but we give 2)
+      const invalidIndexedRepeatNode = {
+        type: "function",
+        operator: "indexed-repeat",
+        operands: [
+          { type: "field_ref", field_ref: { field_id: "pulse" } },
+          { type: "field_ref", field_ref: { field_id: "repeating_vs" } },
+        ],
+      };
+
+      const resultIndexedRepeat = evaluateAST(invalidIndexedRepeatNode);
+      expect(resultIndexedRepeat).toBeNull();
+      expect(warnings.length).toBe(3);
+      expect(warnings[2]).toEqual(expect.objectContaining({
+        type: "arity_mismatch",
+        nodeType: "function",
+        name: "indexed-repeat",
+        expected: 3,
+        actual: 2,
+      }));
+
+      unsub();
+    });
+
+    it("should stop delivery of warning payloads after unsubscribing", () => {
+      const warnings = [];
+      const unsub = registerDiagnosticListener((warn) => {
+        warnings.push(warn);
+      });
+
+      const invalidIsEmptyNode = {
+        type: "function",
+        operator: "is_empty",
+        operands: [],
+      };
+
+      evaluateAST(invalidIsEmptyNode);
+      expect(warnings.length).toBe(1);
+
+      unsub(); // unsubscribe
+
+      evaluateAST(invalidIsEmptyNode);
+      expect(warnings.length).toBe(1); // should not increment
+    });
+
+    it("should catch listener errors internally and prevent app-level crashes", () => {
+      registerDiagnosticListener(() => {
+        throw new Error("Malicious listener crash!");
+      });
+
+      const invalidIsEmptyNode = {
+        type: "function",
+        operator: "is_empty",
+        operands: [],
+      };
+
+      // This should complete successfully and return null rather than propagating the crash
+      expect(() => {
+        const res = evaluateAST(invalidIsEmptyNode);
+        expect(res).toBeNull();
+      }).not.toThrow();
+    });
+
+    it("should trigger type mismatch warnings on registered listeners", () => {
+      const warnings = [];
+      registerDiagnosticListener((warn) => {
+        warnings.push(warn);
+      });
+
+      // Arithmetic operator expects numbers, but we pass strings
+      const invalidArithmeticNode = {
+        type: "comparison",
+        operator: "+",
+        operands: [
+          { type: "constant", value: "hello" },
+          { type: "constant", value: "world" },
+        ],
+      };
+
+      const res = evaluateAST(invalidArithmeticNode);
+      expect(res).toBeNull();
+      expect(warnings.length).toBe(1);
+      expect(warnings[0]).toEqual(expect.objectContaining({
+        type: "type_mismatch",
+        nodeType: "comparison",
+        name: "+",
+        expected: "numeric",
+      }));
+
+      // indexed-repeat third operand expects integer, but we pass non-integer/string
+      const invalidIndexedRepeatTypeNode = {
+        type: "function",
+        operator: "indexed-repeat",
+        operands: [
+          { type: "field_ref", field_ref: { field_id: "vssbp" } },
+          { type: "field_ref", field_ref: { field_id: "repeating_vs" } },
+          { type: "constant", value: "not-a-number" },
+        ],
+      };
+
+      const res2 = evaluateAST(invalidIndexedRepeatTypeNode);
+      expect(res2).toBeNull();
+      expect(warnings.length).toBe(2);
+      expect(warnings[1]).toEqual(expect.objectContaining({
+        type: "type_mismatch",
+        nodeType: "function",
+        name: "indexed-repeat",
+        expected: "integer",
+      }));
     });
   });
 });
