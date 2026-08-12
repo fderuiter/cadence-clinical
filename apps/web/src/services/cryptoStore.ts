@@ -37,7 +37,7 @@ export async function deriveKey(
   return await cryptoObj.subtle.deriveKey(
     {
       name: "PBKDF2",
-      salt,
+      salt: salt as any,
       iterations: 100000,
       hash: "SHA-256",
     },
@@ -69,7 +69,7 @@ export async function encryptData(
   const encodedData = encoder.encode(JSON.stringify(data));
 
   const ciphertext = await cryptoObj.subtle.encrypt(
-    { name: "AES-GCM", iv: finalIv },
+    { name: "AES-GCM", iv: finalIv as any },
     key,
     encodedData
   );
@@ -95,7 +95,7 @@ export async function decryptData(
 ): Promise<object> {
   const cryptoObj = getCrypto();
   const decrypted = await cryptoObj.subtle.decrypt(
-    { name: "AES-GCM", iv },
+    { name: "AES-GCM", iv: iv as any },
     key,
     ciphertext
   );

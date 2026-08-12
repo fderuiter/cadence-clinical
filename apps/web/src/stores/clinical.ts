@@ -552,7 +552,7 @@ export const useClinicalStore = defineStore("clinical", {
       if (!this.debouncedEvaluateRules) {
         this.debouncedEvaluateRules = debounce(async () => {
           await this.evaluateRules();
-        }, 50);
+        }, 50) as any;
       }
       this.debouncedEvaluateRules?.();
     },
@@ -571,7 +571,7 @@ export const useClinicalStore = defineStore("clinical", {
         details,
         reason,
         prevHash
-      );
+      ) as any;
       block.synced = false;
 
       this.ledgerBlocks.push(block);
