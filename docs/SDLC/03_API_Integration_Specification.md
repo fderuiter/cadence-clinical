@@ -1490,6 +1490,45 @@ paths:
                   type: integer
                 type: object
                 title: Response Cache Status Api Admin Cache Status Get
+  /api/v1/admin/outbox:
+    get:
+      summary: Execution Admin Outbox Endpoint
+      description: "Returns the logs/status of integration outbox events."
+      operationId: execution_admin_outbox_endpoint_api_v1_admin_outbox_get
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: "null"
+            title: Status
+        - name: event_type
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: "null"
+            title: Event Type
+      responses:
+        "200":
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+                title: Response Execution Admin Outbox Endpoint Api V1 Admin Outbox Get
+        "422":
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
   /api/v1/studies/{study_id}/alignment-validation:
     get:
       summary: Validate Study Alignment
