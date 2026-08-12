@@ -60,8 +60,8 @@ async def list_cdisc_products(
             description="Study Data Tabulation Model Implementation Guide",
         ),
         CdiscProductSummary(
-            title="Controlled Terminology 2023-12-15",
-            version="2023-12-15",
+            title="Controlled Terminology 2023-12-15",  # deid-ignore
+            version="2023-12-15",  # deid-ignore
             description="CDISC Controlled Terminology package",
         ),
     ]
