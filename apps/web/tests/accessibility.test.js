@@ -7,10 +7,12 @@ import {
   createClinicalLookupInput,
   createSoaBuilderMatrix,
   createClinicalVisitMatrix,
+} from "../src/utils/clinical_helpers.js";
+import {
   createConditionRowHTML,
-  ClinicalQueryPanel,
-  ClinicalInput,
 } from "ui";
+import ClinicalQueryPanel from "../src/components/clinical/ClinicalQueryPanel.vue";
+import ClinicalInput from "../src/components/clinical/ClinicalInput.vue";
 
 // Helper component for testing useFocusTrap directly
 const TestTrapComponent = defineComponent({

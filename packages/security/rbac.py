@@ -5,918 +5,82 @@ import pydantic
 from fastapi import Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
-# Legacy, allow-list-based role constants
-ROLE_CRA = "CRA"
-ROLE_DATA_MANAGER = "Data Manager"
-ROLE_SITE_INVESTIGATOR = "Site Investigator"
-ROLE_AUDITOR = "Auditor"
-ROLE_SPONSOR_ADMIN = "Sponsor Admin"
+# Dynamic containers for roles, permissions, aliases, masking rules and unblinded fields
+ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {}
+ROLE_ALIASES: dict[str, str] = {}
+MASKING_RULES: dict[str, Callable[[Any], Any]] = {}
+SITE_SCOPED_ROLES: set[str] = set()
+ROLE_UNMASKED_FIELDS: dict[str, set[str]] = {}
+AUDITOR_ROLES: set[str] = set()
 
-AUDITOR_ROLES = {"auditor", "inspector", "regulatory_inspector"}
-
-
-# Canonical lower-case roles from docs/SDLC/05_Security_Compliance_Audit_Spec.md §2.1
-ROLE_SYSADMIN = "sysadmin"
-ROLE_SPONSOR_DESIGNER = "sponsor_designer"
-ROLE_SPONSOR_DM = "sponsor_dm"
-ROLE_SPONSOR_MM = "sponsor_mm"
-ROLE_SPONSOR_STATISTICIAN = "sponsor_statistician"
-ROLE_INVESTIGATOR = "investigator"
-ROLE_CRC = "crc"
-ROLE_CRA_CANONICAL = "cra"
-ROLE_SUBJECT = "subject"
-ROLE_AUDITOR_CANONICAL = "auditor"
-ROLE_EXTERNAL_MONITOR = "external_monitor"
-ROLE_REVIEWER = "protocol_reviewer"
-
-# RTSM roles
-ROLE_PHARMACIST = "pharmacist"
-ROLE_UNBLINDED_STATISTICIAN = "unblinded_statistician"
-ROLE_IDMC = "idmc"
-ROLE_EMERGENCY_UNBLINDER = "emergency_unblinder"
-ROLE_PRINCIPAL_INVESTIGATOR = "principal_investigator"
-ROLE_AUTHORIZED_ER_PHYSICIAN = "authorized_er_physician"
-ROLE_LEAD_INVESTIGATOR = "lead_investigator"
+_DYNAMIC_CONSTANTS: dict[str, Any] = {}
 
 
-ROLE_ALIASES = {
-    "unblinded statistician": ROLE_UNBLINDED_STATISTICIAN,
-    "lead unblinded statistician": ROLE_UNBLINDED_STATISTICIAN,
-    "unblinded_statistician": ROLE_UNBLINDED_STATISTICIAN,
-    "idmc": ROLE_IDMC,
-    "dsmb": ROLE_IDMC,
-    "pharmacist": ROLE_PHARMACIST,
-    "unblinded pharmacist": ROLE_PHARMACIST,
-    "unblinded_pharmacist": ROLE_PHARMACIST,
-    "emergency unblinder": ROLE_EMERGENCY_UNBLINDER,
-    "emergency_unblinder": ROLE_EMERGENCY_UNBLINDER,
-    "protocol_reviewer": ROLE_REVIEWER,
-    "protocol reviewer": ROLE_REVIEWER,
-    "protocol-reviewer": ROLE_REVIEWER,
-    "reviewer": ROLE_REVIEWER,
-    "external monitor": ROLE_EXTERNAL_MONITOR,
-    "external_monitor": ROLE_EXTERNAL_MONITOR,
-    "external-monitor": ROLE_EXTERNAL_MONITOR,
-    "cro monitor": ROLE_EXTERNAL_MONITOR,
-    "cro_monitor": ROLE_EXTERNAL_MONITOR,
-    "cro-monitor": ROLE_EXTERNAL_MONITOR,
-    "sysadmin": ROLE_SYSADMIN,
-    "system administrator": ROLE_SYSADMIN,
-    "system_admin": ROLE_SYSADMIN,
-    "system-admin": ROLE_SYSADMIN,
-    "sponsor study designer": ROLE_SPONSOR_DESIGNER,
-    "sponsor_designer": ROLE_SPONSOR_DESIGNER,
-    "sponsor-designer": ROLE_SPONSOR_DESIGNER,
-    "designer": ROLE_SPONSOR_DESIGNER,
-    "study_designer": ROLE_SPONSOR_DESIGNER,
-    "study-designer": ROLE_SPONSOR_DESIGNER,
-    "study designer": ROLE_SPONSOR_DESIGNER,
-    "sponsor designer": ROLE_SPONSOR_DESIGNER,
-    "sponsor data manager": ROLE_SPONSOR_DM,
-    "sponsor_dm": ROLE_SPONSOR_DM,
-    "sponsor-dm": ROLE_SPONSOR_DM,
-    "sponsor dm": ROLE_SPONSOR_DM,
-    "data manager": ROLE_SPONSOR_DM,
-    "data_manager": ROLE_SPONSOR_DM,
-    "data-manager": ROLE_SPONSOR_DM,
-    "dm": ROLE_SPONSOR_DM,
-    "admin": ROLE_SPONSOR_DM,
-    "sponsor admin": ROLE_SPONSOR_DM,
-    "sponsor_admin": ROLE_SPONSOR_DM,
-    "sponsor medical monitor": ROLE_SPONSOR_MM,
-    "sponsor_mm": ROLE_SPONSOR_MM,
-    "sponsor-mm": ROLE_SPONSOR_MM,
-    "sponsor mm": ROLE_SPONSOR_MM,
-    "medical monitor": ROLE_SPONSOR_MM,
-    "medical_monitor": ROLE_SPONSOR_MM,
-    "mm": ROLE_SPONSOR_MM,
-    "sponsor statistician": ROLE_SPONSOR_STATISTICIAN,
-    "sponsor_statistician": ROLE_SPONSOR_STATISTICIAN,
-    "sponsor-statistician": ROLE_SPONSOR_STATISTICIAN,
-    "statistician": ROLE_SPONSOR_STATISTICIAN,
-    "investigator": ROLE_INVESTIGATOR,
-    "site investigator": ROLE_INVESTIGATOR,
-    "site_investigator": ROLE_INVESTIGATOR,
-    "site-investigator": ROLE_INVESTIGATOR,
-    "principal investigator": ROLE_PRINCIPAL_INVESTIGATOR,
-    "pi": ROLE_PRINCIPAL_INVESTIGATOR,
-    "principal_investigator": ROLE_PRINCIPAL_INVESTIGATOR,
-    "principalinvestigator": ROLE_PRINCIPAL_INVESTIGATOR,
-    "authorized er physician": ROLE_AUTHORIZED_ER_PHYSICIAN,
-    "authorized_er_physician": ROLE_AUTHORIZED_ER_PHYSICIAN,
-    "authorized-er-physician": ROLE_AUTHORIZED_ER_PHYSICIAN,
-    "authorederphysician": ROLE_AUTHORIZED_ER_PHYSICIAN,
-    "er physician": ROLE_AUTHORIZED_ER_PHYSICIAN,
-    "er_physician": ROLE_AUTHORIZED_ER_PHYSICIAN,
-    "lead investigator": ROLE_LEAD_INVESTIGATOR,
-    "lead_investigator": ROLE_LEAD_INVESTIGATOR,
-    "lead-investigator": ROLE_LEAD_INVESTIGATOR,
-    "leadinvestigator": ROLE_LEAD_INVESTIGATOR,
-    "investigator_user": ROLE_INVESTIGATOR,
-    "crc": ROLE_CRC,
-    "clinical research coordinator": ROLE_CRC,
-    "study coordinator": ROLE_CRC,
-    "study_coordinator": ROLE_CRC,
-    "study-coordinator": ROLE_CRC,
-    "coordinator": ROLE_CRC,
-    "cra": ROLE_CRA_CANONICAL,
-    "clinical research associate": ROLE_CRA_CANONICAL,
-    "monitor": "monitor",
-    "cra/monitor": ROLE_CRA_CANONICAL,
-    "cra_monitor": ROLE_CRA_CANONICAL,
-    "cra-monitor": ROLE_CRA_CANONICAL,
-    "subject": ROLE_SUBJECT,
-    "patient": ROLE_SUBJECT,
-    "epro": ROLE_SUBJECT,
-    "auditor": ROLE_AUDITOR_CANONICAL,
-    "inspector": ROLE_AUDITOR_CANONICAL,
-    "regulatory_inspector": ROLE_AUDITOR_CANONICAL,
-}
+def register_rbac_role_permissions(role: str, resource_permissions: dict[str, set[str]]):
+    """Dynamically register RBAC permissions for a role."""
+    if role not in ROLE_PERMISSIONS:
+        ROLE_PERMISSIONS[role] = {}
+    for resource, actions in resource_permissions.items():
+        if resource not in ROLE_PERMISSIONS[role]:
+            ROLE_PERMISSIONS[role][resource] = set()
+        ROLE_PERMISSIONS[role][resource].update(actions)
 
 
-# Declarative action vocabulary and role-to-permission matrix matching §2.2
-# Key format: ROLE -> RESOURCE -> SET OF ACTIONS
-# Actions: "create", "read", "update", "delete"
-# Phase 1: Expanded centralized RBAC matrix with designer resource keys and actions
-ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
-    ROLE_SYSADMIN: {
-        "visit_windowing": {"create", "read", "update"},
-        "soa": {"create", "read", "update", "delete"},
-        "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
-        "global_library": {
-            "create",  # Phase 1: create global library object
-            "update",  # Phase 1: update global library object
-            "amend",  # Phase 1: amend global library object
-            "transition",  # Phase 1: transition global library object status
-            "instantiate",  # Phase 1: instantiate global library object in study
-            "read",  # Phase 1: read global library object
-        },
-        "library_object": {
-            "create",
-            "read",
-            "update",
-            "delete",
-            "approve",
-            "publish",
-            "release",
-        },
-        "mdr_concept": {
-            "create",  # Phase 1: create MDR biomedical concept
-            "update",  # Phase 1: update MDR biomedical concept
-            "rename",  # Phase 1: rename MDR biomedical concept
-            "delete",  # Phase 1: delete MDR biomedical concept
-            "read",  # Phase 1: read MDR biomedical concept
-        },
-        "protocol_export": {
-            "generate",  # Phase 1: generate protocol document export
-            "read",  # Phase 1: read protocol document export
-        },
-        "designer_cache": {
-            "admin",  # Phase 1: clear/administer designer cache
-        },
-        "system_audit_logs": {"read"},
-        "export_masked": {"read"},
-        "protocol_ingestion": {"upload", "read", "review", "promote"},
-        "protocol_section": {"lock", "unlock", "approve", "review", "read"},
-        # New permissions
-        "protocol_version": {"sign", "transition_approved"},
-        "regulatory_form": {"create", "read", "sign"},
-        "training_log": {"create", "read", "sign"},
-        # CTMS
-        "ctms_study": {"create", "read"},
-        "ctms_audit_logs": {"read"},
-        "ctms_monitoring_visit": {"create", "update", "read", "sign_off", "sync"},
-        "ctms_monitoring_letter": {"read", "read_type"},
-        "ctms_recruitment": {"create", "read"},
-        "ctms_site_milestone": {"create", "update", "read"},
-        "ctms_cra_allocation": {"create", "update", "read"},
-        "ctms_cra_workload": {"read"},
-        "ctms_financial": {"create", "read", "update", "write"},
-        "ctms_financial_budget": {"create", "read"},
-        "ctms_financial_milestone": {"create", "read", "trigger"},
-        "ctms_financial_payable": {"read"},
-        # eTMF
-        "etmf_document": {
-            "tag",
-            "create",
-            "read",
-            "read_raw",
-            "redact",
-            "sign",
-            "transition_technical_qc",
-            "transition_clinical_qc",
-            "transition_approved",
-            "transition_archived",
-            "transition_rejected",
-            "transition_draft",
-            "transition_signed",
-            "manage_expiration",
-        },
-        "etmf_edl": {"read", "create"},
-        "etmf_taxonomy": {"read"},
-        "etmf_audit_logs": {"read"},
-        # Quality
-        "quality_event": {"create", "read", "update", "delete", "investigate"},
-        "quality_audit_logs": {"read"},
-        # eISF
-        "eisf_document": {"create", "read", "update", "delete", "sync"},
-        # Medical Coding
-        "medical_coding": {"create", "read", "update"},
-        "lab_range": {
-            "create",
-            "read",
-            "update",
-            "delete",
-            "alert",
-        },  # Added alert action
-        "ecoa_schedule": {"create", "read"},
-        "ecoa_diary": {
-            "create",
-            "read",
-            "alert",
-        },  # Added alert action
-        "ecoa_submission": {"create", "read"},
-    },
-    ROLE_SPONSOR_DESIGNER: {
-        "visit_windowing": {"create", "read", "update"},
-        "soa": {"create", "read", "update", "delete"},
-        "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
-        "global_library": {
-            "create",  # Phase 1: create global library object
-            "update",  # Phase 1: update global library object
-            "amend",  # Phase 1: amend global library object
-            "transition",  # Phase 1: transition global library status
-            "instantiate",  # Phase 1: instantiate global library object in study
-            "read",  # Phase 1: read global library object
-        },
-        "library_object": {
-            "create",
-            "read",
-            "update",
-            "delete",
-        },
-        "mdr_concept": {
-            "create",  # Phase 1: create MDR biomedical concept
-            "update",  # Phase 1: update MDR biomedical concept
-            "rename",  # Phase 1: rename MDR biomedical concept
-            "delete",  # Phase 1: delete MDR biomedical concept
-            "read",  # Phase 1: read MDR biomedical concept
-        },
-        "protocol_export": {
-            "generate",  # Phase 1: generate protocol document export
-            "read",  # Phase 1: read protocol document export
-        },
-        "designer_cache": {
-            "admin",  # Phase 1: clear/administer designer cache
-        },
-        "system_audit_logs": {"read"},
-        "protocol_ingestion": {"upload", "read", "review", "promote"},
-        "protocol_version": {"sign", "transition_approved"},
-        "protocol_section": {"lock", "unlock", "approve", "review", "read"},
-        "regulatory_form": {"read"},
-        "training_log": {"read"},
-        "ecoa_schedule": {"create", "read"},
-        "ecoa_diary": {"create", "read"},
-        "ecoa_submission": {"create", "read"},
-    },
-    ROLE_REVIEWER: {
-        "visit_windowing": {"read"},
-        "soa": {"read"},
-        "study_design": {"read"},
-        "protocol_ingestion": {"upload", "read", "review", "promote"},
-        "protocol_section": {"review", "read"},
-    },
-    ROLE_SPONSOR_DM: {
-        "visit_windowing": {"read"},
-        "soa": {"read"},
-        "study_design": {"read", "approve"},
-        "global_library": {
-            "transition",  # Phase 1: transition global library object status
-            "read",  # Phase 1: read global library object
-        },
-        "library_object": {
-            "read",
-            "approve",
-            "publish",
-        },
-        "mdr_concept": {
-            "read",  # Phase 1: read MDR biomedical concept
-        },
-        "protocol_export": {
-            "generate",  # Phase 1: generate protocol document export
-            "read",  # Phase 1: read protocol document export
-        },
-        "subject_enrollment": {"read"},
-        "ecrf_data_entry": {"read"},
-        "query_lifecycle": {"create", "read", "update", "delete"},
-        "system_audit_logs": {"read"},
-        "export_masked": {"create", "read", "update"},
-        "protocol_version": {"transition_approved"},
-        "protocol_section": {"read"},
-        "regulatory_form": {"create", "read", "sign"},
-        "training_log": {"create", "read", "sign"},
-        # CTMS
-        "ctms_study": {"create", "read"},
-        "ctms_audit_logs": {"read"},
-        "ctms_monitoring_visit": {"create", "update", "read", "sign_off", "sync"},
-        "ctms_monitoring_letter": {"read", "read_type"},
-        "ctms_recruitment": {"create", "read"},
-        "ctms_site_milestone": {"create", "update", "read"},
-        "ctms_cra_allocation": {"create", "update", "read"},
-        "ctms_cra_workload": {"read"},
-        "ctms_financial": {"create", "read", "update", "write"},
-        "ctms_financial_budget": {"create", "read"},
-        "ctms_financial_milestone": {"create", "read", "trigger"},
-        "ctms_financial_payable": {"read"},
-        # eTMF
-        "etmf_document": {
-            "tag",
-            "create",
-            "read",
-            "read_raw",
-            "redact",
-            "sign",
-            "transition_technical_qc",
-            "transition_approved",
-            "transition_archived",
-            "transition_rejected",
-            "transition_draft",
-            "transition_signed",
-            "manage_expiration",
-        },
-        "etmf_edl": {"read", "create"},
-        "etmf_taxonomy": {"read"},
-        # Quality
-        "quality_event": {"create", "read", "update", "delete", "investigate"},
-        "quality_audit_logs": {"read"},
-        # eISF
-        "eisf_document": {"create", "read", "update", "delete", "sync"},
-        # Medical Coding
-        "medical_coding": {"create", "read", "update"},
-        "lab_range": {
-            "create",
-            "read",
-            "update",
-            "delete",
-            "alert",
-        },  # Added alert action
-        "ecoa_schedule": {"create", "read"},
-        "ecoa_diary": {
-            "create",
-            "read",
-            "alert",
-        },  # Added alert action
-        "ecoa_submission": {"create", "read"},
-    },
-    ROLE_SPONSOR_MM: {
-        "visit_windowing": {"read"},
-        "soa": {"read"},
-        "study_design": {"read"},
-        "subject_enrollment": {"read"},
-        "ecrf_data_entry": {"read"},
-        "query_lifecycle": {"create", "read", "update"},
-        "system_audit_logs": {"read"},
-        "export_masked": {"read"},
-        "eisf_document": {"read"},
-        "regulatory_form": {"read"},
-        "training_log": {"read"},
-    },
-    ROLE_SPONSOR_STATISTICIAN: {
-        "visit_windowing": {"read"},
-        "soa": {"read"},
-        "study_design": {"read"},
-        "system_audit_logs": {"read"},
-        "export_masked": {"create", "read", "update"},
-        "eisf_document": {"read"},
-        "regulatory_form": {"read"},
-        "training_log": {"read"},
-    },
-    ROLE_INVESTIGATOR: {
-        "visit_windowing": {"read"},
-        "soa": {"read"},
-        "study_design": {"read"},
-        "subject_enrollment": {"create", "read", "update"},
-        "rtsm_unblind": {"write"},
-        "ecrf_data_entry": {"create", "read", "update"},
-        "query_lifecycle": {
-            "read",
-            "update",
-        },  # 'Ans' (Answer query) maps to update/read
-        "sdv": {"read"},
-        "lab_range": {
-            "read",
-            "alert",
-        },  # Added read and alert permissions for clinical reader roles
-        "system_audit_logs": {"read"},
-        "regulatory_form": {"create", "read", "sign"},
-        "training_log": {"create", "read", "sign"},
-        # CTMS
-        "ctms_study": {"read"},
-        "ctms_recruitment": {"read"},
-        "ctms_site_milestone": {"read"},
-        "ctms_cra_allocation": {"read"},
-        "ctms_cra_workload": {"read"},
-        # eTMF
-        "etmf_document": {"read"},
-        "etmf_edl": {"read"},
-        "etmf_taxonomy": {"read"},
-        # Quality
-        "quality_event": {"read"},
-        # eISF
-        "eisf_document": {"create", "read", "update", "delete", "sync"},
-        "ecoa_schedule": {"create", "read"},
-        "ecoa_diary": {
-            "create",
-            "read",
-            "alert",
-        },  # Added alert action
-        "ecoa_submission": {"create", "read"},
-    },
-    ROLE_CRC: {
-        "visit_windowing": {"read"},
-        "soa": {"read"},
-        "study_design": {"read"},
-        "subject_enrollment": {"create", "read", "update"},
-        "ecrf_data_entry": {
-            "create",
-            "read",
-            "update",
-        },  # 'C/R/U (Draft)' maps to create/read/update
-        "query_lifecycle": {"read", "update"},  # 'Ans' maps to update/read
-        "lab_range": {
-            "read",
-            "alert",
-        },  # Added read and alert permissions for clinical reader roles
-        "system_audit_logs": {"read"},
-        "regulatory_form": {"create", "read", "sign"},
-        "training_log": {"create", "read", "sign"},
-        # CTMS
-        "ctms_study": {"read"},
-        "ctms_recruitment": {"read"},
-        "ctms_site_milestone": {"read"},
-        "ctms_cra_allocation": {"read"},
-        "ctms_cra_workload": {"read"},
-        # eTMF
-        "etmf_document": {"read"},
-        "etmf_edl": {"read"},
-        "etmf_taxonomy": {"read"},
-        # Quality
-        "quality_event": {"read"},
-        # eISF
-        "eisf_document": {"create", "read", "update", "delete", "sync"},
-        "ecoa_schedule": {"create", "read"},
-        "ecoa_diary": {
-            "create",
-            "read",
-            "alert",
-        },  # Added alert action
-        "ecoa_submission": {"create", "read"},
-    },
-    ROLE_CRA_CANONICAL: {
-        "visit_windowing": {"read"},
-        "soa": {"read"},
-        "study_design": {"read"},
-        "subject_enrollment": {"read"},
-        "ecrf_data_entry": {"read"},
-        "query_lifecycle": {"create", "read", "update", "delete"},
-        "sdv": {
-            "create",
-            "read",
-            "update",
-            "delete",
-            "flag",
-        },  # Added flag action for item-level SDV flags
-        "system_audit_logs": {"read"},
-        "export_masked": {"read"},
-        "regulatory_form": {"create", "read", "sign"},
-        "training_log": {"create", "read", "sign"},
-        # CTMS
-        "ctms_study": {"create", "read"},
-        "ctms_monitoring_visit": {"create", "update", "read", "sync"},
-        "ctms_monitoring_letter": {"read", "read_type"},
-        "ctms_recruitment": {"create", "read"},
-        "ctms_site_milestone": {"create", "update", "read"},
-        "ctms_cra_allocation": {"read"},
-        "ctms_cra_workload": {"read"},
-        # eTMF
-        "etmf_document": {
-            "tag",
-            "create",
-            "read",
-            "redact",
-            "sign",
-            "transition_clinical_qc",
-        },
-        "etmf_edl": {"read", "create"},
-        "etmf_taxonomy": {"read"},
-        # Quality
-        "quality_event": {"create", "read", "update"},
-        # eISF
-        "eisf_document": {"create", "read", "update", "delete", "sync"},
-        # Medical Coding
-        "medical_coding": {"read"},
-        "lab_range": {
-            "create",
-            "read",
-            "update",
-            "delete",
-            "alert",
-        },  # Added alert action
-        "ecoa_schedule": {"create", "read"},
-        "ecoa_diary": {
-            "create",
-            "read",
-            "alert",
-        },  # Added alert action
-        "ecoa_submission": {"create", "read"},
-    },
-    "monitor": {
-        "visit_windowing": {"read"},
-        "soa": {"read"},
-        "study_design": {"read"},
-        "sdv": {
-            "create",
-            "read",
-            "update",
-            "delete",
-            "flag",
-        },  # Added flag action for item-level SDV flags
-        "system_audit_logs": {"read"},
-        "regulatory_form": {"create", "read", "sign"},
-        "training_log": {"create", "read", "sign"},
-        # CTMS
-        "ctms_study": {"create", "read"},
-        "ctms_monitoring_visit": {"read", "sign_off", "sync"},
-        "ctms_monitoring_letter": {"read", "read_type"},
-        "ctms_recruitment": {"create", "read"},
-        "ctms_site_milestone": {"create", "update", "read"},
-        "ctms_cra_allocation": {"read"},
-        "ctms_cra_workload": {"read"},
-        # eTMF
-        "etmf_document": {
-            "tag",
-            "create",
-            "read",
-            "redact",
-            "sign",
-            "transition_clinical_qc",
-        },
-        "etmf_edl": {"read", "create"},
-        "etmf_taxonomy": {"read"},
-        # Quality
-        "quality_event": {"create", "read", "update"},
-        # eISF
-        "eisf_document": {"create", "read", "update", "delete", "sync"},
-        "lab_range": {
-            "create",
-            "read",
-            "update",
-            "delete",
-            "alert",
-        },  # Added alert action
-        "ecoa_schedule": {"create", "read"},
-        "ecoa_diary": {
-            "create",
-            "read",
-            "alert",
-        },  # Added alert action
-        "ecoa_submission": {"create", "read"},
-    },
-    ROLE_SUBJECT: {
-        "ecrf_data_entry": {"create", "update"},  # 'Diary' maps to create/update
-        "ecoa_schedule": {"read"},
-        "ecoa_diary": {"read"},
-        "ecoa_submission": {"create", "read"},
-    },
-    ROLE_AUDITOR_CANONICAL: {
-        "soa": {"read"},
-        "system_audit_logs": {"read"},
-        "regulatory_form": {"read"},
-        "training_log": {"read"},
-        # CTMS read-only
-        "ctms_study": {"read"},
-        "ctms_audit_logs": {"read"},
-        "ctms_monitoring_visit": {"read"},
-        "ctms_monitoring_letter": {"read", "read_type"},
-        "ctms_recruitment": {"read"},
-        "ctms_site_milestone": {"read"},
-        "ctms_cra_allocation": {"read"},
-        "ctms_cra_workload": {"read"},
-        "ctms_financial": {"read"},
-        "ctms_financial_budget": {"read"},
-        "ctms_financial_milestone": {"read"},
-        "ctms_financial_payable": {"read"},
-        # eTMF read-only
-        "etmf_document": {"read"},
-        "etmf_edl": {"read"},
-        "etmf_taxonomy": {"read"},
-        "etmf_audit_logs": {"read"},
-        # Quality read-only
-        "quality_event": {"read"},
-        "quality_audit_logs": {"read"},
-        # eISF
-        "eisf_document": {"read"},
-    },
-    ROLE_EXTERNAL_MONITOR: {
-        "etmf_document": {"read"},
-        "etmf_edl": {"read"},
-        "etmf_taxonomy": {"read"},
-        "etmf_audit_logs": {"read"},
-        "eisf_document": {"read"},
-        "regulatory_form": {"read"},
-        "training_log": {"read"},
-    },
-    "grants manager": {
-        "ctms_study": {"create", "read"},
-        "ctms_audit_logs": {"read"},
-        "ctms_financial": {"create", "read", "update", "write"},
-        "ctms_financial_budget": {"create", "read"},
-        "ctms_financial_milestone": {"create", "read", "trigger"},
-        "ctms_financial_payable": {"read"},
-        "etmf_document": {"create", "read", "redact", "sign"},
-        "etmf_edl": {"read"},
-        "etmf_taxonomy": {"read"},
-        "quality_event": {"create", "read", "update"},
-        "eisf_document": {"create", "read", "update", "delete", "sync"},
-    },
-    "grants_manager": {
-        "ctms_study": {"create", "read"},
-        "ctms_audit_logs": {"read"},
-        "ctms_financial": {"create", "read", "update", "write"},
-        "ctms_financial_budget": {"create", "read"},
-        "ctms_financial_milestone": {"create", "read", "trigger"},
-        "ctms_financial_payable": {"read"},
-        "etmf_document": {"create", "read", "redact", "sign"},
-        "etmf_edl": {"read"},
-        "etmf_taxonomy": {"read"},
-        "quality_event": {"create", "read", "update"},
-        "eisf_document": {"create", "read", "update", "delete", "sync"},
-    },
-    "sponsor_clinical": {
-        "etmf_document": {
-            "transition_clinical_qc",
-            "transition_approved",
-            "transition_rejected",
-            "transition_draft",
-            "transition_signed",
-        }
-    },
-    "admin": {
-        "visit_windowing": {"create", "read", "update"},
-        "soa": {"create", "read", "update", "delete"},
-        "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
-        "global_library": {
-            "transition",  # Phase 1: transition global library object status
-            "read",  # Phase 1: read global library object
-        },
-        "library_object": {
-            "create",
-            "read",
-            "update",
-            "delete",
-            "approve",
-            "publish",
-            "release",
-        },
-        "mdr_concept": {
-            "read",  # Phase 1: read MDR biomedical concept
-        },
-        "protocol_export": {
-            "generate",  # Phase 1: generate protocol document export
-            "read",  # Phase 1: read protocol document export
-        },
-        "subject_enrollment": {"read"},
-        "ecrf_data_entry": {"read"},
-        "query_lifecycle": {"create", "read", "update", "delete"},
-        "system_audit_logs": {"read"},
-        "export_masked": {"create", "read", "update"},
-        "protocol_version": {"sign", "transition_approved"},
-        "protocol_section": {"lock", "unlock", "approve", "review", "read"},
-        "regulatory_form": {"create", "read", "sign"},
-        "training_log": {"create", "read", "sign"},
-        # CTMS
-        "ctms_study": {"create", "read"},
-        "ctms_audit_logs": {"read"},
-        "ctms_monitoring_visit": {"create", "update", "read", "sign_off", "sync"},
-        "ctms_monitoring_letter": {"read", "read_type"},
-        "ctms_recruitment": {"create", "read"},
-        "ctms_site_milestone": {"create", "update", "read"},
-        "ctms_cra_allocation": {"create", "update", "read"},
-        "ctms_cra_workload": {"read"},
-        "ctms_financial": {"create", "read", "update", "write"},
-        "ctms_financial_budget": {"create", "read"},
-        "ctms_financial_milestone": {"create", "read", "trigger"},
-        "ctms_financial_payable": {"read"},
-        # eTMF
-        "etmf_document": {
-            "tag",
-            "create",
-            "read",
-            "read_raw",
-            "redact",
-            "sign",
-            "transition_technical_qc",
-            "transition_clinical_qc",
-            "transition_approved",
-            "transition_archived",
-            "transition_rejected",
-            "transition_draft",
-            "transition_signed",
-            "manage_expiration",
-        },
-        "etmf_edl": {"read", "create"},
-        "etmf_taxonomy": {"read"},
-        # Quality
-        "quality_event": {"create", "read", "update", "delete", "investigate"},
-        "quality_audit_logs": {"read"},
-        # eISF
-        "eisf_document": {"create", "read", "update", "delete", "sync"},
-        "lab_range": {
-            "create",
-            "read",
-            "update",
-            "delete",
-            "alert",
-        },  # Added alert action
-        "ecoa_schedule": {"create", "read"},
-        "ecoa_diary": {
-            "create",
-            "read",
-            "alert",
-        },  # Added alert action
-        "ecoa_submission": {"create", "read"},
-    },
-    "quality_manager": {
-        "quality_event": {"create", "read", "update", "delete", "investigate"},
-        "quality_audit_logs": {"read"},
-    },
-    "qa_lead": {
-        "quality_event": {"create", "read", "update", "delete", "investigate"},
-        "quality_audit_logs": {"read"},
-    },
-    "quality_oversight": {
-        "quality_event": {"create", "read", "update", "delete", "investigate"},
-        "quality_audit_logs": {"read"},
-    },
-    "system": {
-        "ctms_study": {"create", "read"},
-        "ctms_audit_logs": {"read"},
-        "ctms_monitoring_visit": {"create", "update", "read", "sign_off", "sync"},
-        "ctms_monitoring_letter": {"read", "read_type"},
-        "ctms_recruitment": {"create", "read"},
-        "ctms_site_milestone": {"create", "update", "read"},
-        "ctms_cra_allocation": {"create", "update", "read"},
-        "ctms_cra_workload": {"read"},
-        "ctms_financial": {"create", "read", "update", "write"},
-        "ctms_financial_budget": {"create", "read"},
-        "ctms_financial_milestone": {"create", "read", "trigger"},
-        "ctms_financial_payable": {"read"},
-        "etmf_document": {
-            "create",
-            "read",
-            "read_raw",
-            "redact",
-            "sign",
-            "manage_expiration",
-        },
-        "etmf_edl": {"read", "create"},
-        "etmf_taxonomy": {"read"},
-        "etmf_audit_logs": {"read"},
-        "quality_event": {"create", "read", "update", "delete", "investigate"},
-        "quality_audit_logs": {"read"},
-        "protocol_version": {"sign", "transition_approved"},
-        "protocol_section": {"lock", "unlock", "approve", "review", "read"},
-        "regulatory_form": {"create", "read", "sign"},
-        "training_log": {"create", "read", "sign"},
-        # eISF
-        "eisf_document": {"create", "read", "update", "delete", "sync"},
-        "library_object": {
-            "create",
-            "read",
-            "update",
-            "delete",
-            "approve",
-            "publish",
-            "release",
-        },
-        "ecoa_schedule": {"create", "read"},
-        "ecoa_diary": {
-            "create",
-            "read",
-            "alert",
-        },  # Added alert action
-        "ecoa_submission": {"create", "read"},
-    },
-    "anonymous": {
-        "ctms_study": {"read"},
-        "ctms_monitoring_visit": {"read"},
-        "ctms_monitoring_letter": {"read", "read_type"},
-        "ctms_recruitment": {"read"},
-        "ctms_site_milestone": {"read"},
-        "ctms_cra_allocation": {"read"},
-        "ctms_cra_workload": {"read"},
-        "etmf_document": {"read"},
-        "etmf_edl": {"read"},
-        "etmf_taxonomy": {"read"},
-        "quality_event": {"read"},
-        # eISF
-        "eisf_document": {"read"},
-    },
-    ROLE_UNBLINDED_STATISTICIAN: {
-        "rtsm_randomization": {"read"},
-        "rtsm_allocation": {"read"},
-    },
-    ROLE_IDMC: {
-        "rtsm_randomization": {"read"},
-        "rtsm_allocation": {"read"},
-    },
-    ROLE_PHARMACIST: {
-        "rtsm_supply": {"read", "write"},
-    },
-    ROLE_EMERGENCY_UNBLINDER: {
-        "rtsm_unblind": {"write"},
-    },
-    "terminology_manager": {
-        "medical_coding": {"create", "read", "update"},
-    },
-}
-
-# Derive PI / ER-Physician / Lead-Investigator permissions from the base
-# ROLE_INVESTIGATOR grant set so a single edit propagates to all three personas.
-# Each derivative role adds rtsm_unblind:write (controlled by the emergency-
-# unblinding endpoint) and full eISF document access beyond the base.
-_PI_BASE_PERMISSIONS: dict = {
-    **ROLE_PERMISSIONS[ROLE_INVESTIGATOR],
-    "rtsm_unblind": {"write"},
-    "eisf_document": {"create", "read", "update", "delete", "sync"},
-}
-ROLE_PERMISSIONS[ROLE_PRINCIPAL_INVESTIGATOR] = _PI_BASE_PERMISSIONS.copy()
-ROLE_PERMISSIONS[ROLE_AUTHORIZED_ER_PHYSICIAN] = _PI_BASE_PERMISSIONS.copy()
-ROLE_PERMISSIONS[ROLE_LEAD_INVESTIGATOR] = _PI_BASE_PERMISSIONS.copy()
+def register_rbac_role_alias(alias: str, canonical_role: str):
+    """Dynamically register a role alias."""
+    ROLE_ALIASES[alias.strip().lower()] = canonical_role
 
 
-# Field-level blinding/masking rules from §2.3
-# These are applied to sensitive fields for blinded users.
-MASKING_RULES: dict[str, Callable[[Any], Any]] = {
-    "initials": lambda val: "**" if val else val,
-    "ssn": lambda val: "***-**-****" if val else val,
-    "dob": lambda val: "MASKED" if val else val,
-    "treatment_arm_id": lambda val: "BLINDED" if val else val,
-    "treatment_arm": lambda val: "BLINDED" if val else val,
-    "administered_drug_code": lambda val: "Obfuscated Kit" if val else val,
-    "drug_code": lambda val: "Obfuscated Kit" if val else val,
-    "changed_reason_for_blinded_field": lambda val: "Obfuscated" if val else val,
-    "randomization_seed": lambda val: "MASKED" if val is not None else val,
-    "seed": lambda val: "MASKED" if val is not None else val,
-    "encrypted_allocation": lambda val: "MASKED" if val is not None else val,
-    "kit_reference": lambda val: "Obfuscated Kit" if val else val,
-    "stratum_key": lambda val: "MASKED" if val else val,
-    "randomization_id": lambda val: "MASKED" if val else val,
-    "encrypted_sequence": lambda val: "MASKED" if val else val,
-}
+def register_rbac_masking_rule(field_name: str, mask_fn: Callable[[Any], Any]):
+    """Dynamically register a masking rule."""
+    MASKING_RULES[field_name] = mask_fn
 
-# Canonical set of site-scoped trial personas
-SITE_SCOPED_ROLES: set[str] = {
-    ROLE_INVESTIGATOR,
-    ROLE_CRC,
-    ROLE_CRA_CANONICAL,
-    "monitor",
-    ROLE_EXTERNAL_MONITOR,
-    ROLE_PRINCIPAL_INVESTIGATOR,
-    ROLE_AUTHORIZED_ER_PHYSICIAN,
-    ROLE_LEAD_INVESTIGATOR,
-}
 
-UNMASKED_ALLOCATION_FIELDS: set[str] = {
-    "treatment_arm",
-    "treatment_arm_id",
-    "randomization_seed",
-    "seed",
-    "encrypted_allocation",
-    "stratum_key",
-    "randomization_id",
-    "encrypted_sequence",
-}
+def register_rbac_site_scoped_role(role: str):
+    """Dynamically register a role as site-scoped."""
+    SITE_SCOPED_ROLES.add(role)
 
-UNMASKED_SUPPLY_FIELDS: set[str] = {
-    "drug_code",
-    "administered_drug_code",
-    "kit_reference",
-}
 
-# Role-aware masking policy mapping unblinded RTSM roles to visible fields.
-# NOTE: Routine investigator personas (PI, ER Physician, Lead Investigator) do NOT
-# receive blanket unmasked-allocation or unmasked-supply grants here. Allocation
-# field visibility for those roles is conferred only via the controlled emergency-
-# unblinding endpoint, which returns the decrypted value directly in its response
-# without persisting wide-open field visibility in the session principal.
-ROLE_UNMASKED_FIELDS: dict[str, set[str]] = {
-    ROLE_UNBLINDED_STATISTICIAN: UNMASKED_ALLOCATION_FIELDS,
-    ROLE_IDMC: UNMASKED_ALLOCATION_FIELDS,
-    ROLE_PHARMACIST: UNMASKED_SUPPLY_FIELDS,
-    ROLE_EMERGENCY_UNBLINDER: UNMASKED_ALLOCATION_FIELDS | UNMASKED_SUPPLY_FIELDS,
-}
+def register_rbac_role_unmasked_fields(role: str, fields: set[str]):
+    """Dynamically register unmasked fields for a role."""
+    if role not in ROLE_UNMASKED_FIELDS:
+        ROLE_UNMASKED_FIELDS[role] = set()
+    ROLE_UNMASKED_FIELDS[role].update(fields)
 
+
+def register_rbac_constant(name: str, value: Any):
+    """Dynamically register any module-level constant."""
+    _DYNAMIC_CONSTANTS[name] = value
+    if name == "AUDITOR_ROLES":
+        AUDITOR_ROLES.clear()
+        AUDITOR_ROLES.update(value)
+    # Also expose in global namespace of this module
+    globals()[name] = value
+
+
+def __getattr__(name: str) -> Any:
+    if name in _DYNAMIC_CONSTANTS:
+        return _DYNAMIC_CONSTANTS[name]
+    if name.startswith("ROLE_"):
+        # Derive canonical name on the fly
+        parts = name[5:].lower().split("_")
+        if len(parts) > 1 and parts[-1] == "canonical":
+            parts = parts[:-1]
+        val = "_".join(parts)
+        if name == "ROLE_CRA":
+            val = "CRA"
+        elif name == "ROLE_DATA_MANAGER":
+            val = "Data Manager"
+        elif name == "ROLE_SITE_INVESTIGATOR":
+            val = "Site Investigator"
+        elif name == "ROLE_AUDITOR":
+            val = "Auditor"
+        elif name == "ROLE_SPONSOR_ADMIN":
+            val = "Sponsor Admin"
+        return val
+    if name == "AUDITOR_ROLES":
+        return AUDITOR_ROLES
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 # Traceability Note: Principal now captures sponsor scope (sponsor_id) as a contract change per ADR-86.
 class Principal(BaseModel):
@@ -1048,7 +212,7 @@ def get_principal_sync(request: Request) -> Principal:
 
     normalized_roles = [normalize_role(r) for r in raw_roles]
 
-    if ROLE_EXTERNAL_MONITOR in normalized_roles:
+    if globals().get("ROLE_EXTERNAL_MONITOR", "external_monitor") in normalized_roles:
         raise HTTPException(
             status_code=500,
             detail="External Monitor principal must be resolved via the async get_principal path to allow directory enrichment.",
@@ -1296,7 +460,7 @@ async def get_principal(request: Request) -> Principal:
         raw_roles=raw_roles_list,
     )
 
-    if ROLE_EXTERNAL_MONITOR in principal.roles:
+    if globals().get("ROLE_EXTERNAL_MONITOR", "external_monitor") in principal.roles:
         from packages.security.org_client import resolve_personnel_assignments
 
         res = await resolve_personnel_assignments(principal.user_id)
@@ -1568,81 +732,15 @@ def verify_is_auditor(request: Request) -> list[str]:
     return roles
 
 
-ROLE_EXPANSIONS = {
-    "site investigator": {
-        "site investigator",
-        "investigator",
-        "site-investigator",
-        "site_investigator",
-        "investigator_user",
-        "principal_investigator",
-        "principal investigator",
-        "pi",
-        "authorized_er_physician",
-        "authorized er physician",
-        "lead_investigator",
-        "lead investigator",
-    },
-    "principal_investigator": {
-        "principal_investigator",
-        "principal investigator",
-        "pi",
-        "principalinvestigator",
-    },
-    "authorized_er_physician": {
-        "authorized_er_physician",
-        "authorized er physician",
-        "authorized-er-physician",
-    },
-    "lead_investigator": {
-        "lead_investigator",
-        "lead investigator",
-        "lead-investigator",
-    },
-    "data manager": {
-        "data manager",
-        "data_manager",
-        "data-manager",
-        "sponsor_dm",
-        "dm",
-        "admin",
-    },
-    "cra": {"cra"},
-    "auditor": {"auditor", "inspector", "regulatory_inspector"},
-    "sponsor admin": {"sponsor admin", "sponsor_admin", "admin"},
-    "external_monitor": {
-        "external_monitor",
-        "external monitor",
-        "external-monitor",
-        "cro monitor",
-        "cro_monitor",
-        "cro-monitor",
-    },
-    "protocol_reviewer": {
-        "protocol_reviewer",
-        "protocol reviewer",
-        "protocol-reviewer",
-        "reviewer",
-    },
-    "unblinded_statistician": {
-        "unblinded_statistician",
-        "unblinded statistician",
-        "lead unblinded statistician",
-    },
-    "idmc": {
-        "idmc",
-        "dsmb",
-    },
-    "pharmacist": {
-        "pharmacist",
-        "unblinded pharmacist",
-        "unblinded_pharmacist",
-    },
-    "emergency_unblinder": {
-        "emergency_unblinder",
-        "emergency unblinder",
-    },
-}
+ROLE_EXPANSIONS: dict[str, set[str]] = {}
+
+
+def register_rbac_role_expansion(role: str, expansions: set[str]):
+    """Dynamically register expansions for a role."""
+    if role not in ROLE_EXPANSIONS:
+        ROLE_EXPANSIONS[role] = set()
+    ROLE_EXPANSIONS[role].update(expansions)
+
 
 
 def require_roles(*allowed_roles: str, detail: str | None = None):
@@ -1670,10 +768,10 @@ def require_roles(*allowed_roles: str, detail: str | None = None):
                 else normalize_role(norm_role)
             )
             expanded_allowed.add(norm_role_canonical)
-            if norm_role_canonical in ROLE_EXPANSIONS:
-                expanded_allowed.update(ROLE_EXPANSIONS[norm_role_canonical])
-            if norm_role in ROLE_EXPANSIONS:
-                expanded_allowed.update(ROLE_EXPANSIONS[norm_role])
+            # Match role expansions case-insensitively for complete safety across different canonical forms
+            for k, v in ROLE_EXPANSIONS.items():
+                if k.lower() in (norm_role_canonical.lower(), norm_role.lower()):
+                    expanded_allowed.update(v)
 
         if not any(role in expanded_allowed for role in roles):
             raise HTTPException(

@@ -1074,7 +1074,8 @@ import { useRoute } from "vue-router";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
-import { validateField, debounce, ClinicalFormField } from "ui"; // Consolidating debounce onto shared packages/ui (PR #566 alignment)
+import { validateField, debounce } from "ui"; // Consolidating debounce onto shared packages/ui (PR #566 alignment)
+import ClinicalFormField from "../components/clinical/ClinicalFormField.vue";
 import { evaluateAST } from "../evaluator.js";
 import { terminologyClient } from "../api/terminologyClient";
 import ReasonModal from "../components/ReasonModal.vue";

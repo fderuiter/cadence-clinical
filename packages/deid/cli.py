@@ -471,7 +471,7 @@ def main():
     )
     parser.add_argument(
         "--profile",
-        choices=["HIPAA", "GDPR", "EU_CTR"],
+        choices=[m.value for m in ComplianceProfile],
         default="HIPAA",
         help="Compliance profile to scan against. Defaults to HIPAA.",
     )

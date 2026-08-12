@@ -81,6 +81,7 @@ async def initiate_study_archival(
 
     return ArchiveJobResponse(
         job_id=job_id,
+        scope_id=study_id,
         study_id=study_id,
         status="PENDING",
         download_url=None,
@@ -105,6 +106,7 @@ async def get_archive_job_status(
     job = _ARCHIVE_JOBS[job_id]
     return ArchiveJobResponse(
         job_id=job["job_id"],
+        scope_id=job["study_id"],
         study_id=job["study_id"],
         status=job["status"],
         download_url=job["download_url"],

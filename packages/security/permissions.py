@@ -6,184 +6,89 @@ AUDIT_VIEW, etc.) and role-to-permission mapping for Cadence Clinical eClinical 
 Requirements: PRD-SYS-001, 21 CFR Part 11
 """
 
-import enum
+from typing import Any
 
 
-class PermissionEnum(enum.StrEnum):
-    """Granular permission definitions across Cadence Clinical platform."""
+class DynamicStrEnumMeta(type):
+    def __getattr__(cls, name):
+        if name in cls._members:
+            return cls._members[name]
+        raise AttributeError(f"'{cls.__name__}' object has no attribute '{name}'")
 
-    # Core Read & Audit Permissions
-    STUDY_READ = "study:read"
-    AUDIT_VIEW = "audit:view"
+    def __iter__(cls):
+        return iter(cls._members.values())
 
-    # Form & Data Capture Permissions
-    FORM_WRITE = "form:write"
-    FORM_LOCK = "form:lock"
-    DATA_LOCK = "data:lock"
-    DATA_UNLOCK = "data:unlock"
+    def __len__(cls):
+        return len(cls._members)
 
-    # Monitoring & Verification Permissions
-    SDV_VERIFY = "sdv:verify"
-    SDV_FLAG = "sdv:flag"
-    QUERY_MANAGE = "query:manage"
+    def __contains__(cls, item):
+        if isinstance(item, cls):
+            return item._value_ in cls._members
+        return item in cls._members or item in [m._value_ for m in cls._members.values()]
 
-    # Protocol Authoring & Global Library Permissions
-    PROTOCOL_AUTHOR = "protocol:author"
-    GLOBAL_LIBRARY_MANAGE = "global_library:manage"
+    def __getitem__(cls, name):
+        if name in cls._members:
+            return cls._members[name]
+        raise KeyError(name)
 
-    # Clinical Execution & RTSM Permissions
-    SUBJECT_ENROLL = "subject:enroll"
-    RTSM_RANDOMIZE = "rtsm:randomize"
-    EXPERT_UNBLIND = "expert:unblind"
-    SAE_REPORT = "sae:report"
-
-    # Export & eSignature Permissions
-    EXPORT_SDTM = "export:sdtm"
-    ESIGN_EXECUTE = "esign:execute"
-    CHANGE_REQUEST_APPROVE = "change_request:approve"
-
-    # Document & Archival Permissions
-    DOCUMENTS_READ = "documents:read"
-    DOCUMENTS_WRITE = "documents:write"
-    ARCHIVE_EXPORT = "archive:export"
-
-    # Visit Windowing Permissions
-    VISIT_WINDOWING_READ = "visit_windowing:read"
-    VISIT_WINDOWING_CREATE = "visit_windowing:create"
-    VISIT_WINDOWING_UPDATE = "visit_windowing:update"
-
-    # Schedule of Activities (SoA) Permissions
-    SOA_READ = "soa:read"
-    SOA_MANAGE = "soa:manage"
+    @property
+    def __members__(cls):
+        return cls._members
 
 
-class RoleEnum(enum.StrEnum):
-    """Canonical system roles within Cadence Clinical eClinical platform."""
+class DynamicStrEnum(str, metaclass=DynamicStrEnumMeta):
+    _members = {}
 
-    SPONSOR_ADMIN = "SponsorAdmin"
-    SPONSOR_DESIGNER = "SponsorDesigner"
-    PRINCIPAL_INVESTIGATOR = "PrincipalInvestigator"
-    CRC = "ClinicalResearchCoordinator"
-    CRA = "ClinicalResearchAssociate"
-    DATA_MANAGER = "DataManager"
-    AUDITOR = "Auditor"
-    SUBJECT = "Subject"
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        cls._members = {}
+        # Parse initial class attributes
+        for k, v in list(cls.__dict__.items()):
+            if not k.startswith("_") and isinstance(v, str):
+                cls._add_member(k, v)
+
+    def __new__(cls, value):
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        obj._name_ = value
+        return obj
+
+    @property
+    def value(self):
+        return self._value_
+
+    @property
+    def name(self):
+        return self._name_
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, _source_type, _handler):
+        from pydantic_core import core_schema
+        return core_schema.str_schema()
+
+    @classmethod
+    def _add_member(cls, name, value):
+        inst = cls(value)
+        inst._name_ = name
+        setattr(cls, name, inst)
+        cls._members[name] = inst
 
 
-# Canonical Role to Permission Matrix Mapping
-ROLE_PERMISSIONS_MAP: dict[str, set[PermissionEnum]] = {
-    RoleEnum.SPONSOR_ADMIN.value: {
-        PermissionEnum.STUDY_READ,
-        PermissionEnum.AUDIT_VIEW,
-        PermissionEnum.PROTOCOL_AUTHOR,
-        PermissionEnum.GLOBAL_LIBRARY_MANAGE,
-        PermissionEnum.EXPORT_SDTM,
-        PermissionEnum.CHANGE_REQUEST_APPROVE,
-        PermissionEnum.ESIGN_EXECUTE,
-        PermissionEnum.DOCUMENTS_READ,
-        PermissionEnum.DOCUMENTS_WRITE,
-        PermissionEnum.ARCHIVE_EXPORT,
-        PermissionEnum.VISIT_WINDOWING_READ,
-        PermissionEnum.VISIT_WINDOWING_CREATE,
-        PermissionEnum.VISIT_WINDOWING_UPDATE,
-        PermissionEnum.SOA_READ,
-        PermissionEnum.SOA_MANAGE,
-    },
-    RoleEnum.SPONSOR_DESIGNER.value: {
-        PermissionEnum.STUDY_READ,
-        PermissionEnum.PROTOCOL_AUTHOR,
-        PermissionEnum.GLOBAL_LIBRARY_MANAGE,
-        PermissionEnum.VISIT_WINDOWING_READ,
-        PermissionEnum.VISIT_WINDOWING_CREATE,
-        PermissionEnum.VISIT_WINDOWING_UPDATE,
-        PermissionEnum.SOA_READ,
-        PermissionEnum.SOA_MANAGE,
-    },
-    RoleEnum.PRINCIPAL_INVESTIGATOR.value: {
-        PermissionEnum.STUDY_READ,
-        PermissionEnum.FORM_WRITE,
-        PermissionEnum.SUBJECT_ENROLL,
-        PermissionEnum.RTSM_RANDOMIZE,
-        PermissionEnum.EXPERT_UNBLIND,
-        PermissionEnum.SAE_REPORT,
-        PermissionEnum.ESIGN_EXECUTE,
-        PermissionEnum.QUERY_MANAGE,
-        PermissionEnum.DOCUMENTS_READ,
-        PermissionEnum.DOCUMENTS_WRITE,
-        PermissionEnum.VISIT_WINDOWING_READ,
-        PermissionEnum.SOA_READ,
-    },
-    RoleEnum.CRC.value: {
-        PermissionEnum.STUDY_READ,
-        PermissionEnum.FORM_WRITE,
-        PermissionEnum.SUBJECT_ENROLL,
-        PermissionEnum.RTSM_RANDOMIZE,
-        PermissionEnum.SAE_REPORT,
-        PermissionEnum.QUERY_MANAGE,
-        PermissionEnum.DOCUMENTS_READ,
-        PermissionEnum.DOCUMENTS_WRITE,
-        PermissionEnum.VISIT_WINDOWING_READ,
-        PermissionEnum.SOA_READ,
-    },
-    RoleEnum.CRA.value: {
-        PermissionEnum.STUDY_READ,
-        PermissionEnum.SDV_VERIFY,
-        PermissionEnum.SDV_FLAG,
-        PermissionEnum.QUERY_MANAGE,
-        PermissionEnum.AUDIT_VIEW,
-        PermissionEnum.DOCUMENTS_READ,
-        PermissionEnum.DOCUMENTS_WRITE,
-        PermissionEnum.VISIT_WINDOWING_READ,
-        PermissionEnum.SOA_READ,
-    },
-    RoleEnum.DATA_MANAGER.value: {
-        PermissionEnum.STUDY_READ,
-        PermissionEnum.FORM_LOCK,
-        PermissionEnum.DATA_LOCK,
-        PermissionEnum.DATA_UNLOCK,
-        PermissionEnum.QUERY_MANAGE,
-        PermissionEnum.EXPORT_SDTM,
-        PermissionEnum.AUDIT_VIEW,
-        PermissionEnum.DOCUMENTS_READ,
-        PermissionEnum.DOCUMENTS_WRITE,
-        PermissionEnum.ARCHIVE_EXPORT,
-        PermissionEnum.VISIT_WINDOWING_READ,
-        PermissionEnum.SOA_READ,
-    },
-    RoleEnum.AUDITOR.value: {
-        PermissionEnum.STUDY_READ,
-        PermissionEnum.AUDIT_VIEW,
-        PermissionEnum.DOCUMENTS_READ,
-        PermissionEnum.ARCHIVE_EXPORT,
-        PermissionEnum.VISIT_WINDOWING_READ,
-        PermissionEnum.SOA_READ,
-    },
-    RoleEnum.SUBJECT.value: {
-        PermissionEnum.FORM_WRITE,
-    },
-}
+class PermissionEnum(DynamicStrEnum):
+    """Granular permission definitions. Starts empty/generic, clinical trial values are dynamically registered."""
+    _members = {}
 
-# Role aliases normalization mapping
-_ROLE_ALIASES_MAP: dict[str, str] = {
-    "sponsor_admin": RoleEnum.SPONSOR_ADMIN.value,
-    "sponsor": RoleEnum.SPONSOR_ADMIN.value,
-    "designer": RoleEnum.SPONSOR_DESIGNER.value,
-    "sponsor_designer": RoleEnum.SPONSOR_DESIGNER.value,
-    "pi": RoleEnum.PRINCIPAL_INVESTIGATOR.value,
-    "principal_investigator": RoleEnum.PRINCIPAL_INVESTIGATOR.value,
-    "investigator": RoleEnum.PRINCIPAL_INVESTIGATOR.value,
-    "crc": RoleEnum.CRC.value,
-    "clinical_research_coordinator": RoleEnum.CRC.value,
-    "cra": RoleEnum.CRA.value,
-    "clinical_research_associate": RoleEnum.CRA.value,
-    "monitor": RoleEnum.CRA.value,
-    "dm": RoleEnum.DATA_MANAGER.value,
-    "data_manager": RoleEnum.DATA_MANAGER.value,
-    "auditor": RoleEnum.AUDITOR.value,
-    "inspector": RoleEnum.AUDITOR.value,
-    "subject": RoleEnum.SUBJECT.value,
-    "patient": RoleEnum.SUBJECT.value,
-}
+
+class RoleEnum(DynamicStrEnum):
+    """Canonical system roles. Starts empty/generic, clinical trial values are dynamically registered."""
+    _members = {}
+
+
+# Canonical Role to Permission Matrix Mapping - Dynamically populated
+ROLE_PERMISSIONS_MAP: dict[str, set[PermissionEnum]] = {}
+
+# Role aliases normalization mapping - Dynamically populated
+_ROLE_ALIASES_MAP: dict[str, str] = {}
 
 
 def normalize_role_name(role: str) -> str:
@@ -248,3 +153,28 @@ def has_permission(roles: str | list[str], required_permission: PermissionEnum) 
 
     user_permissions = get_permissions_for_roles(role_list)
     return required_permission in user_permissions
+
+
+# Dynamic registration API for consumer applications to register clinical configurations
+def register_role_and_permissions(role_name: str, permissions: set[str], aliases: list[str] = None):
+    """Dynamically register a role, its associated permissions, and aliases on startup."""
+    role_key = role_name.upper().replace(" ", "_")
+    if role_key not in RoleEnum.__members__:
+        RoleEnum._add_member(role_key, role_name)
+    
+    for perm in permissions:
+        perm_key = perm.upper().replace(":", "_").replace(" ", "_").replace("-", "_")
+        if perm_key not in PermissionEnum.__members__:
+            PermissionEnum._add_member(perm_key, perm)
+            
+    canonical_role = RoleEnum[role_key].value
+    if canonical_role not in ROLE_PERMISSIONS_MAP:
+        ROLE_PERMISSIONS_MAP[canonical_role] = set()
+        
+    for perm in permissions:
+        perm_key = perm.upper().replace(":", "_").replace(" ", "_").replace("-", "_")
+        ROLE_PERMISSIONS_MAP[canonical_role].add(PermissionEnum[perm_key])
+        
+    if aliases:
+        for alias in aliases:
+            _ROLE_ALIASES_MAP[alias.lower()] = canonical_role

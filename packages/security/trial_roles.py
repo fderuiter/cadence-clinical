@@ -1,36 +1,35 @@
-from enum import StrEnum
-
 from fastapi import HTTPException, Request
 
 from packages.security.audit_logger import CentralAuditLogger
-from packages.security.rbac import (
-    Principal,
-    can_access_site,
-    normalize_role,
-)
+from packages.security.permissions import DynamicStrEnum
 
 
-class TrialRole(StrEnum):
-    SITE_PI = "principal_investigator"
-    CRA_MONITOR = "cra"
-    DATA_MANAGER = "sponsor_dm"
-    UNBLINDED_STATISTICIAN = "unblinded_statistician"
-    IDMC = "idmc"
-    PHARMACIST = "pharmacist"
+class TrialRole(DynamicStrEnum):
+    """Dynamically registered trial roles."""
+    _members = {}
 
 
-class ClinicalStaffRole(StrEnum):
-    """
-    Standard clinical staff role vocabulary from docs/SDLC/05_Security_Compliance_Audit_Spec.md,
-    reused across organization directory and delegation of authority records. Includes the
-    External Monitor persona aligned to CRO affiliation.
-    """
+class ClinicalStaffRole(DynamicStrEnum):
+    """Dynamically registered clinical staff roles."""
+    _members = {}
 
-    PRINCIPAL_INVESTIGATOR = "Principal Investigator"
-    SUB_INVESTIGATOR = "Sub-Investigator"
-    CRC = "CRC"
-    CRA_MONITOR = "CRA/Monitor"
-    EXTERNAL_MONITOR = "External Monitor"
+
+def register_trial_role(name: str, value: str):
+    """Dynamically register a TrialRole."""
+    TrialRole._add_member(name, value)
+
+
+def register_clinical_staff_role(name: str, value: str):
+    """Dynamically register a ClinicalStaffRole."""
+    ClinicalStaffRole._add_member(name, value)
+
+
+_TRIAL_ROLE_CHECK_MAP: dict[str, set[str]] = {}
+
+
+def register_trial_role_check_mapping(role: str, allowed_normalized_roles: set[str]):
+    """Register mapping of allowed normalized roles for checking check_trial_role."""
+    _TRIAL_ROLE_CHECK_MAP[role] = allowed_normalized_roles
 
 
 def get_normalized_request_roles(request: Request) -> list[str]:
@@ -52,6 +51,9 @@ def get_normalized_request_roles(request: Request) -> list[str]:
         raw_roles = [str(r).strip() for r in roles_val if str(r).strip()]
     else:
         raw_roles = []
+    
+    # Import normalize_role dynamically to avoid circular import issues
+    from packages.security.rbac import normalize_role
     return [normalize_role(r) for r in raw_roles]
 
 
@@ -61,33 +63,12 @@ def check_trial_role(request: Request, role: TrialRole) -> bool:
     following the eTMF string-matching/normalization convention.
     """
     user_roles = get_normalized_request_roles(request)
-
-    role_map = {
-        TrialRole.SITE_PI: {
-            "principal_investigator",
-            "investigator",
-            "lead_investigator",
-            "authorized_er_physician",
-        },
-        TrialRole.CRA_MONITOR: {"cra", "monitor", "cra_monitor"},
-        TrialRole.DATA_MANAGER: {
-            "sponsor_dm",
-            "data_manager",
-            "dm",
-            "sponsor_admin",
-            "admin",
-        },
-        TrialRole.UNBLINDED_STATISTICIAN: {"unblinded_statistician"},
-        TrialRole.IDMC: {"idmc"},
-        TrialRole.PHARMACIST: {"pharmacist"},
-    }
-
-    allowed = role_map.get(role, set())
+    allowed = _TRIAL_ROLE_CHECK_MAP.get(role, set())
     return any(r in allowed for r in user_roles)
 
 
 def enforce_site_isolation(
-    request: Request, site_id: str, principal: Principal
+    request: Request, site_id: str, principal: any
 ) -> None:
     """
     Site-isolation guard (PRD-SYS-004):
@@ -103,6 +84,8 @@ def enforce_site_isolation(
     is_site_scoped = any(r in SITE_SCOPED_ROLES for r in user_roles)
 
     if is_site_scoped or principal.assigned_sites:
+        # Import can_access_site dynamically to avoid circular import issues
+        from packages.security.rbac import can_access_site
         if not can_access_site(principal, site_id):
             ip_address = (
                 getattr(request.state, "ip_address", None)

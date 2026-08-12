@@ -1,6 +1,6 @@
 import { mount } from "@vue/test-utils";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { ClinicalFormField } from "ui";
+import ClinicalFormField from "../src/components/clinical/ClinicalFormField.vue";
 
 describe("Viewport-Driven DOM Recycler Integration Tests", () => {
   let intersectionCallback;

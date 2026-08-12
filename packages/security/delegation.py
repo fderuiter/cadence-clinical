@@ -7,11 +7,19 @@ delegation workflows in compliance with ICH E6(R2) and 21 CFR Part 11.
 
 from fastapi import HTTPException, Request, status
 
-from packages.security.rbac import get_normalized_roles
 from packages.security.trial_roles import ClinicalStaffRole
 
 # StaffRole alias matching shared ClinicalStaffRole vocabulary
 StaffRole = ClinicalStaffRole
+
+# A dynamic registry for mapping aliases/values to the ClinicalStaffRole member values.
+_NORMALIZED_STAFF_ROLES: dict[str, str] = {}
+
+
+def register_staff_role_normalization(aliases: list[str], target_role_value: str):
+    """Register aliases for a staff role value."""
+    for alias in aliases:
+        _NORMALIZED_STAFF_ROLES[alias.strip().lower().replace("_", " ").replace("-", " ")] = target_role_value
 
 
 def normalize_and_validate_staff_role(role_str: str) -> StaffRole:
@@ -25,37 +33,11 @@ def normalize_and_validate_staff_role(role_str: str) -> StaffRole:
         HTTPException: Raises 400 Bad Request if the role is malformed or invalid.
     """
     norm = role_str.strip().lower().replace("_", " ").replace("-", " ")
-    if norm in {
-        "principal investigator",
-        "pi",
-        "principal_investigator",
-        "principalinvestigator",
-    }:
-        return ClinicalStaffRole.PRINCIPAL_INVESTIGATOR
-    if norm in {
-        "sub-investigator",
-        "sub investigator",
-        "sub_investigator",
-        "subinvestigator",
-        "sub-invest",
-    }:
-        return ClinicalStaffRole.SUB_INVESTIGATOR
-    if norm in {"crc", "clinical research coordinator"}:
-        return ClinicalStaffRole.CRC
-    if norm in {
-        "cra/monitor",
-        "cra monitor",
-        "cra_monitor",
-        "cra-monitor",
-        "cra",
-        "monitor",
-    }:
-        return ClinicalStaffRole.CRA_MONITOR
-
-    # Note: External Monitor ("external monitor"/"external_monitor") is intentionally
-    # excluded from the Delegation-of-Authority (DOA) scope because monitors perform
-    # oversight duties rather than delegated site duties. They fall through to the
-    # invalid clinical staff role exception below.
+    if norm in _NORMALIZED_STAFF_ROLES:
+        val = _NORMALIZED_STAFF_ROLES[norm]
+        for member in ClinicalStaffRole:
+            if member.value == val:
+                return member
 
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
@@ -74,6 +56,8 @@ def validate_request_staff_roles(request: Request) -> list[StaffRole]:
             - 400 Bad Request for malformed/invalid roles.
             - 403 Forbidden if roles list is empty.
     """
+    # Import dynamically from rbac to avoid circular imports
+    from packages.security.rbac import get_normalized_roles
     roles_list = get_normalized_roles(request)
     if not roles_list:
         raise HTTPException(
@@ -116,7 +100,8 @@ def verify_delegation_scope(
 
     # 2. Enforce only PI can delegate (if enforce_pi is True)
     if enforce_pi:
-        if ClinicalStaffRole.PRINCIPAL_INVESTIGATOR not in validated_roles:
+        pi_role = getattr(ClinicalStaffRole, "PRINCIPAL_INVESTIGATOR", None)
+        if pi_role and pi_role not in validated_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Forbidden: Only a Principal Investigator may delegate.",

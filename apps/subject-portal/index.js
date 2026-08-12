@@ -4,14 +4,16 @@ import App from "./App.vue";
 import {
   buildLedgerBlock,
   validateField,
-  normalizeApprovedConsent,
-  shapeComprehensionAnswers,
-  interpretComprehensionResult,
   initHoverDetection,
   deriveKeyFromPIN,
   encryptAESGCM,
   decryptAESGCM,
 } from "ui";
+import {
+  normalizeApprovedConsent,
+  shapeComprehensionAnswers,
+  interpretComprehensionResult,
+} from "./econsent.js";
 import {
   queueSubmission,
   getQueuedSubmissions,

@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class DocumentMetadataResponse(BaseModel):
@@ -11,15 +11,16 @@ class DocumentMetadataResponse(BaseModel):
 
     Requirements: PRD-SYS-001
     """
+    model_config = ConfigDict(extra="allow")
 
     document_id: str
     filename: str
     version_index: str
     sha256_hash: str
-    dia_tmf_code: str
     status: str
     created_by: str
     created_at: datetime
+    custom_tags: dict[str, str] = {}
 
 
 class DocumentUploadResponse(BaseModel):
@@ -39,9 +40,10 @@ class ArchiveJobResponse(BaseModel):
 
     Requirements: PRD-SYS-001
     """
+    model_config = ConfigDict(extra="allow")
 
     job_id: str
-    study_id: str
+    scope_id: str
     status: Literal["PENDING", "PROCESSING", "COMPLETED", "FAILED"]
     download_url: str | None = None
 

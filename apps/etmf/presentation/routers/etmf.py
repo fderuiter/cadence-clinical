@@ -1176,6 +1176,13 @@ async def auto_redact_document_endpoint(
     if not source_doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
+    from packages.deid.models import ComplianceProfile
+    if payload.profile not in ComplianceProfile:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid compliance profile: '{payload.profile}'.",
+        )
+
     enforce_document_site_visibility(source_doc, principal)
 
     if (
