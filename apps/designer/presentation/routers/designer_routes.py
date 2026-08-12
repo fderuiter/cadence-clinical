@@ -182,6 +182,22 @@ from packages.security.rbac import (
 from packages.security.signature import SigningReason
 from packages.security.signing import generate_canonical_signature
 
+DEFAULT_JUSTIFICATIONS = {
+    "system_operation",
+    "system",
+    "automated system operation",
+    "automated system",
+    "default",
+    "none",
+    "system-operation",
+    "system operation",
+    "unknown",
+    "n/a",
+    "na",
+    "null",
+    "undefined",
+}
+
 
 class TerminologyConcept(BaseModel):
     """
@@ -445,22 +461,6 @@ async def import_usdm_study(
             change_reason = parsed.get("reason_for_change") or parsed.get(
                 "changeReason"
             )
-
-    DEFAULT_JUSTIFICATIONS = {
-        "system_operation",
-        "system",
-        "automated system operation",
-        "automated system",
-        "default",
-        "none",
-        "system-operation",
-        "system operation",
-        "unknown",
-        "n/a",
-        "na",
-        "null",
-        "undefined",
-    }
 
     is_invalid = False
     if not change_reason or not str(change_reason).strip():
@@ -4152,27 +4152,25 @@ def resolve_change_reason(request: Request, body_reason: str | None = None) -> s
         reason = body_reason
 
     # Enforce non-default and user-supplied check
-    user_id = getattr(request.state, "user_id", None) or request.headers.get("X-User-Id") or "system"
-
-    # Define standard GxP system default values that are prohibited for user-driven actions
-    DEFAULT_JUSTIFICATIONS = {
-        "system_operation",
-        "system",
-        "automated system operation",
-        "automated system",
-        "default",
-        "none",
-        "system-operation",
-        "system operation",
-        "unknown",
-        "n/a",
-        "na",
-        "null",
-        "undefined",
-    }
+    user_id = (
+        getattr(request.state, "user_id", None)
+        or request.headers.get("X-User-Id")
+        or "system"
+    )
 
     path = request.url.path.lower()
-    is_schema_mod = any(item in path for item in ("/arms", "/epochs", "/visits", "/procedures", "/blocks", "/rules", "/assignments"))
+    is_schema_mod = any(
+        item in path
+        for item in (
+            "/arms",
+            "/epochs",
+            "/visits",
+            "/procedures",
+            "/blocks",
+            "/rules",
+            "/assignments",
+        )
+    )
 
     is_invalid = False
     if not reason or not reason.strip():
