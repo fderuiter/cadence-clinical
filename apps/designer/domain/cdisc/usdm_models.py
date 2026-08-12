@@ -15,7 +15,9 @@ from pydantic import BaseModel, ConfigDict, Field
 class Code(BaseModel):
     """USDM Code / Concept representation."""
 
-    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+    model_config = ConfigDict(
+        populate_by_name=True, extra="ignore", frozen=True, validate_assignment=True
+    )
 
     code: str
     code_system: str = Field(alias="codeSystem")
@@ -26,7 +28,9 @@ class Code(BaseModel):
 class SyntaxTemplate(BaseModel):
     """Syntax template definition for rules and eligibility criteria."""
 
-    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+    model_config = ConfigDict(
+        populate_by_name=True, extra="ignore", frozen=True, validate_assignment=True
+    )
 
     id: str
     name: str | None = None
@@ -37,7 +41,9 @@ class SyntaxTemplate(BaseModel):
 class EligibilityCriterion(BaseModel):
     """Eligibility criterion (Inclusion or Exclusion)."""
 
-    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+    model_config = ConfigDict(
+        populate_by_name=True, extra="ignore", frozen=True, validate_assignment=True
+    )
 
     id: str
     name: str
@@ -52,7 +58,9 @@ class EligibilityCriterion(BaseModel):
 class Activity(BaseModel):
     """Study activity or procedure definition."""
 
-    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+    model_config = ConfigDict(
+        populate_by_name=True, extra="ignore", frozen=True, validate_assignment=True
+    )
 
     id: str
     name: str
@@ -65,7 +73,9 @@ class Activity(BaseModel):
 class Encounter(BaseModel):
     """Study encounter / visit definition."""
 
-    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+    model_config = ConfigDict(
+        populate_by_name=True, extra="ignore", frozen=True, validate_assignment=True
+    )
 
     id: str
     name: str
@@ -77,7 +87,9 @@ class Encounter(BaseModel):
 class StudyArm(BaseModel):
     """Study arm definition."""
 
-    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+    model_config = ConfigDict(
+        populate_by_name=True, extra="ignore", frozen=True, validate_assignment=True
+    )
 
     id: str
     name: str
@@ -88,7 +100,9 @@ class StudyArm(BaseModel):
 class StudyEpoch(BaseModel):
     """Study epoch definition."""
 
-    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+    model_config = ConfigDict(
+        populate_by_name=True, extra="ignore", frozen=True, validate_assignment=True
+    )
 
     id: str
     name: str
@@ -99,7 +113,9 @@ class StudyEpoch(BaseModel):
 class StudyDesign(BaseModel):
     """Study design containing arms, epochs, encounters, activities, and criteria."""
 
-    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+    model_config = ConfigDict(
+        populate_by_name=True, extra="ignore", frozen=True, validate_assignment=True
+    )
 
     id: str
     name: str
@@ -116,7 +132,9 @@ class StudyDesign(BaseModel):
 class USDMStudy(BaseModel):
     """Root USDM protocol study specification container."""
 
-    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+    model_config = ConfigDict(
+        populate_by_name=True, extra="ignore", frozen=True, validate_assignment=True
+    )
 
     id: str
     name: str

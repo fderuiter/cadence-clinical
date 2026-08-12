@@ -111,6 +111,9 @@ importers:
       ui:
         specifier: workspace:*
         version: link:../../packages/ui
+      usdm-schemas:
+        specifier: workspace:*
+        version: link:../../packages/usdm-schemas
       vue:
         specifier: ^3.5.40
         version: 3.5.40(typescript@7.0.2)
@@ -203,6 +206,12 @@ importers:
       vue:
         specifier: ^3.5.40
         version: 3.5.40(typescript@5.9.3)
+
+  packages/usdm-schemas:
+    dependencies:
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
 
 packages:
 
@@ -3198,6 +3207,9 @@ packages:
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
+
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
@@ -6203,5 +6215,7 @@ snapshots:
       yargs-parser: 22.0.0
 
   yocto-queue@0.1.0: {}
+
+  zod@3.25.76: {}
 
   zwitch@2.0.4: {}
