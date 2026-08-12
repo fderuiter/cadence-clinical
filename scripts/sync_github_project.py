@@ -47,6 +47,19 @@ SIZE_OPTIONS = {
 }
 
 
+def get_nodes(issue, field_name):
+    """Safely extracts nodes from a GraphQL connection object on an issue."""
+    if not isinstance(issue, dict):
+        return []
+    field = issue.get(field_name)
+    if not isinstance(field, dict):
+        return []
+    nodes = field.get("nodes")
+    if not isinstance(nodes, list):
+        return []
+    return [n for n in nodes if n is not None]
+
+
 def handle_permission_error(stderr_msg):
     combined = stderr_msg.lower()
     patterns = [
@@ -66,6 +79,9 @@ def handle_permission_error(stderr_msg):
         "rate_limit",
         "exceeded",
         "abuse limit",
+        "could not resolve",
+        "not found",
+        "not_found",
     ]
     if any(p in combined for p in patterns):
         print(
@@ -107,7 +123,13 @@ def run_gql(query, variables=None):
         print(f"GraphQL Query failed: {res.stderr.strip()}", file=sys.stderr)
         return None
     try:
-        return json.loads(res.stdout)
+        data = json.loads(res.stdout)
+        if isinstance(data, dict) and "errors" in data:
+            for error in data["errors"]:
+                if isinstance(error, dict) and "message" in error:
+                    handle_permission_error(error["message"])
+            print(f"GraphQL Query returned errors: {data['errors']}", file=sys.stderr)
+        return data
     except Exception as e:
         print(f"Failed to parse GraphQL output: {e}", file=sys.stderr)
         return None
@@ -193,7 +215,11 @@ mutation($issueId: ID!, $subIssueId: ID!) {
 def assign_work_stream(i):
     title = i["title"].lower()
     body = (i.get("body") or "").lower()
-    labels = [lbl["name"].lower() for lbl in i.get("labels", {}).get("nodes", [])]
+    labels = [
+        lbl["name"].lower()
+        for lbl in get_nodes(i, "labels")
+        if isinstance(lbl, dict) and "name" in lbl
+    ]
 
     if any(
         k in title or k in body for k in ["etmf", "isf", "document", "archiving", "tmf"]
@@ -312,7 +338,8 @@ def clean_and_format_body(i, epics, issue_by_num):
     body_core = re.sub(r"\n---\n*$", "", body_core).strip()
 
     stream_name, default_ms = assign_work_stream(i)
-    current_ms = i["milestone"]["title"] if i.get("milestone") else default_ms
+    milestone = i.get("milestone")
+    current_ms = milestone.get("title") if isinstance(milestone, dict) and milestone.get("title") else default_ms
 
     req_ids = sorted(list(set(re.findall(r"(PRD-[A-Z0-9-]+|Trace-\d+|ADR-\d+)", body))))
     req_str = (
@@ -341,7 +368,7 @@ def clean_and_format_body(i, epics, issue_by_num):
     tasklist_section = ""
 
     # Native subIssues for epics
-    native_sub_issues = i.get("subIssues", {}).get("nodes", [])
+    native_sub_issues = get_nodes(i, "subIssues")
     if is_epic and native_sub_issues:
         items = []
         sorted_subs = sorted(native_sub_issues, key=lambda x: x["number"])
@@ -354,7 +381,7 @@ def clean_and_format_body(i, epics, issue_by_num):
         tasklist_section = "\n\n### 📋 Child Issues / Sub-Tasks\n" + "\n".join(items)
 
     # Native blockedBy for non-epics
-    native_blocked_by = i.get("blockedBy", {}).get("nodes", [])
+    native_blocked_by = get_nodes(i, "blockedBy")
     if not is_epic and native_blocked_by:
         items = []
         sorted_prereqs = sorted(native_blocked_by, key=lambda x: x["number"])
@@ -409,11 +436,11 @@ def main():
 
     epics = set()
     for num, i in issue_by_num.items():
-        labels = [lbl["name"] for lbl in i.get("labels", {}).get("nodes", [])]
+        labels = [lbl["name"] for lbl in get_nodes(i, "labels") if isinstance(lbl, dict) and "name" in lbl]
         if "Parent" in labels or i["title"].startswith("EPIC:"):
             epics.add(num)
 
-    # 2. Smart Migration: Parse explicit body declarations and ensure native GraphQL relations exist
+    # 2. Smart Migration: Parse explicit body declarations and ensure native GraphQL relationships exist
     print(
         "2. Auditing explicit body text declarations and migrating to native GraphQL relationships...",
         flush=True,
@@ -445,7 +472,7 @@ def main():
 
         # Sync native blockedBy
         existing_blocked_by = {
-            b["number"] for b in i.get("blockedBy", {}).get("nodes", [])
+            b["number"] for b in get_nodes(i, "blockedBy") if isinstance(b, dict) and "number" in b
         }
         for p_num in explicit_prereqs:
             if p_num not in existing_blocked_by:
@@ -464,8 +491,10 @@ def main():
         if parent_match:
             parent_num = int(parent_match.group(1))
             current_parent = i.get("parent")
+            has_parent = isinstance(current_parent, dict) and "number" in current_parent
+            parent_num_match = current_parent.get("number") if has_parent else None
             if parent_num in issue_by_num and (
-                not current_parent or current_parent["number"] != parent_num
+                not has_parent or parent_num_match != parent_num
             ):
                 parent_issue = issue_by_num[parent_num]
                 print(
@@ -497,10 +526,10 @@ def main():
         num = i["number"]
         new_body, was_changed = clean_and_format_body(i, epics, issue_by_num)
 
-        native_blocked_by = i.get("blockedBy", {}).get("nodes", [])
-        open_native_blockers = [b for b in native_blocked_by if b["state"] == "OPEN"]
+        native_blocked_by = get_nodes(i, "blockedBy")
+        open_native_blockers = [b for b in native_blocked_by if b and isinstance(b, dict) and b.get("state") == "OPEN"]
 
-        current_labels = [lbl["name"] for lbl in i.get("labels", {}).get("nodes", [])]
+        current_labels = [lbl["name"] for lbl in get_nodes(i, "labels") if isinstance(lbl, dict) and "name" in lbl]
 
         labels_to_remove = [
             lbl for lbl in ["blocked", "status: blocked"] if lbl in current_labels
@@ -555,10 +584,12 @@ def main():
 
     item_by_issue_num = {}
     for item in items:
-        if item.get("content", {}).get("type") == "Issue":
-            num = item["content"].get("number")
-            if num:
-                item_by_issue_num[num] = item
+        if isinstance(item, dict):
+            content = item.get("content")
+            if isinstance(content, dict) and content.get("type") == "Issue":
+                num = content.get("number")
+                if num:
+                    item_by_issue_num[num] = item
 
     # 5. Add missing issues to Project Board
     missing_issues = [i for i in open_issues if i["number"] not in item_by_issue_num]
@@ -599,10 +630,12 @@ def main():
         project_data = json.loads(raw_project)
         items = project_data.get("items", [])
         for item in items:
-            if item.get("content", {}).get("type") == "Issue":
-                num = item["content"].get("number")
-                if num:
-                    item_by_issue_num[num] = item
+            if isinstance(item, dict):
+                content = item.get("content")
+                if isinstance(content, dict) and content.get("type") == "Issue":
+                    num = content.get("number")
+                    if num:
+                        item_by_issue_num[num] = item
 
     # 6. Sync Project Board fields
     print(
@@ -616,13 +649,13 @@ def main():
             continue
 
         labels = [
-            lbl["name"].lower() for lbl in issue.get("labels", {}).get("nodes", [])
+            lbl["name"].lower() for lbl in get_nodes(issue, "labels") if isinstance(lbl, dict) and "name" in lbl
         ]
         body = issue.get("body") or ""
         state = issue["state"]
 
-        native_blocked_by = issue.get("blockedBy", {}).get("nodes", [])
-        open_native_blockers = [b for b in native_blocked_by if b["state"] == "OPEN"]
+        native_blocked_by = get_nodes(issue, "blockedBy")
+        open_native_blockers = [b for b in native_blocked_by if b and isinstance(b, dict) and b.get("state") == "OPEN"]
 
         # Backlog gating logic (Label-Based Backlog Gating)
         is_backlog_gated = False
