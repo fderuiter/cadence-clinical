@@ -82,7 +82,7 @@ def setup_security_dynamic_registry():
             "documents:write",
             "archive:export",
         },
-        aliases=["sponsoradmin", "sponsor_admin", "admin", "sponsor administrator"],
+        aliases=["sponsoradmin", "sponsor_admin", "sponsor admin", "admin", "sponsor administrator"],
     )
 
     register_role_and_permissions(
@@ -106,6 +106,7 @@ def setup_security_dynamic_registry():
         aliases=[
             "sponsordesigner",
             "sponsor_designer",
+            "sponsor designer",
             "designer",
             "study_designer",
             "study designer",
@@ -168,6 +169,7 @@ def setup_security_dynamic_registry():
         {
             "study:read",
             "sdv:verify",
+            "sdv:flag",
             "query:manage",
             "audit:view",
             "etmf_document:read",
@@ -218,6 +220,7 @@ def setup_security_dynamic_registry():
         aliases=[
             "datamanager",
             "data_manager",
+            "data manager",
             "dm",
             "sponsor_dm",
             "sponsor data manager",
@@ -236,7 +239,7 @@ def setup_security_dynamic_registry():
             "documents:read",
             "archive:export",
         },
-        aliases=["auditor", "inspector", "regulatory_inspector"],
+        aliases=["auditor", "inspector", "regulatory_inspector", "regulatory inspector"],
     )
 
     register_role_and_permissions(
@@ -305,7 +308,7 @@ def setup_security_dynamic_registry():
         register_rbac_role_permissions(
             r,
             {
-                "study_design": {"read"},
+                "study_design": {"read", "approve"},
                 "etmf_document": {
                     "read",
                     "write",
@@ -322,11 +325,7 @@ def setup_security_dynamic_registry():
                 "ecoa_diary": {"create", "read", "update", "delete", "alert"},
                 "protocol_export": {"generate", "read"},
                 "global_library": {
-                    "create",
-                    "update",
-                    "amend",
                     "transition",
-                    "instantiate",
                     "read",
                 },
                 "library_object": {"approve", "publish", "release"},
@@ -337,7 +336,7 @@ def setup_security_dynamic_registry():
         register_rbac_role_permissions(
             r,
             {
-                "study_design": {"create", "read", "update", "delete"},
+                "study_design": {"create", "read", "update", "delete", "approve"},
                 "etmf_document": {"read"},
                 "visit_windowing": {"create", "read", "update"},
                 "soa": {"create", "read", "update", "delete"},
@@ -359,6 +358,8 @@ def setup_security_dynamic_registry():
             r,
             {
                 "data": {"read", "write"},
+                "study_design": {"approve"},
+                "sdv": {"read"},
                 "etmf_document": {
                     "read",
                     "write",
@@ -379,11 +380,7 @@ def setup_security_dynamic_registry():
                 "export_masked": {"create"},
                 "protocol_export": {"generate", "read"},
                 "global_library": {
-                    "create",
-                    "update",
-                    "amend",
                     "transition",
-                    "instantiate",
                     "read",
                 },
                 "library_object": {"approve", "publish"},
@@ -395,6 +392,15 @@ def setup_security_dynamic_registry():
             r,
             {
                 "system": {"admin"},
+                "study_design": {"create", "read", "update", "delete", "approve"},
+                "global_library": {
+                    "create",
+                    "update",
+                    "amend",
+                    "transition",
+                    "instantiate",
+                    "read",
+                },
                 "medical_coding": {"create", "read", "update"},
                 "lab_range": {"create", "read", "update", "delete", "alert"},
                 "ecoa_diary": {"create", "read", "update", "delete", "alert"},
@@ -418,7 +424,11 @@ def setup_security_dynamic_registry():
         register_rbac_role_permissions(
             r,
             {
-                "study_design": {"read"},
+                "study_design": {"read", "approve"},
+                "global_library": {
+                    "transition",
+                    "read",
+                },
                 "etmf_document": {
                     "read",
                     "write",
@@ -452,7 +462,7 @@ def setup_security_dynamic_registry():
             r,
             {
                 "data": {"read"},
-                "sdv": {"verify"},
+                "sdv": {"verify", "flag", "read", "create", "update"},
                 "etmf_document": {
                     "read",
                     "write",
@@ -494,6 +504,7 @@ def setup_security_dynamic_registry():
             {
                 "data": {"read", "write"},
                 "signature": {"sign"},
+                "sdv": {"read"},
                 "etmf_document": {"read"},
                 "lab_range": {"read", "alert"},
                 "ecoa_diary": {"create", "read", "update", "delete", "alert"},
@@ -510,6 +521,7 @@ def setup_security_dynamic_registry():
                 "data": {"read", "write"},
                 "signature": {"sign"},
                 "emergency_unblind": {"execute"},
+                "sdv": {"read"},
                 "etmf_document": {"read"},
                 "lab_range": {"read", "alert"},
                 "ecoa_diary": {"create", "read", "update", "delete", "alert"},
@@ -526,6 +538,7 @@ def setup_security_dynamic_registry():
                 "data": {"read", "write"},
                 "signature": {"sign"},
                 "emergency_unblind": {"execute"},
+                "sdv": {"read"},
                 "etmf_document": {"read"},
                 "lab_range": {"read", "alert"},
                 "ecoa_diary": {"create", "read", "update", "delete", "alert"},
@@ -542,6 +555,7 @@ def setup_security_dynamic_registry():
                 "data": {"read", "write"},
                 "signature": {"sign"},
                 "emergency_unblind": {"execute"},
+                "sdv": {"read"},
                 "etmf_document": {"read"},
                 "lab_range": {"read", "alert"},
                 "ecoa_diary": {"create", "read", "update", "delete", "alert"},
@@ -555,6 +569,7 @@ def setup_security_dynamic_registry():
         register_rbac_role_permissions(
             r,
             {
+                "sdv": {"read"},
                 "etmf_document": {"read"},
                 "etmf_edl": {"read"},
                 "etmf_audit_logs": {"read"},

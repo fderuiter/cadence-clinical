@@ -151,7 +151,7 @@ try:
             "documents:write",
             "archive:export",
         },
-        aliases=["sponsoradmin", "sponsor_admin", "admin", "sponsor administrator"],
+        aliases=["sponsoradmin", "sponsor_admin", "sponsor admin", "admin", "sponsor administrator"],
     )
 
     register_role_and_permissions(
@@ -219,6 +219,7 @@ try:
         aliases=[
             "sponsordesigner",
             "sponsor_designer",
+            "sponsor designer",
             "designer",
             "study_designer",
             "study designer",
@@ -303,6 +304,7 @@ try:
         {
             "study:read",
             "sdv:verify",
+            "sdv:flag",
             "query:manage",
             "audit:view",
             "etmf_document:read",
@@ -385,6 +387,7 @@ try:
         aliases=[
             "datamanager",
             "data_manager",
+            "data manager",
             "dm",
             "sponsor_dm",
             "sponsor data manager",
@@ -406,7 +409,7 @@ try:
             "documents:read",
             "archive:export",
         },
-        aliases=["auditor", "inspector", "regulatory_inspector"],
+        aliases=["auditor", "inspector", "regulatory_inspector", "regulatory inspector"],
     )
 
     register_role_and_permissions(
@@ -501,7 +504,53 @@ try:
 
     # 4. Register RBAC role permissions in rbac.py
     admin_perms = {
-        "study_design": {"create", "read", "update", "delete"},
+        "study_design": {"create", "read", "update", "delete", "approve"},
+        "etmf_document": {
+            "read",
+            "write",
+            "delete",
+            "sign",
+            "create",
+            "manage_expiration",
+            "tag",
+            "redact",
+            "read_raw",
+            "transition_draft",
+            "transition_technical_qc",
+            "transition_clinical_qc",
+            "transition_approved",
+            "transition_archived",
+            "transition_rejected",
+            "transition_signed",
+        },
+        "etmf_edl": {"read", "write", "delete", "sign", "create"},
+        "visit_windowing": {"create", "read", "update"},
+        "soa": {"create", "read", "update", "delete"},
+        "lab_range": {"create", "read", "update", "delete", "alert"},
+        "ecoa_diary": {"create", "read", "update", "delete", "alert"},
+        "ecoa_schedule": {"create", "read", "update", "delete"},
+        "ecoa_submission": {"create", "read"},
+        "eisf_document": {"create", "read", "update", "delete", "sync"},
+        "medical_coding": {"create", "read", "update"},
+        "etmf_taxonomy": {"read"},
+        "protocol_export": {"generate", "read"},
+        "audit_log": {"read"},
+        "global_library": {
+            "transition",
+            "read",
+        },
+        "library_object": {"create", "read", "update", "delete", "approve", "publish", "release"},
+        "protocol_section": {"lock", "unlock", "approve", "review", "read"},
+        "mdr_concept": {"read"},
+        "protocol_ingestion": {"upload", "read", "review", "promote"},
+        "protocol_version": {"sign", "transition_approved"},
+        "regulatory_form": {"create", "read", "sign"},
+        "training_log": {"create", "read", "sign"},
+        "quality_event": {"create", "investigate"},
+    }
+
+    sysadmin_perms = {
+        "study_design": {"create", "read", "update", "delete", "approve"},
         "etmf_document": {
             "read",
             "write",
@@ -552,7 +601,7 @@ try:
     }
 
     designer_perms = {
-        "study_design": {"create", "read", "update", "delete"},
+        "study_design": {"create", "read", "update", "delete", "approve"},
         "etmf_document": {"read"},
         "visit_windowing": {"create", "read", "update"},
         "soa": {"create", "read", "update", "delete"},
@@ -576,6 +625,8 @@ try:
 
     dm_perms = {
         "data": {"read", "write"},
+        "study_design": {"approve"},
+        "sdv": {"read"},
         "etmf_document": {
             "read",
             "write",
@@ -606,12 +657,9 @@ try:
         "query_lifecycle": {"create", "read", "update", "delete"},
         "export_masked": {"create"},
         "protocol_export": {"generate", "read"},
+        "mdr_concept": {"read"},
         "global_library": {
-            "create",
-            "update",
-            "amend",
             "transition",
-            "instantiate",
             "read",
         },
         "library_object": {"approve", "publish"},
@@ -622,7 +670,7 @@ try:
 
     cra_perms = {
         "data": {"read"},
-        "sdv": {"verify"},
+        "sdv": {"verify", "flag", "read", "create", "update"},
         "etmf_document": {
             "read",
             "write",
@@ -689,6 +737,7 @@ try:
     investigator_perms = {
         "data": {"read", "write"},
         "signature": {"sign"},
+        "sdv": {"read"},
         "etmf_document": {"read"},
         "eisf_document": {"create", "read", "update", "delete", "sync"},
         "lab_range": {"read", "alert"},
@@ -711,6 +760,7 @@ try:
     }
 
     auditor_perms = {
+        "sdv": {"read"},
         "etmf_document": {"read"},
         "etmf_edl": {"read"},
         "etmf_audit_logs": {"read"},
@@ -796,7 +846,7 @@ try:
         "system administrator",
     ]
     for r in sysadmin_roles:
-        register_rbac_role_permissions(r, admin_perms)
+        register_rbac_role_permissions(r, sysadmin_perms)
 
     cra_roles = [
         "ClinicalResearchAssociate",

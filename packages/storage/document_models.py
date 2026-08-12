@@ -18,6 +18,7 @@ class DocumentMetadataResponse(BaseModel):
     filename: str
     version_index: str
     sha256_hash: str
+    dia_tmf_code: str
     status: str
     created_by: str
     created_at: datetime

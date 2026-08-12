@@ -4829,31 +4829,42 @@ async def update_query_state(
             raise HTTPException(status_code=400, detail=str(e))
 
         # Enforce role boundaries depending on target transition state
-        user_roles = roles
-        cra_dm_roles = {
+        user_roles_lower = {r.strip().lower() for r in roles}
+        cra_dm_roles_lower = {
             "cra",
+            "clinicalresearchassociate",
+            "clinical research associate",
+            "monitor",
             "data manager",
             "data_manager",
+            "datamanager",
             "sponsor_dm",
             "dm",
             "admin",
+            "sponsoradmin",
+            "sponsor_admin",
+            "sponsor admin",
         }
-        inv_roles = {
+        inv_roles_lower = {
             "site investigator",
             "site_investigator",
             "site-investigator",
             "investigator",
             "investigator_user",
+            "principalinvestigator",
+            "principal_investigator",
+            "principal investigator",
+            "pi",
         }
 
         if target_status in ("CANDIDATE", "OPEN", "CLOSED", "REOPENED", "CANCELLED"):
-            if not any(r in cra_dm_roles for r in user_roles):
+            if not any(r in cra_dm_roles_lower for r in user_roles_lower):
                 raise HTTPException(
                     status_code=403,
                     detail="User role is not authorized for this action.",
                 )
         elif target_status == "ANSWERED":
-            if not any(r in inv_roles for r in user_roles):
+            if not any(r in inv_roles_lower for r in user_roles_lower):
                 raise HTTPException(
                     status_code=403,
                     detail="User role is not authorized for this action.",

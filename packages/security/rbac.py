@@ -775,7 +775,16 @@ def require_roles(*allowed_roles: str, detail: str | None = None):
                 if k.lower() in (norm_role_canonical.lower(), norm_role.lower()):
                     expanded_allowed.update(v)
 
-        if not any(role in expanded_allowed for role in roles):
+        lower_roles = {r.strip().lower() for r in roles}
+        # Also expand user's roles case-insensitively using ROLE_EXPANSIONS
+        expanded_user_roles = set(lower_roles)
+        for r in lower_roles:
+            for k, v in ROLE_EXPANSIONS.items():
+                if k.lower() == r:
+                    expanded_user_roles.update(x.strip().lower() for x in v)
+
+        lower_allowed = {r.strip().lower() for r in expanded_allowed}
+        if not any(role in lower_allowed for role in expanded_user_roles):
             raise HTTPException(
                 status_code=403,
                 detail=detail or "User role is not authorized for this action.",

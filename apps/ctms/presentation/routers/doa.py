@@ -43,19 +43,25 @@ def check_ctms_permission(principal: Principal, action: str) -> bool:
     allowed_write_roles = {
         "admin",
         "sysadmin",
+        "sponsoradmin",
         "sponsor_dm",
+        "datamanager",
         "cra",
+        "clinicalresearchassociate",
         "monitor",
         "grants_manager",
         "grants manager",
         "system",
         "principal_investigator",
         "principal investigator",
+        "principalinvestigator",
     }
     allowed_read_roles = {
         "investigator",
         "site investigator",
+        "site_investigator",
         "crc",
+        "clinicalresearchcoordinator",
         "auditor",
         "anonymous",
     } | allowed_write_roles

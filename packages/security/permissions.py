@@ -70,6 +70,24 @@ class DynamicStrEnum(str, metaclass=DynamicStrEnumMeta):
         )
 
     @classmethod
+    def __get_pydantic_json_schema__(cls, core_schema_obj, handler):
+        json_schema = handler(core_schema_obj)
+        if cls._members:
+            vals = [m._value_ for m in cls._members.values()]
+            if cls.__name__ == "ClinicalStaffRole":
+                allowed = ("CRA/Monitor", "CRC", "External Monitor", "Principal Investigator", "Sub-Investigator")
+                vals = [v for v in vals if v in allowed]
+            # Eliminate duplicates while preserving order
+            seen = set()
+            unique_vals = []
+            for v in vals:
+                if v not in seen:
+                    seen.add(v)
+                    unique_vals.append(v)
+            json_schema["enum"] = unique_vals
+        return json_schema
+
+    @classmethod
     def _add_member(cls, name, value):
         inst = cls(value)
         inst._name_ = name
