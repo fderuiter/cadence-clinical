@@ -28,3 +28,4 @@
 /packages/security/      @clinical-platform/security-and-privacy
 /packages/storage/       @clinical-platform/document-management
 /packages/ui/            @clinical-platform/client-ux
+/packages/usdm-schemas/  @clinical-platform/integration-and-routing
