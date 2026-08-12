@@ -40,22 +40,26 @@ def receive_before_flush(session: Session, flush_context, instances):
     if not session.is_modified:
         return
 
-    # Propagate thread-safe context variables into PostgreSQL session if database trigger is active
-    if session.bind and session.bind.dialect.name == "postgresql":
+    # Propagate thread-safe context variables into database session if database trigger is active
+    if session.bind:
         try:
             from sqlalchemy import text
 
             user_id_val = current_user_id.get()
             reason_val = current_change_reason.get()
-            session.connection().execute(
+            conn = session.connection()
+            conn.execute(
                 text("SELECT set_config('cadence.current_user_id', :user_id, true);"),
                 {"user_id": user_id_val or "system"},
             )
-            session.connection().execute(
+            conn.execute(
                 text(
                     "SELECT set_config('cadence.current_change_reason', :reason, true);"
                 ),
                 {"reason": reason_val or "system_operation"},
+            )
+            conn.execute(
+                text("SELECT set_config('cadence.app_writing', 'true', true);")
             )
         except Exception:
             pass
