@@ -184,7 +184,7 @@ export interface paths {
      *     Response: The HTTP response from the downstream service or a
      *               Gateway error JSON payload.
      */
-    get: operations["proxy_requests__path__post"];
+    get: operations["proxy_requests__path__put"];
     /**
      * Proxy Requests
      * @description Proxy HTTP requests to downstream microservices.
@@ -201,7 +201,7 @@ export interface paths {
      *     Response: The HTTP response from the downstream service or a
      *               Gateway error JSON payload.
      */
-    put: operations["proxy_requests__path__post"];
+    put: operations["proxy_requests__path__put"];
     /**
      * Proxy Requests
      * @description Proxy HTTP requests to downstream microservices.
@@ -218,7 +218,7 @@ export interface paths {
      *     Response: The HTTP response from the downstream service or a
      *               Gateway error JSON payload.
      */
-    post: operations["proxy_requests__path__post"];
+    post: operations["proxy_requests__path__put"];
     /**
      * Proxy Requests
      * @description Proxy HTTP requests to downstream microservices.
@@ -235,7 +235,7 @@ export interface paths {
      *     Response: The HTTP response from the downstream service or a
      *               Gateway error JSON payload.
      */
-    delete: operations["proxy_requests__path__post"];
+    delete: operations["proxy_requests__path__put"];
     /**
      * Proxy Requests
      * @description Proxy HTTP requests to downstream microservices.
@@ -252,7 +252,7 @@ export interface paths {
      *     Response: The HTTP response from the downstream service or a
      *               Gateway error JSON payload.
      */
-    options: operations["proxy_requests__path__post"];
+    options: operations["proxy_requests__path__put"];
     /**
      * Proxy Requests
      * @description Proxy HTTP requests to downstream microservices.
@@ -269,7 +269,7 @@ export interface paths {
      *     Response: The HTTP response from the downstream service or a
      *               Gateway error JSON payload.
      */
-    head: operations["proxy_requests__path__post"];
+    head: operations["proxy_requests__path__put"];
     /**
      * Proxy Requests
      * @description Proxy HTTP requests to downstream microservices.
@@ -286,7 +286,7 @@ export interface paths {
      *     Response: The HTTP response from the downstream service or a
      *               Gateway error JSON payload.
      */
-    patch: operations["proxy_requests__path__post"];
+    patch: operations["proxy_requests__path__put"];
   };
   "/ctms/api/v1/ctms/doa/delegate": {
     /**
@@ -15147,7 +15147,7 @@ export interface operations {
    *     Response: The HTTP response from the downstream service or a
    *               Gateway error JSON payload.
    */
-  proxy_requests__path__post: {
+  proxy_requests__path__put: {
     parameters: {
       path: {
         path: string;

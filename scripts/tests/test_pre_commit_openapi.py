@@ -122,12 +122,16 @@ def test_check_and_run_exporter_success(
 
     # 1. Dependency check passes (returncode=0)
     # 2. Schema export passes (returncode=0)
-    # 3. Git add passes (returncode=0)
+    # 3. TypeScript compilation passes (returncode=0)
+    # 4. TypeScript typecheck passes (returncode=0)
+    # 5. Git add passes (returncode=0)
     mock_run.side_effect = [
         MagicMock(returncode=0),  # Dependency check
         MagicMock(
             returncode=0, stdout="Successfully exported schemas", stderr=""
         ),  # Exporter
+        MagicMock(returncode=0),  # TypeScript compilation
+        MagicMock(returncode=0),  # TypeScript typecheck
         MagicMock(returncode=0),  # Git add
     ]
 
@@ -140,6 +144,18 @@ def test_check_and_run_exporter_success(
             "add",
             os.path.abspath(
                 os.path.join(os.path.dirname(__file__), "..", "..", "docs", "openapi")
+            ),
+            os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__),
+                    "..",
+                    "..",
+                    "apps",
+                    "web",
+                    "src",
+                    "api",
+                    "types.ts",
+                )
             ),
         ],
         cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")),
