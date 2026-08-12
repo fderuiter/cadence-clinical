@@ -393,6 +393,12 @@ event.listen(
 
 @event.listens_for(DocumentQCTransition, "before_update")
 def prevent_qc_transition_update(mapper, connection, target):
+    """
+    SQLAlchemy event listener that prevents updates on DocumentQCTransition records.
+
+    Raises:
+        RuntimeError: Always raises to block update operations.
+    """
     raise RuntimeError(
         "IMMUTABILITY_VIOLATION: DocumentQCTransition records are append-only and cannot be updated."
     )
@@ -400,6 +406,12 @@ def prevent_qc_transition_update(mapper, connection, target):
 
 @event.listens_for(DocumentQCTransition, "before_delete")
 def prevent_qc_transition_delete(mapper, connection, target):
+    """
+    SQLAlchemy event listener that prevents deletions on DocumentQCTransition records.
+
+    Raises:
+        RuntimeError: Always raises to block delete operations.
+    """
     raise RuntimeError(
         "IMMUTABILITY_VIOLATION: DocumentQCTransition records are append-only and cannot be deleted."
     )
@@ -453,6 +465,12 @@ event.listen(
 
 @event.listens_for(TMFDocument, "before_delete")
 def prevent_document_delete(mapper, connection, target):
+    """
+    SQLAlchemy event listener that prevents deletions on TMFDocument records.
+
+    Raises:
+        RuntimeError: Always raises to block delete operations.
+    """
     raise RuntimeError(
         "IMMUTABILITY_VIOLATION: eTMF documents are immutable and cannot be deleted."
     )
