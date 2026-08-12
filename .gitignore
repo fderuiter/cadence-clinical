@@ -139,8 +139,9 @@ Thumbs.db
 .cursor/
 
 # ------------------------------------------
-# Isolated eTMF & Generated Binary Templates
+# Isolated eTMF, Exports, & Generated Binary Templates
 # ------------------------------------------
+exports/
 tmp_etmf/
 apps/designer/templates/*.docx
 *.docx
