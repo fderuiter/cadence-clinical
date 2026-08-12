@@ -10,11 +10,11 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2352
-- **Passed:** 2333 🟢
+- **Total Automated Test Cases Run:** 2361
+- **Passed:** 2342 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
-- **Overall Operational Pass Rate:** 99.19%
+- **Overall Operational Pass Rate:** 99.20%
 
 ## 2. Installation Qualification (IQ)
 
@@ -310,10 +310,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_blinding_constraints_on_ui_data_rendering`                                   | `apps.designer.tests.test_designer_compliance`                              | PRD-MDR-006                                  | 🟢 PASSED  | < 1s     |
 | `test_fda_compliant_pdf_generation_protocol`                                       | `apps.designer.tests.test_designer_compliance`                              | PRD-SUB-007                                  | 🟢 PASSED  | < 1s     |
 | `test_field_level_ingestion_validations`                                           | `apps.designer.tests.test_designer_compliance`                              | PRD-EDC-002                                  | 🟢 PASSED  | < 1s     |
-| `test_gxp_audit_enforcement_default_justification`                                 | `apps.designer.tests.test_designer_compliance`                              | PRD-CRF-010                                  | 🟢 PASSED  | < 1s     |
-| `test_gxp_audit_enforcement_missing_justification`                                 | `apps.designer.tests.test_designer_compliance`                              | PRD-CRF-010                                  | 🟢 PASSED  | < 1s     |
-| `test_gxp_audit_enforcement_read_only_bypass`                                      | `apps.designer.tests.test_designer_compliance`                              | PRD-CRF-010                                  | 🟢 PASSED  | < 1s     |
-| `test_gxp_audit_enforcement_system_user_bypass`                                    | `apps.designer.tests.test_designer_compliance`                              | PRD-CRF-011                                  | 🟢 PASSED  | < 1s     |
+| `test_gxp_audit_enforcement_default_justification`                                 | `apps.designer.tests.test_designer_compliance`                              | PRD-CRF-010, Trace-28                        | 🟢 PASSED  | < 1s     |
+| `test_gxp_audit_enforcement_missing_justification`                                 | `apps.designer.tests.test_designer_compliance`                              | PRD-CRF-010, Trace-28                        | 🟢 PASSED  | < 1s     |
+| `test_gxp_audit_enforcement_read_only_bypass`                                      | `apps.designer.tests.test_designer_compliance`                              | PRD-CRF-010, Trace-28                        | 🟢 PASSED  | < 1s     |
+| `test_gxp_audit_enforcement_system_user_bypass`                                    | `apps.designer.tests.test_designer_compliance`                              | PRD-CRF-011, Trace-29                        | 🟢 PASSED  | < 1s     |
 | `test_ie_criteria_logical_mapping_to_ecrf`                                         | `apps.designer.tests.test_designer_compliance`                              | PRD-MDR-007                                  | 🟢 PASSED  | < 1s     |
 | `test_spreadsheet_ingestion_sheet_structure`                                       | `apps.designer.tests.test_designer_compliance`                              | PRD-EDC-001                                  | 🟢 PASSED  | < 1s     |
 | `test_study_differences_missing_version`                                           | `apps.designer.tests.test_designer_differences`                             | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
@@ -1976,6 +1976,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_reorder_visits_mock`                                                         | `packages.database.tests.test_delta`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_reorder_visits_real`                                                         | `packages.database.tests.test_delta`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_update_study_properties`                                                     | `packages.database.tests.test_delta`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_mock_graph_database_manager`                                                 | `packages.database.tests.test_graph_persistence`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_transaction_retry_decorator`                                                 | `packages.database.tests.test_graph_persistence`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_transaction_retry_failure`                                                   | `packages.database.tests.test_graph_persistence`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_validate_cypher_query_failures`                                              | `packages.database.tests.test_graph_persistence`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_validate_cypher_query_success`                                               | `packages.database.tests.test_graph_persistence`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_ledger_sealing_and_validation`                                               | `packages.database.tests.test_ledger_and_triggers`                          | PRD-SYS-003                                  | 🟢 PASSED  | < 1s     |
 | `test_out_of_band_update_triggers_audit_entry`                                     | `packages.database.tests.test_ledger_and_triggers`                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_prevent_audit_ledger_seals_mutation`                                         | `packages.database.tests.test_ledger_and_triggers`                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |

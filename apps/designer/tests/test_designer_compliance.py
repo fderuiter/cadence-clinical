@@ -124,7 +124,8 @@ def _make_auth_headers_comp(
 def test_gxp_audit_enforcement_missing_justification():
     """Verify that a state-altering request without a justification is rejected.
 
-    # @req:PRD-CRF-010, Trace-28
+    # @req:PRD-CRF-010
+    # @req:Trace-28
     """
     client = TestClient(app)
     headers = _make_auth_headers_comp(change_reason="")
@@ -151,7 +152,8 @@ def test_gxp_audit_enforcement_missing_justification():
 def test_gxp_audit_enforcement_default_justification():
     """Verify that user-driven interactions with a default justification are rejected.
 
-    # @req:PRD-CRF-010, Trace-28
+    # @req:PRD-CRF-010
+    # @req:Trace-28
     """
     client = TestClient(app)
     # Prohibited default value
@@ -177,7 +179,8 @@ def test_gxp_audit_enforcement_default_justification():
 def test_gxp_audit_enforcement_system_user_bypass():
     """Verify that a system/service identity can execute with system_operation.
 
-    # @req:PRD-CRF-011, Trace-29
+    # @req:PRD-CRF-011
+    # @req:Trace-29
     """
     client = TestClient(app)
     headers = _make_auth_headers_comp(
@@ -207,7 +210,8 @@ def test_gxp_audit_enforcement_system_user_bypass():
 def test_gxp_audit_enforcement_read_only_bypass():
     """Verify that read-only GET queries are exempt from justification checks.
 
-    # @req:PRD-CRF-010, Trace-28
+    # @req:PRD-CRF-010
+    # @req:Trace-28
     """
     client = TestClient(app)
     # GET request with no change reason header
