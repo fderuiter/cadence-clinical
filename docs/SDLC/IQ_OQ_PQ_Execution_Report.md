@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2346
-- **Passed:** 2327 🟢
+- **Total Automated Test Cases Run:** 2348
+- **Passed:** 2329 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.19%
@@ -1202,6 +1202,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_rsassa_pss_succeeds`                                                         | `apps.execution.tests.test_part11_compliance_engine`                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_unapproved_self_signed_certificate_fails`                                    | `apps.execution.tests.test_part11_compliance_engine`                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_certificate_revocation_verification`                                         | `apps.execution.tests.test_part11_esignatures`                              | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_esignature_duplicate_serial_rejection`                                       | `apps.execution.tests.test_part11_esignatures`                              | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_esignature_tamper_detection_e2e`                                             | `apps.execution.tests.test_part11_esignatures`                              | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_tampered_pdf_fails_verification`                                             | `apps.execution.tests.test_part11_esignatures`                              | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_valid_part11_signature_verification`                                         | `apps.execution.tests.test_part11_esignatures`                              | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
@@ -2161,6 +2162,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_soft_delete_generates_audit_log`                                             | `packages.security.tests.test_audit`                                        | PRD-SYS-002                                  | 🟢 PASSED  | < 1s     |
 | `test_subject_notification_skips_clinical_auditing`                                | `packages.security.tests.test_audit`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_update_generates_audit_log`                                                  | `packages.security.tests.test_audit`                                        | PRD-SYS-001                                  | 🟢 PASSED  | < 1s     |
+| `test_fingerprint_vs_serial_forgery_rejection`                                     | `packages.security.tests.test_cert_store`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_register_and_verify_valid_certificate`                                       | `packages.security.tests.test_cert_store`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_revoke_certificate_status_check`                                             | `packages.security.tests.test_cert_store`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_dual_custody_negative_duplicate_shares`                                      | `packages.security.tests.test_cryptography`                                 | PRD-SYS-001                                  | 🟢 PASSED  | < 1s     |
