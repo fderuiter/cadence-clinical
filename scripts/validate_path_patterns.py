@@ -39,9 +39,10 @@ RULES = {
             "apps/subject-portal/**/*.ts",
             "packages/ui/**/*.ts",
             "packages/gateway-rewrite/**/*.ts",
+            "packages/usdm-schemas/**/*.ts",
             "tests/**/*.ts",
         ],
-        "description": "TypeScript files (*.ts) must reside inside frontend structures or tests (e.g., apps/web/, apps/subject-portal/, packages/ui/, packages/gateway-rewrite/, tests/).",
+        "description": "TypeScript files (*.ts) must reside inside frontend structures, packages, or tests (e.g., apps/web/, apps/subject-portal/, packages/ui/, packages/gateway-rewrite/, packages/usdm-schemas/, tests/).",
     },
     "*.tsx": {
         "allowed": [
