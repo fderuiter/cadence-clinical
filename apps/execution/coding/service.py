@@ -475,7 +475,7 @@ async def process_coding_action(
                 reason_for_change=reason_for_change
                 or f"Manual decision: {action_upper}",
             )
-            repo.session.add(outbox_entry)
+            await repo.add_outbox_entry(outbox_entry)
 
     return assignment
 

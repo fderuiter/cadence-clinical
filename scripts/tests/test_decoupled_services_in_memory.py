@@ -71,6 +71,7 @@ class DummyAssignment:
 
 class DummyQuery:
     def __init__(self, observation_id: str):
+        self.id = "query_1"
         self.observation_id = observation_id
         self.status = "OPEN"
         self.resolver = None
@@ -83,6 +84,7 @@ class InMemoryCodingRepository:
         self.assignments = {"assign_1": DummyAssignment()}
         self.queries = {"obs_1": [DummyQuery("obs_1")]}
         self.ledgers = []
+        self.outbox = []
 
     async def get_assignment(self, assignment_id: str) -> Any:
         if assignment_id in self.assignments:
@@ -103,6 +105,9 @@ class InMemoryCodingRepository:
 
     async def save_query(self, query: Any) -> None:
         pass
+
+    async def add_outbox_entry(self, entry: Any) -> None:
+        self.outbox.append(entry)
 
     async def validate_meddra_term(self, version: str, code: str) -> Any:
         return "mock_meddra_record" if code == "10029300" else None

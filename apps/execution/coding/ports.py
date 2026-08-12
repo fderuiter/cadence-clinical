@@ -40,6 +40,10 @@ class CodingRepositoryPort(RepositoryPort[Any]):
         """Persist/update a clinical query."""
         ...
 
+    async def add_outbox_entry(self, entry: Any) -> None:
+        """Add an outbox entry to the repository."""
+        ...
+
     async def validate_meddra_term(self, version: str, code: str) -> Any:
         """Validate code and version in MedDRA dictionary."""
         ...
