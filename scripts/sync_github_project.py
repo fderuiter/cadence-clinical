@@ -339,7 +339,11 @@ def clean_and_format_body(i, epics, issue_by_num):
 
     stream_name, default_ms = assign_work_stream(i)
     milestone = i.get("milestone")
-    current_ms = milestone.get("title") if isinstance(milestone, dict) and milestone.get("title") else default_ms
+    current_ms = (
+        milestone.get("title")
+        if isinstance(milestone, dict) and milestone.get("title")
+        else default_ms
+    )
 
     req_ids = sorted(list(set(re.findall(r"(PRD-[A-Z0-9-]+|Trace-\d+|ADR-\d+)", body))))
     req_str = (
@@ -436,7 +440,11 @@ def main():
 
     epics = set()
     for num, i in issue_by_num.items():
-        labels = [lbl["name"] for lbl in get_nodes(i, "labels") if isinstance(lbl, dict) and "name" in lbl]
+        labels = [
+            lbl["name"]
+            for lbl in get_nodes(i, "labels")
+            if isinstance(lbl, dict) and "name" in lbl
+        ]
         if "Parent" in labels or i["title"].startswith("EPIC:"):
             epics.add(num)
 
@@ -472,7 +480,9 @@ def main():
 
         # Sync native blockedBy
         existing_blocked_by = {
-            b["number"] for b in get_nodes(i, "blockedBy") if isinstance(b, dict) and "number" in b
+            b["number"]
+            for b in get_nodes(i, "blockedBy")
+            if isinstance(b, dict) and "number" in b
         }
         for p_num in explicit_prereqs:
             if p_num not in existing_blocked_by:
@@ -527,9 +537,17 @@ def main():
         new_body, was_changed = clean_and_format_body(i, epics, issue_by_num)
 
         native_blocked_by = get_nodes(i, "blockedBy")
-        open_native_blockers = [b for b in native_blocked_by if b and isinstance(b, dict) and b.get("state") == "OPEN"]
+        open_native_blockers = [
+            b
+            for b in native_blocked_by
+            if b and isinstance(b, dict) and b.get("state") == "OPEN"
+        ]
 
-        current_labels = [lbl["name"] for lbl in get_nodes(i, "labels") if isinstance(lbl, dict) and "name" in lbl]
+        current_labels = [
+            lbl["name"]
+            for lbl in get_nodes(i, "labels")
+            if isinstance(lbl, dict) and "name" in lbl
+        ]
 
         labels_to_remove = [
             lbl for lbl in ["blocked", "status: blocked"] if lbl in current_labels
@@ -649,13 +667,19 @@ def main():
             continue
 
         labels = [
-            lbl["name"].lower() for lbl in get_nodes(issue, "labels") if isinstance(lbl, dict) and "name" in lbl
+            lbl["name"].lower()
+            for lbl in get_nodes(issue, "labels")
+            if isinstance(lbl, dict) and "name" in lbl
         ]
         body = issue.get("body") or ""
         state = issue["state"]
 
         native_blocked_by = get_nodes(issue, "blockedBy")
-        open_native_blockers = [b for b in native_blocked_by if b and isinstance(b, dict) and b.get("state") == "OPEN"]
+        open_native_blockers = [
+            b
+            for b in native_blocked_by
+            if b and isinstance(b, dict) and b.get("state") == "OPEN"
+        ]
 
         # Backlog gating logic (Label-Based Backlog Gating)
         is_backlog_gated = False
