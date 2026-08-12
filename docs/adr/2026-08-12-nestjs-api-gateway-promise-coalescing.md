@@ -25,9 +25,10 @@ We need a resilient, low-latency, and robust mechanism that merges overlapping r
 ### Option 1: Native Node.js Promise Coalescing & In-Memory Cache
 
 Implement a custom `JwksCoalescerService` using native `Map` collections:
+
 - `keyCache` (or `publicKeyCache`) to hold parsed public keys.
 - `inFlightFetches` to track active HTTP promises for each Key ID.
-Use native `Promise` chaining to multiplex in-flight fetches, and `AbortController` to enforce timeouts.
+  Use native `Promise` chaining to multiplex in-flight fetches, and `AbortController` to enforce timeouts.
 
 - **Pros:**
   - ✅ High performance: zero external cache/network overhead for local hits.
