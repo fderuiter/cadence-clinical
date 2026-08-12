@@ -940,7 +940,7 @@ apiConfig.setTokenProvider(() => {
   try {
     const authStore = useAuthStore();
     return authStore?.token || authStore?.accessToken;
-  } catch (e) {
+  } catch {
     return null;
   }
 });
@@ -1288,7 +1288,7 @@ export const auditorService = {
   },
 };
 `,
-  'ingestionClient.js': `import { apiClient, getBaseUrl } from "./apiClient";
+  'ingestionClient.js': `import { apiClient } from "./apiClient";
 
 export const ingestionClient = {
   uploadProtocol(file, options = {}) {
