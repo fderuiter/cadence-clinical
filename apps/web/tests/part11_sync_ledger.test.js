@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
-import { useClinicalStore } from "../src/stores/clinical.js";
+import { useClinicalStore } from "../src/stores/clinical";
 import { useAuthStore } from "../src/stores/auth.js";
 
 // Mock global fetch
