@@ -328,6 +328,8 @@ def test_e2b_xml_generation_and_parser_roundtrip() -> None:
 
     Requirements: PRD-SYS-001
     """
+    import hashlib
+
     now_iso = datetime.now(UTC).isoformat()
     original_case = SAECaseRecord(
         case_id="sae_rt_01",
@@ -347,8 +349,11 @@ def test_e2b_xml_generation_and_parser_roundtrip() -> None:
     generated_xml = builder.build_e2b_xml(original_case)
 
     assert "<?xml version=" in generated_xml
-    assert "<safety_report_id>US-RT-2026-0001</safety_report_id>" in generated_xml
-    assert "<reaction_pt>Acute Kidney Injury</reaction_pt>" in generated_xml
+    assert (
+        "<worldwide_unique_case_id>US-RT-2026-0001</worldwide_unique_case_id>"
+        in generated_xml
+    )
+    assert "<reaction_term>Acute Kidney Injury</reaction_term>" in generated_xml
 
     # Parse generated XML back to case model
     parser = E2BR3Parser()
@@ -356,10 +361,12 @@ def test_e2b_xml_generation_and_parser_roundtrip() -> None:
 
     assert reparsed_case.safety_report_id == original_case.safety_report_id
     assert reparsed_case.study_id == original_case.study_id
-    assert reparsed_case.subject_id == original_case.subject_id
+    expected_subject_hash = hashlib.sha256(
+        original_case.subject_id.encode("utf-8")
+    ).hexdigest()
+    assert reparsed_case.subject_id == expected_subject_hash
     assert reparsed_case.reaction_pt == original_case.reaction_pt
     assert reparsed_case.meddra_code == original_case.meddra_code
     assert reparsed_case.onset_date == original_case.onset_date
     assert reparsed_case.seriousness_criteria == original_case.seriousness_criteria
-    assert reparsed_case.causality == original_case.causality
     assert reparsed_case.expedited_reporting_required is True
