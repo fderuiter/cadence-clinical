@@ -23,6 +23,7 @@
 /packages/database/      @clinical-platform/clinical-operations
 /packages/deid/          @clinical-platform/security-and-privacy
 /packages/deidentification/ @clinical-platform/security-and-privacy
+/packages/gateway-rewrite/ @clinical-platform/integration-and-routing
 /packages/hexagonal/     @clinical-platform/clinical-operations
 /packages/security/      @clinical-platform/security-and-privacy
 /packages/storage/       @clinical-platform/document-management
