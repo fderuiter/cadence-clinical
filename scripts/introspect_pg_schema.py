@@ -1,0 +1,237 @@
+#!/usr/bin/env python3
+"""
+PostgreSQL Introspection Engine for GxP-Compliant Schema Synchronization.
+
+This script runs out-of-band during CI/CD or development builds to connect to a
+PostgreSQL instance, introspect public clinical tables, and generate corresponding
+type-safe TypeScript interfaces.
+
+Compliance Guardrails:
+1. Environment Isolation: Introspection is strictly blocked on production databases.
+2. Compliance Filtering: Generates types ONLY for public/clinical tables. Internal
+   and compliance-only tables (e.g., audit logs, seals, outboxes) are excluded.
+"""
+
+import argparse
+import os
+import sys
+from urllib.parse import urlparse
+
+from sqlalchemy import create_engine, inspect
+
+# ---------------------------------------------------------------------------
+# GxP Compliance Excluded Tables (Internal/Audit Tables)
+# ---------------------------------------------------------------------------
+EXCLUDED_TABLES = {
+    "audit_logs",
+    "audit_ledger_seals",
+    "integration_outbox",
+    "processed_offline_batches",
+    "synced_batch_idempotency_keys",
+    "tmf_audit_logs",
+    "interop_audit_logs",
+    "ctms_audit_logs",
+    "quality_audit_logs",
+    "isf_audit_logs",
+    "notification_audit_logs",
+    "consent_audit_logs",
+    "org_audit_logs",
+    "safety_audit_logs",
+    "ticket_audit_logs",
+    "translation_jobs",
+    "pending_predecessor_checks",
+}
+
+def check_production_guardrail(db_url: str) -> None:
+    """Enforces environment isolation to prevent production database connections."""
+    app_env = os.getenv("APP_ENV", "development").lower()
+    if app_env == "production":
+        raise PermissionError(
+            "GxP Guardrail Violation: Schema introspection is strictly prohibited in production environments."
+        )
+
+    parsed_url = urlparse(db_url)
+    host = (parsed_url.hostname or "").lower()
+    if any(keyword in host for keyword in ["prod", "live", "production"]):
+        raise PermissionError(
+            "GxP Guardrail Violation: Schema introspection cannot target a production or live database instance."
+        )
+
+
+def snake_to_pascal(name: str) -> str:
+    """Converts a snake_case table name into a clean PascalCase interface name."""
+    special_cases = {
+        "sdv_sign_offs": "SDVSignOff",
+        "tsdv_configs": "TSDVConfig",
+        "meddra_terms": "MedDRATerm",
+        "whodrug_records": "WHODrugRecord",
+    }
+    if name in special_cases:
+        return special_cases[name]
+
+    parts = name.split("_")
+    pascal = "".join(part.capitalize() for part in parts)
+    
+    # Singularize
+    if pascal.endswith("s") and not pascal.endswith("ss") and not pascal.endswith("is"):
+        pascal = pascal[:-3] + "y" if pascal.endswith("ies") else pascal[:-1]
+    return pascal
+
+
+def map_column_type(col_type) -> str:
+    """Maps a SQLAlchemy column type to its TypeScript primitive counterpart."""
+    from sqlalchemy.sql import sqltypes
+
+    if isinstance(
+        col_type,
+        (
+            sqltypes.Integer,
+            sqltypes.SmallInteger,
+            sqltypes.BigInteger,
+            sqltypes.Numeric,
+            sqltypes.Float,
+            sqltypes.REAL,
+            sqltypes.DECIMAL,
+            sqltypes.DOUBLE_PRECISION,
+        ),
+    ):
+        return "number"
+    if isinstance(col_type, sqltypes.Boolean):
+        return "boolean"
+    if isinstance(
+        col_type, (sqltypes.DateTime, sqltypes.Date, sqltypes.Time, sqltypes.TIMESTAMP)
+    ):
+        return "string"  # Dates are serialized as ISO-8601 strings in JSON
+    if isinstance(col_type, (sqltypes.JSON, sqltypes.NullType)):
+        return "Record<string, any>"
+    return "string"
+
+
+def generate_typescript_schemas(db_url: str, output_path: str) -> bool:
+    """Connects to the database, inspects schemas, and generates TypeScript definitions."""
+    # Ensure production guardrails are checked
+    check_production_guardrail(db_url)
+
+    # Convert asyncpg to sync for inspector compatibility if needed
+    sync_url = db_url
+    if sync_url.startswith("postgresql+asyncpg"):
+        sync_url = sync_url.replace("postgresql+asyncpg", "postgresql")
+    elif sync_url.startswith("sqlite+aiosqlite"):
+        sync_url = sync_url.replace("sqlite+aiosqlite", "sqlite")
+
+    print("Connecting to database to perform introspection...")
+    engine_options = {}
+    if sync_url.startswith("sqlite"):
+        engine_options["execution_options"] = {
+            "schema_translate_map": {"audit_schema": None}
+        }
+
+    engine = create_engine(sync_url, **engine_options)
+    try:
+        inspector = inspect(engine)
+        
+        # Check schemas
+        schemas = inspector.get_schema_names()
+        
+        ts_output = [
+            "/* tslint:disable */",
+            "/* eslint-disable */",
+            "/**",
+            " * Auto-generated TypeScript interfaces representing the GxP clinical database models.",
+            " * Excludes all internal compliance-only tables and audit logs.",
+            " * Generated by scripts/introspect_pg_schema.py.",
+            " */",
+            "",
+        ]
+
+        table_count = 0
+        # Iterate over all available tables
+        for schema in ["public", None]:
+            if schema and schema not in schemas:
+                continue
+            
+            try:
+                tables = inspector.get_table_names(schema=schema)
+            except Exception:
+                continue
+
+            for table_name in sorted(tables):
+                # Apply GxP compliance filtering rules
+                name_lower = table_name.lower()
+                if (
+                    name_lower in EXCLUDED_TABLES
+                    or "audit" in name_lower
+                    or "seal" in name_lower
+                    or "outbox" in name_lower
+                    or "idempotency" in name_lower
+                    or "processed_offline" in name_lower
+                ):
+                    print(f"  [COMPLIANCE EXCLUDED] Skipped table '{table_name}'")
+                    continue
+
+                interface_name = snake_to_pascal(table_name)
+                ts_output.append(f"export interface {interface_name} {{")
+                
+                columns = inspector.get_columns(table_name, schema=schema)
+                for col in columns:
+                    col_name = col["name"]
+                    col_type = col["type"]
+                    col_nullable = col["nullable"]
+                    
+                    ts_type = map_column_type(col_type)
+                    optional_suffix = "?" if col_nullable else ""
+                    null_suffix = " | null" if col_nullable else ""
+                    
+                    ts_output.append(f"  {col_name}{optional_suffix}: {ts_type}{null_suffix};")
+                
+                ts_output.append("}")
+                ts_output.append("")
+                table_count += 1
+                print(f"  [EXPORTED] Table '{table_name}' -> interface '{interface_name}'")
+
+        if table_count == 0:
+            print("Warning: No clinical tables were introspected. Output file was not written.")
+            return False
+
+        # Create target directories
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        with open(output_path, "w") as f:
+            f.write("\n".join(ts_output))
+            f.write("\n")
+
+        print(f"\n[SUCCESS] Successfully introspected database. TypeScript definitions exported to {output_path}")
+        return True
+
+    except Exception as e:
+        print(f"Error during introspection: {e}", file=sys.stderr)
+        return False
+    finally:
+        engine.dispose()
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Out-of-band PostgreSQL DB Introspection Engine"
+    )
+    parser.add_argument(
+        "--db-url",
+        type=str,
+        default=os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:"),
+        help="Target database URL for introspection",
+    )
+    parser.add_argument(
+        "--output-file",
+        type=str,
+        default="/app/apps/web/src/types/db_schemas.ts",
+        help="Path where generated TypeScript interfaces will be saved",
+    )
+    args = parser.parse_args()
+
+    success = generate_typescript_schemas(args.db_url, args.output_file)
+    if not success:
+        sys.exit(1)
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
