@@ -180,18 +180,18 @@ class TestOfflineSchemaDrift:
         Returns:
             Dictionary containing extracted schemas.
         """
-        parser_script = (
-            Path(__file__).parent.parent.parent.resolve()
-            / "scripts"
-            / "parse_frontend_ast.js"
-        )
+        repo_root = Path(__file__).parent.parent.parent.resolve()
+        parser_script = repo_root / "scripts" / "parse_frontend_ast.js"
         assert parser_script.exists(), "Frontend AST parser helper script is missing!"
 
+        abs_file_path = str((repo_root / file_path).resolve())
+
         res = subprocess.run(
-            ["node", str(parser_script), file_path],
+            ["node", str(parser_script), abs_file_path],
             capture_output=True,
             text=True,
             check=True,
+            cwd=str(repo_root),
         )
         return json.loads(res.stdout)
 
@@ -204,7 +204,9 @@ class TestOfflineSchemaDrift:
         Returns:
             Dictionary mapping class names to dictionary of fields and types.
         """
-        with open(file_path, encoding="utf-8") as f:
+        repo_root = Path(__file__).parent.parent.parent.resolve()
+        abs_file_path = (repo_root / file_path).resolve()
+        with open(abs_file_path, encoding="utf-8") as f:
             tree = ast.parse(f.read())
 
         models = {}

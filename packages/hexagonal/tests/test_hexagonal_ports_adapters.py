@@ -37,13 +37,15 @@ from apps.execution.domain.models import (
 from apps.execution.subject_lifecycle import (
     InvalidStateTransitionError,
 )
+from packages.hexagonal.tests.test_hexagonal_architecture import SERVICES
 
 # =====================================================================
 # Criterion 1: Zero relational ORM/graph database dependencies in Domain
 # =====================================================================
 
 
-def test_domain_models_contain_zero_database_imports():
+@pytest.mark.parametrize("service", SERVICES)
+def test_domain_models_contain_zero_database_imports(service: str):
     """Verify core domain models have zero dependencies on persistence or web packages.
 
     @req:PRD-SYS-001
@@ -51,10 +53,21 @@ def test_domain_models_contain_zero_database_imports():
     repo_root = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "..", "..")
     )
-    domain_paths = [
-        os.path.join(repo_root, "apps/execution/domain/models.py"),
-        os.path.join(repo_root, "apps/ctms/domain/models.py"),
-    ]
+
+    # Dynamically find all domain files in the service directory
+    service_dir = os.path.join(repo_root, "apps", service)
+    domain_paths = []
+    if os.path.exists(service_dir):
+        for root, _, files in os.walk(service_dir):
+            parts = root.split(os.sep)
+            if "domain" in parts:
+                for file in files:
+                    if file.endswith(".py"):
+                        domain_paths.append(os.path.join(root, file))
+
+    if not domain_paths:
+        pytest.skip(f"Service {service} has no domain files.")
+
     forbidden_imports = {
         "sqlalchemy",
         "sqlmodel",
@@ -66,7 +79,6 @@ def test_domain_models_contain_zero_database_imports():
     }
 
     for path in domain_paths:
-        assert os.path.exists(path), f"Domain module path does not exist: {path}"
         with open(path, encoding="utf-8") as f:
             tree = ast.parse(f.read())
 
@@ -151,7 +163,8 @@ def test_signed_consent_immutability_pure_python_validation():
 # =====================================================================
 
 
-def test_api_routers_contain_no_direct_db_calls():
+@pytest.mark.parametrize("service", SERVICES)
+def test_api_routers_contain_no_direct_db_calls(service: str):
     """Verify endpoint handlers coordinate actions without constructing ORM queries or managing sessions directly.
 
     @req:PRD-SYS-001
@@ -159,13 +172,22 @@ def test_api_routers_contain_no_direct_db_calls():
     repo_root = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "..", "..")
     )
-    router_paths = [
-        os.path.join(repo_root, "apps/execution/routers/doa.py"),
-        os.path.join(repo_root, "apps/ctms/routers/doa.py"),
-    ]
+
+    # Dynamically find all decoupled router files inside the service
+    service_dir = os.path.join(repo_root, "apps", service)
+    router_paths = []
+    if os.path.exists(service_dir):
+        for root, _, files in os.walk(service_dir):
+            parts = root.split(os.sep)
+            if "routers" in parts and "presentation" not in parts:
+                for file in files:
+                    if file.endswith(".py"):
+                        router_paths.append(os.path.join(root, file))
+
+    if not router_paths:
+        pytest.skip(f"Service {service} has no decoupled router files.")
 
     for path in router_paths:
-        assert os.path.exists(path), f"Router file does not exist: {path}"
         with open(path, encoding="utf-8") as f:
             content = f.read()
             tree = ast.parse(content)
