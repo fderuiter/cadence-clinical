@@ -3,7 +3,7 @@ import re
 import subprocess
 import sys
 
-# Import shared compliance utility
+# Import shared compliance utility for ADR validation
 try:
     import compliance_utility
 except ImportError:
