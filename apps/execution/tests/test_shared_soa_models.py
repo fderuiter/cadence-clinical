@@ -1,5 +1,5 @@
 """
-Tests for shared SoA models module in core-models.
+Tests for local designer protocol authoring SoA models.
 """
 
 import pytest

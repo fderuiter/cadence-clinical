@@ -53,7 +53,7 @@ def get_auth_headers(
 
 
 def test_language_code_validation():
-    """Verify standard language validation under packages/core-models/localization."""
+    """Verify standard language validation using the local econsent language helpers."""
     # Valid
     assert validate_language_code("es") == "es"
     assert validate_language_code("ES") == "es"

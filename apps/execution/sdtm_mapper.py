@@ -3,7 +3,7 @@ EDC-to-SDTM Mapper Module.
 
 Provides stateless, rule-based mapping functions from EDC records
 (ClinicalSubject, ClinicalVisit, and ClinicalObservation) to shared
-strongly-typed SDTM models (DM, VS, LB, AE, CM) in packages/core-models/sdtm.
+strongly-typed SDTM models (DM, VS, LB, AE, CM) in local domain structures (apps/execution/domain/sdtm/models).
 All computations are pure and run without database I/O.
 """
 
