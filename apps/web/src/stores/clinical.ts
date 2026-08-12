@@ -782,8 +782,10 @@ export const useClinicalStore = defineStore("clinical", {
       // Validate prior to local queuing, persistence, or API submission!
       const validation = this.validateModel(type, { id, ...properties });
       if (!validation.success) {
-        const errorMsg = `Local payload mutation rejected. Shared Zod Schema violation: ${validation.error!.errors
-          .map((e: any) => `${e.path.join(".") || "field"}: ${e.message}`)
+        const errorMsg = `Local payload mutation rejected. Shared Zod Schema violation: ${validation
+          .error!.errors.map(
+            (e: any) => `${e.path.join(".") || "field"}: ${e.message}`
+          )
           .join(", ")}`;
         console.error(errorMsg);
         this.soaError = errorMsg;
