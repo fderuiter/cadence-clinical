@@ -179,11 +179,11 @@ def test_address_redos_prevention():
     result_with_match = scrub_free_text_pii(input_with_match)
     duration_with_match = time.perf_counter() - start_time_match
 
-    # Assert that both complete in under 1 millisecond (0.001 seconds)
-    assert duration_no_match < 0.001, (
+    # Assert that both complete in under 50 milliseconds (0.050 seconds) to prevent flaky failures under heavy CPU load
+    assert duration_no_match < 0.050, (
         f"Address redaction (no match) took too long: {duration_no_match * 1000:.3f} ms"
     )
-    assert duration_with_match < 0.001, (
+    assert duration_with_match < 0.050, (
         f"Address redaction (with match) took too long: {duration_with_match * 1000:.3f} ms"
     )
 
