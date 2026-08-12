@@ -5,19 +5,133 @@ Requirements: PRD-SYS-001
 
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel
 
 import packages  # noqa: F401
 from apps.execution.domain.signature_transport_models import (
     BatchSignatureRequest,
     BatchSignatureResponse,
 )
+from packages.compliance.services.esignature_verifier import ESignatureVerifier
+from packages.compliance.services.pkcs7_signer import PKCS7Signer
+from packages.security.cert_store import get_active_cert_store
 from packages.security.middleware import get_current_user
 from packages.security.sig_token_verifier import verify_and_consume_sig_token
 from packages.security.signature_builder import CryptographicSignatureBuilder
 
 router = APIRouter(prefix="/api/v1/execution/signatures", tags=["Signatures"])
+
+
+class SignRequest(BaseModel):
+    """Request model for signing payload data."""
+
+    data: str
+
+
+class SignResponse(BaseModel):
+    """Response model with the PKCS#7 signed payload."""
+
+    signed_data: str
+
+
+class VerifyRequest(BaseModel):
+    """Request model for verifying a PKCS#7 signed payload."""
+
+    signed_data: str
+
+
+class VerifyResponse(BaseModel):
+    """Response model for PKCS#7 signature verification."""
+
+    is_valid: bool
+    status: str
+    failure_reason: str = ""
+
+
+KEYS_DIR = (
+    Path(__file__).resolve().parent.parent.parent.parent.parent
+    / "tests"
+    / "fixtures"
+    / "keys"
+)
+
+
+def _load_keys_and_register():
+    """Helper to load key and cert from fixtures and register in trust store."""
+    from cryptography import x509
+    from cryptography.hazmat.primitives import serialization
+
+    cert_path = KEYS_DIR / "certificate.crt"
+    key_path = KEYS_DIR / "private_key.pem"
+
+    with open(cert_path, "rb") as f:
+        cert_bytes = f.read()
+        cert = x509.load_pem_x509_certificate(cert_bytes)
+        get_active_cert_store().register_certificate(
+            user_id="backend_signer", cert_pem=cert_bytes.decode("utf-8")
+        )
+
+    with open(key_path, "rb") as f:
+        key = serialization.load_pem_private_key(f.read(), password=None)
+
+    return cert, key
+
+
+@router.post(
+    "/sign",
+    response_model=SignResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def sign_payload_endpoint(
+    payload: SignRequest,
+) -> SignResponse:
+    """Signs a given string payload using the secure backend PKCS#7 signer.
+
+    Requirements: PRD-SYS-001
+    """
+    try:
+        cert, key = _load_keys_and_register()
+        signer = PKCS7Signer(cert=cert, key=key)
+        signed_bytes = signer.sign_pdf(payload.data.encode("utf-8"))
+        return SignResponse(signed_data=signed_bytes.decode("utf-8", errors="ignore"))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Signature generation failed: {str(e)}",
+        )
+
+
+@router.post(
+    "/verify",
+    response_model=VerifyResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def verify_signature_endpoint(
+    payload: VerifyRequest,
+) -> VerifyResponse:
+    """Verifies a PKCS#7 signed document payload using the ESignatureVerifier and trust store.
+
+    Requirements: PRD-SYS-001
+    """
+    try:
+        # Load and register certificate to ensure trust store has the valid cert registered
+        _load_keys_and_register()
+        verifier = ESignatureVerifier()
+        result = verifier.verify_signature(payload.signed_data.encode("utf-8"))
+        return VerifyResponse(
+            is_valid=result.is_valid,
+            status=result.status,
+            failure_reason=result.failure_reason,
+        )
+    except Exception as e:
+        return VerifyResponse(
+            is_valid=False,
+            status="SYSTEM_FAILURE",
+            failure_reason=f"Signature verification system failure: {str(e)}",
+        )
 
 
 @router.post(
