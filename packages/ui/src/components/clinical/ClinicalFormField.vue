@@ -118,7 +118,8 @@ const wrapperStyle = computed(() => {
     width: "100%",
     boxSizing: "border-box",
     contentVisibility: "auto",
-    containIntrinsicSize: `auto ${measuredHeight.value ? measuredHeight.value + "px" : "44px"}` as any,
+    containIntrinsicSize:
+      `auto ${measuredHeight.value ? measuredHeight.value + "px" : "44px"}` as any,
   };
   return styles;
 });

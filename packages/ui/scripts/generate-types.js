@@ -4,8 +4,14 @@ import { fileURLToPath } from "url";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
-const MODEL_PATH = path.resolve(__dirname, "../../../docs/CDISC/Library/Data_Collection/CDASH_Model_v1.3.json");
-const IG_PATH = path.resolve(__dirname, "../../../docs/CDISC/Library/Data_Collection/CDASHIG_v2.3.json");
+const MODEL_PATH = path.resolve(
+  __dirname,
+  "../../../docs/CDISC/Library/Data_Collection/CDASH_Model_v1.3.json"
+);
+const IG_PATH = path.resolve(
+  __dirname,
+  "../../../docs/CDISC/Library/Data_Collection/CDASHIG_v2.3.json"
+);
 const OUTPUT_DIR = path.resolve(__dirname, "../src/types");
 const OUTPUT_FILE = path.resolve(OUTPUT_DIR, "cdash.ts");
 
