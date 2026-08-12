@@ -143,9 +143,7 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
         """)
         )
         await conn.execute(
-            text(
-                "DROP TRIGGER IF EXISTS tmf_documents_no_delete ON tmf_documents;"
-            )
+            text("DROP TRIGGER IF EXISTS tmf_documents_no_delete ON tmf_documents;")
         )
         await conn.execute(
             text("""
