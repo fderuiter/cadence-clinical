@@ -57,6 +57,9 @@ try:
     PermissionEnum._add_member("DATA_LOCK", "data:lock")
     PermissionEnum._add_member("DATA_UNLOCK", "data:unlock")
     PermissionEnum._add_member("SDV_VERIFY", "sdv:verify")
+    PermissionEnum._add_member("SDV_FLAG", "sdv:flag")
+    PermissionEnum._add_member("QUALITY_EVENT_CREATE", "quality_event:create")
+    PermissionEnum._add_member("QUALITY_EVENT_INVESTIGATE", "quality_event:investigate")
     PermissionEnum._add_member("AUDIT_VIEW", "audit:view")
     PermissionEnum._add_member("PROTOCOL_AUTHOR", "protocol:author")
     PermissionEnum._add_member("GLOBAL_LIBRARY_MANAGE", "global_library:manage")
@@ -157,6 +160,12 @@ try:
             "study:read",
             "protocol:author",
             "global_library:manage",
+            "global_library:create",
+            "global_library:update",
+            "global_library:amend",
+            "global_library:transition",
+            "global_library:instantiate",
+            "global_library:read",
             "visit_windowing:read",
             "visit_windowing:create",
             "visit_windowing:update",
@@ -166,9 +175,46 @@ try:
             "study_design:read",
             "study_design:update",
             "study_design:delete",
+            "study_design:approve",
+            "study_design:reorder",
             "etmf_document:read",
             "eisf_document:read",
             "documents:read",
+            "library_object:create",
+            "library_object:read",
+            "library_object:update",
+            "library_object:delete",
+            "library_object:approve",
+            "library_object:publish",
+            "library_object:release",
+            "mdr_concept:create",
+            "mdr_concept:update",
+            "mdr_concept:rename",
+            "mdr_concept:delete",
+            "mdr_concept:read",
+            "protocol_export:generate",
+            "protocol_export:read",
+            "designer_cache:admin",
+            "system_audit_logs:read",
+            "protocol_ingestion:upload",
+            "protocol_ingestion:read",
+            "protocol_ingestion:review",
+            "protocol_ingestion:promote",
+            "protocol_version:sign",
+            "protocol_version:transition_approved",
+            "protocol_section:lock",
+            "protocol_section:unlock",
+            "protocol_section:approve",
+            "protocol_section:review",
+            "protocol_section:read",
+            "regulatory_form:read",
+            "training_log:read",
+            "ecoa_schedule:create",
+            "ecoa_schedule:read",
+            "ecoa_diary:create",
+            "ecoa_diary:read",
+            "ecoa_submission:create",
+            "ecoa_submission:read",
         },
         aliases=[
             "sponsordesigner",
@@ -494,7 +540,15 @@ try:
             "instantiate",
             "read",
         },
-        "library_object": {"approve", "publish", "release"},
+        "library_object": {"create", "read", "update", "delete", "approve", "publish", "release"},
+        "protocol_section": {"lock", "unlock", "approve", "review", "read"},
+        "mdr_concept": {"create", "update", "rename", "delete", "read"},
+        "protocol_ingestion": {"upload", "read", "review", "promote"},
+        "designer_cache": {"admin"},
+        "protocol_version": {"sign", "transition_approved"},
+        "regulatory_form": {"create", "read", "sign"},
+        "training_log": {"create", "read", "sign"},
+        "quality_event": {"create", "investigate"},
     }
 
     designer_perms = {
@@ -512,7 +566,12 @@ try:
             "instantiate",
             "read",
         },
-        "library_object": {"read"},
+        "library_object": {"create", "read", "update", "delete"},
+        "protocol_section": {"lock", "unlock", "approve", "review", "read"},
+        "mdr_concept": {"create", "update", "rename", "delete", "read"},
+        "protocol_ingestion": {"upload", "read", "review", "promote"},
+        "designer_cache": {"admin"},
+        "protocol_version": {"sign", "transition_approved"},
     }
 
     dm_perms = {
@@ -556,6 +615,9 @@ try:
             "read",
         },
         "library_object": {"approve", "publish"},
+        "regulatory_form": {"create", "read", "sign"},
+        "training_log": {"create", "read", "sign"},
+        "quality_event": {"create"},
     }
 
     cra_perms = {
@@ -581,6 +643,9 @@ try:
         "soa": {"read"},
         "etmf_taxonomy": {"read"},
         "medical_coding": {"read"},
+        "regulatory_form": {"create", "read", "sign"},
+        "training_log": {"create", "read", "sign"},
+        "quality_event": {"create"},
     }
 
     clinical_perms = {
@@ -599,6 +664,9 @@ try:
             "transition_signed",
         },
         "eisf_document": {"read"},
+        "regulatory_form": {"create", "read", "sign"},
+        "training_log": {"create", "read", "sign"},
+        "quality_event": {"create"},
     }
 
     crc_perms = {
@@ -613,6 +681,9 @@ try:
         "soa": {"read"},
         "etmf_taxonomy": {"read"},
         "ecrf_data_entry": {"create", "read", "update"},
+        "regulatory_form": {"create", "read", "sign"},
+        "training_log": {"create", "read", "sign"},
+        "quality_event": {"create"},
     }
 
     investigator_perms = {
@@ -628,6 +699,9 @@ try:
         "soa": {"read"},
         "etmf_taxonomy": {"read"},
         "emergency_unblind": {"execute"},
+        "regulatory_form": {"create", "read", "sign"},
+        "training_log": {"create", "read", "sign"},
+        "quality_event": {"create"},
     }
 
     subject_perms = {
@@ -803,6 +877,14 @@ try:
     for r in ("emergency_unblinder",):
         register_rbac_role_permissions(
             r, {"emergency_unblind": {"execute"}, "rtsm_unblind": {"write"}}
+        )
+
+    for r in ("quality_manager", "qa_lead", "quality_oversight"):
+        register_rbac_role_permissions(
+            r,
+            {
+                "quality_event": {"create", "investigate"},
+            },
         )
 
     for r in ("external_monitor",):
