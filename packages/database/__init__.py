@@ -44,6 +44,10 @@ class AuditJustificationError(ValueError):
 
 
 _TRIAL_LOCK_CHECKERS: list[Callable[[], bool]] = []
+_SITE_LOCK_CHECKERS: list[Callable[[str], bool]] = []
+_VISIT_LOCK_CHECKERS: list[Callable[[str], bool]] = []
+_SUBJECT_LOCK_CHECKERS: list[Callable[[str], bool]] = []
+_FORM_LOCK_CHECKERS: list[Callable[[str], bool]] = []
 
 
 def register_trial_lock_checker(checker: Callable[[], bool]) -> None:
@@ -51,18 +55,63 @@ def register_trial_lock_checker(checker: Callable[[], bool]) -> None:
     _TRIAL_LOCK_CHECKERS.append(checker)
 
 
+def register_site_lock_checker(checker: Callable[[str], bool]) -> None:
+    """Register a callback that checks if a site-level lock is active."""
+    _SITE_LOCK_CHECKERS.append(checker)
+
+
+def register_visit_lock_checker(checker: Callable[[str], bool]) -> None:
+    """Register a callback that checks if a visit-level lock is active."""
+    _VISIT_LOCK_CHECKERS.append(checker)
+
+
+def register_subject_lock_checker(checker: Callable[[str], bool]) -> None:
+    """Register a callback that checks if a subject-level lock is active."""
+    _SUBJECT_LOCK_CHECKERS.append(checker)
+
+
+def register_form_lock_checker(checker: Callable[[str], bool]) -> None:
+    """Register a callback that checks if a form-level lock is active."""
+    _FORM_LOCK_CHECKERS.append(checker)
+
+
 def is_trial_locked() -> bool:
-    """Check if any registered lock checker is active, with fallback to TrialLockManager."""
+    """Check if any registered lock checker is active."""
     for checker in _TRIAL_LOCK_CHECKERS:
         if checker():
             return True
-    try:
-        from apps.execution.trial_lock import TrialLockManager
+    return False
 
-        if TrialLockManager.is_locked():
+
+def is_site_locked(site_id: str) -> bool:
+    """Check if any registered site lock checker is active."""
+    for checker in _SITE_LOCK_CHECKERS:
+        if checker(site_id):
             return True
-    except ImportError:
-        pass
+    return False
+
+
+def is_visit_locked(visit_id: str) -> bool:
+    """Check if any registered visit lock checker is active."""
+    for checker in _VISIT_LOCK_CHECKERS:
+        if checker(visit_id):
+            return True
+    return False
+
+
+def is_subject_locked(subject_id: str) -> bool:
+    """Check if any registered subject lock checker is active."""
+    for checker in _SUBJECT_LOCK_CHECKERS:
+        if checker(subject_id):
+            return True
+    return False
+
+
+def is_form_locked(form_id: str) -> bool:
+    """Check if any registered form lock checker is active."""
+    for checker in _FORM_LOCK_CHECKERS:
+        if checker(form_id):
+            return True
     return False
 
 
@@ -156,54 +205,34 @@ def receive_before_flush(session: Session, flush_context, instances):
         # Site level locks
         site_id = getattr(obj, "site_id", None) or getattr(obj, "site", None)
         if site_id is not None:
-            try:
-                from apps.execution.trial_lock import TrialLockManager
-
-                if TrialLockManager.is_site_locked(str(site_id)):
-                    raise ComplianceError(
-                        f"Site {site_id} is currently locked in a read-only state."
-                    )
-            except ImportError:
-                pass
+            if is_site_locked(str(site_id)):
+                raise ComplianceError(
+                    f"Site {site_id} is currently locked in a read-only state."
+                )
 
         # Visit level locks
         visit_id = getattr(obj, "visit_id", None) or getattr(obj, "visit", None)
         if visit_id is not None:
-            try:
-                from apps.execution.trial_lock import TrialLockManager
-
-                if TrialLockManager.is_visit_locked(str(visit_id)):
-                    raise ComplianceError(
-                        f"Visit {visit_id} is currently locked in a read-only state."
-                    )
-            except ImportError:
-                pass
+            if is_visit_locked(str(visit_id)):
+                raise ComplianceError(
+                    f"Visit {visit_id} is currently locked in a read-only state."
+                )
 
         # Subject level locks
         subject_id = getattr(obj, "subject_id", None) or getattr(obj, "subject", None)
         if subject_id is not None:
-            try:
-                from apps.execution.trial_lock import TrialLockManager
-
-                if TrialLockManager.is_subject_locked(str(subject_id)):
-                    raise ComplianceError(
-                        f"Subject {subject_id} is currently locked in a read-only state."
-                    )
-            except ImportError:
-                pass
+            if is_subject_locked(str(subject_id)):
+                raise ComplianceError(
+                    f"Subject {subject_id} is currently locked in a read-only state."
+                )
 
         # Form level locks
         form_id = getattr(obj, "form_id", None) or getattr(obj, "form", None)
         if form_id is not None:
-            try:
-                from apps.execution.trial_lock import TrialLockManager
-
-                if TrialLockManager.is_form_locked(str(form_id)):
-                    raise ComplianceError(
-                        f"Form {form_id} is currently locked in a read-only state."
-                    )
-            except ImportError:
-                pass
+            if is_form_locked(str(form_id)):
+                raise ComplianceError(
+                    f"Form {form_id} is currently locked in a read-only state."
+                )
 
         # GxP Change Justification Check (Criterion 2)
         # Any change/creation/deletion on an audited clinical record requires a non-empty, non-blank reason.

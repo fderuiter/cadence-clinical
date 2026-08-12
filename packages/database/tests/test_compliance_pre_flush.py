@@ -213,10 +213,11 @@ async def test_site_freeze_blocking_writes():
 
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
-    from apps.execution.trial_lock import TrialLockManager
+    from packages.database import register_site_lock_checker, _SITE_LOCK_CHECKERS
 
-    # Lock site-101
-    TrialLockManager.lock_site("site-101")
+    # Lock site-101 via mock callback
+    locked_sites = {"site-101"}
+    register_site_lock_checker(lambda s: s in locked_sites)
 
     try:
         # Write to locked site should fail
@@ -243,7 +244,7 @@ async def test_site_freeze_blocking_writes():
             await session.flush()
 
     finally:
-        TrialLockManager.reset()
+        _SITE_LOCK_CHECKERS.clear()
         await engine.dispose()
 
 
