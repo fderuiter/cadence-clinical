@@ -221,6 +221,15 @@ def get_relational_db_lifespan(
                         END;
                     """)
                     )
+                    await conn.execute(
+                        text("""
+                        CREATE TRIGGER IF NOT EXISTS tmf_documents_no_delete
+                        BEFORE DELETE ON tmf_documents
+                        BEGIN
+                            SELECT RAISE(FAIL, 'IMMUTABILITY_VIOLATION: eTMF documents are immutable and cannot be deleted.');
+                        END;
+                    """)
+                    )
 
         # Run service-specific asynchronous startup tasks
         if startup_hooks:

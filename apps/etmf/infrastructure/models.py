@@ -405,6 +405,59 @@ def prevent_qc_transition_delete(mapper, connection, target):
     )
 
 
+trigger_document_delete_sqlite = DDL("""
+CREATE TRIGGER IF NOT EXISTS tmf_documents_no_delete
+BEFORE DELETE ON tmf_documents
+BEGIN
+    SELECT RAISE(FAIL, 'IMMUTABILITY_VIOLATION: eTMF documents are immutable and cannot be deleted.');
+END;""")
+
+trigger_document_func_pg = DDL("""
+CREATE OR REPLACE FUNCTION block_document_deletion()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE EXCEPTION 'IMMUTABILITY_VIOLATION: eTMF documents are immutable and cannot be deleted.';
+END;
+$$ LANGUAGE plpgsql;""")
+
+trigger_document_delete_pg_drop = DDL("""
+DROP TRIGGER IF EXISTS tmf_documents_no_delete ON tmf_documents;
+""")
+
+trigger_document_delete_pg_create = DDL("""
+CREATE TRIGGER tmf_documents_no_delete
+BEFORE DELETE ON tmf_documents
+FOR EACH ROW EXECUTE FUNCTION block_document_deletion();""")
+
+event.listen(
+    TMFDocument.__table__,
+    "after_create",
+    trigger_document_delete_sqlite.execute_if(dialect="sqlite"),
+)
+event.listen(
+    TMFDocument.__table__,
+    "after_create",
+    trigger_document_func_pg.execute_if(dialect="postgresql"),
+)
+event.listen(
+    TMFDocument.__table__,
+    "after_create",
+    trigger_document_delete_pg_drop.execute_if(dialect="postgresql"),
+)
+event.listen(
+    TMFDocument.__table__,
+    "after_create",
+    trigger_document_delete_pg_create.execute_if(dialect="postgresql"),
+)
+
+
+@event.listens_for(TMFDocument, "before_delete")
+def prevent_document_delete(mapper, connection, target):
+    raise RuntimeError(
+        "IMMUTABILITY_VIOLATION: eTMF documents are immutable and cannot be deleted."
+    )
+
+
 class IntegrationOutbox(Base, IntegrationOutboxMixin):
     """Concrete integration outbox table for the eTMF service."""
 

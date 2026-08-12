@@ -212,6 +212,13 @@ async def test_migration_upgrade_and_backfill_path():
                 )
             assert "IMMUTABILITY_VIOLATION" in str(exc_info.value)
 
+            # 7. Test Document Immutability Triggers (reject DELETE on tmf_documents)
+            with pytest.raises((OperationalError, IntegrityError)) as exc_info:
+                await conn.execute(
+                    text(f"DELETE FROM tmf_documents WHERE id='{doc1_id}'")
+                )
+            assert "IMMUTABILITY_VIOLATION" in str(exc_info.value)
+
         await engine.dispose()
     finally:
         if os.path.exists(db_file):

@@ -197,6 +197,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-27: API-driven Lock Sync and AST Import Validator for eTMF](2026-07-27-api-driven-lock-sync-and-ast-validator.md)
 - [2026-08-09: Automated eTMF Document Redaction](2026-08-09-automated-etmf-document-redaction.md)
 - [2026-08-12: Deterministic GxP Report Generation and Signature Verification Rectification](2026-08-12-deterministic-gxp-report-generation-and-signature-verification.md)
+- [2026-08-12: Python-Native Isolated Architecture (Strict Compliance)](2026-08-12-python-native-isolated-architecture-strict-compliance.md)
 - [2026-08-17: Unified De-identification Compliance Scan CLI, Pre-commit Hook, and Blocking CI Gate](2026-08-17-unified-deid-compliance-scan-cli.md)
 - [2026-08-18: Document Redaction Architecture, Regulatory Data-Handling, and Compliance Profiles](2026-08-18-document-redaction-architecture.md)
 - [2026-08-03: Native Interval Filtering and Custom Name Matching](2026-08-03-native-interval-filtering-and-custom-name-matching.md)
