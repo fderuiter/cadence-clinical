@@ -49,7 +49,7 @@ This decision addresses the following requirements:
 
 ## 4. Decision Outcome
 
-Chosen option: Option 1. It delivers high-performance virtualization using standard browser APIs, minimizes memory overhead on tablet devices, and guarantees GxP audit data preservation using a completely decoupled Pinia global store (`apps/web/src/stores/clinical.js`).
+Chosen option: Option 1. It delivers high-performance virtualization using standard browser APIs, minimizes memory overhead on tablet devices, and guarantees GxP audit data preservation using a completely decoupled Pinia global store (`apps/web/src/stores/clinical.ts`).
 
 ## 5. Consequences & Trade-offs
 

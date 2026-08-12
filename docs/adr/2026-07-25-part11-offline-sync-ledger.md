@@ -49,7 +49,7 @@ This decision implements requirements under Trace-1.
 ## 6. Implementation & Verification
 
 - **Affected Repositories / Services:**
-  - Frontend store: `apps/web/src/stores/clinical.js`
+  - Frontend store: `apps/web/src/stores/clinical.ts`
   - Frontend view: `apps/web/src/views/EcrfView.vue`
   - Shared security: `packages/security/middleware.py` and `packages/ui/signing.js`
   - Execution backend router: `apps/execution/main.py`

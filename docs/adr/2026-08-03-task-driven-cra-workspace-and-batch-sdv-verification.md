@@ -76,7 +76,7 @@ To support efficient monitoring workflows and maintain strict compliance with re
   - `apps/web/src/views/EcrfView.vue` / `CtmsView.vue` / `DocumentManagerView.vue` — Synthesized query parameters on mount to synchronize with active store states.
 - **Batch SDV, Compliance Lockout, and Verification Drop:**
   - `apps/web/src/views/EcrfView.vue` — Implemented batch checkbox checkboxes, `BULK_SDV` re-authentication workflow, 60-second lockout checks, `SDV_CLEAR` automatic triggers on field value changes inside `commitChange`, and high-priority alert dispatcher.
-  - `apps/web/src/stores/clinical.js` — Tracked eCRF field definitions, ledger entries, and core EDC state.
+  - `apps/web/src/stores/clinical.ts` — Tracked eCRF field definitions, ledger entries, and core EDC state.
 
 ### Verification Plan
 
