@@ -8,6 +8,9 @@ export class JwksCoalescerService implements OnModuleInit {
   // In-memory cache for public keys
   private keyCache = new Map<string, any>();
 
+  // Cached parsed public KeyObjects to eliminate parsing overhead on fast-path
+  private publicKeyCache = new Map<string, any>();
+
   // In-flight fetches map to merge concurrent requests for the same uncached kid
   private inFlightFetches = new Map<string, Promise<void>>();
 
@@ -21,6 +24,22 @@ export class JwksCoalescerService implements OnModuleInit {
 
   // Track number of HTTP fetch calls for metrics / testing assertions
   private fetchCount: number = 0;
+
+  constructor() {
+    const originalSet = this.keyCache.set.bind(this.keyCache);
+    this.keyCache.set = (key: string, value: any) => {
+      const res = originalSet(key, value);
+      try {
+        if (value && !this.publicKeyCache.has(key)) {
+          const publicKey = crypto.createPublicKey({ key: value, format: "jwk" });
+          this.publicKeyCache.set(key, publicKey);
+        }
+      } catch (e) {
+        // Ignore parsing errors (e.g. if the value is not a valid JWK or during reset/clearing)
+      }
+      return res;
+    };
+  }
 
   /**
    * NestJS OnModuleInit hook - performs eager prefetching
@@ -68,6 +87,7 @@ export class JwksCoalescerService implements OnModuleInit {
    */
   reset(): void {
     this.keyCache.clear();
+    this.publicKeyCache.clear();
     this.inFlightFetches.clear();
     this.fetchCount = 0;
   }
@@ -203,7 +223,11 @@ export class JwksCoalescerService implements OnModuleInit {
     const signature = Buffer.from(signatureB64, "base64url");
 
     try {
-      const publicKey = crypto.createPublicKey({ key: jwk, format: "jwk" });
+      let publicKey = this.publicKeyCache.get(kid);
+      if (!publicKey) {
+        publicKey = crypto.createPublicKey({ key: jwk, format: "jwk" });
+        this.publicKeyCache.set(kid, publicKey);
+      }
       const verify = crypto.createVerify("SHA256");
       verify.write(data);
       verify.end();

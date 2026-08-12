@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vitest";
 import * as crypto from "crypto";
 import { JwksCoalescerService } from "../src/jwks-coalescer.service.js";
 
@@ -33,6 +33,23 @@ function generateKeyAndToken(
 describe("JwksCoalescerService", () => {
   let service: JwksCoalescerService;
   const originalFetch = globalThis.fetch;
+
+  beforeAll(async () => {
+    // Warm up Node's crypto library / JwksCoalescerService to eliminate cold-start overhead
+    try {
+      const { jwk, token } = generateKeyAndToken("warmup-kid", {
+        sub: "warmup",
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      });
+      const tempService = new JwksCoalescerService();
+      tempService.getCachedKeys().set("warmup-kid", jwk);
+      for (let i = 0; i < 5; i++) {
+        await tempService.verifyToken(token);
+      }
+    } catch (e) {
+      // Ignore warmup errors
+    }
+  });
 
   beforeEach(() => {
     service = new JwksCoalescerService();
