@@ -59,6 +59,7 @@ share/python-wheels/
 .pytype/
 .coverage
 .coverage.*
+coverage/
 nosetests.xml
 coverage.xml
 report.xml
