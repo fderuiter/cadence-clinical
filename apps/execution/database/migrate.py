@@ -17,6 +17,7 @@ from apps.execution.database.models import (  # noqa: F401
     ConsentSignature,
     DictionaryImportJob,
     FormSubmission,
+    IntegrationOutbox,
     LabReferenceRange,
     LabTestMaster,
     LabTestMasterLegacy,

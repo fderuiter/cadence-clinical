@@ -19,6 +19,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from packages.database import IntegrationOutboxMixin
+
 
 class Base(DeclarativeBase):
     pass
@@ -401,3 +403,9 @@ def prevent_qc_transition_delete(mapper, connection, target):
     raise RuntimeError(
         "IMMUTABILITY_VIOLATION: DocumentQCTransition records are append-only and cannot be deleted."
     )
+
+
+class IntegrationOutbox(Base, IntegrationOutboxMixin):
+    """Concrete integration outbox table for the eTMF service."""
+
+    __tablename__ = "integration_outbox"

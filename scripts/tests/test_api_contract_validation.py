@@ -86,6 +86,7 @@ def loaded_specs():
 
 
 _RAW_WHITELISTED_ROUTES = {
+    ("get", "/api/v1/admin/outbox"),
     ("post", "/api/v1/execution/queries/generate"),
     ("get", "/api/v1/studies/{study_id}/soa"),
     ("patch", "/subjects/{id}/state"),
@@ -513,6 +514,7 @@ def is_whitelisted(method: str, path: str) -> bool:
         return True
     # Wildcard checks for newly added execution and designer features
     wildcards = [
+        "/api/v1/admin/outbox",
         "/api/v1/archive",
         "/api/v1/designer/cascade",
         "/api/v1/designer/export",

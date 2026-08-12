@@ -124,8 +124,16 @@ async def etmf_startup() -> None:
 
     await start_background_etmf_expiration_scanner(db_manager.get_session_maker())
 
+    from apps.etmf.workers.outbox_worker import start_outbox_worker
+
+    start_outbox_worker()
+
 
 async def etmf_shutdown() -> None:
+    from apps.etmf.workers.outbox_worker import stop_outbox_worker
+
+    stop_outbox_worker()
+
     from apps.etmf.sealer import stop_background_etmf_sealer
 
     await stop_background_etmf_sealer()

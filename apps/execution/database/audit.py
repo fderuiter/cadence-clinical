@@ -126,6 +126,7 @@ def receive_before_flush(session: Session, flush_context, instances):
             "tickets",
             "ticket_audit_logs",
             "ticket_comments",
+            "integration_outbox",
         ):
             return
 
