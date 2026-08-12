@@ -1,6 +1,6 @@
 import os
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import httpx
 import pytest
@@ -137,8 +137,11 @@ async def test_etmf_outbox_worker_polling_and_dispatch_success() -> None:
 
     # Mock outbound post to external archival system
     with patch("httpx.AsyncClient.post") as mock_post:
-        mock_resp = AsyncMock()
+        from unittest.mock import MagicMock
+
+        mock_resp = MagicMock()
         mock_resp.status_code = 200
+        mock_resp.raise_for_status = MagicMock()
         mock_post.return_value = mock_resp
 
         await poll_and_dispatch()
