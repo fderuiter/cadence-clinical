@@ -8,9 +8,7 @@ import {
   createSoaBuilderMatrix,
   createClinicalVisitMatrix,
 } from "../src/utils/clinical_helpers.js";
-import {
-  createConditionRowHTML,
-} from "ui";
+import { createConditionRowHTML } from "ui";
 import ClinicalQueryPanel from "../src/components/clinical/ClinicalQueryPanel.vue";
 import ClinicalInput from "../src/components/clinical/ClinicalInput.vue";
 

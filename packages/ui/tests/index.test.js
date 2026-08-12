@@ -158,5 +158,3 @@ describe("Rule Builder Widgets & Serialization Helpers", () => {
     });
   });
 });
-
-
