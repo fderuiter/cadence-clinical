@@ -556,7 +556,11 @@ export const useClinicalStore = defineStore("clinical", {
       }
       this.debouncedEvaluateRules?.();
     },
-    async addLedgerBlock(action: string, details: any, reason: string = "System Action") {
+    async addLedgerBlock(
+      action: string,
+      details: any,
+      reason: string = "System Action"
+    ) {
       const timestamp = new Date().toISOString();
       const index = this.ledgerBlocks.length;
       const prevHash =
@@ -564,14 +568,14 @@ export const useClinicalStore = defineStore("clinical", {
           ? "0000000000000000000000000000000000000000000000000000000000000000" // deid-ignore
           : this.ledgerBlocks[index - 1].hash;
 
-      const block = await buildLedgerBlock(
+      const block = (await buildLedgerBlock(
         index,
         timestamp,
         action,
         details,
         reason,
         prevHash
-      ) as any;
+      )) as any;
       block.synced = false;
 
       this.ledgerBlocks.push(block);
@@ -723,7 +727,12 @@ export const useClinicalStore = defineStore("clinical", {
       }
     },
 
-    async pushSoAMutation(type: string, id: string, properties: any, changeReason: string) {
+    async pushSoAMutation(
+      type: string,
+      id: string,
+      properties: any,
+      changeReason: string
+    ) {
       this.soaLoading = true;
       this.soaError = null;
       const opts = {
