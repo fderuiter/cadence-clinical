@@ -136,6 +136,90 @@
         }
       }
     },
+    "/api/v1/execution/signatures/sign": {
+      "post": {
+        "tags": [
+          "Signatures"
+        ],
+        "summary": "Sign Payload Endpoint",
+        "description": "Signs a given string payload using the secure backend PKCS#7 signer.\n\nRequirements: PRD-SYS-001",
+        "operationId": "sign_payload_endpoint_api_v1_execution_signatures_sign_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/signatures/verify": {
+      "post": {
+        "tags": [
+          "Signatures"
+        ],
+        "summary": "Verify Signature Endpoint",
+        "description": "Verifies a PKCS#7 signed document payload using the ESignatureVerifier and trust store.\n\nRequirements: PRD-SYS-001",
+        "operationId": "verify_signature_endpoint_api_v1_execution_signatures_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/signatures/batch-sign-off": {
       "post": {
         "tags": [
@@ -10372,6 +10456,34 @@
         ],
         "title": "SamplingModelEnum"
       },
+      "SignRequest": {
+        "properties": {
+          "data": {
+            "type": "string",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "SignRequest",
+        "description": "Request model for signing payload data."
+      },
+      "SignResponse": {
+        "properties": {
+          "signed_data": {
+            "type": "string",
+            "title": "Signed Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signed_data"
+        ],
+        "title": "SignResponse",
+        "description": "Response model with the PKCS#7 signed payload."
+      },
       "SiteStaffMemberRequest": {
         "properties": {
           "site_id": {
@@ -11718,6 +11830,44 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VerifyRequest": {
+        "properties": {
+          "signed_data": {
+            "type": "string",
+            "title": "Signed Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signed_data"
+        ],
+        "title": "VerifyRequest",
+        "description": "Request model for verifying a PKCS#7 signed payload."
+      },
+      "VerifyResponse": {
+        "properties": {
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "failure_reason": {
+            "type": "string",
+            "title": "Failure Reason",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_valid",
+          "status"
+        ],
+        "title": "VerifyResponse",
+        "description": "Response model for PKCS#7 signature verification."
       },
       "VisitCreate": {
         "properties": {

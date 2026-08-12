@@ -169,3 +169,83 @@ def test_batch_signature_empty_target_forms_returns_400() -> None:
     assert (
         "At least one target eCRF form ID must be provided" in response.json()["detail"]
     )
+
+
+def test_signature_sign_and_verify_lifecycle_success() -> None:
+    """Validate /sign and /verify endpoints complete successful lifecycle with trust store.
+
+    Requirements: PRD-SYS-001
+    """
+    raw_payload = '{"a":1,"b":2}'
+    headers_sign = _make_auth_headers(action="/api/v1/execution/signatures/sign")
+
+    # 1. Sign
+    sign_response = client.post(
+        "/api/v1/execution/signatures/sign",
+        json={"data": raw_payload},
+        headers=headers_sign,
+    )
+    assert sign_response.status_code == 200
+    signed_data = sign_response.json()["signed_data"]
+    assert "-----BEGIN CERTIFICATE-----" in signed_data
+    assert "-----BEGIN SIGNATURE-----" in signed_data
+
+    # 2. Verify
+    headers_verify = _make_auth_headers(action="/api/v1/execution/signatures/verify")
+    verify_response = client.post(
+        "/api/v1/execution/signatures/verify",
+        json={"signed_data": signed_data},
+        headers=headers_verify,
+    )
+    assert verify_response.status_code == 200
+    verify_result = verify_response.json()
+    assert verify_result["is_valid"] is True
+    assert verify_result["status"] == "VALID"
+
+
+def test_signature_verify_tampered_fails() -> None:
+    """Validate that /verify rejects tampered payload data.
+
+    Requirements: PRD-SYS-001
+    """
+    raw_payload = '{"a":1,"b":2}'
+    headers_sign = _make_auth_headers(action="/api/v1/execution/signatures/sign")
+    sign_response = client.post(
+        "/api/v1/execution/signatures/sign",
+        json={"data": raw_payload},
+        headers=headers_sign,
+    )
+    signed_data = sign_response.json()["signed_data"]
+
+    # Tamper the data section
+    tampered_data = signed_data.replace('{"a":1,"b":2}', '{"a":9,"b":2}')
+
+    headers_verify = _make_auth_headers(action="/api/v1/execution/signatures/verify")
+    verify_response = client.post(
+        "/api/v1/execution/signatures/verify",
+        json={"signed_data": tampered_data},
+        headers=headers_verify,
+    )
+    assert verify_response.status_code == 200
+    verify_result = verify_response.json()
+    assert verify_result["is_valid"] is False
+    assert verify_result["status"] == "TAMPERED_INVALID_HASH"
+
+
+def test_signature_verify_mock_fails() -> None:
+    """Validate that /verify rejects mock signature data case-insensitively.
+
+    Requirements: PRD-SYS-001
+    """
+    headers_verify = _make_auth_headers(action="/api/v1/execution/signatures/verify")
+    verify_response = client.post(
+        "/api/v1/execution/signatures/verify",
+        json={
+            "signed_data": "-----BEGIN CERTIFICATE-----\nmock\n-----BEGIN SIGNATURE-----\nmock"
+        },
+        headers=headers_verify,
+    )
+    assert verify_response.status_code == 200
+    verify_result = verify_response.json()
+    assert verify_result["is_valid"] is False
+    assert verify_result["status"] == "MOCK_SIGNATURE_DETECTED"
