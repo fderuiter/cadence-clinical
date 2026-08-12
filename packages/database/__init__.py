@@ -12,6 +12,15 @@ from sqlalchemy.exc import IntegrityError, NoResultFound, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import Mapped, mapped_column
 
+from packages.database.graph import (
+    GraphDatabaseManager as GraphDatabaseManager,
+)
+from packages.database.graph import (
+    validate_cypher_query as validate_cypher_query,
+)
+from packages.database.graph import (
+    with_transaction_retry as with_transaction_retry,
+)
 from packages.hexagonal import (
     DatabaseError,
     EntityAlreadyExistsError,
@@ -330,3 +339,6 @@ class IntegrationOutboxMixin:
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+
+# Expose new Graph Persistence capabilities while keeping imports resilient

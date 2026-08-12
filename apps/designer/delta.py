@@ -3,8 +3,6 @@ Decoupled Domain Facade for Study Designer.
 Provides zero direct imports of database drivers or inline query strings.
 """
 
-import asyncio
-import functools
 import re
 from typing import Any
 
@@ -14,6 +12,7 @@ from apps.designer.domain.protocol_authoring.models import (
     SectionReviewTransition,
     Suggestion,
 )
+from packages.database import with_transaction_retry as with_transaction_retry
 
 
 # =========================================================================
@@ -148,47 +147,6 @@ def verify_version_signature(version_props: dict[str, Any]) -> bool:
     if "base_version" in version_props and version_props["base_version"] is not None:
         payload_legacy["base_version"] = version_props["base_version"]
     return verify_canonical_signature(payload_legacy, signature, secret)
-
-
-def with_transaction_retry(
-    max_retries: int = 5, initial_delay: float = 0.05, backoff_factor: float = 2.0
-):
-    """Decorator to retry transactions on transient database lock conflicts."""
-
-    def decorator(func):
-        @functools.wraps(func)
-        async def wrapper(*args, **kwargs):
-            retries = 0
-            delay = initial_delay
-            while True:
-                try:
-                    return await func(*args, **kwargs)
-                except Exception as e:
-                    err_name = e.__class__.__name__
-                    err_msg = str(e).lower()
-                    is_transient = (
-                        (
-                            err_name == "TransientError"
-                            and "neo4j" in getattr(e.__class__, "__module__", "")
-                        )
-                        or (
-                            err_name
-                            in ("TransientError", "OperationalError", "LockError")
-                        )
-                        or "lock" in err_msg
-                    )
-                    if is_transient:
-                        if retries >= max_retries:
-                            raise e
-                        retries += 1
-                        await asyncio.sleep(delay)
-                        delay *= backoff_factor
-                    else:
-                        raise e
-
-        return wrapper
-
-    return decorator
 
 
 # =========================================================================
