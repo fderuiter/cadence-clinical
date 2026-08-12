@@ -20,6 +20,7 @@ def test_fail_fast_without_report_and_draft_flag():
     @req:PRD-SYS-001
     """
     from filelock import FileLock
+
     lock = FileLock("/tmp/gxp_fail_fast_test.lock", timeout=120)
     with lock:
         # Temporarily move report.xml if it exists
@@ -66,6 +67,7 @@ def test_success_with_draft_flag():
     @req:PRD-SYS-001
     """
     from filelock import FileLock
+
     lock = FileLock("/tmp/gxp_fail_fast_test.lock", timeout=120)
     with lock:
         # Temporarily move report.xml if it exists
@@ -132,6 +134,7 @@ def test_missing_report_gxp_sync_dry_run():
     @req:PRD-SYS-001
     """
     from filelock import FileLock
+
     lock = FileLock("/tmp/gxp_fail_fast_test.lock", timeout=120)
     with lock:
         # Temporarily move report.xml if it exists
