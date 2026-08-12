@@ -1,9 +1,8 @@
 """Granular Permission Matrix and Role-Based Authorization Definitions.
 
-Provides fine-grained permission enums (STUDY_READ, FORM_WRITE, DATA_LOCK, SDV_VERIFY,
-AUDIT_VIEW, etc.) and role-to-permission mapping for Cadence Clinical eClinical platform.
+Provides fine-grained permission enums and role-to-permission mapping.
 
-Requirements: PRD-SYS-001, 21 CFR Part 11
+Requirements: PRD-SYS-001
 """
 
 
@@ -76,13 +75,13 @@ class DynamicStrEnum(str, metaclass=DynamicStrEnumMeta):
 
 
 class PermissionEnum(DynamicStrEnum):
-    """Granular permission definitions. Starts empty/generic, clinical trial values are dynamically registered."""
+    """Granular permission definitions. Starts empty/generic, values are dynamically registered."""
 
     _members = {}
 
 
 class RoleEnum(DynamicStrEnum):
-    """Canonical system roles. Starts empty/generic, clinical trial values are dynamically registered."""
+    """Canonical system roles. Starts empty/generic, values are dynamically registered."""
 
     _members = {}
 
@@ -158,7 +157,7 @@ def has_permission(roles: str | list[str], required_permission: PermissionEnum) 
     return required_permission in user_permissions
 
 
-# Dynamic registration API for consumer applications to register clinical configurations
+# Dynamic registration API for consumer applications to register configurations
 def register_role_and_permissions(
     role_name: str, permissions: set[str], aliases: list[str] = None
 ):
