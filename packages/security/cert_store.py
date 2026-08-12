@@ -3,9 +3,11 @@
 Requirements: PRD-SYS-001
 """
 
+import logging
 from datetime import UTC, datetime
 
 from cryptography import x509
+from cryptography.hazmat.primitives import hashes
 
 
 class CertificateStoreService:
@@ -94,14 +96,57 @@ class CertificateStoreService:
         except Exception:
             return False
 
-    def is_approved(self, cert_pem: str) -> bool:
-        """Check if the certificate is approved (registered in the active trust store registry)."""
+    def verify_trust(self, cert_pem: str) -> bool:
+        """Verify certificate trust status by comparing computed SHA-256 fingerprint with trusted records.
+
+        This is the public trust store validation service. It executes entirely in memory,
+        ensuring zero external database access or schema exposure.
+
+        Args:
+            cert_pem: PEM encoded X.509 certificate string.
+
+        Returns:
+            bool: True if the certificate fingerprint matches a trusted record, False otherwise.
+        """
+        logger = logging.getLogger("cert-store")
         try:
             cert = x509.load_pem_x509_certificate(cert_pem.encode("utf-8"))
-            serial_hex = hex(cert.serial_number)[2:].lower()
-            return serial_hex in self._cert_registry
-        except Exception:
+            computed_fingerprint = cert.fingerprint(hashes.SHA256()).hex().lower()
+            logger.info(
+                "Computing certificate fingerprint for trust verification: %s",
+                computed_fingerprint,
+            )
+
+            for record in self._cert_registry.values():
+                rec_pem = record.get("pem")
+                if not rec_pem:
+                    continue
+                try:
+                    rec_cert = x509.load_pem_x509_certificate(rec_pem.encode("utf-8"))
+                    rec_fingerprint = (
+                        rec_cert.fingerprint(hashes.SHA256()).hex().lower()
+                    )
+                except Exception:
+                    continue
+
+                if computed_fingerprint == rec_fingerprint:
+                    logger.info(
+                        "Fingerprint match found in trusted store. Certificate is trusted."
+                    )
+                    return True
+
+            logger.warning(
+                "Certificate trust verification failed. No matching fingerprint found: %s",
+                computed_fingerprint,
+            )
             return False
+        except Exception as exc:
+            logger.error("Error during certificate trust verification: %s", exc)
+            return False
+
+    def is_approved(self, cert_pem: str) -> bool:
+        """Check if the certificate is approved (registered in the active trust store registry)."""
+        return self.verify_trust(cert_pem)
 
 
 _active_store_instance = None
