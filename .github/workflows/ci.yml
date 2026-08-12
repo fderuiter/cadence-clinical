@@ -79,7 +79,16 @@ jobs:
         run: |
           if ! command -v hadolint >/dev/null 2>&1; then
             echo "Installing hadolint..."
-            sudo curl -sSfL -o /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-x86_64
+            for i in {1..5}; do
+              sudo curl --connect-timeout 15 --retry 5 --retry-delay 5 -sSfL -o /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.15.1/hadolint-Linux-x86_64 && break || {
+                if [ "$i" -eq 5 ]; then
+                  echo "Failed to install hadolint after 5 attempts."
+                  exit 22
+                fi
+                echo "Download failed, retrying in 5 seconds... (Attempt $i/5)"
+                sleep 5
+              }
+            done
             sudo chmod +x /usr/local/bin/hadolint
           fi
           hadolint --failure-threshold error apps/gateway/Dockerfile apps/designer/Dockerfile apps/execution/Dockerfile apps/etmf/Dockerfile docker/Dockerfile
