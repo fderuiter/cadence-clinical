@@ -383,6 +383,15 @@ def setup_security_dynamic_registry():
                     "create",
                     "manage_expiration",
                     "tag",
+                    "redact",
+                    "read_raw",
+                    "transition_draft",
+                    "transition_technical_qc",
+                    "transition_clinical_qc",
+                    "transition_approved",
+                    "transition_archived",
+                    "transition_rejected",
+                    "transition_signed",
                 },
                 "etmf_edl": {"read", "write", "delete", "sign", "create"},
                 "visit_windowing": {"create", "read", "update"},
@@ -400,7 +409,17 @@ def setup_security_dynamic_registry():
             {
                 "data": {"read"},
                 "sdv": {"verify"},
-                "etmf_document": {"read", "write", "delete", "tag"},
+                "etmf_document": {
+                    "read",
+                    "write",
+                    "delete",
+                    "tag",
+                    "read_raw",
+                    "transition_clinical_qc",
+                    "create",
+                    "redact",
+                    "sign",
+                },
                 "lab_range": {"create", "read", "update", "delete", "alert"},
                 "ecoa_diary": {"create", "read", "update", "delete", "alert"},
                 "visit_windowing": {"read"},
@@ -535,7 +554,19 @@ def setup_security_dynamic_registry():
 
     for r in ("system",):
         register_rbac_role_permissions(
-            r, {"etmf_taxonomy": {"read"}, "ecoa_diary": {"read", "alert"}}
+            r,
+            {
+                "etmf_taxonomy": {"read"},
+                "ecoa_diary": {"read", "alert"},
+                "etmf_document": {
+                    "manage_expiration",
+                    "read",
+                    "create",
+                    "read_raw",
+                    "redact",
+                    "sign",
+                },
+            },
         )
 
     for r in ("grants_manager", "grants manager"):

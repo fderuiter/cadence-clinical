@@ -528,6 +528,9 @@ try:
             "tag",
             "read_raw",
             "transition_clinical_qc",
+            "create",
+            "redact",
+            "sign",
         },
         "eisf_document": {"create", "read", "update", "delete", "sync"},
         "lab_range": {"create", "read", "update", "delete", "alert"},
@@ -609,6 +612,39 @@ try:
     admin_roles = ["SponsorAdmin", "sponsor_admin", "sponsoradmin", "Sponsor Admin"]
     for r in admin_roles:
         register_rbac_role_permissions(r, admin_perms)
+
+    for r in ("admin",):
+        register_rbac_role_permissions(
+            r,
+            {
+                "study_design": {"read"},
+                "etmf_document": {
+                    "read",
+                    "write",
+                    "delete",
+                    "sign",
+                    "create",
+                    "manage_expiration",
+                    "tag",
+                    "redact",
+                    "read_raw",
+                    "transition_draft",
+                    "transition_technical_qc",
+                    "transition_clinical_qc",
+                    "transition_approved",
+                    "transition_archived",
+                    "transition_rejected",
+                    "transition_signed",
+                },
+                "etmf_edl": {"read", "write", "delete", "sign", "create"},
+                "visit_windowing": {"create", "read", "update"},
+                "soa": {"create", "read", "update", "delete"},
+                "lab_range": {"create", "read", "update", "delete", "alert"},
+                "ecoa_diary": {"create", "read", "update", "delete", "alert"},
+                "etmf_taxonomy": {"read"},
+                "protocol_export": {"generate", "read"},
+            },
+        )
 
     designer_roles = [
         "SponsorDesigner",
@@ -744,7 +780,14 @@ try:
             {
                 "etmf_taxonomy": {"read"},
                 "ecoa_diary": {"read", "alert"},
-                "etmf_document": {"manage_expiration", "read"},
+                "etmf_document": {
+                    "manage_expiration",
+                    "read",
+                    "create",
+                    "read_raw",
+                    "redact",
+                    "sign",
+                },
             },
         )
 
