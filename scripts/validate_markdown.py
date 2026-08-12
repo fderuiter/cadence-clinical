@@ -231,7 +231,9 @@ def resolve_path(path_str, md_file_path, repo_root, root_dirs, root_files):
         return None
 
     # Redirect deleted models.py to models package directory
-    path_str = path_str.replace("apps/execution/database/models.py", "apps/execution/database/models")
+    path_str = path_str.replace(
+        "apps/execution/database/models.py", "apps/execution/database/models"
+    )
 
     # Ignore gitignored build folders or coverage folders
     if any(
