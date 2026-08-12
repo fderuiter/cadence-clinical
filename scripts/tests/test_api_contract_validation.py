@@ -522,6 +522,7 @@ def is_whitelisted(method: str, path: str) -> bool:
         "/api/v1/documents",
         "/api/v1/execution/subjects",
         "/api/v1/execution/visits",
+        "/api/v1/execution/exports",
         "/api/v1/studies",
         "/api/v1/synopsis",
         "/subjects",

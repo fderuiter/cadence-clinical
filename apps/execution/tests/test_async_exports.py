@@ -19,7 +19,7 @@ from apps.execution.demographics import encrypt_demographics
 from apps.execution.main import app
 from apps.execution.trial_lock import TrialLockManager
 
-GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # nosec B105: mock fallback secret for testing
 
 
 def get_auth_headers(
