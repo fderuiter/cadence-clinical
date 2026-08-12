@@ -317,4 +317,5 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-11: ADR-[NUMBER]: Persistent Local PIN Wrapper and Secure Offline IndexedDB Encryption](2026-08-11-persistent-local-pin-wrapper-and-indexeddb-security.md)
 - [2026-08-11: AST-based Offline Schema Drift Detection and Babel Parser Dependency](2026-08-11-ast-based-offline-schema-drift-detection.md)
 - [2026-08-11: Refined Mock Signature Verification Base64 Collision Prevention](2026-08-11-refine-asymmetric-mock-signature-detection-for-base64-collisions.md)
+- [2026-08-11: Decommissioning Client-Side TS Wrapper SDK and Enforcing Frontend Dependency Gates](2026-08-11-decommissioning-client-side-ts-sdk-and-enforcing-dependency-gates.md)
 - [2026-08-12: ADR-[NUMBER]: Separate Monolithic Clinical Workflows into Modular Sub-routers](2026-08-12-separate-monolithic-clinical-workflows-into-modular-sub-routers.md)

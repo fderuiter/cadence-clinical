@@ -46,14 +46,14 @@ def check_package_json(file_path: Path) -> list[str]:
     """
     violations = []
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             data = json.load(f)
 
         # Inspect all dependency blocks
         for block in ["dependencies", "devDependencies", "peerDependencies"]:
             deps = data.get(block, {})
             if isinstance(deps, dict):
-                for dep_name in deps.keys():
+                for dep_name in deps:
                     if dep_name.lower() in FORBIDDEN_PACKAGES:
                         violations.append(
                             f"Unauthorized asymmetric cryptographic package '{dep_name}' "
@@ -72,7 +72,16 @@ def main():
     total_files_checked = 0
 
     # Walk repository to find all package.json files (ignoring standard exclusion paths)
-    exclude_dirs = {".venv", "venv", "node_modules", ".git", "dist", "build", ".pytest_cache", ".ruff_cache"}
+    exclude_dirs = {
+        ".venv",
+        "venv",
+        "node_modules",
+        ".git",
+        "dist",
+        "build",
+        ".pytest_cache",
+        ".ruff_cache",
+    }
 
     for root, dirs, files in os.walk(ROOT_DIR):
         # Filter directories in-place to optimize traversal
@@ -88,15 +97,21 @@ def main():
                     violations_found[relative_path] = violations
 
     if violations_found:
-        print("\n[ERROR] Forbidden asymmetric/public-key cryptographic package(s) detected in package.json files!")
+        print(
+            "\n[ERROR] Forbidden asymmetric/public-key cryptographic package(s) detected in package.json files!"
+        )
         for file, errs in violations_found.items():
             print(f"\nIn file: {file}")
             for err in errs:
                 print(f"  - {err}")
-        print("\nCI build block: asymmetric operations must be isolated inside native Python backends.")
+        print(
+            "\nCI build block: asymmetric operations must be isolated inside native Python backends."
+        )
         sys.exit(1)
 
-    print(f"\n[SUCCESS] No forbidden asymmetric cryptographic dependencies found across {total_files_checked} package.json files.")
+    print(
+        f"\n[SUCCESS] No forbidden asymmetric cryptographic dependencies found across {total_files_checked} package.json files."
+    )
     sys.exit(0)
 
 
