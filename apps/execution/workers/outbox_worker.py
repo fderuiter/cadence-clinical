@@ -4,9 +4,10 @@ import os
 import sys
 import time
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import IntegrationOutbox
@@ -14,10 +15,12 @@ from packages.security.signing import generate_gateway_signature
 
 logger = logging.getLogger("execution-outbox-worker")
 outbox_task = None
+_session_maker = None
 
 
 async def poll_and_dispatch() -> None:
-    session_maker = db_manager.get_session_maker()
+    global _session_maker
+    session_maker = _session_maker or db_manager.get_session_maker()
 
     # Get parameters from environment
     batch_size = int(os.getenv("OUTBOX_BATCH_SIZE", "20"))
@@ -28,6 +31,17 @@ async def poll_and_dispatch() -> None:
 
     # 1. Claiming Phase: open a brief transaction using session_maker()
     async with session_maker() as session:
+        if session.bind.dialect.name == "postgresql":
+            lock_res = await session.execute(
+                text("SELECT pg_try_advisory_xact_lock(42003);")
+            )
+            acquired = lock_res.scalar()
+            if not acquired:
+                logger.info(
+                    "Could not acquire transaction advisory lock 42003 for outbox dispatcher. Skipping cycle."
+                )
+                return
+
         # Construct select statement for records that are eligible for processing
         stmt = select(IntegrationOutbox).where(
             IntegrationOutbox.status.in_(("PENDING", "FAILED")),
@@ -213,10 +227,11 @@ async def outbox_lifecycle_worker() -> None:
         await asyncio.sleep(poll_interval)
 
 
-def start_outbox_worker() -> None:
-    global outbox_task
+def start_outbox_worker(session_maker: Any = None) -> None:
+    global outbox_task, _session_maker
     if "pytest" in sys.modules or os.getenv("TESTING") == "true":
         return
+    _session_maker = session_maker
     outbox_task = asyncio.create_task(outbox_lifecycle_worker())
 
 

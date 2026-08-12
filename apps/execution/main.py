@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import uuid
@@ -27,7 +28,7 @@ from apps.execution.database.context import (
     current_change_reason,
     current_user_id,
 )
-from apps.execution.database.core import db_manager
+from apps.execution.database.core import bg_db_manager, db_manager
 from apps.execution.database.middleware import ContextResetMiddleware
 from apps.execution.database.models import (
     AuditLog,
@@ -154,6 +155,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         None
     """
     is_testing = "PYTEST_CURRENT_TEST" in os.environ or "TESTING" in os.environ
+    run_workers = os.getenv("RUN_BACKGROUND_WORKERS", "true").lower() == "true"
 
     if not is_testing:
         # Initialize shared database library
@@ -173,9 +175,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
             stop_outbox_worker,
         )
 
-        await start_background_sealer(db_manager.get_session_maker())
-        await start_background_query_escalation(db_manager.get_session_maker())
-        start_outbox_worker()
+        if run_workers:
+            # Initialize isolated background database session manager with dedicated pool
+            bg_pool_kwargs = {}
+            if not DATABASE_URL.startswith("sqlite"):
+                bg_pool_kwargs = {
+                    "pool_size": 5,
+                    "max_overflow": 5,
+                    "pool_timeout": 30,
+                    "pool_pre_ping": True,
+                }
+            bg_db_manager.init_db(DATABASE_URL, **bg_pool_kwargs)
+
+            await start_background_sealer(bg_db_manager.get_session_maker())
+            await start_background_query_escalation(bg_db_manager.get_session_maker())
+            start_outbox_worker(bg_db_manager.get_session_maker())
 
     yield
 
@@ -186,6 +200,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         await stop_background_query_escalation()
         # Stop background outbox worker
         stop_outbox_worker()
+        # Cleanup background database connection
+        await bg_db_manager.close()
         # Cleanup database connection
         await db_manager.close()
 
@@ -3555,9 +3571,37 @@ async def list_migration_rules(
         ]
 
 
+_last_verification_status = {
+    "verified": True,
+    "message": "GxP clinical execution ledger chain fully verified and structurally intact.",
+}
+_verification_lock = asyncio.Lock()
+
+
+async def run_verification_task():
+    async with _verification_lock:
+        from apps.execution.database.sealer import validate_ledger_integrity
+
+        try:
+            async with db_manager.get_session_maker()() as session:
+                is_valid = await validate_ledger_integrity(session)
+                _last_verification_status["verified"] = is_valid
+                _last_verification_status["message"] = (
+                    "GxP clinical execution ledger chain fully verified and structurally intact."
+                    if is_valid
+                    else "GxP Core Data Integrity Breach Detected"
+                )
+        except Exception as e:
+            _last_verification_status["verified"] = False
+            _last_verification_status["message"] = (
+                f"GxP Core Data Integrity Breach Detected: {str(e)}"
+            )
+
+
 @app.get("/api/v1/execution/audit/integrity")
 async def get_execution_audit_integrity(
     request: Request,
+    background_tasks: BackgroundTasks,
     principal: Principal = Depends(get_principal),
 ) -> dict:
     """Verify the GxP clinical execution ledger integrity via block-sealing validation.
@@ -3582,21 +3626,13 @@ async def get_execution_audit_integrity(
             detail="Forbidden: Access is restricted to authorized auditor/inspection roles.",
         )
 
-    from apps.execution.database.sealer import validate_ledger_integrity
+    # Queue the verification task in the background (will run outside request lifecycle)
+    background_tasks.add_task(run_verification_task)
 
-    try:
-        async with db_manager.get_session_maker()() as session:
-            # validate_ledger_integrity returns True or raises ValueError on tamper
-            is_valid = await validate_ledger_integrity(session)
-            return {
-                "verified": is_valid,
-                "message": "GxP clinical execution ledger chain fully verified and structurally intact.",
-            }
-    except ValueError as e:
-        return {
-            "verified": False,
-            "message": f"GxP Core Data Integrity Breach Detected: {str(e)}",
-        }
+    return {
+        "verified": _last_verification_status["verified"],
+        "message": _last_verification_status["message"],
+    }
 
 
 @app.get("/api/v1/admin/outbox")

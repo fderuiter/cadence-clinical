@@ -157,3 +157,4 @@ class DatabaseSessionManager:
 
 
 db_manager: DatabaseSessionManager = DatabaseSessionManager()
+bg_db_manager: DatabaseSessionManager = DatabaseSessionManager()
