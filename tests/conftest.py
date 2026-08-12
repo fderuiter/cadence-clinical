@@ -485,9 +485,15 @@ try:
         "medical_coding": {"create", "read", "update"},
         "etmf_taxonomy": {"read"},
         "protocol_export": {"generate", "read"},
-        "etmf_audit_logs": {"read"},
         "audit_log": {"read"},
-        "global_library": {"create", "update", "amend", "transition", "instantiate", "read"},
+        "global_library": {
+            "create",
+            "update",
+            "amend",
+            "transition",
+            "instantiate",
+            "read",
+        },
         "library_object": {"approve", "publish", "release"},
     }
 
@@ -498,7 +504,14 @@ try:
         "soa": {"create", "read", "update", "delete"},
         "protocol_export": {"generate", "read"},
         "eisf_document": {"read"},
-        "global_library": {"create", "update", "amend", "transition", "instantiate", "read"},
+        "global_library": {
+            "create",
+            "update",
+            "amend",
+            "transition",
+            "instantiate",
+            "read",
+        },
         "library_object": {"read"},
     }
 
@@ -534,7 +547,14 @@ try:
         "query_lifecycle": {"create", "read", "update", "delete"},
         "export_masked": {"create"},
         "protocol_export": {"generate", "read"},
-        "global_library": {"create", "update", "amend", "transition", "instantiate", "read"},
+        "global_library": {
+            "create",
+            "update",
+            "amend",
+            "transition",
+            "instantiate",
+            "read",
+        },
         "library_object": {"approve", "publish"},
     }
 
@@ -629,7 +649,13 @@ try:
         "ecoa_schedule": {"read"},
     }
 
-    admin_roles = ["SponsorAdmin", "sponsor_admin", "sponsoradmin", "Sponsor Admin", "admin"]
+    admin_roles = [
+        "SponsorAdmin",
+        "sponsor_admin",
+        "sponsoradmin",
+        "Sponsor Admin",
+        "admin",
+    ]
     for r in admin_roles:
         register_rbac_role_permissions(r, admin_perms)
 

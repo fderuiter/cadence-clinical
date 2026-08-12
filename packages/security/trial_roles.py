@@ -66,10 +66,10 @@ def check_trial_role(request: Request, role: TrialRole) -> bool:
     following the eTMF string-matching/normalization convention.
     """
     user_roles = get_normalized_request_roles(request)
-    
+
     # Extract string representation or value of the role
     role_key = getattr(role, "value", str(role))
-    allowed = _TRIAL_ROLE_CHECK_MAP.get(role, None)
+    allowed = _TRIAL_ROLE_CHECK_MAP.get(role)
     if allowed is None:
         allowed = _TRIAL_ROLE_CHECK_MAP.get(role_key, set())
 
@@ -77,19 +77,48 @@ def check_trial_role(request: Request, role: TrialRole) -> bool:
     if isinstance(allowed, str):
         if allowed == "is_sponsor":
             allowed_roles = {
-                "sponsor_dm", "data_manager", "dm", "sponsor_admin", "admin", "sponsor_designer", "sponsor_clinical", "cra", 
-                "sponsoradmin", "sponsordesigner", "clinicalresearchassociate", "datamanager", "sponsor_admin", "sponsoradmin",
-                "ClinicalResearchAssociate", "SponsorAdmin", "SponsorDesigner", "DataManager"
+                "sponsor_dm",
+                "data_manager",
+                "dm",
+                "sponsor_admin",
+                "admin",
+                "sponsor_designer",
+                "sponsor_clinical",
+                "cra",
+                "sponsoradmin",
+                "sponsordesigner",
+                "clinicalresearchassociate",
+                "datamanager",
+                "sponsor_admin",
+                "sponsoradmin",
+                "ClinicalResearchAssociate",
+                "SponsorAdmin",
+                "SponsorDesigner",
+                "DataManager",
             }
         elif allowed == "is_site":
             allowed_roles = {
-                "principal_investigator", "investigator", "lead_investigator", "authorized_er_physician", "crc", "site_investigator", 
-                "principalinvestigator", "clinicalresearchcoordinator", "PrincipalInvestigator", "ClinicalResearchCoordinator",
-                "Site Investigator", "site investigator", "site_investigator"
+                "principal_investigator",
+                "investigator",
+                "lead_investigator",
+                "authorized_er_physician",
+                "crc",
+                "site_investigator",
+                "principalinvestigator",
+                "clinicalresearchcoordinator",
+                "PrincipalInvestigator",
+                "ClinicalResearchCoordinator",
+                "Site Investigator",
+                "site investigator",
+                "site_investigator",
             }
         elif allowed == "is_auditor":
             allowed_roles = {
-                "auditor", "inspector", "regulatory_inspector", "Auditor", "Inspector"
+                "auditor",
+                "inspector",
+                "regulatory_inspector",
+                "Auditor",
+                "Inspector",
             }
     else:
         allowed_roles = set(allowed)

@@ -318,7 +318,14 @@ def setup_security_dynamic_registry():
                 "lab_range": {"create", "read", "update", "delete", "alert"},
                 "ecoa_diary": {"create", "read", "update", "delete", "alert"},
                 "protocol_export": {"generate", "read"},
-                "global_library": {"create", "update", "amend", "transition", "instantiate", "read"},
+                "global_library": {
+                    "create",
+                    "update",
+                    "amend",
+                    "transition",
+                    "instantiate",
+                    "read",
+                },
                 "library_object": {"approve", "publish", "release"},
             },
         )
@@ -332,7 +339,14 @@ def setup_security_dynamic_registry():
                 "visit_windowing": {"create", "read", "update"},
                 "soa": {"create", "read", "update", "delete"},
                 "protocol_export": {"generate", "read"},
-                "global_library": {"create", "update", "amend", "transition", "instantiate", "read"},
+                "global_library": {
+                    "create",
+                    "update",
+                    "amend",
+                    "transition",
+                    "instantiate",
+                    "read",
+                },
                 "library_object": {"read"},
             },
         )
@@ -361,7 +375,14 @@ def setup_security_dynamic_registry():
                 "query_lifecycle": {"create", "read", "update", "delete"},
                 "export_masked": {"create"},
                 "protocol_export": {"generate", "read"},
-                "global_library": {"create", "update", "amend", "transition", "instantiate", "read"},
+                "global_library": {
+                    "create",
+                    "update",
+                    "amend",
+                    "transition",
+                    "instantiate",
+                    "read",
+                },
                 "library_object": {"approve", "publish"},
             },
         )
