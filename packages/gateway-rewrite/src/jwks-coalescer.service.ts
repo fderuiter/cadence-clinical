@@ -31,7 +31,10 @@ export class JwksCoalescerService implements OnModuleInit {
       const res = originalSet(key, value);
       try {
         if (value && !this.publicKeyCache.has(key)) {
-          const publicKey = crypto.createPublicKey({ key: value, format: "jwk" });
+          const publicKey = crypto.createPublicKey({
+            key: value,
+            format: "jwk",
+          });
           this.publicKeyCache.set(key, publicKey);
         }
       } catch (e) {
