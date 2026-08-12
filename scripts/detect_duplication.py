@@ -220,8 +220,11 @@ def main() -> None:
 
                         # Exempt backward-compatibility wrappers from being flagged against packages/shared-api-client/index.js
                         is_api_wrapper_dup = (
-                            (p_file1.startswith("apps/web/src/api/") and p_file2 == "packages/shared-api-client/index.js") or
-                            (p_file2.startswith("apps/web/src/api/") and p_file1 == "packages/shared-api-client/index.js")
+                            p_file1.startswith("apps/web/src/api/")
+                            and p_file2 == "packages/shared-api-client/index.js"
+                        ) or (
+                            p_file2.startswith("apps/web/src/api/")
+                            and p_file1 == "packages/shared-api-client/index.js"
                         )
                         if is_api_wrapper_dup:
                             continue
