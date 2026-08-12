@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2344
-- **Passed:** 2330 🟢
+- **Total Automated Test Cases Run:** 2346
+- **Passed:** 2332 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 14 ⚪
 - **Overall Operational Pass Rate:** 99.40%
@@ -1209,6 +1209,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_pdf_redaction_engine_purges_metadata_and_fields`                             | `apps.execution.tests.test_pdf_redactor`                                    | PRD-SYS-001                                  | 🟢 PASSED  | < 1s     |
 | `test_pdf_redaction_overlay_generation`                                            | `apps.execution.tests.test_pdf_redactor`                                    | PRD-SYS-001                                  | 🟢 PASSED  | < 1s     |
 | `test_zero_phi_leak_in_redacted_pdf`                                               | `apps.execution.tests.test_phi_redaction`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_concurrent_connection_isolation_and_no_weakref_errors`                       | `apps.execution.tests.test_pool_state_eviction`                             | PRD-SYS-001                                  | 🟢 PASSED  | < 1s     |
+| `test_pool_connection_state_eviction`                                              | `apps.execution.tests.test_pool_state_eviction`                             | PRD-SYS-001                                  | 🟢 PASSED  | < 1s     |
 | `test_digest_window_configurations`                                                | `apps.execution.tests.test_queries_escalation`                              | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_escalation_idempotency`                                                      | `apps.execution.tests.test_queries_escalation`                              | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_escalation_missing_ids_fallback`                                             | `apps.execution.tests.test_queries_escalation`                              | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |

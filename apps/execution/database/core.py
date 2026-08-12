@@ -15,13 +15,19 @@ class DatabaseSessionManager:
     """
 
     def __init__(self) -> None:
-        """Initialize the DatabaseSessionManager with empty state."""
+        """Initialize the DatabaseSessionManager with empty state.
+
+        Attributes:
+            engine (Any): The database engine instance.
+            session_maker (async_sessionmaker[AsyncSession] | None): Factory for producing sessions.
+            _sqlite_settings (dict[int, dict[str, str | None]]): Maps connection IDs to their SQLite configurations.
+        """
         self.engine: Any = None
         self.session_maker: async_sessionmaker[AsyncSession] | None = None
+        self._sqlite_settings: dict[int, dict[str, str | None]] = {}
 
     def init_db(self, database_url: str, **kwargs: Any) -> None:
-        """
-        Initialize the database engine and session maker.
+        """Initialize the database engine and session maker.
 
         Args:
             database_url (str): The connection string for the database.
@@ -35,10 +41,7 @@ class DatabaseSessionManager:
 
         self.engine = create_async_engine(database_url, **{**engine_options, **kwargs})
 
-        _sqlite_settings = {}
-
-        @event.listens_for(self.engine.sync_engine, "connect")
-        def set_sqlite_pragma(dbapi_connection, connection_record):
+        def _get_raw_connection(dbapi_connection: Any) -> Any:
             conn = dbapi_connection
             for _ in range(5):
                 if hasattr(conn, "create_function"):
@@ -51,28 +54,33 @@ class DatabaseSessionManager:
                     conn = conn.dbapi_connection
                 else:
                     break
+            return conn
+
+        @event.listens_for(self.engine.sync_engine, "connect")
+        def set_sqlite_pragma(dbapi_connection, connection_record):
+            conn = _get_raw_connection(dbapi_connection)
 
             if hasattr(conn, "create_function"):
                 conn_id = id(conn)
-                if conn_id not in _sqlite_settings:
-                    _sqlite_settings[conn_id] = {
+                if conn_id not in self._sqlite_settings:
+                    self._sqlite_settings[conn_id] = {
                         "cadence.current_user_id": "system",
                         "cadence.current_change_reason": "system_operation",
                         "cadence.app_writing": "false",
                     }
 
                 def sqlite_set_config(name, value, is_local=True):
-                    if conn_id not in _sqlite_settings:
-                        _sqlite_settings[conn_id] = {}
-                    _sqlite_settings[conn_id][name] = (
+                    if conn_id not in self._sqlite_settings:
+                        self._sqlite_settings[conn_id] = {}
+                    self._sqlite_settings[conn_id][name] = (
                         str(value) if value is not None else None
                     )
                     return value
 
                 def sqlite_current_setting(name, missing_ok=True):
-                    if conn_id not in _sqlite_settings:
+                    if conn_id not in self._sqlite_settings:
                         return ""
-                    val = _sqlite_settings[conn_id].get(name)
+                    val = self._sqlite_settings[conn_id].get(name)
                     if val is None:
                         if missing_ok:
                             return ""
@@ -82,6 +90,44 @@ class DatabaseSessionManager:
                 conn.create_function("set_config", 3, sqlite_set_config)
                 conn.create_function("current_setting", 2, sqlite_current_setting)
                 conn.create_function("gen_random_uuid", 0, lambda: str(uuid.uuid4()))
+
+        @event.listens_for(self.engine.sync_engine, "checkout")
+        def reset_sqlite_on_checkout(
+            dbapi_connection, connection_record, connection_proxy
+        ):
+            conn = _get_raw_connection(dbapi_connection)
+            if hasattr(conn, "create_function"):
+                conn_id = id(conn)
+                self._sqlite_settings[conn_id] = {
+                    "cadence.current_user_id": "system",
+                    "cadence.current_change_reason": "system_operation",
+                    "cadence.app_writing": "false",
+                }
+
+        @event.listens_for(self.engine.sync_engine, "checkin")
+        def reset_sqlite_on_checkin(dbapi_connection, connection_record):
+            conn = _get_raw_connection(dbapi_connection)
+            if hasattr(conn, "create_function"):
+                conn_id = id(conn)
+                self._sqlite_settings[conn_id] = {
+                    "cadence.current_user_id": "system",
+                    "cadence.current_change_reason": "system_operation",
+                    "cadence.app_writing": "false",
+                }
+
+        @event.listens_for(self.engine.sync_engine, "close")
+        def evict_sqlite_on_close(dbapi_connection, connection_record):
+            conn = _get_raw_connection(dbapi_connection)
+            if hasattr(conn, "create_function"):
+                conn_id = id(conn)
+                self._sqlite_settings.pop(conn_id, None)
+
+        @event.listens_for(self.engine.sync_engine, "close_detached")
+        def evict_sqlite_on_close_detached(dbapi_connection):
+            conn = _get_raw_connection(dbapi_connection)
+            if hasattr(conn, "create_function"):
+                conn_id = id(conn)
+                self._sqlite_settings.pop(conn_id, None)
 
         self.session_maker = async_sessionmaker(
             bind=self.engine, class_=AsyncSession, expire_on_commit=False
@@ -93,6 +139,7 @@ class DatabaseSessionManager:
             await self.engine.dispose()
             self.engine = None
             self.session_maker = None
+        self._sqlite_settings.clear()
 
     def get_session_maker(self) -> async_sessionmaker[AsyncSession]:
         """

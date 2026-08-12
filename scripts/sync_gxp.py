@@ -182,6 +182,27 @@ def step_run_tests(dry_run: bool) -> None:
                 "--ignore=apps/notifications/tests/test_notifications.py",
                 "--ignore=apps/notifications/tests/test_notification_worker.py",
                 "--ignore=tests/validation",
+                "--ignore=scripts/tests/test_translation_recovery.py",
+                "--ignore=scripts/tests/test_translator.py",
+                "--ignore=apps/designer/tests/test_crf_builder_compliance.py",
+                "--ignore=apps/designer/tests/test_crf_requirements_mapping.py",
+            ]
+        )
+        # Run translation and compliance layout tests sequentially
+        _run(
+            [
+                "uv",
+                "run",
+                "--all-extras",
+                "pytest",
+                "--junitxml",
+                "report_sequential.xml",
+                "-q",
+                "--no-cov",
+                "scripts/tests/test_translation_recovery.py",
+                "scripts/tests/test_translator.py",
+                "apps/designer/tests/test_crf_builder_compliance.py",
+                "apps/designer/tests/test_crf_requirements_mapping.py",
             ]
         )
         # Run notification tests sequentially
@@ -236,6 +257,7 @@ def step_run_tests(dry_run: bool) -> None:
                 "scripts/merge_junit.py",
                 JUNIT_REPORT,
                 "report_main.xml",
+                "report_sequential.xml",
                 "report_notif.xml",
                 "report_integration.xml",
                 "report_qualification.xml",
