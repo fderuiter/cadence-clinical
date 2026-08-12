@@ -67,7 +67,7 @@ from sqlalchemy import inspect, text
 async def deploy_database_triggers(conn, dialect_name: str) -> None:
     """
     Deploys database-level triggers to guarantee immutability (insertion-only)
-    for DocumentQCTransition records.
+    for DocumentQCTransition records and block deletions on tmf_documents.
     """
     if dialect_name == "sqlite":
         await conn.execute(
@@ -85,6 +85,15 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
             BEFORE DELETE ON tmf_document_qc_transitions
             BEGIN
                 SELECT RAISE(FAIL, 'IMMUTABILITY_VIOLATION: DocumentQCTransition records are append-only and cannot be deleted.');
+            END;
+        """)
+        )
+        await conn.execute(
+            text("""
+            CREATE TRIGGER IF NOT EXISTS tmf_documents_no_delete
+            BEFORE DELETE ON tmf_documents
+            BEGIN
+                SELECT RAISE(FAIL, 'IMMUTABILITY_VIOLATION: eTMF documents are immutable and cannot be deleted.');
             END;
         """)
         )
@@ -121,6 +130,26 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
             CREATE TRIGGER tmf_document_qc_transitions_no_delete
             BEFORE DELETE ON tmf_document_qc_transitions
             FOR EACH ROW EXECUTE FUNCTION block_qc_transition_mutation();
+        """)
+        )
+        await conn.execute(
+            text("""
+            CREATE OR REPLACE FUNCTION block_document_deletion()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                RAISE EXCEPTION 'IMMUTABILITY_VIOLATION: eTMF documents are immutable and cannot be deleted.';
+            END;
+            $$ LANGUAGE plpgsql;
+        """)
+        )
+        await conn.execute(
+            text("DROP TRIGGER IF EXISTS tmf_documents_no_delete ON tmf_documents;")
+        )
+        await conn.execute(
+            text("""
+            CREATE TRIGGER tmf_documents_no_delete
+            BEFORE DELETE ON tmf_documents
+            FOR EACH ROW EXECUTE FUNCTION block_document_deletion();
         """)
         )
 

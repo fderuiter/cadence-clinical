@@ -393,6 +393,12 @@ event.listen(
 
 @event.listens_for(DocumentQCTransition, "before_update")
 def prevent_qc_transition_update(mapper, connection, target):
+    """
+    SQLAlchemy event listener that prevents updates on DocumentQCTransition records.
+
+    Raises:
+        RuntimeError: Always raises to block update operations.
+    """
     raise RuntimeError(
         "IMMUTABILITY_VIOLATION: DocumentQCTransition records are append-only and cannot be updated."
     )
@@ -400,8 +406,73 @@ def prevent_qc_transition_update(mapper, connection, target):
 
 @event.listens_for(DocumentQCTransition, "before_delete")
 def prevent_qc_transition_delete(mapper, connection, target):
+    """
+    SQLAlchemy event listener that prevents deletions on DocumentQCTransition records.
+
+    Raises:
+        RuntimeError: Always raises to block delete operations.
+    """
     raise RuntimeError(
         "IMMUTABILITY_VIOLATION: DocumentQCTransition records are append-only and cannot be deleted."
+    )
+
+
+trigger_document_delete_sqlite = DDL("""
+CREATE TRIGGER IF NOT EXISTS tmf_documents_no_delete
+BEFORE DELETE ON tmf_documents
+BEGIN
+    SELECT RAISE(FAIL, 'IMMUTABILITY_VIOLATION: eTMF documents are immutable and cannot be deleted.');
+END;""")
+
+trigger_document_func_pg = DDL("""
+CREATE OR REPLACE FUNCTION block_document_deletion()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE EXCEPTION 'IMMUTABILITY_VIOLATION: eTMF documents are immutable and cannot be deleted.';
+END;
+$$ LANGUAGE plpgsql;""")
+
+trigger_document_delete_pg_drop = DDL("""
+DROP TRIGGER IF EXISTS tmf_documents_no_delete ON tmf_documents;
+""")
+
+trigger_document_delete_pg_create = DDL("""
+CREATE TRIGGER tmf_documents_no_delete
+BEFORE DELETE ON tmf_documents
+FOR EACH ROW EXECUTE FUNCTION block_document_deletion();""")
+
+event.listen(
+    TMFDocument.__table__,
+    "after_create",
+    trigger_document_delete_sqlite.execute_if(dialect="sqlite"),
+)
+event.listen(
+    TMFDocument.__table__,
+    "after_create",
+    trigger_document_func_pg.execute_if(dialect="postgresql"),
+)
+event.listen(
+    TMFDocument.__table__,
+    "after_create",
+    trigger_document_delete_pg_drop.execute_if(dialect="postgresql"),
+)
+event.listen(
+    TMFDocument.__table__,
+    "after_create",
+    trigger_document_delete_pg_create.execute_if(dialect="postgresql"),
+)
+
+
+@event.listens_for(TMFDocument, "before_delete")
+def prevent_document_delete(mapper, connection, target):
+    """
+    SQLAlchemy event listener that prevents deletions on TMFDocument records.
+
+    Raises:
+        RuntimeError: Always raises to block delete operations.
+    """
+    raise RuntimeError(
+        "IMMUTABILITY_VIOLATION: eTMF documents are immutable and cannot be deleted."
     )
 
 

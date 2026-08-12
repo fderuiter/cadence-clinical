@@ -14,6 +14,7 @@ def enable_sqlite_fks(engine):
 
     @event.listens_for(engine.sync_engine, "connect")
     def set_sqlite_pragma(dbapi_connection, connection_record):
+        """Set SQLite PRAGMA configuration on raw database connection."""
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
@@ -209,6 +210,13 @@ async def test_migration_upgrade_and_backfill_path():
                     text(
                         "UPDATE tmf_document_qc_transitions SET to_status='APPROVED' WHERE id='t1'"
                     )
+                )
+            assert "IMMUTABILITY_VIOLATION" in str(exc_info.value)
+
+            # 7. Test Document Immutability Triggers (reject DELETE on tmf_documents)
+            with pytest.raises((OperationalError, IntegrityError)) as exc_info:
+                await conn.execute(
+                    text(f"DELETE FROM tmf_documents WHERE id='{doc1_id}'")
                 )
             assert "IMMUTABILITY_VIOLATION" in str(exc_info.value)
 
