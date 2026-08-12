@@ -12,9 +12,11 @@ Based on the executed automated verification suite, the platform meets all prede
 
 - **Total Automated Test Cases Run:** 2357
 - **Passed:** 2338 🟢
+- **Total Automated Test Cases Run:** 2361
+- **Passed:** 2342 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
-- **Overall Operational Pass Rate:** 99.19%
+- **Overall Operational Pass Rate:** 99.20%
 
 ## 2. Installation Qualification (IQ)
 
@@ -310,6 +312,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_blinding_constraints_on_ui_data_rendering`                                   | `apps.designer.tests.test_designer_compliance`                              | PRD-MDR-006                                  | 🟢 PASSED  | < 1s     |
 | `test_fda_compliant_pdf_generation_protocol`                                       | `apps.designer.tests.test_designer_compliance`                              | PRD-SUB-007                                  | 🟢 PASSED  | < 1s     |
 | `test_field_level_ingestion_validations`                                           | `apps.designer.tests.test_designer_compliance`                              | PRD-EDC-002                                  | 🟢 PASSED  | < 1s     |
+| `test_gxp_audit_enforcement_default_justification`                                 | `apps.designer.tests.test_designer_compliance`                              | PRD-CRF-010, Trace-28                        | 🟢 PASSED  | < 1s     |
+| `test_gxp_audit_enforcement_missing_justification`                                 | `apps.designer.tests.test_designer_compliance`                              | PRD-CRF-010, Trace-28                        | 🟢 PASSED  | < 1s     |
+| `test_gxp_audit_enforcement_read_only_bypass`                                      | `apps.designer.tests.test_designer_compliance`                              | PRD-CRF-010, Trace-28                        | 🟢 PASSED  | < 1s     |
+| `test_gxp_audit_enforcement_system_user_bypass`                                    | `apps.designer.tests.test_designer_compliance`                              | PRD-CRF-011, Trace-29                        | 🟢 PASSED  | < 1s     |
 | `test_ie_criteria_logical_mapping_to_ecrf`                                         | `apps.designer.tests.test_designer_compliance`                              | PRD-MDR-007                                  | 🟢 PASSED  | < 1s     |
 | `test_spreadsheet_ingestion_sheet_structure`                                       | `apps.designer.tests.test_designer_compliance`                              | PRD-EDC-001                                  | 🟢 PASSED  | < 1s     |
 | `test_study_differences_missing_version`                                           | `apps.designer.tests.test_designer_differences`                             | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |

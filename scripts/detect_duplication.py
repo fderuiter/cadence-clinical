@@ -272,7 +272,7 @@ def main() -> None:
                                 },
                                 {
                                     "apps/web/index.js",
-                                    "apps/web/src/stores/clinical.js",
+                                    "apps/web/src/stores/clinical.ts",
                                     "apps/web/src/views/MdrView.vue",
                                     "apps/web/src/views/RulesView.vue",
                                 },

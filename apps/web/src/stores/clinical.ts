@@ -6,22 +6,77 @@ import { executionService } from "../api/execution.js";
 import { evaluateAST } from "../evaluator.js";
 import { ingestionClient } from "../api/ingestionClient.js";
 
+export interface ClinicalField {
+  id: string;
+  label: string;
+  type: string;
+  gridSpan: number;
+  cdash?: string;
+  value?: any;
+  validation?: Record<string, any>;
+  relevant?: Record<string, any>;
+  constraint?: Record<string, any>;
+  options?: Array<{ value: string; label: string }>;
+  [key: string]: any; // Index signature for flexible fields
+}
+
+export interface ClinicalState {
+  currentUsdm: any;
+  currentCtmsData: any;
+  ecrfFields: ClinicalField[];
+  formValues: Record<string, any>; // Index signature for dynamic form values
+  fieldVisibility: Record<string, boolean>;
+  formQueries: Record<string, any>;
+  labAlerts: Record<string, any>;
+  labAlertsLoading: boolean;
+  labAlertsError: string | null;
+  ledgerBlocks: any[];
+  syncInterval: any;
+
+  activeStudyId: string;
+  activeSiteId: string;
+  activeSubjectId: string;
+  activeVisitId: string;
+
+  // --- SoA State ---
+  activeStudyVersionId: string;
+  soaLoading: boolean;
+  soaError: string | null;
+
+  // --- Ingestion / Candidate Draft State ---
+  candidateDraft: any;
+  ingestionJobs: any[];
+  ingestionLoading: boolean;
+  ingestionError: string | null;
+
+  debouncedEvaluateRules?: () => void;
+  [key: string]: any;
+}
+
 export const useClinicalStore = defineStore("clinical", {
-  state: () => {
-    let savedFormValues = null;
-    let savedFormQueries = null;
-    let savedLedgerBlocks = null;
-    let savedUsdm = null;
+  state: (): ClinicalState => {
+    let savedFormValues: any = null;
+    let savedFormQueries: any = null;
+    let savedLedgerBlocks: any = null;
+    let savedUsdm: any = null;
     if (typeof window !== "undefined" && window.localStorage) {
       try {
-        savedFormValues = JSON.parse(window.localStorage.getItem("formValues"));
-        savedFormQueries = JSON.parse(
-          window.localStorage.getItem("formQueries")
-        );
-        savedLedgerBlocks = JSON.parse(
-          window.localStorage.getItem("ledgerBlocks")
-        );
-        savedUsdm = JSON.parse(window.localStorage.getItem("currentUsdm"));
+        const storedFormValues = window.localStorage.getItem("formValues");
+        if (storedFormValues) {
+          savedFormValues = JSON.parse(storedFormValues);
+        }
+        const storedFormQueries = window.localStorage.getItem("formQueries");
+        if (storedFormQueries) {
+          savedFormQueries = JSON.parse(storedFormQueries);
+        }
+        const storedLedgerBlocks = window.localStorage.getItem("ledgerBlocks");
+        if (storedLedgerBlocks) {
+          savedLedgerBlocks = JSON.parse(storedLedgerBlocks);
+        }
+        const storedUsdm = window.localStorage.getItem("currentUsdm");
+        if (storedUsdm) {
+          savedUsdm = JSON.parse(storedUsdm);
+        }
       } catch (e) {
         console.error("Failed to parse saved state from localStorage", e);
       }
@@ -388,7 +443,7 @@ export const useClinicalStore = defineStore("clinical", {
           },
         },
         {
-          id: "concept_code",
+          id: "concept_code_vs", // Resolved duplicate ID by renaming the Vital Signs domain concept code field
           label: "NCI Thesaurus Concept Code",
           type: "concept_code",
           gridSpan: 12,
@@ -410,6 +465,7 @@ export const useClinicalStore = defineStore("clinical", {
         weight: "70",
         height: "1.75",
         bmi_status: "Normal",
+        concept_code_vs: "",
       },
       fieldVisibility: {},
       formQueries: savedFormQueries || {},
@@ -496,11 +552,11 @@ export const useClinicalStore = defineStore("clinical", {
       if (!this.debouncedEvaluateRules) {
         this.debouncedEvaluateRules = debounce(async () => {
           await this.evaluateRules();
-        }, 50);
+        }, 50) as any;
       }
-      this.debouncedEvaluateRules();
+      this.debouncedEvaluateRules?.();
     },
-    async addLedgerBlock(action, details, reason = "System Action") {
+    async addLedgerBlock(action: string, details: any, reason: string = "System Action") {
       const timestamp = new Date().toISOString();
       const index = this.ledgerBlocks.length;
       const prevHash =
@@ -515,7 +571,7 @@ export const useClinicalStore = defineStore("clinical", {
         details,
         reason,
         prevHash
-      );
+      ) as any;
       block.synced = false;
 
       this.ledgerBlocks.push(block);
@@ -559,7 +615,7 @@ export const useClinicalStore = defineStore("clinical", {
         await this.syncUnsyncedBlocks();
       }, 10000); // deid-ignore
     },
-    async syncUnsyncedBlocks(sigToken = null) {
+    async syncUnsyncedBlocks(sigToken: string | null = null) {
       const unsynced = this.ledgerBlocks.filter(
         (b) =>
           !b.synced &&
@@ -577,7 +633,7 @@ export const useClinicalStore = defineStore("clinical", {
       );
 
       try {
-        const options = {
+        const options: Record<string, any> = {
           changeReason: "Background sync of clinical query ledger blocks",
         };
         if (sigToken) {
@@ -608,7 +664,7 @@ export const useClinicalStore = defineStore("clinical", {
     },
 
     // --- Lab Alerts Pinia Actions ---
-    async fetchLabAlerts(studyId, subjectId) {
+    async fetchLabAlerts(studyId: string, subjectId: string) {
       this.labAlertsLoading = true;
       this.labAlertsError = null;
       try {
@@ -616,7 +672,7 @@ export const useClinicalStore = defineStore("clinical", {
           study_id: studyId,
           subject_id: subjectId,
         });
-        const alertsMap = {};
+        const alertsMap: Record<string, any> = {};
         if (Array.isArray(data)) {
           for (const alert of data) {
             const alertTestCode = alert.test_code;
@@ -636,7 +692,7 @@ export const useClinicalStore = defineStore("clinical", {
         }
         this.labAlerts = alertsMap || {};
         this.labAlertsLoading = false;
-      } catch (err) {
+      } catch (err: any) {
         this.labAlertsError = err.message;
         this.labAlertsLoading = false;
         console.warn("Backend lab alerts endpoint failed:", err);
@@ -657,7 +713,7 @@ export const useClinicalStore = defineStore("clinical", {
         this.currentUsdm.encounters = data.encounters || [];
         this.currentUsdm.rows = data.rows || [];
         this.soaLoading = false;
-      } catch (err) {
+      } catch (err: any) {
         this.soaError = err.message;
         this.soaLoading = false;
         console.warn(
@@ -667,7 +723,7 @@ export const useClinicalStore = defineStore("clinical", {
       }
     },
 
-    async pushSoAMutation(type, id, properties, changeReason) {
+    async pushSoAMutation(type: string, id: string, properties: any, changeReason: string) {
       this.soaLoading = true;
       this.soaError = null;
       const opts = {
@@ -713,7 +769,7 @@ export const useClinicalStore = defineStore("clinical", {
           changeReason
         );
         await this.fetchSoAProjection();
-      } catch (err) {
+      } catch (err: any) {
         this.soaError = err.message;
         this.soaLoading = false;
         // Log mutation locally even on network failure for compliance
@@ -726,7 +782,7 @@ export const useClinicalStore = defineStore("clinical", {
       }
     },
 
-    async pushSoALink(linkType, payload, changeReason) {
+    async pushSoALink(linkType: string, payload: any, changeReason: string) {
       this.soaLoading = true;
       this.soaError = null;
       try {
@@ -743,7 +799,7 @@ export const useClinicalStore = defineStore("clinical", {
           changeReason
         );
         await this.fetchSoAProjection();
-      } catch (err) {
+      } catch (err: any) {
         this.soaError = err.message;
         this.soaLoading = false;
         await this.addLedgerBlock(
@@ -756,7 +812,7 @@ export const useClinicalStore = defineStore("clinical", {
     },
 
     // --- Ingestion Store Actions ---
-    async uploadProtocolDocument(file, changeReason) {
+    async uploadProtocolDocument(file: File, changeReason: string) {
       this.ingestionLoading = true;
       this.ingestionError = null;
       try {
@@ -772,14 +828,14 @@ export const useClinicalStore = defineStore("clinical", {
         });
         this.ingestionLoading = false;
         return draft;
-      } catch (err) {
+      } catch (err: any) {
         this.ingestionError = err.message;
         this.ingestionLoading = false;
         throw err;
       }
     },
 
-    async fetchCandidateDraft(candidateId) {
+    async fetchCandidateDraft(candidateId: string) {
       this.ingestionLoading = true;
       this.ingestionError = null;
       try {
@@ -787,7 +843,7 @@ export const useClinicalStore = defineStore("clinical", {
         this.candidateDraft = draft;
         this.ingestionLoading = false;
         return draft;
-      } catch (err) {
+      } catch (err: any) {
         this.ingestionError = err.message;
         this.ingestionLoading = false;
         throw err;
@@ -795,11 +851,11 @@ export const useClinicalStore = defineStore("clinical", {
     },
 
     async transitionCandidateItemState(
-      candidateId,
-      itemId,
-      status,
-      reason,
-      updatedFields = {}
+      candidateId: string,
+      itemId: string,
+      status: string,
+      reason: string,
+      updatedFields: any = {}
     ) {
       this.ingestionLoading = true;
       this.ingestionError = null;
@@ -814,14 +870,14 @@ export const useClinicalStore = defineStore("clinical", {
         this.candidateDraft = draft;
         this.ingestionLoading = false;
         return draft;
-      } catch (err) {
+      } catch (err: any) {
         this.ingestionError = err.message;
         this.ingestionLoading = false;
         throw err;
       }
     },
 
-    async promoteCandidateDraft(candidateId, changeReason) {
+    async promoteCandidateDraft(candidateId: string, changeReason: string) {
       this.ingestionLoading = true;
       this.ingestionError = null;
       try {
@@ -834,7 +890,7 @@ export const useClinicalStore = defineStore("clinical", {
         }
         this.ingestionLoading = false;
         return res;
-      } catch (err) {
+      } catch (err: any) {
         this.ingestionError = err.message;
         this.ingestionLoading = false;
         throw err;

@@ -12,7 +12,7 @@ from packages.security.context import (
     current_user_id,
 )
 
-from .models import AuditedModel, AuditLog
+from .models.audit import AuditedModel, AuditLog
 
 
 def get_primary_key(obj):
