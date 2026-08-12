@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-12: Decoupled PostgreSQL Schema Introspection and Database Triggers for GxP Compliance](2026-08-12-decoupled-postgresql-schema-introspection-and-database-triggers-for-gxp-compliance.md)
 
 - [2026-08-12: Deconsolidate monolithic database models](2026-08-12-deconsolidate-monolithic-database-models.md)
 - [2026-08-12: Dedicated Background Processing with PostgreSQL Database-level Coordination](2026-08-12-dedicated-background-processing-with-postgresql-database-level-coordination.md)
