@@ -618,4 +618,3 @@ export interface WHODrugRecord {
   version: number;
   is_deleted: boolean;
 }
-

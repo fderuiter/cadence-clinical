@@ -203,8 +203,7 @@ def generate_typescript_schemas(db_url: str, output_path: str) -> bool:
         # Create target directories
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, "w") as f:
-            f.write("\n".join(ts_output))
-            f.write("\n")
+            f.write("\n".join(ts_output).rstrip() + "\n")
 
         print(
             f"\n[SUCCESS] Successfully introspected database. TypeScript definitions exported to {output_path}"
