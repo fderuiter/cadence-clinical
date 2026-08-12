@@ -30,16 +30,21 @@ export class ComplianceSDK {
    */
   public async generateSignature(payload: any): Promise<string> {
     const serialized = this.serialize(payload);
-    const response = await fetch(`${this.backendUrl}/api/v1/execution/signatures/sign`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ data: serialized }),
-    });
+    const response = await fetch(
+      `${this.backendUrl}/api/v1/execution/signatures/sign`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ data: serialized }),
+      }
+    );
 
     if (!response.ok) {
-      throw new Error(`Backend signature generation failed: ${response.statusText}`);
+      throw new Error(
+        `Backend signature generation failed: ${response.statusText}`
+      );
     }
 
     const resData = await response.json();
@@ -50,32 +55,39 @@ export class ComplianceSDK {
    * Verifies PKCS#7 signature by querying the secure Python backend.
    * Fails and blocks if local/client-side bypass attempts are detected.
    */
-  public async verifySignature(signedData: string, bypassCertificateStore: boolean = false): Promise<VerificationResult> {
+  public async verifySignature(
+    signedData: string,
+    bypassCertificateStore: boolean = false
+  ): Promise<VerificationResult> {
     // Guardrail: Fail-closed if there is any attempt to bypass the certificate store via local/client-side validation options
     if (bypassCertificateStore) {
       return {
         is_valid: false,
         status: "BYPASS_ATTEMPT_BLOCKED",
-        failure_reason: "Client-side validation bypass of the certificate store is strictly prohibited."
+        failure_reason:
+          "Client-side validation bypass of the certificate store is strictly prohibited.",
       };
     }
 
-    const response = await fetch(`${this.backendUrl}/api/v1/execution/signatures/verify`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ signed_data: signedData }),
-    });
+    const response = await fetch(
+      `${this.backendUrl}/api/v1/execution/signatures/verify`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ signed_data: signedData }),
+      }
+    );
 
     if (!response.ok) {
       return {
         is_valid: false,
         status: "BACKEND_ERROR",
-        failure_reason: `Backend verification query failed: ${response.statusText}`
+        failure_reason: `Backend verification query failed: ${response.statusText}`,
       };
     }
 
-    return await response.json() as VerificationResult;
+    return (await response.json()) as VerificationResult;
   }
 }
