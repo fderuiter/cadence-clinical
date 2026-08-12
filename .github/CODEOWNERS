@@ -25,5 +25,6 @@
 /packages/deidentification/ @clinical-platform/security-and-privacy
 /packages/hexagonal/     @clinical-platform/clinical-operations
 /packages/security/      @clinical-platform/security-and-privacy
+/packages/shared-api-client/ @clinical-platform/integration-and-routing
 /packages/storage/       @clinical-platform/document-management
 /packages/ui/            @clinical-platform/client-ux
