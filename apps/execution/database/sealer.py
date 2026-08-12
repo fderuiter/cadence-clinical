@@ -45,6 +45,16 @@ async def execute_audit_sealing_cycle(db: AsyncSession, limit: int = 100) -> str
     Returns:
         Optional[str]: The hash of the newly created block, or None if no new records were sealed.
     """
+    # 0. Acquire database-level advisory lock (PostgreSQL only)
+    if db.bind.dialect.name == "postgresql":
+        lock_res = await db.execute(text("SELECT pg_try_advisory_xact_lock(42001);"))
+        acquired = lock_res.scalar()
+        if not acquired:
+            logger.info(
+                "Could not acquire transaction advisory lock 42001 for audit sealing. Skipping cycle."
+            )
+            return None
+
     # 1. Fetch the last valid block hash
     last_block_query = await db.execute(
         text(

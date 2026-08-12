@@ -5,7 +5,7 @@ import os
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from apps.execution.database.models import ClinicalQuery
 from apps.execution.trial_lock import NotificationRouter
@@ -28,6 +28,18 @@ async def execute_query_escalation_cycle(session_maker: Any) -> None:
     cutoff_date = now - timedelta(days=14)
 
     async with session_maker() as db:
+        # Acquire database-level advisory lock (PostgreSQL only)
+        if db.bind.dialect.name == "postgresql":
+            lock_res = await db.execute(
+                text("SELECT pg_try_advisory_xact_lock(42002);")
+            )
+            acquired = lock_res.scalar()
+            if not acquired:
+                logger.info(
+                    "Could not acquire transaction advisory lock 42002 for query escalation. Skipping cycle."
+                )
+                return
+
         # Find all open or reopened clinical queries that are not deleted and are older than 14 days
         stmt = select(ClinicalQuery).where(
             ClinicalQuery.status.in_(["OPEN", "REOPENED"]),
