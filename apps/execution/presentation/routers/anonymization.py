@@ -7,6 +7,7 @@ import base64
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
 import packages  # noqa: F401
@@ -50,11 +51,12 @@ async def scan_phi_endpoint(
 
     Requirements: PRD-SYS-001
     """
-    entities = _SCRUBBER.detect_phi(payload.text)
+    entities = await run_in_threadpool(_SCRUBBER.detect_phi, payload.text)
+    scrubbed_preview = await run_in_threadpool(_SCRUBBER.scrub_phi, payload.text)
     return {
         "phi_detected_count": len(entities),
         "entities": entities,
-        "scrubbed_text_preview": _SCRUBBER.scrub_phi(payload.text),
+        "scrubbed_text_preview": scrubbed_preview,
     }
 
 
@@ -72,7 +74,9 @@ async def redact_pdf_endpoint(
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid base64 PDF payload.")
 
-    result = _REDACTOR.apply_redaction_overlay(pdf_bytes, payload.target_snippets)
+    result = await run_in_threadpool(
+        _REDACTOR.apply_redaction_overlay, pdf_bytes, payload.target_snippets
+    )
     redacted_b64 = base64.b64encode(result["redacted_content"]).decode("utf-8")
 
     return {

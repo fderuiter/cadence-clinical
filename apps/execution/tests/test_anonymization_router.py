@@ -61,3 +61,47 @@ def test_redact_pdf_post_endpoint() -> None:
     redacted_bytes = base64.b64decode(data["redacted_pdf_base64"])
     assert b"Alice Smith" not in redacted_bytes
     assert b"123-45-6789" not in redacted_bytes
+
+
+def test_endpoints_offload_to_threadpool() -> None:
+    """Validate that anonymization endpoints delegate CPU-bound work to run_in_threadpool.
+
+    @req:PRD-SYS-001
+    """
+    from unittest.mock import patch
+
+    import apps.execution.presentation.routers.anonymization as anon_router
+
+    headers = _make_auth_headers()
+    sample_text = "Subject Phone: 555-987-6543"
+
+    with patch(
+        "apps.execution.presentation.routers.anonymization.run_in_threadpool",
+        side_effect=anon_router.run_in_threadpool,
+    ) as mock_run:
+        response = client.post(
+            "/api/v1/execution/anonymization/scan-phi",
+            json={"text": sample_text},
+            headers=headers,
+        )
+        assert response.status_code == 200
+        assert mock_run.call_count >= 2
+
+    # Verify pdf-redact endpoint
+    doc_bytes = b"Subject Name: Alice Smith"
+    doc_b64 = base64.b64encode(doc_bytes).decode("utf-8")
+
+    with patch(
+        "apps.execution.presentation.routers.anonymization.run_in_threadpool",
+        side_effect=anon_router.run_in_threadpool,
+    ) as mock_run_pdf:
+        response = client.post(
+            "/api/v1/execution/anonymization/redact-pdf",
+            json={
+                "pdf_base64": doc_b64,
+                "target_snippets": ["Alice Smith"],
+            },
+            headers=headers,
+        )
+        assert response.status_code == 200
+        assert mock_run_pdf.call_count >= 1
