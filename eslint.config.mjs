@@ -2,6 +2,8 @@
 import js from "@eslint/js";
 import vuePlugin from "eslint-plugin-vue";
 import vuejsAccessibility from "eslint-plugin-vuejs-accessibility";
+import vueParser from "vue-eslint-parser";
+import tseslint from "typescript-eslint";
 
 export default [
   {
@@ -18,6 +20,17 @@ export default [
   js.configs.recommended,
   ...vuePlugin.configs["flat/recommended"],
   ...vuejsAccessibility.configs["flat/recommended"],
+  {
+    files: ["**/*.vue"],
+    languageOptions: {
+      parser: vueParser,
+      parserOptions: {
+        parser: tseslint.parser,
+        sourceType: "module",
+        ecmaVersion: 2022,
+      },
+    },
+  },
   {
     languageOptions: {
       ecmaVersion: 2022,
@@ -73,5 +86,18 @@ export default [
       ],
     },
     files: ["packages/ui/**/*.js", "packages/ui/**/*.vue"],
+  },
+  {
+    files: ["**/*.vue"],
+    plugins: {
+      "@typescript-eslint": tseslint.plugin,
+    },
+    rules: {
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+    },
   },
 ];

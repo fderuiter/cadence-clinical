@@ -84,7 +84,7 @@ const props = withDefaults(
   }
 );
 
-const emit = defineEmits<{
+defineEmits<{
   (e: "update:modelValue", value: string | number): void;
   (e: "change", value: string | number, target: any): void;
   (e: "input", value: string | number): void;
