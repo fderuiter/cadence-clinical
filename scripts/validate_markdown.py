@@ -260,6 +260,9 @@ def resolve_path(path_str, md_file_path, repo_root, root_dirs, root_files):
         or "templates" in path_str.lower()
         or "node.js" in path_str.lower()
         or "core-models" in path_str.lower()
+        or "packages/ui/econsent" in path_str.lower()
+        or "packages/ui/src/components/clinical" in path_str.lower()
+        or "packages/ui/tests/econsent_utils" in path_str.lower()
     ):
         return None
 
