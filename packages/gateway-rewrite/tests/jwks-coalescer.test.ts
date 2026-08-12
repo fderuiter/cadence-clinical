@@ -1,4 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  beforeAll,
+} from "vitest";
 import * as crypto from "crypto";
 import { JwksCoalescerService } from "../src/jwks-coalescer.service.js";
 
