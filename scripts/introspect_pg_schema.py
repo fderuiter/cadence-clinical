@@ -42,6 +42,7 @@ EXCLUDED_TABLES = {
     "pending_predecessor_checks",
 }
 
+
 def check_production_guardrail(db_url: str) -> None:
     """Enforces environment isolation to prevent production database connections."""
     app_env = os.getenv("APP_ENV", "development").lower()
@@ -71,7 +72,7 @@ def snake_to_pascal(name: str) -> str:
 
     parts = name.split("_")
     pascal = "".join(part.capitalize() for part in parts)
-    
+
     # Singularize
     if pascal.endswith("s") and not pascal.endswith("ss") and not pascal.endswith("is"):
         pascal = pascal[:-3] + "y" if pascal.endswith("ies") else pascal[:-1]
@@ -129,10 +130,10 @@ def generate_typescript_schemas(db_url: str, output_path: str) -> bool:
     engine = create_engine(sync_url, **engine_options)
     try:
         inspector = inspect(engine)
-        
+
         # Check schemas
         schemas = inspector.get_schema_names()
-        
+
         ts_output = [
             "/* tslint:disable */",
             "/* eslint-disable */",
@@ -149,7 +150,7 @@ def generate_typescript_schemas(db_url: str, output_path: str) -> bool:
         for schema in ["public", None]:
             if schema and schema not in schemas:
                 continue
-            
+
             try:
                 tables = inspector.get_table_names(schema=schema)
             except Exception:
@@ -171,26 +172,32 @@ def generate_typescript_schemas(db_url: str, output_path: str) -> bool:
 
                 interface_name = snake_to_pascal(table_name)
                 ts_output.append(f"export interface {interface_name} {{")
-                
+
                 columns = inspector.get_columns(table_name, schema=schema)
                 for col in columns:
                     col_name = col["name"]
                     col_type = col["type"]
                     col_nullable = col["nullable"]
-                    
+
                     ts_type = map_column_type(col_type)
                     optional_suffix = "?" if col_nullable else ""
                     null_suffix = " | null" if col_nullable else ""
-                    
-                    ts_output.append(f"  {col_name}{optional_suffix}: {ts_type}{null_suffix};")
-                
+
+                    ts_output.append(
+                        f"  {col_name}{optional_suffix}: {ts_type}{null_suffix};"
+                    )
+
                 ts_output.append("}")
                 ts_output.append("")
                 table_count += 1
-                print(f"  [EXPORTED] Table '{table_name}' -> interface '{interface_name}'")
+                print(
+                    f"  [EXPORTED] Table '{table_name}' -> interface '{interface_name}'"
+                )
 
         if table_count == 0:
-            print("Warning: No clinical tables were introspected. Output file was not written.")
+            print(
+                "Warning: No clinical tables were introspected. Output file was not written."
+            )
             return False
 
         # Create target directories
@@ -199,7 +206,9 @@ def generate_typescript_schemas(db_url: str, output_path: str) -> bool:
             f.write("\n".join(ts_output))
             f.write("\n")
 
-        print(f"\n[SUCCESS] Successfully introspected database. TypeScript definitions exported to {output_path}")
+        print(
+            f"\n[SUCCESS] Successfully introspected database. TypeScript definitions exported to {output_path}"
+        )
         return True
 
     except Exception as e:
