@@ -2,8 +2,8 @@ import hashlib
 import hmac
 import os
 import time
-from datetime import datetime
-from unittest.mock import AsyncMock, patch
+from datetime import UTC, datetime
+from unittest.mock import patch
 
 import httpx
 import pytest
@@ -124,8 +124,11 @@ async def test_outbox_worker_polling_and_dispatch_success() -> None:
 
     # Mock httpx POST request to the eTMF trial lock propagation endpoint
     with patch("httpx.AsyncClient.post") as mock_post:
-        mock_resp = AsyncMock()
+        from unittest.mock import MagicMock
+
+        mock_resp = MagicMock()
         mock_resp.status_code = 200
+        mock_resp.raise_for_status = MagicMock()
         mock_post.return_value = mock_resp
 
         await poll_and_dispatch()
@@ -209,7 +212,7 @@ async def test_admin_visibility_endpoint() -> None:
             payload={"trial_locked": True, "reason": "L1"},
             status="SUCCESS",
             attempts=1,
-            completed_at=datetime.utcnow(),
+            completed_at=datetime.now(UTC),
             correlation_id="corr-lock-abc",
             created_by="admin1",
             reason_for_change="Lock study",
