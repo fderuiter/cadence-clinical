@@ -156,7 +156,11 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                     RETURN NEW;
                 END IF;
 
-                v_user_id := COALESCE(NULLIF(current_setting('cadence.current_user_id', true), ''), 'system_process');
+                v_user_id := current_setting('cadence.current_user_id', true);
+                IF (v_user_id IS NULL OR v_user_id = '') THEN
+                    RAISE EXCEPTION 'GxP Compliance Violation: Write operations lacking session-level user identifiers are strictly prohibited.';
+                END IF;
+
                 v_change_reason := COALESCE(NULLIF(current_setting('cadence.current_change_reason', true), ''), 'Automated system operation');
 
                 IF (TG_OP = 'INSERT') THEN
@@ -302,6 +306,11 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                     AFTER INSERT ON {table_name}
                     WHEN (current_setting('cadence.app_writing', 1) <> 'true')
                     BEGIN
+                        SELECT CASE
+                            WHEN (current_setting('cadence.current_user_id', 1) IS NULL OR current_setting('cadence.current_user_id', 1) = '')
+                            THEN RAISE(FAIL, 'GxP Compliance Violation: Write operations lacking session-level user identifiers are strictly prohibited.')
+                        END;
+
                         INSERT INTO audit_logs (
                             id, table_name, record_id, action, user_id, timestamp, old_values, new_values, version_index, change_reason
                         ) VALUES (
@@ -326,6 +335,11 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                     AFTER UPDATE ON {table_name}
                     WHEN (current_setting('cadence.app_writing', 1) <> 'true')
                     BEGIN
+                        SELECT CASE
+                            WHEN (current_setting('cadence.current_user_id', 1) IS NULL OR current_setting('cadence.current_user_id', 1) = '')
+                            THEN RAISE(FAIL, 'GxP Compliance Violation: Write operations lacking session-level user identifiers are strictly prohibited.')
+                        END;
+
                         INSERT INTO audit_logs (
                             id, table_name, record_id, action, user_id, timestamp, old_values, new_values, version_index, change_reason
                         ) VALUES (
