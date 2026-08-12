@@ -501,7 +501,7 @@ try:
 
     # 4. Register RBAC role permissions in rbac.py
     admin_perms = {
-        "study_design": {"create", "read", "update", "delete"},
+        "study_design": {"create", "read", "update", "delete", "approve"},
         "etmf_document": {
             "read",
             "write",
@@ -552,7 +552,7 @@ try:
     }
 
     designer_perms = {
-        "study_design": {"create", "read", "update", "delete"},
+        "study_design": {"create", "read", "update", "delete", "approve"},
         "etmf_document": {"read"},
         "visit_windowing": {"create", "read", "update"},
         "soa": {"create", "read", "update", "delete"},
@@ -606,12 +606,10 @@ try:
         "query_lifecycle": {"create", "read", "update", "delete"},
         "export_masked": {"create"},
         "protocol_export": {"generate", "read"},
+        "study_design": {"approve"},
+        "mdr_concept": {"read"},
         "global_library": {
-            "create",
-            "update",
-            "amend",
             "transition",
-            "instantiate",
             "read",
         },
         "library_object": {"approve", "publish"},
@@ -728,7 +726,6 @@ try:
         "sponsor_admin",
         "sponsoradmin",
         "Sponsor Admin",
-        "admin",
     ]
     for r in admin_roles:
         register_rbac_role_permissions(r, admin_perms)
@@ -737,7 +734,9 @@ try:
         register_rbac_role_permissions(
             r,
             {
-                "study_design": {"read"},
+                "study_design": {"read", "approve"},
+                "global_library": {"transition", "read"},
+                "mdr_concept": {"read"},
                 "etmf_document": {
                     "read",
                     "write",

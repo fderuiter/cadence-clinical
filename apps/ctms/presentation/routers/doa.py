@@ -51,6 +51,9 @@ def check_ctms_permission(principal: Principal, action: str) -> bool:
         "system",
         "principal_investigator",
         "principal investigator",
+        # Normalized canonical forms under dynamic registration
+        "clinicalresearchassociate",
+        "principalinvestigator",
     }
     allowed_read_roles = {
         "investigator",
@@ -58,6 +61,8 @@ def check_ctms_permission(principal: Principal, action: str) -> bool:
         "crc",
         "auditor",
         "anonymous",
+        # Normalized canonical forms under dynamic registration
+        "clinicalresearchcoordinator",
     } | allowed_write_roles
 
     user_roles = [r.lower() for r in principal.roles]
