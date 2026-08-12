@@ -91,6 +91,7 @@
 
 <script setup>
 import { computed } from "vue";
+import { normalizeUsdm } from "../../stores/normalization";
 
 const props = defineProps({
   soaData: {
@@ -99,14 +100,18 @@ const props = defineProps({
   },
 });
 
-const hasError = computed(() => {
-  return !props.soaData || !props.soaData.rows;
+const normalizedData = computed(() => {
+  return normalizeUsdm(props.soaData);
 });
 
-const epochs = computed(() => props.soaData?.epochs || []);
-const encounters = computed(() => props.soaData?.encounters || []);
-const rows = computed(() => props.soaData?.rows || []);
-const arms = computed(() => props.soaData?.arms || []);
+const hasError = computed(() => {
+  return !props.soaData;
+});
+
+const epochs = computed(() => normalizedData.value.epochs || []);
+const encounters = computed(() => normalizedData.value.encounters || []);
+const rows = computed(() => normalizedData.value.rows || []);
+const arms = computed(() => normalizedData.value.arms || []);
 
 const epochMap = computed(() => {
   const map = {};

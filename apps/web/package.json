@@ -4,8 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "prebuild": "pnpm --filter ui build",
-    "pretest": "pnpm --filter ui build",
+    "prebuild": "pnpm --filter ui build && node src/types/generate-types.js",
+    "pretest": "pnpm --filter ui build && node src/types/generate-types.js",
+    "pretypecheck": "node src/types/generate-types.js",
     "dev": "vite",
     "build": "vite build --base=/cadence-clinical/ && node ../../scripts/build-docs.js",
     "build:demo": "vite build --mode demo --base=/cadence-clinical/ && node ../../scripts/build-docs.js",

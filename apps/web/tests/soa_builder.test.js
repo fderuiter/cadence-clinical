@@ -6,6 +6,7 @@ import { useAuthStore } from "../src/stores/auth.js";
 import { apiClient } from "../src/api/apiClient.js";
 import { mount } from "@vue/test-utils";
 import ClinicalSoAMatrix from "../src/components/clinical/ClinicalSoAMatrix.vue";
+import { normalizeUsdm } from "../src/stores/normalization";
 
 // Mock apiClient
 vi.mock("../src/api/apiClient.js", () => {
@@ -247,3 +248,56 @@ describe("SoA Builder Store Integration", () => {
     );
   });
 });
+
+describe("SoA Normalization & Missing/Null Optional Fields Tests", () => {
+  it("normalizes malformed/null USDM fields into safe default typed structures", () => {
+    const rawData = {
+      studyId: null,
+      epochs: null,
+      encounters: [
+        { encounter_id: "E1" }
+      ],
+      rows: [
+        { activity_id: "A1", cells: null }
+      ]
+    };
+
+    const normalized = normalizeUsdm(rawData);
+
+    expect(normalized.studyId).toBe("STUDY-USDM-001");
+    expect(normalized.epochs).toEqual([]);
+    expect(normalized.encounters[0]).toEqual({
+      encounter_id: "E1",
+      encounter_name: "",
+      epoch_id: "",
+      sequence: 0,
+      arm_id: null
+    });
+    expect(normalized.rows[0].activity_id).toBe("A1");
+    expect(normalized.rows[0].cells).toEqual([]);
+  });
+
+  it("ClinicalSoAMatrix component renders empty formatted cells instead of crashing or showing Invalid SoA error when optional fields are null", () => {
+    const malformedSoaData = {
+      epochs: [],
+      encounters: [
+        { encounter_id: "E1", encounter_name: "Visit 1" }
+      ],
+      rows: [
+        { activity_id: "ACT1", activity_name: "Vitals", cells: null }
+      ]
+    };
+
+    const wrapper = mount(ClinicalSoAMatrix, {
+      props: { soaData: malformedSoaData },
+    });
+
+    const html = wrapper.html();
+    expect(html).not.toContain("Invalid SoA matrix data.");
+    expect(html).toContain("class=\"clinical-visit-matrix clinical-soa-matrix\"");
+    expect(html).toContain("Vitals");
+    expect(html).toContain("Visit 1");
+    expect(html).toContain("-"); // Renders empty formatted cell
+  });
+});
+

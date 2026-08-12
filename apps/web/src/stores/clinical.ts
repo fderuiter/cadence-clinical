@@ -5,6 +5,7 @@ import { soaClient } from "../api/soaClient.js";
 import { executionService } from "../api/execution.js";
 import { evaluateAST } from "../evaluator.js";
 import { ingestionClient } from "../api/ingestionClient.js";
+import { normalizeUsdm } from "./normalization";
 
 export interface ClinicalField {
   id: string;
@@ -83,7 +84,7 @@ export const useClinicalStore = defineStore("clinical", {
     }
 
     return {
-      currentUsdm: savedUsdm || {
+      currentUsdm: normalizeUsdm(savedUsdm || {
         studyId: "STUDY-USDM-001",
         studyTitle: "Phase II Trial of Cadence-001 in Essential Hypertension",
         objectives: [
@@ -227,7 +228,7 @@ export const useClinicalStore = defineStore("clinical", {
             ],
           },
         ],
-      },
+      }),
       currentCtmsData: {
         milestones: [
           {
@@ -712,10 +713,13 @@ export const useClinicalStore = defineStore("clinical", {
           this.currentUsdm.studyId,
           this.activeStudyVersionId
         );
-        // Map fetched Neo4j projection structure back to our local currentUsdm state
-        this.currentUsdm.epochs = data.epochs || [];
-        this.currentUsdm.encounters = data.encounters || [];
-        this.currentUsdm.rows = data.rows || [];
+        // Map fetched Neo4j projection structure back to our local currentUsdm state through the normalization adapter
+        this.currentUsdm = normalizeUsdm({
+          ...this.currentUsdm,
+          epochs: data.epochs,
+          encounters: data.encounters,
+          rows: data.rows,
+        });
         this.soaLoading = false;
       } catch (err: any) {
         this.soaError = err.message;
