@@ -100,7 +100,10 @@ from apps.execution.rtsm_supply import (
     SiteInventoryNotFoundError,
     dispense_kit_transaction,
 )
-from apps.execution.subject_lifecycle import InvalidStateTransitionError
+from apps.execution.subject_lifecycle import (
+    InvalidStateTransitionError,
+    LockedFactorMutationError,
+)
 from apps.execution.translator import process_translation
 from apps.execution.trial_lock import TrialLockManager
 from apps.execution.ucum import convert_unit, get_normalized_representation
@@ -391,6 +394,26 @@ async def invalid_change_request_action_handler(
         code="INVALID_CHANGE_REQUEST_ACTION",
     )
     return JSONResponse(status_code=400, content=problem.model_dump(exclude_none=True))
+
+
+@app.exception_handler(LockedFactorMutationError)
+async def locked_factor_mutation_handler(
+    request: Request, exc: LockedFactorMutationError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "LOCKED_FACTOR_MUTATION"},
+    )
+
+
+@app.exception_handler(InvalidStateTransitionError)
+async def invalid_state_transition_handler(
+    request: Request, exc: InvalidStateTransitionError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=400,
+        content={"detail": "INVALID_STATE_TRANSITION"},
+    )
 
 
 app.add_middleware(ContextResetMiddleware)

@@ -282,6 +282,11 @@ async def test_manual_coding_resolution_associates_with_query_and_closes_it():
         assert resp_override.status_code == 200
         assert resp_override.json()["status"] == "CODED"
 
+        # Trigger outbox processing asynchronously/manually in test to execute EDC query closure
+        from apps.execution.workers.outbox_worker import poll_and_dispatch
+
+        await poll_and_dispatch()
+
         # 4. Verify that the original ClinicalQuery is CLOSED and response updated
         resp_queries = await client.get(
             "/api/v1/execution/queries",
