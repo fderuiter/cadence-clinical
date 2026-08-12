@@ -6,7 +6,6 @@ Statically validates workspace paths/links and dry-runs CLI subcommands.
 """
 
 import ast
-import importlib.util
 import json
 import os
 import re
@@ -15,38 +14,6 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-
-# Inject default/mock environment configurations to prevent top-level execution errors during module loading
-MOCK_ENV_VARS = {
-    "DATABASE_URL": "postgresql://mock_user:mock_pass@localhost:5432/mock_db",  # pragma: allowlist secret
-    "ENV": "development",
-    "ENVIRONMENT": "development",
-    "DEBUG": "True",
-    "QUALITY_DATABASE_URL": "sqlite+aiosqlite:///:memory:",
-    "SAFETY_DATABASE_URL": "sqlite+aiosqlite:///:memory:",
-    "GATEWAY_SECRET": "mock-gateway-secret-12345",  # pragma: allowlist secret
-    "SAFETY_SALT": "mock-safety-salt-12345",  # pragma: allowlist secret
-    "SIGNING_SECRET": "mock-signing-secret-12345",  # pragma: allowlist secret
-    "NEO4J_URI": "bolt://localhost:7687",
-    "NEO4J_USER": "neo4j",
-    "NEO4J_PASSWORD": "password",  # pragma: allowlist secret
-    "AUDIT_LOG_SECRET_KEY": "test-gxp-audit-secret-key-placeholder-abc",  # pragma: allowlist secret
-    "INBOUND_EMAIL_HMAC_SECRET": "test-email-hmac-secret-placeholder-xyz",  # pragma: allowlist secret
-}
-for k, v in MOCK_ENV_VARS.items():
-    if k not in os.environ:
-        os.environ[k] = v
-
-# Add packages subfolders and apps to sys.path to resolve imports within modules
-REPO_ROOT = Path(__file__).resolve().parent.parent
-for p in (REPO_ROOT / "packages").glob("*"):
-    if p.is_dir() and str(p) not in sys.path:
-        sys.path.append(str(p))
-for p in (REPO_ROOT / "apps").glob("*"):
-    if p.is_dir() and str(p) not in sys.path:
-        sys.path.append(str(p))
-if str(REPO_ROOT) not in sys.path:
-    sys.path.append(str(REPO_ROOT))
 
 # Common developer tools/executables we whitelist even if not natively installed
 ALLOWED_COMMON_TOOLS = {
@@ -568,7 +535,37 @@ def get_args_list(func_node):
     return args
 
 
-def get_model_fields_ast_from_map(class_name, codebase_map):
+def parse_type_node(node):
+    if node is None:
+        return {"type": "unknown"}
+    if hasattr(node, "value") and isinstance(node, getattr(ast, "Index", type(None))):
+        return parse_type_node(node.value)
+    if isinstance(node, ast.Name):
+        return {"type": "name", "name": node.id}
+    if isinstance(node, ast.Constant):
+        if node.value is None:
+            return {"type": "none"}
+        return {"type": "constant", "value": node.value}
+    if isinstance(node, ast.Subscript):
+        value_rep = parse_type_node(node.value)
+        slice_rep = parse_type_node(node.slice)
+        return {"type": "subscript", "value": value_rep, "slice": slice_rep}
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
+        left_rep = parse_type_node(node.left)
+        right_rep = parse_type_node(node.right)
+        return {"type": "union", "elements": [left_rep, right_rep]}
+    if isinstance(node, ast.Tuple):
+        return {"type": "tuple", "elements": [parse_type_node(el) for el in node.elts]}
+    if isinstance(node, ast.Attribute):
+        return {
+            "type": "attribute",
+            "attr": node.attr,
+            "value": parse_type_node(node.value),
+        }
+    return {"type": "unknown"}
+
+
+def get_model_schema_statically(class_name, codebase_map):
     occurrences = codebase_map.get(class_name, [])
     for occ in occurrences:
         if occ["type"] == "class":
@@ -579,6 +576,7 @@ def get_model_fields_ast_from_map(class_name, codebase_map):
                     item.target, ast.Name
                 ):
                     field_name = item.target.id
+                    type_annotation = parse_type_node(item.annotation)
                     required = True
                     if item.value is not None:
                         if isinstance(item.value, ast.Call):
@@ -610,33 +608,177 @@ def get_model_fields_ast_from_map(class_name, codebase_map):
                                 required = is_required
                         else:
                             required = False
-                    fields[field_name] = required
+                    fields[field_name] = {"type": type_annotation, "required": required}
             return fields
     return {}
 
 
+def get_model_fields_ast_from_map(class_name, codebase_map):
+    schema = get_model_schema_statically(class_name, codebase_map)
+    return {k: v["required"] for k, v in schema.items()}
+
+
+def validate_value_type(val, type_rep, codebase_map, visited=None):
+    if visited is None:
+        visited = set()
+    t = type_rep.get("type")
+    if t == "name":
+        name = type_rep["name"]
+        if name in ("str", "bytes", "AwareDatetime", "NaiveDatetime"):
+            return isinstance(val, (str, bytes)), f"expected {name}"
+        if name == "int":
+            return isinstance(val, int) and not isinstance(val, bool), "expected int"
+        if name == "float":
+            return isinstance(val, (int, float)) and not isinstance(
+                val, bool
+            ), "expected float"
+        if name == "bool":
+            return isinstance(val, bool), "expected bool"
+        if name in ("dict", "Dict"):
+            return isinstance(val, dict), "expected dict"
+        if name in ("list", "List"):
+            return isinstance(val, list), "expected list"
+        if name in ("set", "Set"):
+            return isinstance(val, (list, set)), "expected list/set"
+        if name in ("tuple", "Tuple"):
+            return isinstance(val, (list, tuple)), "expected list/tuple"
+        if name == "Any":
+            return True, ""
+        if name in ("None", "NoneType"):
+            return val is None, "expected None"
+        if name in codebase_map:
+            if name in visited:
+                return True, ""
+            visited.add(name)
+            ok, err_msg = validate_model_statically(val, name, codebase_map, visited)
+            visited.remove(name)
+            if not ok:
+                if isinstance(err_msg, list):
+                    return False, f"nested validation failed: {'; '.join(err_msg)}"
+                return False, f"nested validation failed: {err_msg}"
+            return True, ""
+        return True, ""
+    if t == "none":
+        return val is None, "expected None"
+    if t == "constant":
+        return val == type_rep["value"], f"expected constant {type_rep['value']}"
+    if t == "subscript":
+        value_rep = type_rep["value"]
+        slice_rep = type_rep["slice"]
+        if value_rep.get("type") == "name" and value_rep.get("name") in (
+            "Optional",
+            "Union",
+        ):
+            elements = []
+            if slice_rep.get("type") == "tuple":
+                elements = slice_rep["elements"]
+            else:
+                elements = [slice_rep]
+            if value_rep.get("name") == "Optional":
+                elements.append({"type": "none"})
+            errors = []
+            for elem in elements:
+                ok, err = validate_value_type(val, elem, codebase_map, visited)
+                if ok:
+                    return True, ""
+                errors.append(err)
+            return False, f"expected Union: {', '.join(errors)}"
+        if value_rep.get("type") == "name" and value_rep.get("name") in (
+            "list",
+            "List",
+            "set",
+            "Set",
+            "Sequence",
+            "Iterable",
+        ):
+            if not isinstance(val, list):
+                return False, f"expected list, got {type(val).__name__}"
+            for i, item in enumerate(val):
+                ok, err = validate_value_type(item, slice_rep, codebase_map, visited)
+                if not ok:
+                    return False, f"list item at index {i}: {err}"
+            return True, ""
+        if value_rep.get("type") == "name" and value_rep.get("name") in (
+            "dict",
+            "Dict",
+        ):
+            if not isinstance(val, dict):
+                return False, f"expected dict, got {type(val).__name__}"
+            val_type = slice_rep
+            if slice_rep.get("type") == "tuple" and len(slice_rep["elements"]) == 2:
+                val_type = slice_rep["elements"][1]
+            for k, v in val.items():
+                ok, err = validate_value_type(v, val_type, codebase_map, visited)
+                if not ok:
+                    return False, f"dict value at key '{k}': {err}"
+            return True, ""
+        return validate_value_type(val, value_rep, codebase_map, visited)
+    if t == "union":
+        errors = []
+        for elem in type_rep["elements"]:
+            ok, err = validate_value_type(val, elem, codebase_map, visited)
+            if ok:
+                return True, ""
+            errors.append(err)
+        return False, f"expected Union: {', '.join(errors)}"
+    if t == "tuple":
+        if not isinstance(val, list):
+            return False, f"expected list/tuple, got {type(val).__name__}"
+        elements = type_rep["elements"]
+        if (
+            len(elements) == 2
+            and elements[1].get("type") == "constant"
+            and elements[1].get("value") is Ellipsis
+        ):
+            for i, item in enumerate(val):
+                ok, err = validate_value_type(item, elements[0], codebase_map, visited)
+                if not ok:
+                    return False, f"tuple item at index {i}: {err}"
+            return True, ""
+        if len(val) != len(elements):
+            return False, f"expected tuple of length {len(elements)}, got {len(val)}"
+        for idx, item in enumerate(val):
+            ok, err = validate_value_type(item, elements[idx], codebase_map, visited)
+            if not ok:
+                return False, f"tuple item at index {idx}: {err}"
+        return True, ""
+    if t == "attribute":
+        attr = type_rep["attr"]
+        if attr == "Optional" and val is None:
+            return True, ""
+        return True, ""
+    return True, ""
+
+
+def validate_model_statically(doc_dict, class_name, codebase_map, visited=None):
+    if visited is None:
+        visited = set()
+    if not isinstance(doc_dict, dict):
+        return False, f"expected dict for {class_name}, got {type(doc_dict).__name__}"
+    fields = get_model_schema_statically(class_name, codebase_map)
+    if not fields:
+        return True, ""
+    errors = []
+    for field_name, field_info in fields.items():
+        if field_info["required"] and field_name not in doc_dict:
+            errors.append(f"field '{field_name}' - Field required")
+    for field_name, field_value in doc_dict.items():
+        if field_name in fields:
+            field_info = fields[field_name]
+            ok, err_msg = validate_value_type(
+                field_value, field_info["type"], codebase_map, visited
+            )
+            if not ok:
+                errors.append(f"field '{field_name}' - {err_msg}")
+    if errors:
+        return False, errors
+    return True, ""
+
+
 def import_class_by_name_from_map(class_name, codebase_map):
-    occurrences = codebase_map.get(class_name, [])
-    if not occurrences:
-        return None, f"Class '{class_name}' not found in codebase map."
-    last_err = None
-    for occ in occurrences:
-        if occ["type"] == "class":
-            p = occ["file_path"]
-            try:
-                module_name = p.stem
-                temp_mod_name = f"gxp_import_temp_{module_name}"
-                spec = importlib.util.spec_from_file_location(temp_mod_name, str(p))
-                module = importlib.util.module_from_spec(spec)
-                sys.modules[temp_mod_name] = module
-                spec.loader.exec_module(module)
-                cls = getattr(module, class_name, None)
-                if cls is not None:
-                    return cls, None
-                last_err = f"Class '{class_name}' not found in module '{p}'."
-            except Exception as e:
-                last_err = f"{type(e).__name__}: {str(e)}"
-    return None, last_err
+    # Standard warning fallback is deprecated since we now perform robust static AST validation.
+    # Return a mock representation to preserve compatibility if needed.
+    return None, "Dynamic import is disabled for security."
 
 
 def clean_json_text(text):
@@ -847,6 +989,7 @@ def validate_json_block(
         return
 
     pydantic_class_names = []
+    # Find classes that directly inherit from BaseModel or have base classes that do
     for name, occurrences in codebase_map.items():
         for occ in occurrences:
             if occ["type"] == "class":
@@ -862,6 +1005,30 @@ def validate_json_block(
                         is_pydantic = True
                 if is_pydantic and name not in pydantic_class_names:
                     pydantic_class_names.append(name)
+
+    # Transitive closure for subclasses of BaseModel
+    changed = True
+    while changed:
+        changed = False
+        for name, occurrences in codebase_map.items():
+            if name in pydantic_class_names:
+                continue
+            for occ in occurrences:
+                if occ["type"] == "class":
+                    node = occ["node"]
+                    is_pydantic = False
+                    for base in node.bases:
+                        base_name = None
+                        if isinstance(base, ast.Name):
+                            base_name = base.id
+                        elif isinstance(base, ast.Attribute):
+                            base_name = base.attr
+                        if base_name in pydantic_class_names:
+                            is_pydantic = True
+                            break
+                    if is_pydantic:
+                        pydantic_class_names.append(name)
+                        changed = True
 
     matched_model_name = None
     matched_explicitly = False
@@ -884,10 +1051,11 @@ def validate_json_block(
         for cname in pydantic_class_names:
             if len(cname) <= 5:
                 # Require title case or backtick matching for short class names
+                joined_preceding = "".join(preceding_lines)
                 if (
-                    f"`{cname}`" in "".join(preceding_lines)
-                    or f"'{cname}'" in "".join(preceding_lines)
-                    or cname in "".join(preceding_lines)
+                    f"`{cname}`" in joined_preceding
+                    or f"'{cname}'" in joined_preceding
+                    or re.search(r"\b" + re.escape(cname) + r"\b", joined_preceding)
                 ):
                     matched_model_name = cname
                     matched_explicitly = True
@@ -906,7 +1074,7 @@ def validate_json_block(
         json_keys = set(doc_dict.keys())
         if json_keys:
             for cname in pydantic_class_names:
-                fields = get_model_fields_ast_from_map(cname, codebase_map)
+                fields = get_model_schema_statically(cname, codebase_map)
                 if fields:
                     model_keys = set(fields.keys())
                     overlap = json_keys.intersection(model_keys)
@@ -918,52 +1086,20 @@ def validate_json_block(
             if best_score > 0.3:
                 matched_model_name = best_model
 
-    if matched_model_name:
-        success = False
-        err_msgs = []
-        cls = None
-        import_error = None
-        try:
-            cls, import_error = import_class_by_name_from_map(
-                matched_model_name, codebase_map
-            )
-            if cls is not None:
-                try:
-                    cls.model_validate(doc_dict)
-                    success = True
-                except Exception as val_err:
-                    if hasattr(val_err, "errors"):
-                        for err in val_err.errors():
-                            loc = ".".join(str(item) for item in err.get("loc", []))
-                            err_msgs.append(f"field '{loc}' - {err.get('msg')}")
-                    else:
-                        err_msgs.append(str(val_err))
-                    success = False
-                else:
-                    success = True
-            else:
-                warning_msg = (
-                    f"[WARNING] Degraded linter coverage at {file_path}:{start_line}\n"
-                    f"Failed to dynamically load Pydantic model '{matched_model_name}'.\n"
-                    f"Underlying import error: {import_error or 'Unknown error'}\n"
-                    f"Falling back to basic shallow AST structure verification."
-                )
-                print(warning_msg, file=sys.stderr)
-        except Exception as e:
-            import_error = f"{type(e).__name__}: {str(e)}"
-            warning_msg = (
-                f"[WARNING] Degraded linter coverage at {file_path}:{start_line}\n"
-                f"Failed to dynamically load Pydantic model '{matched_model_name}'.\n"
-                f"Underlying import error: {import_error}\n"
-                f"Falling back to basic shallow AST structure verification."
-            )
-            print(warning_msg, file=sys.stderr)
+    if matched_model_name and len(matched_model_name) <= 5:
+        fields = get_model_schema_statically(matched_model_name, codebase_map)
+        if fields and isinstance(doc_dict, dict) and doc_dict:
+            overlap = set(doc_dict.keys()).intersection(set(fields.keys()))
+            if not overlap:
+                matched_model_name = None
 
-        if not success and not err_msgs:
-            fields = get_model_fields_ast_from_map(matched_model_name, codebase_map)
-            missing = [f for f, req in fields.items() if req and f not in doc_dict]
-            if missing:
-                err_msgs.append(f"Missing required fields: {missing}")
+    if matched_model_name:
+        success, err_msgs = validate_model_statically(
+            doc_dict, matched_model_name, codebase_map
+        )
+
+        if not success and isinstance(err_msgs, str):
+            err_msgs = [err_msgs]
 
         if not success and err_msgs:
             if not matched_explicitly:

@@ -597,45 +597,6 @@ See [my document][ref1] and also [broken doc][ref2].
     )
 
 
-def test_sys_path_append():
-    """Verifies that packages and apps subdirectories are appended to sys.path, not prepended."""
-    import sys
-    from pathlib import Path
-
-    resolved_sys_path = []
-    for x in sys.path:
-        try:
-            resolved_sys_path.append(str(Path(x).resolve()))
-        except Exception:
-            resolved_sys_path.append(x)
-
-    project_root = Path(__file__).resolve().parent.parent
-    for p in (project_root / "packages").glob("*"):
-        if p.is_dir() and p.name != "__pycache__":
-            resolved_path_str = str(p.resolve())
-            assert resolved_path_str in resolved_sys_path
-            # Since they were appended, they should not be at index 0
-            found_index = -1
-            for idx, x in enumerate(sys.path):
-                try:
-                    if str(Path(x).resolve()) == resolved_path_str:
-                        found_index = idx
-                        break
-                except Exception:
-                    pass
-            assert found_index > 0
-
-
-def test_mock_environment_variables():
-    """Verifies that default/mock environment configurations are injected into os.environ."""
-    import os
-
-    assert os.environ.get("DATABASE_URL") is not None
-    assert os.environ.get("ENV") is not None
-    assert os.environ.get("ENVIRONMENT") is not None
-    assert os.environ.get("DEBUG") == "True"
-
-
 def test_exclude_tests_from_codebase_map(tmp_path):
     """Verifies that 'tests' and 'test' directories are excluded during codebase map generation."""
     repo_root = tmp_path / "repo"
@@ -661,7 +622,7 @@ def test_exclude_tests_from_codebase_map(tmp_path):
 
 
 def test_degraded_linter_warnings_and_fallback(tmp_path, capsys):
-    """Verifies that a dynamic import failure emits a degraded coverage warning to stderr, then falls back."""
+    """Verifies that pure static AST validation parses the class and succeeds without triggering top-level execution side-effects."""
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
 
@@ -696,16 +657,15 @@ class BrokenModel(BaseModel):
 
     captured = capsys.readouterr()
 
-    assert "[WARNING] Degraded linter coverage" in captured.err
-    assert "Failed to dynamically load Pydantic model 'BrokenModel'" in captured.err
-    assert "ValueError: Simulated top-level import failure" in captured.err
-    assert "Falling back to basic shallow AST structure verification" in captured.err
-
+    # Pure static validation does not execute/import the python module, so:
+    # 1. No ValueError was raised.
+    # 2. No degraded linter warning was printed.
+    assert "[WARNING] Degraded linter coverage" not in captured.err
     assert len(vm.errors) == 0
 
 
 def test_degraded_linter_warnings_and_fallback_failure(tmp_path, capsys):
-    """Verifies that if fallback also fails (missing required field), errors are reported."""
+    """Verifies that if pure static AST validation fails due to missing required fields, errors are reported properly without triggering any runtime side-effects."""
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
 
@@ -739,15 +699,14 @@ class BrokenModel2(BaseModel):
 
     captured = capsys.readouterr()
 
-    assert "[WARNING] Degraded linter coverage" in captured.err
-    assert "ValueError: Another simulated top-level failure" in captured.err
+    assert "[WARNING] Degraded linter coverage" not in captured.err
 
     assert len(vm.errors) == 1
     assert (
         "JSON example mismatch with Pydantic model 'BrokenModel2'"
         in vm.errors[0]["message"]
     )
-    assert "Missing required fields: ['name']" in vm.errors[0]["message"]
+    assert "field 'name' - Field required" in vm.errors[0]["message"]
 
 
 def test_nested_code_blocks_in_html_comments(tmp_path):
