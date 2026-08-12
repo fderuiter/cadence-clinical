@@ -58,6 +58,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 2. API Gateway, Security & Identity
 
+- [2026-08-12: Unified Cryptographic Fingerprint Verification API](2026-08-12-unified-cryptographic-fingerprint-verification-api.md)
+
 - [2026-08-11: Offline and Synchronous OpenAPI Schema Generation for 15 Platform Services](2026-08-11-offline-and-synchronous-openapi-schema-generation-for-15-platform-services.md)
 
 - [2026-08-11: Decouple Shared Test Signing RBAC Helpers from Gateway](2026-08-11-decoupling-shared-test-signing-rbac-helpers-from-gateway.md)
