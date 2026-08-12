@@ -1,5 +1,6 @@
 """Anti-Corruption Layer DTOs for eligibility criteria received from Designer Service."""
 
+import contextlib
 from datetime import datetime
 from typing import Any, Literal
 
@@ -321,19 +322,53 @@ def evaluate_node_dto(
             )
         l_val, r_val = l_eval.value, r_eval.value
         op = node.operator
-        res = False
-        if op == "==":
-            res = l_val == r_val
-        elif op == "!=":
-            res = l_val != r_val
-        elif op == "<":
-            res = l_val < r_val
-        elif op == "<=":
-            res = l_val <= r_val
-        elif op == ">":
-            res = l_val > r_val
-        elif op == ">=":
-            res = l_val >= r_val
+
+        l_coerced = l_val
+        r_coerced = r_val
+
+        if isinstance(l_val, str):
+            with contextlib.suppress(ValueError, TypeError):
+                l_coerced = float(l_val)
+        if isinstance(r_val, str):
+            with contextlib.suppress(ValueError, TypeError):
+                r_coerced = float(r_val)
+
+        try:
+            res = False
+            if op == "==":
+                res = l_coerced == r_coerced
+            elif op == "!=":
+                res = l_coerced != r_coerced
+            elif op == "<":
+                res = l_coerced < r_coerced
+            elif op == "<=":
+                res = l_coerced <= r_coerced
+            elif op == ">":
+                res = l_coerced > r_coerced
+            elif op == ">=":
+                res = l_coerced >= r_coerced
+            else:
+                return NodeEvaluationDTO(
+                    node_type="comparison",
+                    operator=op,
+                    is_indeterminate=True,
+                    explanation=f"Unsupported comparison operator: {op!r}.",
+                    children=children,
+                )
+        except TypeError as err:
+            explanation = (
+                f"Comparison failed due to incompatible operand types: "
+                f"{type(l_val).__name__} and {type(r_val).__name__}. Details: {err}"
+            )
+            return NodeEvaluationDTO(
+                node_type="comparison",
+                operator=op,
+                value=None,
+                is_indeterminate=True,
+                explanation=explanation,
+                children=children,
+            )
+
         return NodeEvaluationDTO(
             node_type="comparison",
             operator=op,
