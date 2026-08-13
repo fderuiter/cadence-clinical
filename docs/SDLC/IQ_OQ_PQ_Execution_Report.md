@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2386
-- **Passed:** 2367 🟢
+- **Total Automated Test Cases Run:** 2387
+- **Passed:** 2368 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.20%
@@ -974,6 +974,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_age_derivation_boundary_dates[birthdate8-observation_date8-21]`              | `apps.execution.tests.test_demographics`                                    | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_age_derivation_boundary_dates[birthdate9-observation_date9-20]`              | `apps.execution.tests.test_demographics`                                    | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_age_derivation_boundary_dates[invalid-date-string-2020-05-15-None]`          | `apps.execution.tests.test_demographics`                                    | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_custom_gender_preservation`                                                  | `apps.execution.tests.test_demographics`                                    | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_demographics_encryption_decryption_roundtrip`                                | `apps.execution.tests.test_demographics`                                    | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_gender_normalization[  female  -F]`                                          | `apps.execution.tests.test_demographics`                                    | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_gender_normalization[  male  -M]`                                            | `apps.execution.tests.test_demographics`                                    | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
