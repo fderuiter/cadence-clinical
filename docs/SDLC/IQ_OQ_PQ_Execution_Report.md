@@ -10,11 +10,11 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2389
-- **Passed:** 2370 🟢
+- **Total Automated Test Cases Run:** 2390
+- **Passed:** 2371 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
-- **Overall Operational Pass Rate:** 99.20%
+- **Overall Operational Pass Rate:** 99.21%
 
 ## 2. Installation Qualification (IQ)
 
@@ -541,6 +541,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_site_and_visit_locks`                                                             | `apps.designer.tests.test_trial_lock`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_subject_and_form_locks`                                                           | `apps.designer.tests.test_trial_lock`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_trial_lock_freeze`                                                                | `apps.designer.tests.test_trial_lock`                                       | PRD-SYS-003, Trace-3                         | 🟢 PASSED  | < 1s     |
+| `test_usdm_model_immutability`                                                          | `apps.designer.tests.test_usdm_immutability`                                | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_authoring_mutations_rejected_for_auditors`                                        | `apps.econsent.tests.test_econsent`                                         | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_clause_lifecycle_and_versioning_audit`                                            | `apps.econsent.tests.test_econsent`                                         | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_database_url_override_and_init`                                                   | `apps.econsent.tests.test_econsent`                                         | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
