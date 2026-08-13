@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2371
-- **Passed:** 2352 🟢
+- **Total Automated Test Cases Run:** 2381
+- **Passed:** 2362 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.20%
@@ -828,6 +828,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_batch_sign_off_visit_resolution`                                             | `apps.execution.tests.test_batch_sign_off`                                  | Trace-14                                     | 🟢 PASSED  | < 1s     |
 | `test_generate_casebook_manifest_structure`                                        | `apps.execution.tests.test_batch_signatures`                                | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_master_root_digest_tamper_sensitivity`                                       | `apps.execution.tests.test_batch_signatures`                                | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_advisory_locking_pg_outbox_worker`                                           | `apps.execution.tests.test_bg_processing_coordination`                      | PRD-SYS-102                                  | 🟢 PASSED  | < 1s     |
+| `test_advisory_locking_pg_queries_escalation`                                      | `apps.execution.tests.test_bg_processing_coordination`                      | PRD-SYS-102                                  | 🟢 PASSED  | < 1s     |
+| `test_advisory_locking_pg_sealer`                                                  | `apps.execution.tests.test_bg_processing_coordination`                      | PRD-SYS-102                                  | 🟢 PASSED  | < 1s     |
+| `test_background_verification_failure_resilience`                                  | `apps.execution.tests.test_bg_processing_coordination`                      | PRD-SYS-103                                  | 🟢 PASSED  | < 1s     |
+| `test_integrity_verification_runs_in_background`                                   | `apps.execution.tests.test_bg_processing_coordination`                      | PRD-SYS-103                                  | 🟢 PASSED  | < 1s     |
 | `test_dataset_json_integration_structure`                                          | `apps.execution.tests.test_biostat`                                         | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_declarative_mappings_coverage`                                               | `apps.execution.tests.test_biostat`                                         | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_extract_ae_sorting_ongoing_supp`                                             | `apps.execution.tests.test_biostat`                                         | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
