@@ -13901,14 +13901,14 @@ components:
           title: Form Id
         protocol_version:
           anyOf:
-          - type: string
-          - type: 'null'
+            - type: string
+            - type: "null"
           title: Protocol Version
         payload:
           anyOf:
-          - additionalProperties: true
-            type: object
-          - type: 'null'
+            - additionalProperties: true
+              type: object
+            - type: "null"
           title: Payload
       type: object
       required:
@@ -13927,8 +13927,8 @@ components:
           title: Study Id
         site_id:
           anyOf:
-          - type: string
-          - type: 'null'
+            - type: string
+            - type: "null"
           title: Site Id
         subject_id:
           type: string
@@ -13957,14 +13957,14 @@ components:
           title: Signature Manifest
         protocol_version:
           anyOf:
-          - type: string
-          - type: 'null'
+            - type: string
+            - type: "null"
           title: Protocol Version
         payload:
           anyOf:
-          - additionalProperties: true
-            type: object
-          - type: 'null'
+            - additionalProperties: true
+              type: object
+            - type: "null"
           title: Payload
         is_active:
           type: boolean
@@ -13974,8 +13974,8 @@ components:
           title: Is Readonly
         cloned_from_id:
           anyOf:
-          - type: string
-          - type: 'null'
+            - type: string
+            - type: "null"
           title: Cloned From Id
       type: object
       required:
