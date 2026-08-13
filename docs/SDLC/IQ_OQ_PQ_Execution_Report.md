@@ -12,6 +12,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 - **Total Automated Test Cases Run:** 2401
 - **Passed:** 2382 🟢
+- **Total Automated Test Cases Run:** 2399
+- **Passed:** 2380 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.21%
@@ -548,6 +550,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_subject_and_form_locks`                                                           | `apps.designer.tests.test_trial_lock`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_trial_lock_freeze`                                                                | `apps.designer.tests.test_trial_lock`                                       | PRD-SYS-003, Trace-3                         | 🟢 PASSED  | < 1s     |
 | `test_usdm_model_immutability`                                                          | `apps.designer.tests.test_usdm_immutability`                                | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_redis_publish_on_invalidate_and_clear`                                            | `apps.econsent.tests.test_cache_redis`                                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_redis_subscriber_receives_and_evicts_cache`                                       | `apps.econsent.tests.test_cache_redis`                                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_redis_unconfigured_graceful_fallback`                                             | `apps.econsent.tests.test_cache_redis`                                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_redis_unreachable_graceful_fallback`                                              | `apps.econsent.tests.test_cache_redis`                                      | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_authoring_mutations_rejected_for_auditors`                                        | `apps.econsent.tests.test_econsent`                                         | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_clause_lifecycle_and_versioning_audit`                                            | `apps.econsent.tests.test_econsent`                                         | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_database_url_override_and_init`                                                   | `apps.econsent.tests.test_econsent`                                         | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
