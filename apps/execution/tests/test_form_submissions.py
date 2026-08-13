@@ -62,6 +62,8 @@ def get_auth_headers(
 @pytest_asyncio.fixture(autouse=True)
 async def setup_test_db():
     """Setup in-memory SQLite database before each test and clear down after."""
+    from apps.execution.database.migrate import deploy_database_triggers
+
     db_manager.init_db("sqlite+aiosqlite:///:memory:")
     async with db_manager.engine.begin() as conn:
         from sqlalchemy import text
@@ -69,6 +71,7 @@ async def setup_test_db():
         if db_manager.engine.dialect.name == "postgresql":
             await conn.execute(text("CREATE SCHEMA IF NOT EXISTS audit_schema;"))
         await conn.run_sync(Base.metadata.create_all)
+        await deploy_database_triggers(conn, "sqlite")
     yield
     TrialLockManager.reset()
     async with db_manager.engine.begin() as conn:

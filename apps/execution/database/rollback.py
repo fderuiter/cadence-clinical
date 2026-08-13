@@ -91,6 +91,16 @@ async def validate_migration_integrity() -> bool:
                         "DROP TRIGGER IF EXISTS trg_audit_clinical_observations_delete;"
                     )
                 )
+                await conn.execute(
+                    text(
+                        "DROP TRIGGER IF EXISTS trg_lock_clinical_observations_insert;"
+                    )
+                )
+                await conn.execute(
+                    text(
+                        "DROP TRIGGER IF EXISTS trg_lock_clinical_observations_update;"
+                    )
+                )
                 print(
                     "[Migration-Integrity] Dropped table triggers referencing page_id."
                 )

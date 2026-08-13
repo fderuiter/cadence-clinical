@@ -145,10 +145,83 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                 v_action VARCHAR(50);
                 v_record_id VARCHAR(255);
                 v_app_writing VARCHAR(50);
+                v_new_json_lock JSONB := NULL;
+                v_old_json_lock JSONB := NULL;
             BEGIN
                 IF (TG_OP = 'DELETE') THEN
                     RAISE EXCEPTION 'GxP Compliance Violation: Hard deletions are strictly forbidden for clinical entities. Use soft deletes by updating is_deleted=True.';
                     RETURN NULL;
+                END IF;
+
+                -- 1. Check database-level lock validations
+                IF (current_setting('cadence.is_trial_locked', true) = 'true') THEN
+                    RAISE EXCEPTION 'GxP Compliance Violation: Trial is currently locked in a read-only state due to a security violation.';
+                END IF;
+
+                v_new_json_lock := to_jsonb(NEW);
+                
+                -- Check Site Lock
+                IF (v_new_json_lock ? 'site_id' AND v_new_json_lock ->> 'site_id' IS NOT NULL) THEN
+                    IF (',' || current_setting('cadence.locked_sites', true) || ',' LIKE '%,' || (v_new_json_lock ->> 'site_id') || ',%') THEN
+                        RAISE EXCEPTION 'GxP Compliance Violation: Site % is currently locked in a read-only state.', (v_new_json_lock ->> 'site_id');
+                    END IF;
+                END IF;
+
+                -- Check Visit Lock
+                IF (v_new_json_lock ? 'visit_id' AND v_new_json_lock ->> 'visit_id' IS NOT NULL) THEN
+                    IF (',' || current_setting('cadence.locked_visits', true) || ',' LIKE '%,' || (v_new_json_lock ->> 'visit_id') || ',%') THEN
+                        RAISE EXCEPTION 'GxP Compliance Violation: Visit % is currently locked in a read-only state.', (v_new_json_lock ->> 'visit_id');
+                    END IF;
+                END IF;
+
+                -- Check Subject Lock
+                IF (v_new_json_lock ? 'subject_id' AND v_new_json_lock ->> 'subject_id' IS NOT NULL) THEN
+                    IF (',' || current_setting('cadence.locked_subjects', true) || ',' LIKE '%,' || (v_new_json_lock ->> 'subject_id') || ',%') THEN
+                        RAISE EXCEPTION 'GxP Compliance Violation: Subject % is currently locked in a read-only state.', (v_new_json_lock ->> 'subject_id');
+                    END IF;
+                END IF;
+
+                -- Check Form Lock
+                IF (v_new_json_lock ? 'form_id' AND v_new_json_lock ->> 'form_id' IS NOT NULL) THEN
+                    IF (',' || current_setting('cadence.locked_forms', true) || ',' LIKE '%,' || (v_new_json_lock ->> 'form_id') || ',%') THEN
+                        RAISE EXCEPTION 'GxP Compliance Violation: Form % is currently locked in a read-only state.', (v_new_json_lock ->> 'form_id');
+                    END IF;
+                ELSIF (v_new_json_lock ? 'page_id' AND v_new_json_lock ->> 'page_id' IS NOT NULL) THEN
+                    IF (',' || current_setting('cadence.locked_forms', true) || ',' LIKE '%,' || (v_new_json_lock ->> 'page_id') || ',%') THEN
+                        RAISE EXCEPTION 'GxP Compliance Violation: Form % is currently locked in a read-only state.', (v_new_json_lock ->> 'page_id');
+                    END IF;
+                END IF;
+
+                IF (TG_OP = 'UPDATE') THEN
+                    v_old_json_lock := to_jsonb(OLD);
+                    -- Old Site Lock
+                    IF (v_old_json_lock ? 'site_id' AND v_old_json_lock ->> 'site_id' IS NOT NULL) THEN
+                        IF (',' || current_setting('cadence.locked_sites', true) || ',' LIKE '%,' || (v_old_json_lock ->> 'site_id') || ',%') THEN
+                            RAISE EXCEPTION 'GxP Compliance Violation: Site % is currently locked in a read-only state.', (v_old_json_lock ->> 'site_id');
+                        END IF;
+                    END IF;
+                    -- Old Visit Lock
+                    IF (v_old_json_lock ? 'visit_id' AND v_old_json_lock ->> 'visit_id' IS NOT NULL) THEN
+                        IF (',' || current_setting('cadence.locked_visits', true) || ',' LIKE '%,' || (v_old_json_lock ->> 'visit_id') || ',%') THEN
+                            RAISE EXCEPTION 'GxP Compliance Violation: Visit % is currently locked in a read-only state.', (v_old_json_lock ->> 'visit_id');
+                        END IF;
+                    END IF;
+                    -- Old Subject Lock
+                    IF (v_old_json_lock ? 'subject_id' AND v_old_json_lock ->> 'subject_id' IS NOT NULL) THEN
+                        IF (',' || current_setting('cadence.locked_subjects', true) || ',' LIKE '%,' || (v_old_json_lock ->> 'subject_id') || ',%') THEN
+                            RAISE EXCEPTION 'GxP Compliance Violation: Subject % is currently locked in a read-only state.', (v_old_json_lock ->> 'subject_id');
+                        END IF;
+                    END IF;
+                    -- Old Form Lock
+                    IF (v_old_json_lock ? 'form_id' AND v_old_json_lock ->> 'form_id' IS NOT NULL) THEN
+                        IF (',' || current_setting('cadence.locked_forms', true) || ',' LIKE '%,' || (v_old_json_lock ->> 'form_id') || ',%') THEN
+                            RAISE EXCEPTION 'GxP Compliance Violation: Form % is currently locked in a read-only state.', (v_old_json_lock ->> 'form_id');
+                        END IF;
+                    ELSIF (v_old_json_lock ? 'page_id' AND v_old_json_lock ->> 'page_id' IS NOT NULL) THEN
+                        IF (',' || current_setting('cadence.locked_forms', true) || ',' LIKE '%,' || (v_old_json_lock ->> 'page_id') || ',%') THEN
+                            RAISE EXCEPTION 'GxP Compliance Violation: Form % is currently locked in a read-only state.', (v_old_json_lock ->> 'page_id');
+                        END IF;
+                    END IF;
                 END IF;
 
                 v_app_writing := COALESCE(current_setting('cadence.app_writing', true), 'false');
@@ -159,6 +232,14 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                 v_user_id := current_setting('cadence.current_user_id', true);
                 IF (v_user_id IS NULL OR v_user_id = '') THEN
                     RAISE EXCEPTION 'GxP Compliance Violation: Write operations lacking session-level user identifiers are strictly prohibited.';
+                END IF;
+
+                -- Check change justification on update
+                IF (TG_OP = 'UPDATE') THEN
+                    v_change_reason := current_setting('cadence.current_change_reason', true);
+                    IF (v_change_reason IS NULL OR trim(v_change_reason) = '') THEN
+                        RAISE EXCEPTION 'GxP Compliance Violation: GxP change reason is required. Reason for change cannot be empty or consist only of whitespace.';
+                    END IF;
                 END IF;
 
                 v_change_reason := COALESCE(NULLIF(current_setting('cadence.current_change_reason', true), ''), 'Automated system operation');
@@ -291,6 +372,12 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
 
                 # Drop triggers to recreate them
                 await conn.execute(
+                    text(f"DROP TRIGGER IF EXISTS trg_lock_{table_name}_insert;")
+                )
+                await conn.execute(
+                    text(f"DROP TRIGGER IF EXISTS trg_lock_{table_name}_update;")
+                )
+                await conn.execute(
                     text(f"DROP TRIGGER IF EXISTS trg_audit_{table_name}_insert;")
                 )
                 await conn.execute(
@@ -300,6 +387,124 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                     text(f"DROP TRIGGER IF EXISTS trg_audit_{table_name}_delete;")
                 )
 
+                # 1. Create Lock triggers
+                lock_checks_insert = []
+                lock_checks_insert.append("""
+                    SELECT CASE
+                        WHEN (current_setting('cadence.is_trial_locked', 1) = 'true')
+                        THEN RAISE(FAIL, 'GxP Compliance Violation: Trial is currently locked in a read-only state due to a security violation.')
+                    END;
+                """)
+                if "site_id" in table.columns:
+                    lock_checks_insert.append("""
+                        SELECT CASE
+                            WHEN (NEW.site_id IS NOT NULL AND ',' || current_setting('cadence.locked_sites', 1) || ',' LIKE '%,' || NEW.site_id || ',%')
+                            THEN RAISE(FAIL, 'GxP Compliance Violation: Site ' || NEW.site_id || ' is currently locked in a read-only state.')
+                        END;
+                    """)
+                if "visit_id" in table.columns:
+                    lock_checks_insert.append("""
+                        SELECT CASE
+                            WHEN (NEW.visit_id IS NOT NULL AND ',' || current_setting('cadence.locked_visits', 1) || ',' LIKE '%,' || NEW.visit_id || ',%')
+                            THEN RAISE(FAIL, 'GxP Compliance Violation: Visit ' || NEW.visit_id || ' is currently locked in a read-only state.')
+                        END;
+                    """)
+                if "subject_id" in table.columns:
+                    lock_checks_insert.append("""
+                        SELECT CASE
+                            WHEN (NEW.subject_id IS NOT NULL AND ',' || current_setting('cadence.locked_subjects', 1) || ',' LIKE '%,' || NEW.subject_id || ',%')
+                            THEN RAISE(FAIL, 'GxP Compliance Violation: Subject ' || NEW.subject_id || ' is currently locked in a read-only state.')
+                        END;
+                    """)
+                if "form_id" in table.columns:
+                    lock_checks_insert.append("""
+                        SELECT CASE
+                            WHEN (NEW.form_id IS NOT NULL AND ',' || current_setting('cadence.locked_forms', 1) || ',' LIKE '%,' || NEW.form_id || ',%')
+                            THEN RAISE(FAIL, 'GxP Compliance Violation: Form ' || NEW.form_id || ' is currently locked in a read-only state.')
+                        END;
+                    """)
+                elif "page_id" in table.columns:
+                    lock_checks_insert.append("""
+                        SELECT CASE
+                            WHEN (NEW.page_id IS NOT NULL AND ',' || current_setting('cadence.locked_forms', 1) || ',' LIKE '%,' || NEW.page_id || ',%')
+                            THEN RAISE(FAIL, 'GxP Compliance Violation: Form ' || NEW.page_id || ' is currently locked in a read-only state.')
+                        END;
+                    """)
+
+                lock_checks_update = []
+                lock_checks_update.append("""
+                    SELECT CASE
+                        WHEN (current_setting('cadence.is_trial_locked', 1) = 'true')
+                        THEN RAISE(FAIL, 'GxP Compliance Violation: Trial is currently locked in a read-only state due to a security violation.')
+                    END;
+                """)
+                if "site_id" in table.columns:
+                    lock_checks_update.append("""
+                        SELECT CASE
+                            WHEN (NEW.site_id IS NOT NULL AND ',' || current_setting('cadence.locked_sites', 1) || ',' LIKE '%,' || NEW.site_id || ',%')
+                            THEN RAISE(FAIL, 'GxP Compliance Violation: Site ' || NEW.site_id || ' is currently locked in a read-only state.')
+                            WHEN (OLD.site_id IS NOT NULL AND ',' || current_setting('cadence.locked_sites', 1) || ',' LIKE '%,' || OLD.site_id || ',%')
+                            THEN RAISE(FAIL, 'GxP Compliance Violation: Site ' || OLD.site_id || ' is currently locked in a read-only state.')
+                        END;
+                    """)
+                if "visit_id" in table.columns:
+                    lock_checks_update.append("""
+                        SELECT CASE
+                            WHEN (NEW.visit_id IS NOT NULL AND ',' || current_setting('cadence.locked_visits', 1) || ',' LIKE '%,' || NEW.visit_id || ',%')
+                            THEN RAISE(FAIL, 'GxP Compliance Violation: Visit ' || NEW.visit_id || ' is currently locked in a read-only state.')
+                            WHEN (OLD.visit_id IS NOT NULL AND ',' || current_setting('cadence.locked_visits', 1) || ',' LIKE '%,' || OLD.visit_id || ',%')
+                            THEN RAISE(FAIL, 'GxP Compliance Violation: Visit ' || OLD.visit_id || ' is currently locked in a read-only state.')
+                        END;
+                    """)
+                if "subject_id" in table.columns:
+                    lock_checks_update.append("""
+                        SELECT CASE
+                            WHEN (NEW.subject_id IS NOT NULL AND ',' || current_setting('cadence.locked_subjects', 1) || ',' LIKE '%,' || NEW.subject_id || ',%')
+                            THEN RAISE(FAIL, 'GxP Compliance Violation: Subject ' || NEW.subject_id || ' is currently locked in a read-only state.')
+                            WHEN (OLD.subject_id IS NOT NULL AND ',' || current_setting('cadence.locked_subjects', 1) || ',' LIKE '%,' || OLD.subject_id || ',%')
+                            THEN RAISE(FAIL, 'GxP Compliance Violation: Subject ' || OLD.subject_id || ' is currently locked in a read-only state.')
+                        END;
+                    """)
+                if "form_id" in table.columns:
+                    lock_checks_update.append("""
+                        SELECT CASE
+                            WHEN (NEW.form_id IS NOT NULL AND ',' || current_setting('cadence.locked_forms', 1) || ',' LIKE '%,' || NEW.form_id || ',%')
+                            THEN RAISE(FAIL, 'GxP Compliance Violation: Form ' || NEW.form_id || ' is currently locked in a read-only state.')
+                            WHEN (OLD.form_id IS NOT NULL AND ',' || current_setting('cadence.locked_forms', 1) || ',' LIKE '%,' || OLD.form_id || ',%')
+                            THEN RAISE(FAIL, 'GxP Compliance Violation: Form ' || OLD.form_id || ' is currently locked in a read-only state.')
+                        END;
+                    """)
+                elif "page_id" in table.columns:
+                    lock_checks_update.append("""
+                        SELECT CASE
+                            WHEN (NEW.page_id IS NOT NULL AND ',' || current_setting('cadence.locked_forms', 1) || ',' LIKE '%,' || NEW.page_id || ',%')
+                            THEN RAISE(FAIL, 'GxP Compliance Violation: Form ' || NEW.page_id || ' is currently locked in a read-only state.')
+                            WHEN (OLD.page_id IS NOT NULL AND ',' || current_setting('cadence.locked_forms', 1) || ',' LIKE '%,' || OLD.page_id || ',%')
+                            THEN RAISE(FAIL, 'GxP Compliance Violation: Form ' || OLD.page_id || ' is currently locked in a read-only state.')
+                        END;
+                    """)
+
+                await conn.execute(
+                    text(f"""
+                    CREATE TRIGGER trg_lock_{table_name}_insert
+                    BEFORE INSERT ON {table_name}
+                    BEGIN
+                        {" ".join(lock_checks_insert)}
+                    END;
+                """)
+                )
+
+                await conn.execute(
+                    text(f"""
+                    CREATE TRIGGER trg_lock_{table_name}_update
+                    BEFORE UPDATE ON {table_name}
+                    BEGIN
+                        {" ".join(lock_checks_update)}
+                    END;
+                """)
+                )
+
+                # 2. Create Audit triggers
                 await conn.execute(
                     text(f"""
                     CREATE TRIGGER trg_audit_{table_name}_insert
@@ -338,6 +543,11 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                         SELECT CASE
                             WHEN (current_setting('cadence.current_user_id', 1) IS NULL OR current_setting('cadence.current_user_id', 1) = '')
                             THEN RAISE(FAIL, 'GxP Compliance Violation: Write operations lacking session-level user identifiers are strictly prohibited.')
+                        END;
+
+                        SELECT CASE
+                            WHEN (current_setting('cadence.current_change_reason', 1) IS NULL OR trim(current_setting('cadence.current_change_reason', 1)) = '')
+                            THEN RAISE(FAIL, 'GxP Compliance Violation: GxP change reason is required. Reason for change cannot be empty or consist only of whitespace.')
                         END;
 
                         INSERT INTO audit_logs (

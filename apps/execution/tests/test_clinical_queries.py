@@ -105,10 +105,13 @@ def get_v2_auth_headers_with_token(
 @pytest_asyncio.fixture(autouse=True)
 async def setup_test_db() -> AsyncGenerator[None]:
     """Setup in-memory SQLite database before each test and clear down after."""
+    from apps.execution.database.migrate import deploy_database_triggers
+
     db_manager.init_db("sqlite+aiosqlite:///:memory:")
     async with db_manager.engine.begin() as conn:
         # Create all tables including clinical_queries and audit logs
         await conn.run_sync(Base.metadata.create_all)
+        await deploy_database_triggers(conn, "sqlite")
 
     yield
 

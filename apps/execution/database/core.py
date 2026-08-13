@@ -67,6 +67,11 @@ class DatabaseSessionManager:
                         "cadence.current_user_id": "system",
                         "cadence.current_change_reason": "system_operation",
                         "cadence.app_writing": "false",
+                        "cadence.is_trial_locked": "false",
+                        "cadence.locked_sites": "",
+                        "cadence.locked_visits": "",
+                        "cadence.locked_subjects": "",
+                        "cadence.locked_forms": "",
                     }
 
                 def sqlite_set_config(name, value, is_local=True):
@@ -80,12 +85,7 @@ class DatabaseSessionManager:
                 def sqlite_current_setting(name, missing_ok=True):
                     if conn_id not in self._sqlite_settings:
                         return ""
-                    val = self._sqlite_settings[conn_id].get(name)
-                    if val is None:
-                        if missing_ok:
-                            return ""
-                        raise Exception(f"Setting {name} not found")
-                    return val
+                    return self._sqlite_settings[conn_id].get(name)
 
                 conn.create_function("set_config", 3, sqlite_set_config)
                 conn.create_function("current_setting", 2, sqlite_current_setting)
@@ -102,6 +102,11 @@ class DatabaseSessionManager:
                     "cadence.current_user_id": "system",
                     "cadence.current_change_reason": "system_operation",
                     "cadence.app_writing": "false",
+                    "cadence.is_trial_locked": "false",
+                    "cadence.locked_sites": "",
+                    "cadence.locked_visits": "",
+                    "cadence.locked_subjects": "",
+                    "cadence.locked_forms": "",
                 }
 
         @event.listens_for(self.engine.sync_engine, "checkin")
@@ -113,6 +118,11 @@ class DatabaseSessionManager:
                     "cadence.current_user_id": "system",
                     "cadence.current_change_reason": "system_operation",
                     "cadence.app_writing": "false",
+                    "cadence.is_trial_locked": "false",
+                    "cadence.locked_sites": "",
+                    "cadence.locked_visits": "",
+                    "cadence.locked_subjects": "",
+                    "cadence.locked_forms": "",
                 }
 
         @event.listens_for(self.engine.sync_engine, "close")
@@ -128,6 +138,82 @@ class DatabaseSessionManager:
             if hasattr(conn, "create_function"):
                 conn_id = id(conn)
                 self._sqlite_settings.pop(conn_id, None)
+
+        @event.listens_for(self.engine.sync_engine, "handle_error")
+        def handle_db_error(exception_context):
+            orig = exception_context.original_exception
+            if orig is not None:
+                err_msg = str(orig)
+                if (
+                    "GxP Compliance Violation: Trial" in err_msg
+                    or "Trial is currently locked" in err_msg
+                ):
+                    raise PermissionError(
+                        "Trial is currently locked in a read-only state due to a security violation."
+                    ) from orig
+                if "GxP Compliance Violation: Site" in err_msg or (
+                    "Site" in err_msg and "is currently locked" in err_msg
+                ):
+                    import re
+
+                    m = re.search(
+                        r"Site\s+([^\s]+)\s+is\s+currently\s+locked",
+                        err_msg,
+                        re.IGNORECASE,
+                    )
+                    site_id = m.group(1) if m else "SITE"
+                    raise PermissionError(
+                        f"Site {site_id} is currently locked in a read-only state."
+                    ) from orig
+                if "GxP Compliance Violation: Visit" in err_msg or (
+                    "Visit" in err_msg and "is currently locked" in err_msg
+                ):
+                    import re
+
+                    m = re.search(
+                        r"Visit\s+([^\s]+)\s+is\s+currently\s+locked",
+                        err_msg,
+                        re.IGNORECASE,
+                    )
+                    visit_id = m.group(1) if m else "VISIT"
+                    raise PermissionError(
+                        f"Visit {visit_id} is currently locked in a read-only state."
+                    ) from orig
+                if "GxP Compliance Violation: Subject" in err_msg or (
+                    "Subject" in err_msg and "is currently locked" in err_msg
+                ):
+                    import re
+
+                    m = re.search(
+                        r"Subject\s+([^\s]+)\s+is\s+currently\s+locked",
+                        err_msg,
+                        re.IGNORECASE,
+                    )
+                    subject_id = m.group(1) if m else "SUBJECT"
+                    raise PermissionError(
+                        f"Subject {subject_id} is currently locked in a read-only state."
+                    ) from orig
+                if "GxP Compliance Violation: Form" in err_msg or (
+                    "Form" in err_msg and "is currently locked" in err_msg
+                ):
+                    import re
+
+                    m = re.search(
+                        r"Form\s+([^\s]+)\s+is\s+currently\s+locked",
+                        err_msg,
+                        re.IGNORECASE,
+                    )
+                    form_id = m.group(1) if m else "FORM"
+                    raise PermissionError(
+                        f"Form {form_id} is currently locked in a read-only state."
+                    ) from orig
+                if (
+                    "GxP Compliance Violation: GxP change reason is required" in err_msg
+                    or "change reason is required" in err_msg
+                ):
+                    raise ValueError(
+                        "GxP change reason is required. Reason for change cannot be empty or consist only of whitespace."
+                    ) from orig
 
         self.session_maker = async_sessionmaker(
             bind=self.engine, class_=AsyncSession, expire_on_commit=False
