@@ -510,6 +510,8 @@ def is_whitelisted(method: str, path: str) -> bool:
 
     m = method.lower()
     p_norm = normalize_p(norm_path)
+    if "resupply-events" in p_norm or "resupply-events" in path:
+        return True
     if "reorder" in p_norm or "assignments" in p_norm:
         return True
     # Wildcard checks for newly added execution and designer features

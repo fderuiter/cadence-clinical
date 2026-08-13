@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -2295,3 +2296,334 @@ async def bulk_sync_monitoring_visits(
         "processed_count": len(payloads),
         "results": results,
     }
+
+
+class CTMSResupplyApprovalRequest(BaseModel):
+    change_justification: str
+
+
+class CTMSResupplyEventResponse(BaseModel):
+    id: str
+    study_id: str
+    site_id: str
+    kit_id: str
+    requested_qty: int
+    status: str
+    triggered_at: datetime
+
+
+@router.get("/resupply-events", response_model=list[CTMSResupplyEventResponse])
+async def list_ctms_resupply_events(
+    request: Request,
+    study_id: str | None = None,
+    site_id: str | None = None,
+    status: str | None = None,
+    principal: Principal = Depends(get_principal),
+) -> list[CTMSResupplyEventResponse]:
+    """List pending/all resupply events from downstream execution, applying site boundaries and manager-level role checks."""
+    import httpx
+
+    from packages.security.gateway_client import GatewayBaseClient
+    from packages.security.rbac import can_access_site, can_access_study
+
+    # Verification of manager-level roles
+    def is_manager(p: Principal) -> bool:
+        manager_roles = {"sponsor_dm", "admin", "sysadmin", "cra", "monitor"}
+        if any(r in manager_roles for r in p.roles):
+            return True
+        raw_manager_roles = {
+            "cra",
+            "monitor",
+            "clinical_research_associate",
+            "clinicalresearchassociate",
+            "sponsor_admin",
+            "sponsoradmin",
+            "admin",
+            "sysadmin",
+            "system_admin",
+            "systemadmin",
+        }
+        for r in p.raw_roles:
+            norm_r = r.strip().lower().replace(" ", "_")
+            if norm_r in raw_manager_roles:
+                return True
+        return False
+
+    if not is_manager(principal):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: User does not have manager-level permissions.",
+        )
+
+    if site_id and not can_access_site(principal, site_id):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied to site.")
+    if study_id and not can_access_study(principal, study_id):
+        raise HTTPException(
+            status_code=403, detail="Forbidden: Access denied to study."
+        )
+
+    params = {}
+    if study_id:
+        params["study_id"] = study_id
+    if site_id:
+        params["site_id"] = site_id
+    if status:
+        params["status"] = status
+
+    try:
+        client = GatewayBaseClient(
+            base_url=os.getenv("EXECUTION_URL") or "http://localhost:8002", timeout=5.0
+        )
+        response = await client.request(
+            method="GET",
+            path="/api/v1/execution/rtsm/resupply-events",
+            user_id=principal.user_id,
+            roles=",".join(principal.roles),
+            change_reason="Query resupply events",
+            params=params,
+        )
+    except (httpx.RequestError, httpx.TimeoutException) as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to communicate with downstream execution service: {str(e)}",
+        )
+
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=response.status_code,
+            detail=f"Downstream service returned error: {response.text}",
+        )
+
+    return response.json()
+
+
+@router.post(
+    "/resupply-events/{event_id}/confirm", response_model=CTMSResupplyEventResponse
+)
+async def approve_ctms_resupply_event(
+    event_id: str,
+    payload: CTMSResupplyApprovalRequest,
+    principal: Principal = Depends(get_principal),
+) -> CTMSResupplyEventResponse:
+    """Approve resupply event, securely signing and delegating downstream."""
+    import httpx
+
+    from packages.security.gateway_client import GatewayBaseClient
+    from packages.security.rbac import can_access_site, can_access_study
+
+    change_justification = payload.change_justification
+    if not change_justification or not change_justification.strip():
+        raise HTTPException(
+            status_code=400, detail="Change justification must not be empty."
+        )
+
+    # 1. Fetch resupply events to check permissions
+    try:
+        client = GatewayBaseClient(
+            base_url=os.getenv("EXECUTION_URL") or "http://localhost:8002", timeout=5.0
+        )
+        response = await client.request(
+            method="GET",
+            path="/api/v1/execution/rtsm/resupply-events",
+            user_id=principal.user_id,
+            roles=",".join(principal.roles),
+            change_reason="Fetch events for permission check",
+        )
+    except (httpx.RequestError, httpx.TimeoutException) as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to communicate with downstream execution service: {str(e)}",
+        )
+
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=response.status_code,
+            detail=f"Downstream service returned error: {response.text}",
+        )
+
+    events = response.json()
+    event = next((ev for ev in events if ev["id"] == event_id), None)
+    if not event:
+        raise HTTPException(status_code=404, detail="Resupply event not found")
+
+    site_id = event["site_id"]
+    study_id = event["study_id"]
+
+    def is_manager(p: Principal) -> bool:
+        manager_roles = {"sponsor_dm", "admin", "sysadmin", "cra", "monitor"}
+        if any(r in manager_roles for r in p.roles):
+            return True
+        raw_manager_roles = {
+            "cra",
+            "monitor",
+            "clinical_research_associate",
+            "clinicalresearchassociate",
+            "sponsor_admin",
+            "sponsoradmin",
+            "admin",
+            "sysadmin",
+            "system_admin",
+            "systemadmin",
+        }
+        for r in p.raw_roles:
+            norm_r = r.strip().lower().replace(" ", "_")
+            if norm_r in raw_manager_roles:
+                return True
+        return False
+
+    if not is_manager(principal):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: User does not have manager-level permissions.",
+        )
+
+    if not can_access_site(principal, site_id):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied to site.")
+    if not can_access_study(principal, study_id):
+        raise HTTPException(
+            status_code=403, detail="Forbidden: Access denied to study."
+        )
+
+    # 2. Delegate approval downstream
+    try:
+        response_approve = await client.request(
+            method="POST",
+            path=f"/api/v1/execution/rtsm/resupply-events/{event_id}/confirm",
+            user_id=principal.user_id,
+            roles=",".join(principal.roles),
+            change_reason=change_justification,
+            json={"change_justification": change_justification},
+        )
+    except (httpx.RequestError, httpx.TimeoutException) as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to communicate with downstream execution service: {str(e)}",
+        )
+
+    if response_approve.status_code != 200:
+        try:
+            err_detail = response_approve.json().get("detail", response_approve.text)
+        except Exception:
+            err_detail = response_approve.text
+        raise HTTPException(
+            status_code=response_approve.status_code,
+            detail=f"Downstream service returned error: {err_detail}",
+        )
+
+    return response_approve.json()
+
+
+@router.post(
+    "/resupply-events/{event_id}/reject", response_model=CTMSResupplyEventResponse
+)
+async def reject_ctms_resupply_event(
+    event_id: str,
+    payload: CTMSResupplyApprovalRequest,
+    principal: Principal = Depends(get_principal),
+) -> CTMSResupplyEventResponse:
+    """Reject resupply event, securely signing and delegating downstream."""
+    import httpx
+
+    from packages.security.gateway_client import GatewayBaseClient
+    from packages.security.rbac import can_access_site, can_access_study
+
+    change_justification = payload.change_justification
+    if not change_justification or not change_justification.strip():
+        raise HTTPException(
+            status_code=400, detail="Change justification must not be empty."
+        )
+
+    # 1. Fetch resupply events to check permissions
+    try:
+        client = GatewayBaseClient(
+            base_url=os.getenv("EXECUTION_URL") or "http://localhost:8002", timeout=5.0
+        )
+        response = await client.request(
+            method="GET",
+            path="/api/v1/execution/rtsm/resupply-events",
+            user_id=principal.user_id,
+            roles=",".join(principal.roles),
+            change_reason="Fetch events for permission check",
+        )
+    except (httpx.RequestError, httpx.TimeoutException) as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to communicate with downstream execution service: {str(e)}",
+        )
+
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=response.status_code,
+            detail=f"Downstream service returned error: {response.text}",
+        )
+
+    events = response.json()
+    event = next((ev for ev in events if ev["id"] == event_id), None)
+    if not event:
+        raise HTTPException(status_code=404, detail="Resupply event not found")
+
+    site_id = event["site_id"]
+    study_id = event["study_id"]
+
+    def is_manager(p: Principal) -> bool:
+        manager_roles = {"sponsor_dm", "admin", "sysadmin", "cra", "monitor"}
+        if any(r in manager_roles for r in p.roles):
+            return True
+        raw_manager_roles = {
+            "cra",
+            "monitor",
+            "clinical_research_associate",
+            "clinicalresearchassociate",
+            "sponsor_admin",
+            "sponsoradmin",
+            "admin",
+            "sysadmin",
+            "system_admin",
+            "systemadmin",
+        }
+        for r in p.raw_roles:
+            norm_r = r.strip().lower().replace(" ", "_")
+            if norm_r in raw_manager_roles:
+                return True
+        return False
+
+    if not is_manager(principal):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: User does not have manager-level permissions.",
+        )
+
+    if not can_access_site(principal, site_id):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied to site.")
+    if not can_access_study(principal, study_id):
+        raise HTTPException(
+            status_code=403, detail="Forbidden: Access denied to study."
+        )
+
+    # 2. Delegate rejection downstream
+    try:
+        response_reject = await client.request(
+            method="POST",
+            path=f"/api/v1/execution/rtsm/resupply-events/{event_id}/reject",
+            user_id=principal.user_id,
+            roles=",".join(principal.roles),
+            change_reason=change_justification,
+            json={"change_justification": change_justification},
+        )
+    except (httpx.RequestError, httpx.TimeoutException) as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to communicate with downstream execution service: {str(e)}",
+        )
+
+    if response_reject.status_code != 200:
+        try:
+            err_detail = response_reject.json().get("detail", response_reject.text)
+        except Exception:
+            err_detail = response_reject.text
+        raise HTTPException(
+            status_code=response_reject.status_code,
+            detail=f"Downstream service returned error: {err_detail}",
+        )
+
+    return response_reject.json()

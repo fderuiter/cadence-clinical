@@ -1759,6 +1759,198 @@
         }
       }
     },
+    "/api/v1/ctms/resupply-events": {
+      "get": {
+        "tags": [
+          "CTMS"
+        ],
+        "summary": "List Ctms Resupply Events",
+        "description": "List pending/all resupply events from downstream execution, applying site boundaries and manager-level role checks.",
+        "operationId": "list_ctms_resupply_events_api_v1_ctms_resupply_events_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CTMSResupplyEventResponse"
+                  },
+                  "title": "Response List Ctms Resupply Events Api V1 Ctms Resupply Events Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/resupply-events/{event_id}/confirm": {
+      "post": {
+        "tags": [
+          "CTMS"
+        ],
+        "summary": "Approve Ctms Resupply Event",
+        "description": "Approve resupply event, securely signing and delegating downstream.",
+        "operationId": "approve_ctms_resupply_event_api_v1_ctms_resupply_events__event_id__confirm_post",
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Event Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CTMSResupplyApprovalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CTMSResupplyEventResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/resupply-events/{event_id}/reject": {
+      "post": {
+        "tags": [
+          "CTMS"
+        ],
+        "summary": "Reject Ctms Resupply Event",
+        "description": "Reject resupply event, securely signing and delegating downstream.",
+        "operationId": "reject_ctms_resupply_event_api_v1_ctms_resupply_events__event_id__reject_post",
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Event Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CTMSResupplyApprovalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CTMSResupplyEventResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -2140,6 +2332,63 @@
           "details"
         ],
         "title": "CTMSAuditLogResponse"
+      },
+      "CTMSResupplyApprovalRequest": {
+        "properties": {
+          "change_justification": {
+            "type": "string",
+            "title": "Change Justification"
+          }
+        },
+        "type": "object",
+        "required": [
+          "change_justification"
+        ],
+        "title": "CTMSResupplyApprovalRequest"
+      },
+      "CTMSResupplyEventResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "kit_id": {
+            "type": "string",
+            "title": "Kit Id"
+          },
+          "requested_qty": {
+            "type": "integer",
+            "title": "Requested Qty"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "triggered_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Triggered At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "kit_id",
+          "requested_qty",
+          "status",
+          "triggered_at"
+        ],
+        "title": "CTMSResupplyEventResponse"
       },
       "CTMSStudyCreate": {
         "properties": {
