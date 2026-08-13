@@ -56,7 +56,7 @@ Chosen option: **Option A** because it enforces a single, centralized semantic c
 - **Affected Files:**
   - `packages/ui/tokens.css` (centralized token contract & shared component styles)
   - `apps/web/src/style.css` (eliminated duplicated classes)
-  - `apps/subject-portal/style.css` (eliminated duplicated classes)
+  - `apps/subject-portal/src/style.css` (eliminated duplicated classes)
 - **Verification Plan:**
   - Run local formatting: `pnpm -r format`
   - Run local linting: `pnpm -r lint`

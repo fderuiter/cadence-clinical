@@ -61,7 +61,7 @@ Furthermore, the eConsent Glossary component (`IcfSectionEditor.vue`) showed def
 - **Affected Repositories / Services:**
   - `packages/ui/index.js` (Centralized `initHoverDetection` helper)
   - `apps/web/src/main.js` (Boots helper)
-  - `apps/subject-portal/index.js` (Boots helper)
+  - `apps/subject-portal/src/index.js` (Boots helper)
   - `apps/web/src/components/econsent/IcfSectionEditor.vue` (Touch/mobile adaptivity)
 - **Verification Plan:**
   - Verified via a comprehensive unit test suite inside `IcfSectionEditor.spec.js` asserting proper behavior on both desktop/pointer (with hover matches) and mobile/touch (without hover matches) simulated environments.

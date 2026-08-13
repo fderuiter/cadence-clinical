@@ -50,7 +50,7 @@ Chosen option: **Option 2 (Token-Based Centralized Responsive Utilities)** becau
 
 - **Affected Repositories / Services / Files:**
   - `packages/ui/tokens.css` & `packages/ui/responsive.css`
-  - `apps/web/src/style.css` & `apps/subject-portal/style.css`
+  - `apps/web/src/style.css` & `apps/subject-portal/src/style.css`
   - `ConsentAuthoringView.vue`, `RulesView.vue`, `MdrView.vue`, `AuditView.vue`, `CtmsView.vue`, `EcrfView.vue`
   - `SignatureCaptureModal.vue`, `ApprovalHandoffModal.vue`
 - **Verification Plan:**
