@@ -299,4 +299,125 @@ describe("Key-Based Sync Reconciliation Integration Tests", () => {
     expect(item1.status).toBe("CREATED");
     expect(item2.status).toBe("CREATED");
   });
+
+  it("should bypass and exclude undecryptable records from payload compilation, keeping them intact as QUEUED, and retry them when correct session key is restored", async () => {
+    // 1. Initialize session key with User A's session material
+    const rawMaterialA = new Uint8Array(32);
+    for (let i = 0; i < 32; i++) rawMaterialA[i] = i;
+    await initSessionKey(rawMaterialA);
+
+    // 2. Queue Submission A under User A's active key
+    const subA = await queueSubmission({
+      subject_id: "subj_user_a",
+      diary_id: "diary_a",
+      assignment_id: "assign_01",
+      answers: { pain: 1 },
+      change_reason: "User A survey",
+      username: "userA",
+    });
+
+    expect(subA.sequence_number).toBe(1);
+
+    // 3. Switch device rotation: User B logs in (change active session key material)
+    const rawMaterialB = new Uint8Array(32);
+    for (let i = 0; i < 32; i++) rawMaterialB[i] = i + 100; // different key
+    await initSessionKey(rawMaterialB);
+
+    // 4. Queue Submission B under User B's active key
+    const subB = await queueSubmission({
+      subject_id: "subj_user_b",
+      diary_id: "diary_b",
+      assignment_id: "assign_02",
+      answers: { pain: 5 },
+      change_reason: "User B survey",
+      username: "userB",
+    });
+
+    expect(subB.sequence_number).toBe(2);
+
+    // 5. Mock fetch to record payload and return success result
+    let sentPayload = null;
+    globalThis.fetch = vi.fn().mockImplementation((url, options) => {
+      sentPayload = JSON.parse(options.body);
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            status: "success",
+            results: [
+              {
+                status: "CREATED",
+                answers: { pain: 5 },
+                offline_sync_markers: {
+                  sequence_number: 2,
+                  client_id: subB.client_id,
+                },
+              },
+            ],
+          }),
+      });
+    });
+
+    // 6. Trigger sync
+    await syncOfflineQueue();
+
+    // Verify User A's undecryptable record was bypassed and only User B's record was sent in the bulk payload
+    expect(sentPayload).not.toBeNull();
+    expect(sentPayload.submissions).toHaveLength(1);
+    expect(sentPayload.submissions[0].offline_sync_markers.sequence_number).toBe(2);
+
+    // Verify local DB states: subB should be CREATED, subA must remain intact as QUEUED (no deletion/migration/corruption)
+    const all = await getAllSubmissions();
+    const itemA = all.find((x) => x.sequence_number === 1);
+    const itemB = all.find((x) => x.sequence_number === 2);
+
+    expect(itemB.status).toBe("CREATED");
+    // Since we are currently logged in as User B, calling getAllSubmissions tries to decrypt itemA with User B's key,
+    // so in-memory it will be returned with status "DECRYPTION_ERROR".
+    expect(itemA.status).toBe("DECRYPTION_ERROR");
+
+    // But let's check that the database still stores its status as "QUEUED" and hasn't overwritten or deleted it.
+    // We can restore User A's session key and verify we can read it and retry the sync!
+    await initSessionKey(rawMaterialA);
+
+    // Fetching now should successfully decrypt itemA with status "QUEUED"
+    const allRestored = await getAllSubmissions();
+    const itemARestored = allRestored.find((x) => x.sequence_number === 1);
+    expect(itemARestored.status).toBe("QUEUED");
+    expect(itemARestored.answers).toEqual({ pain: 1 });
+
+    // Mock fetch for User A's retry sync
+    globalThis.fetch = vi.fn().mockImplementation((url, options) => {
+      sentPayload = JSON.parse(options.body);
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            status: "success",
+            results: [
+              {
+                status: "CREATED",
+                answers: { pain: 1 },
+                offline_sync_markers: {
+                  sequence_number: 1,
+                  client_id: subA.client_id,
+                },
+              },
+            ],
+          }),
+      });
+    });
+
+    // 7. Trigger sync again under restored User A session
+    await syncOfflineQueue();
+
+    // Verify subA successfully synchronized
+    expect(sentPayload.submissions).toHaveLength(1);
+    expect(sentPayload.submissions[0].offline_sync_markers.sequence_number).toBe(1);
+
+    const allFinal = await getAllSubmissions();
+    const itemAFinal = allFinal.find((x) => x.sequence_number === 1);
+    expect(itemAFinal.status).toBe("CREATED");
+    expect(itemAFinal.resolved_answers).toEqual({ pain: 1 });
+  });
 });
