@@ -5,24 +5,24 @@ Revises: None
 Create Date: 2026-08-13 21:47:16.335945
 
 """
-from typing import Sequence, Union
 
-from alembic import op
+from collections.abc import Sequence
+
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = '862b035e2ce5'
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+revision: str = "862b035e2ce5"
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
     # Shadow Alembic's op functions with safe, idempotent versions
     from contextlib import contextmanager
+
     from alembic import op
-    import sqlalchemy as sa
 
     bind = op.get_bind()
     original_create_table = op.create_table
@@ -30,24 +30,35 @@ def upgrade() -> None:
     original_batch_alter_table = op.batch_alter_table
 
     def safe_create_table(table_name, *args, **kwargs):
-        schema = kwargs.get('schema')
+        schema = kwargs.get("schema")
         live_insp = sa.inspect(op.get_bind())
         if live_insp.has_table(table_name, schema=schema):
-            existing_cols = {c['name'] for c in live_insp.get_columns(table_name, schema=schema)}
+            existing_cols = {
+                c["name"] for c in live_insp.get_columns(table_name, schema=schema)
+            }
             with original_batch_alter_table(table_name, schema=schema) as batch_op:
                 for arg in args:
                     if isinstance(arg, sa.Column):
                         if arg.name not in existing_cols:
-                            batch_op.add_column(sa.Column(arg.name, arg.type, server_default=arg.server_default, nullable=arg.nullable))
+                            batch_op.add_column(
+                                sa.Column(
+                                    arg.name,
+                                    arg.type,
+                                    server_default=arg.server_default,
+                                    nullable=arg.nullable,
+                                )
+                            )
         else:
             original_create_table(table_name, *args, **kwargs)
 
     def safe_create_index(index_name, table_name, columns, **kwargs):
-        schema = kwargs.get('schema')
+        schema = kwargs.get("schema")
         live_insp = sa.inspect(op.get_bind())
         if not live_insp.has_table(table_name, schema=schema):
             return
-        existing_indexes = {idx['name'] for idx in live_insp.get_indexes(table_name, schema=schema)}
+        existing_indexes = {
+            idx["name"] for idx in live_insp.get_indexes(table_name, schema=schema)
+        }
         if index_name not in existing_indexes:
             original_create_index(index_name, table_name, columns, **kwargs)
 
@@ -55,22 +66,33 @@ def upgrade() -> None:
     def safe_batch_alter_table(table_name, schema=None, **kwargs):
         live_insp = sa.inspect(op.get_bind())
         if live_insp.has_table(table_name, schema=schema):
-            existing_indexes = {idx['name'] for idx in live_insp.get_indexes(table_name, schema=schema)}
-            existing_cols = {c['name'] for c in live_insp.get_columns(table_name, schema=schema)}
-            with original_batch_alter_table(table_name, schema=schema, **kwargs) as batch_op:
+            existing_indexes = {
+                idx["name"] for idx in live_insp.get_indexes(table_name, schema=schema)
+            }
+            existing_cols = {
+                c["name"] for c in live_insp.get_columns(table_name, schema=schema)
+            }
+            with original_batch_alter_table(
+                table_name, schema=schema, **kwargs
+            ) as batch_op:
                 original_batch_create_index = batch_op.create_index
                 original_batch_add_column = batch_op.add_column
+
                 def safe_batch_create_index(index_name, columns, **kwargs):
                     if index_name not in existing_indexes:
                         original_batch_create_index(index_name, columns, **kwargs)
+
                 def safe_batch_add_column(column, **kwargs):
                     if column.name not in existing_cols:
                         original_batch_add_column(column, **kwargs)
+
                 batch_op.create_index = safe_batch_create_index
                 batch_op.add_column = safe_batch_add_column
                 yield batch_op
         else:
-            with original_batch_alter_table(table_name, schema=schema, **kwargs) as batch_op:
+            with original_batch_alter_table(
+                table_name, schema=schema, **kwargs
+            ) as batch_op:
                 yield batch_op
 
     op.create_table = safe_create_table
@@ -78,1038 +100,1412 @@ def upgrade() -> None:
     op.batch_alter_table = safe_batch_alter_table
 
     # ### commands auto generated by Alembic - please adjust! ###
-    op.create_table('allocation_key_metadata',
-    sa.Column('key_version', sa.Integer(), nullable=False),
-    sa.Column('salt', sa.String(length=255), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('key_version', name='uq_allocation_key_metadata_version')
+    if bind.dialect.name == "postgresql":
+        op.execute("CREATE SCHEMA IF NOT EXISTS audit_schema")
+    op.create_table(
+        "allocation_key_metadata",
+        sa.Column("key_version", sa.Integer(), nullable=False),
+        sa.Column("salt", sa.String(length=255), nullable=False),
+        sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("key_version", name="uq_allocation_key_metadata_version"),
     )
-    op.create_table('audit_ledger_seals',
-    sa.Column('block_index', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('previous_block_hash', sa.String(length=64), nullable=False),
-    sa.Column('current_block_hash', sa.String(length=64), nullable=False),
-    sa.Column('timestamp', sa.DateTime(), nullable=False),
-    sa.Column('sealed_record_count', sa.Integer(), nullable=False),
-    sa.Column('merkle_root_hash', sa.String(length=64), nullable=False),
-    sa.PrimaryKeyConstraint('block_index'),
-    schema='audit_schema'
+    op.create_table(
+        "audit_ledger_seals",
+        sa.Column("block_index", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("previous_block_hash", sa.String(length=64), nullable=False),
+        sa.Column("current_block_hash", sa.String(length=64), nullable=False),
+        sa.Column("timestamp", sa.DateTime(), nullable=False),
+        sa.Column("sealed_record_count", sa.Integer(), nullable=False),
+        sa.Column("merkle_root_hash", sa.String(length=64), nullable=False),
+        sa.PrimaryKeyConstraint("block_index"),
+        schema="audit_schema",
     )
-    op.create_table('audit_logs',
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('table_name', sa.String(length=255), nullable=False),
-    sa.Column('record_id', sa.String(length=255), nullable=False),
-    sa.Column('action', sa.String(length=50), nullable=False),
-    sa.Column('user_id', sa.String(length=255), nullable=True),
-    sa.Column('ip_address', sa.String(length=45), nullable=True),
-    sa.Column('timestamp', sa.DateTime(), nullable=False),
-    sa.Column('old_values', sa.JSON(), nullable=True),
-    sa.Column('new_values', sa.JSON(), nullable=True),
-    sa.Column('version_index', sa.Integer(), nullable=False),
-    sa.Column('change_reason', sa.String(length=255), nullable=True),
-    sa.Column('cryptographic_seal', sa.String(length=64), nullable=True),
-    sa.PrimaryKeyConstraint('id'),
-    schema='audit_schema'
+    op.create_table(
+        "audit_logs",
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("table_name", sa.String(length=255), nullable=False),
+        sa.Column("record_id", sa.String(length=255), nullable=False),
+        sa.Column("action", sa.String(length=50), nullable=False),
+        sa.Column("user_id", sa.String(length=255), nullable=True),
+        sa.Column("ip_address", sa.String(length=45), nullable=True),
+        sa.Column("timestamp", sa.DateTime(), nullable=False),
+        sa.Column("old_values", sa.JSON(), nullable=True),
+        sa.Column("new_values", sa.JSON(), nullable=True),
+        sa.Column("version_index", sa.Integer(), nullable=False),
+        sa.Column("change_reason", sa.String(length=255), nullable=True),
+        sa.Column("cryptographic_seal", sa.String(length=64), nullable=True),
+        sa.PrimaryKeyConstraint("id"),
+        schema="audit_schema",
     )
-    op.create_table('biostat_exports',
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('export_type', sa.String(length=50), nullable=False),
-    sa.Column('dataset_name', sa.String(length=50), nullable=True),
-    sa.Column('status', sa.String(length=50), nullable=False),
-    sa.Column('error_message', sa.String(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "biostat_exports",
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("export_type", sa.String(length=50), nullable=False),
+        sa.Column("dataset_name", sa.String(length=50), nullable=True),
+        sa.Column("status", sa.String(length=50), nullable=False),
+        sa.Column("error_message", sa.String(), nullable=True),
+        sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table('biostat_exports', schema=None) as batch_op:
-        batch_op.create_index('idx_biostat_exports_coords', ['study_id', 'export_type'], unique=False)
+    with op.batch_alter_table("biostat_exports", schema=None) as batch_op:
+        batch_op.create_index(
+            "idx_biostat_exports_coords", ["study_id", "export_type"], unique=False
+        )
 
-    op.create_table('change_approval_signatures',
-    sa.Column('change_request_id', sa.String(length=36), nullable=False),
-    sa.Column('approver_id', sa.String(length=255), nullable=False),
-    sa.Column('signature_token', sa.String(length=255), nullable=False),
-    sa.Column('role', sa.String(length=255), nullable=False),
-    sa.Column('signed_at', sa.DateTime(), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('signature_token', name='uq_change_approval_signature_token')
+    op.create_table(
+        "change_approval_signatures",
+        sa.Column("change_request_id", sa.String(length=36), nullable=False),
+        sa.Column("approver_id", sa.String(length=255), nullable=False),
+        sa.Column("signature_token", sa.String(length=255), nullable=False),
+        sa.Column("role", sa.String(length=255), nullable=False),
+        sa.Column("signed_at", sa.DateTime(), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "signature_token", name="uq_change_approval_signature_token"
+        ),
     )
-    op.create_table('clinical_coding_assignments',
-    sa.Column('verbatim_text', sa.String(length=1000), nullable=False),
-    sa.Column('source_field', sa.String(length=255), nullable=True),
-    sa.Column('observation_id', sa.String(length=255), nullable=True),
-    sa.Column('dictionary_type', sa.Enum('MEDDRA', 'WHODRUG', 'LOINC', 'SNOMED', name='dictionary_type_assignment_enum'), nullable=False),
-    sa.Column('dictionary_version', sa.String(length=50), nullable=False),
-    sa.Column('coded_code', sa.String(length=50), nullable=True),
-    sa.Column('coded_term', sa.String(length=255), nullable=True),
-    sa.Column('status', sa.Enum('UNCODED', 'SUGGESTED', 'CODED', 'AUTO_CODED', 'QUERY_PENDING', 'RECODING_REQUIRED', name='coding_state_enum'), nullable=False),
-    sa.Column('recoding_status', sa.Enum('NONE', 'PENDING', 'COMPLETED', 'CANCELLED', name='recoding_state_enum'), nullable=False),
-    sa.Column('assigned_by', sa.String(length=255), nullable=True),
-    sa.Column('assigned_at', sa.DateTime(), nullable=False),
-    sa.Column('score', sa.Float(), nullable=True),
-    sa.Column('hierarchy', sa.JSON(), nullable=True),
-    sa.Column('suggestions', sa.JSON(), nullable=True),
-    sa.Column('domain', sa.String(length=50), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.CheckConstraint("(status NOT IN ('CODED', 'AUTO_CODED')) OR (coded_code IS NOT NULL AND coded_term IS NOT NULL)", name='chk_coding_assignment_coded_fields'),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "clinical_coding_assignments",
+        sa.Column("verbatim_text", sa.String(length=1000), nullable=False),
+        sa.Column("source_field", sa.String(length=255), nullable=True),
+        sa.Column("observation_id", sa.String(length=255), nullable=True),
+        sa.Column(
+            "dictionary_type",
+            sa.Enum(
+                "MEDDRA",
+                "WHODRUG",
+                "LOINC",
+                "SNOMED",
+                name="dictionary_type_assignment_enum",
+            ),
+            nullable=False,
+        ),
+        sa.Column("dictionary_version", sa.String(length=50), nullable=False),
+        sa.Column("coded_code", sa.String(length=50), nullable=True),
+        sa.Column("coded_term", sa.String(length=255), nullable=True),
+        sa.Column(
+            "status",
+            sa.Enum(
+                "UNCODED",
+                "SUGGESTED",
+                "CODED",
+                "AUTO_CODED",
+                "QUERY_PENDING",
+                "RECODING_REQUIRED",
+                name="coding_state_enum",
+            ),
+            nullable=False,
+        ),
+        sa.Column(
+            "recoding_status",
+            sa.Enum(
+                "NONE", "PENDING", "COMPLETED", "CANCELLED", name="recoding_state_enum"
+            ),
+            nullable=False,
+        ),
+        sa.Column("assigned_by", sa.String(length=255), nullable=True),
+        sa.Column("assigned_at", sa.DateTime(), nullable=False),
+        sa.Column("score", sa.Float(), nullable=True),
+        sa.Column("hierarchy", sa.JSON(), nullable=True),
+        sa.Column("suggestions", sa.JSON(), nullable=True),
+        sa.Column("domain", sa.String(length=50), nullable=True),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.CheckConstraint(
+            "(status NOT IN ('CODED', 'AUTO_CODED')) OR (coded_code IS NOT NULL AND coded_term IS NOT NULL)",
+            name="chk_coding_assignment_coded_fields",
+        ),
+        sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table('clinical_coding_assignments', schema=None) as batch_op:
-        batch_op.create_index('idx_coding_assign_lookup', ['dictionary_type', 'dictionary_version'], unique=False)
-        batch_op.create_index('idx_coding_assign_obs', ['observation_id'], unique=False)
-        batch_op.create_index('idx_coding_assign_verbatim', ['verbatim_text'], unique=False)
+    with op.batch_alter_table("clinical_coding_assignments", schema=None) as batch_op:
+        batch_op.create_index(
+            "idx_coding_assign_lookup",
+            ["dictionary_type", "dictionary_version"],
+            unique=False,
+        )
+        batch_op.create_index("idx_coding_assign_obs", ["observation_id"], unique=False)
+        batch_op.create_index(
+            "idx_coding_assign_verbatim", ["verbatim_text"], unique=False
+        )
 
-    op.create_table('clinical_coding_ledger',
-    sa.Column('assignment_id', sa.String(length=36), nullable=False),
-    sa.Column('verbatim_text', sa.String(length=1000), nullable=False),
-    sa.Column('observation_id', sa.String(length=255), nullable=True),
-    sa.Column('dictionary_type', sa.Enum('MEDDRA', 'WHODRUG', 'LOINC', 'SNOMED', name='dictionary_type_ledger_enum'), nullable=False),
-    sa.Column('old_dictionary_version', sa.String(length=50), nullable=True),
-    sa.Column('old_coded_code', sa.String(length=50), nullable=True),
-    sa.Column('old_coded_term', sa.String(length=255), nullable=True),
-    sa.Column('new_dictionary_version', sa.String(length=50), nullable=False),
-    sa.Column('new_coded_code', sa.String(length=50), nullable=False),
-    sa.Column('new_coded_term', sa.String(length=255), nullable=False),
-    sa.Column('recoding_reason', sa.String(length=1000), nullable=True),
-    sa.Column('decision_by', sa.String(length=255), nullable=True),
-    sa.Column('decision_at', sa.DateTime(), nullable=False),
-    sa.Column('old_hierarchy', sa.JSON(), nullable=True),
-    sa.Column('new_hierarchy', sa.JSON(), nullable=True),
-    sa.Column('recoding_status', sa.Enum('NONE', 'PENDING', 'COMPLETED', 'CANCELLED', name='recoding_state_ledger_enum'), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "clinical_coding_ledger",
+        sa.Column("assignment_id", sa.String(length=36), nullable=False),
+        sa.Column("verbatim_text", sa.String(length=1000), nullable=False),
+        sa.Column("observation_id", sa.String(length=255), nullable=True),
+        sa.Column(
+            "dictionary_type",
+            sa.Enum(
+                "MEDDRA",
+                "WHODRUG",
+                "LOINC",
+                "SNOMED",
+                name="dictionary_type_ledger_enum",
+            ),
+            nullable=False,
+        ),
+        sa.Column("old_dictionary_version", sa.String(length=50), nullable=True),
+        sa.Column("old_coded_code", sa.String(length=50), nullable=True),
+        sa.Column("old_coded_term", sa.String(length=255), nullable=True),
+        sa.Column("new_dictionary_version", sa.String(length=50), nullable=False),
+        sa.Column("new_coded_code", sa.String(length=50), nullable=False),
+        sa.Column("new_coded_term", sa.String(length=255), nullable=False),
+        sa.Column("recoding_reason", sa.String(length=1000), nullable=True),
+        sa.Column("decision_by", sa.String(length=255), nullable=True),
+        sa.Column("decision_at", sa.DateTime(), nullable=False),
+        sa.Column("old_hierarchy", sa.JSON(), nullable=True),
+        sa.Column("new_hierarchy", sa.JSON(), nullable=True),
+        sa.Column(
+            "recoding_status",
+            sa.Enum(
+                "NONE",
+                "PENDING",
+                "COMPLETED",
+                "CANCELLED",
+                name="recoding_state_ledger_enum",
+            ),
+            nullable=True,
+        ),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table('clinical_coding_ledger', schema=None) as batch_op:
-        batch_op.create_index('idx_coding_ledger_assign', ['assignment_id'], unique=False)
-        batch_op.create_index('idx_coding_ledger_obs', ['observation_id'], unique=False)
+    with op.batch_alter_table("clinical_coding_ledger", schema=None) as batch_op:
+        batch_op.create_index(
+            "idx_coding_ledger_assign", ["assignment_id"], unique=False
+        )
+        batch_op.create_index("idx_coding_ledger_obs", ["observation_id"], unique=False)
 
-    op.create_table('clinical_observations',
-    sa.Column('subject_id', sa.String(length=255), nullable=False),
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('site_id', sa.String(length=255), nullable=True),
-    sa.Column('visit_id', sa.String(length=255), nullable=True),
-    sa.Column('domain', sa.String(length=50), nullable=False),
-    sa.Column('observation_date', sa.DateTime(), nullable=False),
-    sa.Column('test_code', sa.String(length=100), nullable=False),
-    sa.Column('test_name', sa.String(length=255), nullable=False),
-    sa.Column('value', sa.Float(), nullable=True),
-    sa.Column('value_string', sa.String(), nullable=True),
-    sa.Column('unit', sa.String(length=50), nullable=True),
-    sa.Column('normalized_value', sa.Float(), nullable=True),
-    sa.Column('normalized_unit', sa.String(length=50), nullable=True),
-    sa.Column('is_outlier', sa.Boolean(), nullable=False),
-    sa.Column('is_sdv_verified', sa.Boolean(), nullable=False),
-    sa.Column('sdv_verified_by', sa.String(length=255), nullable=True),
-    sa.Column('sdv_verified_at', sa.DateTime(), nullable=True),
-    sa.Column('page_id', sa.String(length=255), nullable=True),
-    sa.Column('is_sdv_flagged', sa.Boolean(), nullable=False),
-    sa.Column('sdv_flag_reason', sa.String(length=1000), nullable=True),
-    sa.Column('additional_properties', sa.JSON(), nullable=True),
-    sa.Column('protocol_version_tag', sa.String(length=50), nullable=True),
-    sa.Column('protocol_version_index', sa.Integer(), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "clinical_observations",
+        sa.Column("subject_id", sa.String(length=255), nullable=False),
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("site_id", sa.String(length=255), nullable=True),
+        sa.Column("visit_id", sa.String(length=255), nullable=True),
+        sa.Column("domain", sa.String(length=50), nullable=False),
+        sa.Column("observation_date", sa.DateTime(), nullable=False),
+        sa.Column("test_code", sa.String(length=100), nullable=False),
+        sa.Column("test_name", sa.String(length=255), nullable=False),
+        sa.Column("value", sa.Float(), nullable=True),
+        sa.Column("value_string", sa.String(), nullable=True),
+        sa.Column("unit", sa.String(length=50), nullable=True),
+        sa.Column("normalized_value", sa.Float(), nullable=True),
+        sa.Column("normalized_unit", sa.String(length=50), nullable=True),
+        sa.Column("is_outlier", sa.Boolean(), nullable=False),
+        sa.Column("is_sdv_verified", sa.Boolean(), nullable=False),
+        sa.Column("sdv_verified_by", sa.String(length=255), nullable=True),
+        sa.Column("sdv_verified_at", sa.DateTime(), nullable=True),
+        sa.Column("page_id", sa.String(length=255), nullable=True),
+        sa.Column("is_sdv_flagged", sa.Boolean(), nullable=False),
+        sa.Column("sdv_flag_reason", sa.String(length=1000), nullable=True),
+        sa.Column("additional_properties", sa.JSON(), nullable=True),
+        sa.Column("protocol_version_tag", sa.String(length=50), nullable=True),
+        sa.Column("protocol_version_index", sa.Integer(), nullable=True),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table('clinical_observations', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_clinical_observations_site_id'), ['site_id'], unique=False)
+    with op.batch_alter_table("clinical_observations", schema=None) as batch_op:
+        batch_op.create_index(
+            batch_op.f("ix_clinical_observations_site_id"), ["site_id"], unique=False
+        )
 
-    op.create_table('clinical_queries',
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('site_id', sa.String(length=255), nullable=True),
-    sa.Column('subject_id', sa.String(length=255), nullable=False),
-    sa.Column('visit_id', sa.String(length=255), nullable=True),
-    sa.Column('domain', sa.String(length=50), nullable=True),
-    sa.Column('test_code', sa.String(length=100), nullable=False),
-    sa.Column('status', sa.String(length=50), nullable=False),
-    sa.Column('explanation', sa.String(length=255), nullable=True),
-    sa.Column('response', sa.String(length=255), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.Column('observation_id', sa.String(length=255), nullable=True),
-    sa.Column('field_link', sa.String(length=255), nullable=True),
-    sa.Column('message', sa.String(length=1000), nullable=True),
-    sa.Column('origin', sa.String(length=50), nullable=True),
-    sa.Column('priority', sa.String(length=50), nullable=True),
-    sa.Column('rule_id', sa.String(length=255), nullable=True),
-    sa.Column('created_by', sa.String(length=255), nullable=True),
-    sa.Column('responder', sa.String(length=255), nullable=True),
-    sa.Column('resolver', sa.String(length=255), nullable=True),
-    sa.Column('resolved_at', sa.DateTime(), nullable=True),
-    sa.Column('cancellation_reason', sa.String(length=1000), nullable=True),
-    sa.Column('escalated_at', sa.DateTime(), nullable=True),
-    sa.Column('form_id', sa.String(length=255), nullable=True),
-    sa.Column('field_id', sa.String(length=255), nullable=True),
-    sa.Column('query_type', sa.String(length=255), nullable=True),
-    sa.Column('action_required', sa.String(length=255), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "clinical_queries",
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("site_id", sa.String(length=255), nullable=True),
+        sa.Column("subject_id", sa.String(length=255), nullable=False),
+        sa.Column("visit_id", sa.String(length=255), nullable=True),
+        sa.Column("domain", sa.String(length=50), nullable=True),
+        sa.Column("test_code", sa.String(length=100), nullable=False),
+        sa.Column("status", sa.String(length=50), nullable=False),
+        sa.Column("explanation", sa.String(length=255), nullable=True),
+        sa.Column("response", sa.String(length=255), nullable=True),
+        sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.Column("updated_at", sa.DateTime(), nullable=False),
+        sa.Column("observation_id", sa.String(length=255), nullable=True),
+        sa.Column("field_link", sa.String(length=255), nullable=True),
+        sa.Column("message", sa.String(length=1000), nullable=True),
+        sa.Column("origin", sa.String(length=50), nullable=True),
+        sa.Column("priority", sa.String(length=50), nullable=True),
+        sa.Column("rule_id", sa.String(length=255), nullable=True),
+        sa.Column("created_by", sa.String(length=255), nullable=True),
+        sa.Column("responder", sa.String(length=255), nullable=True),
+        sa.Column("resolver", sa.String(length=255), nullable=True),
+        sa.Column("resolved_at", sa.DateTime(), nullable=True),
+        sa.Column("cancellation_reason", sa.String(length=1000), nullable=True),
+        sa.Column("escalated_at", sa.DateTime(), nullable=True),
+        sa.Column("form_id", sa.String(length=255), nullable=True),
+        sa.Column("field_id", sa.String(length=255), nullable=True),
+        sa.Column("query_type", sa.String(length=255), nullable=True),
+        sa.Column("action_required", sa.String(length=255), nullable=True),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table('clinical_queries', schema=None) as batch_op:
-        batch_op.create_index('idx_query_target', ['study_id', 'subject_id', 'visit_id', 'domain', 'test_code'], unique=False)
-        batch_op.create_index(batch_op.f('ix_clinical_queries_domain'), ['domain'], unique=False)
-        batch_op.create_index(batch_op.f('ix_clinical_queries_field_link'), ['field_link'], unique=False)
-        batch_op.create_index(batch_op.f('ix_clinical_queries_observation_id'), ['observation_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_clinical_queries_site_id'), ['site_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_clinical_queries_study_id'), ['study_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_clinical_queries_subject_id'), ['subject_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_clinical_queries_test_code'), ['test_code'], unique=False)
-        batch_op.create_index(batch_op.f('ix_clinical_queries_visit_id'), ['visit_id'], unique=False)
+    with op.batch_alter_table("clinical_queries", schema=None) as batch_op:
+        batch_op.create_index(
+            "idx_query_target",
+            ["study_id", "subject_id", "visit_id", "domain", "test_code"],
+            unique=False,
+        )
+        batch_op.create_index(
+            batch_op.f("ix_clinical_queries_domain"), ["domain"], unique=False
+        )
+        batch_op.create_index(
+            batch_op.f("ix_clinical_queries_field_link"), ["field_link"], unique=False
+        )
+        batch_op.create_index(
+            batch_op.f("ix_clinical_queries_observation_id"),
+            ["observation_id"],
+            unique=False,
+        )
+        batch_op.create_index(
+            batch_op.f("ix_clinical_queries_site_id"), ["site_id"], unique=False
+        )
+        batch_op.create_index(
+            batch_op.f("ix_clinical_queries_study_id"), ["study_id"], unique=False
+        )
+        batch_op.create_index(
+            batch_op.f("ix_clinical_queries_subject_id"), ["subject_id"], unique=False
+        )
+        batch_op.create_index(
+            batch_op.f("ix_clinical_queries_test_code"), ["test_code"], unique=False
+        )
+        batch_op.create_index(
+            batch_op.f("ix_clinical_queries_visit_id"), ["visit_id"], unique=False
+        )
 
-    op.create_table('clinical_subjects',
-    sa.Column('subject_id', sa.String(length=255), nullable=False),
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('site_id', sa.String(length=255), nullable=True),
-    sa.Column('encrypted_demographics', sa.String(), nullable=True),
-    sa.Column('status', sa.String(length=50), nullable=False),
-    sa.Column('strat_factors', sa.JSON(), nullable=True),
-    sa.Column('is_unblinded', sa.Boolean(), nullable=False),
-    sa.Column('unblinded_at', sa.DateTime(), nullable=True),
-    sa.Column('unblinded_by', sa.String(length=255), nullable=True),
-    sa.Column('unblinded_reason', sa.String(length=1000), nullable=True),
-    sa.Column('unblinded_signature', sa.String(), nullable=True),
-    sa.Column('withdrawn_at', sa.DateTime(), nullable=True),
-    sa.Column('withdrawal_reason', sa.String(length=1000), nullable=True),
-    sa.Column('randomization_id', sa.String(length=36), nullable=True),
-    sa.Column('kit_reference', sa.String(length=255), nullable=True),
-    sa.Column('enrollment_index', sa.Integer(), nullable=True),
-    sa.Column('treatment_group', sa.String(), nullable=True),
-    sa.Column('randomization_seed', sa.Integer(), nullable=True),
-    sa.Column('investigational_product_id', sa.String(length=255), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "clinical_subjects",
+        sa.Column("subject_id", sa.String(length=255), nullable=False),
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("site_id", sa.String(length=255), nullable=True),
+        sa.Column("encrypted_demographics", sa.String(), nullable=True),
+        sa.Column("status", sa.String(length=50), nullable=False),
+        sa.Column("strat_factors", sa.JSON(), nullable=True),
+        sa.Column("is_unblinded", sa.Boolean(), nullable=False),
+        sa.Column("unblinded_at", sa.DateTime(), nullable=True),
+        sa.Column("unblinded_by", sa.String(length=255), nullable=True),
+        sa.Column("unblinded_reason", sa.String(length=1000), nullable=True),
+        sa.Column("unblinded_signature", sa.String(), nullable=True),
+        sa.Column("withdrawn_at", sa.DateTime(), nullable=True),
+        sa.Column("withdrawal_reason", sa.String(length=1000), nullable=True),
+        sa.Column("randomization_id", sa.String(length=36), nullable=True),
+        sa.Column("kit_reference", sa.String(length=255), nullable=True),
+        sa.Column("enrollment_index", sa.Integer(), nullable=True),
+        sa.Column("treatment_group", sa.String(), nullable=True),
+        sa.Column("randomization_seed", sa.Integer(), nullable=True),
+        sa.Column("investigational_product_id", sa.String(length=255), nullable=True),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table('clinical_subjects', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_clinical_subjects_site_id'), ['site_id'], unique=False)
+    with op.batch_alter_table("clinical_subjects", schema=None) as batch_op:
+        batch_op.create_index(
+            batch_op.f("ix_clinical_subjects_site_id"), ["site_id"], unique=False
+        )
 
-    op.create_table('clinical_visits',
-    sa.Column('subject_id', sa.String(length=255), nullable=False),
-    sa.Column('visit_name', sa.String(length=255), nullable=False),
-    sa.Column('visit_date', sa.DateTime(), nullable=False),
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('site_id', sa.String(length=255), nullable=True),
-    sa.Column('protocol_version_tag', sa.String(length=50), nullable=True),
-    sa.Column('protocol_version_index', sa.Integer(), nullable=True),
-    sa.Column('planned_date', sa.DateTime(), nullable=True),
-    sa.Column('window_start', sa.DateTime(), nullable=True),
-    sa.Column('window_end', sa.DateTime(), nullable=True),
-    sa.Column('window_status', sa.String(length=50), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "clinical_visits",
+        sa.Column("subject_id", sa.String(length=255), nullable=False),
+        sa.Column("visit_name", sa.String(length=255), nullable=False),
+        sa.Column("visit_date", sa.DateTime(), nullable=False),
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("site_id", sa.String(length=255), nullable=True),
+        sa.Column("protocol_version_tag", sa.String(length=50), nullable=True),
+        sa.Column("protocol_version_index", sa.Integer(), nullable=True),
+        sa.Column("planned_date", sa.DateTime(), nullable=True),
+        sa.Column("window_start", sa.DateTime(), nullable=True),
+        sa.Column("window_end", sa.DateTime(), nullable=True),
+        sa.Column("window_status", sa.String(length=50), nullable=True),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table('clinical_visits', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_clinical_visits_site_id'), ['site_id'], unique=False)
+    with op.batch_alter_table("clinical_visits", schema=None) as batch_op:
+        batch_op.create_index(
+            batch_op.f("ix_clinical_visits_site_id"), ["site_id"], unique=False
+        )
 
-    op.create_table('compliance_change_requests',
-    sa.Column('setting_key', sa.String(length=255), nullable=False),
-    sa.Column('old_value', sa.String(length=255), nullable=True),
-    sa.Column('new_value', sa.String(length=255), nullable=True),
-    sa.Column('requested_by', sa.String(length=255), nullable=False),
-    sa.Column('reason', sa.String(length=1000), nullable=False),
-    sa.Column('status', sa.String(length=50), nullable=False),
-    sa.Column('impact_assessment', sa.JSON(), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "compliance_change_requests",
+        sa.Column("setting_key", sa.String(length=255), nullable=False),
+        sa.Column("old_value", sa.String(length=255), nullable=True),
+        sa.Column("new_value", sa.String(length=255), nullable=True),
+        sa.Column("requested_by", sa.String(length=255), nullable=False),
+        sa.Column("reason", sa.String(length=1000), nullable=False),
+        sa.Column("status", sa.String(length=50), nullable=False),
+        sa.Column("impact_assessment", sa.JSON(), nullable=True),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    op.create_table('comprehension_quiz_results',
-    sa.Column('subject_id', sa.String(length=255), nullable=False),
-    sa.Column('site_id', sa.String(length=255), nullable=True),
-    sa.Column('icf_version_id', sa.String(length=255), nullable=False),
-    sa.Column('score', sa.Float(), nullable=False),
-    sa.Column('passed', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "comprehension_quiz_results",
+        sa.Column("subject_id", sa.String(length=255), nullable=False),
+        sa.Column("site_id", sa.String(length=255), nullable=True),
+        sa.Column("icf_version_id", sa.String(length=255), nullable=False),
+        sa.Column("score", sa.Float(), nullable=False),
+        sa.Column("passed", sa.Boolean(), nullable=False),
+        sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table('comprehension_quiz_results', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_comprehension_quiz_results_icf_version_id'), ['icf_version_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_comprehension_quiz_results_site_id'), ['site_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_comprehension_quiz_results_subject_id'), ['subject_id'], unique=False)
+    with op.batch_alter_table("comprehension_quiz_results", schema=None) as batch_op:
+        batch_op.create_index(
+            batch_op.f("ix_comprehension_quiz_results_icf_version_id"),
+            ["icf_version_id"],
+            unique=False,
+        )
+        batch_op.create_index(
+            batch_op.f("ix_comprehension_quiz_results_site_id"),
+            ["site_id"],
+            unique=False,
+        )
+        batch_op.create_index(
+            batch_op.f("ix_comprehension_quiz_results_subject_id"),
+            ["subject_id"],
+            unique=False,
+        )
 
-    op.create_table('consent_form_records',
-    sa.Column('subject_id', sa.String(length=255), nullable=False),
-    sa.Column('site_id', sa.String(length=255), nullable=True),
-    sa.Column('icf_version_id', sa.String(length=255), nullable=False),
-    sa.Column('printed_name', sa.String(length=255), nullable=True),
-    sa.Column('relationship_to_subject', sa.String(length=50), nullable=True),
-    sa.Column('signature_svg', sa.String(), nullable=True),
-    sa.Column('otp_auth_code', sa.String(length=50), nullable=True),
-    sa.Column('status', sa.String(length=50), nullable=False),
-    sa.Column('signed_at', sa.DateTime(), nullable=True),
-    sa.Column('is_verified', sa.Boolean(), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "consent_form_records",
+        sa.Column("subject_id", sa.String(length=255), nullable=False),
+        sa.Column("site_id", sa.String(length=255), nullable=True),
+        sa.Column("icf_version_id", sa.String(length=255), nullable=False),
+        sa.Column("printed_name", sa.String(length=255), nullable=True),
+        sa.Column("relationship_to_subject", sa.String(length=50), nullable=True),
+        sa.Column("signature_svg", sa.String(), nullable=True),
+        sa.Column("otp_auth_code", sa.String(length=50), nullable=True),
+        sa.Column("status", sa.String(length=50), nullable=False),
+        sa.Column("signed_at", sa.DateTime(), nullable=True),
+        sa.Column("is_verified", sa.Boolean(), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table('consent_form_records', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_consent_form_records_icf_version_id'), ['icf_version_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_consent_form_records_site_id'), ['site_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_consent_form_records_subject_id'), ['subject_id'], unique=False)
+    with op.batch_alter_table("consent_form_records", schema=None) as batch_op:
+        batch_op.create_index(
+            batch_op.f("ix_consent_form_records_icf_version_id"),
+            ["icf_version_id"],
+            unique=False,
+        )
+        batch_op.create_index(
+            batch_op.f("ix_consent_form_records_site_id"), ["site_id"], unique=False
+        )
+        batch_op.create_index(
+            batch_op.f("ix_consent_form_records_subject_id"),
+            ["subject_id"],
+            unique=False,
+        )
 
-    op.create_table('consent_signatures',
-    sa.Column('subject_id', sa.String(length=255), nullable=False),
-    sa.Column('site_id', sa.String(length=255), nullable=True),
-    sa.Column('icf_version_id', sa.String(length=100), nullable=False),
-    sa.Column('printed_name', sa.String(length=255), nullable=False),
-    sa.Column('signature_svg_data', sa.String(), nullable=True),
-    sa.Column('signature_svg', sa.String(), nullable=True),
-    sa.Column('otp_auth_code', sa.String(length=50), nullable=True),
-    sa.Column('meaning', sa.String(length=255), nullable=False),
-    sa.Column('cryptographic_token', sa.String(length=255), nullable=True),
-    sa.Column('verification_hash', sa.String(length=255), nullable=True),
-    sa.Column('signed_at', sa.DateTime(), nullable=True),
-    sa.Column('timestamp', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.Column('status', sa.String(length=50), nullable=False),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
-    sa.Column('created_by', sa.String(length=255), nullable=True),
-    sa.Column('reason_for_change', sa.String(length=1000), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "consent_signatures",
+        sa.Column("subject_id", sa.String(length=255), nullable=False),
+        sa.Column("site_id", sa.String(length=255), nullable=True),
+        sa.Column("icf_version_id", sa.String(length=100), nullable=False),
+        sa.Column("printed_name", sa.String(length=255), nullable=False),
+        sa.Column("signature_svg_data", sa.String(), nullable=True),
+        sa.Column("signature_svg", sa.String(), nullable=True),
+        sa.Column("otp_auth_code", sa.String(length=50), nullable=True),
+        sa.Column("meaning", sa.String(length=255), nullable=False),
+        sa.Column("cryptographic_token", sa.String(length=255), nullable=True),
+        sa.Column("verification_hash", sa.String(length=255), nullable=True),
+        sa.Column("signed_at", sa.DateTime(), nullable=True),
+        sa.Column(
+            "timestamp",
+            sa.DateTime(),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            nullable=False,
+        ),
+        sa.Column("status", sa.String(length=50), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            nullable=True,
+        ),
+        sa.Column("created_by", sa.String(length=255), nullable=True),
+        sa.Column("reason_for_change", sa.String(length=1000), nullable=True),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table('consent_signatures', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_consent_signatures_site_id'), ['site_id'], unique=False)
+    with op.batch_alter_table("consent_signatures", schema=None) as batch_op:
+        batch_op.create_index(
+            batch_op.f("ix_consent_signatures_site_id"), ["site_id"], unique=False
+        )
 
-    op.create_table('dictionary_import_jobs',
-    sa.Column('dictionary_type', sa.Enum('MEDDRA', 'WHODRUG', 'LOINC', 'SNOMED', name='dictionary_type_enum'), nullable=False),
-    sa.Column('dictionary_version', sa.String(length=50), nullable=False),
-    sa.Column('status', sa.Enum('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', name='import_state_enum'), nullable=False),
-    sa.Column('started_at', sa.DateTime(), nullable=False),
-    sa.Column('completed_at', sa.DateTime(), nullable=True),
-    sa.Column('progress_percentage', sa.Integer(), nullable=False),
-    sa.Column('records_imported', sa.Integer(), nullable=False),
-    sa.Column('errors_encountered', sa.Integer(), nullable=False),
-    sa.Column('error_details', sa.String(length=1000), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "dictionary_import_jobs",
+        sa.Column(
+            "dictionary_type",
+            sa.Enum(
+                "MEDDRA", "WHODRUG", "LOINC", "SNOMED", name="dictionary_type_enum"
+            ),
+            nullable=False,
+        ),
+        sa.Column("dictionary_version", sa.String(length=50), nullable=False),
+        sa.Column(
+            "status",
+            sa.Enum(
+                "PENDING", "PROCESSING", "COMPLETED", "FAILED", name="import_state_enum"
+            ),
+            nullable=False,
+        ),
+        sa.Column("started_at", sa.DateTime(), nullable=False),
+        sa.Column("completed_at", sa.DateTime(), nullable=True),
+        sa.Column("progress_percentage", sa.Integer(), nullable=False),
+        sa.Column("records_imported", sa.Integer(), nullable=False),
+        sa.Column("errors_encountered", sa.Integer(), nullable=False),
+        sa.Column("error_details", sa.String(length=1000), nullable=True),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    op.create_table('doa_audit_logs',
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('user_id', sa.String(length=255), nullable=False),
-    sa.Column('action', sa.String(length=255), nullable=False),
-    sa.Column('details', sa.String(length=1000), nullable=False),
-    sa.Column('timestamp', sa.DateTime(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "doa_audit_logs",
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("user_id", sa.String(length=255), nullable=False),
+        sa.Column("action", sa.String(length=255), nullable=False),
+        sa.Column("details", sa.String(length=1000), nullable=False),
+        sa.Column("timestamp", sa.DateTime(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    op.create_table('doa_delegation_records',
-    sa.Column('site_id', sa.String(length=255), nullable=False),
-    sa.Column('staff_user_id', sa.String(length=255), nullable=False),
-    sa.Column('task_code', sa.String(length=50), nullable=False),
-    sa.Column('status', sa.String(length=50), nullable=False),
-    sa.Column('pi_user_id', sa.String(length=255), nullable=False),
-    sa.Column('reason_for_change', sa.String(length=1000), nullable=False),
-    sa.Column('pi_approved_at', sa.DateTime(), nullable=True),
-    sa.Column('pi_signature_hash', sa.String(length=512), nullable=True),
-    sa.Column('end_date', sa.DateTime(), nullable=True),
-    sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "doa_delegation_records",
+        sa.Column("site_id", sa.String(length=255), nullable=False),
+        sa.Column("staff_user_id", sa.String(length=255), nullable=False),
+        sa.Column("task_code", sa.String(length=50), nullable=False),
+        sa.Column("status", sa.String(length=50), nullable=False),
+        sa.Column("pi_user_id", sa.String(length=255), nullable=False),
+        sa.Column("reason_for_change", sa.String(length=1000), nullable=False),
+        sa.Column("pi_approved_at", sa.DateTime(), nullable=True),
+        sa.Column("pi_signature_hash", sa.String(length=512), nullable=True),
+        sa.Column("end_date", sa.DateTime(), nullable=True),
+        sa.Column("is_active", sa.Boolean(), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    op.create_table('form_submissions',
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('site_id', sa.String(length=255), nullable=True),
-    sa.Column('subject_id', sa.String(length=255), nullable=False),
-    sa.Column('visit_id', sa.String(length=255), nullable=True),
-    sa.Column('form_id', sa.String(length=255), nullable=False),
-    sa.Column('status', sa.String(length=50), nullable=False, comment='DRAFT, COMPLETED, APPROVED'),
-    sa.Column('signature_manifest', sa.JSON(), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "form_submissions",
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("site_id", sa.String(length=255), nullable=True),
+        sa.Column("subject_id", sa.String(length=255), nullable=False),
+        sa.Column("visit_id", sa.String(length=255), nullable=True),
+        sa.Column("form_id", sa.String(length=255), nullable=False),
+        sa.Column(
+            "status",
+            sa.String(length=50),
+            nullable=False,
+            comment="DRAFT, COMPLETED, APPROVED",
+        ),
+        sa.Column("signature_manifest", sa.JSON(), nullable=True),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table('form_submissions', schema=None) as batch_op:
-        batch_op.create_index('idx_form_submissions_coords', ['study_id', 'subject_id', 'visit_id', 'form_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_form_submissions_site_id'), ['site_id'], unique=False)
+    with op.batch_alter_table("form_submissions", schema=None) as batch_op:
+        batch_op.create_index(
+            "idx_form_submissions_coords",
+            ["study_id", "subject_id", "visit_id", "form_id"],
+            unique=False,
+        )
+        batch_op.create_index(
+            batch_op.f("ix_form_submissions_site_id"), ["site_id"], unique=False
+        )
 
-    op.create_table('integration_outbox',
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('event_type', sa.String(length=255), nullable=False),
-    sa.Column('payload', sa.JSON(), nullable=False),
-    sa.Column('status', sa.String(length=50), nullable=False),
-    sa.Column('attempts', sa.Integer(), nullable=False),
-    sa.Column('last_error', sa.String(), nullable=True),
-    sa.Column('next_retry_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('retry_eligible', sa.Boolean(), nullable=False),
-    sa.Column('correlation_id', sa.String(length=255), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('created_by', sa.String(length=255), nullable=False),
-    sa.Column('reason_for_change', sa.String(length=1000), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "integration_outbox",
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("event_type", sa.String(length=255), nullable=False),
+        sa.Column("payload", sa.JSON(), nullable=False),
+        sa.Column("status", sa.String(length=50), nullable=False),
+        sa.Column("attempts", sa.Integer(), nullable=False),
+        sa.Column("last_error", sa.String(), nullable=True),
+        sa.Column("next_retry_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("retry_eligible", sa.Boolean(), nullable=False),
+        sa.Column("correlation_id", sa.String(length=255), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_by", sa.String(length=255), nullable=False),
+        sa.Column("reason_for_change", sa.String(length=1000), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table('integration_outbox', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_integration_outbox_correlation_id'), ['correlation_id'], unique=True)
-        batch_op.create_index(batch_op.f('ix_integration_outbox_event_type'), ['event_type'], unique=False)
-        batch_op.create_index(batch_op.f('ix_integration_outbox_status'), ['status'], unique=False)
+    with op.batch_alter_table("integration_outbox", schema=None) as batch_op:
+        batch_op.create_index(
+            batch_op.f("ix_integration_outbox_correlation_id"),
+            ["correlation_id"],
+            unique=True,
+        )
+        batch_op.create_index(
+            batch_op.f("ix_integration_outbox_event_type"), ["event_type"], unique=False
+        )
+        batch_op.create_index(
+            batch_op.f("ix_integration_outbox_status"), ["status"], unique=False
+        )
 
-    op.create_table('ip_kits',
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('kit_number', sa.String(length=255), nullable=False),
-    sa.Column('kit_type', sa.String(length=255), nullable=False),
-    sa.Column('description', sa.String(length=1000), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('kit_number')
+    op.create_table(
+        "ip_kits",
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("kit_number", sa.String(length=255), nullable=False),
+        sa.Column("kit_type", sa.String(length=255), nullable=False),
+        sa.Column("description", sa.String(length=1000), nullable=True),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("kit_number"),
     )
-    op.create_table('kit_dispensations',
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('subject_id', sa.String(length=255), nullable=False),
-    sa.Column('kit_id', sa.String(length=255), nullable=False),
-    sa.Column('site_id', sa.String(length=255), nullable=False),
-    sa.Column('visit_id', sa.String(length=255), nullable=False),
-    sa.Column('quantity', sa.Integer(), nullable=False),
-    sa.Column('timestamp', sa.DateTime(), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "kit_dispensations",
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("subject_id", sa.String(length=255), nullable=False),
+        sa.Column("kit_id", sa.String(length=255), nullable=False),
+        sa.Column("site_id", sa.String(length=255), nullable=False),
+        sa.Column("visit_id", sa.String(length=255), nullable=False),
+        sa.Column("quantity", sa.Integer(), nullable=False),
+        sa.Column("timestamp", sa.DateTime(), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    op.create_table('lab_reference_ranges',
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('test_code', sa.String(length=100), nullable=False),
-    sa.Column('test_name', sa.String(length=255), nullable=False),
-    sa.Column('lab_source', sa.String(length=50), nullable=False),
-    sa.Column('site_id', sa.String(length=255), nullable=True),
-    sa.Column('unit', sa.String(length=50), nullable=True),
-    sa.Column('normalized_unit', sa.String(length=50), nullable=True),
-    sa.Column('sex', sa.String(length=50), nullable=True),
-    sa.Column('age_low', sa.Float(), nullable=True),
-    sa.Column('age_high', sa.Float(), nullable=True),
-    sa.Column('range_low', sa.Float(), nullable=True),
-    sa.Column('range_high', sa.Float(), nullable=True),
-    sa.Column('critical_low', sa.Float(), nullable=True),
-    sa.Column('critical_high', sa.Float(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
-    sa.Column('created_by', sa.String(length=255), nullable=True),
-    sa.Column('reason_for_change', sa.String(length=1000), nullable=True),
-    sa.Column('version_index', sa.Integer(), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "lab_reference_ranges",
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("test_code", sa.String(length=100), nullable=False),
+        sa.Column("test_name", sa.String(length=255), nullable=False),
+        sa.Column("lab_source", sa.String(length=50), nullable=False),
+        sa.Column("site_id", sa.String(length=255), nullable=True),
+        sa.Column("unit", sa.String(length=50), nullable=True),
+        sa.Column("normalized_unit", sa.String(length=50), nullable=True),
+        sa.Column("sex", sa.String(length=50), nullable=True),
+        sa.Column("age_low", sa.Float(), nullable=True),
+        sa.Column("age_high", sa.Float(), nullable=True),
+        sa.Column("range_low", sa.Float(), nullable=True),
+        sa.Column("range_high", sa.Float(), nullable=True),
+        sa.Column("critical_low", sa.Float(), nullable=True),
+        sa.Column("critical_high", sa.Float(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            nullable=True,
+        ),
+        sa.Column("created_by", sa.String(length=255), nullable=True),
+        sa.Column("reason_for_change", sa.String(length=1000), nullable=True),
+        sa.Column("version_index", sa.Integer(), nullable=True),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table('lab_reference_ranges', schema=None) as batch_op:
-        batch_op.create_index('idx_lab_range_lookup', ['study_id', 'test_code', 'lab_source', 'site_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_lab_reference_ranges_study_id'), ['study_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_lab_reference_ranges_test_code'), ['test_code'], unique=False)
+    with op.batch_alter_table("lab_reference_ranges", schema=None) as batch_op:
+        batch_op.create_index(
+            "idx_lab_range_lookup",
+            ["study_id", "test_code", "lab_source", "site_id"],
+            unique=False,
+        )
+        batch_op.create_index(
+            batch_op.f("ix_lab_reference_ranges_study_id"), ["study_id"], unique=False
+        )
+        batch_op.create_index(
+            batch_op.f("ix_lab_reference_ranges_test_code"), ["test_code"], unique=False
+        )
 
-    op.create_table('lab_test_master',
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('test_code', sa.String(length=100), nullable=False),
-    sa.Column('test_name', sa.String(length=255), nullable=False),
-    sa.Column('default_unit', sa.String(length=50), nullable=True),
-    sa.Column('normalized_unit', sa.String(length=50), nullable=True),
-    sa.Column('loinc_code', sa.String(length=50), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
-    sa.Column('created_by', sa.String(length=255), nullable=True),
-    sa.Column('reason_for_change', sa.String(length=1000), nullable=True),
-    sa.Column('version_index', sa.Integer(), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "lab_test_master",
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("test_code", sa.String(length=100), nullable=False),
+        sa.Column("test_name", sa.String(length=255), nullable=False),
+        sa.Column("default_unit", sa.String(length=50), nullable=True),
+        sa.Column("normalized_unit", sa.String(length=50), nullable=True),
+        sa.Column("loinc_code", sa.String(length=50), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            nullable=True,
+        ),
+        sa.Column("created_by", sa.String(length=255), nullable=True),
+        sa.Column("reason_for_change", sa.String(length=1000), nullable=True),
+        sa.Column("version_index", sa.Integer(), nullable=True),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table('lab_test_master', schema=None) as batch_op:
-        batch_op.create_index('idx_lab_master_legacy_lookup', ['study_id', 'test_code'], unique=False)
-        batch_op.create_index(batch_op.f('ix_lab_test_master_study_id'), ['study_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_lab_test_master_test_code'), ['test_code'], unique=False)
+    with op.batch_alter_table("lab_test_master", schema=None) as batch_op:
+        batch_op.create_index(
+            "idx_lab_master_legacy_lookup", ["study_id", "test_code"], unique=False
+        )
+        batch_op.create_index(
+            batch_op.f("ix_lab_test_master_study_id"), ["study_id"], unique=False
+        )
+        batch_op.create_index(
+            batch_op.f("ix_lab_test_master_test_code"), ["test_code"], unique=False
+        )
 
-    op.create_table('lab_test_masters',
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('test_code', sa.String(length=100), nullable=False),
-    sa.Column('test_name', sa.String(length=255), nullable=False),
-    sa.Column('default_unit', sa.String(length=50), nullable=False),
-    sa.Column('normalized_unit', sa.String(length=50), nullable=False),
-    sa.Column('loinc_code', sa.String(length=50), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
-    sa.Column('created_by', sa.String(length=255), nullable=True),
-    sa.Column('reason_for_change', sa.String(length=1000), nullable=True),
-    sa.Column('version_index', sa.Integer(), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "lab_test_masters",
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("test_code", sa.String(length=100), nullable=False),
+        sa.Column("test_name", sa.String(length=255), nullable=False),
+        sa.Column("default_unit", sa.String(length=50), nullable=False),
+        sa.Column("normalized_unit", sa.String(length=50), nullable=False),
+        sa.Column("loinc_code", sa.String(length=50), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            nullable=True,
+        ),
+        sa.Column("created_by", sa.String(length=255), nullable=True),
+        sa.Column("reason_for_change", sa.String(length=1000), nullable=True),
+        sa.Column("version_index", sa.Integer(), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table('lab_test_masters', schema=None) as batch_op:
-        batch_op.create_index('idx_lab_test_master_lookup', ['study_id', 'test_code'], unique=False)
-        batch_op.create_index(batch_op.f('ix_lab_test_masters_study_id'), ['study_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_lab_test_masters_test_code'), ['test_code'], unique=False)
+    with op.batch_alter_table("lab_test_masters", schema=None) as batch_op:
+        batch_op.create_index(
+            "idx_lab_test_master_lookup", ["study_id", "test_code"], unique=False
+        )
+        batch_op.create_index(
+            batch_op.f("ix_lab_test_masters_study_id"), ["study_id"], unique=False
+        )
+        batch_op.create_index(
+            batch_op.f("ix_lab_test_masters_test_code"), ["test_code"], unique=False
+        )
 
-    op.create_table('lab_unit_conversions',
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('test_code', sa.String(length=100), nullable=False),
-    sa.Column('from_unit', sa.String(length=50), nullable=False),
-    sa.Column('to_unit', sa.String(length=50), nullable=False),
-    sa.Column('factor', sa.Float(), nullable=False),
-    sa.Column('offset', sa.Float(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
-    sa.Column('created_by', sa.String(length=255), nullable=True),
-    sa.Column('reason_for_change', sa.String(length=1000), nullable=True),
-    sa.Column('version_index', sa.Integer(), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "lab_unit_conversions",
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("test_code", sa.String(length=100), nullable=False),
+        sa.Column("from_unit", sa.String(length=50), nullable=False),
+        sa.Column("to_unit", sa.String(length=50), nullable=False),
+        sa.Column("factor", sa.Float(), nullable=False),
+        sa.Column("offset", sa.Float(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            nullable=True,
+        ),
+        sa.Column("created_by", sa.String(length=255), nullable=True),
+        sa.Column("reason_for_change", sa.String(length=1000), nullable=True),
+        sa.Column("version_index", sa.Integer(), nullable=True),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table('lab_unit_conversions', schema=None) as batch_op:
-        batch_op.create_index('idx_lab_unit_conversion_lookup', ['study_id', 'test_code', 'from_unit', 'to_unit'], unique=False)
-        batch_op.create_index(batch_op.f('ix_lab_unit_conversions_study_id'), ['study_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_lab_unit_conversions_test_code'), ['test_code'], unique=False)
+    with op.batch_alter_table("lab_unit_conversions", schema=None) as batch_op:
+        batch_op.create_index(
+            "idx_lab_unit_conversion_lookup",
+            ["study_id", "test_code", "from_unit", "to_unit"],
+            unique=False,
+        )
+        batch_op.create_index(
+            batch_op.f("ix_lab_unit_conversions_study_id"), ["study_id"], unique=False
+        )
+        batch_op.create_index(
+            batch_op.f("ix_lab_unit_conversions_test_code"), ["test_code"], unique=False
+        )
 
-    op.create_table('meddra_hierarchies',
-    sa.Column('dictionary_version', sa.String(length=50), nullable=False),
-    sa.Column('llt_code', sa.String(length=50), server_default='NONE', nullable=False),
-    sa.Column('pt_code', sa.String(length=50), nullable=False),
-    sa.Column('hlt_code', sa.String(length=50), nullable=False),
-    sa.Column('hlgt_code', sa.String(length=50), nullable=False),
-    sa.Column('soc_code', sa.String(length=50), nullable=False),
-    sa.Column('primary_soc_flag', sa.String(length=1), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('dictionary_version', 'pt_code', 'hlt_code', 'hlgt_code', 'soc_code', 'llt_code', name='uq_meddra_hier_version_codes')
+    op.create_table(
+        "meddra_hierarchies",
+        sa.Column("dictionary_version", sa.String(length=50), nullable=False),
+        sa.Column(
+            "llt_code", sa.String(length=50), server_default="NONE", nullable=False
+        ),
+        sa.Column("pt_code", sa.String(length=50), nullable=False),
+        sa.Column("hlt_code", sa.String(length=50), nullable=False),
+        sa.Column("hlgt_code", sa.String(length=50), nullable=False),
+        sa.Column("soc_code", sa.String(length=50), nullable=False),
+        sa.Column("primary_soc_flag", sa.String(length=1), nullable=True),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "dictionary_version",
+            "pt_code",
+            "hlt_code",
+            "hlgt_code",
+            "soc_code",
+            "llt_code",
+            name="uq_meddra_hier_version_codes",
+        ),
     )
-    with op.batch_alter_table('meddra_hierarchies', schema=None) as batch_op:
-        batch_op.create_index('idx_meddra_hier_llt', ['dictionary_version', 'llt_code'], unique=False)
-        batch_op.create_index('idx_meddra_hier_lookup', ['dictionary_version', 'pt_code'], unique=False)
+    with op.batch_alter_table("meddra_hierarchies", schema=None) as batch_op:
+        batch_op.create_index(
+            "idx_meddra_hier_llt", ["dictionary_version", "llt_code"], unique=False
+        )
+        batch_op.create_index(
+            "idx_meddra_hier_lookup", ["dictionary_version", "pt_code"], unique=False
+        )
 
-    op.create_table('meddra_terms',
-    sa.Column('dictionary_version', sa.String(length=50), nullable=False),
-    sa.Column('code', sa.String(length=50), nullable=False),
-    sa.Column('term_name', sa.String(length=255), nullable=False),
-    sa.Column('level', sa.String(length=10), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('dictionary_version', 'code', 'level', name='uq_meddra_term_version_code_level')
+    op.create_table(
+        "meddra_terms",
+        sa.Column("dictionary_version", sa.String(length=50), nullable=False),
+        sa.Column("code", sa.String(length=50), nullable=False),
+        sa.Column("term_name", sa.String(length=255), nullable=False),
+        sa.Column("level", sa.String(length=10), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "dictionary_version",
+            "code",
+            "level",
+            name="uq_meddra_term_version_code_level",
+        ),
     )
-    with op.batch_alter_table('meddra_terms', schema=None) as batch_op:
-        batch_op.create_index('idx_meddra_term_lookup', ['dictionary_version', 'code', 'level'], unique=False)
-        batch_op.create_index('idx_meddra_term_search', ['dictionary_version', 'term_name'], unique=False)
+    with op.batch_alter_table("meddra_terms", schema=None) as batch_op:
+        batch_op.create_index(
+            "idx_meddra_term_lookup",
+            ["dictionary_version", "code", "level"],
+            unique=False,
+        )
+        batch_op.create_index(
+            "idx_meddra_term_search", ["dictionary_version", "term_name"], unique=False
+        )
 
-    op.create_table('migration_rules',
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('source_version', sa.String(length=50), nullable=False),
-    sa.Column('target_version', sa.String(length=50), nullable=False),
-    sa.Column('rule_type', sa.String(length=50), nullable=False),
-    sa.Column('source_field', sa.String(length=100), nullable=True),
-    sa.Column('target_field', sa.String(length=100), nullable=True),
-    sa.Column('default_value_string', sa.String(), nullable=True),
-    sa.Column('default_value_float', sa.Float(), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "migration_rules",
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("source_version", sa.String(length=50), nullable=False),
+        sa.Column("target_version", sa.String(length=50), nullable=False),
+        sa.Column("rule_type", sa.String(length=50), nullable=False),
+        sa.Column("source_field", sa.String(length=100), nullable=True),
+        sa.Column("target_field", sa.String(length=100), nullable=True),
+        sa.Column("default_value_string", sa.String(), nullable=True),
+        sa.Column("default_value_float", sa.Float(), nullable=True),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    op.create_table('pending_predecessor_checks',
-    sa.Column('subject_id', sa.String(length=255), nullable=False),
-    sa.Column('site_id', sa.String(length=255), nullable=True),
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('current_visit_id', sa.String(length=255), nullable=True),
-    sa.Column('current_visit_name', sa.String(length=255), nullable=False),
-    sa.Column('predecessor_visit_name', sa.String(length=255), nullable=False),
-    sa.Column('rule_id', sa.String(length=255), nullable=False),
-    sa.Column('observation_id', sa.String(length=255), nullable=False),
-    sa.Column('test_code', sa.String(length=100), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "pending_predecessor_checks",
+        sa.Column("subject_id", sa.String(length=255), nullable=False),
+        sa.Column("site_id", sa.String(length=255), nullable=True),
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("current_visit_id", sa.String(length=255), nullable=True),
+        sa.Column("current_visit_name", sa.String(length=255), nullable=False),
+        sa.Column("predecessor_visit_name", sa.String(length=255), nullable=False),
+        sa.Column("rule_id", sa.String(length=255), nullable=False),
+        sa.Column("observation_id", sa.String(length=255), nullable=False),
+        sa.Column("test_code", sa.String(length=100), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table('pending_predecessor_checks', schema=None) as batch_op:
-        batch_op.create_index('idx_pending_pred_subject_rule', ['subject_id', 'rule_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_pending_predecessor_checks_site_id'), ['site_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_pending_predecessor_checks_study_id'), ['study_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_pending_predecessor_checks_subject_id'), ['subject_id'], unique=False)
+    with op.batch_alter_table("pending_predecessor_checks", schema=None) as batch_op:
+        batch_op.create_index(
+            "idx_pending_pred_subject_rule", ["subject_id", "rule_id"], unique=False
+        )
+        batch_op.create_index(
+            batch_op.f("ix_pending_predecessor_checks_site_id"),
+            ["site_id"],
+            unique=False,
+        )
+        batch_op.create_index(
+            batch_op.f("ix_pending_predecessor_checks_study_id"),
+            ["study_id"],
+            unique=False,
+        )
+        batch_op.create_index(
+            batch_op.f("ix_pending_predecessor_checks_subject_id"),
+            ["subject_id"],
+            unique=False,
+        )
 
-    op.create_table('processed_offline_batches',
-    sa.Column('client_batch_id', sa.String(length=255), nullable=False),
-    sa.Column('device_id', sa.String(length=255), nullable=True),
-    sa.Column('synced_at', sa.DateTime(), nullable=False),
-    sa.PrimaryKeyConstraint('client_batch_id')
+    op.create_table(
+        "processed_offline_batches",
+        sa.Column("client_batch_id", sa.String(length=255), nullable=False),
+        sa.Column("device_id", sa.String(length=255), nullable=True),
+        sa.Column("synced_at", sa.DateTime(), nullable=False),
+        sa.PrimaryKeyConstraint("client_batch_id"),
     )
-    op.create_table('randomization_configs',
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('algorithm_type', sa.String(length=50), nullable=False),
-    sa.Column('arms_ratios', sa.JSON(), nullable=False),
-    sa.Column('stratification_factors', sa.JSON(), nullable=True),
-    sa.Column('encrypted_block_config', sa.String(), nullable=True),
-    sa.Column('seed', sa.Integer(), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('study_id')
+    op.create_table(
+        "randomization_configs",
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("algorithm_type", sa.String(length=50), nullable=False),
+        sa.Column("arms_ratios", sa.JSON(), nullable=False),
+        sa.Column("stratification_factors", sa.JSON(), nullable=True),
+        sa.Column("encrypted_block_config", sa.String(), nullable=True),
+        sa.Column("seed", sa.Integer(), nullable=True),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("study_id"),
     )
-    op.create_table('resupply_events',
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('site_id', sa.String(length=255), nullable=False),
-    sa.Column('kit_id', sa.String(length=255), nullable=False),
-    sa.Column('requested_qty', sa.Integer(), nullable=False),
-    sa.Column('status', sa.String(length=50), nullable=False),
-    sa.Column('triggered_at', sa.DateTime(), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "resupply_events",
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("site_id", sa.String(length=255), nullable=False),
+        sa.Column("kit_id", sa.String(length=255), nullable=False),
+        sa.Column("requested_qty", sa.Integer(), nullable=False),
+        sa.Column("status", sa.String(length=50), nullable=False),
+        sa.Column("triggered_at", sa.DateTime(), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    op.create_table('sdtm_domain_records',
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('domain', sa.String(length=50), nullable=False),
-    sa.Column('usubjid', sa.String(length=255), nullable=False),
-    sa.Column('record_data', sa.JSON(), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "sdtm_domain_records",
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("domain", sa.String(length=50), nullable=False),
+        sa.Column("usubjid", sa.String(length=255), nullable=False),
+        sa.Column("record_data", sa.JSON(), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    op.create_table('sdv_sign_offs',
-    sa.Column('scope', sa.String(length=50), nullable=False, comment='FIELD, PAGE, or VISIT'),
-    sa.Column('target_id', sa.String(length=255), nullable=False),
-    sa.Column('subject_id', sa.String(length=255), nullable=False),
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('site_id', sa.String(length=255), nullable=True),
-    sa.Column('is_verified', sa.Boolean(), nullable=False),
-    sa.Column('verified_by', sa.String(length=255), nullable=True),
-    sa.Column('verified_at', sa.DateTime(), nullable=True),
-    sa.Column('dropped_reason', sa.String(length=1000), nullable=True),
-    sa.Column('dropped_at', sa.DateTime(), nullable=True),
-    sa.Column('status', sa.String(length=50), nullable=False),
-    sa.Column('flagged_by', sa.String(length=255), nullable=True),
-    sa.Column('flagged_at', sa.DateTime(), nullable=True),
-    sa.Column('flag_reason', sa.String(length=1000), nullable=True),
-    sa.Column('flag_severity', sa.String(length=50), nullable=True),
-    sa.Column('resolved_by', sa.String(length=255), nullable=True),
-    sa.Column('resolved_at', sa.DateTime(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
-    sa.Column('created_by', sa.String(length=255), nullable=True),
-    sa.Column('reason_for_change', sa.String(length=1000), nullable=True),
-    sa.Column('version_index', sa.Integer(), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "sdv_sign_offs",
+        sa.Column(
+            "scope",
+            sa.String(length=50),
+            nullable=False,
+            comment="FIELD, PAGE, or VISIT",
+        ),
+        sa.Column("target_id", sa.String(length=255), nullable=False),
+        sa.Column("subject_id", sa.String(length=255), nullable=False),
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("site_id", sa.String(length=255), nullable=True),
+        sa.Column("is_verified", sa.Boolean(), nullable=False),
+        sa.Column("verified_by", sa.String(length=255), nullable=True),
+        sa.Column("verified_at", sa.DateTime(), nullable=True),
+        sa.Column("dropped_reason", sa.String(length=1000), nullable=True),
+        sa.Column("dropped_at", sa.DateTime(), nullable=True),
+        sa.Column("status", sa.String(length=50), nullable=False),
+        sa.Column("flagged_by", sa.String(length=255), nullable=True),
+        sa.Column("flagged_at", sa.DateTime(), nullable=True),
+        sa.Column("flag_reason", sa.String(length=1000), nullable=True),
+        sa.Column("flag_severity", sa.String(length=50), nullable=True),
+        sa.Column("resolved_by", sa.String(length=255), nullable=True),
+        sa.Column("resolved_at", sa.DateTime(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            nullable=True,
+        ),
+        sa.Column("created_by", sa.String(length=255), nullable=True),
+        sa.Column("reason_for_change", sa.String(length=1000), nullable=True),
+        sa.Column("version_index", sa.Integer(), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table('sdv_sign_offs', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_sdv_sign_offs_site_id'), ['site_id'], unique=False)
+    with op.batch_alter_table("sdv_sign_offs", schema=None) as batch_op:
+        batch_op.create_index(
+            batch_op.f("ix_sdv_sign_offs_site_id"), ["site_id"], unique=False
+        )
 
-    op.create_table('site_compliance_caches',
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('site_id', sa.String(length=255), nullable=True),
-    sa.Column('milestone', sa.String(length=255), nullable=False),
-    sa.Column('is_complete', sa.Boolean(), nullable=False),
-    sa.Column('missing_documents', sa.String(length=1000), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "site_compliance_caches",
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("site_id", sa.String(length=255), nullable=True),
+        sa.Column("milestone", sa.String(length=255), nullable=False),
+        sa.Column("is_complete", sa.Boolean(), nullable=False),
+        sa.Column("missing_documents", sa.String(length=1000), nullable=True),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table('site_compliance_caches', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_site_compliance_caches_milestone'), ['milestone'], unique=False)
-        batch_op.create_index(batch_op.f('ix_site_compliance_caches_site_id'), ['site_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_site_compliance_caches_study_id'), ['study_id'], unique=False)
+    with op.batch_alter_table("site_compliance_caches", schema=None) as batch_op:
+        batch_op.create_index(
+            batch_op.f("ix_site_compliance_caches_milestone"),
+            ["milestone"],
+            unique=False,
+        )
+        batch_op.create_index(
+            batch_op.f("ix_site_compliance_caches_site_id"), ["site_id"], unique=False
+        )
+        batch_op.create_index(
+            batch_op.f("ix_site_compliance_caches_study_id"), ["study_id"], unique=False
+        )
 
-    op.create_table('site_inventories',
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('site_id', sa.String(length=255), nullable=False),
-    sa.Column('kit_id', sa.String(length=255), nullable=False),
-    sa.Column('on_hand_qty', sa.Integer(), nullable=False),
-    sa.Column('reorder_threshold', sa.Integer(), nullable=False),
-    sa.Column('resupply_signal', sa.Boolean(), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('site_id', 'kit_id', name='uq_site_inventory_site_kit')
+    op.create_table(
+        "site_inventories",
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("site_id", sa.String(length=255), nullable=False),
+        sa.Column("kit_id", sa.String(length=255), nullable=False),
+        sa.Column("on_hand_qty", sa.Integer(), nullable=False),
+        sa.Column("reorder_threshold", sa.Integer(), nullable=False),
+        sa.Column("resupply_signal", sa.Boolean(), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("site_id", "kit_id", name="uq_site_inventory_site_kit"),
     )
-    op.create_table('site_staff_members',
-    sa.Column('site_id', sa.String(length=255), nullable=False),
-    sa.Column('staff_user_id', sa.String(length=255), nullable=False),
-    sa.Column('name', sa.String(length=255), nullable=False),
-    sa.Column('email', sa.String(length=255), nullable=False),
-    sa.Column('has_gcp_training', sa.Boolean(), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('staff_user_id')
+    op.create_table(
+        "site_staff_members",
+        sa.Column("site_id", sa.String(length=255), nullable=False),
+        sa.Column("staff_user_id", sa.String(length=255), nullable=False),
+        sa.Column("name", sa.String(length=255), nullable=False),
+        sa.Column("email", sa.String(length=255), nullable=False),
+        sa.Column("has_gcp_training", sa.Boolean(), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("staff_user_id"),
     )
-    op.create_table('stratum_states',
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('stratum_key', sa.String(length=255), nullable=False),
-    sa.Column('block_index', sa.Integer(), nullable=False),
-    sa.Column('encrypted_sequence', sa.String(), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('study_id', 'stratum_key', name='uq_stratum_state_study_stratum')
+    op.create_table(
+        "stratum_states",
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("stratum_key", sa.String(length=255), nullable=False),
+        sa.Column("block_index", sa.Integer(), nullable=False),
+        sa.Column("encrypted_sequence", sa.String(), nullable=True),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "study_id", "stratum_key", name="uq_stratum_state_study_stratum"
+        ),
     )
-    op.create_table('study_authored_rules',
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('rule_id', sa.String(length=255), nullable=False),
-    sa.Column('rule_type', sa.String(length=50), nullable=False),
-    sa.Column('condition', sa.JSON(), nullable=False),
-    sa.Column('query_message', sa.String(length=1000), nullable=False),
-    sa.Column('message', sa.String(length=1000), nullable=False),
-    sa.Column('publication_version', sa.String(length=50), nullable=False),
-    sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "study_authored_rules",
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("rule_id", sa.String(length=255), nullable=False),
+        sa.Column("rule_type", sa.String(length=50), nullable=False),
+        sa.Column("condition", sa.JSON(), nullable=False),
+        sa.Column("query_message", sa.String(length=1000), nullable=False),
+        sa.Column("message", sa.String(length=1000), nullable=False),
+        sa.Column("publication_version", sa.String(length=50), nullable=False),
+        sa.Column("is_active", sa.Boolean(), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table('study_authored_rules', schema=None) as batch_op:
-        batch_op.create_index('idx_authored_rules_study_active', ['study_id', 'is_active'], unique=False)
-        batch_op.create_index('idx_authored_rules_study_rule', ['study_id', 'rule_id'], unique=False)
+    with op.batch_alter_table("study_authored_rules", schema=None) as batch_op:
+        batch_op.create_index(
+            "idx_authored_rules_study_active", ["study_id", "is_active"], unique=False
+        )
+        batch_op.create_index(
+            "idx_authored_rules_study_rule", ["study_id", "rule_id"], unique=False
+        )
 
-    op.create_table('subject_consents',
-    sa.Column('subject_id', sa.String(length=255), nullable=False),
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('site_id', sa.String(length=255), nullable=True),
-    sa.Column('version_tag', sa.String(length=50), nullable=False),
-    sa.Column('version_index', sa.Integer(), nullable=False),
-    sa.Column('icf_signed', sa.Boolean(), nullable=False),
-    sa.Column('icf_signed_date', sa.DateTime(), nullable=True),
-    sa.Column('requires_reconsent', sa.Boolean(), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "subject_consents",
+        sa.Column("subject_id", sa.String(length=255), nullable=False),
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("site_id", sa.String(length=255), nullable=True),
+        sa.Column("version_tag", sa.String(length=50), nullable=False),
+        sa.Column("version_index", sa.Integer(), nullable=False),
+        sa.Column("icf_signed", sa.Boolean(), nullable=False),
+        sa.Column("icf_signed_date", sa.DateTime(), nullable=True),
+        sa.Column("requires_reconsent", sa.Boolean(), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table('subject_consents', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_subject_consents_site_id'), ['site_id'], unique=False)
+    with op.batch_alter_table("subject_consents", schema=None) as batch_op:
+        batch_op.create_index(
+            batch_op.f("ix_subject_consents_site_id"), ["site_id"], unique=False
+        )
 
-    op.create_table('subject_randomizations',
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('site_id', sa.String(length=255), nullable=True),
-    sa.Column('subject_id', sa.String(length=255), nullable=False),
-    sa.Column('stratum_key', sa.String(length=255), nullable=True),
-    sa.Column('encrypted_allocation', sa.String(), nullable=False),
-    sa.Column('kit_reference', sa.String(length=255), nullable=True),
-    sa.Column('randomized_at', sa.DateTime(), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('subject_id')
+    op.create_table(
+        "subject_randomizations",
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("site_id", sa.String(length=255), nullable=True),
+        sa.Column("subject_id", sa.String(length=255), nullable=False),
+        sa.Column("stratum_key", sa.String(length=255), nullable=True),
+        sa.Column("encrypted_allocation", sa.String(), nullable=False),
+        sa.Column("kit_reference", sa.String(length=255), nullable=True),
+        sa.Column("randomized_at", sa.DateTime(), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("subject_id"),
     )
-    with op.batch_alter_table('subject_randomizations', schema=None) as batch_op:
-        batch_op.create_index('idx_subject_randomization_study', ['study_id'], unique=False)
+    with op.batch_alter_table("subject_randomizations", schema=None) as batch_op:
+        batch_op.create_index(
+            "idx_subject_randomization_study", ["study_id"], unique=False
+        )
 
-    op.create_table('synced_batch_idempotency_keys',
-    sa.Column('client_batch_id', sa.String(length=255), nullable=False),
-    sa.Column('device_id', sa.String(length=255), nullable=False),
-    sa.Column('processed_count', sa.Integer(), nullable=False),
-    sa.Column('processed_at', sa.DateTime(), nullable=False),
-    sa.PrimaryKeyConstraint('client_batch_id')
+    op.create_table(
+        "synced_batch_idempotency_keys",
+        sa.Column("client_batch_id", sa.String(length=255), nullable=False),
+        sa.Column("device_id", sa.String(length=255), nullable=False),
+        sa.Column("processed_count", sa.Integer(), nullable=False),
+        sa.Column("processed_at", sa.DateTime(), nullable=False),
+        sa.PrimaryKeyConstraint("client_batch_id"),
     )
-    op.create_table('translation_jobs',
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('status', sa.String(length=50), nullable=False),
-    sa.Column('odm_payload', sa.String(), nullable=True),
-    sa.Column('openrosa_payload', sa.String(), nullable=True),
-    sa.Column('error_message', sa.String(), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table(
+        "translation_jobs",
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("status", sa.String(length=50), nullable=False),
+        sa.Column("odm_payload", sa.String(), nullable=True),
+        sa.Column("openrosa_payload", sa.String(), nullable=True),
+        sa.Column("error_message", sa.String(), nullable=True),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
     )
-    op.create_table('tsdv_configs',
-    sa.Column('study_id', sa.String(length=255), nullable=False),
-    sa.Column('sampling_model', sa.String(length=50), nullable=False),
-    sa.Column('initial_full_sdv_subject_count', sa.Integer(), nullable=False),
-    sa.Column('random_sample_percentage', sa.Float(), nullable=False),
-    sa.Column('full_sdv_domains', sa.JSON(), nullable=True),
-    sa.Column('safety_endpoints', sa.JSON(), nullable=True),
-    sa.Column('zero_sdv_domains', sa.JSON(), nullable=True),
-    sa.Column('trial_random_seed', sa.Integer(), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('study_id')
+    op.create_table(
+        "tsdv_configs",
+        sa.Column("study_id", sa.String(length=255), nullable=False),
+        sa.Column("sampling_model", sa.String(length=50), nullable=False),
+        sa.Column("initial_full_sdv_subject_count", sa.Integer(), nullable=False),
+        sa.Column("random_sample_percentage", sa.Float(), nullable=False),
+        sa.Column("full_sdv_domains", sa.JSON(), nullable=True),
+        sa.Column("safety_endpoints", sa.JSON(), nullable=True),
+        sa.Column("zero_sdv_domains", sa.JSON(), nullable=True),
+        sa.Column("trial_random_seed", sa.Integer(), nullable=True),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("study_id"),
     )
-    op.create_table('whodrug_atc',
-    sa.Column('dictionary_version', sa.String(length=50), nullable=False),
-    sa.Column('atc_code', sa.String(length=50), nullable=False),
-    sa.Column('description', sa.String(length=255), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('dictionary_version', 'atc_code', name='uq_whodrug_atc_version_code')
+    op.create_table(
+        "whodrug_atc",
+        sa.Column("dictionary_version", sa.String(length=50), nullable=False),
+        sa.Column("atc_code", sa.String(length=50), nullable=False),
+        sa.Column("description", sa.String(length=255), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "dictionary_version", "atc_code", name="uq_whodrug_atc_version_code"
+        ),
     )
-    with op.batch_alter_table('whodrug_atc', schema=None) as batch_op:
-        batch_op.create_index('idx_whodrug_atc_lookup', ['dictionary_version', 'atc_code'], unique=False)
+    with op.batch_alter_table("whodrug_atc", schema=None) as batch_op:
+        batch_op.create_index(
+            "idx_whodrug_atc_lookup", ["dictionary_version", "atc_code"], unique=False
+        )
 
-    op.create_table('whodrug_drug_atc',
-    sa.Column('dictionary_version', sa.String(length=50), nullable=False),
-    sa.Column('drug_code', sa.String(length=50), nullable=False),
-    sa.Column('atc_code', sa.String(length=50), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('dictionary_version', 'drug_code', 'atc_code', name='uq_whodrug_drug_atc_version')
+    op.create_table(
+        "whodrug_drug_atc",
+        sa.Column("dictionary_version", sa.String(length=50), nullable=False),
+        sa.Column("drug_code", sa.String(length=50), nullable=False),
+        sa.Column("atc_code", sa.String(length=50), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "dictionary_version",
+            "drug_code",
+            "atc_code",
+            name="uq_whodrug_drug_atc_version",
+        ),
     )
-    with op.batch_alter_table('whodrug_drug_atc', schema=None) as batch_op:
-        batch_op.create_index('idx_whodrug_drug_atc_lookup', ['dictionary_version', 'drug_code'], unique=False)
+    with op.batch_alter_table("whodrug_drug_atc", schema=None) as batch_op:
+        batch_op.create_index(
+            "idx_whodrug_drug_atc_lookup",
+            ["dictionary_version", "drug_code"],
+            unique=False,
+        )
 
-    op.create_table('whodrug_drug_ingredients',
-    sa.Column('dictionary_version', sa.String(length=50), nullable=False),
-    sa.Column('drug_code', sa.String(length=50), nullable=False),
-    sa.Column('ingredient_code', sa.String(length=50), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('dictionary_version', 'drug_code', 'ingredient_code', name='uq_whodrug_drug_ingredient_version')
+    op.create_table(
+        "whodrug_drug_ingredients",
+        sa.Column("dictionary_version", sa.String(length=50), nullable=False),
+        sa.Column("drug_code", sa.String(length=50), nullable=False),
+        sa.Column("ingredient_code", sa.String(length=50), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "dictionary_version",
+            "drug_code",
+            "ingredient_code",
+            name="uq_whodrug_drug_ingredient_version",
+        ),
     )
-    with op.batch_alter_table('whodrug_drug_ingredients', schema=None) as batch_op:
-        batch_op.create_index('idx_whodrug_drug_ing_lookup', ['dictionary_version', 'drug_code'], unique=False)
+    with op.batch_alter_table("whodrug_drug_ingredients", schema=None) as batch_op:
+        batch_op.create_index(
+            "idx_whodrug_drug_ing_lookup",
+            ["dictionary_version", "drug_code"],
+            unique=False,
+        )
 
-    op.create_table('whodrug_ingredients',
-    sa.Column('dictionary_version', sa.String(length=50), nullable=False),
-    sa.Column('ingredient_code', sa.String(length=50), nullable=False),
-    sa.Column('ingredient_name', sa.String(length=255), nullable=False),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('dictionary_version', 'ingredient_code', name='uq_whodrug_ingredient_version_code')
+    op.create_table(
+        "whodrug_ingredients",
+        sa.Column("dictionary_version", sa.String(length=50), nullable=False),
+        sa.Column("ingredient_code", sa.String(length=50), nullable=False),
+        sa.Column("ingredient_name", sa.String(length=255), nullable=False),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "dictionary_version",
+            "ingredient_code",
+            name="uq_whodrug_ingredient_version_code",
+        ),
     )
-    with op.batch_alter_table('whodrug_ingredients', schema=None) as batch_op:
-        batch_op.create_index('idx_whodrug_ingredient_lookup', ['dictionary_version', 'ingredient_code'], unique=False)
-        batch_op.create_index('idx_whodrug_ingredient_search', ['dictionary_version', 'ingredient_name'], unique=False)
+    with op.batch_alter_table("whodrug_ingredients", schema=None) as batch_op:
+        batch_op.create_index(
+            "idx_whodrug_ingredient_lookup",
+            ["dictionary_version", "ingredient_code"],
+            unique=False,
+        )
+        batch_op.create_index(
+            "idx_whodrug_ingredient_search",
+            ["dictionary_version", "ingredient_name"],
+            unique=False,
+        )
 
-    op.create_table('whodrug_records',
-    sa.Column('dictionary_version', sa.String(length=50), nullable=False),
-    sa.Column('drug_code', sa.String(length=50), nullable=False),
-    sa.Column('preferred_name', sa.String(length=255), nullable=False),
-    sa.Column('drug_name', sa.String(length=255), nullable=True),
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('version', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('dictionary_version', 'drug_code', name='uq_whodrug_record_version_code')
+    op.create_table(
+        "whodrug_records",
+        sa.Column("dictionary_version", sa.String(length=50), nullable=False),
+        sa.Column("drug_code", sa.String(length=50), nullable=False),
+        sa.Column("preferred_name", sa.String(length=255), nullable=False),
+        sa.Column("drug_name", sa.String(length=255), nullable=True),
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "dictionary_version", "drug_code", name="uq_whodrug_record_version_code"
+        ),
     )
-    with op.batch_alter_table('whodrug_records', schema=None) as batch_op:
-        batch_op.create_index('idx_whodrug_record_lookup', ['dictionary_version', 'drug_code'], unique=False)
-        batch_op.create_index('idx_whodrug_record_search', ['dictionary_version', 'preferred_name'], unique=False)
+    with op.batch_alter_table("whodrug_records", schema=None) as batch_op:
+        batch_op.create_index(
+            "idx_whodrug_record_lookup",
+            ["dictionary_version", "drug_code"],
+            unique=False,
+        )
+        batch_op.create_index(
+            "idx_whodrug_record_search",
+            ["dictionary_version", "preferred_name"],
+            unique=False,
+        )
 
     # Backfill version_index for legacy rows to 1
-    op.execute("UPDATE lab_reference_ranges SET version_index = 1 WHERE version_index IS NULL;")
+    op.execute(
+        "UPDATE lab_reference_ranges SET version_index = 1 WHERE version_index IS NULL;"
+    )
 
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
-    with op.batch_alter_table('whodrug_records', schema=None) as batch_op:
-        batch_op.drop_index('idx_whodrug_record_search')
-        batch_op.drop_index('idx_whodrug_record_lookup')
+    with op.batch_alter_table("whodrug_records", schema=None) as batch_op:
+        batch_op.drop_index("idx_whodrug_record_search")
+        batch_op.drop_index("idx_whodrug_record_lookup")
 
-    op.drop_table('whodrug_records')
-    with op.batch_alter_table('whodrug_ingredients', schema=None) as batch_op:
-        batch_op.drop_index('idx_whodrug_ingredient_search')
-        batch_op.drop_index('idx_whodrug_ingredient_lookup')
+    op.drop_table("whodrug_records")
+    with op.batch_alter_table("whodrug_ingredients", schema=None) as batch_op:
+        batch_op.drop_index("idx_whodrug_ingredient_search")
+        batch_op.drop_index("idx_whodrug_ingredient_lookup")
 
-    op.drop_table('whodrug_ingredients')
-    with op.batch_alter_table('whodrug_drug_ingredients', schema=None) as batch_op:
-        batch_op.drop_index('idx_whodrug_drug_ing_lookup')
+    op.drop_table("whodrug_ingredients")
+    with op.batch_alter_table("whodrug_drug_ingredients", schema=None) as batch_op:
+        batch_op.drop_index("idx_whodrug_drug_ing_lookup")
 
-    op.drop_table('whodrug_drug_ingredients')
-    with op.batch_alter_table('whodrug_drug_atc', schema=None) as batch_op:
-        batch_op.drop_index('idx_whodrug_drug_atc_lookup')
+    op.drop_table("whodrug_drug_ingredients")
+    with op.batch_alter_table("whodrug_drug_atc", schema=None) as batch_op:
+        batch_op.drop_index("idx_whodrug_drug_atc_lookup")
 
-    op.drop_table('whodrug_drug_atc')
-    with op.batch_alter_table('whodrug_atc', schema=None) as batch_op:
-        batch_op.drop_index('idx_whodrug_atc_lookup')
+    op.drop_table("whodrug_drug_atc")
+    with op.batch_alter_table("whodrug_atc", schema=None) as batch_op:
+        batch_op.drop_index("idx_whodrug_atc_lookup")
 
-    op.drop_table('whodrug_atc')
-    op.drop_table('tsdv_configs')
-    op.drop_table('translation_jobs')
-    op.drop_table('synced_batch_idempotency_keys')
-    with op.batch_alter_table('subject_randomizations', schema=None) as batch_op:
-        batch_op.drop_index('idx_subject_randomization_study')
+    op.drop_table("whodrug_atc")
+    op.drop_table("tsdv_configs")
+    op.drop_table("translation_jobs")
+    op.drop_table("synced_batch_idempotency_keys")
+    with op.batch_alter_table("subject_randomizations", schema=None) as batch_op:
+        batch_op.drop_index("idx_subject_randomization_study")
 
-    op.drop_table('subject_randomizations')
-    with op.batch_alter_table('subject_consents', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_subject_consents_site_id'))
+    op.drop_table("subject_randomizations")
+    with op.batch_alter_table("subject_consents", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_subject_consents_site_id"))
 
-    op.drop_table('subject_consents')
-    with op.batch_alter_table('study_authored_rules', schema=None) as batch_op:
-        batch_op.drop_index('idx_authored_rules_study_rule')
-        batch_op.drop_index('idx_authored_rules_study_active')
+    op.drop_table("subject_consents")
+    with op.batch_alter_table("study_authored_rules", schema=None) as batch_op:
+        batch_op.drop_index("idx_authored_rules_study_rule")
+        batch_op.drop_index("idx_authored_rules_study_active")
 
-    op.drop_table('study_authored_rules')
-    op.drop_table('stratum_states')
-    op.drop_table('site_staff_members')
-    op.drop_table('site_inventories')
-    with op.batch_alter_table('site_compliance_caches', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_site_compliance_caches_study_id'))
-        batch_op.drop_index(batch_op.f('ix_site_compliance_caches_site_id'))
-        batch_op.drop_index(batch_op.f('ix_site_compliance_caches_milestone'))
+    op.drop_table("study_authored_rules")
+    op.drop_table("stratum_states")
+    op.drop_table("site_staff_members")
+    op.drop_table("site_inventories")
+    with op.batch_alter_table("site_compliance_caches", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_site_compliance_caches_study_id"))
+        batch_op.drop_index(batch_op.f("ix_site_compliance_caches_site_id"))
+        batch_op.drop_index(batch_op.f("ix_site_compliance_caches_milestone"))
 
-    op.drop_table('site_compliance_caches')
-    with op.batch_alter_table('sdv_sign_offs', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_sdv_sign_offs_site_id'))
+    op.drop_table("site_compliance_caches")
+    with op.batch_alter_table("sdv_sign_offs", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_sdv_sign_offs_site_id"))
 
-    op.drop_table('sdv_sign_offs')
-    op.drop_table('sdtm_domain_records')
-    op.drop_table('resupply_events')
-    op.drop_table('randomization_configs')
-    op.drop_table('processed_offline_batches')
-    with op.batch_alter_table('pending_predecessor_checks', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_pending_predecessor_checks_subject_id'))
-        batch_op.drop_index(batch_op.f('ix_pending_predecessor_checks_study_id'))
-        batch_op.drop_index(batch_op.f('ix_pending_predecessor_checks_site_id'))
-        batch_op.drop_index('idx_pending_pred_subject_rule')
+    op.drop_table("sdv_sign_offs")
+    op.drop_table("sdtm_domain_records")
+    op.drop_table("resupply_events")
+    op.drop_table("randomization_configs")
+    op.drop_table("processed_offline_batches")
+    with op.batch_alter_table("pending_predecessor_checks", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_pending_predecessor_checks_subject_id"))
+        batch_op.drop_index(batch_op.f("ix_pending_predecessor_checks_study_id"))
+        batch_op.drop_index(batch_op.f("ix_pending_predecessor_checks_site_id"))
+        batch_op.drop_index("idx_pending_pred_subject_rule")
 
-    op.drop_table('pending_predecessor_checks')
-    op.drop_table('migration_rules')
-    with op.batch_alter_table('meddra_terms', schema=None) as batch_op:
-        batch_op.drop_index('idx_meddra_term_search')
-        batch_op.drop_index('idx_meddra_term_lookup')
+    op.drop_table("pending_predecessor_checks")
+    op.drop_table("migration_rules")
+    with op.batch_alter_table("meddra_terms", schema=None) as batch_op:
+        batch_op.drop_index("idx_meddra_term_search")
+        batch_op.drop_index("idx_meddra_term_lookup")
 
-    op.drop_table('meddra_terms')
-    with op.batch_alter_table('meddra_hierarchies', schema=None) as batch_op:
-        batch_op.drop_index('idx_meddra_hier_lookup')
-        batch_op.drop_index('idx_meddra_hier_llt')
+    op.drop_table("meddra_terms")
+    with op.batch_alter_table("meddra_hierarchies", schema=None) as batch_op:
+        batch_op.drop_index("idx_meddra_hier_lookup")
+        batch_op.drop_index("idx_meddra_hier_llt")
 
-    op.drop_table('meddra_hierarchies')
-    with op.batch_alter_table('lab_unit_conversions', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_lab_unit_conversions_test_code'))
-        batch_op.drop_index(batch_op.f('ix_lab_unit_conversions_study_id'))
-        batch_op.drop_index('idx_lab_unit_conversion_lookup')
+    op.drop_table("meddra_hierarchies")
+    with op.batch_alter_table("lab_unit_conversions", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_lab_unit_conversions_test_code"))
+        batch_op.drop_index(batch_op.f("ix_lab_unit_conversions_study_id"))
+        batch_op.drop_index("idx_lab_unit_conversion_lookup")
 
-    op.drop_table('lab_unit_conversions')
-    with op.batch_alter_table('lab_test_masters', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_lab_test_masters_test_code'))
-        batch_op.drop_index(batch_op.f('ix_lab_test_masters_study_id'))
-        batch_op.drop_index('idx_lab_test_master_lookup')
+    op.drop_table("lab_unit_conversions")
+    with op.batch_alter_table("lab_test_masters", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_lab_test_masters_test_code"))
+        batch_op.drop_index(batch_op.f("ix_lab_test_masters_study_id"))
+        batch_op.drop_index("idx_lab_test_master_lookup")
 
-    op.drop_table('lab_test_masters')
-    with op.batch_alter_table('lab_test_master', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_lab_test_master_test_code'))
-        batch_op.drop_index(batch_op.f('ix_lab_test_master_study_id'))
-        batch_op.drop_index('idx_lab_master_legacy_lookup')
+    op.drop_table("lab_test_masters")
+    with op.batch_alter_table("lab_test_master", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_lab_test_master_test_code"))
+        batch_op.drop_index(batch_op.f("ix_lab_test_master_study_id"))
+        batch_op.drop_index("idx_lab_master_legacy_lookup")
 
-    op.drop_table('lab_test_master')
-    with op.batch_alter_table('lab_reference_ranges', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_lab_reference_ranges_test_code'))
-        batch_op.drop_index(batch_op.f('ix_lab_reference_ranges_study_id'))
-        batch_op.drop_index('idx_lab_range_lookup')
+    op.drop_table("lab_test_master")
+    with op.batch_alter_table("lab_reference_ranges", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_lab_reference_ranges_test_code"))
+        batch_op.drop_index(batch_op.f("ix_lab_reference_ranges_study_id"))
+        batch_op.drop_index("idx_lab_range_lookup")
 
-    op.drop_table('lab_reference_ranges')
-    op.drop_table('kit_dispensations')
-    op.drop_table('ip_kits')
-    with op.batch_alter_table('integration_outbox', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_integration_outbox_status'))
-        batch_op.drop_index(batch_op.f('ix_integration_outbox_event_type'))
-        batch_op.drop_index(batch_op.f('ix_integration_outbox_correlation_id'))
+    op.drop_table("lab_reference_ranges")
+    op.drop_table("kit_dispensations")
+    op.drop_table("ip_kits")
+    with op.batch_alter_table("integration_outbox", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_integration_outbox_status"))
+        batch_op.drop_index(batch_op.f("ix_integration_outbox_event_type"))
+        batch_op.drop_index(batch_op.f("ix_integration_outbox_correlation_id"))
 
-    op.drop_table('integration_outbox')
-    with op.batch_alter_table('form_submissions', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_form_submissions_site_id'))
-        batch_op.drop_index('idx_form_submissions_coords')
+    op.drop_table("integration_outbox")
+    with op.batch_alter_table("form_submissions", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_form_submissions_site_id"))
+        batch_op.drop_index("idx_form_submissions_coords")
 
-    op.drop_table('form_submissions')
-    op.drop_table('doa_delegation_records')
-    op.drop_table('doa_audit_logs')
-    op.drop_table('dictionary_import_jobs')
-    with op.batch_alter_table('consent_signatures', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_consent_signatures_site_id'))
+    op.drop_table("form_submissions")
+    op.drop_table("doa_delegation_records")
+    op.drop_table("doa_audit_logs")
+    op.drop_table("dictionary_import_jobs")
+    with op.batch_alter_table("consent_signatures", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_consent_signatures_site_id"))
 
-    op.drop_table('consent_signatures')
-    with op.batch_alter_table('consent_form_records', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_consent_form_records_subject_id'))
-        batch_op.drop_index(batch_op.f('ix_consent_form_records_site_id'))
-        batch_op.drop_index(batch_op.f('ix_consent_form_records_icf_version_id'))
+    op.drop_table("consent_signatures")
+    with op.batch_alter_table("consent_form_records", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_consent_form_records_subject_id"))
+        batch_op.drop_index(batch_op.f("ix_consent_form_records_site_id"))
+        batch_op.drop_index(batch_op.f("ix_consent_form_records_icf_version_id"))
 
-    op.drop_table('consent_form_records')
-    with op.batch_alter_table('comprehension_quiz_results', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_comprehension_quiz_results_subject_id'))
-        batch_op.drop_index(batch_op.f('ix_comprehension_quiz_results_site_id'))
-        batch_op.drop_index(batch_op.f('ix_comprehension_quiz_results_icf_version_id'))
+    op.drop_table("consent_form_records")
+    with op.batch_alter_table("comprehension_quiz_results", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_comprehension_quiz_results_subject_id"))
+        batch_op.drop_index(batch_op.f("ix_comprehension_quiz_results_site_id"))
+        batch_op.drop_index(batch_op.f("ix_comprehension_quiz_results_icf_version_id"))
 
-    op.drop_table('comprehension_quiz_results')
-    op.drop_table('compliance_change_requests')
-    with op.batch_alter_table('clinical_visits', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_clinical_visits_site_id'))
+    op.drop_table("comprehension_quiz_results")
+    op.drop_table("compliance_change_requests")
+    with op.batch_alter_table("clinical_visits", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_clinical_visits_site_id"))
 
-    op.drop_table('clinical_visits')
-    with op.batch_alter_table('clinical_subjects', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_clinical_subjects_site_id'))
+    op.drop_table("clinical_visits")
+    with op.batch_alter_table("clinical_subjects", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_clinical_subjects_site_id"))
 
-    op.drop_table('clinical_subjects')
-    with op.batch_alter_table('clinical_queries', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_clinical_queries_visit_id'))
-        batch_op.drop_index(batch_op.f('ix_clinical_queries_test_code'))
-        batch_op.drop_index(batch_op.f('ix_clinical_queries_subject_id'))
-        batch_op.drop_index(batch_op.f('ix_clinical_queries_study_id'))
-        batch_op.drop_index(batch_op.f('ix_clinical_queries_site_id'))
-        batch_op.drop_index(batch_op.f('ix_clinical_queries_observation_id'))
-        batch_op.drop_index(batch_op.f('ix_clinical_queries_field_link'))
-        batch_op.drop_index(batch_op.f('ix_clinical_queries_domain'))
-        batch_op.drop_index('idx_query_target')
+    op.drop_table("clinical_subjects")
+    with op.batch_alter_table("clinical_queries", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_clinical_queries_visit_id"))
+        batch_op.drop_index(batch_op.f("ix_clinical_queries_test_code"))
+        batch_op.drop_index(batch_op.f("ix_clinical_queries_subject_id"))
+        batch_op.drop_index(batch_op.f("ix_clinical_queries_study_id"))
+        batch_op.drop_index(batch_op.f("ix_clinical_queries_site_id"))
+        batch_op.drop_index(batch_op.f("ix_clinical_queries_observation_id"))
+        batch_op.drop_index(batch_op.f("ix_clinical_queries_field_link"))
+        batch_op.drop_index(batch_op.f("ix_clinical_queries_domain"))
+        batch_op.drop_index("idx_query_target")
 
-    op.drop_table('clinical_queries')
-    with op.batch_alter_table('clinical_observations', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_clinical_observations_site_id'))
+    op.drop_table("clinical_queries")
+    with op.batch_alter_table("clinical_observations", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_clinical_observations_site_id"))
 
-    op.drop_table('clinical_observations')
-    with op.batch_alter_table('clinical_coding_ledger', schema=None) as batch_op:
-        batch_op.drop_index('idx_coding_ledger_obs')
-        batch_op.drop_index('idx_coding_ledger_assign')
+    op.drop_table("clinical_observations")
+    with op.batch_alter_table("clinical_coding_ledger", schema=None) as batch_op:
+        batch_op.drop_index("idx_coding_ledger_obs")
+        batch_op.drop_index("idx_coding_ledger_assign")
 
-    op.drop_table('clinical_coding_ledger')
-    with op.batch_alter_table('clinical_coding_assignments', schema=None) as batch_op:
-        batch_op.drop_index('idx_coding_assign_verbatim')
-        batch_op.drop_index('idx_coding_assign_obs')
-        batch_op.drop_index('idx_coding_assign_lookup')
+    op.drop_table("clinical_coding_ledger")
+    with op.batch_alter_table("clinical_coding_assignments", schema=None) as batch_op:
+        batch_op.drop_index("idx_coding_assign_verbatim")
+        batch_op.drop_index("idx_coding_assign_obs")
+        batch_op.drop_index("idx_coding_assign_lookup")
 
-    op.drop_table('clinical_coding_assignments')
-    op.drop_table('change_approval_signatures')
-    with op.batch_alter_table('biostat_exports', schema=None) as batch_op:
-        batch_op.drop_index('idx_biostat_exports_coords')
+    op.drop_table("clinical_coding_assignments")
+    op.drop_table("change_approval_signatures")
+    with op.batch_alter_table("biostat_exports", schema=None) as batch_op:
+        batch_op.drop_index("idx_biostat_exports_coords")
 
-    op.drop_table('biostat_exports')
-    op.drop_table('audit_logs', schema='audit_schema')
-    op.drop_table('audit_ledger_seals', schema='audit_schema')
-    op.drop_table('allocation_key_metadata')
+    op.drop_table("biostat_exports")
+    op.drop_table("audit_logs", schema="audit_schema")
+    op.drop_table("audit_ledger_seals", schema="audit_schema")
+    op.drop_table("allocation_key_metadata")
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        op.execute("DROP SCHEMA IF EXISTS audit_schema")
     # ### end Alembic commands ###

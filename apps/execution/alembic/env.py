@@ -4,7 +4,7 @@ import sys
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import pool, text, inspect
+from sqlalchemy import inspect, pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 # 1. Interpret the config file for Python logging.
@@ -21,7 +21,9 @@ from apps.execution.database.models import Base  # noqa: E402
 target_metadata = Base.metadata
 
 # 4. Read connection URL from environment or fallback
-db_url = os.getenv("EXECUTION_DATABASE_URL", os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:"))
+db_url = os.getenv(
+    "EXECUTION_DATABASE_URL", os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+)
 config.set_main_option("sqlalchemy.url", db_url)
 
 
@@ -36,7 +38,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        **context_args
+        **context_args,
     )
 
     with context.begin_transaction():
@@ -52,7 +54,7 @@ def do_run_migrations(connection) -> None:
         connection=connection,
         target_metadata=target_metadata,
         render_as_batch=True,  # SQLite safe alterations
-        **context_args
+        **context_args,
     )
 
     with context.begin_transaction():
@@ -75,15 +77,19 @@ async def run_migrations_online() -> None:
             )
         # Run standard schema migrations
         await connection.run_sync(do_run_migrations)
-        
+
         # Deploy native write-protection and GxP triggers only if the target tables are already created
         has_audit_logs = await connection.run_sync(
-            lambda sc: inspect(sc).has_table("audit_logs", schema=None)
+            lambda sc: (
+                inspect(sc).has_table("audit_logs", schema="audit_schema")
+                or inspect(sc).has_table("audit_logs", schema=None)
+            )
         )
         if has_audit_logs:
             from apps.execution.database.migrate import deploy_database_triggers
+
             await deploy_database_triggers(connection, connectable.dialect.name)
-        
+
         await connection.commit()
 
     await connectable.dispose()
