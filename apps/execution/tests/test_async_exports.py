@@ -66,8 +66,10 @@ async def setup_test_db():
         async with db_manager.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
     else:
-        # For Postgres, conftest handles database creation. But we must ensure schemas are loaded
-        # and clean. Let's make sure the tables are created.
+        # If running on Postgres, ensure the engine is initialized first if not already done.
+        if db_manager.engine is None:
+            db_manager.init_db(os.environ["TEST_DATABASE_URL"])
+            initialized_here = True
         async with db_manager.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
@@ -84,8 +86,11 @@ async def setup_test_db():
             db_manager.engine = original_engine
             db_manager.session_maker = original_session_maker
     else:
-        # For postgres, conftest handles clean up of databases
-        pass
+        # For postgres, restore original states if we initialized it here
+        if initialized_here:
+            await db_manager.close()
+            db_manager.engine = original_engine
+            db_manager.session_maker = original_session_maker
 
 
 @pytest_asyncio.fixture
