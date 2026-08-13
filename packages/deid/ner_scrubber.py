@@ -3,7 +3,6 @@
 Requirements: PRD-SYS-001
 """
 
-import re
 from typing import Any
 
 import packages  # noqa: F401
@@ -15,7 +14,7 @@ class PHINameEntityScrubber:
     Requirements: PRD-SYS-001
     """
 
-    # HIPAA 18 PHI regex pattern rules
+    # HIPAA 18 PHI regex pattern rules (kept for backwards compatibility metadata)
     _PATTERNS = {
         "SSN": r"\b\d{3}-\d{2}-\d{4}\b",
         "EMAIL": r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",
@@ -36,75 +35,44 @@ class PHINameEntityScrubber:
         Returns:
             List of detected PHI entity dicts containing type, text, start, and end indices.
         """
-        entities: list[dict[str, Any]] = []
+        from packages.deid.detector import DeidDetector
+        from packages.deid.models import ComplianceProfile, DetectorCategory
 
-        # 1. Match standard HIPAA regex patterns
-        for entity_type, pattern in self._PATTERNS.items():
-            for match in re.finditer(pattern, text, re.IGNORECASE):
-                entities.append(
-                    {
-                        "entity_type": entity_type,
-                        "text": match.group(0),
-                        "start_char": match.start(),
-                        "end_char": match.end(),
-                        "confidence": 0.99,
-                    }
-                )
+        legacy_type_map = {
+            DetectorCategory.EMAIL: "EMAIL",
+            DetectorCategory.TELEPHONE_FAX: "PHONE",
+            DetectorCategory.SSN_NATIONAL_ID: "SSN",
+            DetectorCategory.DATES: "DOB",
+            DetectorCategory.MEDICAL_RECORD_ACCOUNT: "MRN",
+            DetectorCategory.ZIP_GEOGRAPHIC: "ZIP_GEOGRAPHIC",
+            DetectorCategory.URLS: "URLS",
+            DetectorCategory.IP_MAC_ADDRESSES: "IP_MAC_ADDRESSES",
+            DetectorCategory.AGE: "AGE",
+            DetectorCategory.CUSTOM: "CUSTOM",
+            DetectorCategory.HEALTH_PLAN_BENEFICIARY: "HEALTH_PLAN_BENEFICIARY",
+            DetectorCategory.CERTIFICATE_LICENSE: "CERTIFICATE_LICENSE",
+            DetectorCategory.VEHICLE_IDENTIFIERS: "VEHICLE_IDENTIFIERS",
+            DetectorCategory.DEVICE_SERIAL: "DEVICE_SERIAL",
+        }
 
-        # 2. Match custom terms (if provided)
-        if custom_terms:
-            valid_terms = [t for t in custom_terms if t and t.strip()]
-            if valid_terms:
-                # Sort descending to match longer strings first
-                valid_terms.sort(key=len, reverse=True)
-                patterns = []
-                for term in valid_terms:
-                    escaped = re.escape(term)
-                    start_b = r"\b" if re.match(r"^\w", term) else ""
-                    end_b = r"\b" if re.search(r"\w$", term) else ""
-                    patterns.append(f"{start_b}{escaped}{end_b}")
-
-                custom_regex = re.compile("|".join(patterns), re.IGNORECASE)
-                for match in custom_regex.finditer(text):
-                    entities.append(
-                        {
-                            "entity_type": "CUSTOM",
-                            "text": match.group(0),
-                            "start_char": match.start(),
-                            "end_char": match.end(),
-                            "confidence": 0.99,
-                        }
-                    )
-
-        # 3. Deterministic Overlap Resolution
-        # Sort sequence:
-        # 1. start_char index (ascending)
-        # 2. end_char index (descending - wider intervals prioritized)
-        # 3. entity_type (alphabetically)
-        # 4. Match length (descending)
-        entities.sort(
-            key=lambda x: (
-                x["start_char"],
-                -x["end_char"],
-                x["entity_type"],
-                -len(x["text"]),
-            )
+        detector = DeidDetector()
+        results = detector.detect(
+            text, profile=ComplianceProfile.HIPAA, custom_terms=custom_terms
         )
 
-        # Resolve overlapping intervals, discarding subordinate/nested overlaps
-        accepted: list[dict[str, Any]] = []
-        for candidate in entities:
-            overlap = False
-            for acc in accepted:
-                if max(candidate["start_char"], acc["start_char"]) < min(
-                    candidate["end_char"], acc["end_char"]
-                ):
-                    overlap = True
-                    break
-            if not overlap:
-                accepted.append(candidate)
-
-        return accepted
+        entities: list[dict[str, Any]] = []
+        for r in results:
+            etype = legacy_type_map.get(r.category, r.category.upper())
+            entities.append(
+                {
+                    "entity_type": etype,
+                    "text": r.value,
+                    "start_char": r.start,
+                    "end_char": r.end,
+                    "confidence": 0.99,
+                }
+            )
+        return entities
 
     def scrub_phi(
         self,

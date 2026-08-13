@@ -18,6 +18,10 @@ class DetectorCategory(StrEnum):
     MEDICAL_RECORD_ACCOUNT = "medical_record_account"
     AGE = "age"
     CUSTOM = "custom"
+    HEALTH_PLAN_BENEFICIARY = "health_plan_beneficiary"
+    CERTIFICATE_LICENSE = "certificate_license"
+    VEHICLE_IDENTIFIERS = "vehicle_identifiers"
+    DEVICE_SERIAL = "device_serial"
 
 
 class ComplianceProfile(StrEnum):
@@ -43,6 +47,10 @@ PROFILE_CATEGORIES = {
         DetectorCategory.MEDICAL_RECORD_ACCOUNT,
         DetectorCategory.AGE,
         DetectorCategory.CUSTOM,
+        DetectorCategory.HEALTH_PLAN_BENEFICIARY,
+        DetectorCategory.CERTIFICATE_LICENSE,
+        DetectorCategory.VEHICLE_IDENTIFIERS,
+        DetectorCategory.DEVICE_SERIAL,
     },
     ComplianceProfile.GDPR: {
         DetectorCategory.EMAIL,
@@ -55,6 +63,10 @@ PROFILE_CATEGORIES = {
         DetectorCategory.MEDICAL_RECORD_ACCOUNT,
         DetectorCategory.AGE,
         DetectorCategory.CUSTOM,
+        DetectorCategory.HEALTH_PLAN_BENEFICIARY,
+        DetectorCategory.CERTIFICATE_LICENSE,
+        DetectorCategory.VEHICLE_IDENTIFIERS,
+        DetectorCategory.DEVICE_SERIAL,
     },
     ComplianceProfile.EU_CTR: {
         # CTR focuses on patient anonymity in clinical trials: removing direct clinical trial patient identifiers
