@@ -121,18 +121,18 @@ def _parse_date_string(date_str: str) -> date | None:
 def calculate_age(
     birthdate: date | datetime | str | None,
     observation_date: date | datetime | str | None,
-) -> int | None:
-    """Calculate subject's completed years of age relative to the observation date.
+) -> float | None:
+    """Calculate subject's precise decimal age relative to the observation date.
 
     Handles boundary dates such as birthdays on, before, or after the observation date.
-    Returns None on malformed, missing, or future birthday inputs.
+    Returns decimal age based on exact calendar days, or None if safe derivation fails.
 
     Args:
         birthdate (Union[date, datetime, str, None]): The subject's birthdate.
         observation_date (Union[date, datetime, str, None]): The date of observation.
 
     Returns:
-        Optional[int]: Derived age in completed years, or None if safe derivation fails.
+        Optional[float]: Derived decimal age, or None if safe derivation fails.
     """
     if not birthdate or not observation_date:
         return None
@@ -162,16 +162,8 @@ def calculate_age(
         if b_dt is None or o_dt is None:
             return None
 
-        # Secure check: if birthday is in the future relative to observation
-        if o_dt < b_dt:
-            logger.warning(
-                "Observation date occurs before the subject birthdate. Cannot derive valid age."
-            )
-            return None
-
-        # Completed age calculation taking leap years and exact calendar day into account
-        # ((o_dt.month, o_dt.day) < (b_dt.month, b_dt.day)) is True (1) if birthday has not yet occurred in the observation year
-        return o_dt.year - b_dt.year - ((o_dt.month, o_dt.day) < (b_dt.month, b_dt.day))
+        # Compute exact calendar-day subtraction as a precise decimal float
+        return (o_dt - b_dt).days / 365.25
 
     except Exception:
         # Log generic error strictly without exposing sensitive birthdate inputs

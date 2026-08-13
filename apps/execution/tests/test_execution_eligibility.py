@@ -217,7 +217,7 @@ async def test_ecrf_context_builder_demographics_and_precedence():
 
         # Assert AGE computed correctly relative to observation date (approx 26 years)
         assert "eCRF.DM.AGE" in context
-        assert context["eCRF.DM.AGE"] == 26
+        assert context["eCRF.DM.AGE"] == pytest.approx(26.0, abs=1e-2)
         assert context["eCRF.DM.SEX"] == "M"
 
         # Assert correct highest precedence observation wins

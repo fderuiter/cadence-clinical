@@ -1501,3 +1501,51 @@ async def test_lab_reference_range_synonyms_and_audit():
 
     finally:
         await db_manager.close()
+
+
+def test_negative_age_matching():
+    """Verify that a negative decimal age (e.g. -0.25) matches correctly against reference ranges with negative bounds.
+
+    @req:PRD-LAB-005
+    """
+    study = "STUDY-123"
+    tcode = "WBC"
+    unit = "10^9/L"
+
+    # Define reference ranges:
+    # 1. Prenatal range: -0.5 to 0.0 years
+    r_prenatal = create_mock_range(
+        id="prenatal",
+        test_code=tcode,
+        normalized_unit=unit,
+        source="CENTRAL",
+        age_low=-0.5,
+        age_high=0.0,
+    )
+    # 2. Infant/neonatal range: 0.0 to 1.0 years
+    r_infant = create_mock_range(
+        id="infant",
+        test_code=tcode,
+        normalized_unit=unit,
+        source="CENTRAL",
+        age_low=0.0,
+        age_high=1.0,
+    )
+    # 3. Adult range: 18.0 to 100.0 years
+    r_adult = create_mock_range(
+        id="adult",
+        test_code=tcode,
+        normalized_unit=unit,
+        source="CENTRAL",
+        age_low=18.0,
+        age_high=100.0,
+    )
+
+    ranges = [r_prenatal, r_infant, r_adult]
+
+    # Matching for a prenatal subject with decimal age -0.25 years
+    matched = select_reference_range(
+        ranges, study, tcode, unit, "CENTRAL", sex="F", age=-0.25, site_id=None
+    )
+    assert matched is not None
+    assert matched["id"] == "prenatal"
