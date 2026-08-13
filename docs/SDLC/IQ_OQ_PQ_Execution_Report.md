@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2393
-- **Passed:** 2374 🟢
+- **Total Automated Test Cases Run:** 2395
+- **Passed:** 2376 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.21%
@@ -1024,8 +1024,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_edc_concurrent_review_locks`                                                      | `apps.execution.tests.test_execution_compliance`                            | PRD-EDC-009                                  | 🟢 PASSED  | < 1s     |
 | `test_edc_electronic_signatures`                                                        | `apps.execution.tests.test_execution_compliance`                            | PRD-SYS-001                                  | 🟢 PASSED  | < 1s     |
 | `test_edc_reconsent_and_versioning`                                                     | `apps.execution.tests.test_execution_compliance`                            | PRD-SUB-007                                  | 🟢 PASSED  | < 1s     |
+| `test_event_driven_site_compliance_cache`                                               | `apps.execution.tests.test_execution_compliance`                            | PRD-EDL-001                                  | 🟢 PASSED  | < 1s     |
 | `test_fda_compliant_pdf_generation_econsent`                                            | `apps.execution.tests.test_execution_compliance`                            | PRD-SUB-007                                  | 🟢 PASSED  | < 1s     |
 | `test_query_lifecycle_states`                                                           | `apps.execution.tests.test_execution_compliance`                            | PRD-QRY-001                                  | 🟢 PASSED  | < 1s     |
+| `test_subject_enrollment_blocking`                                                      | `apps.execution.tests.test_execution_compliance`                            | PRD-EDL-001                                  | 🟢 PASSED  | < 1s     |
 | `test_submission_archival_integration`                                                  | `apps.execution.tests.test_execution_compliance`                            | PRD-SUB-006                                  | 🟢 PASSED  | < 1s     |
 | `test_submission_audit_trail`                                                           | `apps.execution.tests.test_execution_compliance`                            | PRD-SUB-004                                  | 🟢 PASSED  | < 1s     |
 | `test_submission_e_signatures`                                                          | `apps.execution.tests.test_execution_compliance`                            | PRD-SUB-003                                  | 🟢 PASSED  | < 1s     |

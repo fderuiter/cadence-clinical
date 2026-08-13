@@ -72,6 +72,7 @@ _submodule_mappings = {
     # compliance
     "ComplianceChangeRequest": "compliance",
     "ChangeApprovalSignature": "compliance",
+    "SiteComplianceCache": "compliance",
     # sync
     "SyncedBatchIdempotencyKey": "sync",
     "ProcessedOfflineBatch": "sync",
