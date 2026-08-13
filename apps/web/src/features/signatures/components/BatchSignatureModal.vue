@@ -139,7 +139,8 @@
             style="color: #475569; margin-bottom: 16px; line-height: 1.4"
           >
             You are signing <strong>{{ selectedForms.length }}</strong> eCRF
-            forms for Subject <strong>{{ subjectId }}</strong>.
+            forms for Subject <strong>{{ subjectId }}</strong
+            >.
           </p>
 
           <!-- Form Summary Table (Step 1) -->
@@ -452,7 +453,6 @@ onMounted(() => {
 
 const handleExecuteSign = async () => {
   const pVal = password.value;
-  const tVal = totp.value;
 
   // IMMEDIATELY purge credentials from state to satisfy zero-leak memory requirements
   password.value = "";

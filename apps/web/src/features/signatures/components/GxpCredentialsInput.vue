@@ -141,7 +141,12 @@ defineProps({
   },
 });
 
-defineEmits(["update:username", "update:password", "update:totp", "keyup-enter"]);
+defineEmits([
+  "update:username",
+  "update:password",
+  "update:totp",
+  "keyup-enter",
+]);
 </script>
 
 <style scoped>
