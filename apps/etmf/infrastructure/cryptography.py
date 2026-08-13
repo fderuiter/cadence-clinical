@@ -103,23 +103,41 @@ def extract_signature_from_content(
 
         if cert_match:
             cert_pem = cert_match.group(1).strip()
-            if not allow_mock and "mock" in cert_pem.lower() and not is_mock_allowed():
+            is_mock_cert = False
+            if "mock" in cert_pem.lower():
+                try:
+                    parsed_cert = x509.load_pem_x509_certificate(
+                        cert_pem.encode("utf-8")
+                    )
+                    subject_str = parsed_cert.subject.rfc4514_string().lower()
+                    issuer_str = parsed_cert.issuer.rfc4514_string().lower()
+                    if "mock" in subject_str or "mock" in issuer_str:
+                        is_mock_cert = True
+                except Exception:
+                    is_mock_cert = True
+
+            if not allow_mock and is_mock_cert and not is_mock_allowed():
                 raise ValueError("Mock signature detected and blocked.")
 
             sig_bytes = None
             if sig_match:
                 sig_str = sig_match.group(1).strip()
-                if (
-                    not allow_mock
-                    and "mock" in sig_str.lower()
-                    and not is_mock_allowed()
-                ):
-                    raise ValueError("Mock signature detected and blocked.")
                 try:
                     sig_bytes = base64.b64decode(sig_str)
                 except Exception:
                     with contextlib.suppress(Exception):
                         sig_bytes = bytes.fromhex(sig_str)
+
+                is_mock_sig = False
+                if "mock" in sig_str.lower():
+                    if sig_bytes is None or len(sig_bytes) < 64:
+                        is_mock_sig = True
+                    else:
+                        if b"MOCK" in sig_bytes or b"mock" in sig_bytes:
+                            is_mock_sig = True
+
+                if not allow_mock and is_mock_sig and not is_mock_allowed():
+                    raise ValueError("Mock signature detected and blocked.")
 
             signed_data = content
             signed_data = re.sub(
@@ -146,7 +164,22 @@ def extract_signature_from_content(
 
         if cert_match:
             cert_body = cert_match.group(1).strip()
-            if not allow_mock and "mock" in cert_body.lower() and not is_mock_allowed():
+            is_mock_cert = False
+            if "mock" in cert_body.lower():
+                try:
+                    parsed_cert = x509.load_pem_x509_certificate(
+                        cert_body.encode("utf-8")
+                        if "-----BEGIN CERTIFICATE-----" in cert_body
+                        else f"-----BEGIN CERTIFICATE-----\n{cert_body}\n-----END CERTIFICATE-----".encode()
+                    )
+                    subject_str = parsed_cert.subject.rfc4514_string().lower()
+                    issuer_str = parsed_cert.issuer.rfc4514_string().lower()
+                    if "mock" in subject_str or "mock" in issuer_str:
+                        is_mock_cert = True
+                except Exception:
+                    is_mock_cert = True
+
+            if not allow_mock and is_mock_cert and not is_mock_allowed():
                 raise ValueError("Mock signature detected and blocked.")
 
             if "-----BEGIN CERTIFICATE-----" not in cert_body:
@@ -157,17 +190,22 @@ def extract_signature_from_content(
             sig_bytes = None
             if sig_match:
                 sig_str = sig_match.group(1).strip()
-                if (
-                    not allow_mock
-                    and "mock" in sig_str.lower()
-                    and not is_mock_allowed()
-                ):
-                    raise ValueError("Mock signature detected and blocked.")
                 try:
                     sig_bytes = base64.b64decode(sig_str)
                 except Exception:
                     with contextlib.suppress(Exception):
                         sig_bytes = bytes.fromhex(sig_str)
+
+                is_mock_sig = False
+                if "mock" in sig_str.lower():
+                    if sig_bytes is None or len(sig_bytes) < 64:
+                        is_mock_sig = True
+                    else:
+                        if b"MOCK" in sig_bytes or b"mock" in sig_bytes:
+                            is_mock_sig = True
+
+                if not allow_mock and is_mock_sig and not is_mock_allowed():
+                    raise ValueError("Mock signature detected and blocked.")
 
             signed_data = content
             signed_data = re.sub(
@@ -348,12 +386,30 @@ def validate_document_signature(
 
     if is_strict and not is_mock_allowed():
         if cert_pem and "mock" in cert_pem.lower():
-            return False, "Mock signature detected and blocked."
+            is_mock_cert = False
+            try:
+                parsed_cert = x509.load_pem_x509_certificate(cert_pem.encode("utf-8"))
+                subject_str = parsed_cert.subject.rfc4514_string().lower()
+                issuer_str = parsed_cert.issuer.rfc4514_string().lower()
+                if "mock" in subject_str or "mock" in issuer_str:
+                    is_mock_cert = True
+            except Exception:
+                is_mock_cert = True
+            if is_mock_cert:
+                return False, "Mock signature detected and blocked."
+
         if sig_bytes:
             try:
                 sig_str_check = sig_bytes.decode("utf-8", errors="ignore").lower()
                 if "mock" in sig_str_check:
-                    return False, "Mock signature detected and blocked."
+                    is_mock_sig = False
+                    if len(sig_bytes) < 64:
+                        is_mock_sig = True
+                    else:
+                        if b"MOCK" in sig_bytes or b"mock" in sig_bytes:
+                            is_mock_sig = True
+                    if is_mock_sig:
+                        return False, "Mock signature detected and blocked."
             except Exception:
                 pass
 
