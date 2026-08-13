@@ -1,137 +1,228 @@
 import os
+import re
 import sys
-import types
-from typing import Any, Union, get_args, get_origin
+import time
+from pathlib import Path
 
-from pydantic import BaseModel
+# Absolute paths
+REPO_ROOT = Path(__file__).resolve().parent.parent
+TS_FILE = REPO_ROOT / "packages" / "usdm-schemas" / "src" / "index.ts"
+PY_FILE = REPO_ROOT / "apps" / "designer" / "domain" / "cdisc" / "usdm_models.py"
 
-# Ensure we can import apps
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from apps.designer.domain.cdisc.usdm_models import (
-    Activity,
-    Code,
-    EligibilityCriterion,
-    Encounter,
-    StudyArm,
-    StudyDesign,
-    StudyEpoch,
-    SyntaxTemplate,
-    USDMStudy,
-)
-
-MODELS = [
-    Code,
-    SyntaxTemplate,
-    EligibilityCriterion,
-    Activity,
-    Encounter,
-    StudyArm,
-    StudyEpoch,
-    StudyDesign,
-    USDMStudy,
-]
+DOCSTRINGS = {
+    "Code": "USDM Code / Concept representation.",
+    "SyntaxTemplate": "Syntax template definition for rules and eligibility criteria.",
+    "EligibilityCriterion": "Eligibility criterion (Inclusion or Exclusion).",
+    "Activity": "Study activity or procedure definition.",
+    "Encounter": "Study encounter / visit definition.",
+    "StudyArm": "Study arm definition.",
+    "StudyEpoch": "Study epoch definition.",
+    "StudyDesign": "Study design containing arms, epochs, encounters, activities, and criteria.",
+    "USDMStudy": "Root USDM protocol study specification container.",
+}
 
 
-def python_type_to_zod(py_type: Any) -> str:
-    origin = get_origin(py_type)
-    args = get_args(py_type)
+def camel_to_snake(name: str) -> str:
+    """Convert camelCase to snake_case."""
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
 
-    if origin is Union or origin is types.UnionType:
-        # Check if None is in the Union (Optional)
-        non_none_args = [arg for arg in args if arg is not type(None)]
-        if len(non_none_args) == 1:
-            zod_base = python_type_to_zod(non_none_args[0])
-            return f"{zod_base}.nullable().optional()"
-        union_schemas = [python_type_to_zod(arg) for arg in non_none_args]
-        zod_base = f"z.union([{', '.join(union_schemas)}])"
-        if type(None) in args:
-            return f"{zod_base}.nullable().optional()"
-        return zod_base
 
-    if origin is list or py_type is list:
-        if args:
-            inner_type = args[0]
-            if inner_type is Any:
-                return "z.array(z.any())"
-            return f"z.array({python_type_to_zod(inner_type)})"
-        return "z.array(z.any())"
+def get_python_field_info(field_name: str, zod_type: str) -> str:
+    """Translate TS field name and Zod type into Python field string."""
+    # 1. Convert field_name to snake_case
+    py_field_name = camel_to_snake(field_name)
+    has_alias = py_field_name != field_name
 
-    if origin is dict or py_type is dict:
-        return "z.record(z.any())"
+    # 2. Extract base type and modifiers
+    is_list = "z.array(" in zod_type
+    is_dict = "z.record(" in zod_type
+    is_nullable = ".nullable()" in zod_type or ".optional()" in zod_type
 
-    if py_type is str:
-        return "z.string()"
-    if py_type is int:
-        return "z.number().int()"
-    if py_type is float:
-        return "z.number()"
-    if py_type is bool:
-        return "z.boolean()"
-    if py_type is Any:
-        return "z.any()"
+    # Check default value
+    default_val = None
+    default_match = re.search(r"\.default\((.*?)\)", zod_type)
+    if default_match:
+        default_val = default_match.group(1).strip()
 
-    if isinstance(py_type, type) and issubclass(py_type, BaseModel):
-        return f"{py_type.__name__}Schema"
+    # Extract base type name
+    if is_list:
+        inner_match = re.search(r"z\.array\((.*?)\)", zod_type)
+        inner_zod = inner_match.group(1).strip() if inner_match else "z.any()"
+        if "z.string" in inner_zod:
+            inner_type = "str"
+        elif "z.record" in inner_zod:
+            inner_type = "dict[str, Any]"
+        elif "Schema" in inner_zod:
+            inner_type = inner_zod.replace("Schema", "")
+        else:
+            inner_type = "Any"
+        py_type = f"list[{inner_type}]"
+    elif is_dict:
+        py_type = "dict[str, Any]"
+    elif "z.string" in zod_type:
+        py_type = "str"
+    elif "z.number().int" in zod_type:
+        py_type = "int"
+    elif "z.number" in zod_type:
+        py_type = "float"
+    elif "z.boolean" in zod_type:
+        py_type = "bool"
+    elif "z.any" in zod_type:
+        py_type = "Any"
+    elif "Schema" in zod_type:
+        schema_match = re.search(r"(\w+)Schema", zod_type)
+        base_schema = schema_match.group(1) if schema_match else "Any"
+        py_type = base_schema
+    else:
+        py_type = "Any"
 
-    return "z.any()"
+    if is_nullable:
+        py_type = f"{py_type} | None"
+
+    # Construct default value expression
+    field_args = []
+
+    if is_list:
+        field_args.append("default_factory=list")
+    elif default_val is not None:
+        if default_val == "[]":
+            field_args.append("default_factory=list")
+        else:
+            field_args.append(f"default={default_val}")
+    elif is_nullable:
+        field_args.append("default=None")
+
+    if has_alias:
+        field_args.append(f'alias="{field_name}"')
+
+    # Specific description for criterionType
+    if py_field_name == "criterion_type":
+        field_args.append('description="Inclusion or Exclusion"')
+
+    if field_args:
+        if len(field_args) == 1 and field_args[0] == "default=None":
+            default_expr = " = None"
+        else:
+            default_expr = f" = Field({', '.join(field_args)})"
+    else:
+        default_expr = ""
+
+    return f"    {py_field_name}: {py_type}{default_expr}"
+
+
+def compile_schemas():
+    """Parse TS Zod schemas and compile them to Python BaseModel definitions."""
+    if not TS_FILE.exists():
+        print(f"Error: {TS_FILE} does not exist.", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"Reading TypeScript schemas from {TS_FILE}...")
+    with open(TS_FILE, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Match: export const <Model>Schema = z.object({ ... });
+    pattern = re.compile(r"export const (\w+)Schema\s*=\s*z\.object\(\{([\s\S]*?)\}\);")
+    matches = pattern.findall(content)
+
+    if not matches:
+        print("Warning: No Schema matches found in the TypeScript file.")
+
+    classes_code = []
+
+    for model_name, fields_block in matches:
+        docstring = DOCSTRINGS.get(model_name, f"USDM {model_name} schema.")
+        field_lines = []
+
+        lines = fields_block.strip().split("\n")
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            if ":" not in line:
+                continue
+            field_name, zod_type = line.split(":", 1)
+            field_name = field_name.strip()
+            zod_type = zod_type.strip()
+            if zod_type.endswith(","):
+                zod_type = zod_type[:-1].strip()
+
+            field_code = get_python_field_info(field_name, zod_type)
+            field_lines.append(field_code)
+
+        fields_str = "\n".join(field_lines)
+
+        class_template = f"""class {model_name}(BaseModel):
+    \"\"\"{docstring}\"\"\"
+
+    model_config = ConfigDict(
+        populate_by_name=True, extra="ignore", frozen=True, validate_assignment=True
+    )
+
+{fields_str}"""
+        classes_code.append(class_template)
+
+    classes_section = "\n\n\n".join(classes_code)
+
+    file_template = f"""# This file is auto-generated from packages/usdm-schemas/src/index.ts.
+# DO NOT EDIT DIRECTLY.
+\"\"\"CDISC USDM v2.0 and v3.0 Pydantic v2 data models.
+
+Provides strictly-typed objects representing the Unified Study Data Model (USDM)
+protocol graph structure, including study designs, encounters, activities, and
+eligibility criteria.
+
+Requirements: PRD-SYS-001
+\"\"\"
+
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+{classes_section}
+"""
+
+    PY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(PY_FILE, "w", encoding="utf-8") as f:
+        f.write(file_template)
+
+    print(f"Successfully generated Python classes at {PY_FILE}")
+
+    # Run formatting via subprocess
+    try:
+        import subprocess
+
+        # Format
+        subprocess.run(["uv", "run", "ruff", "format", str(PY_FILE)], check=True)
+        # Fix imports/lint issues
+        subprocess.run(
+            ["uv", "run", "ruff", "check", str(PY_FILE), "--fix"], check=False
+        )
+        print("Formatted and lint-checked with ruff.")
+    except Exception as e:
+        print(f"Warning: Failed to format/check with ruff: {e}")
 
 
 def main():
-    output_dir = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "../packages/usdm-schemas/src")
-    )
-    os.makedirs(output_dir, exist_ok=True)
-    output_file = os.path.join(output_dir, "index.ts")
-
-    lines = []
-    lines.append(
-        "// This file is auto-generated from Python USDM models. DO NOT EDIT DIRECTLY."
-    )
-    lines.append('import { z } from "zod";')
-    lines.append("")
-
-    for model in MODELS:
-        name = model.__name__
-        lines.append(f"export const {name}Schema = z.object({{")
-        for field_name, field_info in model.model_fields.items():
-            # Use alias if defined (for camelCase alignment with serialized API JSON payloads)
-            target_name = field_info.alias if field_info.alias else field_name
-            zod_type = python_type_to_zod(field_info.annotation)
-
-            # Check if there is a default or default_factory
-            has_default = (
-                field_info.default is not None and field_info.default is not ...
-            ) or field_info.default_factory is not None
-
-            # Special default matching for lists or empty structures if needed
-            if zod_type.startswith("z.array"):
-                lines.append(f"  {target_name}: {zod_type}.default([]),")
-            elif has_default:
-                default_val = field_info.default
-                if isinstance(default_val, str):
-                    lines.append(
-                        f'  {target_name}: {zod_type}.default("{default_val}"),'
-                    )
-                elif isinstance(default_val, bool):
-                    lines.append(
-                        f"  {target_name}: {zod_type}.default({str(default_val).lower()}),"
-                    )
-                elif isinstance(default_val, (int, float)):
-                    lines.append(f"  {target_name}: {zod_type}.default({default_val}),")
-                else:
-                    lines.append(f"  {target_name}: {zod_type},")
-            else:
-                lines.append(f"  {target_name}: {zod_type},")
-
-        lines.append("});")
-        lines.append(f"export type {name} = z.infer<typeof {name}Schema>;")
-        lines.append("")
-
-    with open(output_file, "w") as f:
-        f.write("\n".join(lines))
-
-    print(f"Successfully generated Zod schemas and TypeScript types at: {output_file}")
+    if "--watch" in sys.argv:
+        print(f"Watching {TS_FILE} for changes...")
+        last_mtime = TS_FILE.stat().st_mtime if TS_FILE.exists() else 0
+        while True:
+            try:
+                mtime = TS_FILE.stat().st_mtime if TS_FILE.exists() else 0
+                if mtime != last_mtime:
+                    print("Change detected, recompiling...")
+                    compile_schemas()
+                    last_mtime = mtime
+                time.sleep(0.5)
+            except KeyboardInterrupt:
+                print("\nWatch stopped.")
+                break
+            except Exception as e:
+                print(f"Error in watch loop: {e}")
+                time.sleep(1)
+    else:
+        compile_schemas()
 
 
 if __name__ == "__main__":

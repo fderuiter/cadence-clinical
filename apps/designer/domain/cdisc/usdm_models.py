@@ -1,3 +1,5 @@
+# This file is auto-generated from packages/usdm-schemas/src/index.ts.
+# DO NOT EDIT DIRECTLY.
 """CDISC USDM v2.0 and v3.0 Pydantic v2 data models.
 
 Provides strictly-typed objects representing the Unified Study Data Model (USDM)

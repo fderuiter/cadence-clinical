@@ -1,4 +1,4 @@
-// This file is auto-generated from Python USDM models. DO NOT EDIT DIRECTLY.
+// Clinical study schema source of truth. Edit this file to update the schema definitions.
 import { z } from "zod";
 
 export const CodeSchema = z.object({
