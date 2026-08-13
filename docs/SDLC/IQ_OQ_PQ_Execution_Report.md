@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2387
-- **Passed:** 2368 🟢
+- **Total Automated Test Cases Run:** 2388
+- **Passed:** 2369 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.20%
@@ -814,6 +814,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_advs_date_and_visit_fallback`                                                | `apps.execution.tests.test_advs`                                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_advs_missing_baseline_behavior`                                              | `apps.execution.tests.test_advs`                                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_advs_no_coercion_of_missing_numeric_values`                                  | `apps.execution.tests.test_advs`                                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_endpoints_offload_to_threadpool`                                             | `apps.execution.tests.test_anonymization_router`                            | PRD-SYS-001                                  | 🟢 PASSED  | < 1s     |
 | `test_redact_pdf_post_endpoint`                                                    | `apps.execution.tests.test_anonymization_router`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_scan_phi_post_endpoint`                                                      | `apps.execution.tests.test_anonymization_router`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_batch_sign_off_all_locks`                                                    | `apps.execution.tests.test_batch_sign_off`                                  | Trace-14                                     | 🟢 PASSED  | < 1s     |
