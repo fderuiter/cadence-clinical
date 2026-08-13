@@ -660,7 +660,12 @@ export async function saveDraft(assignmentId, answers) {
   }
   try {
     const aad = new TextEncoder().encode(assignmentId);
-    const encryptedAnswers = await encryptAESGCM(answers, inMemorySessionKey, 1, aad);
+    const encryptedAnswers = await encryptAESGCM(
+      answers,
+      inMemorySessionKey,
+      1,
+      aad
+    );
     const db = await openDatabase();
     return new Promise((resolve, reject) => {
       const tx = db.transaction("drafts", "readwrite");
@@ -668,7 +673,7 @@ export async function saveDraft(assignmentId, answers) {
       store.put({
         assignment_id: assignmentId,
         answers: encryptedAnswers,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       });
       tx.oncomplete = () => {
         resolve();
@@ -707,7 +712,12 @@ export async function getDraft(assignmentId) {
     }
 
     const aad = new TextEncoder().encode(assignmentId);
-    const decryptedAnswers = await decryptAESGCM(draft.answers, inMemorySessionKey, 1, aad);
+    const decryptedAnswers = await decryptAESGCM(
+      draft.answers,
+      inMemorySessionKey,
+      1,
+      aad
+    );
     return decryptedAnswers;
   } catch (err) {
     console.error("Failed to decrypt or retrieve draft:", err);
