@@ -22,6 +22,9 @@ import {
   getInstrumentsFromDB,
   getInstrumentFromDB,
   bulkUpdateSubmissionStatuses,
+  saveDraft,
+  getDraft,
+  deleteDraft,
 } from "../sync-queue.js";
 
 describe("sync-queue secure storage and sync capabilities", () => {
@@ -274,5 +277,74 @@ describe("sync-queue secure storage and sync capabilities", () => {
         { sequence_number: 999, status: "SUBMITTED" },
       ])
     ).rejects.toThrow("Submission 999 not found");
+  });
+
+  it("should warn and return null on saveDraft if session key is missing", async () => {
+    clearInMemoryKey();
+    clearSessionKey();
+    const result = await saveDraft("assign_missing", { sample: "test" });
+    expect(result).toBeNull();
+  });
+
+  it("should warn and return null on getDraft if session key is missing", async () => {
+    clearInMemoryKey();
+    clearSessionKey();
+    const result = await getDraft("assign_missing");
+    expect(result).toBeNull();
+  });
+
+  it("should successfully save, retrieve, and delete drafts when key is present", async () => {
+    const rawMaterial = new Uint8Array(32);
+    for (let i = 0; i < 32; i++) rawMaterial[i] = i;
+    await initSessionKey(rawMaterial);
+
+    const answers = { some_question: "some_typed_value" };
+    await saveDraft("assign_draft_01", answers);
+
+    const retrieved = await getDraft("assign_draft_01");
+    expect(retrieved).toEqual(answers);
+
+    // Get non-existent draft
+    const nonExistent = await getDraft("assign_draft_none");
+    expect(nonExistent).toBeNull();
+
+    await deleteDraft("assign_draft_01");
+    const afterDelete = await getDraft("assign_draft_01");
+    expect(afterDelete).toBeNull();
+  });
+
+  it("should handle decryption failure or invalid session key cleanly for drafts", async () => {
+    const rawMaterial = new Uint8Array(32);
+    for (let i = 0; i < 32; i++) rawMaterial[i] = i;
+    await initSessionKey(rawMaterial);
+
+    await saveDraft("assign_draft_02", { secret: "info" });
+
+    // Switch key to invalid
+    const differentKey = new Uint8Array(32);
+    differentKey.fill(9);
+    await initSessionKey(differentKey);
+
+    const failGet = await getDraft("assign_draft_02");
+    expect(failGet).toBeNull();
+  });
+
+  it("should handle database errors on draft operations gracefully", async () => {
+    const originalOpen = indexedDB.open;
+    indexedDB.open = () => {
+      throw new Error("Simulated DB open failure");
+    };
+
+    try {
+      const saveRes = await saveDraft("any_id", { a: 1 });
+      expect(saveRes).toBeNull();
+
+      const getRes = await getDraft("any_id");
+      expect(getRes).toBeNull();
+
+      await deleteDraft("any_id");
+    } finally {
+      indexedDB.open = originalOpen;
+    }
   });
 });

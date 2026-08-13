@@ -3,6 +3,7 @@ import { reactive, createApp, watch, nextTick } from "vue";
 import App from "./App.vue";
 import {
   buildLedgerBlock,
+  debounce,
   validateField,
   normalizeApprovedConsent,
   shapeComprehensionAnswers,
@@ -30,6 +31,9 @@ import {
   saveInstrumentsToDB,
   getInstrumentsFromDB,
   getInstrumentFromDB,
+  saveDraft,
+  getDraft,
+  deleteDraft,
 } from "./sync-queue.js";
 
 // Mock Data fallbacks for high-fidelity offline/sandbox usage
@@ -533,24 +537,76 @@ function renderTasks() {
   });
 }
 
+function showToast(message) {
+  if (typeof document === "undefined") return;
+  let toast = document.getElementById("toast-container");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "toast-container";
+    toast.className = "toast-notification";
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.add("toast-show");
+  setTimeout(() => {
+    toast.classList.remove("toast-show");
+  }, 3000);
+}
+
+async function saveActiveDraftProgress() {
+  if (!state.activeQuestionnaire) return;
+  const { instrument } = state.activeQuestionnaire;
+  Object.entries(instrument.items).forEach(([id, field]) => {
+    const val =
+      field.type === "choice_single"
+        ? document.querySelector(`input[name="${id}"]:checked`)?.value || ""
+        : document.getElementById(id)?.value?.trim() || "";
+    state.activeQuestionnaire.answers[id] = val;
+  });
+
+  await saveDraft(state.activeQuestionnaire.assignment.id, state.activeQuestionnaire.answers);
+}
+
+const debouncedSaveActiveDraft = debounce(saveActiveDraftProgress, 1500);
+
 // 2. Questionnaire Completion
 async function startQuestionnaire(assignmentId) {
   const assignment = state.assignments.find((a) => a.id === assignmentId);
   if (!assignment) return;
 
   let instrument = state.instruments[assignment.instrument_id];
-  if (!instrument && isAuthenticatedSession()) {
-    try {
-      instrument = await fetchInstrument(assignment.instrument_id);
-      state.instruments[assignment.instrument_id] = instrument;
-      if (instrument) {
+  if (!instrument && !isAuthenticatedSession()) {
+    instrument = MOCK_INSTRUMENTS[assignment.instrument_id];
+  }
+
+  if (!instrument) {
+    if (isAuthenticatedSession()) {
+      try {
+        instrument = await fetchInstrument(assignment.instrument_id);
+        state.instruments[assignment.instrument_id] = instrument;
+        if (instrument) {
+          try {
+            await saveInstrumentsToDB([instrument]);
+          } catch (dbErr) {
+            console.warn("Could not cache instrument to IndexedDB:", dbErr);
+          }
+        }
+      } catch (err) {
         try {
-          await saveInstrumentsToDB([instrument]);
+          instrument = await getInstrumentFromDB(assignment.instrument_id);
         } catch (dbErr) {
-          console.warn("Could not cache instrument to IndexedDB:", dbErr);
+          console.warn("Could not read instrument from IndexedDB:", dbErr);
+        }
+        if (instrument) {
+          state.instruments[assignment.instrument_id] = instrument;
+        } else {
+          alert(
+            "Failed to retrieve questionnaire definition: " + (err.message || err)
+          );
+          return;
         }
       }
-    } catch (err) {
+    } else {
       try {
         instrument = await getInstrumentFromDB(assignment.instrument_id);
       } catch (dbErr) {
@@ -558,28 +614,8 @@ async function startQuestionnaire(assignmentId) {
       }
       if (instrument) {
         state.instruments[assignment.instrument_id] = instrument;
-      } else {
-        alert(
-          "Failed to retrieve questionnaire definition: " + (err.message || err)
-        );
-        return;
       }
     }
-  }
-
-  if (!instrument) {
-    try {
-      instrument = await getInstrumentFromDB(assignment.instrument_id);
-    } catch (dbErr) {
-      console.warn("Could not read instrument from IndexedDB:", dbErr);
-    }
-    if (instrument) {
-      state.instruments[assignment.instrument_id] = instrument;
-    }
-  }
-
-  if (!instrument && !isAuthenticatedSession()) {
-    instrument = MOCK_INSTRUMENTS[assignment.instrument_id];
   }
 
   if (!instrument) {
@@ -593,7 +629,7 @@ async function startQuestionnaire(assignmentId) {
     answers: {},
   };
 
-  // Set HTML headers
+  // Set HTML headers synchronously
   document.getElementById("questionnaire-title").textContent = instrument.name;
   document.getElementById("questionnaire-desc").textContent =
     instrument.description;
@@ -624,8 +660,40 @@ async function startQuestionnaire(assignmentId) {
   formHtml += `</div>`;
   formContainer.innerHTML = formHtml;
 
-  // Render and navigate
+  // Set up listeners for real-time background auto-saving
+  formContainer.addEventListener("input", debouncedSaveActiveDraft);
+  formContainer.addEventListener("change", debouncedSaveActiveDraft);
+
+  // Render and navigate synchronously
   showView("view-questionnaire");
+
+  // Load and apply draft answers asynchronously
+  try {
+    const draftAnswers = await getDraft(assignmentId);
+    if (draftAnswers && Object.keys(draftAnswers).length > 0 && state.activeQuestionnaire && state.activeQuestionnaire.assignment.id === assignmentId) {
+      state.activeQuestionnaire.answers = draftAnswers;
+      Object.entries(draftAnswers).forEach(([id, val]) => {
+        if (!val) return;
+        const field = instrument.items[id];
+        if (field) {
+          if (field.type === "choice_single") {
+            const radioInput = document.querySelector(`input[name="${id}"][value="${val}"]`);
+            if (radioInput) {
+              radioInput.checked = true;
+            }
+          } else {
+            const inputEl = document.getElementById(id);
+            if (inputEl) {
+              inputEl.value = val;
+            }
+          }
+        }
+      });
+      showToast("Progress restored");
+    }
+  } catch (err) {
+    console.warn("Could not retrieve draft:", err);
+  }
 }
 
 function validateActiveQuestionnaire() {
@@ -936,6 +1004,12 @@ async function verifyAndSubmitSignature() {
       console.error("Failed to write to offline queue IndexedDB:", err);
       alert("Could not queue submission locally. Please try again.");
       return;
+    }
+
+    try {
+      await deleteDraft(active.assignment.id);
+    } catch (err) {
+      console.warn("Could not delete draft on submission:", err);
     }
 
     // Perform GxP audit logging locally
@@ -2108,14 +2182,28 @@ async function initializeApp() {
 
   const btnBack = document.getElementById("btn-back-to-tasks");
   if (btnBack)
-    btnBack.addEventListener("click", () => {
+    btnBack.addEventListener("click", async () => {
+      if (state.activeQuestionnaire && state.activeQuestionnaire.assignment) {
+        try {
+          await deleteDraft(state.activeQuestionnaire.assignment.id);
+        } catch (err) {
+          console.warn("Could not delete draft:", err);
+        }
+      }
       state.activeQuestionnaire = null;
       showView("view-tasks");
     });
 
   const btnCancel = document.getElementById("btn-cancel-questionnaire");
   if (btnCancel)
-    btnCancel.addEventListener("click", () => {
+    btnCancel.addEventListener("click", async () => {
+      if (state.activeQuestionnaire && state.activeQuestionnaire.assignment) {
+        try {
+          await deleteDraft(state.activeQuestionnaire.assignment.id);
+        } catch (err) {
+          console.warn("Could not delete draft:", err);
+        }
+      }
       state.activeQuestionnaire = null;
       showView("view-tasks");
     });

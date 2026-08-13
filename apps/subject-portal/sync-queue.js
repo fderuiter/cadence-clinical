@@ -86,6 +86,9 @@ export function openDatabase() {
           if (!db.objectStoreNames.contains("assignments")) {
             db.createObjectStore("assignments", { keyPath: "id" });
           }
+          if (!db.objectStoreNames.contains("drafts")) {
+            db.createObjectStore("drafts", { keyPath: "assignment_id" });
+          }
         } catch (upgradeErr) {
           console.error("IndexedDB upgrade error:", upgradeErr);
           if (
@@ -648,4 +651,85 @@ export async function saveWrappedMasterKeyConfig(wrappedKey, salt) {
     };
     /* v8 ignore stop */
   });
+}
+
+export async function saveDraft(assignmentId, answers) {
+  if (!inMemorySessionKey) {
+    console.warn("No active session key. Cannot save draft.");
+    return null;
+  }
+  try {
+    const aad = new TextEncoder().encode(assignmentId);
+    const encryptedAnswers = await encryptAESGCM(answers, inMemorySessionKey, 1, aad);
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("drafts", "readwrite");
+      const store = tx.objectStore("drafts");
+      store.put({
+        assignment_id: assignmentId,
+        answers: encryptedAnswers,
+        updated_at: new Date().toISOString()
+      });
+      tx.oncomplete = () => {
+        resolve();
+      };
+      tx.onerror = () => {
+        reject(tx.error);
+      };
+    });
+  } catch (err) {
+    console.error("Failed to save draft:", err);
+    return null;
+  }
+}
+
+export async function getDraft(assignmentId) {
+  if (!inMemorySessionKey) {
+    console.warn("No active session key. Cannot retrieve draft.");
+    return null;
+  }
+  try {
+    const db = await openDatabase();
+    const draft = await new Promise((resolve, reject) => {
+      const tx = db.transaction("drafts", "readonly");
+      const store = tx.objectStore("drafts");
+      const req = store.get(assignmentId);
+      req.onsuccess = () => {
+        resolve(req.result || null);
+      };
+      req.onerror = () => {
+        reject(req.error);
+      };
+    });
+
+    if (!draft) {
+      return null;
+    }
+
+    const aad = new TextEncoder().encode(assignmentId);
+    const decryptedAnswers = await decryptAESGCM(draft.answers, inMemorySessionKey, 1, aad);
+    return decryptedAnswers;
+  } catch (err) {
+    console.error("Failed to decrypt or retrieve draft:", err);
+    return null;
+  }
+}
+
+export async function deleteDraft(assignmentId) {
+  try {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("drafts", "readwrite");
+      const store = tx.objectStore("drafts");
+      store.delete(assignmentId);
+      tx.oncomplete = () => {
+        resolve();
+      };
+      tx.onerror = () => {
+        reject(tx.error);
+      };
+    });
+  } catch (err) {
+    console.error("Failed to delete draft:", err);
+  }
 }
