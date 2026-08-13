@@ -582,6 +582,7 @@
 
           <div v-if="!showCanvas" id="soa-matrix-container">
             <ClinicalSoAMatrix :soa-data="soaData" />
+            <ClinicalGanttVisualizer />
           </div>
 
           <div v-else id="crf-canvas-container">
@@ -966,6 +967,7 @@
 import { ref, computed, watch, reactive } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import ClinicalSoAMatrix from "../components/clinical/ClinicalSoAMatrix.vue";
+import ClinicalGanttVisualizer from "../components/clinical/ClinicalGanttVisualizer.vue";
 import { terminologyClient } from "../api/terminologyClient.js";
 import { debounce } from "ui";
 import ReasonModal from "../components/ReasonModal.vue";
