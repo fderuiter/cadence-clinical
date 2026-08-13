@@ -53,7 +53,7 @@ Chosen option: **Option 2 (Opt-In Helper Class Model with Dynamic Viewport Toggl
 ## 6. Implementation & Verification
 
 - **Affected Repositories / Services / Files:**
-  - `apps/web/src/style.css` & `apps/subject-portal/style.css`: Removed high-precedence global tag overrides.
+  - `apps/web/src/style.css` & `apps/subject-portal/src/style.css`: Removed high-precedence global tag overrides.
   - `packages/ui/responsive.css`: Introduced standard utility classes (`.touch-target`, `.min-touch-target`, `.touch-target-interactive`) and compact padding/margin spacing helpers (`.compact-layout`, `.compact-padding`).
   - `apps/web/src/components/crf/CanvasFieldWidget.vue`: Configured dynamic Vue `:class` bindings matching the active Pinia viewport state (`designerStore.viewport !== 'desktop'`).
   - `apps/web/src/components/crf/CrfAuthoringCanvas.vue`: Added `.touch-simulation-active` layout helper.
