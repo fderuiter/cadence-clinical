@@ -1,4 +1,3 @@
-import os
 import re
 import sys
 import time
@@ -117,7 +116,7 @@ def compile_schemas():
         sys.exit(1)
 
     print(f"Reading TypeScript schemas from {TS_FILE}...")
-    with open(TS_FILE, "r", encoding="utf-8") as f:
+    with open(TS_FILE, encoding="utf-8") as f:
         content = f.read()
 
     # Match: export const <Model>Schema = z.object({ ... });
