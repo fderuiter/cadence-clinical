@@ -3162,6 +3162,162 @@
         }
       }
     },
+    "/api/v1/execution/webhooks/etmf": {
+      "post": {
+        "summary": "Etmf Completeness Webhook",
+        "description": "Receive and process completeness webhook events from eTMF to update local compliance cache.",
+        "operationId": "etmf_completeness_webhook_api_v1_execution_webhooks_etmf_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ETMFCompletenessWebhookPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Etmf Completeness Webhook Api V1 Execution Webhooks Etmf Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/sites/{site_id}/activate": {
+      "post": {
+        "summary": "Activate Site Endpoint",
+        "description": "Attempt site activation in the Execution Engine, validating compliance from the local cache.",
+        "operationId": "activate_site_endpoint_api_v1_execution_sites__site_id__activate_post",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SiteActivationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Activate Site Endpoint Api V1 Execution Sites  Site Id  Activate Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/sites/{site_id}/compliance-status": {
+      "get": {
+        "summary": "Get Site Compliance Status",
+        "description": "Retrieve site compliance status from the local cache.",
+        "operationId": "get_site_compliance_status_api_v1_execution_sites__site_id__compliance_status_get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The clinical study ID",
+              "title": "Study Id"
+            },
+            "description": "The clinical study ID"
+          },
+          {
+            "name": "milestone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "The milestone to check",
+              "default": "SITE_ACTIVATION",
+              "title": "Milestone"
+            },
+            "description": "The milestone to check"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplianceStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/subjects/{subject_id}/screening": {
       "post": {
         "summary": "Evaluate And Transition Screening",
@@ -4368,6 +4524,16 @@
                 }
               ],
               "title": "Form Id"
+            }
+          },
+          {
+            "name": "include_inactive",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Inactive"
             }
           }
         ],
@@ -6920,6 +7086,49 @@
         ],
         "title": "CodingAssignmentResponse"
       },
+      "ComplianceStatusResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "milestone": {
+            "type": "string",
+            "title": "Milestone"
+          },
+          "is_complete": {
+            "type": "boolean",
+            "title": "Is Complete"
+          },
+          "missing_documents": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Documents"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "milestone",
+          "is_complete",
+          "missing_documents"
+        ],
+        "title": "ComplianceStatusResponse"
+      },
       "CriterionLevelResult": {
         "properties": {
           "criterion_id": {
@@ -7784,6 +7993,47 @@
         "title": "EISFTaxonomyCategoryEnum",
         "description": "DIA eISF / Regulatory Binder document taxonomy categories.\n\nRequirements: PRD-SYS-001"
       },
+      "ETMFCompletenessWebhookPayload": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "milestone": {
+            "type": "string",
+            "title": "Milestone"
+          },
+          "is_complete": {
+            "type": "boolean",
+            "title": "Is Complete"
+          },
+          "missing_artifacts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Artifacts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "milestone",
+          "is_complete"
+        ],
+        "title": "ETMFCompletenessWebhookPayload"
+      },
       "FormSubmissionApprove": {
         "properties": {
           "signature_manifest": {
@@ -7831,6 +8081,29 @@
           "form_id": {
             "type": "string",
             "title": "Form Id"
+          },
+          "protocol_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol Version"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
           }
         },
         "type": "object",
@@ -7853,7 +8126,14 @@
             "title": "Study Id"
           },
           "site_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Site Id"
           },
           "subject_id": {
@@ -7897,18 +8177,61 @@
               }
             ],
             "title": "Signature Manifest"
+          },
+          "protocol_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol Version"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "is_readonly": {
+            "type": "boolean",
+            "title": "Is Readonly"
+          },
+          "cloned_from_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cloned From Id"
           }
         },
         "type": "object",
         "required": [
           "id",
           "study_id",
-          "site_id",
           "subject_id",
           "form_id",
           "status",
           "version",
-          "is_deleted"
+          "is_deleted",
+          "is_active",
+          "is_readonly"
         ],
         "title": "FormSubmissionResponse"
       },
@@ -10792,6 +11115,19 @@
         ],
         "title": "SignResponse",
         "description": "Response model with the PKCS#7 signed payload."
+      },
+      "SiteActivationRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "SiteActivationRequest"
       },
       "SiteStaffMemberRequest": {
         "properties": {
