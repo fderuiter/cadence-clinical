@@ -6,7 +6,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.safety.adapter import SafetyDatabaseAdapter
+from apps.safety.adapters import SafetyDatabaseAdapter
 from apps.safety.domain.sae_icsr import (
     IndividualCaseSafetyReport,
     MedDRACoding,

@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select, text
 
 from apps.gateway.main import generate_signature
-from apps.safety.adapter import SafetyDatabaseAdapter
+from apps.safety.adapters import SafetyDatabaseAdapter
 from apps.safety.database import db_manager
 from apps.safety.domain.sae_icsr import MedDRACoding, SeriousAdverseEvent
 from apps.safety.execution_client import ExecutionClient
