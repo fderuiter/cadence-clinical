@@ -8,13 +8,10 @@ import { ingestionClient } from "../api/ingestionClient.js";
 import { normalizeUsdm } from "./normalization";
 import {
   CodeSchema,
-  SyntaxTemplateSchema,
-  EligibilityCriterionSchema,
   ActivitySchema,
   EncounterSchema,
   StudyArmSchema,
   StudyEpochSchema,
-  StudyDesignSchema,
   USDMStudySchema,
 } from "usdm-schemas";
 
@@ -761,7 +758,11 @@ export const useClinicalStore = defineStore("clinical", {
         schema = ActivitySchema;
       } else if (lower === "concept" || lower === "code") {
         schema = CodeSchema;
-      } else if (lower === "study" || lower === "usdm" || lower === "usdmstudy") {
+      } else if (
+        lower === "study" ||
+        lower === "usdm" ||
+        lower === "usdmstudy"
+      ) {
         schema = USDMStudySchema;
       }
 
@@ -769,7 +770,10 @@ export const useClinicalStore = defineStore("clinical", {
 
       const res = schema.safeParse(payload);
       if (!res.success) {
-        console.error(`USDM validation failure for type [${type}]:`, res.error.errors);
+        console.error(
+          `USDM validation failure for type [${type}]:`,
+          res.error.errors
+        );
         return { success: false, error: res.error };
       }
       return { success: true, data: res.data };

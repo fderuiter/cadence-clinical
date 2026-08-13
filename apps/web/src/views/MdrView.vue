@@ -1461,7 +1461,8 @@ function queueMutation(mutation) {
       code: mutation.id,
       codeSystem: mutation.properties.codeSystem || "NCI_Thesaurus",
       codeSystemVersion: mutation.properties.codeSystemVersion || "24.03d",
-      decode: mutation.properties.decode || mutation.properties.preferred_name || ""
+      decode:
+        mutation.properties.decode || mutation.properties.preferred_name || "",
     };
   }
 
