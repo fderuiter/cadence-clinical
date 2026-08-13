@@ -83,20 +83,28 @@
     >
       <div><strong>Study ID:</strong> {{ studyId }}</div>
       <div><strong>Site ID:</strong> {{ siteId }}</div>
-      <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+      <div
+        style="margin-left: auto; display: flex; align-items: center; gap: 8px"
+      >
         <strong>eTMF Compliance Status:</strong>
-        <span
-          v-if="loadingCompliance"
-          style="color: #64748b;"
-        >Loading...</span>
+        <span v-if="loadingCompliance" style="color: #64748b">Loading...</span>
         <span
           v-else
           class="badge"
           :class="{ gxp: complianceStatus.is_complete }"
-          :style="complianceStatus.is_complete ? {} : { backgroundColor: '#ef4444', color: '#ffffff' }"
-          :title="complianceStatus.is_complete ? 'All required documents approved in eTMF.' : 'Missing: ' + (complianceStatus.missing_documents || []).join(', ')"
+          :style="
+            complianceStatus.is_complete
+              ? {}
+              : { backgroundColor: '#ef4444', color: '#ffffff' }
+          "
+          :title="
+            complianceStatus.is_complete
+              ? 'All required documents approved in eTMF.'
+              : 'Missing: ' +
+                (complianceStatus.missing_documents || []).join(', ')
+          "
         >
-          {{ complianceStatus.is_complete ? 'COMPLIANT' : 'NON-COMPLIANT' }}
+          {{ complianceStatus.is_complete ? "COMPLIANT" : "NON-COMPLIANT" }}
         </span>
       </div>
     </div>
@@ -1033,7 +1041,10 @@ async function loadComplianceStatus() {
     const res = await apiClient.get(
       `/api/v1/execution/sites/${siteId.value}/compliance-status?study_id=${studyId.value}`
     );
-    complianceStatus.value = res || { is_complete: false, missing_documents: [] };
+    complianceStatus.value = res || {
+      is_complete: false,
+      missing_documents: [],
+    };
   } catch (err) {
     console.error("Failed to load site compliance status:", err);
     complianceStatus.value = { is_complete: false, missing_documents: [] };
