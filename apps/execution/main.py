@@ -80,22 +80,10 @@ from apps.execution.exceptions import (
 )
 from apps.execution.lab_range_cache import get_active_lab_ranges, lab_range_cache
 from apps.execution.outliers import recalculate_cohort_outliers
-from apps.execution.routers.amendments import router as amendments_router
-from apps.execution.routers.anonymization import router as anonymization_router
-from apps.execution.routers.auditor import router as auditor_router
-from apps.execution.routers.dictionaries import router as dictionaries_router
-from apps.execution.routers.doa import router as doa_router
-from apps.execution.routers.documents import router as documents_router
-from apps.execution.routers.eisf import router as eisf_router
-from apps.execution.routers.exports import router as exports_router
-from apps.execution.routers.locks import router as locks_router
-from apps.execution.routers.offline import router as offline_router
-from apps.execution.routers.queries import router as queries_router
-from apps.execution.routers.randomization import router as randomization_router
-from apps.execution.routers.safety import router as safety_router
-from apps.execution.routers.sdv import router as sdv_router
-from apps.execution.routers.signatures import router as signatures_router
-from apps.execution.routers.unblinding import router as unblinding_router
+from apps.execution.presentation.routers.biostat_subrouter import biostat_subrouter
+from apps.execution.presentation.routers.coding_subrouter import coding_subrouter
+from apps.execution.presentation.routers.edc_subrouter import edc_subrouter
+from apps.execution.presentation.routers.rtsm_subrouter import rtsm_subrouter
 from apps.execution.rtsm_authz import redact_response, verify_site_access
 from apps.execution.rtsm_supply import (
     InsufficientStockError,
@@ -314,11 +302,6 @@ validate_branding("execution")
 app = FastAPI(
     title=f"{BRAND_NAME} - EDC Execution Engine", version="0.1.0", lifespan=lifespan
 )
-
-from apps.execution.presentation.routers.edc_subrouter import edc_subrouter
-from apps.execution.presentation.routers.rtsm_subrouter import rtsm_subrouter
-from apps.execution.presentation.routers.coding_subrouter import coding_subrouter
-from apps.execution.presentation.routers.biostat_subrouter import biostat_subrouter
 
 app.include_router(edc_subrouter)
 app.include_router(rtsm_subrouter)

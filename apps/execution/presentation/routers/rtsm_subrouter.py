@@ -1,6 +1,8 @@
 from fastapi import APIRouter
 
-from apps.execution.presentation.routers.randomization import router as randomization_router
+from apps.execution.presentation.routers.randomization import (
+    router as randomization_router,
+)
 
 rtsm_subrouter = APIRouter()
 

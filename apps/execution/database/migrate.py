@@ -4,7 +4,6 @@ import os
 import sys
 
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine
 
 from apps.execution.database.models import (  # noqa: F401
     Base,
@@ -661,7 +660,9 @@ async def run_migrations(database_url: str) -> None:
     env = os.environ.copy()
     env["EXECUTION_DATABASE_URL"] = database_url
     env.setdefault("AUDIT_LOG_SECRET_KEY", "test-gxp-audit-secret-key-placeholder-abc")
-    env.setdefault("INBOUND_EMAIL_HMAC_SECRET", "test-email-hmac-secret-placeholder-xyz")
+    env.setdefault(
+        "INBOUND_EMAIL_HMAC_SECRET", "test-email-hmac-secret-placeholder-xyz"
+    )
     env.setdefault("GATEWAY_SECRET", "internal-gateway-secret-12345")
     env.setdefault("SIGNING_SECRET", "designer-amendment-secure-key-12345")
 

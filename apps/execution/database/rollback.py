@@ -79,13 +79,17 @@ async def validate_migration_integrity() -> bool:
                 return False
 
         # Step 3: Run Downgrade base to drop everything
-        print("[Migration-Integrity] Step 3: Running standard Alembic rollback to base...")
+        print(
+            "[Migration-Integrity] Step 3: Running standard Alembic rollback to base..."
+        )
         await run_downgrade(db_url)
 
         # Verify that all tables have been dropped
         async with engine.begin() as conn:
             tables_after_rollback = await conn.run_sync(get_tables)
-            print(f"[Migration-Integrity] Tables after rollback: {tables_after_rollback}")
+            print(
+                f"[Migration-Integrity] Tables after rollback: {tables_after_rollback}"
+            )
             # Ensure alembic_version table may remain or is empty, but clinical tables are dropped
             if "clinical_observations" in tables_after_rollback:
                 print(
