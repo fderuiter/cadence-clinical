@@ -3,10 +3,12 @@ import { createPinia, setActivePinia } from "pinia";
 import { useClinicalStore } from "../src/stores/clinical.js";
 import { useAuthStore } from "../src/stores/auth.js";
 import { soaClient } from "../src/api/soaClient.js";
+import { stateTrackingPlugin } from "../src/stores/plugins.js";
 
 describe("Shared Zod Schema Client-Side Validation", () => {
   beforeEach(() => {
     const pinia = createPinia();
+    pinia.use(stateTrackingPlugin);
     setActivePinia(pinia);
     const authStore = useAuthStore();
     authStore.accessToken = "mock-keycloak-jwt-token";

@@ -1,4 +1,12 @@
-import { defineStore } from "pinia";
+import { defineStore, getActivePinia } from "pinia";
+import "pinia";
+import { stateTrackingPlugin } from "./plugins.js";
+
+declare module "pinia" {
+  export interface DefineStoreOptionsBase<S, Store> {
+    trackActions?: Record<string, { loading?: string; error?: string }>;
+  }
+}
 import { buildLedgerBlock, debounce } from "ui";
 import { useAuthStore } from "./auth.js";
 import { soaClient } from "../api/soaClient.js";
@@ -62,7 +70,7 @@ export interface ClinicalState {
   [key: string]: any;
 }
 
-export const useClinicalStore = defineStore("clinical", {
+const useClinicalStoreInner = defineStore("clinical", {
   state: (): ClinicalState => {
     let savedFormValues: any = null;
     let savedFormQueries: any = null;
@@ -507,6 +515,16 @@ export const useClinicalStore = defineStore("clinical", {
       ingestionError: null,
     };
   },
+  trackActions: {
+    fetchLabAlerts: { loading: "labAlertsLoading", error: "labAlertsError" },
+    fetchSoAProjection: { loading: "soaLoading", error: "soaError" },
+    pushSoAMutation: { loading: "soaLoading", error: "soaError" },
+    pushSoALink: { loading: "soaLoading", error: "soaError" },
+    uploadProtocolDocument: {
+      loading: "ingestionLoading",
+      error: "ingestionError",
+    },
+  },
   getters: {
     user: () => {
       const authStore = useAuthStore();
@@ -724,8 +742,6 @@ export const useClinicalStore = defineStore("clinical", {
 
     // --- Lab Alerts Pinia Actions ---
     async fetchLabAlerts(studyId: string, subjectId: string) {
-      this.labAlertsLoading = true;
-      this.labAlertsError = null;
       try {
         const data = await executionService.listLabAlerts({
           study_id: studyId,
@@ -750,39 +766,26 @@ export const useClinicalStore = defineStore("clinical", {
           }
         }
         this.labAlerts = alertsMap || {};
-        this.labAlertsLoading = false;
       } catch (err: any) {
-        this.labAlertsError = err.message;
-        this.labAlertsLoading = false;
-        console.warn("Backend lab alerts endpoint failed:", err);
+        console.warn("Database connection failed", err);
+        this.labAlertsError = err.message || err;
+        // Suppress/Swallow the error (DO NOT re-throw)
       }
     },
 
     // --- SoA Pinia Actions ---
     async fetchSoAProjection() {
-      this.soaLoading = true;
-      this.soaError = null;
-      try {
-        const data = await soaClient.getSoAProjection(
-          this.currentUsdm.studyId,
-          this.activeStudyVersionId
-        );
-        // Map fetched Neo4j projection structure back to our local currentUsdm state through the normalization adapter
-        this.currentUsdm = normalizeUsdm({
-          ...this.currentUsdm,
-          epochs: data.epochs,
-          encounters: data.encounters,
-          rows: data.rows,
-        });
-        this.soaLoading = false;
-      } catch (err: any) {
-        this.soaError = err.message;
-        this.soaLoading = false;
-        console.warn(
-          "Backend SoA endpoint failed, relying on local state:",
-          err
-        );
-      }
+      const data = await soaClient.getSoAProjection(
+        this.currentUsdm.studyId,
+        this.activeStudyVersionId
+      );
+      // Map fetched Neo4j projection structure back to our local currentUsdm state through the normalization adapter
+      this.currentUsdm = normalizeUsdm({
+        ...this.currentUsdm,
+        epochs: data.epochs,
+        encounters: data.encounters,
+        rows: data.rows,
+      });
     },
 
     validateModel(type: string, payload: any) {
@@ -837,8 +840,6 @@ export const useClinicalStore = defineStore("clinical", {
         this.soaError = errorMsg;
         throw new Error(errorMsg);
       }
-      this.soaLoading = true;
-      this.soaError = null;
       const opts = {
         changeReason,
       };
@@ -883,8 +884,6 @@ export const useClinicalStore = defineStore("clinical", {
         );
         await this.fetchSoAProjection();
       } catch (err: any) {
-        this.soaError = err.message;
-        this.soaLoading = false;
         // Log mutation locally even on network failure for compliance
         await this.addLedgerBlock(
           `SOA_MUTATION_OFFLINE_${type.toUpperCase()}`,
@@ -896,8 +895,6 @@ export const useClinicalStore = defineStore("clinical", {
     },
 
     async pushSoALink(linkType: string, payload: any, changeReason: string) {
-      this.soaLoading = true;
-      this.soaError = null;
       try {
         await soaClient.createLink(
           this.currentUsdm.studyId,
@@ -913,8 +910,6 @@ export const useClinicalStore = defineStore("clinical", {
         );
         await this.fetchSoAProjection();
       } catch (err: any) {
-        this.soaError = err.message;
-        this.soaLoading = false;
         await this.addLedgerBlock(
           `SOA_LINK_OFFLINE_${linkType.toUpperCase()}`,
           { payload, error: err.message },
@@ -926,26 +921,17 @@ export const useClinicalStore = defineStore("clinical", {
 
     // --- Ingestion Store Actions ---
     async uploadProtocolDocument(file: File, changeReason: string) {
-      this.ingestionLoading = true;
-      this.ingestionError = null;
-      try {
-        const draft = await ingestionClient.uploadProtocol(file, {
-          changeReason,
-        });
-        this.candidateDraft = draft;
-        this.ingestionJobs.push({
-          job_id: draft.id,
-          status: "COMPLETED",
-          candidate_id: draft.id,
-          errors: null,
-        });
-        this.ingestionLoading = false;
-        return draft;
-      } catch (err: any) {
-        this.ingestionError = err.message;
-        this.ingestionLoading = false;
-        throw err;
-      }
+      const draft = await ingestionClient.uploadProtocol(file, {
+        changeReason,
+      });
+      this.candidateDraft = draft;
+      this.ingestionJobs.push({
+        job_id: draft.id,
+        status: "COMPLETED",
+        candidate_id: draft.id,
+        errors: null,
+      });
+      return draft;
     },
 
     async fetchCandidateDraft(candidateId: string) {
@@ -1011,3 +997,19 @@ export const useClinicalStore = defineStore("clinical", {
     },
   },
 });
+
+export const useClinicalStore = (pinia?: any) => {
+  const activePinia = pinia || getActivePinia();
+  if (activePinia && !(activePinia as any)._hasStateTrackingPlugin) {
+    activePinia.use(stateTrackingPlugin);
+    if (!activePinia._a && typeof activePinia.install === "function") {
+      const dummyApp = {
+        provide() {},
+        config: { globalProperties: {} },
+      };
+      activePinia.install(dummyApp);
+    }
+    (activePinia as any)._hasStateTrackingPlugin = true;
+  }
+  return useClinicalStoreInner(activePinia);
+};

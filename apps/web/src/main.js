@@ -9,10 +9,13 @@ import { initHoverDetection } from "ui";
 import { resolveAssetUrl } from "./utils/url";
 import { vKeyboardClick } from "./directives/keyboardClick";
 
+import { stateTrackingPlugin } from "./stores/plugins.js";
+
 const app = createApp(App);
 app.directive("keyboard-click", vKeyboardClick);
 
 const pinia = createPinia();
+pinia.use(stateTrackingPlugin);
 
 app.use(pinia);
 app.use(router);
