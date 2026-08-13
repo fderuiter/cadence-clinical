@@ -1,7 +1,7 @@
 # GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report
 
-*Execution Date:* 2026-07-23 22:38:25 UTC
-*Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B
+_Execution Date:_ 2026-07-23 22:38:25 UTC
+_Regulatory Protocol:_ FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B
 
 ## 1. Executive Summary & Verification Declaration
 
@@ -25,6 +25,7 @@ Based on the executed automated verification suite, the platform meets all prede
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
 
 ### 2.1 System Environment Metadata
+
 - **Operating System / Platform:** linux (containerized target specification)
 - **Python Version:** 3.14.5 (Docker execution environment baseline)
 - **Database Provider (Execution Engine):** PostgreSQL / SQLite in-memory fallback
@@ -32,14 +33,16 @@ The Installation Qualification verifies that the software execution environment,
 - **Identity Management Gateway:** Keycloak OIDC Router
 
 ### 2.2 Static Analysis & Security Gateways
-| Tool | Target Standard | Status | Outcome / Verification Reference |
-| :--- | :--- | :--- | :--- |
-| **Ruff / Black** | PEP 8 / Clean Code formatting | Passed | Zero warnings, style rules enforced. |
-| **Bandit Security** | Secure Python programming | Passed | No high-severity vulnerabilities found in application code. |
-| **pip-audit** | Dependency vulnerability auditing | Passed | Zero CVEs detected on active virtualenv packages. |
-| **Git Secrets** | Secret leakage prevention | Passed | Clean commit signatures, no exposed API tokens. |
+
+| Tool                | Target Standard                   | Status | Outcome / Verification Reference                            |
+| :------------------ | :-------------------------------- | :----- | :---------------------------------------------------------- |
+| **Ruff / Black**    | PEP 8 / Clean Code formatting     | Passed | Zero warnings, style rules enforced.                        |
+| **Bandit Security** | Secure Python programming         | Passed | No high-severity vulnerabilities found in application code. |
+| **pip-audit**       | Dependency vulnerability auditing | Passed | Zero CVEs detected on active virtualenv packages.           |
+| **Git Secrets**     | Secret leakage prevention         | Passed | Clean commit signatures, no exposed API tokens.             |
 
 ### 2.3 Installed Dependency Package Ledger (Pip List)
+
 ```
 Package                 Version     Editable project location
 ----------------------- ----------- -------------------------
@@ -5044,21 +5047,25 @@ The Operational Qualification verifies that individual clinical operations, stat
 Performance Qualification documents the verification of end-to-end clinical workflow scenarios defined in Section 5 of the QA & Validation Plan.
 
 ### TC-VAL-LOG-001: Protocol Version Locking & Immutability Rejection
+
 - **Target Requirements:** PRD-MDR-001, PRD-UNI-003
 - **Description:** Verifies that locked study version nodes in Neo4j are completely immutable, and direct database manipulations are rejected.
 - **Verification Status:** ✅ Verified Compliant via Automated Integration Suite
 
 ### TC-VAL-LOG-002: Stratification Factor Re-randomization Rejections
+
 - **Target Requirements:** PRD-SUB-002, PRD-SUB-001
 - **Description:** Verifies that stratification factor modifications and backward state machine updates are strictly forbidden once randomized.
 - **Verification Status:** ✅ Verified Compliant via Automated Integration Suite
 
 ### TC-VAL-LOG-003: Offline Mode Data Entry, Sync Collision & Conflict Resolution
+
 - **Target Requirements:** PRD-EDC-004, PRD-UNI-002
 - **Description:** Verifies that offline data entries are synchronized accurately, conflict resolution runs deterministically, and the audit ledger captures all states.
 - **Verification Status:** ✅ Verified Compliant via Automated Integration Suite
 
 ### TC-VAL-LOG-004: Re-authentication Enforcement during Emergency Unblinding
+
 - **Target Requirements:** PRD-MDR-003, PRD-UNI-002
 - **Description:** Verifies that unblinding requests require strict multi-factor re-authentication, trigger immediate unblinded state transition, lock the trial on tampering, and dispatch security alerts.
 - **Verification Status:** ✅ Verified Compliant via Automated Integration Suite
