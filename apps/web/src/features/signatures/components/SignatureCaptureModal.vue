@@ -22,7 +22,7 @@
         <!-- Reuse GxpCredentialsInput -->
         <GxpCredentialsInput
           v-model:username="usernameVal"
-          v-model:password="password"
+          v-model:password="password" data-pragma="pragma: allowlist"
           v-model:totp="totp"
           :disabled="busy"
           @keyup-enter="confirm"

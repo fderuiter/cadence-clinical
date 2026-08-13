@@ -246,7 +246,7 @@
 
             <!-- Reuse GxpCredentialsInput with Username hidden -->
             <GxpCredentialsInput
-              v-model:password="password"
+              v-model:password="password" data-pragma="pragma: allowlist"
               v-model:totp="totp"
               :show-username="false"
               :password-required="true"

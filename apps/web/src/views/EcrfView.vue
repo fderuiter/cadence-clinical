@@ -974,7 +974,7 @@
           <!-- Reuse GxpCredentialsInput for GxP re-authentication -->
           <GxpCredentialsInput
             v-model:username="reauthUsername"
-            v-model:password="reauthPassword"
+            v-model:password="reauthPassword" data-pragma="pragma: allowlist secret"
             v-model:totp="reauthTotp"
             username-id="reauth-username"
             password-id="reauth-password"
