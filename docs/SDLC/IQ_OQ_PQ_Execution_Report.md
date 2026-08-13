@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2395
-- **Passed:** 2376 🟢
+- **Total Automated Test Cases Run:** 2401
+- **Passed:** 2382 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.21%
@@ -262,6 +262,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_ctms_doa_rbac_violations`                                                         | `apps.ctms.tests.test_doa_router`                                           | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_doa_manager_service_class_interface`                                              | `apps.ctms.tests.test_doa_service`                                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_doa_task_delegation_and_esignature_lifecycle`                                     | `apps.ctms.tests.test_doa_service`                                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_ctms_approve_unassigned_site`                                                     | `apps.ctms.tests.test_federated_resupply`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_ctms_approve_unreachable_downstream`                                              | `apps.ctms.tests.test_federated_resupply`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_ctms_list_resupply_events_blocked_read_only`                                      | `apps.ctms.tests.test_federated_resupply`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_ctms_list_resupply_events_success`                                                | `apps.ctms.tests.test_federated_resupply`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_execution_approve_reject_resupply_events`                                         | `apps.ctms.tests.test_federated_resupply`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_execution_list_resupply_events`                                                   | `apps.ctms.tests.test_federated_resupply`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_compare_usdm_snapshots_added_removed_modified`                                    | `apps.designer.tests.test_amendment_diff`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_backward_compatible_form_rehydration_lifecycle`                                   | `apps.designer.tests.test_amendment_rehydration`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_get_amendment_summary_endpoint`                                                   | `apps.designer.tests.test_amendment_router`                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |

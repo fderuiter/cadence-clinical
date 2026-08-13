@@ -339,6 +339,10 @@ def main() -> None:
                                     "apps/eisf/routers/eisf.py",
                                 },
                                 {
+                                    "apps/execution/main.py",
+                                    "apps/ctms/presentation/routers/ctms.py",
+                                },
+                                {
                                     "apps/web/src/components/SignatureCaptureModal.vue",
                                     "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
                                     "apps/web/src/components/crf/ApprovalHandoffModal.vue",
