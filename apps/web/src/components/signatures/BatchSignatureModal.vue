@@ -440,7 +440,9 @@ const localError = computed(() => {
   if (errStatus === 401) {
     return "Authentication failed: Invalid credentials or expired session (HTTP 401).";
   }
-  return err.message || "An unexpected error occurred during re-authentication.";
+  return (
+    err.message || "An unexpected error occurred during re-authentication."
+  );
 });
 
 const lastSignatureResult = computed(() => data.value);

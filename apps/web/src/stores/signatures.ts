@@ -17,4 +17,3 @@ export const useSignatureStore = defineStore("signatures", {
     },
   },
 });
-

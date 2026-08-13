@@ -364,7 +364,9 @@ describe("Key-Based Sync Reconciliation Integration Tests", () => {
     // Verify User A's undecryptable record was bypassed and only User B's record was sent in the bulk payload
     expect(sentPayload).not.toBeNull();
     expect(sentPayload.submissions).toHaveLength(1);
-    expect(sentPayload.submissions[0].offline_sync_markers.sequence_number).toBe(2);
+    expect(
+      sentPayload.submissions[0].offline_sync_markers.sequence_number
+    ).toBe(2);
 
     // Verify local DB states: subB should be CREATED, subA must remain intact as QUEUED (no deletion/migration/corruption)
     const all = await getAllSubmissions();
@@ -413,7 +415,9 @@ describe("Key-Based Sync Reconciliation Integration Tests", () => {
 
     // Verify subA successfully synchronized
     expect(sentPayload.submissions).toHaveLength(1);
-    expect(sentPayload.submissions[0].offline_sync_markers.sequence_number).toBe(1);
+    expect(
+      sentPayload.submissions[0].offline_sync_markers.sequence_number
+    ).toBe(1);
 
     const allFinal = await getAllSubmissions();
     const itemAFinal = allFinal.find((x) => x.sequence_number === 1);

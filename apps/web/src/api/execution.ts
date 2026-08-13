@@ -165,4 +165,3 @@ export const executionService = {
 export const submitBatchSignature = (
   payload: BatchSignPayload
 ): Promise<BatchSignResponse> => executionService.submitBatchSignature(payload);
-
