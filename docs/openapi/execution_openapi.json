@@ -8790,7 +8790,8 @@
         },
         "summary": "Trigger Dataset Export",
         "tags": [
-          "Exports"
+          "Exports",
+          "CDISC Exports"
         ]
       }
     },
@@ -8833,7 +8834,8 @@
         },
         "summary": "Get Export Job Status",
         "tags": [
-          "Exports"
+          "Exports",
+          "CDISC Exports"
         ]
       }
     },
@@ -8874,7 +8876,8 @@
         },
         "summary": "Download Exported File",
         "tags": [
-          "Exports"
+          "Exports",
+          "CDISC Exports"
         ]
       }
     },
