@@ -564,7 +564,10 @@ async function saveActiveDraftProgress() {
     state.activeQuestionnaire.answers[id] = val;
   });
 
-  await saveDraft(state.activeQuestionnaire.assignment.id, state.activeQuestionnaire.answers);
+  await saveDraft(
+    state.activeQuestionnaire.assignment.id,
+    state.activeQuestionnaire.answers
+  );
 }
 
 const debouncedSaveActiveDraft = debounce(saveActiveDraftProgress, 1500);
@@ -601,7 +604,8 @@ async function startQuestionnaire(assignmentId) {
           state.instruments[assignment.instrument_id] = instrument;
         } else {
           alert(
-            "Failed to retrieve questionnaire definition: " + (err.message || err)
+            "Failed to retrieve questionnaire definition: " +
+              (err.message || err)
           );
           return;
         }
@@ -670,14 +674,21 @@ async function startQuestionnaire(assignmentId) {
   // Load and apply draft answers asynchronously
   try {
     const draftAnswers = await getDraft(assignmentId);
-    if (draftAnswers && Object.keys(draftAnswers).length > 0 && state.activeQuestionnaire && state.activeQuestionnaire.assignment.id === assignmentId) {
+    if (
+      draftAnswers &&
+      Object.keys(draftAnswers).length > 0 &&
+      state.activeQuestionnaire &&
+      state.activeQuestionnaire.assignment.id === assignmentId
+    ) {
       state.activeQuestionnaire.answers = draftAnswers;
       Object.entries(draftAnswers).forEach(([id, val]) => {
         if (!val) return;
         const field = instrument.items[id];
         if (field) {
           if (field.type === "choice_single") {
-            const radioInput = document.querySelector(`input[name="${id}"][value="${val}"]`);
+            const radioInput = document.querySelector(
+              `input[name="${id}"][value="${val}"]`
+            );
             if (radioInput) {
               radioInput.checked = true;
             }

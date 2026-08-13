@@ -318,7 +318,7 @@ describe("sync-queue secure storage and sync capabilities", () => {
     for (let i = 0; i < 32; i++) rawMaterial[i] = i;
     await initSessionKey(rawMaterial);
 
-    await saveDraft("assign_draft_02", { secret: "info" });
+    await saveDraft("assign_draft_02", { secret: "info" }); // pragma: allowlist secret
 
     // Switch key to invalid
     const differentKey = new Uint8Array(32);
