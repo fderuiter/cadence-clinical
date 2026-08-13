@@ -70,4 +70,3 @@ class SiteComplianceCache(AuditedModel):
     milestone: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     is_complete: Mapped[bool] = mapped_column(default=False, nullable=False)
     missing_documents: Mapped[str | None] = mapped_column(String(1000), nullable=True)
-

@@ -248,10 +248,12 @@ async def setup_compliance_test_db():
 @pytest.mark.asyncio
 async def test_event_driven_site_compliance_cache(setup_compliance_test_db) -> None:
     """Verify event-driven compliance cache, webhook handling, blocking transitions, and auditing.
-    
+
     # @req:PRD-EDL-001
     """
-    headers = get_auth_headers(roles="site investigator", change_reason="Testing Site Compliance Cache")
+    headers = get_auth_headers(
+        roles="site investigator", change_reason="Testing Site Compliance Cache"
+    )
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
@@ -332,10 +334,13 @@ async def test_event_driven_site_compliance_cache(setup_compliance_test_db) -> N
 @pytest.mark.asyncio
 async def test_subject_enrollment_blocking(setup_compliance_test_db) -> None:
     """Verify that patient enrollment is gated by site compliance in the local cache.
-    
+
     # @req:PRD-EDL-001
     """
-    headers = get_auth_headers(roles="site investigator", change_reason="Testing Patient Enrollment Compliance Gate")
+    headers = get_auth_headers(
+        roles="site investigator",
+        change_reason="Testing Patient Enrollment Compliance Gate",
+    )
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
@@ -359,7 +364,9 @@ async def test_subject_enrollment_blocking(setup_compliance_test_db) -> None:
         # Update subject's site_id directly in DB
         async with db_manager.get_session_maker()() as session:
             async with session.begin():
-                stmt = select(ClinicalSubject).where(ClinicalSubject.subject_id == subject_id)
+                stmt = select(ClinicalSubject).where(
+                    ClinicalSubject.subject_id == subject_id
+                )
                 db_subj = (await session.execute(stmt)).scalars().first()
                 assert db_subj is not None
                 db_subj.site_id = site_id
@@ -383,7 +390,10 @@ async def test_subject_enrollment_blocking(setup_compliance_test_db) -> None:
             )
             audit_entry = (await session.execute(stmt)).scalars().first()
             assert audit_entry is not None
-            assert f"Blocked enrollment of subject {subject_id}" in audit_entry.change_reason
+            assert (
+                f"Blocked enrollment of subject {subject_id}"
+                in audit_entry.change_reason
+            )
 
         # 3. Simulate eTMF sending a completeness webhook to activate the site Beta
         webhook_payload = {
@@ -407,4 +417,3 @@ async def test_subject_enrollment_blocking(setup_compliance_test_db) -> None:
             headers=headers,
         )
         assert patch_res_success.status_code == 200
-
