@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "types": "./index.d.ts",
   "exports": {
     ".": "./index.js",
     "./tokens.css": "./tokens.css",
@@ -10,7 +11,7 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "vite build",
+    "build": "node scripts/generate-types.js && vite build",
     "test": "vitest run --testTimeout=30000",
     "lint": "eslint .",
     "format": "prettier --write ."
@@ -28,6 +29,7 @@
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.8",
     "pinia": "^4.0.2",
+    "typescript": "^5.5.4",
     "vite": "^8.2.0",
     "vitest": "^4.1.10",
     "vue": "^3.5.40"

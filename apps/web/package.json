@@ -1,25 +1,5 @@
 {
-  "name": "web",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "prebuild": "pnpm --filter ui build && node src/types/generate-types.js",
-    "pretest": "pnpm --filter ui build && node src/types/generate-types.js",
-    "pretypecheck": "node src/types/generate-types.js",
-    "dev": "vite",
-    "build": "vite build --base=/cadence-clinical/ && node ../../scripts/build-docs.js",
-    "build:demo": "vite build --mode demo --base=/cadence-clinical/ && node ../../scripts/build-docs.js",
-    "test": "vitest run --coverage",
-    "test:e2e": "playwright test",
-    "typecheck": "node ../../scripts/check_duplicate_identifiers.js && tsc --noEmit",
-    "lint": "node ../../scripts/check_duplicate_identifiers.js && eslint .",
-    "format": "prettier --write ."
-  },
-  "keywords": [],
   "author": "",
-  "license": "ISC",
-  "type": "module",
   "dependencies": {
     "keycloak-js": "^26.2.4",
     "pinia": "^4.0.2",
@@ -28,16 +8,36 @@
     "vue-router": "^5.2.0",
     "vuedraggable": "4.1.0"
   },
+  "description": "",
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
     "@playwright/test": "^1.49.0",
     "@vitejs/plugin-vue": "^6.0.8",
+    "@vitest/coverage-v8": "^4.1.10",
     "@vue/test-utils": "^2.4.11",
     "eslint-plugin-vue": "^10.10.0",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.1.1",
-    "typescript": "^7.0.2",
-    "vite": "^8.2.0",
-    "@vitest/coverage-v8": "^4.1.10"
-  }
+    "typescript": "^5.5.4",
+    "vite": "^8.2.0"
+  },
+  "keywords": [],
+  "license": "ISC",
+  "main": "index.js",
+  "name": "web",
+  "scripts": {
+    "build": "vite build --base=/cadence-clinical/ && node ../../scripts/build-docs.js",
+    "build:demo": "vite build --mode demo --base=/cadence-clinical/ && node ../../scripts/build-docs.js",
+    "dev": "vite",
+    "format": "prettier --write .",
+    "lint": "node ../../scripts/check_duplicate_identifiers.js && eslint .",
+    "prebuild": "pnpm --filter ui build && node src/types/generate-types.js",
+    "pretest": "pnpm --filter ui build && node src/types/generate-types.js",
+    "pretypecheck": "node src/types/generate-types.js",
+    "test": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "typecheck": "node ../../scripts/check_duplicate_identifiers.js && tsc --noEmit"
+  },
+  "type": "module",
+  "version": "1.0.0"
 }

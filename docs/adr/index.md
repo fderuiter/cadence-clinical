@@ -319,3 +319,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-11: Refined Mock Signature Verification Base64 Collision Prevention](2026-08-11-refine-asymmetric-mock-signature-detection-for-base64-collisions.md)
 - [2026-08-11: Decommissioning Client-Side TS Wrapper SDK and Enforcing Frontend Dependency Gates](2026-08-11-decommissioning-client-side-ts-sdk-and-enforcing-dependency-gates.md)
 - [2026-08-12: ADR-[NUMBER]: Separate Monolithic Clinical Workflows into Modular Sub-routers](2026-08-12-separate-monolithic-clinical-workflows-into-modular-sub-routers.md)
+- [2026-08-12: Dynamic CDASH type generation and strongly-typed clinical Vue components](2026-08-12-dynamic-cdash-type-generation-and-strongly-typed-clinical-vue-components.md)
