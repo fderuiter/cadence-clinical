@@ -7987,6 +7987,13 @@ paths:
               - type: string
               - type: "null"
             title: Form Id
+        - name: include_inactive
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+            title: Include Inactive
       responses:
         "200":
           description: Successful Response
@@ -13892,6 +13899,17 @@ components:
         form_id:
           type: string
           title: Form Id
+        protocol_version:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Protocol Version
+        payload:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Payload
       type: object
       required:
         - study_id
@@ -13908,7 +13926,9 @@ components:
           type: string
           title: Study Id
         site_id:
-          type: string
+          anyOf:
+          - type: string
+          - type: 'null'
           title: Site Id
         subject_id:
           type: string
@@ -13935,6 +13955,28 @@ components:
               type: object
             - type: "null"
           title: Signature Manifest
+        protocol_version:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Protocol Version
+        payload:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Payload
+        is_active:
+          type: boolean
+          title: Is Active
+        is_readonly:
+          type: boolean
+          title: Is Readonly
+        cloned_from_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cloned From Id
       type: object
       required:
         - id
@@ -13945,6 +13987,8 @@ components:
         - status
         - version
         - is_deleted
+        - is_active
+        - is_readonly
       title: FormSubmissionResponse
     FormSubmissionStatusEnum:
       type: string
