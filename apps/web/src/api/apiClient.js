@@ -47,7 +47,7 @@ async function request(path, options = {}) {
   if (pendingRequests.has(requestKey)) {
     try {
       pendingRequests.get(requestKey).abort();
-    } catch (e) {
+    } catch {
       // ignore
     }
   }
@@ -116,7 +116,11 @@ async function request(path, options = {}) {
     if (error instanceof ApiError) {
       throw error;
     }
-    if (error.name === "AbortError" || error.message?.toLowerCase().includes("abort") || error.statusText === "abort") {
+    if (
+      error.name === "AbortError" ||
+      error.message?.toLowerCase().includes("abort") ||
+      error.statusText === "abort"
+    ) {
       throw error;
     }
     throw new ApiError(error.message || "Network or unknown error occurred");
