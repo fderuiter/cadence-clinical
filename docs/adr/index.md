@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+
 - [2026-08-12: Database-Backed Asynchronous Export Jobs](2026-08-12-database-backed-asynchronous-export-jobs.md)
 
 - [2026-08-12: Deconsolidate monolithic database models](2026-08-12-deconsolidate-monolithic-database-models.md)

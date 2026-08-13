@@ -49,15 +49,43 @@ def get_auth_headers(
 
 @pytest_asyncio.fixture(autouse=True)
 async def setup_test_db():
-    """Setup in-memory SQLite database before each test and clear down after."""
-    db_manager.init_db("sqlite+aiosqlite:///:memory:")
-    async with db_manager.engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    """Setup clean database state before each test and clear down after."""
+    is_postgres = os.environ.get("TEST_DATABASE_URL", "").startswith(
+        ("postgres", "postgresql")
+    )
+
+    # Save original state of engine/sessionmaker to avoid polluting other tests
+    original_engine = db_manager.engine
+    original_session_maker = db_manager.session_maker
+
+    # If not already initialized or if we want SQLite fallback, init it
+    initialized_here = False
+    if not is_postgres:
+        db_manager.init_db("sqlite+aiosqlite:///:memory:")
+        initialized_here = True
+        async with db_manager.engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    else:
+        # For Postgres, conftest handles database creation. But we must ensure schemas are loaded
+        # and clean. Let's make sure the tables are created.
+        async with db_manager.engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
     yield
+
     TrialLockManager.reset()
-    async with db_manager.engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-    await db_manager.close()
+
+    if not is_postgres:
+        async with db_manager.engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+        if initialized_here:
+            await db_manager.close()
+            # Restore original state of singleton to avoid polluting subsequent tests
+            db_manager.engine = original_engine
+            db_manager.session_maker = original_session_maker
+    else:
+        # For postgres, conftest handles clean up of databases
+        pass
 
 
 @pytest_asyncio.fixture
