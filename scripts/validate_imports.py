@@ -36,6 +36,7 @@ LEGACY_TESTS_EXEMPT_FROM_IMPORT_BOUNDARIES = {
     "apps/ctms/tests/test_ctms.py",
     "apps/ctms/tests/test_delegation.py",
     "apps/ctms/tests/test_doa_models.py",
+    "apps/ctms/tests/test_federated_resupply.py",
     "apps/notifications/tests/test_notification_worker.py",
     "apps/notifications/tests/test_clinical_workflow_notifications.py",
     "apps/notifications/tests/test_clinical_workflow_notifications_integration.py",
