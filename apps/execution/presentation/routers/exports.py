@@ -1,8 +1,7 @@
 import json
 import os
 import uuid
-from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response
 from fastapi.responses import FileResponse
@@ -51,12 +50,12 @@ class ExportTriggerRequest(BaseModel):
 
 class JobStatusResponse(BaseModel):
     id: str
-    study_id: Optional[str]
-    dataset_name: Optional[str]
+    study_id: str | None
+    dataset_name: str | None
     status: str
     progress: int
-    download_url: Optional[str] = None
-    error_message: Optional[str] = None
+    download_url: str | None = None
+    error_message: str | None = None
 
 
 async def run_sdtm_extraction(
@@ -509,9 +508,7 @@ async def export_sdtm_domain(
                 export_data[f"SUPP{dom_upper}"] = supp_records
 
             # Apply deterministic de-identification transform
-            salt = os.getenv(
-                "BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765"
-            )  # nosec B105: mock fallback secret
+            salt = os.getenv("BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765")  # nosec B105: mock fallback secret
             from apps.execution.biostat.deid import deidentify_export_data
 
             export_data = deidentify_export_data(export_data, salt)
@@ -590,9 +587,7 @@ async def export_adam_dataset(
             records = await run_adam_derivation(session, study_id, ds_upper)
 
             # Apply deterministic de-identification transform
-            salt = os.getenv(
-                "BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765"
-            )  # nosec B105: mock fallback secret
+            salt = os.getenv("BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765")  # nosec B105: mock fallback secret
             from apps.execution.biostat.deid import deidentify_export_data
 
             deidentified_records = deidentify_export_data(records, salt)
@@ -680,9 +675,7 @@ async def export_biostat_bundle(
                 )
 
             # Apply deterministic de-identification transform
-            salt = os.getenv(
-                "BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765"
-            )  # nosec B105: mock fallback secret
+            salt = os.getenv("BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765")  # nosec B105: mock fallback secret
             from apps.execution.biostat.deid import deidentify_export_data
 
             bundle_data = deidentify_export_data(bundle_data, salt)

@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import JSON, DateTime, Index, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
@@ -57,9 +56,9 @@ class DatasetExportJob(AuditedModel):
 
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="PENDING")
     progress: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    study_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    dataset_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    download_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
-    file_path: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
-    error_message: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    initiated_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    study_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    dataset_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    download_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    file_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(String, nullable=True)
+    initiated_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
