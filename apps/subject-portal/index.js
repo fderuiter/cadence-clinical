@@ -1679,7 +1679,9 @@ async function syncOfflineQueue() {
     return;
   }
 
-  const decryptable = queued.filter((item) => item.status !== "DECRYPTION_ERROR");
+  const decryptable = queued.filter(
+    (item) => item.status !== "DECRYPTION_ERROR"
+  );
 
   if (decryptable.length === 0) {
     const txtComplete = "Online. Sync complete.";
