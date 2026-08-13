@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2411
-- **Passed:** 2392 🟢
+- **Total Automated Test Cases Run:** 2416
+- **Passed:** 2397 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.21%
@@ -443,6 +443,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_export_ich_m11_docx`                                                              | `apps.designer.tests.test_m11_exporter`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_export_usdm_json`                                                                 | `apps.designer.tests.test_m11_exporter`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_protocol_export_router_endpoint`                                                  | `apps.designer.tests.test_m11_exporter`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_export_workflows_continue_preflight_validation`                                   | `apps.designer.tests.test_payload_hashing_and_trusted_fetch`                | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_get_usdm_study_skips_recursive_validation`                                        | `apps.designer.tests.test_payload_hashing_and_trusted_fetch`                | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_modified_payload_triggers_full_validation`                                        | `apps.designer.tests.test_payload_hashing_and_trusted_fetch`                | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_payload_hashing_and_cache_bypass`                                                 | `apps.designer.tests.test_payload_hashing_and_trusted_fetch`                | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_target_version_update_invalidates_cache`                                          | `apps.designer.tests.test_payload_hashing_and_trusted_fetch`                | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_clinical_capture_provenance_and_version_stamping`                                 | `apps.designer.tests.test_protocol_amendments_validation_suite`             | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_designer_amendment_immutability_and_race_safety`                                  | `apps.designer.tests.test_protocol_amendments_validation_suite`             | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_designer_amendment_signature_validation`                                          | `apps.designer.tests.test_protocol_amendments_validation_suite`             | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |

@@ -372,7 +372,7 @@ async def get_usdm_study(
 
     try:
         serialized = serialize_usdm(
-            usdm_study, format_type=fmt, style="canonical", validate=True
+            usdm_study, format_type=fmt, style="canonical", validate=False
         )
     except USDMSerializationError as e:
         raise HTTPException(

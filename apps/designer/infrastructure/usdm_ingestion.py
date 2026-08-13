@@ -1,11 +1,32 @@
 from __future__ import annotations
 
+import copy
+import hashlib
+import importlib.metadata
 import json
+import logging
 from typing import Any, Literal
 
 import usdm_model
 import yaml
 from pydantic import BaseModel, Field, ValidationError, model_validator
+
+logger = logging.getLogger(__name__)
+
+try:
+    _usdm_pkg_version = importlib.metadata.version("usdm")
+except Exception:
+    _usdm_pkg_version = "unknown"
+
+_VALIDATION_CACHE: dict[tuple[str, str, str | None, str], USDMValidationReport] = {}
+
+
+def clear_validation_cache() -> None:
+    """
+    Clears the USDM payload validation cache.
+    """
+    _VALIDATION_CACHE.clear()
+    logger.info("USDM validation signature cache cleared.")
 
 
 class ValidationIssue(BaseModel):
@@ -358,6 +379,28 @@ def validate_usdm_payload(
 
     resolved_version, evidence = resolve_usdm_version(payload, override)
 
+    # Calculate payload signature hash and check cache
+    raw_text_stripped = raw_text.strip()
+    payload_hash = hashlib.sha256(raw_text_stripped.encode("utf-8")).hexdigest()
+
+    cache_key = (payload_hash, resolved_version, override, _usdm_pkg_version)
+    if cache_key in _VALIDATION_CACHE:
+        cached_report = _VALIDATION_CACHE[cache_key]
+        cloned_report = copy.deepcopy(cached_report)
+        cloned_report.warnings.append(
+            ValidationIssue(
+                field="payload",
+                reason="Recursive structural validation bypassed via signature match.",
+            )
+        )
+        logger.info(
+            "USDM validation bypassed via signature match for payload hash %s (resolved_version=%s, override=%s).",
+            payload_hash,
+            resolved_version,
+            override,
+        )
+        return cloned_report
+
     try:
         normalized_payload = normalize_usdm_payload(payload, resolved_version)
     except Exception as e:
@@ -540,7 +583,7 @@ def validate_usdm_payload(
 
     is_valid = len(errors) == 0
 
-    return USDMValidationReport(
+    report = USDMValidationReport(
         version=resolved_version,
         format=detected_format,
         validity=is_valid,
@@ -548,3 +591,8 @@ def validate_usdm_payload(
         warnings=warnings,
         version_resolution_evidence=evidence,
     )
+
+    if is_valid:
+        _VALIDATION_CACHE[cache_key] = report
+
+    return report

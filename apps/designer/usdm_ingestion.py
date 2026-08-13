@@ -3,6 +3,7 @@ from apps.designer.infrastructure.usdm_ingestion import (
     FieldReference,
     USDMValidationReport,
     ValidationIssue,
+    clear_validation_cache,
     detect_circular_dependencies,
     detect_stochastic_operators,
     extract_field_references,
@@ -26,4 +27,5 @@ __all__ = [
     "safe_parse_payload",
     "traverse_rules_in_payload",
     "validate_usdm_payload",
+    "clear_validation_cache",
 ]
