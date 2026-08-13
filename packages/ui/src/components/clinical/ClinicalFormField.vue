@@ -10,6 +10,8 @@
         :query="query"
         :grid-span="field.gridSpan || 12"
         :error="error"
+        :can-manage-queries="canManageQueries"
+        :query-label="queryLabel"
         @update:model-value="$emit('update:modelValue', $event)"
         @change="(val, target) => $emit('change', val, target)"
         @create-query="$emit('create-query', $event)"
@@ -29,6 +31,8 @@
         :status="lookupStatus ? lookupStatus.status : 'none'"
         :status-message="lookupStatus ? lookupStatus.message : ''"
         :attributes="customAttributes"
+        :can-manage-queries="canManageQueries"
+        :query-label="queryLabel"
         @update:model-value="$emit('update:modelValue', $event)"
         @input="$emit('input', $event)"
         @change="(val, target) => $emit('change', val, target)"
@@ -47,6 +51,8 @@
         :grid-span="field.gridSpan || 12"
         :error="error"
         :attributes="customAttributes"
+        :can-manage-queries="canManageQueries"
+        :query-label="queryLabel"
         @update:model-value="$emit('update:modelValue', $event)"
         @change="(val, target) => $emit('change', val, target)"
         @create-query="$emit('create-query', $event)"
@@ -75,12 +81,16 @@ const props = withDefaults(
       status: "none" | "loading" | "valid" | "invalid" | "degraded";
       message?: string;
     } | null;
+    canManageQueries?: boolean;
+    queryLabel?: string;
   }>(),
   {
     modelValue: "",
     query: null,
     error: null,
     lookupStatus: null,
+    canManageQueries: false,
+    queryLabel: "",
   }
 );
 
