@@ -354,7 +354,7 @@ def main() -> None:
                                 },
                                 {
                                     "apps/web/src/style.css",
-                                    "apps/subject-portal/style.css",
+                                    "apps/subject-portal/src/style.css",
                                 },
                                 {
                                     "packages/ui/src/components/clinical/ClinicalInput.vue",

@@ -39,7 +39,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
-      include: ["sync-queue.js"],
+      include: ["src/sync-queue.js"],
       thresholds: {
         lines: 80,
         functions: 80,

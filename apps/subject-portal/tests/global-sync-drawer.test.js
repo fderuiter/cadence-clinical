@@ -1,13 +1,13 @@
 import "fake-indexeddb/auto";
 import { describe, it, expect, beforeEach } from "vitest";
 import { createApp, nextTick } from "vue";
-import App from "../App.vue";
-import { state, refreshSubmissionsState } from "../index.js";
+import App from "../src/App.vue";
+import { state, refreshSubmissionsState } from "../src/index.js";
 import {
   initSessionKey,
   queueSubmission,
   clearAllSubmissions,
-} from "../sync-queue.js";
+} from "../src/sync-queue.js";
 
 describe("Global Floating Drawer and Vue-Reactive State Sync", () => {
   beforeEach(async () => {
