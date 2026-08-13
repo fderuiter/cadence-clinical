@@ -12,7 +12,7 @@
 
 The Cadence Clinical platform strictly enforces 21 CFR Part 11 and GxP compliance, which requires all mutating API requests to include a cryptographic gateway signature and a non-empty `X-Change-Reason` header (justification for change). This audit trial is vital for regulated environments (such as clinical execution/EDC and production settings).
 
-However, during early stage development, design phase modifications, mock trials, and UI interactions on low-risk paths (such as draft study versions, staging configurations, visual canvas layouts, and visual study designer operations), requiring change justifications from the user at every single action creates high friction and slows down study builders. 
+However, during early stage development, design phase modifications, mock trials, and UI interactions on low-risk paths (such as draft study versions, staging configurations, visual canvas layouts, and visual study designer operations), requiring change justifications from the user at every single action creates high friction and slows down study builders.
 
 We need a safe, robust, and compliant way to allow path-based exemptions to bypass change justification verification for non-regulated, low-risk activities, without weakening enforcement on regulated endpoints.
 
@@ -25,6 +25,7 @@ We need a safe, robust, and compliant way to allow path-based exemptions to bypa
 ## 3. Options Considered
 
 ### Option 1: Globally relax reasons for change validation
+
 - **Overview:** Relax reason-for-change requirements globally across all environments and stages.
 - **Pros:**
   - ✅ Simplifies implementation.
@@ -32,6 +33,7 @@ We need a safe, robust, and compliant way to allow path-based exemptions to bypa
   - ❌ Directly violates GxP and FDA 21 CFR Part 11 requirements for change justification and audit trails.
 
 ### Option 2: Implement centralized, path-based exemptions (Selected)
+
 - **Overview:** Define a helper function `is_path_exempt_from_justification` in `packages/security/gating.py` listing low-risk keyword/path matches (e.g., `draft`, `staging`, `designer`, `layout`, `canvas`). If a request targets an exempt path, the middleware allows bypassing the change justification check (setting it to an empty string internally) while still strictly enforcing the check on all other paths.
 - **Pros:**
   - ✅ Highly granular and safe: isolates non-regulated designer activities from execution-service endpoints.
