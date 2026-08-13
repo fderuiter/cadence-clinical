@@ -260,7 +260,7 @@ class TestOfflineSchemaDrift:
 
         @req:PRD-SYS-001
         """
-        client_file = "apps/subject-portal/sync-queue.js"
+        client_file = "apps/subject-portal/src/sync-queue.js"
         offline_models_file = "apps/execution/domain/offline_models.py"
         interop_models_file = "apps/interop/infrastructure/models.py"
 

@@ -41,8 +41,8 @@ Chosen option: **Option 1** because it perfectly guarantees clinical history int
 ## 6. Implementation & Verification
 
 - **Frontend Target Files:**
-  - `apps/subject-portal/sync-queue.js` (bulk IndexedDB updates)
-  - `apps/subject-portal/index.js` (synchronization reconciliation engine)
+  - `apps/subject-portal/src/sync-queue.js` (bulk IndexedDB updates)
+  - `apps/subject-portal/src/index.js` (synchronization reconciliation engine)
 - **Backend Target Files:**
   - `apps/execution/domain/offline_models.py`
   - `apps/gateway/domain/acl/ecoa_dto.py`
