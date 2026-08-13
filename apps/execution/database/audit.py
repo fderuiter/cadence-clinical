@@ -142,6 +142,40 @@ def receive_before_flush(session: Session, flush_context, instances):
             "Trial is currently locked in a read-only state due to a security violation."
         )
 
+    # Check for read-only / inactive form submissions
+    for obj in list(session.new) + list(session.dirty) + list(session.deleted):
+        if hasattr(obj, "__tablename__") and obj.__tablename__ == "form_submissions":
+            if obj in session.deleted:
+                raise PermissionError("Cannot delete a form submission record.")
+            if obj in session.dirty:
+                state = inspect(obj)
+                orig_readonly = state.attrs.is_readonly.value
+                if (
+                    state.attrs.is_readonly.history.has_changes()
+                    and state.attrs.is_readonly.history.deleted
+                ):
+                    orig_readonly = state.attrs.is_readonly.history.deleted[0]
+
+                orig_active = state.attrs.is_active.value
+                if (
+                    state.attrs.is_active.history.has_changes()
+                    and state.attrs.is_active.history.deleted
+                ):
+                    orig_active = state.attrs.is_active.history.deleted[0]
+
+                if orig_readonly is True or orig_active is False:
+                    # Block modifications to any other fields
+                    modified_attrs = []
+                    for attr in state.mapper.attrs:
+                        if attr.key not in ("is_readonly", "is_active", "version"):
+                            history = getattr(state.attrs, attr.key).history
+                            if history.has_changes():
+                                modified_attrs.append(attr.key)
+                    if modified_attrs:
+                        raise PermissionError(
+                            "Cannot modify a read-only or inactive form submission."
+                        )
+
     # Propagate site_id for subject-derived records if not specified
     for obj in list(session.new) + list(session.dirty):
         if not hasattr(obj, "__tablename__") or obj.__tablename__ == "audit_logs":
