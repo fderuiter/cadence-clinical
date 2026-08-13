@@ -1541,7 +1541,7 @@ async def create_observation(
         gender = "U"
         age = None
         if subj_db:
-            demo = get_safe_demographics(subj_db, obs_date)
+            demo = get_safe_demographics(subj_db, obs_date, preserve_custom=True)
             gender = demo.get("gender")
             age = demo.get("age")
 

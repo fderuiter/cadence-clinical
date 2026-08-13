@@ -72,17 +72,9 @@ def select_reference_range(
     candidates = []
 
     # Clean input sex using basic normalization
-    norm_sex = None
-    if sex:
-        s_clean = str(sex).strip().upper()
-        if s_clean in ("M", "MALE", "BOY", "MAN"):
-            norm_sex = "M"
-        elif s_clean in ("F", "FEMALE", "GIRL", "WOMAN"):
-            norm_sex = "F"
-        elif s_clean in ("U", "UNKNOWN"):
-            norm_sex = "U"
-        else:
-            norm_sex = s_clean
+    from apps.execution.demographics import normalize_gender
+
+    norm_sex = normalize_gender(sex, preserve_custom=True) if sex is not None else "U"
 
     for r in ranges:
         # 1. Skip deleted records
@@ -131,11 +123,11 @@ def select_reference_range(
             r_sex = str(r_sex).strip().upper()
 
         sex_score = 0
-        if norm_sex in ("M", "F"):
+        if norm_sex and norm_sex != "U":
             if r_sex == norm_sex:
-                sex_score = 2  # Exact sex match
+                sex_score = 2  # Exact match for M, F, or custom sex (e.g. "OTHER")
             elif r_sex in ("ALL", None, "", "U"):
-                sex_score = 1  # Generic fallback
+                sex_score = 1  # Fallback to ALL/generic
         else:
             # If subject's sex is unknown/None/U, only match ALL/generic ranges
             if r_sex in ("ALL", None, "", "U"):
@@ -356,7 +348,7 @@ async def recalculate_range_flags(
         obs_date = obs.observation_date or datetime.now()
         subj = subjects.get(obs.subject_id)
         if subj:
-            demo = get_safe_demographics(subj, obs_date)
+            demo = get_safe_demographics(subj, obs_date, preserve_custom=True)
             gender = demo.get("gender")
             age = demo.get("age")
         else:

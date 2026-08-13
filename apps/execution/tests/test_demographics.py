@@ -143,3 +143,39 @@ def test_get_safe_demographics_failures_fail_safely() -> None:
     encrypted_incomplete = encrypt_demographics({"name": "Secret Person"})
     profile_incomplete = get_safe_demographics(encrypted_incomplete, "2025-06-20")
     assert profile_incomplete == {"gender": "U", "age": None}
+
+
+def test_custom_gender_preservation() -> None:
+    """Verify normalize_gender and get_safe_demographics with preserve_custom=True."""
+    # Test normalize_gender preservation
+    assert normalize_gender("OTHER", preserve_custom=True) == "OTHER"
+    assert normalize_gender("X", preserve_custom=True) == "X"
+    assert normalize_gender("other", preserve_custom=True) == "OTHER"
+    assert normalize_gender("  X  ", preserve_custom=True) == "X"
+
+    # Defaults to U when preserve_custom=False
+    assert normalize_gender("OTHER", preserve_custom=False) == "U"
+    assert normalize_gender("X", preserve_custom=False) == "U"
+
+    # Standard values still map correctly with preserve_custom=True
+    assert normalize_gender("Male", preserve_custom=True) == "M"
+    assert normalize_gender("Female", preserve_custom=True) == "F"
+    assert normalize_gender("Unknown", preserve_custom=True) == "U"
+
+    # Test get_safe_demographics preservation
+    payload_other = {
+        "birthdate": "1990-06-20",
+        "gender": "OTHER",
+        "name": "Jane Smith",
+    }
+    encrypted_other = encrypt_demographics(payload_other)
+
+    profile_no_preserve = get_safe_demographics(
+        encrypted_other, "2025-06-20", preserve_custom=False
+    )
+    assert profile_no_preserve["gender"] == "U"
+
+    profile_preserve = get_safe_demographics(
+        encrypted_other, "2025-06-20", preserve_custom=True
+    )
+    assert profile_preserve["gender"] == "OTHER"
