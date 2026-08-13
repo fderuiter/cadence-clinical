@@ -55,3 +55,19 @@ class ChangeApprovalSignature(AuditedModel):
         back_populates="signatures",
         uselist=False,
     )
+
+
+class SiteComplianceCache(AuditedModel):
+    """Local relational cache of site-level and study-level milestone compliance statuses.
+
+    Tracks whether necessary EDL documents have been approved in eTMF.
+    """
+
+    __tablename__ = "site_compliance_caches"
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    milestone: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    is_complete: Mapped[bool] = mapped_column(default=False, nullable=False)
+    missing_documents: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+

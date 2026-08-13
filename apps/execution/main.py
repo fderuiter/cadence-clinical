@@ -13,6 +13,7 @@ from fastapi import (
     Depends,
     FastAPI,
     HTTPException,
+    Query,
     Request,
     Response,
 )
@@ -1062,6 +1063,170 @@ async def record_subject_consent_endpoint(
         )
 
 
+async def check_site_compliance_for_enrollment(session, study_id: str, site_id: str | None) -> bool:
+    """Helper to verify that SITE_ACTIVATION milestone is complete in SiteComplianceCache."""
+    if not site_id:
+        return True
+    from apps.execution.database.models.compliance import SiteComplianceCache
+    stmt = select(SiteComplianceCache).where(
+        SiteComplianceCache.study_id == study_id,
+        SiteComplianceCache.site_id == site_id,
+        SiteComplianceCache.milestone == "SITE_ACTIVATION"
+    )
+    result = await session.execute(stmt)
+    cache_entry = result.scalars().first()
+    return bool(cache_entry and cache_entry.is_complete)
+
+
+class ETMFCompletenessWebhookPayload(BaseModel):
+    study_id: str
+    site_id: str | None = None
+    milestone: str
+    is_complete: bool
+    missing_artifacts: list[str] = Field(default_factory=list)
+
+
+@app.post("/api/v1/execution/webhooks/etmf")
+async def etmf_completeness_webhook(
+    payload: ETMFCompletenessWebhookPayload,
+) -> dict[str, Any]:
+    """Receive and process completeness webhook events from eTMF to update local compliance cache."""
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            from apps.execution.database.models.compliance import SiteComplianceCache
+
+            stmt = select(SiteComplianceCache).where(
+                SiteComplianceCache.study_id == payload.study_id,
+                SiteComplianceCache.site_id == payload.site_id,
+                SiteComplianceCache.milestone == payload.milestone
+            )
+            result = await session.execute(stmt)
+            cache_entry = result.scalars().first()
+
+            missing_docs_str = ",".join(payload.missing_artifacts) if payload.missing_artifacts else None
+
+            if cache_entry:
+                cache_entry.is_complete = payload.is_complete
+                cache_entry.missing_documents = missing_docs_str
+                cache_entry.version += 1
+            else:
+                cache_entry = SiteComplianceCache(
+                    study_id=payload.study_id,
+                    site_id=payload.site_id,
+                    milestone=payload.milestone,
+                    is_complete=payload.is_complete,
+                    missing_documents=missing_docs_str,
+                    version=1
+                )
+                session.add(cache_entry)
+            await session.commit()
+
+    return {"status": "success", "message": "Compliance cache updated successfully."}
+
+
+class SiteActivationRequest(BaseModel):
+    study_id: str
+
+
+@app.post("/api/v1/execution/sites/{site_id}/activate")
+async def activate_site_endpoint(
+    site_id: str,
+    payload: SiteActivationRequest,
+    principal: Principal = Depends(get_principal),
+) -> dict[str, Any]:
+    """Attempt site activation in the Execution Engine, validating compliance from the local cache."""
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            from apps.execution.database.models.compliance import SiteComplianceCache
+
+            stmt = select(SiteComplianceCache).where(
+                SiteComplianceCache.study_id == payload.study_id,
+                SiteComplianceCache.site_id == site_id,
+                SiteComplianceCache.milestone == "SITE_ACTIVATION"
+            )
+            result = await session.execute(stmt)
+            cache_entry = result.scalars().first()
+
+            if not cache_entry or cache_entry.is_complete is False:
+                # Log blocked activation attempt to execution audit trail in separate session
+                async with db_manager.get_session_maker()() as audit_session:
+                    async with audit_session.begin():
+                        block_audit = AuditLog(
+                            table_name="site_compliance_caches",
+                            record_id=site_id,
+                            action="BLOCKED_ACTIVATION",
+                            user_id=principal.user_id if principal else "system",
+                            change_reason=f"Blocked site activation for site {site_id} due to incomplete eTMF compliance status."
+                        )
+                        audit_session.add(block_audit)
+
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Site activation blocked: Site {site_id} is not compliant in eTMF. Missing expected documents."
+                )
+
+            # Successfully activated: Log success in execution audit trail
+            success_audit = AuditLog(
+                table_name="site_compliance_caches",
+                record_id=site_id,
+                action="SITE_ACTIVATION",
+                user_id=principal.user_id if principal else "system",
+                change_reason=f"Site {site_id} successfully activated after eTMF compliance completeness verification."
+            )
+            session.add(success_audit)
+            await session.commit()
+
+    return {"status": "success", "message": f"Site {site_id} activated successfully."}
+
+
+class ComplianceStatusResponse(BaseModel):
+    study_id: str
+    site_id: str | None
+    milestone: str
+    is_complete: bool
+    missing_documents: list[str]
+
+
+@app.get("/api/v1/execution/sites/{site_id}/compliance-status", response_model=ComplianceStatusResponse)
+async def get_site_compliance_status(
+    site_id: str,
+    study_id: str = Query(..., description="The clinical study ID"),
+    milestone: str = Query("SITE_ACTIVATION", description="The milestone to check"),
+) -> ComplianceStatusResponse:
+    """Retrieve site compliance status from the local cache."""
+    async with db_manager.get_session_maker()() as session:
+        from apps.execution.database.models.compliance import SiteComplianceCache
+
+        stmt = select(SiteComplianceCache).where(
+            SiteComplianceCache.study_id == study_id,
+            SiteComplianceCache.site_id == site_id,
+            SiteComplianceCache.milestone == milestone
+        )
+        result = await session.execute(stmt)
+        cache_entry = result.scalars().first()
+
+        if not cache_entry:
+            return ComplianceStatusResponse(
+                study_id=study_id,
+                site_id=site_id,
+                milestone=milestone,
+                is_complete=False,
+                missing_documents=[]
+            )
+
+        missing_list = []
+        if cache_entry.missing_documents:
+            missing_list = [d.strip() for d in cache_entry.missing_documents.split(",") if d.strip()]
+
+        return ComplianceStatusResponse(
+            study_id=cache_entry.study_id,
+            site_id=cache_entry.site_id,
+            milestone=cache_entry.milestone,
+            is_complete=cache_entry.is_complete,
+            missing_documents=missing_list
+        )
+
+
 @app.post(
     "/api/v1/execution/subjects/{subject_id}/screening",
     response_model=SubjectScreeningResponse,
@@ -1136,6 +1301,25 @@ async def evaluate_and_transition_screening(
                 session.add(subject_obj)
                 await session.commit()
             elif res.eligible is True:
+                # Check site compliance from local cache
+                is_compliant = await check_site_compliance_for_enrollment(session, study_id, subject_obj.site_id)
+                if not is_compliant:
+                    # Log blocked transition attempt to execution audit trail in separate session
+                    async with db_manager.get_session_maker()() as audit_session:
+                        async with audit_session.begin():
+                            blocked_audit = AuditLog(
+                                table_name="clinical_subjects",
+                                record_id=subject_obj.id,
+                                action="BLOCKED_ENROLLMENT",
+                                user_id=user_val,
+                                change_reason=f"Blocked enrollment of subject {subject_id} due to non-compliant site {subject_obj.site_id} in study {study_id}."
+                            )
+                            audit_session.add(blocked_audit)
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Subject enrollment blocked: Site {subject_obj.site_id} is not compliant."
+                    )
+
                 custom_reason = f"Subject met all eligibility criteria and transitioned to ENROLLED. Original reason: {change_reason}"
                 current_change_reason.set(custom_reason)
 
@@ -1214,7 +1398,29 @@ async def update_subject_state_endpoint(
 
             # Try to transition state
             try:
+                if target_state == "ENROLLED":
+                    # Check site compliance from local cache
+                    is_compliant = await check_site_compliance_for_enrollment(session, subject.study_id, subject.site_id)
+                    if not is_compliant:
+                        # Log blocked transition attempt to execution audit trail in separate session
+                        async with db_manager.get_session_maker()() as audit_session:
+                            async with audit_session.begin():
+                                blocked_audit = AuditLog(
+                                    table_name="clinical_subjects",
+                                    record_id=subject.id,
+                                    action="BLOCKED_ENROLLMENT",
+                                    user_id=principal.user_id if principal else "system",
+                                    change_reason=f"Blocked enrollment of subject {id} due to non-compliant site {subject.site_id} in study {subject.study_id}."
+                                )
+                                audit_session.add(blocked_audit)
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Subject enrollment blocked: Site {subject.site_id} is not compliant."
+                        )
+
                 subject.status = target_state
+            except HTTPException:
+                raise
             except InvalidStateTransitionError:
                 raise HTTPException(status_code=400, detail="INVALID_STATE_TRANSITION")
             except Exception as e:

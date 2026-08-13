@@ -76,12 +76,29 @@
         margin-bottom: 20px;
         display: flex;
         gap: 24px;
+        align-items: center;
         font-size: 14px;
         color: #334155;
       "
     >
       <div><strong>Study ID:</strong> {{ studyId }}</div>
       <div><strong>Site ID:</strong> {{ siteId }}</div>
+      <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+        <strong>eTMF Compliance Status:</strong>
+        <span
+          v-if="loadingCompliance"
+          style="color: #64748b;"
+        >Loading...</span>
+        <span
+          v-else
+          class="badge"
+          :class="{ gxp: complianceStatus.is_complete }"
+          :style="complianceStatus.is_complete ? {} : { backgroundColor: '#ef4444', color: '#ffffff' }"
+          :title="complianceStatus.is_complete ? 'All required documents approved in eTMF.' : 'Missing: ' + (complianceStatus.missing_documents || []).join(', ')"
+        >
+          {{ complianceStatus.is_complete ? 'COMPLIANT' : 'NON-COMPLIANT' }}
+        </span>
+      </div>
     </div>
 
     <!-- Tab 1: Core Operations -->
@@ -1007,9 +1024,28 @@ const availableTasks = [
   { value: "PRINCIPAL_INVESTIGATOR", text: "Principal Investigator Oversight" },
 ];
 
+const complianceStatus = ref({ is_complete: false, missing_documents: [] });
+const loadingCompliance = ref(false);
+
+async function loadComplianceStatus() {
+  loadingCompliance.value = true;
+  try {
+    const res = await apiClient.get(
+      `/api/v1/execution/sites/${siteId.value}/compliance-status?study_id=${studyId.value}`
+    );
+    complianceStatus.value = res || { is_complete: false, missing_documents: [] };
+  } catch (err) {
+    console.error("Failed to load site compliance status:", err);
+    complianceStatus.value = { is_complete: false, missing_documents: [] };
+  } finally {
+    loadingCompliance.value = false;
+  }
+}
+
 // Load Operations Data from Real-time Backend
 async function loadOperationsData() {
   try {
+    loadComplianceStatus();
     const [milestonesRes, visitsRes, workloadRes, recruitmentRes] =
       await Promise.all([
         apiClient.get(
