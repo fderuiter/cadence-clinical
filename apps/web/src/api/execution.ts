@@ -2,23 +2,43 @@ import { apiClient } from "./apiClient";
 import type { components } from "./types";
 import { useAuthStore } from "../stores/auth";
 
+/**
+ * Payload interface for submitting a batch signature.
+ */
 export interface BatchSignPayload {
+  /** The unique identifier of the clinical study. */
   studyId: string;
+  /** The unique identifier of the subject being signed off. */
   subjectId: string;
+  /** List of form IDs to sign off concurrently. */
   formIds: string[];
+  /** The user's credential password for cryptographic verification. */
   password: string;
+  /** The compliance meaning or reason of the signature (e.g. APPROVED). */
   meaning: string;
+  /** Optional printed name of the signer. Defaults to Principal Investigator. */
   printedName?: string;
+  /** Optional target type. Defaults to FORM. */
   targetType?: string;
 }
 
+/**
+ * Response interface returned after successfully processing a batch signature.
+ */
 export interface BatchSignResponse {
+  /** Generated unique electronic signature record ID. */
   signature_id: string;
+  /** Reference to the clinical study. */
   study_id: string;
+  /** Reference to the subject signed off. */
   subject_id: string;
+  /** The count of forms successfully signed in this batch. */
   signed_forms_count: number;
+  /** Cryptographic content digest over the signed form data assets. */
   content_digest: string;
+  /** ISO UTC timestamp of the signature transaction. */
   timestamp_utc: string;
+  /** Reference to the database ledger transaction hash. */
   audit_tx: string;
 }
 
@@ -94,6 +114,16 @@ export const executionService = {
     );
   },
 
+  /**
+   * Submits a batch electronic signature for a list of clinical forms.
+   *
+   * Under standard mode, this sends an electronic signature sign-off request
+   * to the EDC backend. Under demo mode, it bypasses network transmission and
+   * generates/persists a mock signature response locally in localStorage.
+   *
+   * @param payload Payload parameters for the batch signature.
+   * @returns Resolves with the processing signature response.
+   */
   async submitBatchSignature(
     payload: BatchSignPayload
   ): Promise<BatchSignResponse> {
@@ -162,6 +192,12 @@ export const executionService = {
   },
 };
 
+/**
+ * Convenience wrapper to submit a batch electronic signature for forms.
+ *
+ * @param payload Payload parameters for the batch signature.
+ * @returns Resolves with the processing signature response.
+ */
 export const submitBatchSignature = (
   payload: BatchSignPayload
 ): Promise<BatchSignResponse> => executionService.submitBatchSignature(payload);
