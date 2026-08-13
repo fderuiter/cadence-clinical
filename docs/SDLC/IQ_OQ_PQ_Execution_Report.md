@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2392
-- **Passed:** 2378 🟢
+- **Total Automated Test Cases Run:** 2393
+- **Passed:** 2379 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 14 ⚪
 - **Overall Operational Pass Rate:** 99.41%
@@ -879,6 +879,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_invalid_sdtm_domain_rejection`                                                    | `apps.execution.tests.test_biostat_exports`                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_sdtm_domain_export_success`                                                       | `apps.execution.tests.test_biostat_exports`                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_unauthenticated_access_rejection`                                                 | `apps.execution.tests.test_biostat_exports`                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_recover_orphaned_dictionary_imports`                                              | `apps.execution.tests.test_boot_recovery`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_cdisc_cache_purge_expired`                                                        | `apps.execution.tests.test_cdisc_cache`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_cdisc_cache_save_and_get`                                                         | `apps.execution.tests.test_cdisc_cache`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_cdisc_cache_ttl_expiration`                                                       | `apps.execution.tests.test_cdisc_cache`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
