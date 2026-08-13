@@ -57,14 +57,6 @@ class ESignatureVerifier:
             VerificationResult: The result of the verification check.
         """
         try:
-            # Reject mock signatures / certificates case-insensitively
-            if b"mock" in signed_data.lower():
-                return VerificationResult(
-                    is_valid=False,
-                    status="MOCK_SIGNATURE_DETECTED",
-                    failure_reason="Mock signature detected and blocked.",
-                )
-
             # Check for duplicate/injected cert/signature blocks
             if (
                 signed_data.count(b"-----BEGIN CERTIFICATE-----") > 1
@@ -85,6 +77,13 @@ class ESignatureVerifier:
             sig_end = signed_data.find(b"-----END SIGNATURE-----")
 
             if cert_start == -1 or sig_start == -1 or sig_end == -1:
+                # Fallback check if markers are missing
+                if b"mock" in signed_data.lower():
+                    return VerificationResult(
+                        is_valid=False,
+                        status="MOCK_SIGNATURE_DETECTED",
+                        failure_reason="Mock signature detected and blocked.",
+                    )
                 return VerificationResult(
                     is_valid=False,
                     status="TAMPERED_INVALID_HASH",
@@ -99,6 +98,38 @@ class ESignatureVerifier:
                 .strip()
                 .decode("utf-8", errors="ignore")
             )
+
+            # Robust mock detection
+            is_mock_cert = False
+            cert_pem_str = cert_pem.decode("utf-8", errors="ignore")
+            if "mock" in cert_pem_str.lower():
+                try:
+                    parsed_cert = x509.load_pem_x509_certificate(cert_pem)
+                    subject_str = parsed_cert.subject.rfc4514_string().lower()
+                    issuer_str = parsed_cert.issuer.rfc4514_string().lower()
+                    if "mock" in subject_str or "mock" in issuer_str:
+                        is_mock_cert = True
+                except Exception:
+                    is_mock_cert = True
+
+            is_mock_sig = False
+            if "mock" in sig_b64.lower():
+                try:
+                    sig_bytes = base64.b64decode(sig_b64)
+                    if sig_bytes is None or len(sig_bytes) < 64:
+                        is_mock_sig = True
+                    else:
+                        if b"MOCK" in sig_bytes or b"mock" in sig_bytes:
+                            is_mock_sig = True
+                except Exception:
+                    is_mock_sig = True
+
+            if is_mock_cert or is_mock_sig:
+                return VerificationResult(
+                    is_valid=False,
+                    status="MOCK_SIGNATURE_DETECTED",
+                    failure_reason="Mock signature detected and blocked.",
+                )
 
             # Load certificate
             try:
