@@ -389,10 +389,11 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from "vue";
-import { useSignatureStore } from "../../stores/signatures";
+import { ref, watch, onMounted, computed } from "vue";
 import { useFocusTrap } from "@/composables/useFocusTrap";
 import { useEscapeClose } from "@/composables/useEscapeClose";
+import { useMutation } from "@tanstack/vue-query";
+import { submitBatchSignature } from "../../api/execution";
 
 const props = defineProps({
   isOpen: {
@@ -418,14 +419,31 @@ const emit = defineEmits(["close", "signed"]);
 const modalRef = ref(null);
 useFocusTrap(modalRef);
 useEscapeClose(() => emit("close"));
-const signatureStore = useSignatureStore();
 
 const password = ref("");
 const totp = ref("");
 const signatureMeaning = ref("APPROVED");
-const isSigning = ref(false);
-const localError = ref("");
-const lastSignatureResult = ref(null);
+
+const { mutateAsync, isPending, error, reset, data } = useMutation({
+  mutationFn: (payload) => submitBatchSignature(payload),
+  onError: () => {
+    password.value = "";
+  },
+});
+
+const isSigning = computed(() => isPending.value);
+
+const localError = computed(() => {
+  if (!error.value) return "";
+  const err = error.value;
+  const errStatus = err.status || (err.response ? err.response.status : null);
+  if (errStatus === 401) {
+    return "Authentication failed: Invalid credentials or expired session (HTTP 401).";
+  }
+  return err.message || "An unexpected error occurred during re-authentication.";
+});
+
+const lastSignatureResult = computed(() => data.value);
 
 const formHashes = ref({});
 
@@ -454,8 +472,7 @@ watch(
       password.value = "";
       totp.value = "";
       signatureMeaning.value = "APPROVED";
-      localError.value = "";
-      lastSignatureResult.value = null;
+      reset();
       computeHashes();
     }
   }
@@ -478,34 +495,18 @@ onMounted(() => {
 });
 
 const handleExecuteSign = async () => {
-  isSigning.value = true;
-  localError.value = "";
   try {
     const studyId = props.studyId || "STUDY-USDM-001";
-    const res = await signatureStore.submitBatchSignature({
+    const res = await mutateAsync({
       studyId,
       subjectId: props.subjectId,
       formIds: props.selectedForms,
       password: password.value,
       meaning: signatureMeaning.value,
     });
-    lastSignatureResult.value = res;
     emit("signed", res);
-  } catch (err) {
-    // Automatically clear password on authentication failure
-    password.value = "";
-
-    // Handle re-auth error
-    const errStatus = err.status || (err.response ? err.response.status : null);
-    if (errStatus === 401) {
-      localError.value =
-        "Authentication failed: Invalid credentials or expired session (HTTP 401).";
-    } else {
-      localError.value =
-        err.message || "An unexpected error occurred during re-authentication.";
-    }
-  } finally {
-    isSigning.value = false;
+  } catch {
+    // Error state is automatically captured by useMutation
   }
 };
 </script>

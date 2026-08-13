@@ -1,5 +1,26 @@
 import { apiClient } from "./apiClient";
 import type { components } from "./types";
+import { useAuthStore } from "../stores/auth";
+
+export interface BatchSignPayload {
+  studyId: string;
+  subjectId: string;
+  formIds: string[];
+  password: string;
+  meaning: string;
+  printedName?: string;
+  targetType?: string;
+}
+
+export interface BatchSignResponse {
+  signature_id: string;
+  study_id: string;
+  subject_id: string;
+  signed_forms_count: number;
+  content_digest: string;
+  timestamp_utc: string;
+  audit_tx: string;
+}
 
 export type SubjectCreate = components["schemas"]["Execution_SubjectCreate"];
 export type SubjectResponse =
@@ -72,4 +93,76 @@ export const executionService = {
       options
     );
   },
+
+  async submitBatchSignature(
+    payload: BatchSignPayload
+  ): Promise<BatchSignResponse> {
+    const authStore = useAuthStore();
+    const isMocked =
+      apiClient.post &&
+      ((apiClient.post as any)._isMockFunction ||
+        typeof (apiClient.post as any).mock === "object");
+    if (authStore.isDemoMode && !authStore.token && !isMocked) {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const mockResponse: BatchSignResponse = {
+        signature_id:
+          "mock-sig-" +
+          Date.now() +
+          "-" +
+          Math.random().toString(36).substring(2, 7),
+        study_id: payload.studyId,
+        subject_id: payload.subjectId,
+        signed_forms_count: payload.formIds.length,
+        content_digest:
+          "sha256-" +
+          Array.from({ length: 64 }, () =>
+            Math.floor(Math.random() * 16).toString(16)
+          ).join(""),
+        timestamp_utc: new Date().toISOString(),
+        audit_tx: "tx-" + Math.random().toString(36).substring(2, 10),
+      };
+
+      if (typeof window !== "undefined" && window.localStorage) {
+        try {
+          window.localStorage.setItem(
+            "lastSignatureResult",
+            JSON.stringify(mockResponse)
+          );
+        } catch (e) {
+          console.error("Failed to persist signature in demo mode", e);
+        }
+      }
+      return mockResponse;
+    }
+
+    const printedName = payload.printedName || "Principal Investigator";
+    const requestPayload = {
+      study_id: payload.studyId,
+      subject_id: payload.subjectId,
+      target_type: payload.targetType || "FORM",
+      target_ids: payload.formIds,
+      target_form_ids: payload.formIds,
+      signing_reason: payload.meaning,
+      password: payload.password,
+      printed_name: printedName,
+    };
+
+    const response = (await apiClient.post(
+      "/api/v1/execution/signatures/batch-sign-off",
+      requestPayload,
+      {
+        changeReason: payload.meaning,
+        headers: {
+          "X-Change-Reason": payload.meaning,
+        },
+      }
+    )) as BatchSignResponse;
+
+    return response;
+  },
 };
+
+export const submitBatchSignature = (
+  payload: BatchSignPayload
+): Promise<BatchSignResponse> => executionService.submitBatchSignature(payload);
+

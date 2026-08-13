@@ -1,6 +1,7 @@
 {
   "author": "",
   "dependencies": {
+    "@tanstack/vue-query": "^5.101.4",
     "keycloak-js": "^26.2.4",
     "pinia": "^4.0.2",
     "ui": "workspace:*",

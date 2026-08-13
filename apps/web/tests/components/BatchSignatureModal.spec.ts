@@ -4,20 +4,29 @@
  * Requirements Traceability: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import BatchSignatureModal from "../../src/components/signatures/BatchSignatureModal.vue";
 import { useSignatureStore } from "../../src/stores/signatures";
+import { VueQueryPlugin, QueryClient } from "@tanstack/vue-query";
 
 import { apiClient } from "../../src/api/apiClient";
 
 describe("BatchSignatureModal.vue", () => {
   let pinia: any;
+  let queryClient: QueryClient;
 
   beforeEach(() => {
     pinia = createPinia();
     setActivePinia(pinia);
+
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
 
     // Spy on the real apiClient directly
     vi.spyOn(apiClient, "get").mockResolvedValue([]);
@@ -44,7 +53,7 @@ describe("BatchSignatureModal.vue", () => {
         selectedForms: ["Form-A", "Form-B"],
       },
       global: {
-        plugins: [pinia],
+        plugins: [pinia, [VueQueryPlugin, { queryClient }]],
       },
     });
 
@@ -64,7 +73,7 @@ describe("BatchSignatureModal.vue", () => {
         selectedForms: ["Form-A", "Form-B"],
       },
       global: {
-        plugins: [pinia],
+        plugins: [pinia, [VueQueryPlugin, { queryClient }]],
       },
     });
 
@@ -97,7 +106,7 @@ describe("BatchSignatureModal.vue", () => {
         selectedForms: ["Form-A"],
       },
       global: {
-        plugins: [pinia],
+        plugins: [pinia, [VueQueryPlugin, { queryClient }]],
       },
     });
 
@@ -130,7 +139,7 @@ describe("BatchSignatureModal.vue", () => {
         selectedForms: ["Form-A"],
       },
       global: {
-        plugins: [pinia],
+        plugins: [pinia, [VueQueryPlugin, { queryClient }]],
       },
     });
 
@@ -183,7 +192,7 @@ describe("BatchSignatureModal.vue", () => {
         selectedForms: ["Form-A"],
       },
       global: {
-        plugins: [pinia],
+        plugins: [pinia, [VueQueryPlugin, { queryClient }]],
       },
     });
 

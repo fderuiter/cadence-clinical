@@ -4,6 +4,7 @@ import { useAuthStore } from "../src/stores/auth";
 import { useSignatureStore } from "../src/stores/signatures";
 import { useNotificationsStore } from "../src/stores/notifications";
 import { useEtmfStore } from "../src/stores/etmf";
+import { submitBatchSignature } from "../src/api/execution";
 
 describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
   beforeEach(() => {
@@ -233,7 +234,6 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
     describe("Signatures Store Simulation", () => {
       it("intercepts batch signature submission and persists to localStorage in demo mode", async () => {
         authStore.isDemoMode = true;
-        const signatureStore = useSignatureStore();
 
         const payload = {
           studyId: "STUDY-01",
@@ -243,12 +243,11 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
           meaning: "APPROVED",
         };
 
-        const res = await signatureStore.submitBatchSignature(payload);
+        const res = await submitBatchSignature(payload);
 
         expect(res.signature_id).toBeDefined();
         expect(res.signature_id.startsWith("mock-sig-")).toBe(true);
         expect(res.signed_forms_count).toBe(2);
-        expect(signatureStore.lastSignatureResult).toEqual(res);
 
         // Verify localStorage persistence
         const stored = window.localStorage.getItem("lastSignatureResult");
@@ -372,7 +371,7 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
         const etmfStore = useEtmfStore();
 
         // Mutate all stores
-        await signatureStore.submitBatchSignature({
+        await submitBatchSignature({
           studyId: "S",
           subjectId: "SU",
           formIds: ["F"],
@@ -406,7 +405,6 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
         expect(window.localStorage.getItem("demo_documents")).toBeNull();
 
         // Verify in-memory state is back to pristine default state
-        expect(signatureStore.lastSignatureResult).toBeNull();
         expect(notificationsStore.notifications[0].status).toBe("OPEN"); // originally "OPEN", ack changed it to "ACKNOWLEDGED"
         expect(
           etmfStore.documentsList.some(

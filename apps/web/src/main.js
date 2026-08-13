@@ -1,6 +1,7 @@
 // Cadence Clinical Vue SPA Bootstrap entrypoint
 import { createApp } from "vue";
 import { createPinia } from "pinia";
+import { VueQueryPlugin } from "@tanstack/vue-query";
 import App from "./App.vue";
 import { router } from "./router";
 import Keycloak from "keycloak-js";
@@ -16,6 +17,7 @@ const pinia = createPinia();
 
 app.use(pinia);
 app.use(router);
+app.use(VueQueryPlugin);
 
 // Graceful Keycloak / OIDC setup
 const keycloakUrl =
