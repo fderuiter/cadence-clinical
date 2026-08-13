@@ -13,10 +13,12 @@ Based on the executed automated verification suite, the platform meets all prede
 - **Total Automated Test Cases Run:** 2395
 - **Passed:** 2376 🟢
 - **Total Automated Test Cases Run:** 2398
-- **Passed:** 2379 🟢
+- **Passed:** 2384 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.21%
+- **Skipped:** 14 ⚪
+- **Overall Operational Pass Rate:** 99.42%
 
 ## 2. Installation Qualification (IQ)
 
