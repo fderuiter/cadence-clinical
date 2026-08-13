@@ -235,6 +235,10 @@ def resolve_path(path_str, md_file_path, repo_root, root_dirs, root_files):
         "apps/execution/database/models.py", "apps/execution/database/models"
     )
 
+    # Exclude decommissioned/deleted files referenced in ADR/docs
+    if "packages/ui/sdk.ts" in path_str or "packages/ui/tests/sdk.test.ts" in path_str:
+        return None
+
     # Ignore gitignored build folders or coverage folders
     if any(
         p in path_str.replace("\\", "/").split("/")

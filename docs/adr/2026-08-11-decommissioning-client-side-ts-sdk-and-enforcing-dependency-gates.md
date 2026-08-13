@@ -1,6 +1,6 @@
 # ADR-123: Decommissioning Client-Side TS Wrapper SDK and Enforcing Frontend Dependency Gates
 
-- **Status:** Accepted
+- **Status:** Implemented
 - **Date:** 2026-08-11
 - **Authors:** @jules
 - **Deciders:** @fderuiter
