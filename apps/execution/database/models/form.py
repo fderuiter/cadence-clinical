@@ -1,6 +1,6 @@
 import enum
 
-from sqlalchemy import JSON, Index, String
+from sqlalchemy import JSON, Boolean, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, synonym
 
 from .audit import AuditedModel
@@ -43,3 +43,9 @@ class FormSubmission(AuditedModel):
         comment="DRAFT, COMPLETED, APPROVED",
     )  # DRAFT, COMPLETED, APPROVED
     signature_manifest: Mapped[dict] = mapped_column(JSON, nullable=True)
+
+    protocol_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_readonly: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    cloned_from_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
