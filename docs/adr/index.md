@@ -127,6 +127,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ### 3. Clinical Data Interoperability & Standards
 
 - [2026-08-11: Key-Based Sync Reconciliation](2026-08-11-key-based-sync-reconciliation.md)
+- [2026-08-13: Automated TypeScript-to-Python Model Compilation](2026-08-13-automated-typescript-to-python-model-compilation.md)
 
 - [2026-08-04: Thread-Safe In-Memory Terminology Search Cache](2026-08-04-in-memory-terminology-search-cache.md)
 - [2026-09-01: SAE Reconciliation & Safety Gateway (E2B)](2026-09-01-sae-reconciliation-safety-gateway-e2b.md)
