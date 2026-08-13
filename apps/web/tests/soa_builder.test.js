@@ -7,6 +7,7 @@ import { apiClient } from "../src/api/apiClient.js";
 import { mount } from "@vue/test-utils";
 import ClinicalSoAMatrix from "../src/components/clinical/ClinicalSoAMatrix.vue";
 import { normalizeUsdm } from "../src/stores/normalization";
+import { stateTrackingPlugin } from "../src/stores/plugins.js";
 
 // Mock apiClient
 vi.mock("../src/api/apiClient.js", () => {
@@ -22,6 +23,7 @@ vi.mock("../src/api/apiClient.js", () => {
 
 beforeEach(() => {
   const pinia = createPinia();
+  pinia.use(stateTrackingPlugin);
   setActivePinia(pinia);
   const authStore = useAuthStore();
   authStore.accessToken = "mock-keycloak-jwt-token";

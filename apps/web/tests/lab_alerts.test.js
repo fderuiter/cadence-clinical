@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { useClinicalStore } from "../src/stores/clinical";
 import { executionService } from "../src/api/execution";
+import { stateTrackingPlugin } from "../src/stores/plugins.js";
 
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
@@ -12,6 +13,7 @@ describe("Lab Alerts - API Client & Pinia Store Unit Tests", () => {
   beforeEach(() => {
     mockFetch.mockReset();
     pinia = createPinia();
+    pinia.use(stateTrackingPlugin);
     setActivePinia(pinia);
   });
 
