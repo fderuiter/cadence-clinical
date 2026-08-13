@@ -2,8 +2,8 @@ const CACHE_NAME = "portal-cache-v1";
 const ASSETS = [
   "/subject-portal/",
   "/subject-portal/index.html",
-  "/subject-portal/style.css",
-  "/subject-portal/index.js",
+  "/subject-portal/src/style.css",
+  "/subject-portal/src/index.js",
   "/subject-portal/manifest.json",
 ];
 

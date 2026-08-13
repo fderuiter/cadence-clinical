@@ -118,7 +118,7 @@ beforeEach(async () => {
     })
   );
 
-  const portal = await import("../index.js");
+  const portal = await import("../src/index.js");
   portal.state.session.userId = "subject_001";
   portal.state.session.token = null;
   portal.state.session.isOfflineMode = true;
@@ -133,7 +133,7 @@ beforeEach(async () => {
 
 describe("eConsent Patient Portal - Workflow and Gating Integration Tests", () => {
   it("verifies language selection drop-down re-fetches approved consent content", async () => {
-    const portal = await import("../index.js");
+    const portal = await import("../src/index.js");
     await portal.initializeApp();
 
     portal.showView("view-consent");
@@ -153,7 +153,7 @@ describe("eConsent Patient Portal - Workflow and Gating Integration Tests", () =
   });
 
   it("gates the Sign action and keeps signature disabled until comprehension verification passes", async () => {
-    const portal = await import("../index.js");
+    const portal = await import("../src/index.js");
     await portal.initializeApp();
 
     portal.showView("view-consent");
@@ -194,7 +194,7 @@ describe("eConsent Patient Portal - Workflow and Gating Integration Tests", () =
   });
 
   it("verifies strict credential hygiene: cleans PIN/password inputs immediately on submit or cancel", async () => {
-    const portal = await import("../index.js");
+    const portal = await import("../src/index.js");
     await portal.initializeApp();
 
     portal.state.consentPassed = true;
@@ -222,7 +222,7 @@ describe("eConsent Patient Portal - Workflow and Gating Integration Tests", () =
   });
 
   it("verifies credential hygiene on cancel or failure", async () => {
-    const portal = await import("../index.js");
+    const portal = await import("../src/index.js");
     await portal.initializeApp();
 
     portal.state.consentPassed = true;

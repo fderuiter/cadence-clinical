@@ -5,14 +5,14 @@ import {
   state,
   handlePINSetupSubmit,
   handlePINUnlockSubmit,
-} from "../index.js";
+} from "../src/index.js";
 import {
   clearSessionKey,
   clearInMemoryKey,
   getInMemorySessionKey,
   getWrappedMasterKeyConfig,
   openDatabase,
-} from "../sync-queue.js";
+} from "../src/sync-queue.js";
 
 describe("Persistent Local PIN Wrapper Cryptographic & Flow Tests", () => {
   beforeEach(async () => {

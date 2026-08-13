@@ -25,7 +25,7 @@ import {
   saveDraft,
   getDraft,
   deleteDraft,
-} from "../sync-queue.js";
+} from "../src/sync-queue.js";
 
 describe("sync-queue secure storage and sync capabilities", () => {
   beforeEach(async () => {

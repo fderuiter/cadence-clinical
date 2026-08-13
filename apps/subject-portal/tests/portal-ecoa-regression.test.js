@@ -125,7 +125,7 @@ beforeEach(async () => {
 
   // Reset state and clear IndexedDB stores
   try {
-    const portal = await import("../index.js");
+    const portal = await import("../src/index.js");
     portal.state.session.userId = "subject_001";
     portal.state.session.roles = "Subject";
     portal.state.session.token = null;
@@ -194,14 +194,14 @@ beforeEach(async () => {
 
 describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
   beforeEach(async () => {
-    const portal = await import("../index.js");
+    const portal = await import("../src/index.js");
     portal.state.session.isDemoMode = true; // Default tests to demo-mode to preserve mock data reliance
     portal.state.session.isOfflineMode = true;
     portal.state.session.token = null;
   });
 
   it("verifies dynamic rendering and form field generation from instrument schemas", async () => {
-    const portal = await import("../index.js");
+    const portal = await import("../src/index.js");
     await portal.initializeApp();
 
     // Start daily diary questionnaire
@@ -230,7 +230,7 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
   });
 
   it("checks input validator, clinical bounds constraints, and error feedback", async () => {
-    const portal = await import("../index.js");
+    const portal = await import("../src/index.js");
     await portal.initializeApp();
 
     portal.startQuestionnaire("assign_01");
@@ -261,7 +261,7 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
   });
 
   it("proves compliance calculation, compliance metrics, and status rendering update correctly", async () => {
-    const portal = await import("../index.js");
+    const portal = await import("../src/index.js");
     await portal.initializeApp();
 
     // Initial compliance checks
@@ -306,7 +306,7 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
   });
 
   it("handles offline queueing in IndexedDB, sequence preservation, and sequential sync upon online transition", async () => {
-    const portal = await import("../index.js");
+    const portal = await import("../src/index.js");
     await portal.initializeApp();
 
     // Ensure empty queue
@@ -371,7 +371,7 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
   });
 
   it("safeguards queued data on sync network failures", async () => {
-    const portal = await import("../index.js");
+    const portal = await import("../src/index.js");
     await portal.initializeApp();
 
     await portal.clearAllSubmissions();
@@ -405,7 +405,7 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
   });
 
   it("verifies and renders sync conflict resolutions (MERGED, IGNORED_SERVER_WINS) cleanly in the UI", async () => {
-    const portal = await import("../index.js");
+    const portal = await import("../src/index.js");
     await portal.initializeApp();
 
     await portal.clearAllSubmissions();
@@ -532,7 +532,7 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     ];
 
     it("authenticates and loads data from server-shaped payloads correctly", async () => {
-      const portal = await import("../index.js");
+      const portal = await import("../src/index.js");
 
       // Enable authenticated session
       portal.state.session.userId = "subject_authenticated";
@@ -597,7 +597,7 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     });
 
     it("shows loading, empty, and failure states on tasks, inbox, and compliance with retry actions", async () => {
-      const portal = await import("../index.js");
+      const portal = await import("../src/index.js");
 
       portal.state.session.userId = "subject_authenticated";
       portal.state.session.token = "valid-token";
@@ -689,7 +689,7 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     });
 
     it("prevents changing notification state on failed server acknowledgement, but updates on success", async () => {
-      const portal = await import("../index.js");
+      const portal = await import("../src/index.js");
 
       portal.state.session.userId = "subject_authenticated";
       portal.state.session.token = "valid-token";
@@ -757,7 +757,7 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     });
 
     it("guarantees an authenticated read failure never substitutes mock content or locally derived compliance", async () => {
-      const portal = await import("../index.js");
+      const portal = await import("../src/index.js");
 
       portal.state.session.userId = "subject_authenticated";
       portal.state.session.token = "valid-token";

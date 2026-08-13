@@ -126,7 +126,7 @@ beforeEach(async () => {
 
   // Reset state and clear IndexedDB stores
   try {
-    const portal = await import("../index.js");
+    const portal = await import("../src/index.js");
     portal.state.session.userId = "subject_001";
     portal.state.session.roles = "Subject";
     portal.state.session.token = null;
@@ -195,7 +195,7 @@ beforeEach(async () => {
 
 describe("eCOA Companion Patient Portal - Workflow Tests", () => {
   beforeEach(async () => {
-    const portal = await import("../index.js");
+    const portal = await import("../src/index.js");
     portal.state.session.isDemoMode = true; // Default tests to demo-mode to preserve mock data reliance
     portal.state.session.isOfflineMode = true;
     portal.state.session.token = null;
@@ -203,7 +203,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
 
   it("initializes app state with default tasks and mock data on load", async () => {
     // Import dynamically to trigger DOM listeners and state bootstrap
-    const portal = await import("../index.js");
+    const portal = await import("../src/index.js");
 
     // Initialize application
     await portal.initializeApp();
@@ -221,7 +221,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
   });
 
   it("handles navigation between primary patient-facing views", async () => {
-    const portal = await import("../index.js");
+    const portal = await import("../src/index.js");
     await portal.initializeApp();
 
     // Start with tasks view active
@@ -244,7 +244,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
   });
 
   it("renders eCOA questionnaire fields dynamically based on definition", async () => {
-    const portal = await import("../index.js");
+    const portal = await import("../src/index.js");
     await portal.initializeApp();
 
     // Trigger start questionnaire for "inst_daily_diary"
@@ -276,7 +276,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
   });
 
   it("enforces clinical boundaries and performs input validation", async () => {
-    const portal = await import("../index.js");
+    const portal = await import("../src/index.js");
     await portal.initializeApp();
 
     portal.startQuestionnaire("assign_01");
@@ -308,7 +308,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
   });
 
   it("calculates compliance scores correctly and updates the history log on submission", async () => {
-    const portal = await import("../index.js");
+    const portal = await import("../src/index.js");
     await portal.initializeApp();
 
     // Check initial compliance rate (1 completed out of 3 total = 33%)
@@ -346,7 +346,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
   });
 
   it("renders the patient notification inbox and handles write-reason acknowledgments", async () => {
-    const portal = await import("../index.js");
+    const portal = await import("../src/index.js");
     await portal.initializeApp();
 
     // Unread notification counts (initially 2 unread)
@@ -382,7 +382,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     });
 
     it("queues submissions in IndexedDB when offline and persists them across reload", async () => {
-      const portal = await import("../index.js");
+      const portal = await import("../src/index.js");
       await portal.initializeApp();
 
       // Clear any prior submissions to guarantee clean state
@@ -430,7 +430,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     });
 
     it("flushes queued items in correct sequence order upon going online", async () => {
-      const portal = await import("../index.js");
+      const portal = await import("../src/index.js");
       await portal.initializeApp();
 
       // Clean state
@@ -517,7 +517,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     });
 
     it("retains QUEUED status and retries when sync fails", async () => {
-      const portal = await import("../index.js");
+      const portal = await import("../src/index.js");
       await portal.initializeApp();
 
       await portal.clearAllSubmissions();
@@ -552,7 +552,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     });
 
     it("asserts Bearer token is attached and gateway headers are absent when authenticated", async () => {
-      const portal = await import("../index.js");
+      const portal = await import("../src/index.js");
       portal.state.session.isDemoMode = false;
       portal.state.session.isOfflineMode = false;
       portal.state.session.token = "valid_test_token_abc123";
@@ -585,7 +585,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     });
 
     it("asserts no Authorization header is emitted when no token is present", async () => {
-      const portal = await import("../index.js");
+      const portal = await import("../src/index.js");
       portal.state.session.isDemoMode = false;
       portal.state.session.isOfflineMode = false;
       portal.state.session.token = null;
@@ -610,7 +610,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     });
 
     it("surfaces an error state on authenticated (non-demo) dispatch failures instead of falling back silently to mocks", async () => {
-      const portal = await import("../index.js");
+      const portal = await import("../src/index.js");
       portal.state.session.isDemoMode = false;
       portal.state.session.isOfflineMode = false;
       portal.state.session.token = "some_token";
@@ -644,13 +644,13 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     });
 
     it("demonstrates proper encryption, key-derivation, decryption, and error handling on decryption failure", async () => {
-      const portal = await import("../index.js");
+      const portal = await import("../src/index.js");
       const {
         initSessionKey,
         clearSessionKey,
         getQueuedSubmissions,
         queueSubmission,
-      } = await import("../sync-queue.js");
+      } = await import("../src/sync-queue.js");
 
       // 1. Initializing session key and clearing database for clean state
       await portal.clearAllSubmissions();
@@ -697,7 +697,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     });
 
     it("displays conflict resolution outcomes (MERGED, IGNORED_SERVER_WINS) cleanly without discarding", async () => {
-      const portal = await import("../index.js");
+      const portal = await import("../src/index.js");
       await portal.initializeApp();
 
       await portal.clearAllSubmissions();
@@ -847,7 +847,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     ];
 
     it("authenticates and loads data from server-shaped payloads correctly", async () => {
-      const portal = await import("../index.js");
+      const portal = await import("../src/index.js");
 
       // Enable authenticated session
       portal.state.session.userId = "subject_authenticated";
@@ -912,7 +912,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     });
 
     it("shows loading, empty, and failure states on tasks, inbox, and compliance with retry actions", async () => {
-      const portal = await import("../index.js");
+      const portal = await import("../src/index.js");
 
       portal.state.session.userId = "subject_authenticated";
       portal.state.session.token = "valid-token";
@@ -1004,7 +1004,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     });
 
     it("prevents changing notification state on failed server acknowledgement, but updates on success", async () => {
-      const portal = await import("../index.js");
+      const portal = await import("../src/index.js");
 
       portal.state.session.userId = "subject_authenticated";
       portal.state.session.token = "valid-token";
@@ -1072,7 +1072,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     });
 
     it("guarantees an authenticated read failure never substitutes mock content or locally derived compliance", async () => {
-      const portal = await import("../index.js");
+      const portal = await import("../src/index.js");
 
       portal.state.session.userId = "subject_authenticated";
       portal.state.session.token = "valid-token";
@@ -1101,7 +1101,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
 
     describe("eCOA Patient Portal - Dynamic JSDOM Accessibility Audits", () => {
       it("passes automated axe-core audits for WCAG 2.1 AA", async () => {
-        const portal = await import("../index.js");
+        const portal = await import("../src/index.js");
         await portal.initializeApp();
 
         // Run axe audit on the rendered body layout
@@ -1122,7 +1122,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       });
 
       it("supports keyboard arrow-key navigation on navigation tabs", async () => {
-        const portal = await import("../index.js");
+        const portal = await import("../src/index.js");
         await portal.initializeApp();
 
         const navTabs = document.querySelector(".nav-tabs");
@@ -1160,7 +1160,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       });
 
       it("enforces focus containment within the signing modal and restores focus on closure", async () => {
-        const portal = await import("../index.js");
+        const portal = await import("../src/index.js");
         await portal.initializeApp();
 
         // Set initiating element
@@ -1217,7 +1217,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       });
 
       it("links form field errors dynamically to input elements using aria-describedby", async () => {
-        const portal = await import("../index.js");
+        const portal = await import("../src/index.js");
         await portal.initializeApp();
 
         // Render a mock form input
@@ -1251,7 +1251,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
         });
 
         it("resolves the user's OIDC identity from local storage before establishing the initial session key", async () => {
-          const portal = await import("../index.js");
+          const portal = await import("../src/index.js");
 
           // 1. Seed cached user identity in localStorage
           localStorage.setItem("oidc_user_id", "subject_cached_123");
@@ -1264,7 +1264,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
         });
 
         it("saves the verified user identifier into the browser's persistent local storage upon successful login simulation", async () => {
-          const portal = await import("../index.js");
+          const portal = await import("../src/index.js");
 
           // Simulate Keycloak authentication success by setting the state directly and triggering the save (or manually calling keycloak flows)
           portal.state.session.userId = "subject_logged_in_456";
@@ -1278,7 +1278,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
         });
 
         it("automatically re-derives the AES-GCM encryption key as soon as the active user identifier changes", async () => {
-          const portal = await import("../index.js");
+          const portal = await import("../src/index.js");
           await portal.initializeApp();
 
           // Let's track when initSessionKey is called or just verify the key re-derivation by changing the userId
@@ -1293,7 +1293,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
         });
 
         it("triggers immediate deletion of the cached OIDC identifier from local storage on user logout", async () => {
-          const portal = await import("../index.js");
+          const portal = await import("../src/index.js");
 
           // 1. Set cached OIDC user id in localStorage
           localStorage.setItem("oidc_user_id", "subject_to_logout");

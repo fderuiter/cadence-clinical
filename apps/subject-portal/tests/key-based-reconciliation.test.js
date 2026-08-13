@@ -9,8 +9,8 @@ import {
   getAllSubmissions,
   bulkUpdateSubmissionStatuses,
   clearAllSubmissions,
-} from "../sync-queue.js";
-import { syncOfflineQueue, state } from "../index.js";
+} from "../src/sync-queue.js";
+import { syncOfflineQueue, state } from "../src/index.js";
 
 describe("Key-Based Sync Reconciliation Integration Tests", () => {
   beforeEach(async () => {

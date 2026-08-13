@@ -102,8 +102,8 @@ describe("Subject Portal Service Worker (sw.js)", () => {
     expect(mockCache.addAll).toHaveBeenCalledWith([
       "/subject-portal/",
       "/subject-portal/index.html",
-      "/subject-portal/style.css",
-      "/subject-portal/index.js",
+      "/subject-portal/src/style.css",
+      "/subject-portal/src/index.js",
       "/subject-portal/manifest.json",
     ]);
   });
