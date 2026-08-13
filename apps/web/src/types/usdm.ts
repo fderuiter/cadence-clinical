@@ -1,5 +1,5 @@
 // Auto-generated from OpenAPI schema definition
-// Generated on: 2026-08-13T00:23:49.620Z
+// Generated on: 2026-08-13T00:42:17.820Z
 
 export interface ActivityAssignmentRequest {
   visit_id: string;
