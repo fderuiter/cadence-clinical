@@ -52,11 +52,13 @@ def decrypt_demographics(encrypted_str: str) -> dict:
     return json.loads(decrypted.decode("utf-8"))
 
 
-def normalize_gender(gender_str: str | None) -> str:
+def normalize_gender(gender_str: str | None, preserve_custom: bool = False) -> str:
     """Normalize supported gender/sex input values into standard rule-engine codes (CDISC SEX).
 
     Args:
         gender_str (Optional[str]): Raw input gender or sex string (e.g. "Male", "Female", "M", "F", "U").
+        preserve_custom (bool): If True, returns custom/unmapped sex values stripped and uppercased
+                                instead of defaulting to "U".
 
     Returns:
         str: Normalized standard code: "M" for Male, "F" for Female, and "U" for Unknown/Others.
@@ -72,6 +74,11 @@ def normalize_gender(gender_str: str | None) -> str:
         return "M"
     if normalized in ("F", "FEMALE", "GIRL", "WOMAN"):
         return "F"
+    if normalized in ("U", "UNKNOWN", "UNK"):
+        return "U"
+
+    if preserve_custom and normalized:
+        return normalized
 
     # Default to "U" (CDISC Unknown) for unmapped/absent/unknown values
     return "U"
@@ -177,6 +184,7 @@ def calculate_age(
 def get_safe_demographics(
     subject: Any,
     observation_date: date | datetime | str | None,
+    preserve_custom: bool = False,
 ) -> dict[str, Any]:
     """Securely extract range-matching demographics from ClinicalSubject without exposing raw PII.
 
@@ -188,6 +196,7 @@ def get_safe_demographics(
     Args:
         subject (Any): ClinicalSubject instance, a dict, or raw encrypted ciphertext string.
         observation_date (Union[date, datetime, str, None]): Date of the observation.
+        preserve_custom (bool): If True, preserves custom biological sex strings.
 
     Returns:
         Dict[str, Any]: Safe demographic profile with 'gender' (str) and 'age' (int/None).
@@ -220,7 +229,7 @@ def get_safe_demographics(
 
         # Normalize gender/sex
         raw_gender = decrypted_data.get("gender") or decrypted_data.get("sex")
-        result["gender"] = normalize_gender(raw_gender)
+        result["gender"] = normalize_gender(raw_gender, preserve_custom=preserve_custom)
 
         # Parse birthdate and calculate observation-relative age
         raw_birthdate = (

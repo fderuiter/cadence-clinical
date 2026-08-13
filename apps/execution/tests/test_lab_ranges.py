@@ -791,8 +791,8 @@ def test_task1_exact_m_rejected_against_f_only_range():
 
 
 def test_task1_divergence_select_reference_range_vs_normalize_gender():
-    """Document the known divergence: the inline sex normalization in select_reference_range falls back
-    to the raw uppercased string, while demographics.normalize_gender defaults to "U".
+    """Verify that divergence is resolved: the unified helper is used with preserve_custom=True,
+    allowing custom biological sex exact reference ranges to match with high specificity (score 2).
 
     @req:PRD-LAB-001
     """
@@ -802,17 +802,14 @@ def test_task1_divergence_select_reference_range_vs_normalize_gender():
     tcode = "WBC"
     unit = "10^9/L"
 
-    # For an unmapped/custom string like "OTHER" or "X":
-    # 1. demographics.normalize_gender defaults to "U"
-    assert normalize_gender("OTHER") == "U"
-    assert normalize_gender("X") == "U"
+    # 1. demographics.normalize_gender without preserve_custom still defaults to "U"
+    assert normalize_gender("OTHER", preserve_custom=False) == "U"
+    assert normalize_gender("X", preserve_custom=False) == "U"
 
-    # 2. select_reference_range falls back to raw uppercased string ("OTHER" or "X").
-    # This means norm_sex becomes "OTHER" or "X". Since they are not "M" or "F", it falls to the else branch
-    # of select_reference_range, matching ranges with sex_applicability in ("ALL", None, "", "U").
-    # Specifically, a candidate range with sex_applicability="OTHER" or "X" gets a sex_score of 0 because:
-    #   r_sex is "OTHER" or "X", which is not in ("ALL", None, "", "U").
-    # Thus, even though norm_sex is "OTHER" or "X", it cannot match an exact sex_applicability="OTHER" or "X" range!
+    # With preserve_custom=True, it returns the custom string
+    assert normalize_gender("OTHER", preserve_custom=True) == "OTHER"
+    assert normalize_gender("X", preserve_custom=True) == "X"
+
     r_other = create_mock_range(
         id="sex_other", test_code=tcode, normalized_unit=unit, sex_applicability="OTHER"
     )
@@ -823,29 +820,34 @@ def test_task1_divergence_select_reference_range_vs_normalize_gender():
         id="sex_all", test_code=tcode, normalized_unit=unit, sex_applicability="ALL"
     )
 
-    # Passing sex="OTHER" or "X" will NOT match the "OTHER" or "X" range
+    # Passing sex="OTHER" or "X" will now match the exact "OTHER" or "X" range
     matched_other = select_reference_range(
         [r_other], study, tcode, unit, "CENTRAL", sex="OTHER", age=30.0
     )
-    assert matched_other is None
+    assert matched_other is not None
+    assert matched_other["id"] == "sex_other"
 
     matched_x = select_reference_range(
         [r_x], study, tcode, unit, "CENTRAL", sex="X", age=30.0
     )
-    assert matched_x is None
+    assert matched_x is not None
+    assert matched_x["id"] == "sex_x"
 
-    # Passing sex="OTHER" or "X" WILL match the "ALL" range
+    # Passing sex="OTHER" or "X" will fall back to "ALL" range if specific custom range is not in candidate list
     matched_all_other = select_reference_range(
         [r_all], study, tcode, unit, "CENTRAL", sex="OTHER", age=30.0
     )
     assert matched_all_other is not None
     assert matched_all_other["id"] == "sex_all"
 
-    matched_all_x = select_reference_range(
-        [r_all], study, tcode, unit, "CENTRAL", sex="X", age=30.0
+    # Verify specificity scoring priority: exact custom sex range match wins over "ALL" fallback range
+    matched_priority = select_reference_range(
+        [r_other, r_all], study, tcode, unit, "CENTRAL", sex="OTHER", age=30.0
     )
-    assert matched_all_x is not None
-    assert matched_all_x["id"] == "sex_all"
+    assert matched_priority is not None
+    assert (
+        matched_priority["id"] == "sex_other"
+    )  # Wins because of sex_score = 2 vs sex_score = 1
 
 
 def test_task2_age_inclusive_boundaries():
