@@ -5,6 +5,8 @@
     :query="query"
     :grid-span="gridSpan"
     :error="error"
+    :can-manage-queries="canManageQueries"
+    :query-label="queryLabel"
     tag="fieldset"
   >
     <template #default="{ id: slotId }">
@@ -64,6 +66,14 @@ const props = defineProps({
   error: {
     type: String,
     default: null,
+  },
+  canManageQueries: {
+    type: Boolean,
+    default: false,
+  },
+  queryLabel: {
+    type: String,
+    default: "",
   },
 });
 

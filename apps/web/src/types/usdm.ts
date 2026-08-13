@@ -1,5 +1,5 @@
 // Auto-generated from OpenAPI schema definition
-// Generated on: 2026-08-13T05:41:27.758Z
+// Generated on: 2026-08-13T12:31:28.515Z
 
 export interface ActivityAssignmentRequest {
   visit_id: string;
@@ -507,7 +507,11 @@ export interface LibraryObjectAmendRequest {
 
 export interface LibraryObjectListResponse {
   object?: string;
-  data: FormLibraryObjectDetail | DataElementLibraryObjectDetail | ArmLibraryObjectDetail | VisitLibraryObjectDetail[];
+  data:
+    | FormLibraryObjectDetail
+    | DataElementLibraryObjectDetail
+    | ArmLibraryObjectDetail
+    | VisitLibraryObjectDetail[];
   has_more: boolean;
   next_cursor?: string | null;
 }
@@ -517,7 +521,8 @@ export interface LibraryObjectTransitionRequest {
   change_reason: string;
 }
 
-export type LibraryStatus = "DRAFT" | "IN_REVIEW" | "APPROVED" | "PUBLISHED" | "ARCHIVED" | "REJECTED";
+export type LibraryStatus =
+  "DRAFT" | "IN_REVIEW" | "APPROVED" | "PUBLISHED" | "ARCHIVED" | "REJECTED";
 
 export interface LinkArmApplicabilityRequest {
   arm_id: string;
@@ -645,7 +650,20 @@ export interface SectionTransitionRequest {
   signing_reason?: SigningReason | null;
 }
 
-export type SigningReason = "AUTHOR" | "REVIEW" | "APPROVAL" | "SPONSOR_APPROVAL" | "INVESTIGATOR_SIGNATURE" | "TECHNICAL_QC" | "CLINICAL_QC" | "DATA_LOCK" | "SYSTEM_SEAL" | "PROTOCOL_APPROVAL" | "REGULATORY_FORM_SIGNATURE" | "TRAINING_ACKNOWLEDGEMENT" | "SITE_VISIT_SIGN_OFF";
+export type SigningReason =
+  | "AUTHOR"
+  | "REVIEW"
+  | "APPROVAL"
+  | "SPONSOR_APPROVAL"
+  | "INVESTIGATOR_SIGNATURE"
+  | "TECHNICAL_QC"
+  | "CLINICAL_QC"
+  | "DATA_LOCK"
+  | "SYSTEM_SEAL"
+  | "PROTOCOL_APPROVAL"
+  | "REGULATORY_FORM_SIGNATURE"
+  | "TRAINING_ACKNOWLEDGEMENT"
+  | "SITE_VISIT_SIGN_OFF";
 
 export interface SoACellView {
   activity_id: string;
@@ -786,7 +804,8 @@ export interface TerminologyConcept {
   valid: boolean;
 }
 
-export type TerminologyEnum = "SNOMED-CT" | "LOINC" | "MedDRA" | "WHODrug" | "NCI" | "CDISC-CT";
+export type TerminologyEnum =
+  "SNOMED-CT" | "LOINC" | "MedDRA" | "WHODrug" | "NCI" | "CDISC-CT";
 
 export interface TerminologySearchResponse {
   query: string;
@@ -968,4 +987,3 @@ export interface apps__designer__library__UpdateVisitRequest {
   object_type?: string;
   payload: VisitPayload;
 }
-

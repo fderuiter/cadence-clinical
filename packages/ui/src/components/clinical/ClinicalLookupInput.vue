@@ -5,6 +5,8 @@
     :query="query"
     :grid-span="gridSpan"
     :error="error"
+    :can-manage-queries="canManageQueries"
+    :query-label="queryLabel"
     tag="div"
     extra-class="clinical-lookup-container"
   >
@@ -83,6 +85,10 @@ interface Props {
   query?: any;
   // Custom element attributes mapping
   attributes?: Record<string, any>;
+  // Query permission check
+  canManageQueries?: boolean;
+  // Formatted query status label
+  queryLabel?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -93,6 +99,8 @@ const props = withDefaults(defineProps<Props>(), {
   gridSpan: 12,
   query: null,
   attributes: () => ({}),
+  canManageQueries: false,
+  queryLabel: "",
 });
 
 defineEmits<{

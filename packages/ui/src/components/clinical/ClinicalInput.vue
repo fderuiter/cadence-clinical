@@ -6,6 +6,8 @@
     :grid-span="gridSpan"
     :error="error"
     :attributes="attributes"
+    :can-manage-queries="canManageQueries"
+    :query-label="queryLabel"
     tag="div"
   >
     <template #default="{ id: slotId, errorId, hasError }">
@@ -54,6 +56,14 @@ defineProps({
   attributes: {
     type: Object,
     default: () => ({}),
+  },
+  canManageQueries: {
+    type: Boolean,
+    default: false,
+  },
+  queryLabel: {
+    type: String,
+    default: "",
   },
 });
 
