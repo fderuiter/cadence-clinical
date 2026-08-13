@@ -1,5 +1,5 @@
 // Cadence Clinical Vue SPA Bootstrap entrypoint
-import { createApp, ref } from "vue";
+import { createApp } from "vue";
 import { createPinia } from "pinia";
 import App from "./App.vue";
 import { router } from "./router";

@@ -1,7 +1,10 @@
 import { ref } from "vue";
 
 export const stateTrackingPlugin = ({ store, options }) => {
-  console.log(`[Plugin] stateTrackingPlugin called for store: ${store.$id}, trackActions:`, options?.trackActions);
+  console.log(
+    `[Plugin] stateTrackingPlugin called for store: ${store.$id}, trackActions:`,
+    options?.trackActions
+  );
   if (options.trackActions) {
     // 1. Dynamic Injection: Create and attach state properties if they are not already defined
     Object.entries(options.trackActions).forEach(([actionName, config]) => {
@@ -24,18 +27,24 @@ export const stateTrackingPlugin = ({ store, options }) => {
       const loadingKey = config.loading || `${name}Loading`;
       const errorKey = config.error || `${name}Error`;
 
-      console.log(`[Plugin] Action start: ${name}, setting ${loadingKey}=true, ${errorKey}=null`);
+      console.log(
+        `[Plugin] Action start: ${name}, setting ${loadingKey}=true, ${errorKey}=null`
+      );
       // Set pending state
       store[loadingKey] = true;
       store[errorKey] = null;
 
       after(() => {
-        console.log(`[Plugin] Action after: ${name}, setting ${loadingKey}=false`);
+        console.log(
+          `[Plugin] Action after: ${name}, setting ${loadingKey}=false`
+        );
         store[loadingKey] = false;
       });
 
       onError((error) => {
-        console.log(`[Plugin] Action onError: ${name}, error=${error.message || error}, setting ${loadingKey}=false, ${errorKey}=error`);
+        console.log(
+          `[Plugin] Action onError: ${name}, error=${error.message || error}, setting ${loadingKey}=false, ${errorKey}=error`
+        );
         store[loadingKey] = false;
         // Ignore AbortError / canceled requests to avoid UI flashing or false error banners
         const isAbortError =

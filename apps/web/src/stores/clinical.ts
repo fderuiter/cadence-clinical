@@ -520,7 +520,10 @@ const useClinicalStoreInner = defineStore("clinical", {
     fetchSoAProjection: { loading: "soaLoading", error: "soaError" },
     pushSoAMutation: { loading: "soaLoading", error: "soaError" },
     pushSoALink: { loading: "soaLoading", error: "soaError" },
-    uploadProtocolDocument: { loading: "ingestionLoading", error: "ingestionError" },
+    uploadProtocolDocument: {
+      loading: "ingestionLoading",
+      error: "ingestionError",
+    },
   },
   getters: {
     user: () => {
