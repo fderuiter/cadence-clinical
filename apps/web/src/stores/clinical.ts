@@ -6,6 +6,14 @@ import { executionService } from "../api/execution";
 import { evaluateAST } from "../evaluator.js";
 import { ingestionClient } from "../api/ingestionClient.js";
 import { normalizeUsdm } from "./normalization";
+import {
+  CodeSchema,
+  ActivitySchema,
+  EncounterSchema,
+  StudyArmSchema,
+  StudyEpochSchema,
+  USDMStudySchema,
+} from "usdm-schemas";
 
 export interface ClinicalField {
   id: string;
@@ -737,12 +745,58 @@ export const useClinicalStore = defineStore("clinical", {
       }
     },
 
+    validateModel(type: string, payload: any) {
+      let schema;
+      const lower = type ? type.toLowerCase() : "";
+      if (lower === "arms" || lower === "arm") {
+        schema = StudyArmSchema;
+      } else if (lower === "epochs" || lower === "epoch") {
+        schema = StudyEpochSchema;
+      } else if (lower === "visits" || lower === "encounter") {
+        schema = EncounterSchema;
+      } else if (lower === "procedures" || lower === "activity") {
+        schema = ActivitySchema;
+      } else if (lower === "concept" || lower === "code") {
+        schema = CodeSchema;
+      } else if (
+        lower === "study" ||
+        lower === "usdm" ||
+        lower === "usdmstudy"
+      ) {
+        schema = USDMStudySchema;
+      }
+
+      if (!schema) return { success: true };
+
+      const res = schema.safeParse(payload);
+      if (!res.success) {
+        console.error(
+          `USDM validation failure for type [${type}]:`,
+          res.error.errors
+        );
+        return { success: false, error: res.error };
+      }
+      return { success: true, data: res.data };
+    },
+
     async pushSoAMutation(
       type: string,
       id: string,
       properties: any,
       changeReason: string
     ) {
+      // Validate prior to local queuing, persistence, or API submission!
+      const validation = this.validateModel(type, { id, ...properties });
+      if (!validation.success) {
+        const errorMsg = `Local payload mutation rejected. Shared Zod Schema violation: ${validation
+          .error!.errors.map(
+            (e: any) => `${e.path.join(".") || "field"}: ${e.message}`
+          )
+          .join(", ")}`;
+        console.error(errorMsg);
+        this.soaError = errorMsg;
+        throw new Error(errorMsg);
+      }
       this.soaLoading = true;
       this.soaError = null;
       const opts = {
