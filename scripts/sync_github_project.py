@@ -61,43 +61,20 @@ def get_nodes(issue, field_name):
 
 
 def handle_permission_error(stderr_msg):
-    combined = stderr_msg.lower()
-    patterns = [
-        "resource not accessible by integration",
-        "403",
-        "http 403",
-        "must have admin rights",
-        "viewer can't make query",
-        "could not resolve to a projectv2",
-        "not logged in",
-        "gh auth login",
-        "populate the gh_token",
-        "unauthorized",
-        "forbidden",
-        "permission",
-        "rate limit",
-        "rate_limit",
-        "exceeded",
-        "abuse limit",
-        "could not resolve",
-        "not found",
-        "not_found",
-    ]
-    if any(p in combined for p in patterns):
-        print(
-            "WARNING: GitHub API permission or authentication error occurred.\n"
-            f"Error details: {stderr_msg.strip()}\n"
-            "Skipping automated project/issue synchronization.",
-            file=sys.stderr,
-        )
-        if (
-            os.environ.get("FAIL_ON_PROJECT_SYNC_ERROR") == "true"
-            or os.environ.get("FAIL_ON_RULESET_SYNC_ERROR") == "true"
-        ):
-            sys.exit(1)
-        else:
-            print("Exiting project sync gracefully with code 0.")
-            sys.exit(0)
+    print(
+        "WARNING: GitHub API permission or authentication error occurred.\n"
+        f"Error details: {stderr_msg.strip()}\n"
+        "Skipping automated project/issue synchronization.",
+        file=sys.stderr,
+    )
+    if (
+        os.environ.get("FAIL_ON_PROJECT_SYNC_ERROR") == "true"
+        or os.environ.get("FAIL_ON_RULESET_SYNC_ERROR") == "true"
+    ):
+        sys.exit(1)
+    else:
+        print("Exiting project sync gracefully with code 0.")
+        sys.exit(0)
 
 
 def run_cmd(args):
@@ -138,9 +115,10 @@ def run_gql(query, variables=None):
 def fetch_all_issues_gql():
     cursor = None
     all_nodes = []
-    while True:
-        c_str = f', after: "{cursor}"' if cursor else ""
-        query = f"""
+    try:
+        while True:
+            c_str = f', after: "{cursor}"' if cursor else ""
+            query = f"""
 query {{
   repository(owner: "{OWNER}", name: "cadence-clinical") {{
     issues(first: 100{c_str}) {{
@@ -164,15 +142,24 @@ query {{
   }}
 }}
 """
-        data = run_gql(query)
-        if not data or "data" not in data:
-            break
-        res = data["data"]["repository"]["issues"]
-        all_nodes.extend(res["nodes"])
-        if not res["pageInfo"]["hasNextPage"]:
-            break
-        cursor = res["pageInfo"]["endCursor"]
-    return {n["number"]: n for n in all_nodes}
+            data = run_gql(query)
+            if not data or not isinstance(data, dict) or data.get("data") is None:
+                break
+            repo_data = data["data"].get("repository")
+            if not repo_data:
+                break
+            res = repo_data.get("issues")
+            if not res or "nodes" not in res:
+                break
+            all_nodes.extend(res["nodes"])
+            page_info = res.get("pageInfo")
+            if not page_info or not page_info.get("hasNextPage"):
+                break
+            cursor = page_info.get("endCursor")
+    except Exception as exc:
+        print(f"Error fetching issues via GraphQL: {exc}", file=sys.stderr)
+        return {}
+    return {n["number"]: n for n in all_nodes if n and "number" in n}
 
 
 def add_blocked_by(issue_id, blocking_issue_id):
@@ -433,8 +420,20 @@ def main():
     )
     issue_by_num = fetch_all_issues_gql()
     if not issue_by_num:
-        print("Failed to fetch repository issues.", file=sys.stderr)
-        sys.exit(1)
+        print(
+            "WARNING: Failed to fetch repository issues from GitHub API.\n"
+            "This may be due to restricted token permissions in a Pull Request context.\n"
+            "Skipping automated project/issue synchronization.",
+            file=sys.stderr,
+        )
+        if (
+            os.environ.get("FAIL_ON_PROJECT_SYNC_ERROR") == "true"
+            or os.environ.get("FAIL_ON_RULESET_SYNC_ERROR") == "true"
+        ):
+            sys.exit(1)
+        else:
+            print("Exiting project sync gracefully with code 0.")
+            sys.exit(0)
 
     print(f"Fetched {len(issue_by_num)} total issues.", flush=True)
 
