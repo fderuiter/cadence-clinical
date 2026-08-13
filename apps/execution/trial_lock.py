@@ -3,6 +3,13 @@ import logging
 import time
 
 from apps.execution.notifications_client import publish_notification
+from packages.database import (
+    register_form_lock_checker,
+    register_site_lock_checker,
+    register_subject_lock_checker,
+    register_trial_lock_checker,
+    register_visit_lock_checker,
+)
 from packages.security import run_async
 
 """
@@ -301,3 +308,11 @@ class TrialLockManager:
         # Explicitly clear new collections to maintain test isolation (Task 1)
         cls._locked_forms.clear()
         cls._locked_subjects.clear()
+
+
+# Register checkers to decoupled packages.database
+register_trial_lock_checker(TrialLockManager.is_locked)
+register_site_lock_checker(TrialLockManager.is_site_locked)
+register_visit_lock_checker(TrialLockManager.is_visit_locked)
+register_subject_lock_checker(TrialLockManager.is_subject_locked)
+register_form_lock_checker(TrialLockManager.is_form_locked)
