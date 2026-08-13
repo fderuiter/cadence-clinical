@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2376
-- **Passed:** 2357 🟢
+- **Total Automated Test Cases Run:** 2381
+- **Passed:** 2362 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.20%
@@ -1966,6 +1966,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_clean_postgres_databases_calls_truncate`                                     | `packages.database.tests.test_asgi_live_db`                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_live_db_halt_when_neo4j_unreachable`                                         | `packages.database.tests.test_asgi_live_db`                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_live_db_halt_when_postgres_unreachable`                                      | `packages.database.tests.test_asgi_live_db`                                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_pre_flush_justification_rejection`                                           | `packages.database.tests.test_compliance_pre_flush`                         | PRD-SYS-001                                  | 🟢 PASSED  | < 1s     |
+| `test_site_freeze_blocking_writes`                                                 | `packages.database.tests.test_compliance_pre_flush`                         | PRD-SYS-002                                  | 🟢 PASSED  | < 1s     |
+| `test_sync_and_async_map_database_exceptions`                                      | `packages.database.tests.test_compliance_pre_flush`                         | PRD-SYS-005                                  | 🟢 PASSED  | < 1s     |
+| `test_trial_freeze_blocking_writes`                                                | `packages.database.tests.test_compliance_pre_flush`                         | PRD-SYS-002                                  | 🟢 PASSED  | < 1s     |
+| `test_utc_datetime_type_decorator_enforcement`                                     | `packages.database.tests.test_compliance_pre_flush`                         | PRD-SYS-004                                  | 🟢 PASSED  | < 1s     |
 | `test_ci_database_parity_enforcement_raises_on_failure`                            | `packages.database.tests.test_database_managers`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_ctms_database_manager_uninitialized_and_close`                               | `packages.database.tests.test_database_managers`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_econsent_database_manager_uninitialized_and_close`                           | `packages.database.tests.test_database_managers`                            | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
