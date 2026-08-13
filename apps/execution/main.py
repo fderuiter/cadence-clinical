@@ -2964,7 +2964,7 @@ class FormSubmissionCreate(BaseModel):
 class FormSubmissionResponse(BaseModel):
     id: str
     study_id: str
-    site_id: str | None = None
+    site_id: str | None
     subject_id: str
     visit_id: str | None = None
     form_id: str
