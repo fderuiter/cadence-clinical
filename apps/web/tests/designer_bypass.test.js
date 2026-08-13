@@ -19,7 +19,9 @@ describe("MdrView.vue Change Reason Modal Bypass", () => {
     clinicalStore.activeStudyVersionId = "v_draft_01"; // Draft version
 
     // Mock store methods to prevent actual API calls
-    clinicalStore.pushSoAMutation = vi.fn().mockResolvedValue({ success: true });
+    clinicalStore.pushSoAMutation = vi
+      .fn()
+      .mockResolvedValue({ success: true });
     clinicalStore.validateModel = vi.fn().mockReturnValue({ success: true });
 
     const wrapper = mount(MdrView, {
@@ -57,7 +59,9 @@ describe("MdrView.vue Change Reason Modal Bypass", () => {
     const clinicalStore = useClinicalStore();
     clinicalStore.activeStudyVersionId = "v_baseline_production"; // Non-draft
 
-    clinicalStore.pushSoAMutation = vi.fn().mockResolvedValue({ success: true });
+    clinicalStore.pushSoAMutation = vi
+      .fn()
+      .mockResolvedValue({ success: true });
     clinicalStore.validateModel = vi.fn().mockReturnValue({ success: true });
 
     const wrapper = mount(MdrView, {
