@@ -23,6 +23,8 @@ export default defineConfig({
     alias: {
       ui: path.resolve(__dirname, "../../packages/ui/dist/index.js"),
       "@": path.resolve(__dirname, "./src"),
+      pinia: path.resolve(__dirname, "node_modules/pinia"),
+      vue: path.resolve(__dirname, "node_modules/vue"),
     },
   },
   server: {
