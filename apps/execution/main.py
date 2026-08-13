@@ -315,22 +315,15 @@ app = FastAPI(
     title=f"{BRAND_NAME} - EDC Execution Engine", version="0.1.0", lifespan=lifespan
 )
 
-app.include_router(locks_router)
-app.include_router(signatures_router)
-app.include_router(amendments_router)
-app.include_router(auditor_router)
-app.include_router(safety_router)
-app.include_router(eisf_router)
-app.include_router(anonymization_router)
-app.include_router(doa_router)
-app.include_router(offline_router)
-app.include_router(documents_router)
-app.include_router(sdv_router)
-app.include_router(randomization_router)
-app.include_router(unblinding_router)
-app.include_router(queries_router)
-app.include_router(dictionaries_router)
-app.include_router(exports_router)
+from apps.execution.presentation.routers.edc_subrouter import edc_subrouter
+from apps.execution.presentation.routers.rtsm_subrouter import rtsm_subrouter
+from apps.execution.presentation.routers.coding_subrouter import coding_subrouter
+from apps.execution.presentation.routers.biostat_subrouter import biostat_subrouter
+
+app.include_router(edc_subrouter)
+app.include_router(rtsm_subrouter)
+app.include_router(coding_subrouter)
+app.include_router(biostat_subrouter)
 
 
 @app.exception_handler(RequestValidationError)

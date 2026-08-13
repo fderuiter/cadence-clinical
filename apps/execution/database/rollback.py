@@ -20,10 +20,31 @@ os.environ.setdefault(
 os.environ.setdefault("GATEWAY_SECRET", "internal-gateway-secret-12345")
 os.environ.setdefault("SIGNING_SECRET", "designer-amendment-secure-key-12345")
 
-from sqlalchemy import inspect, text
+from sqlalchemy import inspect
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from apps.execution.database.migrate import run_migrations
+
+
+async def run_downgrade(database_url: str) -> None:
+    print(f"[Migration-Integrity] Rolling back database to base schema: {database_url}")
+    env = os.environ.copy()
+    env["EXECUTION_DATABASE_URL"] = database_url
+    cmd = [
+        sys.executable,
+        "-m",
+        "alembic",
+        "-c",
+        "apps/execution/alembic.ini",
+        "downgrade",
+        "base",
+    ]
+    process = await asyncio.create_subprocess_exec(
+        *cmd, env=env, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    if process.returncode != 0:
+        raise RuntimeError(f"Alembic downgrade failed for execution: {stderr.decode()}")
 
 
 async def validate_migration_integrity() -> bool:
@@ -37,7 +58,7 @@ async def validate_migration_integrity() -> bool:
 
     try:
         # Step 1: Run Forward Migrations
-        print("[Migration-Integrity] Step 1: Running forward migrations...")
+        print("[Migration-Integrity] Step 1: Running forward migrations to head...")
         await run_migrations(db_url)
 
         # Step 2: Verify tables are created and healthy
@@ -57,65 +78,18 @@ async def validate_migration_integrity() -> bool:
                 )
                 return False
 
-            # Step 3: Simulate Rollback to an earlier version (dropping newly added column)
-            print("[Migration-Integrity] Step 3: Executing simulated rollback...")
+        # Step 3: Run Downgrade base to drop everything
+        print("[Migration-Integrity] Step 3: Running standard Alembic rollback to base...")
+        await run_downgrade(db_url)
 
-            def get_cols(sync_conn, table):
-                insp = inspect(sync_conn)
-                return [col["name"] for col in insp.get_columns(table)]
-
-            cols_before = await conn.run_sync(
-                lambda sc: get_cols(sc, "clinical_observations")
-            )
-            if "page_id" not in cols_before:
+        # Verify that all tables have been dropped
+        async with engine.begin() as conn:
+            tables_after_rollback = await conn.run_sync(get_tables)
+            print(f"[Migration-Integrity] Tables after rollback: {tables_after_rollback}")
+            # Ensure alembic_version table may remain or is empty, but clinical tables are dropped
+            if "clinical_observations" in tables_after_rollback:
                 print(
-                    "[Migration-Integrity] Error: 'page_id' column was not added by migration.",
-                    file=sys.stderr,
-                )
-                return False
-
-            # Drop triggers referencing the column before dropping the column in SQLite
-            try:
-                await conn.execute(
-                    text(
-                        "DROP TRIGGER IF EXISTS trg_audit_clinical_observations_insert;"
-                    )
-                )
-                await conn.execute(
-                    text(
-                        "DROP TRIGGER IF EXISTS trg_audit_clinical_observations_update;"
-                    )
-                )
-                await conn.execute(
-                    text(
-                        "DROP TRIGGER IF EXISTS trg_audit_clinical_observations_delete;"
-                    )
-                )
-                print(
-                    "[Migration-Integrity] Dropped table triggers referencing page_id."
-                )
-            except Exception as e:
-                print(f"[Migration-Integrity] Warning during trigger drop: {e}")
-
-            # Now drop 'page_id' to simulate rollback
-            try:
-                await conn.execute(
-                    text("ALTER TABLE clinical_observations DROP COLUMN page_id;")
-                )
-                print(
-                    "[Migration-Integrity] Dropped column 'page_id' successfully (simulated rollback)."
-                )
-            except Exception as e:
-                print(f"[Migration-Integrity] Rollback column drop failed: {e}")
-                return False
-
-            # Validate that page_id column is indeed gone
-            cols_after = await conn.run_sync(
-                lambda sc: get_cols(sc, "clinical_observations")
-            )
-            if "page_id" in cols_after:
-                print(
-                    "[Migration-Integrity] Error: Rollback failed, 'page_id' is still present.",
+                    "[Migration-Integrity] Error: clinical_observations table still exists after rollback.",
                     file=sys.stderr,
                 )
                 return False
@@ -127,12 +101,10 @@ async def validate_migration_integrity() -> bool:
         await run_migrations(db_url)
 
         async with engine.begin() as conn:
-            cols_re_migrated = await conn.run_sync(
-                lambda sc: get_cols(sc, "clinical_observations")
-            )
-            if "page_id" not in cols_re_migrated:
+            tables_re_migrated = await conn.run_sync(get_tables)
+            if "clinical_observations" not in tables_re_migrated:
                 print(
-                    "[Migration-Integrity] Error: Re-migration failed to restore 'page_id'.",
+                    "[Migration-Integrity] Error: Re-migration failed to restore tables.",
                     file=sys.stderr,
                 )
                 return False

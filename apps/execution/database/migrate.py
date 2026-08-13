@@ -655,42 +655,33 @@ async def upgrade_existing_tables(conn) -> None:
 
 async def run_migrations(database_url: str) -> None:
     """
-    Execute asynchronous pre-boot schema migrations.
-
-    This function sets up the database schema safely before the main web application
-    starts, preventing race conditions or downtime associated with runtime migrations.
-
-    Args:
-        database_url (str): The connection string for the database to migrate.
+    Execute asynchronous pre-boot schema migrations using standard Alembic commands.
     """
-    print(f"Starting pre-boot schema migration for {database_url}...")
-    engine_options = {}
-    if database_url.startswith("sqlite"):
-        engine_options["execution_options"] = {
-            "schema_translate_map": {"audit_schema": None}
-        }
+    print(f"Starting pre-boot schema migration for execution: {database_url}")
+    env = os.environ.copy()
+    env["EXECUTION_DATABASE_URL"] = database_url
+    env.setdefault("AUDIT_LOG_SECRET_KEY", "test-gxp-audit-secret-key-placeholder-abc")
+    env.setdefault("INBOUND_EMAIL_HMAC_SECRET", "test-email-hmac-secret-placeholder-xyz")
+    env.setdefault("GATEWAY_SECRET", "internal-gateway-secret-12345")
+    env.setdefault("SIGNING_SECRET", "designer-amendment-secure-key-12345")
 
-    engine = create_async_engine(database_url, echo=False, **engine_options)
-    try:
-        async with engine.begin() as conn:
-            if engine.dialect.name == "postgresql":
-                await conn.execute(text("CREATE SCHEMA IF NOT EXISTS audit_schema;"))
-
-            # Setup metadata tables
-            await conn.run_sync(Base.metadata.create_all)
-
-            # Upgrade existing tables with new columns
-            await upgrade_existing_tables(conn)
-
-            # Deploy database triggers
-            await deploy_database_triggers(conn, engine.dialect.name)
-
-        print("Schema migration completed successfully.")
-    except Exception as e:
-        print(f"Schema migration failed: {e}")
-        sys.exit(1)
-    finally:
-        await engine.dispose()
+    cmd = [
+        sys.executable,
+        "-m",
+        "alembic",
+        "-c",
+        "apps/execution/alembic.ini",
+        "upgrade",
+        "head",
+    ]
+    process = await asyncio.create_subprocess_exec(
+        *cmd, env=env, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    if process.returncode != 0:
+        print(f"Alembic migration failed: {stderr.decode()}", file=sys.stderr)
+        raise RuntimeError(f"Alembic migration failed for execution: {stderr.decode()}")
+    print("Execution Schema migration completed successfully via Alembic.")
 
 
 def main() -> None:
