@@ -6,17 +6,17 @@
  * Represents a variable definition in the CDASH Model v1.3
  */
 export interface CDASHModelVariable {
-  Version: string;
-  Class: string;
-  Domain: string | null;
+  "Version": string;
+  "Class": string;
+  "Domain": string | null;
   "Variable Order": number | null;
   "CDASH Variable": string;
   "CDASH Variable Label": string;
   "DRAFT CDASH Definition"?: string | null;
   "Domain Specific"?: boolean | null;
   "Question Text"?: string | null;
-  Prompt?: string | null;
-  Type: string;
+  "Prompt"?: string | null;
+  "Type": string;
   "SDTM Target"?: string | null;
   "Mapping Instructions"?: string | null;
   "Controlled Terminology Codelist Code"?: string | null;
@@ -27,24 +27,23 @@ export interface CDASHModelVariable {
  * Represents a variable definition in the CDASHIG v2.3
  */
 export interface CDASHIGVariable {
-  Version: string;
-  Class: string;
-  Domain: string;
+  "Version": string;
+  "Class": string;
+  "Domain": string;
   "Data Collection Scenario/Implementation Option"?: string | null;
   "Variable Order": number | null;
   "CDASHIG Variable": string;
   "CDASHIG Variable Label": string;
   "DRAFT CDASHIG Definition"?: string | null;
   "Question Text"?: string | null;
-  Prompt?: string | null;
-  Type: string;
+  "Prompt"?: string | null;
+  "Type": string;
   "CDASHIG Core": "HR" | "R" | "O" | string;
   "Case Report Form Completion Instructions"?: string | null;
   "SDTMIG Target"?: string | null;
   "Mapping Instructions"?: string | null;
   "CDISC CT Codelist Code(s), Subset Codes(s)"?: string | null;
-  "CDISC CT Codelist Submission Values(s), Subset Submission Value(s)"?:
-    string | null;
+  "CDISC CT Codelist Submission Values(s), Subset Submission Value(s)"?: string | null;
   "Implementation Notes"?: string | null;
 }
 

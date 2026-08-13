@@ -971,52 +971,26 @@
             you must re-verify your identity before performing this
             high-security action.
           </p>
-          <div class="form-group" style="margin-bottom: 12px">
-            <label for="reauth-username">Username</label>
-            <input
-              id="reauth-username"
-              v-model="reauthUsername"
-              type="text"
-              style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 4px;
-              "
-            />
-          </div>
-          <div class="form-group" style="margin-bottom: 12px">
-            <label for="reauth-password">Password</label>
-            <input
-              id="reauth-password"
-              v-model="reauthPassword"
-              type="password"
-              placeholder="Enter your password to confirm identity..."
-              required
-              style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 4px;
-              "
-              @keyup.enter="confirmReauth"
-            />
-          </div>
-          <div class="form-group" style="margin-bottom: 12px">
-            <label for="reauth-totp">MFA/TOTP Token (Optional)</label>
-            <input
-              id="reauth-totp"
-              v-model="reauthTotp"
-              type="text"
-              placeholder="Enter 6-digit TOTP code..."
-              style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 4px;
-              "
-            />
-          </div>
+          <!-- Reuse GxpCredentialsInput for GxP re-authentication -->
+          <!-- prettier-ignore -->
+          <GxpCredentialsInput
+            v-model:username="reauthUsername"
+            v-model:password="reauthPassword" data-pragma="pragma: allowlist secret"
+            v-model:totp="reauthTotp"
+            username-id="reauth-username"
+            password-id="reauth-password"
+            totp-id="reauth-totp"
+            :disabled="false"
+            :password-required="true"
+            :group-style="{ marginBottom: '12px' }"
+            :input-style="{
+              width: '100%',
+              padding: '8px',
+              border: '1px solid var(--border)',
+              borderRadius: '4px',
+            }"
+            @keyup-enter="confirmReauth"
+          />
           <div
             class="form-group"
             style="
@@ -1081,6 +1055,7 @@ import { evaluateAST } from "../evaluator.js";
 import { terminologyClient } from "../api/terminologyClient";
 import ReasonModal from "../components/ReasonModal.vue";
 import ConflictResolutionModal from "../components/ConflictResolutionModal.vue";
+import GxpCredentialsInput from "../features/signatures/components/GxpCredentialsInput.vue";
 import { useSyncStore } from "../stores/sync";
 import { useNotificationsStore } from "../stores/notifications";
 import { ClientSyncEngine } from "../utils/syncEngine";

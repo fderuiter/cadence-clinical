@@ -231,6 +231,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 - [2026-07-22: ADR 2026-07-22: Modular pnpm Workspace for Frontend Development](2026-07-22-pnpm-frontend-workspace.md)
 - [2026-08-30: Vue SPA Foundation and Tooling Setup](2026-08-30-vue-spa-foundation-tooling.md)
+- [2026-09-11: Preservation of CDASH Type Definition Pristine State](2026-09-11-preservation-of-cdash-type-definition-pristine-state.md)
 - [2026-07-28: Hybrid ESLint and In-Memory Accessibility Auditing](2026-07-28-hybrid-eslint-and-in-memory-accessibility-auditing.md)
 - [2026-08-10: Debounced Clinical Code Lookup UI Primitive](2026-08-10-debounced-clinical-code-lookup-ui-primitive.md)
 - [2026-08-11: Standardize PR Templates and Centralize Shared Hashing & Radio Grid Layouts](2026-08-11-standardize-pr-templates-and-centralize-hashing-grid-layout.md)
