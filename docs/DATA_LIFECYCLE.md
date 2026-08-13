@@ -888,8 +888,8 @@ Every transition, merge decision, or exception is chronologically logged in the 
 Because client-side JavaScript testing is excluded from the Python-based RTM generator, the verified client-side components and their human-readable traces are listed here:
 
 - **Local Persistence & Service Worker**:
-  - `apps/subject-portal/sync-queue.js` (IndexedDB queue ordering and offline state tracking)
-  - `apps/subject-portal/index.js` (State persistence and reconnection-based auto-flushes)
+  - `apps/subject-portal/src/sync-queue.js` (IndexedDB queue ordering and offline state tracking)
+  - `apps/subject-portal/src/index.js` (State persistence and reconnection-based auto-flushes)
   - `apps/subject-portal/public/sw.js` (PWA service-worker caching and offline network fallback)
 - **Client Verification Suites**:
   - `apps/subject-portal/tests/portal.test.js` (Validates queue serialization and sequence ordering)
