@@ -164,22 +164,8 @@ function copyAndPreprocess(srcName, destName) {
 runPreflightChecks();
 
 try {
-  // 1. Run validation scripts
-  console.log("--- Step 1: Pre-Build Validation ---");
-  try {
-    console.log("Building shared UI primitives package first...");
-    runCommand(`${pnpmCmd} --filter ui build`);
-  } catch (err) {
-    console.warn(
-      "Warning: Shared UI primitives package build failed, continuing anyway..."
-    );
-  }
-  runCommand("python3 scripts/validate_adrs.py");
-  runCommand("python3 scripts/validate_markdown.py");
-  runCommand("uv run python scripts/generate_schema_documentation.py");
-
-  // 2. Run compliance compiler
-  console.log("--- Step 2: Running Compliance Tracer ---");
+  // 1. Run compliance compiler early so that markdown validation does not fail on missing ephemeral files
+  console.log("--- Step 1: Running Compliance Tracer ---");
   const reportPath = path.join(repoRoot, "report.xml");
   const hasReport =
     fs.existsSync(reportPath) && fs.statSync(reportPath).size > 0;
@@ -192,6 +178,20 @@ try {
   } else {
     runCommand("python3 scripts/generate_rtm.py --draft");
   }
+
+  // 2. Run validation scripts
+  console.log("--- Step 2: Pre-Build Validation ---");
+  try {
+    console.log("Building shared UI primitives package first...");
+    runCommand(`${pnpmCmd} --filter ui build`);
+  } catch (err) {
+    console.warn(
+      "Warning: Shared UI primitives package build failed, continuing anyway..."
+    );
+  }
+  runCommand("python3 scripts/validate_adrs.py");
+  runCommand("python3 scripts/validate_markdown.py");
+  runCommand("uv run python scripts/generate_schema_documentation.py");
 
   // 3. Prepare files for VitePress
   console.log("--- Step 3: Preparing Documentation Files ---");

@@ -121,6 +121,9 @@ jobs:
       - name: Compile UI library for markdown checks
         run: pnpm --filter ui build
 
+      - name: Pre-generate GxP Compliance Reports
+        run: uv run python scripts/generate_rtm.py --draft
+
       - name: Run Markdown validation
         id: run_markdown
         if: always()
