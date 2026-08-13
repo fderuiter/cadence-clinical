@@ -219,6 +219,7 @@ def test_cache_entry_expiration():
     cache = ApprovedTranslationCache(ttl=0.01)
     cache.set_cached("t1", 1, "en", {"data": "1"})
     import time
+
     time.sleep(0.02)
     data, expired = cache.get_cached("t1", 1, "en")
     assert data == {"data": "1"}
@@ -230,15 +231,22 @@ def test_redis_publish_error_handling():
     with patch.dict(os.environ, {"REDIS_HOST": "mock.redis.local"}):
         mock_pub_client = MagicMock()
         mock_pub_client.publish.side_effect = Exception("Redis publish error")
-        with patch("redis.Redis", return_value=mock_pub_client), patch.object(
-            ApprovedTranslationCache, "_run_subscriber", return_value=None
+        with (
+            patch("redis.Redis", return_value=mock_pub_client),
+            patch.object(
+                ApprovedTranslationCache, "_run_subscriber", return_value=None
+            ),
         ):
             cache = ApprovedTranslationCache()
-            cache.invalidate("t1", 1, "en")  # Should log warning but not raise exception
+            cache.invalidate(
+                "t1", 1, "en"
+            )  # Should log warning but not raise exception
 
 
 def test_redis_subscriber_invalidate_template():
-    with patch.dict(os.environ, {"REDIS_HOST": "mock.redis.local", "REDIS_CHANNEL": "test_channel"}):
+    with patch.dict(
+        os.environ, {"REDIS_HOST": "mock.redis.local", "REDIS_CHANNEL": "test_channel"}
+    ):
         mock_r = MagicMock()
         mock_pubsub = MagicMock()
         mock_r.pubsub.return_value = mock_pubsub
@@ -246,10 +254,12 @@ def test_redis_subscriber_invalidate_template():
         messages = [
             {
                 "type": "message",
-                "data": json.dumps({
-                    "action": "invalidate_template",
-                    "template_id": "t1",
-                }),
+                "data": json.dumps(
+                    {
+                        "action": "invalidate_template",
+                        "template_id": "t1",
+                    }
+                ),
             },
             {
                 "type": "message",
@@ -270,7 +280,9 @@ def test_redis_subscriber_invalidate_template():
         with (
             patch("redis.Redis", return_value=mock_r),
             patch("time.sleep", side_effect=InterruptedError("Stop loop")),
-            patch.object(ApprovedTranslationCache, "_run_subscriber", return_value=None),
+            patch.object(
+                ApprovedTranslationCache, "_run_subscriber", return_value=None
+            ),
         ):
             cache = ApprovedTranslationCache()
             cache.set_cached("t1", 1, "en", {"foo": "bar"})
@@ -291,6 +303,7 @@ def test_redis_subscriber_invalidate_template():
 @pytest.mark.asyncio
 async def test_get_approved_template_translation_helper():
     from apps.econsent.infrastructure.cache import get_approved_template_translation
+
     cache = ApprovedTranslationCache()
 
     async def mock_fetch_db(template_id, version_index, language_code):
@@ -306,13 +319,15 @@ async def test_get_approved_template_translation_helper():
 
     # Expired cache fallback
     cache.ttl = -1.0  # Force expired
+
     async def mock_fetch_fail(template_id, version_index, language_code):
         raise Exception("DB offline")
 
-    res3 = await get_approved_template_translation(cache, "t1", 1, "en", mock_fetch_fail)
+    res3 = await get_approved_template_translation(
+        cache, "t1", 1, "en", mock_fetch_fail
+    )
     assert res3 == {"fetched": "from_db"}  # should fallback to stale cached data
 
     # Failure with no cache fallback
     with pytest.raises(Exception, match="DB offline"):
         await get_approved_template_translation(cache, "t2", 1, "en", mock_fetch_fail)
-
