@@ -1,7 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
-import { createPinia, setActivePinia } from "pinia";
-import { useAuthStore } from "../src/stores/auth";
 import {
   ClinicalInput,
   ClinicalRadioGroup,
@@ -38,7 +36,7 @@ describe("ClinicalQueryFlag.vue", () => {
 describe("ClinicalQueryPanel.vue", () => {
   it("renders query creation panel for NONE status", async () => {
     const wrapper = mount(ClinicalQueryPanel, {
-      props: { id: "fieldX", query: null },
+      props: { id: "fieldX", query: null, canManageQueries: true },
     });
     expect(wrapper.text()).toContain("Raise a query for this field:");
     expect(wrapper.find("textarea").exists()).toBe(true);
@@ -87,7 +85,7 @@ describe("ClinicalQueryPanel.vue", () => {
       respondedBy: "Investigator",
     };
     const wrapper = mount(ClinicalQueryPanel, {
-      props: { id: "fieldX", query },
+      props: { id: "fieldX", query, canManageQueries: true },
     });
 
     expect(wrapper.text()).toContain("Status: ANSWERED");
@@ -107,20 +105,16 @@ describe("ClinicalQueryPanel.vue", () => {
   });
 
   it("displays role-aware labels and fallback statuses correctly", async () => {
-    const pinia = createPinia();
-    setActivePinia(pinia);
-    const authStore = useAuthStore();
-
-    authStore.isAuthenticated = true;
-    authStore.rawRoles = ["Site Investigator"];
-
     const queryOpen = {
       status: "OPEN",
       message: "Value out of bounds",
     };
     const wrapperOpenSite = mount(ClinicalQueryPanel, {
-      props: { id: "fieldX", query: queryOpen },
-      global: { plugins: [pinia] },
+      props: {
+        id: "fieldX",
+        query: queryOpen,
+        queryLabel: "Awaiting Site Action",
+      },
     });
     expect(wrapperOpenSite.text()).toContain("Status: Awaiting Site Action");
 
@@ -130,8 +124,11 @@ describe("ClinicalQueryPanel.vue", () => {
       response: "Resolved",
     };
     const wrapperAnsweredSite = mount(ClinicalQueryPanel, {
-      props: { id: "fieldX", query: queryAnswered },
-      global: { plugins: [pinia] },
+      props: {
+        id: "fieldX",
+        query: queryAnswered,
+        queryLabel: "Submitted to CRA",
+      },
     });
     expect(wrapperAnsweredSite.text()).toContain("Status: Submitted to CRA");
 
@@ -141,34 +138,34 @@ describe("ClinicalQueryPanel.vue", () => {
       response: "Resolved",
     };
     const wrapperClosedSite = mount(ClinicalQueryPanel, {
-      props: { id: "fieldX", query: queryClosed },
-      global: { plugins: [pinia] },
+      props: { id: "fieldX", query: queryClosed, queryLabel: "CLOSED" },
     });
     expect(wrapperClosedSite.text()).toContain("Status: CLOSED");
 
-    authStore.rawRoles = ["CRA"];
-
     const wrapperOpenMonitor = mount(ClinicalQueryPanel, {
-      props: { id: "fieldX", query: queryOpen },
-      global: { plugins: [pinia] },
+      props: {
+        id: "fieldX",
+        query: queryOpen,
+        queryLabel: "Awaiting Site Response",
+      },
     });
     expect(wrapperOpenMonitor.text()).toContain(
       "Status: Awaiting Site Response"
     );
 
     const wrapperAnsweredMonitor = mount(ClinicalQueryPanel, {
-      props: { id: "fieldX", query: queryAnswered },
-      global: { plugins: [pinia] },
+      props: {
+        id: "fieldX",
+        query: queryAnswered,
+        queryLabel: "Awaiting CRA Review",
+      },
     });
     expect(wrapperAnsweredMonitor.text()).toContain(
       "Status: Awaiting CRA Review"
     );
 
-    authStore.isAuthenticated = false;
-    authStore.rawRoles = [];
     const wrapperOpenFallback = mount(ClinicalQueryPanel, {
       props: { id: "fieldX", query: queryOpen },
-      global: { plugins: [pinia] },
     });
     expect(wrapperOpenFallback.text()).toContain("Status: OPEN");
   });

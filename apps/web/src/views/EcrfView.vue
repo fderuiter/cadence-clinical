@@ -179,6 +179,8 @@
                 :query="store.formQueries[field.id]"
                 :error="getValidationError(field)"
                 :lookup-status="lookupStatuses[field.id]"
+                :can-manage-queries="store.canManageQueries"
+                :query-label="store.getQueryLabel(store.formQueries[field.id])"
                 @update:model-value="store.formValues[field.id] = $event"
                 @input="handleLookupInput(field, $event)"
                 @change="(val, target) => handleFieldChange(field, val, target)"

@@ -326,3 +326,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-12: Dynamic CDASH type generation and strongly-typed clinical Vue components](2026-08-12-dynamic-cdash-type-generation-and-strongly-typed-clinical-vue-components.md)
 - [2026-09-10: Align Ledger Block Signature and Deduplicate Pinia Dependency](2026-09-10-align-ledger-block-signature-and-deduplicate-pinia-dependency.md)
 - [2026-09-10: Shared Zod Schemas and Backend Immutability](2026-09-10-shared-zod-schemas-and-backend-immutability.md)
+- [2026-08-13: Decouple ClinicalQueryPanel from Pinia and Auth store](2026-08-13-decouple-clinical-query-panel.md)

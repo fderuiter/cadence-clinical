@@ -55,6 +55,8 @@
       v-if="isQueryOpen"
       :id="id"
       :query="query"
+      :can-manage-queries="canManageQueries"
+      :query-label="queryLabel"
       @close-panel="isQueryOpen = false"
       @create-query="$emit('create-query', $event)"
       @respond-query="$emit('respond-query', $event)"
@@ -99,6 +101,14 @@ const props = defineProps({
     default: "div",
   },
   extraClass: {
+    type: String,
+    default: "",
+  },
+  canManageQueries: {
+    type: Boolean,
+    default: false,
+  },
+  queryLabel: {
     type: String,
     default: "",
   },

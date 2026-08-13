@@ -523,6 +523,46 @@ export const useClinicalStore = defineStore("clinical", {
         authenticated: true,
       };
     },
+    canManageQueries: () => {
+      const authStore = useAuthStore();
+      const roles = authStore ? authStore.normalizedRoles || [] : [];
+      return roles.some((role) =>
+        [
+          "cra",
+          "monitor",
+          "data_manager",
+          "sponsor_admin",
+          "admin",
+          "sponsor_designer",
+        ].includes(role)
+      );
+    },
+    getQueryLabel: () => {
+      return (query: any) => {
+        const status =
+          query && query.status ? query.status.toUpperCase() : "NONE";
+        const authStore = useAuthStore();
+        if (!authStore || !authStore.isAuthenticated) {
+          return status;
+        }
+        const roles = authStore.normalizedRoles || [];
+        if (roles.length === 0) {
+          return status;
+        }
+        const isSite =
+          roles.includes("site_investigator") || roles.includes("crc");
+        const isMonitor = roles.includes("cra") || roles.includes("monitor");
+
+        if (status === "OPEN" || status === "REOPENED") {
+          if (isSite) return "Awaiting Site Action";
+          if (isMonitor) return "Awaiting Site Response";
+        } else if (status === "ANSWERED") {
+          if (isSite) return "Submitted to CRA";
+          if (isMonitor) return "Awaiting CRA Review";
+        }
+        return status;
+      };
+    },
   },
   actions: {
     async evaluateRules() {

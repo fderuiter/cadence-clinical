@@ -58,7 +58,7 @@
           class="query-status-badge"
           :class="`badge-${status.toLowerCase()}`"
         >
-          Status: {{ queryLabel }}
+          Status: {{ displayQueryLabel }}
         </div>
         <p class="query-current-msg">
           <strong>Discrepancy:</strong> {{ query.message }}
@@ -92,7 +92,7 @@
       <!-- ANSWERED state (Only CRAs/DMs can close/reopen) -->
       <div v-else-if="status === 'ANSWERED'" class="query-details">
         <div class="query-status-badge badge-answered">
-          Status: {{ queryLabel }}
+          Status: {{ displayQueryLabel }}
         </div>
         <p class="query-current-msg">
           <strong>Discrepancy:</strong> {{ query.message }}
@@ -148,7 +148,7 @@
       <!-- CLOSED state -->
       <div v-else-if="status === 'CLOSED'" class="query-details">
         <div class="query-status-badge badge-closed">
-          Status: {{ queryLabel }}
+          Status: {{ displayQueryLabel }}
         </div>
         <p class="query-current-msg">
           <strong>Discrepancy:</strong> {{ query.message }}
@@ -172,7 +172,6 @@
 import { ref, computed, watch } from "vue";
 import { useFocusTrap } from "../../composables/useFocusTrap";
 import { useEscapeClose } from "../../composables/useEscapeClose";
-import { getActivePinia } from "pinia";
 
 const props = defineProps({
   id: {
@@ -182,6 +181,14 @@ const props = defineProps({
   query: {
     type: Object,
     default: null,
+  },
+  canManageQueries: {
+    type: Boolean,
+    default: false,
+  },
+  queryLabel: {
+    type: String,
+    default: "",
   },
 });
 
@@ -201,58 +208,14 @@ useEscapeClose(() => emit("close-panel"));
 const messageInput = ref("");
 const responseInput = ref("");
 
-// CRA / Monitor, Data Manager, or admin roles can manage queries (Close/Reopen/Create)
-const canManageQueries = computed(() => {
-  const pinia = getActivePinia();
-  if (!pinia) {
-    return true; // default fallback for direct mount unit tests where Pinia is not installed
-  }
-  const authStore = pinia._s.get("auth");
-  const roles = authStore ? authStore.normalizedRoles || [] : [];
-  // Ensure we also support mock data manager role in RulesView
-  return roles.some((role) =>
-    [
-      "cra",
-      "monitor",
-      "data_manager",
-      "sponsor_admin",
-      "admin",
-      "sponsor_designer",
-    ].includes(role)
-  );
-});
-
 const status = computed(() => {
   return props.query && props.query.status
     ? props.query.status.toUpperCase()
     : "NONE";
 });
 
-const queryLabel = computed(() => {
-  const pinia = getActivePinia();
-  if (!pinia) {
-    return status.value;
-  }
-  const authStore = pinia._s.get("auth");
-  if (!authStore || !authStore.isAuthenticated) {
-    return status.value;
-  }
-  const roles = authStore.normalizedRoles || [];
-  if (roles.length === 0) {
-    return status.value;
-  }
-  const isSite = roles.includes("site_investigator") || roles.includes("crc");
-  const isMonitor = roles.includes("cra") || roles.includes("monitor");
-
-  const stat = status.value;
-  if (stat === "OPEN" || stat === "REOPENED") {
-    if (isSite) return "Awaiting Site Action";
-    if (isMonitor) return "Awaiting Site Response";
-  } else if (stat === "ANSWERED") {
-    if (isSite) return "Submitted to CRA";
-    if (isMonitor) return "Awaiting CRA Review";
-  }
-  return stat;
+const displayQueryLabel = computed(() => {
+  return props.queryLabel || status.value;
 });
 
 // Clear inputs when status changes
