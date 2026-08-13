@@ -2957,12 +2957,14 @@ class FormSubmissionCreate(BaseModel):
     subject_id: str
     visit_id: str | None = None
     form_id: str
+    protocol_version: str | None = None
+    payload: dict[str, Any] | None = None
 
 
 class FormSubmissionResponse(BaseModel):
     id: str
     study_id: str
-    site_id: str
+    site_id: str | None
     subject_id: str
     visit_id: str | None = None
     form_id: str
@@ -2970,6 +2972,11 @@ class FormSubmissionResponse(BaseModel):
     version: int
     is_deleted: bool
     signature_manifest: dict[str, Any] | None = None
+    protocol_version: str | None = None
+    payload: dict[str, Any] | None = None
+    is_active: bool
+    is_readonly: bool
+    cloned_from_id: str | None = None
 
 
 class FormSubmissionApprove(BaseModel):
@@ -3022,6 +3029,11 @@ async def create_form_submission(
             form_id=payload.form_id,
             status="DRAFT",
             signature_manifest=None,
+            protocol_version=payload.protocol_version,
+            payload=payload.payload,
+            is_active=True,
+            is_readonly=False,
+            cloned_from_id=None,
         )
         session.add(sub)
         await session.commit()
@@ -3042,6 +3054,11 @@ async def create_form_submission(
             version=sub_db.version,
             is_deleted=sub_db.is_deleted,
             signature_manifest=sub_db.signature_manifest,
+            protocol_version=sub_db.protocol_version,
+            payload=sub_db.payload,
+            is_active=sub_db.is_active,
+            is_readonly=sub_db.is_readonly,
+            cloned_from_id=sub_db.cloned_from_id,
         )
 
 
@@ -3064,6 +3081,12 @@ async def complete_form_submission(
         sub = res.scalars().first()
         if not sub:
             raise HTTPException(status_code=404, detail="Form submission not found")
+
+        if sub.is_readonly or not sub.is_active:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot modify a read-only or inactive form submission.",
+            )
 
         if sub.status != "DRAFT":
             raise HTTPException(
@@ -3128,6 +3151,11 @@ async def complete_form_submission(
             version=sub_db.version,
             is_deleted=sub_db.is_deleted,
             signature_manifest=sub_db.signature_manifest,
+            protocol_version=sub_db.protocol_version,
+            payload=sub_db.payload,
+            is_active=sub_db.is_active,
+            is_readonly=sub_db.is_readonly,
+            cloned_from_id=sub_db.cloned_from_id,
         )
 
 
@@ -3165,6 +3193,12 @@ async def approve_form_submission(
         if not sub:
             raise HTTPException(status_code=404, detail="Form submission not found")
 
+        if sub.is_readonly or not sub.is_active:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot modify a read-only or inactive form submission.",
+            )
+
         if sub.status != "COMPLETED":
             raise HTTPException(
                 status_code=400,
@@ -3191,6 +3225,11 @@ async def approve_form_submission(
             version=sub_db.version,
             is_deleted=sub_db.is_deleted,
             signature_manifest=sub_db.signature_manifest,
+            protocol_version=sub_db.protocol_version,
+            payload=sub_db.payload,
+            is_active=sub_db.is_active,
+            is_readonly=sub_db.is_readonly,
+            cloned_from_id=sub_db.cloned_from_id,
         )
 
 
@@ -3284,6 +3323,10 @@ async def post_batch_sign_off(
             ).encode()
 
             for sub in resolved_subs:
+                if sub.is_readonly or not sub.is_active:
+                    skipped_submission_ids.append(sub.id)
+                    continue
+
                 sub_target_id = None
                 if target_type_upper == "FORM":
                     sub_target_id = sub.id
@@ -3435,6 +3478,7 @@ async def list_form_submissions(
     subject_id: str | None = None,
     visit_id: str | None = None,
     form_id: str | None = None,
+    include_inactive: bool = False,
     principal: Principal = Depends(get_principal),
 ) -> list[FormSubmissionResponse]:
     """List form submissions with filters."""
@@ -3443,6 +3487,8 @@ async def list_form_submissions(
 
     async with db_manager.get_session_maker()() as session:
         stmt = select(FormSubmission).where(FormSubmission.is_deleted.is_(False))
+        if not include_inactive:
+            stmt = stmt.where(FormSubmission.is_active.is_(True))
         if study_id:
             stmt = stmt.where(FormSubmission.study_id == study_id)
         if subject_id:
@@ -3475,6 +3521,11 @@ async def list_form_submissions(
                     version=sub.version,
                     is_deleted=sub.is_deleted,
                     signature_manifest=sub.signature_manifest,
+                    protocol_version=sub.protocol_version,
+                    payload=sub.payload,
+                    is_active=sub.is_active,
+                    is_readonly=sub.is_readonly,
+                    cloned_from_id=sub.cloned_from_id,
                 ),
                 principal,
             )
@@ -3516,6 +3567,11 @@ async def get_form_submission(
                 version=sub.version,
                 is_deleted=sub.is_deleted,
                 signature_manifest=sub.signature_manifest,
+                protocol_version=sub.protocol_version,
+                payload=sub.payload,
+                is_active=sub.is_active,
+                is_readonly=sub.is_readonly,
+                cloned_from_id=sub.cloned_from_id,
             ),
             principal,
         )
