@@ -12,9 +12,11 @@ Based on the executed automated verification suite, the platform meets all prede
 
 - **Total Automated Test Cases Run:** 2388
 - **Passed:** 2369 🟢
+- **Total Automated Test Cases Run:** 2396
+- **Passed:** 2377 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
-- **Overall Operational Pass Rate:** 99.20%
+- **Overall Operational Pass Rate:** 99.21%
 
 ## 2. Installation Qualification (IQ)
 
@@ -820,8 +822,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_async_export_adam_success`                                                   | `apps.execution.tests.test_async_exports`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_async_export_bundle_success`                                                 | `apps.execution.tests.test_async_exports`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_async_export_not_found`                                                      | `apps.execution.tests.test_async_exports`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_async_export_task_dataset_json_validation_failure`                           | `apps.execution.tests.test_async_exports`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_async_export_unauthorized`                                                   | `apps.execution.tests.test_async_exports`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_async_export_validation_failure`                                             | `apps.execution.tests.test_async_exports`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_download_endpoint_errors`                                                    | `apps.execution.tests.test_async_exports`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_exports_helper_unsupported_adam`                                             | `apps.execution.tests.test_async_exports`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_run_dataset_export_task_no_job`                                              | `apps.execution.tests.test_async_exports`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_synchronous_exports_errors`                                                  | `apps.execution.tests.test_async_exports`                                   | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_batch_sign_off_all_locks`                                                    | `apps.execution.tests.test_batch_sign_off`                                  | Trace-14                                     | 🟢 PASSED  | < 1s     |
 | `test_batch_sign_off_audit_manifestation_capture`                                  | `apps.execution.tests.test_batch_sign_off`                                  | Trace-14                                     | 🟢 PASSED  | < 1s     |
 | `test_batch_sign_off_happy_path_form`                                              | `apps.execution.tests.test_batch_sign_off`                                  | Trace-14, Trace-17                           | 🟢 PASSED  | < 1s     |
