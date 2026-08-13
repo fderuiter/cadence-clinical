@@ -93,6 +93,22 @@ def test_redis_publish_on_invalidate_and_clear():
                     ),
                 )
 
+                # Reset mock and test invalidate_template
+                mock_pub_client.reset_mock()
+                cache.set_cached("t1", 1, "es", {"foo": "bar"})
+                cache.invalidate_template("t1")
+                assert cache.get_status()["size"] == 0
+
+                mock_pub_client.publish.assert_any_call(
+                    "test_channel",
+                    json.dumps(
+                        {
+                            "action": "invalidate_template",
+                            "template_id": "t1",
+                        }
+                    ),
+                )
+
 
 def test_redis_subscriber_receives_and_evicts_cache():
     """Verify that background subscriber thread receives messages and evicts entries locally without loop republishes."""
@@ -172,3 +188,131 @@ def test_redis_subscriber_receives_and_evicts_cache():
             # 3. CRITICAL: Background thread MUST NOT publish back to Redis when processing received messages.
             # So mock_pub_client.publish should NOT have been called.
             mock_pub_client.publish.assert_not_called()
+
+
+def test_cache_ttl_and_env_initialization():
+    # Test ttl initialization with explicit parameter
+    cache = ApprovedTranslationCache(ttl=120)
+    assert cache.ttl == 120.0
+
+    # Test invalid float env var
+    with patch.dict(os.environ, {"ECONSENT_CACHE_TTL": "not-a-float"}):
+        cache2 = ApprovedTranslationCache()
+        assert cache2.ttl == 3600.0
+
+
+def test_cache_max_size_eviction():
+    # Test max size reached evicts the oldest key
+    cache = ApprovedTranslationCache(max_size=2)
+    cache.set_cached("t1", 1, "en", {"data": "1"})
+    cache.set_cached("t2", 1, "en", {"data": "2"})
+    assert cache.get_status()["size"] == 2
+
+    # Third set should evict "t1"
+    cache.set_cached("t3", 1, "en", {"data": "3"})
+    assert cache.get_status()["size"] == 2
+    data, expired = cache.get_cached("t1", 1, "en")
+    assert data is None
+
+
+def test_cache_entry_expiration():
+    cache = ApprovedTranslationCache(ttl=0.01)
+    cache.set_cached("t1", 1, "en", {"data": "1"})
+    import time
+    time.sleep(0.02)
+    data, expired = cache.get_cached("t1", 1, "en")
+    assert data == {"data": "1"}
+    assert expired
+
+
+def test_redis_publish_error_handling():
+    # Test exception in _publish_message doesn't crash
+    with patch.dict(os.environ, {"REDIS_HOST": "mock.redis.local"}):
+        mock_pub_client = MagicMock()
+        mock_pub_client.publish.side_effect = Exception("Redis publish error")
+        with patch("redis.Redis", return_value=mock_pub_client), patch.object(
+            ApprovedTranslationCache, "_run_subscriber", return_value=None
+        ):
+            cache = ApprovedTranslationCache()
+            cache.invalidate("t1", 1, "en")  # Should log warning but not raise exception
+
+
+def test_redis_subscriber_invalidate_template():
+    with patch.dict(os.environ, {"REDIS_HOST": "mock.redis.local", "REDIS_CHANNEL": "test_channel"}):
+        mock_r = MagicMock()
+        mock_pubsub = MagicMock()
+        mock_r.pubsub.return_value = mock_pubsub
+
+        messages = [
+            {
+                "type": "message",
+                "data": json.dumps({
+                    "action": "invalidate_template",
+                    "template_id": "t1",
+                }),
+            },
+            {
+                "type": "message",
+                "data": "invalid-json-payload-test",
+            },
+            Exception("Stop loop"),
+        ]
+
+        def mock_listen():
+            for m in messages:
+                if isinstance(m, Exception):
+                    raise m
+                yield m
+
+        mock_pubsub.listen = mock_listen
+        original_run_subscriber = ApprovedTranslationCache._run_subscriber
+
+        with (
+            patch("redis.Redis", return_value=mock_r),
+            patch("time.sleep", side_effect=InterruptedError("Stop loop")),
+            patch.object(ApprovedTranslationCache, "_run_subscriber", return_value=None),
+        ):
+            cache = ApprovedTranslationCache()
+            cache.set_cached("t1", 1, "en", {"foo": "bar"})
+            cache.set_cached("t1", 2, "en", {"baz": "qux"})
+            cache.set_cached("t2", 1, "en", {"other": "data"})
+            assert cache.get_status()["size"] == 3
+
+            # Run loop
+            with pytest.raises(InterruptedError):
+                original_run_subscriber(cache)
+
+            # t1 keys should be gone, t2 should remain
+            assert cache.get_status()["size"] == 1
+            data, _ = cache.get_cached("t2", 1, "en")
+            assert data == {"other": "data"}
+
+
+@pytest.mark.asyncio
+async def test_get_approved_template_translation_helper():
+    from apps.econsent.infrastructure.cache import get_approved_template_translation
+    cache = ApprovedTranslationCache()
+
+    async def mock_fetch_db(template_id, version_index, language_code):
+        return {"fetched": "from_db"}
+
+    # Cache miss -> DB fetch
+    res = await get_approved_template_translation(cache, "t1", 1, "en", mock_fetch_db)
+    assert res == {"fetched": "from_db"}
+
+    # Cache hit
+    res2 = await get_approved_template_translation(cache, "t1", 1, "en", mock_fetch_db)
+    assert res2 == {"fetched": "from_db"}
+
+    # Expired cache fallback
+    cache.ttl = -1.0  # Force expired
+    async def mock_fetch_fail(template_id, version_index, language_code):
+        raise Exception("DB offline")
+
+    res3 = await get_approved_template_translation(cache, "t1", 1, "en", mock_fetch_fail)
+    assert res3 == {"fetched": "from_db"}  # should fallback to stale cached data
+
+    # Failure with no cache fallback
+    with pytest.raises(Exception, match="DB offline"):
+        await get_approved_template_translation(cache, "t2", 1, "en", mock_fetch_fail)
+
