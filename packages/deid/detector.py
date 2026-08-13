@@ -9,11 +9,35 @@ from packages.deid.models import (
 )
 
 # Curated, compiled regular expressions for PII/PHI categories
-EMAIL_REGEX = re.compile(r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b")
+# Use lookbehind assertions to preserve and redact leading non-word symbols like + or ( in phone/email
+EMAIL_REGEX = re.compile(r"(?<!\w)[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b")
 
 # Robust telephone and fax number regex (matches standard formats without capturing dates)
 PHONE_FAX_REGEX = re.compile(
-    r"(?:\+\d{1,3}[-.\s]*)?\(?\d{2,4}\)?[-.\s]*\d{3,4}[-.\s]*\d{4}\b|\b\d{3}[-.\s]*\d{4}\b"
+    r"(?<!\w)(?:\+(?:[-.\s]*1)?[-.\s]*\(?\d{3}\)?|\(?\d{3}\)?)[-.\s]*\d{3}[-.\s]*\d{4}\b"
+    r"|(?<!\w)(?:\(?\d{3}\)?)[-.\s]*\d{4}\b"
+    r"|(?:\+\d{1,3}[-.\s]*)?\(?\d{2,4}\)?[-.\s]*\d{3,4}[-.\s]*\d{4}\b"
+    r"|\b\d{3}[-.\s]*\d{4}\b"
+)
+
+HEALTH_PLAN_BENEFICIARY_REGEX = re.compile(
+    r"\b(?:HICN|MBI|Medicare|Beneficiary|Health Plan|Policy(?: Number)?|Plan ID)[:#\s]*(?=[A-Za-z0-9-]*\d)[A-Za-z0-9-]{5,15}\b",
+    re.IGNORECASE,
+)
+
+CERTIFICATE_LICENSE_REGEX = re.compile(
+    r"\b(?:License|Certificate|Cert|Lic|Medical License|State License|Driver License)[:#\s]*(?=[A-Za-z0-9-]*\d)[A-Za-z0-9-]{5,15}\b",
+    re.IGNORECASE,
+)
+
+VEHICLE_IDENTIFIERS_REGEX = re.compile(
+    r"\b(?:VIN|Vehicle ID|License Plate|Plate Number|Engine Number)[:#\s]*(?=[A-Za-z0-9-]*\d)[A-Za-z0-9-]{5,17}\b",
+    re.IGNORECASE,
+)
+
+DEVICE_SERIAL_REGEX = re.compile(
+    r"\b(?:Device ID|Serial Number|Serial|Device Serial|Model Number|UDI)[:#\s]*(?=[A-Za-z0-9-]*\d)[A-Za-z0-9-]{5,20}\b",
+    re.IGNORECASE,
 )
 
 # Social security numbers and simple national ID formats
@@ -66,7 +90,7 @@ IP_MAC_REGEX = re.compile(
 # Medical record numbers, EHR numbers, NHS numbers, and general patient/account IDs
 # Requires the identifier sequence to contain at least one digit to avoid matching general words
 MEDICAL_RECORD_ACCOUNT_REGEX = re.compile(
-    r"\b(?:MRN|EHR|ACC|NHS)[-:\s]*[a-zA-Z0-9-]*\d[a-zA-Z0-9-]*\b"
+    r"\b(?:MRN|EHR|ACC|NHS)[-:#\s]*[a-zA-Z0-9-]*\d[a-zA-Z0-9-]*\b"
     r"|\b\d{3}[-\s]?\d{3}[-\s]?\d{4}\b",
     re.IGNORECASE,
 )
@@ -79,7 +103,9 @@ AGE_REGEX = re.compile(
 )
 
 
-def resolve_overlaps(results: list[DetectionResult]) -> list[DetectionResult]:
+def resolve_overlaps(
+    results: list[DetectionResult], text: str = ""
+) -> list[DetectionResult]:
     """
     Resolve overlapping detection results deterministically.
     Longer/wider matches are prioritized. For overlapping intervals, the match
@@ -121,7 +147,7 @@ def redact_text(
     for each result. Otherwise, defaults to f"[{result.category.upper()}]".
     """
     # Resolve overlaps to ensure safety and determinism
-    clean_results = resolve_overlaps(results)
+    clean_results = resolve_overlaps(results, text)
 
     parts = list(text)
     # Process from right-to-left so offsets remain valid during substitution
@@ -245,12 +271,21 @@ class DeidDetector:
 
         if DetectorCategory.MEDICAL_RECORD_ACCOUNT in active_categories:
             for m in MEDICAL_RECORD_ACCOUNT_REGEX.finditer(text):
+                val = m.group()
+                # If it's a 10-digit/phone-like format, check for a valid prefix in preceding text
+                if re.match(r"^\d{3}[-.\s]?\d{3}[-.\s]?\d{4}$", val):
+                    preceding = text[max(0, m.start() - 25) : m.start()].lower()
+                    if not any(
+                        p in preceding for p in ("nhs", "acc", "record", "mrn", "ehr")
+                    ):
+                        # Skip matching as medical_record_account, since it's likely a phone number
+                        continue
                 candidates.append(
                     DetectionResult(
                         category=DetectorCategory.MEDICAL_RECORD_ACCOUNT,
                         start=m.start(),
                         end=m.end(),
-                        value=m.group(),
+                        value=val,
                     )
                 )
 
@@ -259,6 +294,50 @@ class DeidDetector:
                 candidates.append(
                     DetectionResult(
                         category=DetectorCategory.AGE,
+                        start=m.start(),
+                        end=m.end(),
+                        value=m.group(),
+                    )
+                )
+
+        if DetectorCategory.HEALTH_PLAN_BENEFICIARY in active_categories:
+            for m in HEALTH_PLAN_BENEFICIARY_REGEX.finditer(text):
+                candidates.append(
+                    DetectionResult(
+                        category=DetectorCategory.HEALTH_PLAN_BENEFICIARY,
+                        start=m.start(),
+                        end=m.end(),
+                        value=m.group(),
+                    )
+                )
+
+        if DetectorCategory.CERTIFICATE_LICENSE in active_categories:
+            for m in CERTIFICATE_LICENSE_REGEX.finditer(text):
+                candidates.append(
+                    DetectionResult(
+                        category=DetectorCategory.CERTIFICATE_LICENSE,
+                        start=m.start(),
+                        end=m.end(),
+                        value=m.group(),
+                    )
+                )
+
+        if DetectorCategory.VEHICLE_IDENTIFIERS in active_categories:
+            for m in VEHICLE_IDENTIFIERS_REGEX.finditer(text):
+                candidates.append(
+                    DetectionResult(
+                        category=DetectorCategory.VEHICLE_IDENTIFIERS,
+                        start=m.start(),
+                        end=m.end(),
+                        value=m.group(),
+                    )
+                )
+
+        if DetectorCategory.DEVICE_SERIAL in active_categories:
+            for m in DEVICE_SERIAL_REGEX.finditer(text):
+                candidates.append(
+                    DetectionResult(
+                        category=DetectorCategory.DEVICE_SERIAL,
                         start=m.start(),
                         end=m.end(),
                         value=m.group(),
@@ -274,8 +353,14 @@ class DeidDetector:
                 escaped_terms = [re.escape(term) for term in valid_terms]
                 patterns = []
                 for term in escaped_terms:
-                    start_b = r"\b" if re.match(r"^\w", term) else ""
-                    end_b = r"\b" if re.search(r"\w$", term) else ""
+                    raw_term = valid_terms[escaped_terms.index(term)]
+                    # Only enforce word boundaries for short alphanumeric terms/initials of length <= 3
+                    if len(raw_term) <= 3 and re.match(r"^\w+$", raw_term):
+                        start_b = r"\b"
+                        end_b = r"\b"
+                    else:
+                        start_b = ""
+                        end_b = ""
                     patterns.append(f"{start_b}{term}{end_b}")
 
                 custom_regex = re.compile("|".join(patterns), re.IGNORECASE)
@@ -288,6 +373,24 @@ class DeidDetector:
                             value=m.group(),
                         )
                     )
+
+        # Redact trailing hyphens, slashes, or special punctuation that form part of formatted clinical identifiers
+        clinical_categories = {
+            DetectorCategory.MEDICAL_RECORD_ACCOUNT,
+            DetectorCategory.SSN_NATIONAL_ID,
+            DetectorCategory.HEALTH_PLAN_BENEFICIARY,
+            DetectorCategory.CERTIFICATE_LICENSE,
+            DetectorCategory.VEHICLE_IDENTIFIERS,
+            DetectorCategory.DEVICE_SERIAL,
+        }
+        for cand in candidates:
+            if cand.category in clinical_categories:
+                new_end = cand.end
+                while new_end < len(text) and text[new_end] in ("-", "/", "\\"):
+                    new_end += 1
+                if new_end > cand.end:
+                    cand.end = new_end
+                    cand.value = text[cand.start : cand.end]
 
         # 3. Resolve overlaps deterministically
         return resolve_overlaps(candidates)
