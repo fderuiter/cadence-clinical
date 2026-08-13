@@ -146,3 +146,10 @@ apps/designer/templates/*.docx
 *.docx
 scripts/sync_github_project.py
 scripts/live_hygiene_enforcement.py
+
+# ------------------------------------------
+# Ephemeral GxP Compliance Reports
+# ------------------------------------------
+docs/SDLC/Requirements_Traceability_Matrix.md
+docs/SDLC/IQ_OQ_PQ_Execution_Report.md
+

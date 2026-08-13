@@ -836,7 +836,7 @@ def main():
 
     report_exists = os.path.exists(report_path) and os.path.getsize(report_path) > 0
     if not report_exists:
-        if not args.draft:
+        if not args.draft and not args.validate:
             print(
                 f"ERROR: Required test report '{report_path}' is missing. Failing fast to protect GxP data integrity.",
                 file=sys.stderr,
@@ -844,7 +844,7 @@ def main():
             sys.exit(1)
         else:
             print(
-                f"Note: '{report_path}' is missing. Draft mode enabled — generating draft reports with UNVERIFIED statuses."
+                f"Note: '{report_path}' is missing. Draft/Validate mode enabled — generating draft reports with UNVERIFIED statuses."
             )
             for (classname, name), info in test_cases_all.items():
                 test_results[(classname, name)] = {
@@ -876,34 +876,6 @@ def main():
         else get_stable_timestamp()
     )
 
-    # 4. Generate RTM Markdown
-    rtm_out = os.path.join(args.output_dir, "Requirements_Traceability_Matrix.md")
-    generate_rtm_md(
-        all_requirements,
-        test_mappings,
-        test_results,
-        test_cases_all,
-        rtm_out,
-        timestamp=timestamp,
-        draft=args.draft,
-    )
-    print(f"Requirements Traceability Matrix successfully written to {rtm_out}")
-    format_file_with_prettier(rtm_out)
-
-    # 5. Generate Qualification Report
-    qual_out = os.path.join(args.output_dir, "IQ_OQ_PQ_Execution_Report.md")
-    generate_qualification_report(
-        all_requirements,
-        test_mappings,
-        test_results,
-        test_cases_all,
-        qual_out,
-        timestamp=timestamp,
-        draft=args.draft,
-    )
-    print(f"Qualification Execution Report successfully written to {qual_out}")
-    format_file_with_prettier(qual_out)
-
     if args.validate:
         unmapped_list = [
             req_id
@@ -921,6 +893,34 @@ def main():
             print(
                 "SUCCESS: Requirements traceability validation passed! All requirements are mapped."
             )
+    else:
+        # 4. Generate RTM Markdown
+        rtm_out = os.path.join(args.output_dir, "Requirements_Traceability_Matrix.md")
+        generate_rtm_md(
+            all_requirements,
+            test_mappings,
+            test_results,
+            test_cases_all,
+            rtm_out,
+            timestamp=timestamp,
+            draft=args.draft,
+        )
+        print(f"Requirements Traceability Matrix successfully written to {rtm_out}")
+        format_file_with_prettier(rtm_out)
+
+        # 5. Generate Qualification Report
+        qual_out = os.path.join(args.output_dir, "IQ_OQ_PQ_Execution_Report.md")
+        generate_qualification_report(
+            all_requirements,
+            test_mappings,
+            test_results,
+            test_cases_all,
+            qual_out,
+            timestamp=timestamp,
+            draft=args.draft,
+        )
+        print(f"Qualification Execution Report successfully written to {qual_out}")
+        format_file_with_prettier(qual_out)
 
 
 if __name__ == "__main__":

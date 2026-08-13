@@ -176,5 +176,8 @@ def test_missing_report_gxp_sync_dry_run():
                     "checkout",
                     "docs/SDLC/Requirements_Traceability_Matrix.md",
                     "docs/SDLC/IQ_OQ_PQ_Execution_Report.md",
-                ]
+                ],
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
