@@ -43,9 +43,11 @@ def should_trigger_schema_generation(staged_files: list[str]) -> bool:
 
     Returns:
         bool: True if any staged file is an API route, Pydantic model, or schema
-              definition; False otherwise.
+              definition, or any frontend API client change; False otherwise.
     """
     for f in staged_files:
+        if "apps/web/src/api/" in f:
+            return True
         if not f.endswith(".py"):
             continue
         parts = f.split(os.sep)
@@ -155,18 +157,79 @@ def check_and_run_exporter() -> int:
         print(f"[ERROR] Failed to run schema validation script: {e}", file=sys.stderr)
         return 1
 
-    # Automatically stage any newly generated OpenAPI JSON changes
-    print("Staging newly compiled OpenAPI schemas into the current commit...")
+    # Compile TypeScript definitions from the aggregated schema
+    types_out_file = os.path.join(app_root, "apps", "web", "src", "api", "types.ts")
+    print(
+        f"Compiling aggregated OpenAPI Gateway schema into TypeScript: {types_out_file}..."
+    )
+    try:
+        ts_compile_result = subprocess.run(
+            [
+                "pnpm",
+                "--prefix",
+                "apps/web",
+                "dlx",
+                "openapi-typescript@6.2.8",
+                "docs/openapi/cdisc_openapi.json",
+                "-o",
+                "apps/web/src/api/types.ts",
+            ],
+            cwd=app_root,
+            capture_output=True,
+            text=True,
+        )
+        if ts_compile_result.returncode != 0:
+            print(
+                "[ERROR] TypeScript compilation of Gateway schema failed:",
+                file=sys.stderr,
+            )
+            print(ts_compile_result.stdout, file=sys.stderr)
+            print(ts_compile_result.stderr, file=sys.stderr)
+            return ts_compile_result.returncode
+        print("TypeScript types successfully compiled!")
+    except subprocess.SubprocessError as e:
+        print(
+            f"[ERROR] Failed to compile OpenAPI Gateway schema into TypeScript: {e}",
+            file=sys.stderr,
+        )
+        return 1
+
+    # Run TypeScript typecheck on the web workspace
+    print("Running TypeScript typecheck to verify contract alignment...")
+    try:
+        typecheck_result = subprocess.run(
+            ["pnpm", "--filter", "web", "typecheck"],
+            cwd=app_root,
+            capture_output=True,
+            text=True,
+        )
+        if typecheck_result.returncode != 0:
+            print(
+                "[ERROR] TypeScript typecheck failed! Drift detected between backend definitions and manual clients.",
+                file=sys.stderr,
+            )
+            print(typecheck_result.stdout, file=sys.stderr)
+            print(typecheck_result.stderr, file=sys.stderr)
+            return typecheck_result.returncode
+        print("TypeScript typecheck validation passed successfully!")
+    except subprocess.SubprocessError as e:
+        print(f"[ERROR] Failed to execute TypeScript typecheck: {e}", file=sys.stderr)
+        return 1
+
+    # Automatically stage any newly generated OpenAPI JSON and TypeScript type changes
+    print(
+        "Staging newly compiled OpenAPI schemas and TypeScript types into the current commit..."
+    )
     try:
         subprocess.run(
-            ["git", "add", export_dir],
+            ["git", "add", export_dir, types_out_file],
             cwd=app_root,
             check=True,
         )
-        print("OpenAPI schemas successfully compiled and staged!")
+        print("OpenAPI schemas and TypeScript types successfully compiled and staged!")
     except subprocess.SubprocessError as e:
         print(
-            f"Warning: Failed to automatically stage OpenAPI schemas: {e}",
+            f"Warning: Failed to automatically stage changes: {e}",
             file=sys.stderr,
         )
 

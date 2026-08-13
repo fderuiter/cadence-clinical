@@ -143,9 +143,11 @@ export function sha256(message: string): Promise<string>;
 export function validateField(value: any, rules: any): any;
 export function buildLedgerBlock(
   index: number,
-  prevHash: string,
-  data: any,
-  key: any
+  timestamp: string,
+  action: string,
+  details: any,
+  reason: string,
+  prevHash: string
 ): Promise<any>;
 export function encryptAESGCM(
   plaintext: string,

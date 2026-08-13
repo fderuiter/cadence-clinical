@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { buildLedgerBlock, debounce } from "ui";
 import { useAuthStore } from "./auth.js";
 import { soaClient } from "../api/soaClient.js";
-import { executionService } from "../api/execution.js";
+import { executionService } from "../api/execution";
 import { evaluateAST } from "../evaluator.js";
 import { ingestionClient } from "../api/ingestionClient.js";
 import { normalizeUsdm } from "./normalization";

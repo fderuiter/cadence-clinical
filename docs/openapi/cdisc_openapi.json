@@ -897,115 +897,7 @@
           }
         }
       },
-      "get": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__patch",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__patch",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "options": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__patch",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
+      "post": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
         "operationId": "proxy_requests__path__patch",
@@ -1077,7 +969,115 @@
           }
         }
       },
-      "post": {
+      "get": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__patch",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__patch",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__patch",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
         "operationId": "proxy_requests__path__patch",
@@ -14997,6 +14997,1256 @@
         }
       }
     },
+    "/execution/api/v1/execution/subjects/{subject_id}/randomize": {
+      "post": {
+        "tags": [
+          "Randomization"
+        ],
+        "summary": "Randomize Subject Endpoint",
+        "description": "Execute GxP compliant subject randomization allocation and block-index advancement.",
+        "operationId": "randomize_subject_endpoint_api_v1_execution_subjects__subject_id__randomize_post",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_SubjectRandomizationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/subjects/{subject_id}/unblind": {
+      "post": {
+        "tags": [
+          "Unblinding"
+        ],
+        "summary": "Unblind Subject",
+        "description": "Execute an emergency treatment-allocation unblinding for a randomised subject.\n\nThis endpoint implements the GxP / 21 CFR Part 11 compliant emergency\nunblinding workflow: it validates step-up re-authentication, performs\nShamir dual-custody reconstruction of the encrypted allocation, builds a\ncryptographically signed evidence record, writes an immutable audit-log\nentry, and dispatches a critical-priority dashboard notification \u2014 all\nwithin a single atomic database transaction.",
+        "operationId": "unblind_subject_api_v1_execution_subjects__subject_id__unblind_post",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_UnblindRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_SubjectUnblindResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/queries": {
+      "get": {
+        "tags": [
+          "Queries"
+        ],
+        "summary": "List Queries",
+        "description": "Retrieve a list of clinical queries with optional filtering.",
+        "operationId": "list_queries_api_v1_execution_queries_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          },
+          {
+            "name": "visit_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Visit Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
+                  },
+                  "title": "Response List Queries Api V1 Execution Queries Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Queries"
+        ],
+        "summary": "Open Query",
+        "description": "Raise a new clinical query on a specific field coordinate.",
+        "operationId": "open_query_api_v1_execution_queries_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_QueryCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/queries/{query_id}": {
+      "get": {
+        "tags": [
+          "Queries"
+        ],
+        "summary": "Get Query",
+        "description": "Query a single clinical query by ID, returning its full audit history.",
+        "operationId": "get_query_api_v1_execution_queries__query_id__get",
+        "parameters": [
+          {
+            "name": "query_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Query Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Queries"
+        ],
+        "summary": "Update Query State",
+        "description": "Transition a query through the designated state sequence and perform role checks.",
+        "operationId": "update_query_state_api_v1_execution_queries__query_id__patch",
+        "parameters": [
+          {
+            "name": "query_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Query Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_QueryUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/queries/{query_id}/respond": {
+      "post": {
+        "tags": [
+          "Queries"
+        ],
+        "summary": "Respond Query",
+        "description": "Submit an investigator response/answer to an open or reopened clinical query.",
+        "operationId": "respond_query_api_v1_execution_queries__query_id__respond_post",
+        "parameters": [
+          {
+            "name": "query_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Query Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_QueryRespond"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/queries/{query_id}/close": {
+      "post": {
+        "tags": [
+          "Queries"
+        ],
+        "summary": "Close Query",
+        "description": "Close an answered query (resolving the discrepancy loop).",
+        "operationId": "close_query_api_v1_execution_queries__query_id__close_post",
+        "parameters": [
+          {
+            "name": "query_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Query Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/queries/{query_id}/reopen": {
+      "post": {
+        "tags": [
+          "Queries"
+        ],
+        "summary": "Reopen Query",
+        "description": "Reopen an answered or closed clinical query for further clarification.",
+        "operationId": "reopen_query_api_v1_execution_queries__query_id__reopen_post",
+        "parameters": [
+          {
+            "name": "query_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Query Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Execution_QueryReopen"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/queries/{query_id}/cancel": {
+      "post": {
+        "tags": [
+          "Queries"
+        ],
+        "summary": "Cancel Query",
+        "description": "Cancel a clinical query raised in error.",
+        "operationId": "cancel_query_api_v1_execution_queries__query_id__cancel_post",
+        "parameters": [
+          {
+            "name": "query_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Query Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_QueryCancel"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/queries/sync": {
+      "post": {
+        "tags": [
+          "Queries"
+        ],
+        "summary": "Sync Queries",
+        "description": "Synchronize clinical query local ledger blocks to the target database.",
+        "operationId": "sync_queries_api_v1_execution_queries_sync_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_SyncRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Sync Queries Api V1 Execution Queries Sync Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/dictionaries/import": {
+      "post": {
+        "tags": [
+          "Dictionaries"
+        ],
+        "summary": "Import Dictionary",
+        "description": "Imports raw dictionary files and schedules a background parsing task.",
+        "operationId": "import_dictionary_api_v1_dictionaries_import_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_Body_import_dictionary_api_v1_dictionaries_import_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_JobStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/dictionaries/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "Dictionaries"
+        ],
+        "summary": "Get Dictionary Import Job",
+        "description": "Query the execution status, progress, and import counts of a dictionary import job by ID.",
+        "operationId": "get_dictionary_import_job_api_v1_dictionaries_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_JobStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/dictionaries/meddra/code": {
+      "get": {
+        "tags": [
+          "Dictionaries"
+        ],
+        "summary": "Get Meddra Code",
+        "description": "Performs coding or interactive auto-complete lookup on adverse events using version-aware matcher.",
+        "operationId": "get_meddra_code_api_v1_dictionaries_meddra_code_get",
+        "parameters": [
+          {
+            "name": "term",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Term"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "26.0",
+              "title": "Version"
+            }
+          },
+          {
+            "name": "target_level",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Execution_MedDRATargetLevelEnum"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "LLT",
+              "title": "Target Level"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_MedDRACodeLookupResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/dictionaries/whodrug/code": {
+      "get": {
+        "tags": [
+          "Dictionaries"
+        ],
+        "summary": "Get Whodrug Code",
+        "description": "Performs coding or interactive lookup on WHODrug database using version-aware matcher.",
+        "operationId": "get_whodrug_code_api_v1_dictionaries_whodrug_code_get",
+        "parameters": [
+          {
+            "name": "term",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Term"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_WHODrugCodeLookupResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/dictionaries/ucum/convert": {
+      "post": {
+        "tags": [
+          "Dictionaries"
+        ],
+        "summary": "Post Ucum Convert",
+        "description": "Standardizes numeric values and verifies scale compatibility between source and target codes.",
+        "operationId": "post_ucum_convert_api_v1_dictionaries_ucum_convert_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_UCUMConvertRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_UCUMConvertResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/coding/impact-analysis": {
+      "post": {
+        "tags": [
+          "Dictionaries"
+        ],
+        "summary": "Post Impact Analysis",
+        "description": "Manually triggers up-versioning impact analysis on existing coded assignments.",
+        "operationId": "post_impact_analysis_api_v1_execution_coding_impact_analysis_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_ImpactAnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ImpactAnalysisResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/coding/assignments": {
+      "get": {
+        "tags": [
+          "Dictionaries"
+        ],
+        "summary": "List Coding Assignments",
+        "description": "Lists and filters medical coding assignments.",
+        "operationId": "list_coding_assignments_api_v1_execution_coding_assignments_get",
+        "parameters": [
+          {
+            "name": "observation_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Observation Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "verbatim_text",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Verbatim Text"
+            }
+          },
+          {
+            "name": "dictionary_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dictionary Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_CodingAssignmentResponse"
+                  },
+                  "title": "Response List Coding Assignments Api V1 Execution Coding Assignments Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/coding/assignments/{assignment_id}": {
+      "get": {
+        "tags": [
+          "Dictionaries"
+        ],
+        "summary": "Get Coding Assignment",
+        "description": "Retrieves a single medical coding assignment by ID.",
+        "operationId": "get_coding_assignment_api_v1_execution_coding_assignments__assignment_id__get",
+        "parameters": [
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assignment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_CodingAssignmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/coding/assignments/{assignment_id}/action": {
+      "post": {
+        "tags": [
+          "Dictionaries"
+        ],
+        "summary": "Process Coding Action",
+        "description": "Accepts a suggestion or submits a manual override, persisting results and updating the ledger.",
+        "operationId": "process_coding_action_api_v1_execution_coding_assignments__assignment_id__action_post",
+        "parameters": [
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assignment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_CoderActionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_CodingAssignmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/biostat/sdtm/{domain}": {
+      "get": {
+        "tags": [
+          "CDISC Exports"
+        ],
+        "summary": "Export Sdtm Domain",
+        "description": "Exports SDTM domain data (DM, AE, VS, LB, MH, CM) in CDISC Dataset-JSON format.",
+        "operationId": "export_sdtm_domain_api_v1_execution_biostat_sdtm__domain__get",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Domain"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The unique study identifier",
+              "title": "Study Id"
+            },
+            "description": "The unique study identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Export Sdtm Domain Api V1 Execution Biostat Sdtm  Domain  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/biostat/adam/{dataset}": {
+      "get": {
+        "tags": [
+          "CDISC Exports"
+        ],
+        "summary": "Export Adam Dataset",
+        "description": "Exports ADaM dataset data (ADSL, ADAE, ADVS) in CDISC Dataset-JSON format.",
+        "operationId": "export_adam_dataset_api_v1_execution_biostat_adam__dataset__get",
+        "parameters": [
+          {
+            "name": "dataset",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Dataset"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The unique study identifier",
+              "title": "Study Id"
+            },
+            "description": "The unique study identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Export Adam Dataset Api V1 Execution Biostat Adam  Dataset  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/biostat/bundle": {
+      "get": {
+        "tags": [
+          "CDISC Exports"
+        ],
+        "summary": "Export Biostat Bundle",
+        "description": "Exports all SDTM domains and ADaM datasets bundled in a single CDISC Dataset-JSON document.",
+        "operationId": "export_biostat_bundle_api_v1_execution_biostat_bundle_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The unique study identifier",
+              "title": "Study Id"
+            },
+            "description": "The unique study identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Export Biostat Bundle Api V1 Execution Biostat Bundle Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/execution/health": {
       "get": {
         "summary": "Health Check",
@@ -15305,96 +16555,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Execution_SubjectScreeningResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/execution/api/v1/execution/subjects/{subject_id}/unblind": {
-      "post": {
-        "summary": "Unblind Subject",
-        "description": "Execute an emergency treatment-allocation unblinding for a randomised subject.\n\nThis endpoint implements the GxP / 21 CFR Part 11 compliant emergency\nunblinding workflow: it validates step-up re-authentication, performs\nShamir dual-custody reconstruction of the encrypted allocation, builds a\ncryptographically signed evidence record, writes an immutable audit-log\nentry, and dispatches a critical-priority dashboard notification \u2014 all\nwithin a single atomic database transaction.\n\nArgs:\n    subject_id: Path parameter identifying the subject to unblind.\n    request: The raw FastAPI request object; used to extract and validate\n        the step-up ``X-Sig-Token`` and change-justification headers.\n    background_tasks: FastAPI background-task registry used to dispatch\n        the post-commit dashboard notification without blocking the response.\n    payload: Validated ``UnblindRequest`` body containing the reason code,\n        clinical justification, and exactly two Shamir custodian shares.\n    principal: The authenticated caller resolved by ``get_principal``.\n    roles: Role enforcement dependency; only the four approved unblinding\n        personas may call this endpoint.\n\nReturns:\n    SubjectUnblindResponse: The subject's updated unblinding status and\n    allocation details, masked according to the caller's access level.\n\nRaises:\n    HTTPException(400): If the justification is too short, the subject has\n        not been randomised, the Shamir reconstruction fails, the decrypted\n        payload does not contain a recognisable allocation field, or the\n        subject is already unblinded.\n    HTTPException(401): If the ``X-Sig-Token`` is absent or invalid\n        (step-up re-authentication required).\n    HTTPException(403): If the caller's role is insufficient.\n    HTTPException(404): If the subject record does not exist.",
-        "operationId": "unblind_subject_api_v1_execution_subjects__subject_id__unblind_post",
-        "parameters": [
-          {
-            "name": "subject_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Subject Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Execution_UnblindRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_SubjectUnblindResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/execution/api/v1/execution/subjects/{subject_id}/randomize": {
-      "post": {
-        "summary": "Randomize Subject Endpoint",
-        "description": "Execute GxP compliant subject randomization allocation and block-index advancement.",
-        "operationId": "randomize_subject_endpoint_api_v1_execution_subjects__subject_id__randomize_post",
-        "parameters": [
-          {
-            "name": "subject_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Subject Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_SubjectRandomizationResponse"
                 }
               }
             }
@@ -16456,481 +17616,6 @@
         }
       }
     },
-    "/execution/api/v1/dictionaries/import": {
-      "post": {
-        "summary": "Import Dictionary",
-        "description": "Imports raw dictionary files and schedules a background parsing task.\n\nSatisfies Epic #109 / Issue #1122 / Phase 16: Dictionary Ingestion & Persistence.",
-        "operationId": "import_dictionary_api_v1_dictionaries_import_post",
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/Execution_Body_import_dictionary_api_v1_dictionaries_import_post"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "202": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_JobStatusResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/execution/api/v1/dictionaries/jobs/{job_id}": {
-      "get": {
-        "summary": "Get Dictionary Import Job",
-        "description": "Query the execution status, progress, and import counts of a dictionary import job by ID.",
-        "operationId": "get_dictionary_import_job_api_v1_dictionaries_jobs__job_id__get",
-        "parameters": [
-          {
-            "name": "job_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Job Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_JobStatusResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/execution/api/v1/dictionaries/meddra/code": {
-      "get": {
-        "summary": "Get Meddra Code",
-        "description": "Performs coding or interactive auto-complete lookup on adverse events using version-aware matcher.\n\nPhase 17 / Epic #109 dictionary lookup endpoint.",
-        "operationId": "get_meddra_code_api_v1_dictionaries_meddra_code_get",
-        "parameters": [
-          {
-            "name": "term",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Term"
-            }
-          },
-          {
-            "name": "version",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": "26.0",
-              "title": "Version"
-            }
-          },
-          {
-            "name": "target_level",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/Execution_MedDRATargetLevelEnum"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": "LLT",
-              "title": "Target Level"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_MedDRACodeLookupResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/execution/api/v1/dictionaries/whodrug/code": {
-      "get": {
-        "summary": "Get Whodrug Code",
-        "description": "Performs coding or interactive lookup on WHODrug database using version-aware matcher.\n\nPhase 17 / Epic #109 drug dictionary lookup endpoint.",
-        "operationId": "get_whodrug_code_api_v1_dictionaries_whodrug_code_get",
-        "parameters": [
-          {
-            "name": "term",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Term"
-            }
-          },
-          {
-            "name": "version",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Version"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_WHODrugCodeLookupResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/execution/api/v1/dictionaries/ucum/convert": {
-      "post": {
-        "summary": "Post Ucum Convert",
-        "description": "Standardizes numeric values and verifies scale compatibility between source and target codes.",
-        "operationId": "post_ucum_convert_api_v1_dictionaries_ucum_convert_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Execution_UCUMConvertRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_UCUMConvertResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/execution/api/v1/execution/queries": {
-      "get": {
-        "summary": "List Queries",
-        "description": "Retrieve a list of clinical queries with optional filtering.\n\nArgs:\n    study_id (Optional[str]): Filter by study identifier.\n    subject_id (Optional[str]): Filter by subject identifier.\n    visit_id (Optional[str]): Filter by visit identifier.\n    status (Optional[str]): Filter by query status.\n\nReturns:\n    List[ClinicalQueryResponse]: List of matching queries including audit history.",
-        "operationId": "list_queries_api_v1_execution_queries_get",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Study Id"
-            }
-          },
-          {
-            "name": "subject_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Subject Id"
-            }
-          },
-          {
-            "name": "visit_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Visit Id"
-            }
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Status"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-                  },
-                  "title": "Response List Queries Api V1 Execution Queries Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "Open Query",
-        "description": "Raise a new clinical query on a specific field coordinate.\n\nArgs:\n    request (Request): The incoming FastAPI request.\n    payload (QueryCreate): The coordinate details and query explanation.\n\nReturns:\n    ClinicalQueryResponse: The newly opened clinical query.",
-        "operationId": "open_query_api_v1_execution_queries_post",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Execution_QueryCreate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/execution/api/v1/execution/queries/{query_id}": {
-      "get": {
-        "summary": "Get Query",
-        "description": "Query a single clinical query by ID, returning its full audit history.\n\nArgs:\n    query_id (str): The unique database identifier of the query.\n\nReturns:\n    ClinicalQueryResponse: The query record including detailed history.",
-        "operationId": "get_query_api_v1_execution_queries__query_id__get",
-        "parameters": [
-          {
-            "name": "query_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Query Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "summary": "Update Query State",
-        "description": "Transition a query through the designated state sequence and perform role checks.\n\nArgs:\n    query_id (str): Unique database identifier of the query.\n    request (Request): The incoming FastAPI request.\n    payload (QueryUpdate): Target status and optional explanation/response fields.\n\nReturns:\n    ClinicalQueryResponse: The updated query record and audit trail.",
-        "operationId": "update_query_state_api_v1_execution_queries__query_id__patch",
-        "parameters": [
-          {
-            "name": "query_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Query Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Execution_QueryUpdate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/execution/api/v1/execution/form-submissions": {
       "post": {
         "summary": "Create Form Submission",
@@ -17219,244 +17904,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Execution_FormSubmissionResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/execution/api/v1/execution/queries/{query_id}/respond": {
-      "post": {
-        "summary": "Respond Query",
-        "description": "Submit an investigator response/answer to an open or reopened clinical query.\n\nArgs:\n    query_id (str): Unique database identifier of the query.\n    request (Request): The incoming FastAPI request.\n    payload (QueryRespond): The investigator's response explanation.\n\nReturns:\n    ClinicalQueryResponse: The updated query with ANSWERED status.",
-        "operationId": "respond_query_api_v1_execution_queries__query_id__respond_post",
-        "parameters": [
-          {
-            "name": "query_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Query Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Execution_QueryRespond"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/execution/api/v1/execution/queries/{query_id}/close": {
-      "post": {
-        "summary": "Close Query",
-        "description": "Close an answered query (resolving the discrepancy loop).\n\nArgs:\n    query_id (str): Unique database identifier of the query.\n    request (Request): The incoming FastAPI request.\n\nReturns:\n    ClinicalQueryResponse: The updated query with CLOSED status.",
-        "operationId": "close_query_api_v1_execution_queries__query_id__close_post",
-        "parameters": [
-          {
-            "name": "query_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Query Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/execution/api/v1/execution/queries/{query_id}/reopen": {
-      "post": {
-        "summary": "Reopen Query",
-        "description": "Reopen an answered or closed clinical query for further clarification.\n\nArgs:\n    query_id (str): Unique database identifier of the query.\n    request (Request): The incoming FastAPI request.\n    payload (Optional[QueryReopen]): Optional reopen payload containing reject reason.\n\nReturns:\n    ClinicalQueryResponse: The updated query with REOPENED status.",
-        "operationId": "reopen_query_api_v1_execution_queries__query_id__reopen_post",
-        "parameters": [
-          {
-            "name": "query_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Query Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/Execution_QueryReopen"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "title": "Payload"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/execution/api/v1/execution/queries/{query_id}/cancel": {
-      "post": {
-        "summary": "Cancel Query",
-        "description": "Cancel a clinical query raised in error.\n\nArgs:\n    query_id (str): Unique database identifier of the query.\n    request (Request): The incoming FastAPI request.\n    payload (QueryCancel): The cancellation reason.\n\nReturns:\n    ClinicalQueryResponse: The updated query with CANCELLED status.",
-        "operationId": "cancel_query_api_v1_execution_queries__query_id__cancel_post",
-        "parameters": [
-          {
-            "name": "query_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Query Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Execution_QueryCancel"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ClinicalQueryResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/execution/api/v1/execution/queries/sync": {
-      "post": {
-        "summary": "Sync Queries",
-        "description": "Synchronize clinical query local ledger blocks to the target database.\n\nTranslates local ledger blocks to correct fields in the target database schema,\nverifying caller roles and payload integrity.",
-        "operationId": "sync_queries_api_v1_execution_queries_sync_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Execution_SyncRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Sync Queries Api V1 Execution Queries Sync Post"
                 }
               }
             }
@@ -18289,287 +18736,6 @@
         }
       }
     },
-    "/execution/api/v1/execution/coding/impact-analysis": {
-      "post": {
-        "summary": "Post Impact Analysis",
-        "description": "Manually triggers up-versioning impact analysis on existing coded assignments.",
-        "operationId": "post_impact_analysis_api_v1_execution_coding_impact_analysis_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Execution_ImpactAnalysisRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ImpactAnalysisResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/execution/api/v1/execution/coding/assignments": {
-      "get": {
-        "summary": "List Coding Assignments",
-        "description": "Lists and filters medical coding assignments.",
-        "operationId": "list_coding_assignments_api_v1_execution_coding_assignments_get",
-        "parameters": [
-          {
-            "name": "observation_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Observation Id"
-            }
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Status"
-            }
-          },
-          {
-            "name": "verbatim_text",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Verbatim Text"
-            }
-          },
-          {
-            "name": "dictionary_type",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Dictionary Type"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Execution_CodingAssignmentResponse"
-                  },
-                  "title": "Response List Coding Assignments Api V1 Execution Coding Assignments Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/execution/api/v1/execution/coding/assignments/{assignment_id}": {
-      "get": {
-        "summary": "Get Coding Assignment",
-        "description": "Retrieves a single medical coding assignment by ID.",
-        "operationId": "get_coding_assignment_api_v1_execution_coding_assignments__assignment_id__get",
-        "parameters": [
-          {
-            "name": "assignment_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Assignment Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_CodingAssignmentResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/execution/api/v1/execution/coding/assignments/{assignment_id}/action": {
-      "post": {
-        "summary": "Process Coding Action",
-        "description": "Accepts a suggestion or submits a manual override, persisting results and updating the ledger.",
-        "operationId": "process_coding_action_api_v1_execution_coding_assignments__assignment_id__action_post",
-        "parameters": [
-          {
-            "name": "assignment_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Assignment Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Execution_CoderActionRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_CodingAssignmentResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/execution/api/v1/execution/biostat/sdtm/{domain}": {
-      "get": {
-        "summary": "Export Sdtm Domain",
-        "description": "Exports SDTM domain data (DM, AE, VS, LB, MH, CM) in CDISC Dataset-JSON format.\n\n- **Protected Endpoint**: Requires authenticated session under GatewayAuthMiddleware.\n- **Authorized Roles**: CRA, Data Manager, Sponsor Statistician.\n- **Validations**: Automatically validates schema, keys, and values before returning payload.\n- **Media Type Contract**: `application/json` conforming to CDISC Dataset-JSON 1.0.0.\n- **Supplemental Contract**: Includes matching SUPP<domain> dataset alongside the parent dataset when supplemental records exist.",
-        "operationId": "export_sdtm_domain_api_v1_execution_biostat_sdtm__domain__get",
-        "parameters": [
-          {
-            "name": "domain",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Domain"
-            }
-          },
-          {
-            "name": "study_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "description": "The unique study identifier",
-              "title": "Study Id"
-            },
-            "description": "The unique study identifier"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Export Sdtm Domain Api V1 Execution Biostat Sdtm  Domain  Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/execution/api/v1/execution/rtsm/dispense": {
       "post": {
         "summary": "Dispense Kit Endpoint",
@@ -18704,103 +18870,6 @@
                   "additionalProperties": true,
                   "type": "object",
                   "title": "Response Get Execution Audit Integrity Api V1 Execution Audit Integrity Get"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/execution/api/v1/execution/biostat/adam/{dataset}": {
-      "get": {
-        "summary": "Export Adam Dataset",
-        "description": "Exports ADaM dataset data (ADSL, ADAE, ADVS) in CDISC Dataset-JSON format.\n\n- **Protected Endpoint**: Requires authenticated session under GatewayAuthMiddleware.\n- **Authorized Roles**: CRA, Data Manager, Sponsor Statistician.\n- **Validations**: Automatically validates schema, keys, demographics, and referential consistency.\n- **Media Type Contract**: `application/json` conforming to CDISC Dataset-JSON 1.0.0.",
-        "operationId": "export_adam_dataset_api_v1_execution_biostat_adam__dataset__get",
-        "parameters": [
-          {
-            "name": "dataset",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Dataset"
-            }
-          },
-          {
-            "name": "study_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "description": "The unique study identifier",
-              "title": "Study Id"
-            },
-            "description": "The unique study identifier"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Export Adam Dataset Api V1 Execution Biostat Adam  Dataset  Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/execution/api/v1/execution/biostat/bundle": {
-      "get": {
-        "summary": "Export Biostat Bundle",
-        "description": "Exports all SDTM domains and ADaM datasets bundled in a single CDISC Dataset-JSON document.\n\n- **Protected Endpoint**: Requires authenticated session under GatewayAuthMiddleware.\n- **Authorized Roles**: CRA, Data Manager, Sponsor Statistician.\n- **Validations**: Validates complete structural, domain-level, and cross-dataset referential consistency.\n- **Media Type Contract**: `application/json` conforming to CDISC Dataset-JSON 1.0.0.\n- **Supplemental Contract**: Includes all generated SUPP-- datasets alongside their parent datasets in the bundle.",
-        "operationId": "export_biostat_bundle_api_v1_execution_biostat_bundle_get",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "description": "The unique study identifier",
-              "title": "Study Id"
-            },
-            "description": "The unique study identifier"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Export Biostat Bundle Api V1 Execution Biostat Bundle Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
                 }
               }
             }

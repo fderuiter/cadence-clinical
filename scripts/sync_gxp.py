@@ -47,6 +47,7 @@ import sys
 from pathlib import Path
 
 # Mark that the GxP sync process is running, so spawned scripts know they aren't run directly.
+# Triggered CI/CD compliance validation run.
 os.environ["GXP_SYNC_RUNNING"] = "1"
 
 # Files that must be committed to keep CI green and compliant.

@@ -1,4 +1,15 @@
 import { apiClient } from "./apiClient";
+import type { components } from "./types";
+
+export type SubjectCreate = components["schemas"]["Execution_SubjectCreate"];
+export type SubjectResponse =
+  components["schemas"]["Execution_SubjectResponse"];
+
+export interface LabAlertParams {
+  study_id?: string;
+  subject_id?: string;
+  test_code?: string;
+}
 
 /**
  * Service module for the Clinical Execution microservice (EDC).
@@ -8,21 +19,24 @@ export const executionService = {
   /**
    * Enrolls/creates a new subject in the study.
    */
-  createSubject(body, options = {}) {
+  createSubject(
+    body: SubjectCreate,
+    options: any = {}
+  ): Promise<SubjectResponse> {
     return apiClient.post(`/api/v1/execution/subjects`, body, options);
   },
 
   /**
    * Lists clinical queries matching filters.
    */
-  getQueries(options = {}) {
+  getQueries(options: any = {}): Promise<any> {
     return apiClient.get(`/api/v1/execution/queries`, options);
   },
 
   /**
    * Lists real-time lab alerts matching filters.
    */
-  listLabAlerts(params = {}, options = {}) {
+  listLabAlerts(params: LabAlertParams = {}, options: any = {}): Promise<any> {
     const query = new URLSearchParams();
     if (params.study_id) query.append("study_id", params.study_id);
     if (params.subject_id) query.append("subject_id", params.subject_id);
@@ -37,21 +51,21 @@ export const executionService = {
   /**
    * Retrieves detail for a single clinical query.
    */
-  getQuery(queryId, options = {}) {
+  getQuery(queryId: string | number, options: any = {}): Promise<any> {
     return apiClient.get(`/api/v1/execution/queries/${queryId}`, options);
   },
 
   /**
    * Submits/creates a form submission.
    */
-  submitForm(body, options = {}) {
+  submitForm(body: any, options: any = {}): Promise<any> {
     return apiClient.post(`/api/v1/execution/form-submissions`, body, options);
   },
 
   /**
    * Syncs clinical query ledger blocks.
    */
-  syncQueries(blocks, options = {}) {
+  syncQueries(blocks: any, options: any = {}): Promise<any> {
     return apiClient.post(
       `/api/v1/execution/queries/sync`,
       { blocks },
