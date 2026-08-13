@@ -100,6 +100,76 @@ def is_form_locked(form_id: str) -> bool:
     return any(checker(form_id) for checker in _FORM_LOCK_CHECKERS)
 
 
+def propagate_session_context(session: Session) -> None:
+    """
+    Propagates thread-safe security and lock context parameters into the database session configuration.
+    """
+    if not session.bind:
+        return
+    try:
+        from sqlalchemy import text
+
+        try:
+            from apps.execution.trial_lock import TrialLockManager
+
+            is_trial_locked_val = "true" if TrialLockManager.is_locked() else "false"
+            locked_sites_val = ",".join(str(s) for s in TrialLockManager._locked_sites)
+            locked_visits_val = ",".join(
+                str(v) for v in TrialLockManager._locked_visits
+            )
+            locked_subjects_val = ",".join(
+                str(s) for s in TrialLockManager._locked_subjects
+            )
+            locked_forms_val = ",".join(str(f) for f in TrialLockManager._locked_forms)
+        except ImportError:
+            is_trial_locked_val = "true" if is_trial_locked() else "false"
+            locked_sites_val = ""
+            locked_visits_val = ""
+            locked_subjects_val = ""
+            locked_forms_val = ""
+
+        from packages.security.context import (
+            current_change_reason,
+            current_user_id,
+        )
+
+        user_id = current_user_id.get() or "system"
+        reason = current_change_reason.get() or "system_operation"
+
+        conn = session.connection()
+        conn.execute(
+            text("SELECT set_config('cadence.current_user_id', :user_id, true);"),
+            {"user_id": user_id},
+        )
+        conn.execute(
+            text("SELECT set_config('cadence.current_change_reason', :reason, true);"),
+            {"reason": reason},
+        )
+        conn.execute(
+            text("SELECT set_config('cadence.is_trial_locked', :val, true);"),
+            {"val": is_trial_locked_val},
+        )
+        conn.execute(
+            text("SELECT set_config('cadence.locked_sites', :val, true);"),
+            {"val": locked_sites_val},
+        )
+        conn.execute(
+            text("SELECT set_config('cadence.locked_visits', :val, true);"),
+            {"val": locked_visits_val},
+        )
+        conn.execute(
+            text("SELECT set_config('cadence.locked_subjects', :val, true);"),
+            {"val": locked_subjects_val},
+        )
+        conn.execute(
+            text("SELECT set_config('cadence.locked_forms', :val, true);"),
+            {"val": locked_forms_val},
+        )
+        conn.execute(text("SELECT set_config('cadence.app_writing', 'true', true);"))
+    except Exception:
+        pass
+
+
 @event.listens_for(Session, "before_flush")
 def receive_before_flush(session: Session, flush_context, instances):
     """
@@ -210,79 +280,7 @@ def receive_before_flush(session: Session, flush_context, instances):
                     "GxP change reason is required. Reason for change cannot be empty or consist only of whitespace."
                 )
 
-    if session.bind:
-        try:
-            from sqlalchemy import text
-
-            try:
-                from apps.execution.trial_lock import TrialLockManager
-
-                is_trial_locked_val = (
-                    "true" if TrialLockManager.is_locked() else "false"
-                )
-                locked_sites_val = ",".join(
-                    str(s) for s in TrialLockManager._locked_sites
-                )
-                locked_visits_val = ",".join(
-                    str(v) for v in TrialLockManager._locked_visits
-                )
-                locked_subjects_val = ",".join(
-                    str(s) for s in TrialLockManager._locked_subjects
-                )
-                locked_forms_val = ",".join(
-                    str(f) for f in TrialLockManager._locked_forms
-                )
-            except ImportError:
-                is_trial_locked_val = "true" if is_trial_locked() else "false"
-                locked_sites_val = ""
-                locked_visits_val = ""
-                locked_subjects_val = ""
-                locked_forms_val = ""
-
-            from packages.security.context import (
-                current_change_reason,
-                current_user_id,
-            )
-
-            user_id = current_user_id.get() or "system"
-            reason = current_change_reason.get() or "system_operation"
-
-            conn = session.connection()
-            conn.execute(
-                text("SELECT set_config('cadence.current_user_id', :user_id, true);"),
-                {"user_id": user_id},
-            )
-            conn.execute(
-                text(
-                    "SELECT set_config('cadence.current_change_reason', :reason, true);"
-                ),
-                {"reason": reason},
-            )
-            conn.execute(
-                text("SELECT set_config('cadence.is_trial_locked', :val, true);"),
-                {"val": is_trial_locked_val},
-            )
-            conn.execute(
-                text("SELECT set_config('cadence.locked_sites', :val, true);"),
-                {"val": locked_sites_val},
-            )
-            conn.execute(
-                text("SELECT set_config('cadence.locked_visits', :val, true);"),
-                {"val": locked_visits_val},
-            )
-            conn.execute(
-                text("SELECT set_config('cadence.locked_subjects', :val, true);"),
-                {"val": locked_subjects_val},
-            )
-            conn.execute(
-                text("SELECT set_config('cadence.locked_forms', :val, true);"),
-                {"val": locked_forms_val},
-            )
-            conn.execute(
-                text("SELECT set_config('cadence.app_writing', 'true', true);")
-            )
-        except Exception:
-            pass
+    propagate_session_context(session)
 
 
 def map_database_exceptions(func: Callable) -> Callable:

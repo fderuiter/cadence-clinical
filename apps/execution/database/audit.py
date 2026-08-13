@@ -4,6 +4,7 @@ from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import get_history
 
+from apps.execution.trial_lock import TrialLockManager
 from packages.security.context import (
     current_change_reason,
     current_ip_address,
@@ -40,60 +41,9 @@ def receive_before_flush(session: Session, flush_context, instances):
         return
 
     # Propagate thread-safe context variables into database session if database trigger is active
-    if session.bind:
-        try:
-            from sqlalchemy import text
+    from packages.database import propagate_session_context
 
-            from apps.execution.trial_lock import TrialLockManager
-
-            user_id_val = current_user_id.get() or "system"
-            reason_val = current_change_reason.get() or "system_operation"
-            is_trial_locked_val = "true" if TrialLockManager.is_locked() else "false"
-            locked_sites_val = ",".join(str(s) for s in TrialLockManager._locked_sites)
-            locked_visits_val = ",".join(
-                str(v) for v in TrialLockManager._locked_visits
-            )
-            locked_subjects_val = ",".join(
-                str(s) for s in TrialLockManager._locked_subjects
-            )
-            locked_forms_val = ",".join(str(f) for f in TrialLockManager._locked_forms)
-
-            conn = session.connection()
-            conn.execute(
-                text("SELECT set_config('cadence.current_user_id', :user_id, true);"),
-                {"user_id": user_id_val},
-            )
-            conn.execute(
-                text(
-                    "SELECT set_config('cadence.current_change_reason', :reason, true);"
-                ),
-                {"reason": reason_val},
-            )
-            conn.execute(
-                text("SELECT set_config('cadence.is_trial_locked', :val, true);"),
-                {"val": is_trial_locked_val},
-            )
-            conn.execute(
-                text("SELECT set_config('cadence.locked_sites', :val, true);"),
-                {"val": locked_sites_val},
-            )
-            conn.execute(
-                text("SELECT set_config('cadence.locked_visits', :val, true);"),
-                {"val": locked_visits_val},
-            )
-            conn.execute(
-                text("SELECT set_config('cadence.locked_subjects', :val, true);"),
-                {"val": locked_subjects_val},
-            )
-            conn.execute(
-                text("SELECT set_config('cadence.locked_forms', :val, true);"),
-                {"val": locked_forms_val},
-            )
-            conn.execute(
-                text("SELECT set_config('cadence.app_writing', 'true', true);")
-            )
-        except Exception:
-            pass
+    propagate_session_context(session)
 
     # If the session contains eTMF, Interop, CTMS, Quality, eISF, or Notifications objects, skip execution auditing
     for obj in list(session.new) + list(session.dirty) + list(session.deleted):
