@@ -237,6 +237,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-11: Implement slot-driven dynamic accessibility context in Vue 3 SPA components](2026-08-11-slot-driven-dynamic-accessibility-context.md)
 - [2026-08-17: Frontend Standardization, CSS Grid Layouts, and Centralized UI Utilities](2026-08-17-frontend-standardization-css-grid-and-centralized-utilities.md)
 - [2026-08-17: Interactive Mermaid Diagrams and Responsive Layout Controls](2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md)
+- [2026-08-13: Standardize Batch Signature Flow Asynchronous State with TanStack Query](2026-08-13-standardize-batch-signature-state-with-tanstack-query.md)
 
 ### 7. DevOps, Tooling & CI/CD
 
