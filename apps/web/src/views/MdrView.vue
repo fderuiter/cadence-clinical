@@ -1478,6 +1478,18 @@ function queueMutation(mutation) {
     }
   }
 
+  const activeVersion = store.activeStudyVersionId || "";
+  const isExempt = activeVersion.toLowerCase().includes("draft") ||
+                   activeVersion.toLowerCase().includes("staging") ||
+                   mutation.type === "layout" ||
+                   mutation.type === "canvas";
+
+  if (isExempt) {
+    pendingMutation.value = mutation;
+    confirmMutation("");
+    return;
+  }
+
   pendingMutation.value = mutation;
   showReasonModal.value = true;
 }

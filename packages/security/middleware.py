@@ -228,9 +228,14 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                 },
             )
 
+        from packages.security.gating import is_path_exempt_from_justification
+
+        path_lower = request.url.path.lower()
+        is_exempt = is_path_exempt_from_justification(path_lower)
+
         change_reason = request.headers.get("X-Change-Reason")
         if not change_reason:
-            if request.method in ("GET", "HEAD", "OPTIONS"):
+            if request.method in ("GET", "HEAD", "OPTIONS") or is_exempt:
                 change_reason = ""
             else:
                 status_code = 403 if is_mutation else 401
@@ -239,7 +244,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                     content={"detail": "Missing change justification reason"},
                 )
 
-        if change_reason and len(change_reason) > 255:
+        if not is_exempt and change_reason and len(change_reason) > 255:
             status_code = 400 if is_mutation else 401
             return JSONResponse(
                 status_code=status_code,

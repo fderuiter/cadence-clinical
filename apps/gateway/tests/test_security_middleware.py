@@ -1760,3 +1760,105 @@ def test_middleware_scope_header_mutation_and_injection_rejection() -> None:
     headers_injected_unblinded["X-Unblinded-Access"] = "true"
     res = client.get("/verify-context-scope", headers=headers_injected_unblinded)
     assert res.status_code in (401, 403)
+
+
+@test_app.post("/api/v1/studies/study_123/versions/v_draft_01/arms")
+async def draft_arms_endpoint():
+    return {"status": "success", "message": "Draft Arm Saved"}
+
+
+@test_app.post("/api/v1/ctms/delegation")
+async def non_exempt_endpoint():
+    return {"status": "success", "message": "Delegation Updated"}
+
+
+def test_middleware_exempted_draft_path_no_reason_success() -> None:
+    """
+    Test that a mutating request to an exempted draft path succeeds (2xx)
+    even when X-Change-Reason is missing/empty.
+    """
+    client = TestClient(test_app)
+    user_id = "test_user"
+    roles = "sponsor_designer"
+    timestamp = str(time.time())
+    sig = generate_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        version="2",
+        change_reason=None,
+    )
+
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+    }
+
+    res = client.post("/api/v1/studies/study_123/versions/v_draft_01/arms", headers=headers)
+    assert res.status_code == 200
+    assert res.json() == {"status": "success", "message": "Draft Arm Saved"}
+
+
+def test_middleware_non_exempted_path_no_reason_blocked() -> None:
+    """
+    Test that a mutating request to a non-exempted regulated path without
+    an X-Change-Reason header is blocked with 403 Forbidden response.
+    """
+    client = TestClient(test_app)
+    user_id = "test_user"
+    roles = "sponsor_designer"
+    timestamp = str(time.time())
+    sig = generate_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        version="2",
+        change_reason=None,
+    )
+
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+    }
+
+    res = client.post("/api/v1/ctms/delegation", headers=headers)
+    assert res.status_code == 403
+    assert "Missing change justification reason" in res.json()["detail"]
+
+
+def test_middleware_exempted_path_length_check_ignored() -> None:
+    """
+    Test that an exempted path ignores the length check limit on change_reason
+    if a long change reason is present.
+    """
+    client = TestClient(test_app)
+    user_id = "test_user"
+    roles = "sponsor_designer"
+    timestamp = str(time.time())
+    long_reason = "A" * 300
+    sig = generate_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        version="2",
+        change_reason=long_reason,
+    )
+
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": long_reason,
+    }
+
+    res = client.post("/api/v1/studies/study_123/versions/v_draft_01/arms", headers=headers)
+    assert res.status_code == 200
+

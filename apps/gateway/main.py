@@ -1445,9 +1445,13 @@ async def proxy_requests(request: Request, path: str) -> Response:
         ):
             headers.pop(k, None)
 
+    from packages.security.gating import is_path_exempt_from_justification
+    path_lower = path.lower()
+    is_exempt = is_path_exempt_from_justification(path_lower)
+
     change_reason = request.headers.get("x-change-reason")
     if change_reason is not None:
-        if len(change_reason) > 255:
+        if not is_exempt and len(change_reason) > 255:
             return JSONResponse(
                 status_code=400,
                 content={"detail": "Change reason exceeds 255 characters"},

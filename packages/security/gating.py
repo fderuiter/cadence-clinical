@@ -38,3 +38,13 @@ def is_path_signature_gated(path_lower: str) -> bool:
         elif pattern in path_lower:
             return True
     return False
+
+
+def is_path_exempt_from_justification(path_lower: str) -> bool:
+    """
+    Checks if a lowercase HTTP request path is exempted from GxP change reason justification.
+    Exemptions only include draft, staging, layout, or canvas operations in the study designer.
+    """
+    exempt_patterns = ["draft", "staging", "designer", "layout", "canvas"]
+    return any(pattern in path_lower for pattern in exempt_patterns)
+
