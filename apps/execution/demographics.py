@@ -191,7 +191,7 @@ def get_safe_demographics(
         preserve_custom (bool): If True, preserves custom biological sex strings.
 
     Returns:
-        Dict[str, Any]: Safe demographic profile with 'gender' (str) and 'age' (int/None).
+        Dict[str, Any]: Safe demographic profile with 'gender' (str) and 'age' (float/None).
     """
     result = {
         "gender": "U",
