@@ -18,6 +18,8 @@ export class ApiError extends Error {
   }
 }
 
+const pendingRequests = new Map();
+
 /**
  * Generic request helper.
  * Automatically resolves the bearer token from the Pinia auth store if present.
@@ -39,6 +41,20 @@ async function request(path, options = {}) {
     ...customOptions
   } = options;
 
+  const upperMethod = method.toUpperCase();
+  const requestKey = `${upperMethod}:${path}`;
+
+  if (pendingRequests.has(requestKey)) {
+    try {
+      pendingRequests.get(requestKey).abort();
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  const controller = new AbortController();
+  pendingRequests.set(requestKey, controller);
+
   const requestHeaders = {
     "Content-Type": "application/json",
     ...headers,
@@ -49,7 +65,6 @@ async function request(path, options = {}) {
   }
 
   // Caller can supply a change reason for mutations, passed as X-Change-Reason
-  const upperMethod = method.toUpperCase();
   const isMutation = ["POST", "PUT", "DELETE", "PATCH"].includes(upperMethod);
   const resolvedChangeReason =
     changeReason || headers["X-Change-Reason"] || headers["x-change-reason"];
@@ -66,6 +81,7 @@ async function request(path, options = {}) {
   const fetchOptions = {
     method: upperMethod,
     headers: requestHeaders,
+    signal: controller.signal,
     ...customOptions,
   };
 
@@ -100,7 +116,14 @@ async function request(path, options = {}) {
     if (error instanceof ApiError) {
       throw error;
     }
+    if (error.name === "AbortError" || error.message?.toLowerCase().includes("abort") || error.statusText === "abort") {
+      throw error;
+    }
     throw new ApiError(error.message || "Network or unknown error occurred");
+  } finally {
+    if (pendingRequests.get(requestKey) === controller) {
+      pendingRequests.delete(requestKey);
+    }
   }
 }
 
