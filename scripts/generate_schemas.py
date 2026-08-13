@@ -33,7 +33,7 @@ MODELS = [
 ]
 
 
-def python_type_to_zod(py_type: Any) -> str:
+def python_type_to_zod(py_type: Any, metadata: list[Any] = None) -> str:
     origin = get_origin(py_type)
     args = get_args(py_type)
 
@@ -41,9 +41,9 @@ def python_type_to_zod(py_type: Any) -> str:
         # Check if None is in the Union (Optional)
         non_none_args = [arg for arg in args if arg is not type(None)]
         if len(non_none_args) == 1:
-            zod_base = python_type_to_zod(non_none_args[0])
+            zod_base = python_type_to_zod(non_none_args[0], metadata)
             return f"{zod_base}.nullable().optional()"
-        union_schemas = [python_type_to_zod(arg) for arg in non_none_args]
+        union_schemas = [python_type_to_zod(arg, metadata) for arg in non_none_args]
         zod_base = f"z.union([{', '.join(union_schemas)}])"
         if type(None) in args:
             return f"{zod_base}.nullable().optional()"
@@ -53,28 +53,79 @@ def python_type_to_zod(py_type: Any) -> str:
         if args:
             inner_type = args[0]
             if inner_type is Any:
-                return "z.array(z.any())"
-            return f"z.array({python_type_to_zod(inner_type)})"
-        return "z.array(z.any())"
+                zod_base = "z.array(z.unknown())"
+            else:
+                zod_base = f"z.array({python_type_to_zod(inner_type)})"
+        else:
+            zod_base = "z.array(z.unknown())"
+
+        # Apply list-level constraints if metadata is provided
+        if metadata:
+            for m in metadata:
+                if hasattr(m, 'min_length') and m.min_length is not None:
+                    zod_base += f".min({m.min_length})"
+                if hasattr(m, 'max_length') and m.max_length is not None:
+                    zod_base += f".max({m.max_length})"
+        return zod_base
 
     if origin is dict or py_type is dict:
-        return "z.record(z.any())"
+        return "z.record(z.string(), z.unknown())"
 
     if py_type is str:
-        return "z.string()"
+        zod_base = "z.string()"
+        if metadata:
+            for m in metadata:
+                if hasattr(m, 'min_length') and m.min_length is not None:
+                    zod_base += f".min({m.min_length})"
+                if hasattr(m, 'max_length') and m.max_length is not None:
+                    zod_base += f".max({m.max_length})"
+                if hasattr(m, 'pattern') and m.pattern is not None:
+                    pattern_escaped = m.pattern.replace("\\", "\\\\").replace('"', '\\"')
+                    zod_base += f'.regex(new RegExp("{pattern_escaped}"))'
+        return zod_base
+
     if py_type is int:
-        return "z.number().int()"
+        zod_base = "z.number().int()"
+        if metadata:
+            for m in metadata:
+                if hasattr(m, 'gt') and m.gt is not None:
+                    zod_base += f".gt({m.gt})"
+                if hasattr(m, 'ge') and m.ge is not None:
+                    zod_base += f".gte({m.ge})"
+                if hasattr(m, 'lt') and m.lt is not None:
+                    zod_base += f".lt({m.lt})"
+                if hasattr(m, 'le') and m.le is not None:
+                    zod_base += f".lte({m.le})"
+                if hasattr(m, 'multiple_of') and m.multiple_of is not None:
+                    zod_base += f".multipleOf({m.multiple_of})"
+        return zod_base
+
     if py_type is float:
-        return "z.number()"
+        zod_base = "z.number()"
+        if metadata:
+            for m in metadata:
+                if hasattr(m, 'gt') and m.gt is not None:
+                    zod_base += f".gt({m.gt})"
+                if hasattr(m, 'ge') and m.ge is not None:
+                    zod_base += f".gte({m.ge})"
+                if hasattr(m, 'lt') and m.lt is not None:
+                    zod_base += f".lt({m.lt})"
+                if hasattr(m, 'le') and m.le is not None:
+                    zod_base += f".lte({m.le})"
+                if hasattr(m, 'multiple_of') and m.multiple_of is not None:
+                    zod_base += f".multipleOf({m.multiple_of})"
+        return zod_base
+
     if py_type is bool:
         return "z.boolean()"
+
     if py_type is Any:
-        return "z.any()"
+        return "z.unknown()"
 
     if isinstance(py_type, type) and issubclass(py_type, BaseModel):
-        return f"{py_type.__name__}Schema"
+        return f"z.lazy(() => {py_type.__name__}Schema)"
 
-    return "z.any()"
+    return "z.unknown()"
 
 
 def main():
@@ -97,7 +148,7 @@ def main():
         for field_name, field_info in model.model_fields.items():
             # Use alias if defined (for camelCase alignment with serialized API JSON payloads)
             target_name = field_info.alias if field_info.alias else field_name
-            zod_type = python_type_to_zod(field_info.annotation)
+            zod_type = python_type_to_zod(field_info.annotation, field_info.metadata)
 
             # Check if there is a default or default_factory
             has_default = (
