@@ -254,12 +254,8 @@ describe("SoA Normalization & Missing/Null Optional Fields Tests", () => {
     const rawData = {
       studyId: null,
       epochs: null,
-      encounters: [
-        { encounter_id: "E1" }
-      ],
-      rows: [
-        { activity_id: "A1", cells: null }
-      ]
+      encounters: [{ encounter_id: "E1" }],
+      rows: [{ activity_id: "A1", cells: null }],
     };
 
     const normalized = normalizeUsdm(rawData);
@@ -271,7 +267,7 @@ describe("SoA Normalization & Missing/Null Optional Fields Tests", () => {
       encounter_name: "",
       epoch_id: "",
       sequence: 0,
-      arm_id: null
+      arm_id: null,
     });
     expect(normalized.rows[0].activity_id).toBe("A1");
     expect(normalized.rows[0].cells).toEqual([]);
@@ -280,12 +276,8 @@ describe("SoA Normalization & Missing/Null Optional Fields Tests", () => {
   it("ClinicalSoAMatrix component renders empty formatted cells instead of crashing or showing Invalid SoA error when optional fields are null", () => {
     const malformedSoaData = {
       epochs: [],
-      encounters: [
-        { encounter_id: "E1", encounter_name: "Visit 1" }
-      ],
-      rows: [
-        { activity_id: "ACT1", activity_name: "Vitals", cells: null }
-      ]
+      encounters: [{ encounter_id: "E1", encounter_name: "Visit 1" }],
+      rows: [{ activity_id: "ACT1", activity_name: "Vitals", cells: null }],
     };
 
     const wrapper = mount(ClinicalSoAMatrix, {
@@ -294,10 +286,9 @@ describe("SoA Normalization & Missing/Null Optional Fields Tests", () => {
 
     const html = wrapper.html();
     expect(html).not.toContain("Invalid SoA matrix data.");
-    expect(html).toContain("class=\"clinical-visit-matrix clinical-soa-matrix\"");
+    expect(html).toContain('class="clinical-visit-matrix clinical-soa-matrix"');
     expect(html).toContain("Vitals");
     expect(html).toContain("Visit 1");
     expect(html).toContain("-"); // Renders empty formatted cell
   });
 });
-
