@@ -188,6 +188,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 5. Compliance, Audit & Governance
 
+- [2026-08-13: GxP Change Justification Path Exemptions](2026-08-13-gxp-change-justification-path-exemptions.md)
 - [2026-08-04: Enforce Fail-Fast Environment Validation for GxP Compliance](2026-08-04-enforce-fail-fast-environment-validation-for-gxp-compliance.md)
 - [2026-08-03: Fail-Safe GxP Document Generation and Draft Warning Banners](2026-08-03-fail-safe-gxp-document-generation-and-draft-warning-banners.md)
 - [2026-07-31: GxP 21 CFR Part 11 eConsent Audit Trails](2026-07-31-gxp-21-cfr-part-11-econsent-audit-trails.md)

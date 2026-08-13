@@ -1797,7 +1797,9 @@ def test_middleware_exempted_draft_path_no_reason_success() -> None:
         "X-Signature-Version": "2",
     }
 
-    res = client.post("/api/v1/studies/study_123/versions/v_draft_01/arms", headers=headers)
+    res = client.post(
+        "/api/v1/studies/study_123/versions/v_draft_01/arms", headers=headers
+    )
     assert res.status_code == 200
     assert res.json() == {"status": "success", "message": "Draft Arm Saved"}
 
@@ -1859,6 +1861,7 @@ def test_middleware_exempted_path_length_check_ignored() -> None:
         "X-Change-Reason": long_reason,
     }
 
-    res = client.post("/api/v1/studies/study_123/versions/v_draft_01/arms", headers=headers)
+    res = client.post(
+        "/api/v1/studies/study_123/versions/v_draft_01/arms", headers=headers
+    )
     assert res.status_code == 200
-

@@ -47,4 +47,3 @@ def is_path_exempt_from_justification(path_lower: str) -> bool:
     """
     exempt_patterns = ["draft", "staging", "designer", "layout", "canvas"]
     return any(pattern in path_lower for pattern in exempt_patterns)
-

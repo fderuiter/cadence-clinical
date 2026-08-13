@@ -1446,6 +1446,7 @@ async def proxy_requests(request: Request, path: str) -> Response:
             headers.pop(k, None)
 
     from packages.security.gating import is_path_exempt_from_justification
+
     path_lower = path.lower()
     is_exempt = is_path_exempt_from_justification(path_lower)
 

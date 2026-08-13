@@ -553,7 +553,7 @@ async def test_api_audit_reason_enforcement():
     or requests where X-Change-Reason exceeds 255 characters.
     """
     study_id = "study_1"
-    version_id = "v_draft"
+    version_id = "v_active"
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
