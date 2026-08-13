@@ -658,7 +658,7 @@ async def export_safety_case(
 
     pseudonymized_xml = generate_e2b_xml(icsr_copy)
 
-    from apps.safety.adapter import SafetyDatabaseAdapter
+    from apps.safety.adapters import SafetyDatabaseAdapter
 
     client = getattr(request.app.state, "test_httpx_client", None)
     adapter = SafetyDatabaseAdapter(client=client)

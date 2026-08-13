@@ -195,6 +195,18 @@ def run_layout_assertions(repo_root: Path):
     if not (repo_root / "uv.lock").is_file():
         raise AssertionError("uv.lock dependency lockfile is missing!")
 
+    # 4. Verify no singular "adapter" directory exists in any active microservice
+    apps_dir = repo_root / "apps"
+    if apps_dir.is_dir():
+        for p in apps_dir.iterdir():
+            if p.is_dir() and p.name not in {"web", "subject-portal", "__pycache__"}:
+                for sub_p in p.rglob("*"):
+                    if sub_p.is_dir() and sub_p.name == "adapter":
+                        raise AssertionError(
+                            f"Microservice '{p.name}' contains a singular 'adapter' directory at '{sub_p.relative_to(repo_root)}'. "
+                            "All services must use plural 'adapters' to maintain layout convergence."
+                        )
+
 
 def validate_file(file_path: str, repo_root: Path) -> tuple[bool, str]:
     """
