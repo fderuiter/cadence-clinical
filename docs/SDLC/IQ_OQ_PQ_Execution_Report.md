@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2411
-- **Passed:** 2392 🟢
+- **Total Automated Test Cases Run:** 2412
+- **Passed:** 2393 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.21%
@@ -1435,6 +1435,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_neo4j_create_study_version_success`                                               | `apps.execution.tests.test_study_versions`                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_update_study_properties_guards`                                                   | `apps.execution.tests.test_study_versions`                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_verify_version_signature_edge_cases`                                              | `apps.execution.tests.test_study_versions`                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_db_migration_cloning_and_sealing`                                                 | `apps.execution.tests.test_subject_migration`                               | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_migrate_subject_submissions_field_remapping`                                      | `apps.execution.tests.test_subject_migration`                               | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_pure_python_transition_guard`                                                     | `apps.execution.tests.test_subject_randomization_lifecycle`                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_stratification_factors_locking`                                                   | `apps.execution.tests.test_subject_randomization_lifecycle`                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
