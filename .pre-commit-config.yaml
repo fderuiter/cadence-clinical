@@ -109,6 +109,13 @@ repos:
         language: system
         pass_filenames: true
 
+      - id: backend-static-verify
+        name: Backend Port Contract Static Verification
+        entry: python3 scripts/verify_contracts.py
+        language: system
+        files: ^(apps/execution/domain/ports\.py|apps/execution/adapters/repositories\.py|apps/execution/infrastructure/repositories/execution_repositories\.py|apps/execution/application/ports\.py)$
+        pass_filenames: false
+
       - id: query-style-linter
         name: Pre-Commit Query Style Linter
         entry: uv run python scripts/pre_commit_query_linter.py
