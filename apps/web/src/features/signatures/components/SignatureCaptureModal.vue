@@ -20,6 +20,7 @@
         </p>
 
         <!-- Reuse GxpCredentialsInput -->
+        <!-- prettier-ignore -->
         <GxpCredentialsInput
           v-model:username="usernameVal"
           v-model:password="password" data-pragma="pragma: allowlist"

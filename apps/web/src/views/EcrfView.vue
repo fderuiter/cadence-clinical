@@ -972,6 +972,7 @@
             high-security action.
           </p>
           <!-- Reuse GxpCredentialsInput for GxP re-authentication -->
+          <!-- prettier-ignore -->
           <GxpCredentialsInput
             v-model:username="reauthUsername"
             v-model:password="reauthPassword" data-pragma="pragma: allowlist secret"
