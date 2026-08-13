@@ -34,7 +34,7 @@ To improve robustness, separation of concerns, and automatic caching/mutation st
 
 ### Option 2: Migrating Asynchronous State Orchestration to TanStack Query (`useMutation`) [Selected]
 
-- **Overview:** Use `@tanstack/vue-query`'s `useMutation` hook directly inside the signature modal to manage the async lifecycle, keeping Pinia store (`stores/signatures.ts`) strictly synchronous for form selection.
+- **Overview:** Use `@tanstack/vue-query`'s `useMutation` hook directly inside the signature modal to manage the async lifecycle, keeping Pinia store (`apps/web/src/stores/signatures.ts`) strictly synchronous for form selection.
 - **Pros:**
   - ✅ Decoupled client state (selected IDs) from network transactional state (pending/resolved/rejected).
   - ✅ Automatic handling of loading indicators, error reporting, and completion events.
