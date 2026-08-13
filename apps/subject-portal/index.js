@@ -1613,6 +1613,10 @@ async function renderSyncQueueList() {
         statusLabel = "QUARANTINED";
         statusDesc =
           "Quarantined: Under review by clinical trial managers due to validation errors.";
+      } else if (item.status === "DECRYPTION_ERROR") {
+        badgeClass = "pending";
+        statusLabel = "DECRYPTION_ERROR";
+        statusDesc = item.error || "Decryption failed: Secure key cleared.";
       }
 
       let answersDetails = `<strong>Local Answers:</strong> <code style="background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 4px;">${JSON.stringify(item.answers)}</code>`;
@@ -1675,14 +1679,27 @@ async function syncOfflineQueue() {
     return;
   }
 
-  const txtSyncing = `Online. Syncing ${queued.length} submission(s)...`;
+  const decryptable = queued.filter((item) => item.status !== "DECRYPTION_ERROR");
+
+  if (decryptable.length === 0) {
+    const txtComplete = "Online. Sync complete.";
+    if (statusTextEl) {
+      statusTextEl.textContent = txtComplete;
+    }
+    state.syncStatusText = txtComplete;
+    await renderSyncQueueList();
+    await refreshSubmissionsState();
+    return;
+  }
+
+  const txtSyncing = `Online. Syncing ${decryptable.length} submission(s)...`;
   if (statusTextEl) {
     statusTextEl.textContent = txtSyncing;
   }
   state.syncStatusText = txtSyncing;
 
   const payload = {
-    submissions: queued.map((item) => ({
+    submissions: decryptable.map((item) => ({
       subject_id: item.subject_id,
       diary_id: item.diary_id,
       device_timestamp: item.device_timestamp,
@@ -1718,7 +1735,7 @@ async function syncOfflineQueue() {
             res.offline_sync_markers?.sequence_number ?? res.sequence_number;
           const resClientId =
             res.offline_sync_markers?.client_id ?? res.client_id;
-          const item = queued.find(
+          const item = decryptable.find(
             (q) => q.sequence_number === resSeq && q.client_id === resClientId
           );
           if (item) {
@@ -1734,8 +1751,8 @@ async function syncOfflineQueue() {
         }
       } else {
         // Graceful fallback to index matching
-        for (let i = 0; i < queued.length; i++) {
-          const item = queued[i];
+        for (let i = 0; i < decryptable.length; i++) {
+          const item = decryptable[i];
           const res = response.results[i];
           if (res) {
             updates.push({
