@@ -34,6 +34,7 @@ class CertificateStoreService:
         cert = x509.load_pem_x509_certificate(cert_pem.encode("utf-8"))
         serial_hex = hex(cert.serial_number)[2:]
         now_iso = datetime.now(UTC).isoformat()
+        fingerprint = cert.fingerprint(hashes.SHA256()).hex().lower()
 
         record = {
             "user_id": user_id,
@@ -44,6 +45,7 @@ class CertificateStoreService:
             "not_after": cert.not_valid_after_utc.isoformat(),
             "registered_at": now_iso,
             "pem": cert_pem,
+            "fingerprint": fingerprint,
         }
 
         self._cert_registry[serial_hex] = record
@@ -118,16 +120,21 @@ class CertificateStoreService:
             )
 
             for record in self._cert_registry.values():
-                rec_pem = record.get("pem")
-                if not rec_pem:
-                    continue
-                try:
-                    rec_cert = x509.load_pem_x509_certificate(rec_pem.encode("utf-8"))
-                    rec_fingerprint = (
-                        rec_cert.fingerprint(hashes.SHA256()).hex().lower()
-                    )
-                except Exception:
-                    continue
+                rec_fingerprint = record.get("fingerprint")
+                if not rec_fingerprint:
+                    rec_pem = record.get("pem")
+                    if not rec_pem:
+                        continue
+                    try:
+                        rec_cert = x509.load_pem_x509_certificate(
+                            rec_pem.encode("utf-8")
+                        )
+                        rec_fingerprint = (
+                            rec_cert.fingerprint(hashes.SHA256()).hex().lower()
+                        )
+                        record["fingerprint"] = rec_fingerprint
+                    except Exception:
+                        continue
 
                 if computed_fingerprint == rec_fingerprint:
                     logger.info(
