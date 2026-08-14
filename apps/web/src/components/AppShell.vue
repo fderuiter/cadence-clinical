@@ -9,9 +9,12 @@
         <div class="brand-logo-mark">⚡</div>
         <div class="header-title-area">
           <h1 class="brand-title">
-            {{ brandNameFirst }} <span class="brand-title-rest">{{ brandNameRest }}</span>
+            {{ brandNameFirst }}
+            <span class="brand-title-rest">{{ brandNameRest }}</span>
           </h1>
-          <p class="brand-subtitle">Automated Digital Data Flow & Regulatory eClinical Platform</p>
+          <p class="brand-subtitle">
+            Automated Digital Data Flow & Regulatory eClinical Platform
+          </p>
         </div>
       </div>
 
@@ -46,11 +49,7 @@
             title="Switch active user role & permissions"
             @change="onPersonaSelect"
           >
-            <option
-              v-for="p in PERSONA_PRESETS"
-              :key="p.key"
-              :value="p.key"
-            >
+            <option v-for="p in PERSONA_PRESETS" :key="p.key" :value="p.key">
               {{ p.label }}
             </option>
           </select>
@@ -59,7 +58,11 @@
         <!-- User Identity Card -->
         <div class="user-status-card">
           <div class="user-avatar">
-            {{ (authStore.identity?.username || "U").substring(0, 2).toUpperCase() }}
+            {{
+              (authStore.identity?.username || "U")
+                .substring(0, 2)
+                .toUpperCase()
+            }}
           </div>
           <div class="user-info">
             <div class="user-name">
@@ -105,7 +108,10 @@
               <li
                 id="tab-btn-mdr"
                 class="nav-item"
-                :class="{ active: $route.name === 'mdr' && $route.query.tab !== 'canvas' }"
+                :class="{
+                  active:
+                    $route.name === 'mdr' && $route.query.tab !== 'canvas',
+                }"
               >
                 <router-link v-slot="{ navigate }" to="/mdr" custom>
                   <button type="button" @click="navigate">
@@ -117,7 +123,10 @@
               <li
                 id="tab-btn-crf-designer"
                 class="nav-item"
-                :class="{ active: $route.name === 'mdr' && $route.query.tab === 'canvas' }"
+                :class="{
+                  active:
+                    $route.name === 'mdr' && $route.query.tab === 'canvas',
+                }"
               >
                 <router-link v-slot="{ navigate }" to="/mdr?tab=canvas" custom>
                   <button type="button" @click="navigate">
@@ -129,7 +138,11 @@
               <li
                 id="tab-btn-icf-builder"
                 class="nav-item"
-                :class="{ active: $route.name === 'icf-builder' || $route.name === 'econsent-authoring' }"
+                :class="{
+                  active:
+                    $route.name === 'icf-builder' ||
+                    $route.name === 'econsent-authoring',
+                }"
               >
                 <router-link v-slot="{ navigate }" to="/icf-builder" custom>
                   <button type="button" @click="navigate">
@@ -232,7 +245,9 @@
               <li
                 id="tab-btn-audit"
                 class="nav-item"
-                :class="{ active: $route.name === 'audit' || $route.name === 'auditor' }"
+                :class="{
+                  active: $route.name === 'audit' || $route.name === 'auditor',
+                }"
               >
                 <router-link v-slot="{ navigate }" to="/audit" custom>
                   <button type="button" @click="navigate">
@@ -520,7 +535,6 @@ import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
 import { useOnboardingStore } from "../stores/onboarding";
-import { hasRequiredRole } from "../router";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
 
 const authStore = useAuthStore();
@@ -535,7 +549,9 @@ const brandNameRest = parts.slice(1).join(" ") || "";
 const activePersonaKey = ref(authStore.currentPersona || "super_admin");
 
 const activePersonaLabel = computed(() => {
-  const p = PERSONA_PRESETS.find((preset) => preset.key === activePersonaKey.value);
+  const p = PERSONA_PRESETS.find(
+    (preset) => preset.key === activePersonaKey.value
+  );
   return p ? p.label.replace(/^.+?\s/, "") : "Super Admin";
 });
 
@@ -606,65 +622,4 @@ watch(
     }
   }
 );
-
-const canViewMdr = computed(() => {
-  return hasRequiredRole(authStore.normalizedRoles, [
-    "sponsor_designer",
-    "data_manager",
-    "sponsor_admin",
-  ]);
-});
-
-const canViewEcrf = computed(() => {
-  return hasRequiredRole(authStore.normalizedRoles, [
-    "site_investigator",
-    "crc",
-    "data_manager",
-    "sponsor_admin",
-  ]);
-});
-
-const canViewCtms = computed(() => {
-  return hasRequiredRole(authStore.normalizedRoles, [
-    "cra",
-    "monitor",
-    "sponsor_admin",
-  ]);
-});
-
-const canViewRules = computed(() => {
-  return hasRequiredRole(authStore.normalizedRoles, [
-    "sponsor_designer",
-    "data_manager",
-    "sponsor_admin",
-  ]);
-});
-
-const canViewAudit = computed(() => {
-  return hasRequiredRole(authStore.normalizedRoles, [
-    "auditor",
-    "tmf_auditor",
-    "sponsor_admin",
-  ]);
-});
-
-const canViewEtmf = computed(() => {
-  return hasRequiredRole(authStore.normalizedRoles, [
-    "cra",
-    "monitor",
-    "auditor",
-    "tmf_auditor",
-    "sponsor_admin",
-  ]);
-});
-
-const canViewCoding = computed(() => {
-  return hasRequiredRole(authStore.normalizedRoles, [
-    "data_manager",
-    "sponsor_designer",
-    "sponsor_admin",
-    "super_admin",
-  ]);
-});
 </script>
-

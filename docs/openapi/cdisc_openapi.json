@@ -861,154 +861,10 @@
       }
     },
     "/{path}": {
-      "put": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__put",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
       "head": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__put",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "options": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__put",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__put",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__put",
+        "operationId": "proxy_requests__path__head",
         "parameters": [
           {
             "name": "path",
@@ -1044,7 +900,115 @@
       "delete": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__put",
+        "operationId": "proxy_requests__path__head",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__head",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__head",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__head",
         "parameters": [
           {
             "name": "path",
@@ -1080,7 +1044,43 @@
       "post": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__put",
+        "operationId": "proxy_requests__path__head",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__head",
         "parameters": [
           {
             "name": "path",
@@ -12737,6 +12737,70 @@
         }
       }
     },
+    "/etmf/api/v1/etmf/studies/{study_id}/seed-edl": {
+      "post": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Seed Edl Endpoint",
+        "description": "Seed Expected Document List (EDL) for a study across DIA TMF zones and milestones.",
+        "operationId": "seed_edl_endpoint_api_v1_etmf_studies__study_id__seed_edl_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ETMF_SeedEDLRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ETMF_ExpectedDocumentResponse"
+                  },
+                  "title": "Response Seed Edl Endpoint Api V1 Etmf Studies  Study Id  Seed Edl Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ETMF_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/etmf/api/v1/etmf/completeness": {
       "get": {
         "tags": [
@@ -14070,6 +14134,149 @@
                   "type": "object",
                   "additionalProperties": true,
                   "title": "Response Get Amendment Summary Endpoint Api V1 Execution Amendments Summary  Study Id   Version  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/amendments/{study_id}/subject-impact": {
+      "get": {
+        "tags": [
+          "Amendments"
+        ],
+        "summary": "Get Subject Impact Analysis",
+        "description": "Calculates subject migration impact for an active protocol amendment.\n\nRequirements: PRD-SYS-001, PRD-SUB-007",
+        "operationId": "get_subject_impact_analysis_api_v1_execution_amendments__study_id__subject_impact_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "target_version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "2.0.0",
+              "title": "Target Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Subject Impact Analysis Api V1 Execution Amendments  Study Id  Subject Impact Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/amendments/validate-gating": {
+      "post": {
+        "tags": [
+          "Amendments"
+        ],
+        "summary": "Validate Gating Endpoint",
+        "description": "Validates subject re-consent gating before form data entry.\n\nRequirements: PRD-SUB-007",
+        "operationId": "validate_gating_endpoint_api_v1_execution_amendments_validate_gating_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_ValidateGatingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Validate Gating Endpoint Api V1 Execution Amendments Validate Gating Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/amendments/reconsent": {
+      "post": {
+        "tags": [
+          "Amendments"
+        ],
+        "summary": "Register Subject Reconsent",
+        "description": "Registers subject signed re-consent for an amended version, unlocking gating.\n\nRequirements: PRD-SUB-007, PRD-SYS-001",
+        "operationId": "register_subject_reconsent_api_v1_execution_amendments_reconsent_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_SubjectReconsentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Register Subject Reconsent Api V1 Execution Amendments Reconsent Post"
                 }
               }
             }
@@ -37382,6 +37589,33 @@
         ],
         "title": "RedactRequest"
       },
+      "ETMF_SeedEDLRequest": {
+        "properties": {
+          "milestones": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Milestones",
+            "description": "Optional list of milestones to seed. Defaults to STUDY_INITIATION, ETHICS_SUBMISSION, SITE_ACTIVATION, FSI."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Part 11 change justification reason for seeding EDL",
+            "default": "Zero-Click USDM Study Ingestion"
+          }
+        },
+        "type": "object",
+        "title": "SeedEDLRequest"
+      },
       "ETMF_SignDocumentRequest": {
         "properties": {
           "signing_reason": {
@@ -44155,6 +44389,51 @@
         "title": "SubjectRandomizationResponse",
         "description": "Pydantic schema for returning blinded subject randomization details."
       },
+      "Execution_SubjectReconsentRequest": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study identifier"
+          },
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version",
+            "description": "Amended protocol version tag"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Protocol version index",
+            "default": 2
+          },
+          "icf_signed": {
+            "type": "boolean",
+            "title": "Icf Signed",
+            "description": "Whether ICF is signed",
+            "default": true
+          },
+          "signature_type": {
+            "type": "string",
+            "title": "Signature Type",
+            "description": "Signature type: 'ECONSENT' or 'PAPER_UPLOAD'",
+            "default": "ECONSENT"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_id",
+          "study_id",
+          "protocol_version"
+        ],
+        "title": "SubjectReconsentRequest",
+        "description": "Request payload to register subject re-consent for an amended version."
+      },
       "Execution_SubjectResponse": {
         "properties": {
           "id": {
@@ -45092,6 +45371,39 @@
         ],
         "title": "UploadEISFDocumentRequest",
         "description": "Request payload to upload an eISF document.\n\nRequirements: PRD-SYS-001"
+      },
+      "Execution_ValidateGatingRequest": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject identifier"
+          },
+          "target_visit_id": {
+            "type": "string",
+            "title": "Target Visit Id",
+            "description": "Target visit identifier"
+          },
+          "active_protocol_version": {
+            "type": "string",
+            "title": "Active Protocol Version",
+            "description": "Active protocol version tag (e.g., '2.0.0')"
+          },
+          "requires_reconsent": {
+            "type": "boolean",
+            "title": "Requires Reconsent",
+            "description": "Whether amendment requires re-consent",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_id",
+          "target_visit_id",
+          "active_protocol_version"
+        ],
+        "title": "ValidateGatingRequest",
+        "description": "Request payload to validate subject re-consent gating."
       },
       "Execution_ValidationError": {
         "properties": {

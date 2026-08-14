@@ -4,11 +4,15 @@
     <div class="view-header">
       <div class="header-content">
         <div class="title-row">
-          <h2 class="view-title">Protocol Amendments &amp; In-Flight Subject Migration</h2>
+          <h2 class="view-title">
+            Protocol Amendments &amp; In-Flight Subject Migration
+          </h2>
           <span class="badge badge-primary">Zero-Downtime Engine</span>
         </div>
         <p class="view-description">
-          Graph-native immutable versioning and dynamic subject schema projection. Compare version graphs, inspect field deltas, and track in-flight patient re-consent compliance.
+          Graph-native immutable versioning and dynamic subject schema
+          projection. Compare version graphs, inspect field deltas, and track
+          in-flight patient re-consent compliance.
         </p>
       </div>
 
@@ -28,8 +32,14 @@
     <div class="controls-panel">
       <div class="version-selectors">
         <div class="selector-group">
-          <label for="base-version-select" class="selector-label">Base Version (Frozen):</label>
-          <select id="base-version-select" v-model="selectedBaseVersion" class="form-select">
+          <label for="base-version-select" class="selector-label"
+            >Base Version (Frozen):</label
+          >
+          <select
+            id="base-version-select"
+            v-model="selectedBaseVersion"
+            class="form-select"
+          >
             <option value="1.0.0">v1.0.0 (Approved / Locked)</option>
             <option value="1.1.0">v1.1.0 (Locked)</option>
           </select>
@@ -38,8 +48,14 @@
         <div class="diff-arrow">➔</div>
 
         <div class="selector-group">
-          <label for="amended-version-select" class="selector-label">Amended Target Version:</label>
-          <select id="amended-version-select" v-model="selectedAmendedVersion" class="form-select">
+          <label for="amended-version-select" class="selector-label"
+            >Amended Target Version:</label
+          >
+          <select
+            id="amended-version-select"
+            v-model="selectedAmendedVersion"
+            class="form-select"
+          >
             <option value="2.0.0">v2.0.0-AMENDMENT (Approved / Active)</option>
             <option value="2.1.0-DRAFT">v2.1.0-DRAFT (Drafting)</option>
           </select>
@@ -49,12 +65,16 @@
       <div class="version-meta-tags">
         <span class="meta-tag">
           <strong>Re-Consent Mandated:</strong>
-          <span class="tag-status" :class="requiresReconsent ? 'status-alert' : 'status-ok'">
-            {{ requiresReconsent ? 'YES (PRD-SUB-007)' : 'NO' }}
+          <span
+            class="tag-status"
+            :class="requiresReconsent ? 'status-alert' : 'status-ok'"
+          >
+            {{ requiresReconsent ? "YES (PRD-SUB-007)" : "NO" }}
           </span>
         </span>
         <span class="meta-tag">
-          <strong>Graph Status:</strong> <span class="tag-status status-immutable">IMMUTABLE BRANCH</span>
+          <strong>Graph Status:</strong>
+          <span class="tag-status status-immutable">IMMUTABLE BRANCH</span>
         </span>
       </div>
     </div>
@@ -62,22 +82,33 @@
     <!-- Section 1: Subject Impact Analyzer Dashboard -->
     <div class="dashboard-section">
       <div class="section-header">
-        <h3 class="section-title">📊 In-Flight Subject Migration &amp; Re-Consent Analyzer</h3>
-        <span class="subject-total-counter">Total In-Flight Cohort: <strong>{{ activeSubjectCount }} Subjects</strong></span>
+        <h3 class="section-title">
+          📊 In-Flight Subject Migration &amp; Re-Consent Analyzer
+        </h3>
+        <span class="subject-total-counter"
+          >Total In-Flight Cohort:
+          <strong>{{ activeSubjectCount }} Subjects</strong></span
+        >
       </div>
 
       <div class="impact-metrics-grid">
         <!-- Migrated & Re-Consented -->
         <div class="metric-card metric-green">
           <div class="card-header">
-            <span class="card-badge badge-green">MIGRATED &amp; RE-CONSENTED</span>
+            <span class="card-badge badge-green"
+              >MIGRATED &amp; RE-CONSENTED</span
+            >
             <span class="metric-count">{{ impactStats.migrated.length }}</span>
           </div>
-          <p class="metric-label">Subjects executing on Target Schema v{{ selectedAmendedVersion }}</p>
+          <p class="metric-label">
+            Subjects executing on Target Schema v{{ selectedAmendedVersion }}
+          </p>
           <div class="progress-bar-container">
             <div
               class="progress-bar bar-green"
-              :style="{ width: getPercentage(impactStats.migrated.length) + '%' }"
+              :style="{
+                width: getPercentage(impactStats.migrated.length) + '%',
+              }"
             />
           </div>
         </div>
@@ -88,11 +119,15 @@
             <span class="card-badge badge-yellow">PENDING RE-CONSENT</span>
             <span class="metric-count">{{ impactStats.pending.length }}</span>
           </div>
-          <p class="metric-label">eCRF Data Entry Gated until ICF Signed (PRD-SUB-007)</p>
+          <p class="metric-label">
+            eCRF Data Entry Gated until ICF Signed (PRD-SUB-007)
+          </p>
           <div class="progress-bar-container">
             <div
               class="progress-bar bar-yellow"
-              :style="{ width: getPercentage(impactStats.pending.length) + '%' }"
+              :style="{
+                width: getPercentage(impactStats.pending.length) + '%',
+              }"
             />
           </div>
         </div>
@@ -101,13 +136,19 @@
         <div class="metric-card metric-gray">
           <div class="card-header">
             <span class="card-badge badge-gray">COMPLETED UNDER PREVIOUS</span>
-            <span class="metric-count">{{ impactStats.completedPrev.length }}</span>
+            <span class="metric-count">{{
+              impactStats.completedPrev.length
+            }}</span>
           </div>
-          <p class="metric-label">Historical Visits Preserved under v{{ selectedBaseVersion }} Schema</p>
+          <p class="metric-label">
+            Historical Visits Preserved under v{{ selectedBaseVersion }} Schema
+          </p>
           <div class="progress-bar-container">
             <div
               class="progress-bar bar-gray"
-              :style="{ width: getPercentage(impactStats.completedPrev.length) + '%' }"
+              :style="{
+                width: getPercentage(impactStats.completedPrev.length) + '%',
+              }"
             />
           </div>
         </div>
@@ -127,13 +168,21 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="sub in subjectsList" :key="sub.id" :class="'row-' + sub.category">
-              <td class="cell-id"><strong>{{ sub.id }}</strong></td>
+            <tr
+              v-for="sub in subjectsList"
+              :key="sub.id"
+              :class="'row-' + sub.category"
+            >
+              <td class="cell-id">
+                <strong>{{ sub.id }}</strong>
+              </td>
               <td>
                 <span class="state-pill">{{ sub.status }}</span>
               </td>
               <td>
-                <span class="version-tag">v{{ sub.active_protocol_version }}</span>
+                <span class="version-tag"
+                  >v{{ sub.active_protocol_version }}</span
+                >
               </td>
               <td>
                 <span :class="['consent-badge', 'badge-' + sub.consentColor]">
@@ -169,9 +218,15 @@
       <div class="section-header">
         <h3 class="section-title">🔀 Side-by-Side Protocol Graph Diff</h3>
         <div class="legend-box">
-          <span class="legend-item"><span class="color-dot dot-green" /> Added Visits/Activities</span>
-          <span class="legend-item"><span class="color-dot dot-yellow" /> Modified Constraints</span>
-          <span class="legend-item"><span class="color-dot dot-red" /> Deprecated Procedures</span>
+          <span class="legend-item"
+            ><span class="color-dot dot-green" /> Added Visits/Activities</span
+          >
+          <span class="legend-item"
+            ><span class="color-dot dot-yellow" /> Modified Constraints</span
+          >
+          <span class="legend-item"
+            ><span class="color-dot dot-red" /> Deprecated Procedures</span
+          >
         </div>
       </div>
 
@@ -242,35 +297,55 @@
     </div>
 
     <!-- Modal: Draft New Amendment -->
-    <div v-if="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false">
+    <div
+      v-if="showCreateModal"
+      class="modal-overlay"
+      @click.self="showCreateModal = false"
+    >
       <div class="modal-card">
         <div class="modal-header">
           <h3 class="modal-title">Draft Protocol Amendment</h3>
-          <button class="modal-close" @click="showCreateModal = false">&times;</button>
+          <button class="modal-close" @click="showCreateModal = false">
+            &times;
+          </button>
         </div>
         <div class="modal-body">
           <div class="form-group">
             <label class="form-label">Base Study Version:</label>
-            <input type="text" class="form-control" value="1.0.0" disabled>
+            <input type="text" class="form-control" value="1.0.0" disabled />
           </div>
           <div class="form-group">
             <label class="form-label">Amendment Classification:</label>
             <select v-model="newAmendment.amendment_type" class="form-select">
-              <option value="major">Major Amendment (Structural / Safety Changes)</option>
-              <option value="minor">Minor Amendment (Administrative / Clarification)</option>
+              <option value="major">
+                Major Amendment (Structural / Safety Changes)
+              </option>
+              <option value="minor">
+                Minor Amendment (Administrative / Clarification)
+              </option>
             </select>
           </div>
           <div class="form-group checkbox-group">
             <label class="checkbox-label">
-              <input v-model="newAmendment.requires_reconsent" type="checkbox">
-              <span><strong>Requires Subject Re-Consent (PRD-SUB-007)</strong></span>
+              <input
+                v-model="newAmendment.requires_reconsent"
+                type="checkbox"
+              />
+              <span
+                ><strong
+                  >Requires Subject Re-Consent (PRD-SUB-007)</strong
+                ></span
+              >
             </label>
             <small class="form-hint">
-              When checked, site data entry for in-flight subjects is locked until a signed ICF matching the new version is registered.
+              When checked, site data entry for in-flight subjects is locked
+              until a signed ICF matching the new version is registered.
             </small>
           </div>
           <div class="form-group">
-            <label class="form-label">GxP Justification &amp; Change Reason:</label>
+            <label class="form-label"
+              >GxP Justification &amp; Change Reason:</label
+            >
             <textarea
               v-model="newAmendment.change_reason"
               class="form-control text-area"
@@ -280,48 +355,85 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showCreateModal = false">Cancel</button>
+          <button class="btn btn-secondary" @click="showCreateModal = false">
+            Cancel
+          </button>
           <button
             class="btn btn-primary"
             :disabled="!newAmendment.change_reason.trim() || isSubmitting"
             @click="submitCreateAmendment"
           >
-            {{ isSubmitting ? 'Cloning Graph Hierarchy...' : 'Clone & Create Amendment' }}
+            {{
+              isSubmitting
+                ? "Cloning Graph Hierarchy..."
+                : "Clone & Create Amendment"
+            }}
           </button>
         </div>
       </div>
     </div>
 
     <!-- Modal: Re-Consent Resolution -->
-    <div v-if="showReconsentModal" class="modal-overlay" @click.self="showReconsentModal = false">
+    <div
+      v-if="showReconsentModal"
+      class="modal-overlay"
+      @click.self="showReconsentModal = false"
+    >
       <div class="modal-card">
         <div class="modal-header">
-          <h3 class="modal-title">Clear Subject Re-Consent Gate (PRD-SUB-007)</h3>
-          <button class="modal-close" @click="showReconsentModal = false">&times;</button>
+          <h3 class="modal-title">
+            Clear Subject Re-Consent Gate (PRD-SUB-007)
+          </h3>
+          <button class="modal-close" @click="showReconsentModal = false">
+            &times;
+          </button>
         </div>
         <div class="modal-body">
           <p>
-            Subject <strong>{{ activeModalSubject?.id }}</strong> is currently locked from data entry on upcoming visits under Protocol Amendment <strong>v{{ selectedAmendedVersion }}</strong>.
+            Subject <strong>{{ activeModalSubject?.id }}</strong> is currently
+            locked from data entry on upcoming visits under Protocol Amendment
+            <strong>v{{ selectedAmendedVersion }}</strong
+            >.
           </p>
           <div class="reconsent-options">
-            <div class="option-card" :class="{ selected: reconsentMode === 'ECONSENT' }" @click="reconsentMode = 'ECONSENT'">
+            <div
+              class="option-card"
+              :class="{ selected: reconsentMode === 'ECONSENT' }"
+              @click="reconsentMode = 'ECONSENT'"
+            >
               <h4>✍️ Execute eConsent</h4>
-              <p>Register electronic signature verified with 21 CFR Part 11 cryptographic seal.</p>
+              <p>
+                Register electronic signature verified with 21 CFR Part 11
+                cryptographic seal.
+              </p>
             </div>
-            <div class="option-card" :class="{ selected: reconsentMode === 'PAPER' }" @click="reconsentMode = 'PAPER'">
+            <div
+              class="option-card"
+              :class="{ selected: reconsentMode === 'PAPER' }"
+              @click="reconsentMode = 'PAPER'"
+            >
               <h4>📄 Upload Signed Paper ICF</h4>
-              <p>Record site PI verified paper ICF signed and dated by the patient.</p>
+              <p>
+                Record site PI verified paper ICF signed and dated by the
+                patient.
+              </p>
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showReconsentModal = false">Cancel</button>
+          <button class="btn btn-secondary" @click="showReconsentModal = false">
+            Cancel
+          </button>
           <button
             class="btn btn-primary"
             :disabled="isSubmitting"
             @click="submitReconsent"
           >
-            {{ isSubmitting ? 'Registering & Unlocking...' : 'Register Signed Consent & Unlock eCRF' }}
+            {{
+              isSubmitting
+                ? "Registering & Unlocking..."
+                : "Register Signed Consent & Unlock eCRF"
+            }}
           </button>
         </div>
       </div>
@@ -403,7 +515,9 @@ const impactStats = computed(() => {
   return {
     migrated: subjectsList.value.filter((s) => s.category === "migrated"),
     pending: subjectsList.value.filter((s) => s.category === "pending"),
-    completedPrev: subjectsList.value.filter((s) => s.category === "completedPrev"),
+    completedPrev: subjectsList.value.filter(
+      (s) => s.category === "completedPrev"
+    ),
   };
 });
 
@@ -492,7 +606,8 @@ const graphDiff = ref({
       schedule: "Day 14",
       diffType: "node-modified",
       diffBadgeText: "Modified",
-      deltaNote: "Added PK Blood Draw form and expanded safety lab range criteria.",
+      deltaNote:
+        "Added PK Blood Draw form and expanded safety lab range criteria.",
     },
     {
       id: "a-v4",
@@ -530,7 +645,9 @@ async function submitReconsent() {
     // Simulate API registration
     await new Promise((resolve) => setTimeout(resolve, 600));
 
-    const targetSub = subjectsList.value.find((s) => s.id === activeModalSubject.value.id);
+    const targetSub = subjectsList.value.find(
+      (s) => s.id === activeModalSubject.value.id
+    );
     if (targetSub) {
       targetSub.active_protocol_version = selectedAmendedVersion.value;
       targetSub.consentText = `Signed ICF v${selectedAmendedVersion.value}`;
@@ -628,7 +745,8 @@ async function submitCreateAmendment() {
   margin-top: 1rem;
 }
 
-.form-select, .form-control {
+.form-select,
+.form-control {
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--border, #cbd5e1);
   border-radius: var(--radius-sm, 6px);
@@ -665,7 +783,8 @@ async function submitCreateAmendment() {
 }
 
 /* Dashboard Section */
-.dashboard-section, .diff-section {
+.dashboard-section,
+.diff-section {
   background: var(--surface, #ffffff);
   border: 1px solid var(--border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
@@ -735,9 +854,18 @@ async function submitCreateAmendment() {
   border-radius: 4px;
 }
 
-.badge-green { background: #dcfce7; color: #166534; }
-.badge-yellow { background: #fef9c3; color: #854d0e; }
-.badge-gray { background: #e2e8f0; color: #475569; }
+.badge-green {
+  background: #dcfce7;
+  color: #166534;
+}
+.badge-yellow {
+  background: #fef9c3;
+  color: #854d0e;
+}
+.badge-gray {
+  background: #e2e8f0;
+  color: #475569;
+}
 
 .metric-count {
   font-size: 1.5rem;
@@ -757,10 +885,19 @@ async function submitCreateAmendment() {
   overflow: hidden;
 }
 
-.progress-bar { height: 100%; transition: width 0.3s ease; }
-.bar-green { background: #22c55e; }
-.bar-yellow { background: #eab308; }
-.bar-gray { background: #94a3b8; }
+.progress-bar {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+.bar-green {
+  background: #22c55e;
+}
+.bar-yellow {
+  background: #eab308;
+}
+.bar-gray {
+  background: #94a3b8;
+}
 
 /* Data Table */
 .subject-table-wrapper {
@@ -773,7 +910,8 @@ async function submitCreateAmendment() {
   font-size: 0.9rem;
 }
 
-.data-table th, .data-table td {
+.data-table th,
+.data-table td {
   padding: 0.75rem 1rem;
   text-align: left;
   border-bottom: 1px solid var(--border, #f1f5f9);
@@ -851,8 +989,14 @@ async function submitCreateAmendment() {
   font-weight: 600;
 }
 
-.badge-locked { background: #e2e8f0; color: #475569; }
-.badge-active { background: #dbeafe; color: #1e40af; }
+.badge-locked {
+  background: #e2e8f0;
+  color: #475569;
+}
+.badge-active {
+  background: #dbeafe;
+  color: #1e40af;
+}
 
 .nodes-container {
   display: flex;
@@ -917,9 +1061,18 @@ async function submitCreateAmendment() {
   border-radius: 4px;
 }
 
-.diff-badge-node-added { background: #dcfce7; color: #166534; }
-.diff-badge-node-modified { background: #fef9c3; color: #854d0e; }
-.diff-badge-node-unchanged { background: #f1f5f9; color: #64748b; }
+.diff-badge-node-added {
+  background: #dcfce7;
+  color: #166534;
+}
+.diff-badge-node-modified {
+  background: #fef9c3;
+  color: #854d0e;
+}
+.diff-badge-node-unchanged {
+  background: #f1f5f9;
+  color: #64748b;
+}
 
 .node-details {
   display: flex;
@@ -954,9 +1107,15 @@ async function submitCreateAmendment() {
   border-radius: 50%;
 }
 
-.dot-green { background: #22c55e; }
-.dot-yellow { background: #eab308; }
-.dot-red { background: #ef4444; }
+.dot-green {
+  background: #22c55e;
+}
+.dot-yellow {
+  background: #eab308;
+}
+.dot-red {
+  background: #ef4444;
+}
 
 .graph-divider {
   display: flex;

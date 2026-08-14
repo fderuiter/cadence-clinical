@@ -425,6 +425,149 @@
         }
       }
     },
+    "/api/v1/execution/amendments/{study_id}/subject-impact": {
+      "get": {
+        "tags": [
+          "Amendments"
+        ],
+        "summary": "Get Subject Impact Analysis",
+        "description": "Calculates subject migration impact for an active protocol amendment.\n\nRequirements: PRD-SYS-001, PRD-SUB-007",
+        "operationId": "get_subject_impact_analysis_api_v1_execution_amendments__study_id__subject_impact_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "target_version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "2.0.0",
+              "title": "Target Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Subject Impact Analysis Api V1 Execution Amendments  Study Id  Subject Impact Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/amendments/validate-gating": {
+      "post": {
+        "tags": [
+          "Amendments"
+        ],
+        "summary": "Validate Gating Endpoint",
+        "description": "Validates subject re-consent gating before form data entry.\n\nRequirements: PRD-SUB-007",
+        "operationId": "validate_gating_endpoint_api_v1_execution_amendments_validate_gating_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateGatingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Validate Gating Endpoint Api V1 Execution Amendments Validate Gating Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/amendments/reconsent": {
+      "post": {
+        "tags": [
+          "Amendments"
+        ],
+        "summary": "Register Subject Reconsent",
+        "description": "Registers subject signed re-consent for an amended version, unlocking gating.\n\nRequirements: PRD-SUB-007, PRD-SYS-001",
+        "operationId": "register_subject_reconsent_api_v1_execution_amendments_reconsent_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubjectReconsentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Register Subject Reconsent Api V1 Execution Amendments Reconsent Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/auditor/token/generate": {
       "post": {
         "tags": [
@@ -12910,6 +13053,51 @@
         "title": "SubjectRandomizationResponse",
         "description": "Pydantic schema for returning blinded subject randomization details."
       },
+      "SubjectReconsentRequest": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study identifier"
+          },
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version",
+            "description": "Amended protocol version tag"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Protocol version index",
+            "default": 2
+          },
+          "icf_signed": {
+            "type": "boolean",
+            "title": "Icf Signed",
+            "description": "Whether ICF is signed",
+            "default": true
+          },
+          "signature_type": {
+            "type": "string",
+            "title": "Signature Type",
+            "description": "Signature type: 'ECONSENT' or 'PAPER_UPLOAD'",
+            "default": "ECONSENT"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_id",
+          "study_id",
+          "protocol_version"
+        ],
+        "title": "SubjectReconsentRequest",
+        "description": "Request payload to register subject re-consent for an amended version."
+      },
       "SubjectResponse": {
         "properties": {
           "id": {
@@ -13847,6 +14035,39 @@
         ],
         "title": "UploadEISFDocumentRequest",
         "description": "Request payload to upload an eISF document.\n\nRequirements: PRD-SYS-001"
+      },
+      "ValidateGatingRequest": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject identifier"
+          },
+          "target_visit_id": {
+            "type": "string",
+            "title": "Target Visit Id",
+            "description": "Target visit identifier"
+          },
+          "active_protocol_version": {
+            "type": "string",
+            "title": "Active Protocol Version",
+            "description": "Active protocol version tag (e.g., '2.0.0')"
+          },
+          "requires_reconsent": {
+            "type": "boolean",
+            "title": "Requires Reconsent",
+            "description": "Whether amendment requires re-consent",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_id",
+          "target_visit_id",
+          "active_protocol_version"
+        ],
+        "title": "ValidateGatingRequest",
+        "description": "Request payload to validate subject re-consent gating."
       },
       "ValidationError": {
         "properties": {

@@ -24,7 +24,9 @@
           <h4>Analysis Target Parameters</h4>
           <div class="config-grid">
             <div class="drawer-input-block">
-              <label for="impact-dict-type" class="drawer-input-label">Target Dictionary</label>
+              <label for="impact-dict-type" class="drawer-input-label"
+                >Target Dictionary</label
+              >
               <select
                 id="impact-dict-type"
                 v-model="dictType"
@@ -36,7 +38,9 @@
             </div>
 
             <div class="drawer-input-block">
-              <label for="impact-target-version" class="drawer-input-label">Target Migration Version</label>
+              <label for="impact-target-version" class="drawer-input-label"
+                >Target Migration Version</label
+              >
               <input
                 id="impact-target-version"
                 v-model="targetVersion"
@@ -51,7 +55,9 @@
             <button
               type="button"
               class="btn btn-primary"
-              :disabled="codingStore.impactAnalysis.isLoading || !targetVersion.trim()"
+              :disabled="
+                codingStore.impactAnalysis.isLoading || !targetVersion.trim()
+              "
               @click="runAnalysis"
             >
               {{
@@ -70,7 +76,10 @@
         </div>
 
         <!-- Loading State -->
-        <div v-if="codingStore.impactAnalysis.isLoading" class="analysis-loading-state">
+        <div
+          v-if="codingStore.impactAnalysis.isLoading"
+          class="analysis-loading-state"
+        >
           <div class="spinner"></div>
           <h4>Running Up-Versioning Delta Engine...</h4>
           <p>
@@ -110,7 +119,8 @@
               </div>
               <div class="metric-label">Reclassified Terms</div>
               <div class="metric-desc">
-                Primary SOC or parent hierarchy shifted; recoding review advised.
+                Primary SOC or parent hierarchy shifted; recoding review
+                advised.
               </div>
             </div>
 
@@ -603,4 +613,3 @@ function close() {
   color: #3730a3;
 }
 </style>
-

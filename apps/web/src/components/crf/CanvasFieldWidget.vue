@@ -26,10 +26,7 @@
       </div>
 
       <!-- SDTM Tag Badge -->
-      <span
-        v-if="field.cdash || field.sdtm"
-        class="sdtm-tag-badge"
-      >
+      <span v-if="field.cdash || field.sdtm" class="sdtm-tag-badge">
         [{{ field.cdash || field.sdtm }}]
       </span>
     </div>
@@ -91,20 +88,29 @@
       </template>
 
       <template v-else-if="field.type === 'radio'">
-        <div style="display: flex; gap: 12px; align-items: center; padding: 4px 0;">
+        <div
+          style="display: flex; gap: 12px; align-items: center; padding: 4px 0"
+        >
           <label
             v-for="opt in field.options || [
               { value: 'Y', label: 'Yes' },
               { value: 'N', label: 'No' },
             ]"
             :key="opt.value"
-            style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #475569; cursor: pointer;"
+            style="
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              font-size: 0.8rem;
+              color: #475569;
+              cursor: pointer;
+            "
             :class="{ 'touch-target': designerStore.viewport !== 'desktop' }"
           >
             <input
               type="radio"
               disabled
-              style="cursor: pointer; accent-color: #026597;"
+              style="cursor: pointer; accent-color: #026597"
               :class="{
                 'touch-target-interactive':
                   designerStore.viewport !== 'desktop',
@@ -116,18 +122,43 @@
       </template>
 
       <template v-else-if="field.type === 'grid'">
-        <div style="border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; font-size: 0.75rem;">
-          <table style="width: 100%; background: #f8fafc; border-collapse: collapse;">
+        <div
+          style="
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+            font-size: 0.75rem;
+          "
+        >
+          <table
+            style="width: 100%; background: #f8fafc; border-collapse: collapse"
+          >
             <thead>
-              <tr style="background: #f1f5f9; border-bottom: 1px solid #e2e8f0;">
-                <th style="padding: 4px 8px; text-align: left; border-right: 1px solid #e2e8f0;">Column 1</th>
-                <th style="padding: 4px 8px; text-align: left;">Column 2</th>
+              <tr style="background: #f1f5f9; border-bottom: 1px solid #e2e8f0">
+                <th
+                  style="
+                    padding: 4px 8px;
+                    text-align: left;
+                    border-right: 1px solid #e2e8f0;
+                  "
+                >
+                  Column 1
+                </th>
+                <th style="padding: 4px 8px; text-align: left">Column 2</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td style="padding: 4px 8px; border-right: 1px solid #e2e8f0; color: #94a3b8;">Data item A</td>
-                <td style="padding: 4px 8px; color: #94a3b8;">Data item B</td>
+                <td
+                  style="
+                    padding: 4px 8px;
+                    border-right: 1px solid #e2e8f0;
+                    color: #94a3b8;
+                  "
+                >
+                  Data item A
+                </td>
+                <td style="padding: 4px 8px; color: #94a3b8">Data item B</td>
               </tr>
             </tbody>
           </table>
@@ -138,14 +169,22 @@
         v-else-if="field.type === 'file' || field.type === 'file upload'"
       >
         <div
-          style="border: 2px dashed #cbd5e1; border-radius: 6px; padding: 12px; text-align: center; background: #f8fafc; font-size: 0.75rem; color: #64748b;"
+          style="
+            border: 2px dashed #cbd5e1;
+            border-radius: 6px;
+            padding: 12px;
+            text-align: center;
+            background: #f8fafc;
+            font-size: 0.75rem;
+            color: #64748b;
+          "
         >
           <span>📁 Attachment Upload Area</span>
         </div>
       </template>
 
       <template v-else>
-        <div style="font-size: 0.75rem; color: #94a3b8; font-style: italic;">
+        <div style="font-size: 0.75rem; color: #94a3b8; font-style: italic">
           Standard clinical field preview
         </div>
       </template>
@@ -155,26 +194,60 @@
     <div
       v-if="isSelected"
       class="widget-actions"
-      style="position: absolute; top: -12px; right: 8px; display: flex; gap: 4px; background-color: #026597; color: white; border-radius: 6px; padding: 2px 6px; z-index: 10; font-size: 0.72rem; box-shadow: 0 2px 6px rgba(0,0,0,0.15);"
+      style="
+        position: absolute;
+        top: -12px;
+        right: 8px;
+        display: flex;
+        gap: 4px;
+        background-color: #026597;
+        color: white;
+        border-radius: 6px;
+        padding: 2px 6px;
+        z-index: 10;
+        font-size: 0.72rem;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      "
     >
       <button
-        style="background: none; border: none; color: white; cursor: pointer; font-weight: 600; padding: 2px 4px;"
+        style="
+          background: none;
+          border: none;
+          color: white;
+          cursor: pointer;
+          font-weight: 600;
+          padding: 2px 4px;
+        "
         title="Duplicate Field"
         @click.stop="$emit('duplicate-field', field.id)"
       >
         Duplicate
       </button>
-      <span style="color: #93c5fd; user-select: none;">|</span>
+      <span style="color: #93c5fd; user-select: none">|</span>
       <button
-        style="background: none; border: none; color: white; cursor: pointer; font-weight: 600; padding: 2px 4px;"
+        style="
+          background: none;
+          border: none;
+          color: white;
+          cursor: pointer;
+          font-weight: 600;
+          padding: 2px 4px;
+        "
         title="Inspect Properties"
         @click.stop="$emit('select-field', field.id)"
       >
         Inspect
       </button>
-      <span style="color: #93c5fd; user-select: none;">|</span>
+      <span style="color: #93c5fd; user-select: none">|</span>
       <button
-        style="background: none; border: none; color: #fca5a5; cursor: pointer; font-weight: 600; padding: 2px 4px;"
+        style="
+          background: none;
+          border: none;
+          color: #fca5a5;
+          cursor: pointer;
+          font-weight: 600;
+          padding: 2px 4px;
+        "
         title="Delete Field"
         @click.stop="$emit('delete-field', field.id)"
       >
@@ -185,10 +258,21 @@
     <!-- Layout Warning Banner -->
     <div
       v-if="hasWarning"
-      style="background-color: #fefce8; border: 1px solid #fef08a; color: #854d0e; font-size: 0.72rem; border-radius: 6px; padding: 6px 8px; margin-top: 8px; display: flex; align-items: flex-start; gap: 6px;"
+      style="
+        background-color: #fefce8;
+        border: 1px solid #fef08a;
+        color: #854d0e;
+        font-size: 0.72rem;
+        border-radius: 6px;
+        padding: 6px 8px;
+        margin-top: 8px;
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+      "
     >
       <span>⚠️</span>
-      <span style="font-weight: 600;">{{ warningMessage }}</span>
+      <span style="font-weight: 600">{{ warningMessage }}</span>
     </div>
   </div>
 </template>

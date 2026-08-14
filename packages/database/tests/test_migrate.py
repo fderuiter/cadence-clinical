@@ -51,16 +51,17 @@ async def test_run_migrations_failure():
 
         class MockBeginFail:
             async def __aenter__(self):
-                raise Exception("DB Error")
+                raise RuntimeError("DB Error")
 
             async def __aexit__(self, exc_type, exc, tb):
                 pass
 
         mock_engine.begin = MagicMock(return_value=MockBeginFail())
 
-        with patch("sys.exit") as mock_exit:
+        with pytest.raises(RuntimeError, match="DB Error"):
             await run_migrations("sqlite+aiosqlite:///:memory:")
-            mock_exit.assert_called_once_with(1)
+
+        mock_engine.dispose.assert_awaited_once()
 
 
 def test_main_cli():

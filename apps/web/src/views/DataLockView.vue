@@ -10,9 +10,10 @@
         </div>
         <h2 class="view-title">Granular Data Lock &amp; Freeze Console</h2>
         <p class="view-subtitle">
-          Manage regulatory lock governance across Study, Site, Subject, Visit, Form, and Field scopes.
-          Enforces multi-tier hierarchical inheritance, step-up dual signatures (<code>X-Sig-Token</code>),
-          and strict mandatory &ge;50-character GxP unlock justification audit trails.
+          Manage regulatory lock governance across Study, Site, Subject, Visit,
+          Form, and Field scopes. Enforces multi-tier hierarchical inheritance,
+          step-up dual signatures (<code>X-Sig-Token</code>), and strict
+          mandatory &ge;50-character GxP unlock justification audit trails.
         </p>
       </div>
       <div class="header-action-group">
@@ -95,11 +96,14 @@
                   class="expand-btn"
                   @click.stop="toggleExpand(studyTree)"
                 >
-                  {{ studyTree.expanded ? '▼' : '▶' }}
+                  {{ studyTree.expanded ? "▼" : "▶" }}
                 </button>
                 <span class="node-icon">🏛️</span>
                 <span class="node-name">{{ studyTree.name }}</span>
-                <span class="node-badge" :class="getBadgeClass(studyTree.status)">
+                <span
+                  class="node-badge"
+                  :class="getBadgeClass(studyTree.status)"
+                >
                   {{ studyTree.status }}
                 </span>
                 <div class="node-actions">
@@ -147,11 +151,14 @@
                       class="expand-btn"
                       @click.stop="toggleExpand(site)"
                     >
-                      {{ site.expanded ? '▼' : '▶' }}
+                      {{ site.expanded ? "▼" : "▶" }}
                     </button>
                     <span class="node-icon">🏥</span>
                     <span class="node-name">{{ site.name }}</span>
-                    <span class="node-badge" :class="getBadgeClass(site.status)">
+                    <span
+                      class="node-badge"
+                      :class="getBadgeClass(site.status)"
+                    >
                       {{ site.status }}
                     </span>
                     <div class="node-actions">
@@ -199,11 +206,14 @@
                           class="expand-btn"
                           @click.stop="toggleExpand(subject)"
                         >
-                          {{ subject.expanded ? '▼' : '▶' }}
+                          {{ subject.expanded ? "▼" : "▶" }}
                         </button>
                         <span class="node-icon">👤</span>
                         <span class="node-name">{{ subject.name }}</span>
-                        <span class="node-badge" :class="getBadgeClass(subject.status)">
+                        <span
+                          class="node-badge"
+                          :class="getBadgeClass(subject.status)"
+                        >
                           {{ subject.status }}
                         </span>
                         <div class="node-actions">
@@ -243,11 +253,14 @@
                               class="expand-btn"
                               @click.stop="toggleExpand(visit)"
                             >
-                              {{ visit.expanded ? '▼' : '▶' }}
+                              {{ visit.expanded ? "▼" : "▶" }}
                             </button>
                             <span class="node-icon">📅</span>
                             <span class="node-name">{{ visit.name }}</span>
-                            <span class="node-badge" :class="getBadgeClass(visit.status)">
+                            <span
+                              class="node-badge"
+                              :class="getBadgeClass(visit.status)"
+                            >
                               {{ visit.status }}
                             </span>
                             <div class="node-actions">
@@ -279,7 +292,9 @@
                             >
                               <div
                                 class="node-row"
-                                :class="{ selected: selectedNode?.id === form.id }"
+                                :class="{
+                                  selected: selectedNode?.id === form.id,
+                                }"
                                 @click="selectNode(form)"
                               >
                                 <button
@@ -287,11 +302,14 @@
                                   class="expand-btn"
                                   @click.stop="toggleExpand(form)"
                                 >
-                                  {{ form.expanded ? '▼' : '▶' }}
+                                  {{ form.expanded ? "▼" : "▶" }}
                                 </button>
                                 <span class="node-icon">📋</span>
                                 <span class="node-name">{{ form.name }}</span>
-                                <span class="node-badge" :class="getBadgeClass(form.status)">
+                                <span
+                                  class="node-badge"
+                                  :class="getBadgeClass(form.status)"
+                                >
                                   {{ form.status }}
                                 </span>
                                 <div class="node-actions">
@@ -299,7 +317,9 @@
                                     v-if="form.status === 'UNLOCKED'"
                                     class="btn-mini btn-mini-lock"
                                     title="Lock Form"
-                                    @click.stop="openLockDialog(form, 'HARD_LOCK')"
+                                    @click.stop="
+                                      openLockDialog(form, 'HARD_LOCK')
+                                    "
                                   >
                                     🔒
                                   </button>
@@ -323,13 +343,20 @@
                                 >
                                   <div
                                     class="node-row"
-                                    :class="{ selected: selectedNode?.id === field.id }"
+                                    :class="{
+                                      selected: selectedNode?.id === field.id,
+                                    }"
                                     @click="selectNode(field)"
                                   >
                                     <span class="tree-leaf-spacer"></span>
                                     <span class="node-icon">🏷️</span>
-                                    <span class="node-name">{{ field.name }}</span>
-                                    <span class="node-badge" :class="getBadgeClass(field.status)">
+                                    <span class="node-name">{{
+                                      field.name
+                                    }}</span>
+                                    <span
+                                      class="node-badge"
+                                      :class="getBadgeClass(field.status)"
+                                    >
                                       {{ field.status }}
                                     </span>
                                     <div class="node-actions">
@@ -337,7 +364,9 @@
                                         v-if="field.status === 'UNLOCKED'"
                                         class="btn-mini btn-mini-lock"
                                         title="Lock Field"
-                                        @click.stop="openLockDialog(field, 'HARD_LOCK')"
+                                        @click.stop="
+                                          openLockDialog(field, 'HARD_LOCK')
+                                        "
                                       >
                                         🔒
                                       </button>
@@ -380,17 +409,32 @@
         <div v-if="!selectedNode" class="empty-selection-state">
           <span class="empty-icon">👈</span>
           <h4>Select a Node from Hierarchy</h4>
-          <p>Choose any Study, Site, Subject, Visit, Form, or Field node to view its active lock parameters or perform governance actions.</p>
+          <p>
+            Choose any Study, Site, Subject, Visit, Form, or Field node to view
+            its active lock parameters or perform governance actions.
+          </p>
         </div>
 
         <div v-else class="inspection-body">
-          <div class="scope-summary-banner" :class="selectedNode.status.toLowerCase()">
+          <div
+            class="scope-summary-banner"
+            :class="selectedNode.status.toLowerCase()"
+          >
             <div class="banner-status-icon">
-              {{ selectedNode.status === 'LOCKED' || selectedNode.status === 'HARD_LOCK' ? '🔒' : (selectedNode.status === 'FROZEN' ? '❄️' : '🔓') }}
+              {{
+                selectedNode.status === "LOCKED" ||
+                selectedNode.status === "HARD_LOCK"
+                  ? "🔒"
+                  : selectedNode.status === "FROZEN"
+                    ? "❄️"
+                    : "🔓"
+              }}
             </div>
             <div class="banner-text">
               <h4>{{ selectedNode.name }}</h4>
-              <p class="node-id-sub">Identifier: <code>{{ selectedNode.id }}</code></p>
+              <p class="node-id-sub">
+                Identifier: <code>{{ selectedNode.id }}</code>
+              </p>
               <p class="node-status-text">
                 Current Status: <strong>{{ selectedNode.status }}</strong>
               </p>
@@ -403,11 +447,17 @@
             <div class="inheritance-breadcrumbs">
               <span class="crumb">Study: {{ studyTree.id }}</span>
               <span class="crumb-arrow">&gt;</span>
-              <span class="crumb">Site: {{ selectedNode.site_id || 'Inherited' }}</span>
+              <span class="crumb"
+                >Site: {{ selectedNode.site_id || "Inherited" }}</span
+              >
               <span class="crumb-arrow">&gt;</span>
-              <span class="crumb">Subject: {{ selectedNode.subject_id || 'Inherited' }}</span>
+              <span class="crumb"
+                >Subject: {{ selectedNode.subject_id || "Inherited" }}</span
+              >
               <span class="crumb-arrow">&gt;</span>
-              <span class="crumb">Form: {{ selectedNode.form_id || 'Inherited' }}</span>
+              <span class="crumb"
+                >Form: {{ selectedNode.form_id || "Inherited" }}</span
+              >
             </div>
           </div>
 
@@ -456,20 +506,28 @@
                 </thead>
                 <tbody>
                   <tr v-for="rec in matchingRecords" :key="rec.lock_id">
-                    <td><code>{{ rec.lock_id }}</code></td>
+                    <td>
+                      <code>{{ rec.lock_id }}</code>
+                    </td>
                     <td>{{ rec.scope_type || rec.scope }}</td>
                     <td>
-                      <span class="node-badge" :class="getBadgeClass(rec.status)">
+                      <span
+                        class="node-badge"
+                        :class="getBadgeClass(rec.status)"
+                      >
                         {{ rec.status }}
                       </span>
                     </td>
                     <td>{{ rec.created_by || rec.locked_by }}</td>
-                    <td class="text-truncate-cell">{{ rec.unlock_justification || rec.reason_for_change }}</td>
+                    <td class="text-truncate-cell">
+                      {{ rec.unlock_justification || rec.reason_for_change }}
+                    </td>
                     <td>{{ formatDate(rec.created_at || rec.locked_at) }}</td>
                   </tr>
                   <tr v-if="matchingRecords.length === 0">
                     <td colspan="6" class="text-center text-muted">
-                      No active data locks recorded for this specific scope node.
+                      No active data locks recorded for this specific scope
+                      node.
                     </td>
                   </tr>
                 </tbody>
@@ -481,17 +539,32 @@
     </div>
 
     <!-- Lock Action Modal Dialog -->
-    <div v-if="isLockModalOpen" class="modal-overlay" @click.self="isLockModalOpen = false">
+    <div
+      v-if="isLockModalOpen"
+      class="modal-overlay"
+      @click.self="isLockModalOpen = false"
+    >
       <div class="modal-card">
         <div class="modal-header">
           <h3>
-            {{ lockForm.action === 'FREEZE' ? '❄️ Soft Freeze Data Scope' : '🔒 Execute Cryptographic Hard Lock' }}
+            {{
+              lockForm.action === "FREEZE"
+                ? "❄️ Soft Freeze Data Scope"
+                : "🔒 Execute Cryptographic Hard Lock"
+            }}
           </h3>
-          <button class="modal-close-btn" @click="isLockModalOpen = false">&times;</button>
+          <button class="modal-close-btn" @click="isLockModalOpen = false">
+            &times;
+          </button>
         </div>
         <div class="modal-body">
           <div class="modal-target-info">
-            <p><strong>Target Scope:</strong> {{ lockForm.scope_type }} (<code>{{ lockForm.scope_id }}</code>)</p>
+            <p>
+              <strong>Target Scope:</strong> {{ lockForm.scope_type }} (<code>{{
+                lockForm.scope_id
+              }}</code
+              >)
+            </p>
             <p><strong>Study ID:</strong> {{ lockForm.study_id }}</p>
           </div>
 
@@ -503,14 +576,20 @@
                 <span>FREEZE (Monitoring Hold)</span>
               </label>
               <label class="radio-label">
-                <input v-model="lockForm.action" type="radio" value="HARD_LOCK" />
+                <input
+                  v-model="lockForm.action"
+                  type="radio"
+                  value="HARD_LOCK"
+                />
                 <span>HARD_LOCK (21 CFR Part 11 Seal)</span>
               </label>
             </div>
           </div>
 
           <div v-if="lockForm.action === 'HARD_LOCK'" class="form-group">
-            <label class="form-label">Step-Up Dual Signature Token (<code>X-Sig-Token</code>):</label>
+            <label class="form-label"
+              >Step-Up Dual Signature Token (<code>X-Sig-Token</code>):</label
+            >
             <input
               v-model="lockForm.sig_token"
               type="password"
@@ -523,7 +602,10 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">GxP Reason for Change: <span class="required-star">*</span></label>
+            <label class="form-label"
+              >GxP Reason for Change:
+              <span class="required-star">*</span></label
+            >
             <textarea
               v-model="lockForm.reason"
               class="form-textarea"
@@ -533,53 +615,78 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="isLockModalOpen = false">Cancel</button>
+          <button class="btn btn-secondary" @click="isLockModalOpen = false">
+            Cancel
+          </button>
           <button
             class="btn btn-primary"
             :disabled="!lockForm.reason.trim() || isSubmitting"
             @click="submitLock"
           >
-            {{ isSubmitting ? 'Locking...' : 'Confirm Lock Operation' }}
+            {{ isSubmitting ? "Locking..." : "Confirm Lock Operation" }}
           </button>
         </div>
       </div>
     </div>
 
     <!-- Unlock Justification Modal Dialog (Strict >= 50 Chars) -->
-    <div v-if="isUnlockModalOpen" class="modal-overlay" @click.self="isUnlockModalOpen = false">
+    <div
+      v-if="isUnlockModalOpen"
+      class="modal-overlay"
+      @click.self="isUnlockModalOpen = false"
+    >
       <div class="modal-card unlock-modal">
         <div class="modal-header">
           <h3>🔓 GxP Unlock Override Justification</h3>
-          <button class="modal-close-btn" @click="isUnlockModalOpen = false">&times;</button>
+          <button class="modal-close-btn" @click="isUnlockModalOpen = false">
+            &times;
+          </button>
         </div>
         <div class="modal-body">
           <div class="alert-warning-banner">
             <span class="banner-icon">⚠️</span>
             <div>
               <strong>Regulatory Integrity Warning (21 CFR Part 11)</strong>
-              <p>Unlocking previously locked clinical data requires a detailed justification of at least <strong>50 characters</strong> detailing clinical necessity, PI/CRA approval, and discrepancy scope.</p>
+              <p>
+                Unlocking previously locked clinical data requires a detailed
+                justification of at least
+                <strong>50 characters</strong> detailing clinical necessity,
+                PI/CRA approval, and discrepancy scope.
+              </p>
             </div>
           </div>
 
           <div class="modal-target-info">
-            <p><strong>Unlocking Scope:</strong> {{ unlockForm.scope_type }} (<code>{{ unlockForm.scope_id }}</code>)</p>
+            <p>
+              <strong>Unlocking Scope:</strong>
+              {{ unlockForm.scope_type }} (<code>{{ unlockForm.scope_id }}</code
+              >)
+            </p>
           </div>
 
           <div class="form-group">
             <label class="form-label">
-              Mandatory Unlock Justification (&ge; 50 Characters): <span class="required-star">*</span>
+              Mandatory Unlock Justification (&ge; 50 Characters):
+              <span class="required-star">*</span>
             </label>
             <textarea
               v-model="unlockForm.justification"
               class="form-textarea"
-              :class="{ 'input-valid': isJustificationValid, 'input-invalid': unlockForm.justification.length > 0 && !isJustificationValid }"
+              :class="{
+                'input-valid': isJustificationValid,
+                'input-invalid':
+                  unlockForm.justification.length > 0 && !isJustificationValid,
+              }"
               rows="4"
               placeholder="Describe the clinical rationale, CRA monitor approval, and specific queries necessitating this unlock override..."
             ></textarea>
             <div class="char-counter-row">
               <span
                 class="char-counter"
-                :class="{ 'counter-met': isJustificationValid, 'counter-unmet': !isJustificationValid }"
+                :class="{
+                  'counter-met': isJustificationValid,
+                  'counter-unmet': !isJustificationValid,
+                }"
               >
                 {{ unlockForm.justification.length }} / 50 characters required
               </span>
@@ -595,21 +702,31 @@
           <div class="form-group">
             <label class="form-label">GxP Reason for Change Code:</label>
             <select v-model="unlockForm.reason_code" class="form-select">
-              <option value="CRA_QUERY_CORRECTION">CRA Monitor Query Resolution</option>
-              <option value="SAFETY_EVENT_UPDATE">Adverse Event / SAE Timely Update</option>
-              <option value="PROTOCOL_DEVIATION_CORRECTION">Protocol Deviation Correction</option>
-              <option value="AUDITOR_OVERRIDE">Quality / Auditor Requested Re-entry</option>
+              <option value="CRA_QUERY_CORRECTION">
+                CRA Monitor Query Resolution
+              </option>
+              <option value="SAFETY_EVENT_UPDATE">
+                Adverse Event / SAE Timely Update
+              </option>
+              <option value="PROTOCOL_DEVIATION_CORRECTION">
+                Protocol Deviation Correction
+              </option>
+              <option value="AUDITOR_OVERRIDE">
+                Quality / Auditor Requested Re-entry
+              </option>
             </select>
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="isUnlockModalOpen = false">Cancel</button>
+          <button class="btn btn-secondary" @click="isUnlockModalOpen = false">
+            Cancel
+          </button>
           <button
             class="btn btn-danger"
             :disabled="!isJustificationValid || isSubmitting"
             @click="submitUnlock"
           >
-            {{ isSubmitting ? 'Unlocking...' : 'Confirm Unlock Override' }}
+            {{ isSubmitting ? "Unlocking..." : "Confirm Unlock Override" }}
           </button>
         </div>
       </div>
@@ -707,9 +824,27 @@ export default {
                         status: "UNLOCKED",
                         expanded: false,
                         fields: [
-                          { id: "FIELD-BRTHDTC", name: "Birth Date (BRTHDTC)", type: "FIELD", form_id: "FORM-DM-01", status: "UNLOCKED" },
-                          { id: "FIELD-SEX", name: "Biological Sex (SEX)", type: "FIELD", form_id: "FORM-DM-01", status: "UNLOCKED" },
-                          { id: "FIELD-RACE", name: "Race / Ethnicity (RACE)", type: "FIELD", form_id: "FORM-DM-01", status: "UNLOCKED" },
+                          {
+                            id: "FIELD-BRTHDTC",
+                            name: "Birth Date (BRTHDTC)",
+                            type: "FIELD",
+                            form_id: "FORM-DM-01",
+                            status: "UNLOCKED",
+                          },
+                          {
+                            id: "FIELD-SEX",
+                            name: "Biological Sex (SEX)",
+                            type: "FIELD",
+                            form_id: "FORM-DM-01",
+                            status: "UNLOCKED",
+                          },
+                          {
+                            id: "FIELD-RACE",
+                            name: "Race / Ethnicity (RACE)",
+                            type: "FIELD",
+                            form_id: "FORM-DM-01",
+                            status: "UNLOCKED",
+                          },
                         ],
                       },
                       {
@@ -723,9 +858,27 @@ export default {
                         status: "UNLOCKED",
                         expanded: false,
                         fields: [
-                          { id: "FIELD-SYSBP", name: "Systolic Blood Pressure (SYSBP)", type: "FIELD", form_id: "FORM-VS-01", status: "UNLOCKED" },
-                          { id: "FIELD-DIABP", name: "Diastolic Blood Pressure (DIABP)", type: "FIELD", form_id: "FORM-VS-01", status: "UNLOCKED" },
-                          { id: "FIELD-PULSE", name: "Heart Rate Pulse (PULSE)", type: "FIELD", form_id: "FORM-VS-01", status: "UNLOCKED" },
+                          {
+                            id: "FIELD-SYSBP",
+                            name: "Systolic Blood Pressure (SYSBP)",
+                            type: "FIELD",
+                            form_id: "FORM-VS-01",
+                            status: "UNLOCKED",
+                          },
+                          {
+                            id: "FIELD-DIABP",
+                            name: "Diastolic Blood Pressure (DIABP)",
+                            type: "FIELD",
+                            form_id: "FORM-VS-01",
+                            status: "UNLOCKED",
+                          },
+                          {
+                            id: "FIELD-PULSE",
+                            name: "Heart Rate Pulse (PULSE)",
+                            type: "FIELD",
+                            form_id: "FORM-VS-01",
+                            status: "UNLOCKED",
+                          },
                         ],
                       },
                     ],
@@ -749,20 +902,22 @@ export default {
         return this.studyTree.sites;
       }
       const q = this.searchQuery.toLowerCase();
-      return this.studyTree.sites.filter(s =>
-        s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q)
+      return this.studyTree.sites.filter(
+        (s) =>
+          s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q)
       );
     },
 
     matchingRecords() {
       if (!this.selectedNode) return [];
       const nid = this.selectedNode.id;
-      return this.allLockRecords.filter(r =>
-        r.scope_id === nid ||
-        r.form_id === nid ||
-        r.subject_id === nid ||
-        r.site_id === nid ||
-        r.study_id === nid
+      return this.allLockRecords.filter(
+        (r) =>
+          r.scope_id === nid ||
+          r.form_id === nid ||
+          r.subject_id === nid ||
+          r.site_id === nid ||
+          r.study_id === nid
       );
     },
   },
@@ -790,7 +945,7 @@ export default {
           hour: "2-digit",
           minute: "2-digit",
         });
-      } catch (e) {
+      } catch {
         return iso;
       }
     },
@@ -806,7 +961,9 @@ export default {
     async refreshLocks() {
       this.isLoading = true;
       try {
-        const response = await fetch("/api/v1/execution/locks?study_id=STUDY-001");
+        const response = await fetch(
+          "/api/v1/execution/locks?study_id=STUDY-001"
+        );
         if (response.ok) {
           const data = await response.json();
           this.allLockRecords = data || [];
@@ -814,7 +971,10 @@ export default {
           this.syncTreeStatuses();
         }
       } catch (err) {
-        console.warn("Failed to fetch locks from API, operating with local state:", err);
+        console.warn(
+          "Failed to fetch locks from API, operating with local state:",
+          err
+        );
       } finally {
         this.isLoading = false;
       }
@@ -843,7 +1003,10 @@ export default {
       // Helper to update status by finding matching active lock
       const findStatus = (scopeType, scopeId) => {
         const match = this.allLockRecords.find(
-          r => r.is_active && (r.scope_type === scopeType || r.scope === scopeType) && r.scope_id === scopeId
+          (r) =>
+            r.is_active &&
+            (r.scope_type === scopeType || r.scope === scopeType) &&
+            r.scope_id === scopeId
         );
         return match ? match.lock_type || match.status : "UNLOCKED";
       };
@@ -886,7 +1049,7 @@ export default {
 
     openUnlockDialog(node) {
       const match = this.allLockRecords.find(
-        r => r.is_active && (r.scope_id === node.id || r.form_id === node.id)
+        (r) => r.is_active && (r.scope_id === node.id || r.form_id === node.id)
       );
 
       this.unlockForm = {
@@ -933,17 +1096,19 @@ export default {
 
         if (res.ok) {
           const result = await res.json();
-          this.allLockRecords.unshift(result.record || {
-            lock_id: result.lock_id,
-            scope_type: payload.scope_type,
-            scope_id: payload.scope_id,
-            status: result.status,
-            lock_type: result.status,
-            is_active: true,
-            created_by: "Current User",
-            reason_for_change: payload.reason_for_change,
-            created_at: new Date().toISOString(),
-          });
+          this.allLockRecords.unshift(
+            result.record || {
+              lock_id: result.lock_id,
+              scope_type: payload.scope_type,
+              scope_id: payload.scope_id,
+              status: result.status,
+              lock_type: result.status,
+              is_active: true,
+              created_by: "Current User",
+              reason_for_change: payload.reason_for_change,
+              created_at: new Date().toISOString(),
+            }
+          );
           this.calculateStats();
           this.syncTreeStatuses();
           this.isLockModalOpen = false;
@@ -975,7 +1140,11 @@ export default {
 
         if (res.ok) {
           const result = await res.json();
-          const target = this.allLockRecords.find(r => r.lock_id === result.lock_id || r.scope_id === this.unlockForm.scope_id);
+          const target = this.allLockRecords.find(
+            (r) =>
+              r.lock_id === result.lock_id ||
+              r.scope_id === this.unlockForm.scope_id
+          );
           if (target) {
             target.is_active = false;
             target.status = "UNLOCKED";

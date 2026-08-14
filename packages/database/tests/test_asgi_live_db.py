@@ -1,6 +1,6 @@
 import os
 import subprocess
-from unittest.mock import ANY, AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -94,29 +94,20 @@ async def test_clean_postgres_databases_calls_truncate():
     and restores triggers across all service databases.
     """
     mock_conn = AsyncMock()
-    mock_conn.__aenter__.return_value = mock_conn
+    mock_conn.fetch.return_value = [
+        {"schemaname": "public", "tablename": "clinical_subjects"}
+    ]
 
-    mock_begin_ctx = AsyncMock()
-    mock_begin_ctx.__aenter__.return_value = mock_conn
-
-    # Mock engine creation and transaction context using AsyncMock and MagicMock
-    mock_engine = MagicMock()
-    mock_engine.begin.return_value = mock_begin_ctx
-    mock_engine.dispose = AsyncMock()
-
-    with patch("sqlalchemy.ext.asyncio.create_async_engine", return_value=mock_engine):
+    with (
+        patch.dict(os.environ, {"USE_LIVE_DB": "true"}),
+        patch("asyncpg.connect", return_value=mock_conn) as mock_connect,
+    ):
         await clean_postgres_databases()
 
-        # Verify replica session replication role was set to disable triggers/FKs
-        mock_conn.execute.assert_any_call(
-            ANY
-        )  # SET session_replication_role = 'replica';
-
-        # Verify replica role was reset to origin
-        resets = []
-        for call in mock_conn.execute.call_args_list:
-            arg = call[0][0]
-            sql_text = getattr(arg, "text", str(arg))
-            if "SET session_replication_role" in sql_text:
-                resets.append(call)
-        assert len(resets) > 0
+    assert mock_connect.await_count == 11
+    mock_conn.execute.assert_any_await("SET session_replication_role = 'replica';")
+    mock_conn.execute.assert_any_await(
+        'TRUNCATE TABLE "public"."clinical_subjects" RESTART IDENTITY CASCADE;'
+    )
+    mock_conn.execute.assert_any_await("SET session_replication_role = 'origin';")
+    assert mock_conn.close.await_count == 11

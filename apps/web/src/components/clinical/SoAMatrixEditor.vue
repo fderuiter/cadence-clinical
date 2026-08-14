@@ -2,15 +2,29 @@
   <div class="soa-matrix-editor">
     <div class="matrix-toolbar">
       <div class="toolbar-stats">
-        <span class="stat-badge"><strong>{{ localActivities.length }}</strong> Procedures</span>
-        <span class="stat-badge"><strong>{{ visits.length }}</strong> Visits</span>
-        <span class="stat-badge highlight"><strong>{{ totalAssignedCells }}</strong> Scheduled Activities</span>
+        <span class="stat-badge"
+          ><strong>{{ localActivities.length }}</strong> Procedures</span
+        >
+        <span class="stat-badge"
+          ><strong>{{ visits.length }}</strong> Visits</span
+        >
+        <span class="stat-badge highlight"
+          ><strong>{{ totalAssignedCells }}</strong> Scheduled Activities</span
+        >
       </div>
       <div class="toolbar-actions">
-        <button type="button" class="btn btn-secondary btn-sm" @click="showAddProcedure = !showAddProcedure">
+        <button
+          type="button"
+          class="btn btn-secondary btn-sm"
+          @click="showAddProcedure = !showAddProcedure"
+        >
           + Add Procedure
         </button>
-        <button type="button" class="btn btn-secondary btn-sm" @click="showAddVisit = !showAddVisit">
+        <button
+          type="button"
+          class="btn btn-secondary btn-sm"
+          @click="showAddVisit = !showAddVisit"
+        >
           + Add Visit
         </button>
       </div>
@@ -20,11 +34,20 @@
     <div v-if="showAddProcedure" class="inline-add-box">
       <div class="inline-form-group">
         <label for="new-proc-name">Procedure Name</label>
-        <input id="new-proc-name" v-model="newProcedureName" placeholder="e.g. Pharmacokinetic Blood Sampling" class="input-text" />
+        <input
+          id="new-proc-name"
+          v-model="newProcedureName"
+          placeholder="e.g. Pharmacokinetic Blood Sampling"
+          class="input-text"
+        />
       </div>
       <div class="inline-form-group">
         <label for="new-proc-domain">CDASH Domain</label>
-        <select id="new-proc-domain" v-model="newProcedureDomain" class="input-select">
+        <select
+          id="new-proc-domain"
+          v-model="newProcedureDomain"
+          class="input-select"
+        >
           <option value="VS">VS - Vital Signs</option>
           <option value="EG">EG - ECG</option>
           <option value="LB">LB - Laboratory</option>
@@ -36,26 +59,59 @@
           <option value="EX">EX - Exposure</option>
         </select>
       </div>
-      <button type="button" class="btn btn-primary btn-sm" :disabled="!newProcedureName.trim()" @click="addCustomProcedure">
+      <button
+        type="button"
+        class="btn btn-primary btn-sm"
+        :disabled="!newProcedureName.trim()"
+        @click="addCustomProcedure"
+      >
         Save Procedure
       </button>
-      <button type="button" class="btn btn-secondary btn-sm" @click="showAddProcedure = false">Cancel</button>
+      <button
+        type="button"
+        class="btn btn-secondary btn-sm"
+        @click="showAddProcedure = false"
+      >
+        Cancel
+      </button>
     </div>
 
     <!-- Inline Add Visit Form -->
     <div v-if="showAddVisit" class="inline-add-box">
       <div class="inline-form-group">
         <label for="new-visit-name">Visit Name</label>
-        <input id="new-visit-name" v-model="newVisitName" placeholder="e.g. Visit 4 / Week 8" class="input-text" />
+        <input
+          id="new-visit-name"
+          v-model="newVisitName"
+          placeholder="e.g. Visit 4 / Week 8"
+          class="input-text"
+        />
       </div>
       <div class="inline-form-group">
         <label for="new-visit-day">Target Day</label>
-        <input id="new-visit-day" v-model.number="newVisitDay" type="number" class="input-text" style="width: 90px;" />
+        <input
+          id="new-visit-day"
+          v-model.number="newVisitDay"
+          type="number"
+          class="input-text"
+          style="width: 90px"
+        />
       </div>
-      <button type="button" class="btn btn-primary btn-sm" :disabled="!newVisitName.trim()" @click="addCustomVisit">
+      <button
+        type="button"
+        class="btn btn-primary btn-sm"
+        :disabled="!newVisitName.trim()"
+        @click="addCustomVisit"
+      >
         Save Visit
       </button>
-      <button type="button" class="btn btn-secondary btn-sm" @click="showAddVisit = false">Cancel</button>
+      <button
+        type="button"
+        class="btn btn-secondary btn-sm"
+        @click="showAddVisit = false"
+      >
+        Cancel
+      </button>
     </div>
 
     <!-- High Density Matrix Table -->
@@ -63,7 +119,9 @@
       <table class="soa-interactive-table">
         <thead>
           <tr>
-            <th class="col-procedure-header" scope="col">Clinical Procedure / Assessment</th>
+            <th class="col-procedure-header" scope="col">
+              Clinical Procedure / Assessment
+            </th>
             <th class="col-domain-header" scope="col">CDASH</th>
             <th
               v-for="visit in visits"
@@ -77,7 +135,11 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="act in localActivities" :key="act.activity_name" class="soa-row">
+          <tr
+            v-for="act in localActivities"
+            :key="act.activity_name"
+            class="soa-row"
+          >
             <td class="cell-procedure-name">
               <span class="procedure-label">{{ act.activity_name }}</span>
               <span v-if="act.biomedical_concept_code" class="concept-code-tag">
@@ -85,7 +147,10 @@
               </span>
             </td>
             <td class="cell-domain-tag">
-              <span class="cdash-badge" :class="`cdash-${act.cdash_domain.toLowerCase()}`">
+              <span
+                class="cdash-badge"
+                :class="`cdash-${act.cdash_domain.toLowerCase()}`"
+              >
                 {{ act.cdash_domain }}
               </span>
             </td>
@@ -144,7 +209,10 @@ watch(
 );
 
 const isAssigned = (act, visitName) => {
-  return Array.isArray(act.assigned_visit_names) && act.assigned_visit_names.includes(visitName);
+  return (
+    Array.isArray(act.assigned_visit_names) &&
+    act.assigned_visit_names.includes(visitName)
+  );
 };
 
 const toggleAssignment = (act, visitName) => {
@@ -161,7 +229,10 @@ const toggleAssignment = (act, visitName) => {
 };
 
 const totalAssignedCells = computed(() => {
-  return localActivities.value.reduce((acc, curr) => acc + (curr.assigned_visit_names?.length || 0), 0);
+  return localActivities.value.reduce(
+    (acc, curr) => acc + (curr.assigned_visit_names?.length || 0),
+    0
+  );
 });
 
 const addCustomProcedure = () => {
@@ -260,7 +331,8 @@ const addCustomVisit = () => {
   color: #475569;
 }
 
-.input-text, .input-select {
+.input-text,
+.input-select {
   padding: 6px 10px;
   border: 1px solid #cbd5e1;
   border-radius: 4px;
@@ -353,13 +425,34 @@ const addCustomVisit = () => {
   color: #334155;
 }
 
-.cdash-vs { background-color: #e0f2fe; color: #0369a1; }
-.cdash-eg { background-color: #fef3c7; color: #b45309; }
-.cdash-lb { background-color: #f3e8ff; color: #7e22ce; }
-.cdash-qs { background-color: #dcfce7; color: #15803d; }
-.cdash-pe { background-color: #fee2e2; color: #b91c1c; }
-.cdash-ae { background-color: #ffedd5; color: #c2410c; }
-.cdash-dm { background-color: #f1f5f9; color: #475569; }
+.cdash-vs {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+.cdash-eg {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+.cdash-lb {
+  background-color: #f3e8ff;
+  color: #7e22ce;
+}
+.cdash-qs {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+.cdash-pe {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+.cdash-ae {
+  background-color: #ffedd5;
+  color: #c2410c;
+}
+.cdash-dm {
+  background-color: #f1f5f9;
+  color: #475569;
+}
 
 .cell-toggle {
   text-align: center;
