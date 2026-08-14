@@ -224,6 +224,12 @@ class DictionaryImportJob(AuditedModel):
     records_imported: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     errors_encountered: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     error_details: Mapped[str] = mapped_column(String(1000), nullable=True)
+    file_hash: Mapped[str] = mapped_column(String(64), nullable=True)
+    retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    user_id: Mapped[str] = mapped_column(String(100), nullable=True)
+    change_reason: Mapped[str] = mapped_column(String(500), nullable=True)
+    temp_zip_path: Mapped[str] = mapped_column(String(500), nullable=True)
 
 
 class ClinicalCodingAssignment(AuditedModel):

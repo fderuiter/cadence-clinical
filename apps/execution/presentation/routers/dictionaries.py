@@ -3,6 +3,7 @@
 Requirements: PRD-SYS-008
 """
 
+import hashlib
 import os
 import shutil
 import tempfile
@@ -164,10 +165,38 @@ async def import_dictionary(
             detail=f"Failed to process file upload: {str(e)}",
         )
 
+    # 3. Calculate file hash
+    sha256 = hashlib.sha256()
+    with open(temp_file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            sha256.update(chunk)
+    file_hash = sha256.hexdigest()
+
+    # 4. Check for duplicate imports
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(DictionaryImportJob).where(
+            DictionaryImportJob.file_hash == file_hash,
+            DictionaryImportJob.status.in_(
+                [ImportState.COMPLETED, ImportState.PENDING, ImportState.PROCESSING]
+            ),
+        )
+        res = await session.execute(stmt)
+        existing_job = res.scalars().first()
+        if existing_job:
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+            raise HTTPException(
+                status_code=400,
+                detail="Duplicate import detected: this file hash has already been processed or is queued.",
+            )
+
     # Convert parameter enum to database model enum
     db_type = DBDictionaryType[dictionary_type.value]
 
-    # 3. Create the initial DictionaryImportJob record in PENDING status
+    user_id = current_user_id.get()
+    change_reason = current_change_reason.get()
+
+    # 5. Create the initial DictionaryImportJob record in PENDING status
     async with db_manager.get_session_maker()() as session, session.begin():
         job = DictionaryImportJob(
             dictionary_type=db_type,
@@ -177,16 +206,17 @@ async def import_dictionary(
             progress_percentage=0,
             records_imported=0,
             errors_encountered=0,
+            file_hash=file_hash,
+            user_id=user_id,
+            change_reason=change_reason,
+            temp_zip_path=temp_file_path,
         )
         session.add(job)
         await session.flush()
         job_id = job.id
         started_at = job.started_at
 
-    # 4. Schedule the background parsing task
-    user_id = current_user_id.get()
-    change_reason = current_change_reason.get()
-
+    # 6. Schedule the background parsing task
     background_tasks.add_task(
         process_dictionary_import,
         job_id=job_id,

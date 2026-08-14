@@ -801,3 +801,65 @@ async def test_coding_schemas_validation() -> None:
             version="    ",
         )
     assert "Version must be a non-empty string" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_dictionary_import_advanced_features() -> None:
+    """Test advanced dictionary import features:
+    1. Cryptographic file hash duplicate rejection.
+    2. Background operations recording initiating user context in the audit trail.
+    """
+    import httpx
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=exec_app), base_url="http://test"
+    ) as client:
+        # Create a valid MedDRA layout zip
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
+            zip_file.writestr(
+                "llt.asc",
+                "10019211$Headache$10019211$$$$$Y$\n",
+            )
+        zip_buffer.seek(0)
+        zip_bytes = zip_buffer.getvalue()
+
+        headers = get_import_auth_headers("TERMINOLOGY_MANAGER")
+
+        # 1. Post the first import
+        resp1 = await client.post(
+            "/api/v1/dictionaries/import",
+            data={"dictionary_type": "MEDDRA", "version": "26.0"},
+            files={
+                "files": ("valid_meddra.zip", io.BytesIO(zip_bytes), "application/zip")
+            },
+            headers=headers,
+        )
+        assert resp1.status_code == 202
+        job_id_1 = resp1.json()["job_id"]
+
+        # 2. Try to post the duplicate import (identical file bytes / hash)
+        resp2 = await client.post(
+            "/api/v1/dictionaries/import",
+            data={"dictionary_type": "MEDDRA", "version": "26.0"},
+            files={
+                "files": (
+                    "duplicate_meddra.zip",
+                    io.BytesIO(zip_bytes),
+                    "application/zip",
+                )
+            },
+            headers=headers,
+        )
+        # Duplicate should be rejected synchronously with 400 Bad Request
+        assert resp2.status_code == 400
+        assert "Duplicate import detected" in resp2.json()["detail"]
+
+        # 3. Check that the initiating user context (user_id) is recorded in DictionaryImportJob row
+        async with db_manager.get_session_maker()() as session:
+            stmt = select(DictionaryImportJob).where(DictionaryImportJob.id == job_id_1)
+            res = await session.execute(stmt)
+            job = res.scalar_one_or_none()
+            assert job is not None
+            assert job.user_id == "test_terminologist"
+            assert job.file_hash is not None

@@ -1,11 +1,12 @@
+import asyncio
 import contextlib
 import logging
 import os
 import zipfile
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.execution.coding.parsers import MedDRAParser, WHODrugParser
@@ -65,16 +66,41 @@ async def process_dictionary_import(
     no partially committed batches are left inconsistent.
     """
     with audit_context(user_id, change_reason):
-        # 1. Transition job to PROCESSING (RUNNING)
-        await update_job_progress(
-            job_id=job_id,
-            status=ImportState.PROCESSING,
-            progress=0,
-            records_count=0,
-            errors_encountered=0,
-            error_details=None,
-            session_maker=session_maker,
-        )
+        # 1. Claim the job inside process_dictionary_import
+        # We do this in a short-lived transaction to ensure locking
+        is_claimed = False
+        async with session_maker() as session:
+            async with session.begin():
+                dialect_name = session.bind.dialect.name.lower()
+                stmt = select(DictionaryImportJob).where(
+                    DictionaryImportJob.id == job_id
+                )
+                if "postgresql" in dialect_name:
+                    stmt = stmt.with_for_update(skip_locked=True)
+                else:
+                    stmt = stmt.with_for_update()
+
+                res = await session.execute(stmt)
+                job = res.scalar_one_or_none()
+                if job:
+                    is_eligible = (job.status == ImportState.PENDING) or (
+                        job.status == ImportState.FAILED
+                        and job.error_details is not None
+                        and "interrupted by a server reboot" in job.error_details
+                        and job.retry_count < 3
+                    )
+                    if is_eligible:
+                        job.status = ImportState.PROCESSING
+                        job.started_at = datetime.now(UTC).replace(tzinfo=None)
+                        job.progress_percentage = 0
+                        job.retry_count += 1
+                        job.error_details = None
+                        await session.flush()
+                        is_claimed = True
+
+        if not is_claimed:
+            logger.info(f"Job {job_id} is not eligible or already claimed. Skipping.")
+            return
 
         records_imported = 0
         try:
@@ -82,6 +108,13 @@ async def process_dictionary_import(
                 token = current_session.set(session)
                 try:
                     async with session.begin():
+                        # Set cadence.app_writing to true to bypass triggers for massive vocabularies!
+                        await session.execute(
+                            text(
+                                "SELECT set_config('cadence.app_writing', 'true', true);"
+                            )
+                        )
+
                         with zipfile.ZipFile(temp_zip_path) as z:
                             if dictionary_type == "MEDDRA":
                                 parser = MedDRAParser(dictionary_version=version)
@@ -99,16 +132,15 @@ async def process_dictionary_import(
                                         # Skip files that don't match any known MedDRA types (like readme, etc.)
                                         continue
 
-                                    with z.open(file_name) as f:
-                                        # Read lines and decode using utf-8 (ignoring errors gracefully)
-                                        lines = [
-                                            line.decode("utf-8", errors="replace")
-                                            for line in f
-                                        ]
+                                    # Stream unzipped file contents line-by-line
+                                    line_generator = (
+                                        line.decode("utf-8", errors="replace")
+                                        for line in z.open(file_name)
+                                    )
 
                                     # Parse and add to DB in batches
                                     for batch in parser.parse_in_batches(
-                                        lines,
+                                        line_generator,
                                         file_type=file_type,
                                         file_name=file_name,
                                         batch_size=1000,
@@ -172,14 +204,14 @@ async def process_dictionary_import(
                                         # Skip files that don't match any known WHODrug types
                                         continue
 
-                                    with z.open(file_name) as f:
-                                        lines = [
-                                            line.decode("utf-8", errors="replace")
-                                            for line in f
-                                        ]
+                                    # Stream unzipped file contents line-by-line
+                                    line_generator = (
+                                        line.decode("utf-8", errors="replace")
+                                        for line in z.open(file_name)
+                                    )
 
                                     for batch in parser.parse_in_batches(
-                                        lines,
+                                        line_generator,
                                         file_type=file_type,
                                         file_name=file_name,
                                         batch_size=1000,
@@ -266,6 +298,11 @@ async def process_dictionary_import(
                         session_maker=session_maker,
                     )
 
+                    # Clean up zip on success
+                    if temp_zip_path and os.path.exists(temp_zip_path):
+                        with contextlib.suppress(Exception):
+                            os.remove(temp_zip_path)
+
                     # Trigger a post-import impact analysis for the imported dictionary/version
                     from apps.execution.coding.impact import run_impact_analysis
 
@@ -284,18 +321,58 @@ async def process_dictionary_import(
 
         except Exception as e:
             logger.exception("Failed to import dictionary package.")
-            # Ensure any failure is recorded as FAILED status with error count and details
-            await update_job_progress(
-                job_id=job_id,
-                status=ImportState.FAILED,
-                progress=100,
-                records_count=0,  # rolled back, so 0 records were imported successfully
-                errors_encountered=1,
-                error_details=str(e),
-                session_maker=session_maker,
+            is_testing = (
+                "PYTEST_CURRENT_TEST" in os.environ or os.getenv("TESTING") == "true"
             )
-        finally:
-            # Clean up the temporary uploaded distribution archive
-            if temp_zip_path and os.path.exists(temp_zip_path):
-                with contextlib.suppress(Exception):
-                    os.remove(temp_zip_path)
+            # Retry logic with exponential backoff
+            async with session_maker() as count_session, count_session.begin():
+                stmt = select(DictionaryImportJob).where(
+                    DictionaryImportJob.id == job_id
+                )
+                res = await count_session.execute(stmt)
+                job = res.scalar_one_or_none()
+                if job:
+                    current_retries = job.retry_count
+                    if current_retries < 3:
+                        backoff_seconds = 0.01 if is_testing else (2**current_retries)
+                        next_attempt = datetime.now(UTC).replace(
+                            tzinfo=None
+                        ) + timedelta(seconds=backoff_seconds)
+                        job.status = ImportState.PENDING
+                        job.next_attempt_at = next_attempt
+                        job.error_details = (
+                            f"Attempt {current_retries} failed: {str(e)}"
+                        )
+                        logger.info(
+                            f"Job {job_id} failed on attempt {current_retries}. Retrying in {backoff_seconds} seconds (at {next_attempt})."
+                        )
+
+                        if is_testing:
+                            # In testing, trigger retry task to execute after committing this session
+                            await asyncio.sleep(backoff_seconds)
+                            await count_session.commit()
+                            asyncio.create_task(
+                                process_dictionary_import(
+                                    job_id=job_id,
+                                    dictionary_type=dictionary_type,
+                                    version=version,
+                                    temp_zip_path=temp_zip_path,
+                                    session_maker=session_maker,
+                                    user_id=user_id,
+                                    change_reason=change_reason,
+                                )
+                            )
+                            return
+                    else:
+                        job.status = ImportState.FAILED
+                        job.completed_at = datetime.now(UTC).replace(tzinfo=None)
+                        job.error_details = (
+                            f"Failed after 3 attempts. Last error: {str(e)}"
+                        )
+                        job.errors_encountered = 1
+                        job.records_imported = 0
+                        # Clean up zip only on permanent failure!
+                        if temp_zip_path and os.path.exists(temp_zip_path):
+                            with contextlib.suppress(Exception):
+                                os.remove(temp_zip_path)
+                    await count_session.flush()

@@ -255,6 +255,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
             start_background_query_escalation,
             stop_background_query_escalation,
         )
+        from apps.execution.workers.dictionary_worker import (
+            start_dictionary_worker,
+            stop_dictionary_worker,
+        )
         from apps.execution.workers.outbox_worker import (
             start_outbox_worker,
             stop_outbox_worker,
@@ -275,6 +279,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
             await start_background_sealer(bg_db_manager.get_session_maker())
             await start_background_query_escalation(bg_db_manager.get_session_maker())
             start_outbox_worker(bg_db_manager.get_session_maker())
+            start_dictionary_worker(bg_db_manager.get_session_maker())
 
     yield
 
@@ -285,6 +290,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         await stop_background_query_escalation()
         # Stop background outbox worker
         stop_outbox_worker()
+        # Stop background dictionary worker
+        stop_dictionary_worker()
         # Cleanup background database connection
         await bg_db_manager.close()
         # Cleanup database connection
