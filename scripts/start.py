@@ -53,6 +53,45 @@ def run_web_server(service: str, host: str, port: int, extra_args: list[str]) ->
     to preserve signal propagation (SIGTERM/SIGINT) as PID 1, or falls back to
     subprocess.run.
     """
+    if service.lower() == "gateway" and os.getenv("GATEWAY_ENGINE", "python").lower() == "nestjs":
+        fallback_port = 8014
+        print(f"[GATEWAY] Launching background legacy Python gateway on port {fallback_port} for CDISC/eCOA/USDM/OpenAPI routing...")
+        python_cmd = [
+            sys.executable,
+            "-m",
+            "uvicorn",
+            "apps.gateway.main:app",
+            "--host",
+            host,
+            "--port",
+            str(fallback_port),
+        ]
+        # Start python gateway in background
+        subprocess.Popen(python_cmd)
+
+        print("[GATEWAY] Compiling NestJS application...")
+        subprocess.run(["pnpm", "--filter", "gateway-rewrite", "build"], check=True)
+        print(f"[GATEWAY] Launching NestJS Fastify gateway on port {port}...")
+
+        node_cmd = [
+            "node",
+            "packages/gateway-rewrite/dist/main.js",
+        ]
+        os.environ["PORT"] = str(port)
+        os.environ["HOST"] = host
+        os.environ["PYTHON_GATEWAY_URL"] = f"http://{host}:{fallback_port}"
+
+        if os.name != "nt":
+            try:
+                os.execvp("node", node_cmd)
+            except FileNotFoundError:
+                # Fallback
+                subprocess.run(node_cmd)
+                sys.exit(0)
+        else:
+            res = subprocess.run(node_cmd)
+            sys.exit(res.returncode)
+
     print(f"[{service.upper()}] Launching web server on {host}:{port}...")
 
     uvicorn_cmd = [

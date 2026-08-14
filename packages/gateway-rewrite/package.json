@@ -8,11 +8,16 @@
     "test": "vitest run",
     "build": "tsc"
   },
-  "devDependencies": {
+  "dependencies": {
     "@nestjs/common": "^11.1.29",
     "@nestjs/core": "^11.1.29",
-    "@types/node": "^26.2.0",
+    "@nestjs/platform-fastify": "^11.1.29",
+    "fastify": "^5.2.1",
     "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
     "typescript": "^5.0.0",
     "vitest": "^4.1.10"
   }
