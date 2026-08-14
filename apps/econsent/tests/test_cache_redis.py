@@ -29,7 +29,8 @@ def test_redis_unconfigured_graceful_fallback():
 def test_redis_unreachable_graceful_fallback():
     """Verify that if REDIS_HOST is configured but unreachable, initialization succeeds and doesn't crash."""
     with patch.dict(
-        os.environ, {"REDIS_HOST": "unreachable.redis.local", "REDIS_PORT": "6379"}
+        os.environ,
+        {"REDIS_HOST": "unreachable.redis.local", "REDIS_PORT": "6379"},
     ):
         with patch("redis.Redis") as mock_redis:
             # Simulate Redis connection failure on ping/subscribe
@@ -50,7 +51,8 @@ def test_redis_unreachable_graceful_fallback():
 def test_redis_publish_on_invalidate_and_clear():
     """Verify that calling invalidate or clear on cache publishes lightweight payloads to Redis."""
     with patch.dict(
-        os.environ, {"REDIS_HOST": "mock.redis.local", "REDIS_CHANNEL": "test_channel"}
+        os.environ,
+        {"REDIS_HOST": "mock.redis.local", "REDIS_CHANNEL": "test_channel"},
     ):
         mock_pub_client = MagicMock()
         with patch("redis.Redis", return_value=mock_pub_client):
@@ -117,15 +119,13 @@ def test_redis_publish_on_invalidate_and_clear():
 def test_redis_subscriber_receives_and_evicts_cache():
     """Verify that background subscriber thread receives messages and evicts entries locally without loop republishes."""
     with patch.dict(
-        os.environ, {"REDIS_HOST": "mock.redis.local", "REDIS_CHANNEL": "test_channel"}
+        os.environ,
+        {"REDIS_HOST": "mock.redis.local", "REDIS_CHANNEL": "test_channel"},
     ):
-        # We want to test that the background thread listens and evicts.
-        # We can mock the Redis instance returned in _run_subscriber.
         mock_r = MagicMock()
         mock_pubsub = MagicMock()
         mock_r.pubsub.return_value = mock_pubsub
 
-        # We want pubsub.listen() to yield a message, then exit or sleep
         messages = [
             {
                 "type": "message",
@@ -158,19 +158,18 @@ def test_redis_subscriber_receives_and_evicts_cache():
 
         mock_pubsub.listen = mock_listen
 
-        # Get original _run_subscriber before entering mock patch block
         original_run_subscriber = ApprovedTranslationCache._run_subscriber
 
-        # Mock the time.sleep in the retry loop so the test completes quickly when error is raised
-        # Also patch _run_subscriber to do nothing on init, preventing the background thread from starting automatically
         with (
             patch("redis.Redis", return_value=mock_r),
-            patch("time.sleep", side_effect=InterruptedError("Stop loop")),
             patch.object(
                 ApprovedTranslationCache, "_run_subscriber", return_value=None
             ),
         ):
             cache = ApprovedTranslationCache()
+            cache._stop_event.wait = MagicMock(
+                side_effect=InterruptedError("Stop loop")
+            )
             # Deactivate publisher publish so we can assert no republishing occurs (avoiding infinite loops)
             mock_pub_client = MagicMock()
             cache._pub_client = mock_pub_client
@@ -249,7 +248,8 @@ def test_redis_publish_error_handling():
 
 def test_redis_subscriber_invalidate_template():
     with patch.dict(
-        os.environ, {"REDIS_HOST": "mock.redis.local", "REDIS_CHANNEL": "test_channel"}
+        os.environ,
+        {"REDIS_HOST": "mock.redis.local", "REDIS_CHANNEL": "test_channel"},
     ):
         mock_r = MagicMock()
         mock_pubsub = MagicMock()
@@ -308,7 +308,9 @@ def test_redis_subscriber_invalidate_template():
 
 @pytest.mark.asyncio
 async def test_get_approved_template_translation_helper():
-    from apps.econsent.infrastructure.cache import get_approved_template_translation
+    from apps.econsent.infrastructure.cache import (
+        get_approved_template_translation,
+    )
 
     cache = ApprovedTranslationCache()
 

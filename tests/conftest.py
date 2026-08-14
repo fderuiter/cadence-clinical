@@ -1,9 +1,15 @@
 import asyncio
 import os
+import sys
+import threading
+import time
 import uuid
 from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
+import pytest_asyncio
 from neo4j.exceptions import TransientError
 
 # Ensure offline terminology fallback is active for test isolation and speed
@@ -18,9 +24,24 @@ os.environ.setdefault(
     "INBOUND_EMAIL_HMAC_SECRET", "test-email-hmac-secret-placeholder-xyz"
 )
 
+# Service database prefix catalog for isolated PostgreSQL testing
+SERVICE_DB_PREFIXES = [
+    "cadence_edc",
+    "cadence_etmf",
+    "cadence_ctms",
+    "cadence_quality",
+    "cadence_interop",
+    "cadence_tickets",
+    "cadence_notifications",
+    "cadence_econsent",
+    "cadence_safety",
+    "cadence_org",
+    "cadence_eisf",
+]
 
-# Identify and override Database URL for workers early, and ensure database isolation
-def get_postgres_base_config():
+
+def get_postgres_base_config() -> str:
+    """Resolve the base PostgreSQL URL (without target database name)."""
     url = (
         os.environ.get("TEST_DATABASE_URL")
         or os.environ.get("DATABASE_URL")
@@ -36,7 +57,110 @@ def get_postgres_base_config():
     return "postgresql+asyncpg://cadence:cadence_password@localhost:5432/"  # pragma: allowlist secret
 
 
-async def create_databases_async(worker_suffix: str):
+def get_run_uid(config: Any = None) -> str:
+    """Resolve the test run identifier unique to this pytest invocation.
+
+    Checks workerinput from xdist first, then env variables, falling back to a deterministic 8-char hex string.
+    """
+    if (
+        config
+        and hasattr(config, "workerinput")
+        and "cadence_run_uid" in config.workerinput
+    ):
+        raw_uid = str(config.workerinput["cadence_run_uid"])
+    else:
+        raw_uid = (
+            os.environ.get("PYTEST_XDIST_TESTRUNUID")
+            or os.environ.get("CADENCE_TEST_RUN_ID")
+            or ""
+        )
+    safe_uid = "".join(c for c in raw_uid if c.isalnum())
+    if not safe_uid:
+        safe_uid = uuid.uuid4().hex[:8]
+        os.environ["PYTEST_XDIST_TESTRUNUID"] = safe_uid
+        os.environ["CADENCE_TEST_RUN_ID"] = safe_uid
+    return safe_uid[:8]
+
+
+def get_worker_id(config: Any = None) -> str:
+    """Resolve the xdist worker label (e.g. 'gw0', 'gw1') or 'main' for single-process runs."""
+    if config and hasattr(config, "workerinput") and "workerid" in config.workerinput:
+        return str(config.workerinput["workerid"])
+    return os.environ.get("PYTEST_XDIST_WORKER", "main")
+
+
+def build_worker_suffix(run_uid: str, worker_id: str) -> str:
+    """Build a database suffix unique to both the test run and worker process."""
+    return f"_{run_uid}_{worker_id}"
+
+
+def _build_worker_suffix(config: Any = None) -> str:
+    """Build the active worker suffix based on current configuration and environment."""
+    run_uid = get_run_uid(config)
+    worker_id = get_worker_id(config)
+    return build_worker_suffix(run_uid, worker_id)
+
+
+# Module-level default suffix for backward compatibility with direct symbol imports
+worker_suffix = _build_worker_suffix()
+
+
+def is_xdist_controller(config: Any) -> bool:
+    """Return True if this process is the xdist controller/master process (not a worker and not single-process)."""
+    if not config:
+        return False
+    # If workerinput exists on config, it is definitely a worker node
+    if hasattr(config, "workerinput"):
+        return False
+    # Check if xdist is active and distributing to multiple processes
+    numprocesses = getattr(config.option, "numprocesses", None)
+    dist = getattr(config.option, "dist", "no")
+    pluginmanager = getattr(config, "pluginmanager", None)
+    has_xdist_plugin = pluginmanager.hasplugin("xdist") if pluginmanager else False
+    return bool(
+        (numprocesses is not None and numprocesses > 0)
+        or (dist != "no" and has_xdist_plugin)
+    )
+
+
+def is_live_db_requested() -> bool:
+    """Return True if live databases (PostgreSQL/Neo4j) are explicitly requested."""
+    return os.environ.get("USE_LIVE_DB") == "true" or os.environ.get(
+        "TEST_DATABASE_URL", ""
+    ).startswith(("postgres", "postgresql"))
+
+
+def should_provision_postgres(config: Any = None) -> bool:
+    """Determine whether the current process should provision PostgreSQL schemas.
+
+    The xdist controller MUST NEVER provision schemas because it runs zero tests.
+    Only worker nodes and single-process runners provision schemas when live db is requested.
+    """
+    if config and is_xdist_controller(config):
+        return False
+    return is_live_db_requested()
+
+
+def run_sync(coro, timeout: float = 30.0):
+    """Execute an async coroutine synchronously with bounded timeout."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    if loop.is_running():
+        import concurrent.futures
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(asyncio.run, coro)
+            return future.result(timeout=timeout)
+    else:
+        return loop.run_until_complete(asyncio.wait_for(coro, timeout=timeout))
+
+
+async def create_databases_async(worker_suffix_val: str, timeout: float = 15.0):
+    """Create isolated PostgreSQL databases for the given worker suffix."""
     import asyncpg
 
     postgres_url = get_postgres_base_config()
@@ -45,21 +169,9 @@ async def create_databases_async(worker_suffix: str):
         + "/postgres"
     )
 
-    db_names = [
-        f"cadence_edc{worker_suffix}",
-        f"cadence_etmf{worker_suffix}",
-        f"cadence_ctms{worker_suffix}",
-        f"cadence_quality{worker_suffix}",
-        f"cadence_interop{worker_suffix}",
-        f"cadence_tickets{worker_suffix}",
-        f"cadence_notifications{worker_suffix}",
-        f"cadence_econsent{worker_suffix}",
-        f"cadence_safety{worker_suffix}",
-        f"cadence_org{worker_suffix}",
-        f"cadence_eisf{worker_suffix}",
-    ]
+    db_names = [f"{prefix}{worker_suffix_val}" for prefix in SERVICE_DB_PREFIXES]
 
-    conn = await asyncpg.connect(clean_url)
+    conn = await asyncpg.connect(clean_url, timeout=5.0)
     try:
         for db_name in db_names:
             await conn.execute(f"""
@@ -82,7 +194,8 @@ async def create_databases_async(worker_suffix: str):
         await conn.close()
 
 
-async def drop_databases_async(worker_suffix: str):
+async def drop_databases_async(worker_suffix_val: str, timeout: float = 15.0):
+    """Drop isolated PostgreSQL databases for the given worker suffix."""
     import asyncpg
 
     postgres_url = get_postgres_base_config()
@@ -91,22 +204,10 @@ async def drop_databases_async(worker_suffix: str):
         + "/postgres"
     )
 
-    db_names = [
-        f"cadence_edc{worker_suffix}",
-        f"cadence_etmf{worker_suffix}",
-        f"cadence_ctms{worker_suffix}",
-        f"cadence_quality{worker_suffix}",
-        f"cadence_interop{worker_suffix}",
-        f"cadence_tickets{worker_suffix}",
-        f"cadence_notifications{worker_suffix}",
-        f"cadence_econsent{worker_suffix}",
-        f"cadence_safety{worker_suffix}",
-        f"cadence_org{worker_suffix}",
-        f"cadence_eisf{worker_suffix}",
-    ]
+    db_names = [f"{prefix}{worker_suffix_val}" for prefix in SERVICE_DB_PREFIXES]
 
     try:
-        conn = await asyncpg.connect(clean_url)
+        conn = await asyncpg.connect(clean_url, timeout=5.0)
         try:
             for db_name in db_names:
                 try:
@@ -126,41 +227,46 @@ async def drop_databases_async(worker_suffix: str):
         print(f"[conftest] Error connecting to postgres for drop: {e}")
 
 
-def run_sync(coro):
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+async def drop_run_databases_async(run_uid: str, timeout: float = 20.0):
+    """Drop all test databases matching a specific run UID (safeguard for xdist controller teardown)."""
+    import asyncpg
 
-    if loop.is_running():
-        import concurrent.futures
-
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            future = executor.submit(asyncio.run, coro)
-            return future.result()
-    else:
-        return loop.run_until_complete(coro)
-
-
-def _build_worker_suffix() -> str:
-    """Build a database suffix unique to both the test run and worker process."""
-    run_uid = (
-        os.environ.get("PYTEST_XDIST_TESTRUNUID")
-        or os.environ.get("CADENCE_TEST_RUN_ID")
-        or uuid.uuid4().hex
+    postgres_url = get_postgres_base_config()
+    clean_url = (
+        postgres_url.replace("postgresql+asyncpg://", "postgresql://").rstrip("/")
+        + "/postgres"
     )
-    safe_run_uid = "".join(character for character in run_uid if character.isalnum())
-    if not safe_run_uid:
-        safe_run_uid = uuid.uuid4().hex
-    worker_label = os.environ.get("PYTEST_XDIST_WORKER", "main")
-    return f"_{safe_run_uid[:8]}_{worker_label}"
+
+    try:
+        conn = await asyncpg.connect(clean_url, timeout=5.0)
+        try:
+            pattern = f"%_{run_uid}_%"
+            rows = await conn.fetch(
+                "SELECT datname FROM pg_database WHERE datname LIKE $1", pattern
+            )
+            for row in rows:
+                db_name = row["datname"]
+                try:
+                    await conn.execute(f"""
+                        SELECT pg_terminate_backend(pid)
+                        FROM pg_stat_activity
+                        WHERE datname = '{db_name}'
+                          AND pid <> pg_backend_pid();
+                    """)
+                    await conn.execute(f"DROP DATABASE IF EXISTS {db_name};")
+                    print(f"[conftest] Cleaned lingering test database: {db_name}")
+                except Exception as err:
+                    print(f"[conftest] Error cleaning database {db_name}: {err}")
+        finally:
+            await conn.close()
+    except Exception as err:
+        print(
+            f"[conftest] Postgres connection error during run database cleanup: {err}"
+        )
 
 
-worker_suffix = _build_worker_suffix()
-
-
-def verify_live_db_connections():
+def verify_live_db_connections(timeout: float = 10.0):
+    """Assert connectivity to live PostgreSQL and Neo4j instances when running with live DB."""
     from neo4j import AsyncGraphDatabase
     from sqlalchemy import text
     from sqlalchemy.ext.asyncio import create_async_engine
@@ -175,11 +281,9 @@ def verify_live_db_connections():
             async with engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))
 
-        run_sync(check_pg())
-        run_sync(engine.dispose())
+        run_sync(check_pg(), timeout=timeout)
+        run_sync(engine.dispose(), timeout=timeout)
     except Exception as e:
-        import pytest
-
         pytest.exit(
             f"Database connection error: PostgreSQL instance is unreachable. {e}"
         )
@@ -195,14 +299,13 @@ def verify_live_db_connections():
             async with AsyncGraphDatabase.driver(uri, auth=(user, password)) as driver:
                 await driver.verify_connectivity()
 
-        run_sync(check_neo())
+        run_sync(check_neo(), timeout=timeout)
     except Exception as e:
-        import pytest
-
         pytest.exit(f"Database connection error: Neo4j instance is unreachable. {e}")
 
 
-async def create_all_schemas_async(worker_suffix: str):
+async def create_all_schemas_async(worker_suffix_val: str, timeout: float = 30.0):
+    """Run migrations and schema creation for all 11 microservices on this worker's databases."""
     from sqlalchemy.ext.asyncio import create_async_engine
 
     from apps.ctms.migrate import run_migrations as run_ctms_migrations
@@ -212,11 +315,9 @@ async def create_all_schemas_async(worker_suffix: str):
     from apps.eisf.models import Base as EISFBase
     from apps.etmf.database.migrate import run_migrations as run_etmf_migrations
     from apps.etmf.models import Base as ETMFBase
-
-    # Migrations
-    from apps.execution.database.migrate import run_migrations as run_exec_migrations
-
-    # Import bases
+    from apps.execution.database.migrate import (
+        run_migrations as run_exec_migrations,
+    )
     from apps.execution.database.models import Base as ExecBase
     from apps.interop.models import Base as InteropBase
     from apps.notifications.models import Base as NotificationsBase
@@ -242,7 +343,7 @@ async def create_all_schemas_async(worker_suffix: str):
 
     base_postgres_url = get_postgres_base_config()
     for db_prefix, (base, migration_func) in service_bases.items():
-        db_name = f"{db_prefix}{worker_suffix}"
+        db_name = f"{db_prefix}{worker_suffix_val}"
         db_url = f"{base_postgres_url}{db_name}"
 
         if migration_func is not None:
@@ -254,15 +355,15 @@ async def create_all_schemas_async(worker_suffix: str):
             await engine.dispose()
 
 
-if os.environ.get("USE_LIVE_DB") == "true":
-    verify_live_db_connections()
+# Patching and database state tracking
+_initialized_databases: set[str] = set()
+_current_worker_suffix = ""
+_databases_provisioned = False
 
 
-# Patch and create databases
-_initialized_databases = set()
-
-
-def patch_init_db():
+def patch_init_db(suffix: str | None = None) -> None:
+    """Patch database manager singletons to route to this worker's isolated database set."""
+    target_suffix = suffix or _current_worker_suffix or _build_worker_suffix()
     from apps.execution.database.core import DatabaseSessionManager
     from packages.database import RelationalDatabaseManager
 
@@ -286,21 +387,21 @@ def patch_init_db():
     base_postgres_url = get_postgres_base_config()
 
     def patched_exec_init_db(self, database_url: str, **kwargs):
-        if os.environ.get("USE_LIVE_DB") == "true" or database_url.startswith(
+        if is_live_db_requested() or database_url.startswith(
             ("postgres", "postgresql")
         ):
-            db_name = f"cadence_edc{worker_suffix}"
+            db_name = f"cadence_edc{target_suffix}"
             _initialized_databases.add("cadence_edc")
             new_url = f"{base_postgres_url}{db_name}"
             return original_exec_init_db(self, new_url, **kwargs)
         return original_exec_init_db(self, database_url, **kwargs)
 
     def patched_rel_init_db(self, database_url: str, **kwargs):
-        if os.environ.get("USE_LIVE_DB") == "true" or database_url.startswith(
+        if is_live_db_requested() or database_url.startswith(
             ("postgres", "postgresql")
         ):
             base_name = service_map.get(self.service_name, "cadence_edc")
-            db_name = f"{base_name}{worker_suffix}"
+            db_name = f"{base_name}{target_suffix}"
             _initialized_databases.add(base_name)
             new_url = f"{base_postgres_url}{db_name}"
             return original_rel_init_db(self, new_url, **kwargs)
@@ -311,68 +412,264 @@ def patch_init_db():
     original_drop_all = MetaData.drop_all
 
     def patched_drop_all(self, bind=None, tables=None, checkfirst=True):
-        if os.environ.get("USE_LIVE_DB") == "true" or os.environ.get(
-            "TEST_DATABASE_URL", ""
-        ).startswith(("postgres", "postgresql")):
+        if is_live_db_requested() or os.environ.get("TEST_DATABASE_URL", "").startswith(
+            ("postgres", "postgresql")
+        ):
             return None
         return original_drop_all(self, bind=bind, tables=tables, checkfirst=checkfirst)
 
     MetaData.drop_all = patched_drop_all
-
     DatabaseSessionManager.init_db = patched_exec_init_db
     RelationalDatabaseManager.init_db = patched_rel_init_db
 
 
+# Backward compatibility flag
 databases_pre_created = False
 
-# Create worker isolated databases and perform patching if PostgreSQL is available
-try:
-    from filelock import FileLock
 
-    # Independent runs and xdist workers own distinct databases. Scoping the lock
-    # to that database set prevents unrelated local/CI runs from blocking each
-    # other while still protecting a repeated initialization of the same worker.
-    lock_path = f"/tmp/postgres_db_creation{worker_suffix}.lock"
-    with FileLock(lock_path, timeout=180):
-        run_sync(create_databases_async(worker_suffix))
-        # Override the env var so any standard fallback uses isolated DB too
-        os.environ["TEST_DATABASE_URL"] = (
-            f"{get_postgres_base_config()}cadence_edc{worker_suffix}"
-        )
-        patch_init_db()
-        databases_pre_created = True
+# =========================================================================
+# Test Tail & Stall Diagnostics Monitor
+# =========================================================================
 
-        if os.environ.get("USE_LIVE_DB") == "true" or os.environ.get(
-            "TEST_DATABASE_URL", ""
-        ).startswith(("postgres", "postgresql")):
-            print(
-                f"[conftest] Initializing all PostgreSQL schemas for worker {worker_suffix}..."
-            )
-            run_sync(create_all_schemas_async(worker_suffix))
-except Exception as e:
-    if os.environ.get("GITHUB_ACTIONS") == "true":
-        print(f"[conftest] ERROR: Database initialization failed in CI: {e}")
-        if os.environ.get("USE_LIVE_DB") == "true" or os.environ.get(
-            "TEST_DATABASE_URL", ""
-        ).startswith(("postgres", "postgresql")):
-            import pytest
 
-            pytest.exit(
-                f"Database connection error: PostgreSQL instance is unreachable. {e}"
-            )
-        raise
-    elif os.environ.get("USE_LIVE_DB") == "true" or os.environ.get(
-        "TEST_DATABASE_URL", ""
-    ).startswith(("postgres", "postgresql")):
-        import pytest
+class _TestSessionMonitor:
+    """Lightweight test monitor that runs on the xdist controller or single-process runner
 
-        pytest.exit(
-            f"Database connection error: Failed to create/initialize isolated PostgreSQL databases: {e}"
-        )
-    else:
+    to detect long-running tests or worker stalls near the tail of a run.
+    """
+
+    def __init__(self):
+        self._active_tests: dict[str, float] = {}  # nodeid -> start_time
+        self._lock = threading.Lock()
+        self._stop_event = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    def start(self):
+        if self._thread is not None:
+            return
+        self._thread = threading.Thread(target=self._monitor_loop, daemon=True)
+        self._thread.start()
+
+    def stop(self):
+        self._stop_event.set()
+
+    def record_start(self, nodeid: str):
+        with self._lock:
+            self._active_tests[nodeid] = time.time()
+
+    def record_finish(self, nodeid: str):
+        with self._lock:
+            self._active_tests.pop(nodeid, None)
+
+    def _monitor_loop(self):
+        while not self._stop_event.wait(15.0):
+            now = time.time()
+            with self._lock:
+                stalled = [
+                    (nodeid, now - start)
+                    for nodeid, start in self._active_tests.items()
+                    if (now - start) >= 15.0
+                ]
+            if stalled:
+                stalled_summary = ", ".join(
+                    f"{nodeid} ({duration:.1f}s)" for nodeid, duration in stalled[:5]
+                )
+                if len(stalled) > 5:
+                    stalled_summary += f" ... and {len(stalled) - 5} more"
+                print(
+                    f"\n[cadence-test-monitor] ⏳ Outstanding tests executing >15s: {stalled_summary}",
+                    flush=True,
+                )
+
+
+_session_monitor = _TestSessionMonitor()
+
+
+def pytest_runtest_logstart(nodeid, location):
+    """Track when a test node begins execution."""
+    _session_monitor.record_start(nodeid)
+
+
+def pytest_runtest_logfinish(nodeid, location):
+    """Track when a test node finishes execution."""
+    _session_monitor.record_finish(nodeid)
+
+
+def pytest_runtest_logreport(report):
+    """Log warning diagnostics for slow individual test cases exceeding 15 seconds."""
+    if report.when == "call" and report.duration > 15.0:
         print(
-            f"[conftest] Warning: PostgreSQL database is not available ({e}). Skipping worker-isolated DB setup and patching. Tests will fall back to SQLite or mocked states."
+            f"\n[cadence-test-monitor] ⚠️ Slow test completed: {report.nodeid} ({report.duration:.2f}s)",
+            flush=True,
         )
+
+
+# =========================================================================
+# Pytest Lifecycle Hooks
+# =========================================================================
+
+
+def pytest_configure(config):
+    """Pytest configure hook: manages test run UID, xdist coordination, and database provisioning."""
+    global \
+        _current_worker_suffix, \
+        _databases_provisioned, \
+        databases_pre_created, \
+        worker_suffix
+
+    # 1. Determine run UID and worker ID
+    run_uid = get_run_uid(config)
+    worker_id = get_worker_id(config)
+    _current_worker_suffix = build_worker_suffix(run_uid, worker_id)
+    worker_suffix = _current_worker_suffix
+    config._cadence_run_uid = run_uid
+    config._cadence_worker_suffix = _current_worker_suffix
+
+    # 2. Start tail monitor
+    _session_monitor.start()
+
+    # 3. Fail-fast validation when USE_LIVE_DB=true is explicitly active
+    if os.environ.get("USE_LIVE_DB") == "true":
+        verify_live_db_connections()
+
+    # 4. If this is the xdist controller, DO NOT provision databases.
+    if is_xdist_controller(config):
+        return
+
+    # 5. If live DB is requested, provision schemas for this worker / single runner
+    if should_provision_postgres(config):
+        try:
+            from filelock import FileLock
+
+            lock_path = f"/tmp/postgres_db_creation{_current_worker_suffix}.lock"
+            with FileLock(lock_path, timeout=180):
+                run_sync(create_databases_async(_current_worker_suffix), timeout=30.0)
+                os.environ["TEST_DATABASE_URL"] = (
+                    f"{get_postgres_base_config()}cadence_edc{_current_worker_suffix}"
+                )
+                patch_init_db(_current_worker_suffix)
+                _databases_provisioned = True
+                databases_pre_created = True
+
+                print(
+                    f"[conftest] Initializing all PostgreSQL schemas for worker {_current_worker_suffix}..."
+                )
+                run_sync(
+                    create_all_schemas_async(_current_worker_suffix),
+                    timeout=60.0,
+                )
+        except Exception as e:
+            if os.environ.get("GITHUB_ACTIONS") == "true":
+                print(f"[conftest] ERROR: Database initialization failed in CI: {e}")
+                pytest.exit(
+                    f"Database connection error: PostgreSQL instance is unreachable. {e}"
+                )
+            elif is_live_db_requested():
+                pytest.exit(
+                    f"Database connection error: Failed to create/initialize isolated PostgreSQL databases: {e}"
+                )
+            else:
+                print(
+                    f"[conftest] Warning: PostgreSQL database is not available ({e}). Skipping worker-isolated DB setup and patching. Tests will fall back to SQLite or mocked states."
+                )
+
+
+def pytest_configure_node(node):
+    """Pass shared test run UID to xdist worker nodes so all workers share the same run UID."""
+    controller_run_uid = getattr(node.config, "_cadence_run_uid", None) or get_run_uid(
+        node.config
+    )
+    node.workerinput["cadence_run_uid"] = controller_run_uid
+
+
+def pytest_unconfigure(config):
+    """Clean up worker-isolated databases and stop monitors when the test process unconfigures."""
+    global _databases_provisioned, _current_worker_suffix, databases_pre_created
+
+    _session_monitor.stop()
+
+    # If this worker provisioned databases, clean them up
+    if _databases_provisioned and _current_worker_suffix:
+        try:
+            run_sync(drop_databases_async(_current_worker_suffix), timeout=20.0)
+            _databases_provisioned = False
+            databases_pre_created = False
+        except Exception as e:
+            print(f"[conftest] Error tearing down worker databases: {e}")
+
+    # If this is the xdist controller, run safeguard sweep for this run's databases only if live db was requested
+    if is_xdist_controller(config) and is_live_db_requested():
+        run_uid = getattr(config, "_cadence_run_uid", None) or get_run_uid(config)
+        try:
+            run_sync(drop_run_databases_async(run_uid), timeout=25.0)
+        except Exception as e:
+            print(f"[conftest] Error in controller database safeguard teardown: {e}")
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Hook to run after the test session finishes to generate/update the
+
+    Requirements Traceability Matrix (RTM) and GxP Qualification Report.
+    """
+    # Skip report generation if inside a pytest-xdist worker process
+    config = getattr(session, "config", None)
+    if config and hasattr(config, "workerinput"):
+        return
+
+    import subprocess
+
+    # Check for output dir environment variable
+    output_dir = os.environ.get("RTM_OUTPUT_DIR") or os.environ.get(
+        "GENERATE_RTM_OUTPUT_DIR"
+    )
+    dynamic_val = os.environ.get("RTM_DYNAMIC_TIMESTAMP") or os.environ.get(
+        "GENERATE_RTM_DYNAMIC_TIMESTAMP"
+    )
+    draft_val = os.environ.get("RTM_DRAFT") or os.environ.get("GENERATE_RTM_DRAFT")
+    explicit_gen = os.environ.get("GENERATE_RTM_ON_FINISH") == "true"
+
+    # Only run RTM generator when explicitly requested or configured with a custom output dir
+    if output_dir is None and not explicit_gen:
+        return
+
+    print(
+        "\n--- Running Automated Requirements Traceability Matrix (RTM) Generator ---"
+    )
+    try:
+        cmd = [sys.executable, "scripts/generate_rtm.py"]
+        if output_dir:
+            cmd.extend(["--output-dir", output_dir])
+        if dynamic_val is not None and dynamic_val.lower() not in (
+            "",
+            "0",
+            "false",
+            "no",
+            "off",
+        ):
+            cmd.append("--dynamic-timestamp")
+        if draft_val is not None and draft_val.lower() not in (
+            "",
+            "0",
+            "false",
+            "no",
+            "off",
+        ):
+            cmd.append("--draft")
+
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=120,
+        )
+        print(result.stdout)
+        if result.stderr:
+            print("Errors from RTM Generator:")
+            print(result.stderr)
+    except Exception as e:
+        print(f"Error executing RTM generator: {e}")
+
 
 # Ensure packages path injection is run before tests start
 import packages  # noqa: F401, E402
@@ -517,7 +814,12 @@ class MockTransaction:
             properties = parameters["properties"]
 
             act_id = self.state.update_study_properties(
-                study_id, user_id, change_reason, properties, action_id, self.tx_id
+                study_id,
+                user_id,
+                change_reason,
+                properties,
+                action_id,
+                self.tx_id,
             )
             return MockResult([{"action_id": act_id}])
 
@@ -599,95 +901,9 @@ def concurrency_runner():
     return ConcurrencyRunner()
 
 
-def pytest_unconfigure(config):
-    """Clean up worker-isolated databases when the test process unconfigures."""
-    if databases_pre_created:
-        try:
-            run_sync(drop_databases_async(worker_suffix))
-        except Exception as e:
-            print(f"[conftest] Error tearing down databases: {e}")
-
-
-def pytest_sessionfinish(session, exitstatus):
-    """
-    Hook to run after the test session finishes to generate/update the
-    Requirements Traceability Matrix (RTM) and GxP Qualification Report.
-    """
-    # Skip report generation if inside a pytest-xdist worker process
-    config = getattr(session, "config", None)
-    if config and hasattr(config, "workerinput"):
-        return
-
-    import subprocess
-    import sys
-
-    print(
-        "\n--- Running Automated Requirements Traceability Matrix (RTM) Generator ---"
-    )
-    try:
-        cmd = [sys.executable, "scripts/generate_rtm.py"]
-
-        # Check for output dir environment variable
-        output_dir = os.environ.get("RTM_OUTPUT_DIR") or os.environ.get(
-            "GENERATE_RTM_OUTPUT_DIR"
-        )
-        if output_dir:
-            cmd.extend(["--output-dir", output_dir])
-
-        # Check for dynamic timestamp environment variable
-        dynamic_val = os.environ.get("RTM_DYNAMIC_TIMESTAMP") or os.environ.get(
-            "GENERATE_RTM_DYNAMIC_TIMESTAMP"
-        )
-        if dynamic_val is not None:
-            if dynamic_val.lower() not in ("", "0", "false", "no", "off"):
-                cmd.append("--dynamic-timestamp")
-
-        # Check for draft environment variable
-        draft_val = os.environ.get("RTM_DRAFT") or os.environ.get("GENERATE_RTM_DRAFT")
-        if draft_val is not None:
-            if draft_val.lower() not in ("", "0", "false", "no", "off"):
-                cmd.append("--draft")
-
-        # To prevent local test execution speed penalties, avoid running the check
-        # synchronously during local pytest executions (when GITHUB_ACTIONS is not 'true').
-        # However, we run it synchronously if a custom output directory is set (such as
-        # in test_rtm_generation_conftest_hook_detection) or in CI.
-        is_ci = os.environ.get("GITHUB_ACTIONS") == "true"
-        is_test = output_dir is not None or dynamic_val is not None
-
-        if not is_ci and not is_test:
-            print(
-                "Local pytest execution detected: launching RTM Generator asynchronously in background."
-            )
-            subprocess.Popen(
-                cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-        else:
-            # Run the script using the same python interpreter
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            print(result.stdout)
-            if result.stderr:
-                print("Errors from RTM Generator:")
-                print(result.stderr)
-    except Exception as e:
-        print(f"Error executing RTM generator: {e}")
-
-
 # =========================================================================
 # Shared multi-service RBAC test harness fixtures
 # =========================================================================
-
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import httpx
-import pytest_asyncio
 
 from apps.designer.main import app as designer_app
 from apps.etmf.database import db_manager as etmf_db_manager
@@ -700,8 +916,8 @@ from apps.execution.main import app as exec_app
 
 @pytest_asyncio.fixture
 async def shared_sqlite_dbs():
-    """
-    Setup in-memory SQLite databases for execution and etmf using their own db_manager/Base singletons.
+    """Setup in-memory SQLite databases for execution and etmf using their own db_manager/Base singletons.
+
     Follows the init_db + create_all + teardown pattern.
     """
     etmf_db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
@@ -731,8 +947,8 @@ async def shared_sqlite_dbs():
 
 @pytest.fixture
 def mock_designer_driver():
-    """
-    Injects a mock or fake Neo4j driver into designer_app.state.driver after client creation,
+    """Injects a mock or fake Neo4j driver into designer_app.state.driver after client creation,
+
     and restores the original driver on teardown.
     """
     if os.environ.get("USE_LIVE_DB") == "true":
@@ -748,7 +964,7 @@ def mock_designer_driver():
 
         yield real_driver
 
-        run_sync(real_driver.close())
+        run_sync(real_driver.close(), timeout=10.0)
         designer_app.state.driver = original_driver
     else:
         driver_mock = MagicMock()
@@ -801,8 +1017,8 @@ async def designer_client(mock_designer_driver):
 
 @pytest.fixture
 def intercept_cross_service_calls():
-    """
-    Patch httpx.AsyncClient.send globally to route service-to-service HTTP calls
+    """Patch httpx.AsyncClient.send globally to route service-to-service HTTP calls
+
     to the target in-process app (execution, etmf, or designer) while keeping signed headers intact.
     """
     original_send = httpx.AsyncClient.send
@@ -843,15 +1059,12 @@ def intercept_cross_service_calls():
 
 @pytest.fixture
 def signed_headers():
-    """
-    Factory fixture to build valid V2 gateway-signed headers for testing.
+    """Factory fixture to build valid V2 gateway-signed headers for testing.
+
     Resolves GATEWAY_SECRET from env, defaulting to 'internal-gateway-secret-12345'.
     Always includes tenant_id in both the signed payload and X-Tenant-Id header.
     Supports a 'tamper' mode by passing tamper_tenant_id to sign with a different tenant_id.
     """
-    import os
-    import time
-
     from packages.security.signing import generate_gateway_signature
 
     def _factory(
@@ -872,7 +1085,6 @@ def signed_headers():
         )
         timestamp = str(time.time())
 
-        # Support tamper mode: sign with tamper_tenant_id but send tenant_id in X-Tenant-Id
         sign_tenant = tamper_tenant_id if tamper_tenant_id is not None else tenant_id
 
         signature = generate_gateway_signature(
@@ -916,14 +1128,11 @@ def signed_headers():
 
 @pytest.fixture
 def capture_cross_service_calls():
-    """
-    Fixture to patch httpx.AsyncClient.request to capture outbound requests,
+    """Fixture to patch httpx.AsyncClient.request to capture outbound requests,
+
     exposing them to the test, and providing a helper to replay them.
     """
     import json as json_lib
-    from unittest.mock import patch
-
-    import httpx
 
     class CrossServiceCallCapture:
         def __init__(self):
@@ -1002,8 +1211,7 @@ def capture_cross_service_calls():
 
 
 async def clean_neo4j_graph():
-    import os
-
+    """Detach and delete all nodes in the live Neo4j graph database."""
     from neo4j import AsyncGraphDatabase
 
     uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
@@ -1020,21 +1228,8 @@ async def clean_neo4j_graph():
 
 
 async def clean_postgres_databases():
+    """Truncate tables across all initialized PostgreSQL test databases."""
     import asyncpg
-
-    service_dbs = [
-        "cadence_edc",
-        "cadence_etmf",
-        "cadence_ctms",
-        "cadence_quality",
-        "cadence_interop",
-        "cadence_tickets",
-        "cadence_notifications",
-        "cadence_econsent",
-        "cadence_safety",
-        "cadence_org",
-        "cadence_eisf",
-    ]
 
     base_postgres_url = (
         get_postgres_base_config()
@@ -1042,16 +1237,17 @@ async def clean_postgres_databases():
         .rstrip("/")
     )
 
-    for db_prefix in service_dbs:
+    suffix = _current_worker_suffix or _build_worker_suffix()
+    for db_prefix in SERVICE_DB_PREFIXES:
         if (
             os.environ.get("USE_LIVE_DB") != "true"
             and db_prefix not in _initialized_databases
         ):
             continue
-        db_name = f"{db_prefix}{worker_suffix}"
+        db_name = f"{db_prefix}{suffix}"
         db_url = f"{base_postgres_url}/{db_name}"
         try:
-            conn = await asyncpg.connect(db_url, timeout=10)
+            conn = await asyncpg.connect(db_url, timeout=5.0)
             try:
                 await conn.execute("SET session_replication_role = 'replica';")
                 tables = await conn.fetch(
@@ -1071,27 +1267,20 @@ async def clean_postgres_databases():
 
 @pytest_asyncio.fixture(autouse=True)
 async def cleanup_databases_fixture():
-    """
-    Autouse fixture that clears live Neo4j and PostgreSQL databases
+    """Autouse fixture that clears live Neo4j and PostgreSQL databases
+
     before and after every single test case when USE_LIVE_DB=true is active.
     """
-    is_postgres = os.environ.get("TEST_DATABASE_URL", "").startswith(
-        ("postgres", "postgresql")
-    )
     is_live_db = os.environ.get("USE_LIVE_DB") == "true"
 
-    if not is_live_db and not is_postgres:
+    if not is_live_db:
         yield
         return
 
-    if is_live_db or is_postgres:
-        await clean_postgres_databases()
-    if is_live_db:
-        await clean_neo4j_graph()
+    await clean_postgres_databases()
+    await clean_neo4j_graph()
 
     yield
 
-    if is_live_db or is_postgres:
-        await clean_postgres_databases()
-    if is_live_db:
-        await clean_neo4j_graph()
+    await clean_postgres_databases()
+    await clean_neo4j_graph()

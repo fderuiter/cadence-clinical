@@ -249,6 +249,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-17: Interactive Mermaid Diagrams and Responsive Layout Controls](2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md)
 
 ### 7. DevOps, Tooling & CI/CD
+- [2026-08-14: Isolated Concurrent Pytest Harness and Worker Lifecycle](2026-08-14-isolated-concurrent-pytest-harness-and-worker-lifecycle.md)
 
 - [2026-08-11: Standardize Hatch build configurations for clean namespace wheels](2026-08-11-standardize-hatch-build-configurations-for-clean-namespace-wheels.md)
 
