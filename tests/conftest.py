@@ -670,7 +670,6 @@ def pytest_sessionfinish(session, exitstatus):
 # Shared multi-service RBAC test harness fixtures
 # =========================================================================
 
-import contextlib
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -1007,98 +1006,53 @@ async def clean_neo4j_graph():
 
 
 async def clean_postgres_databases():
-    from sqlalchemy import text
-    from sqlalchemy.ext.asyncio import create_async_engine
+    import asyncpg
 
-    from apps.ctms.models import Base as CTMSBase
-    from apps.econsent.models import Base as EConsentBase
-    from apps.eisf.models import Base as EISFBase
-    from apps.etmf.models import Base as ETMFBase
+    service_dbs = [
+        "cadence_edc",
+        "cadence_etmf",
+        "cadence_ctms",
+        "cadence_quality",
+        "cadence_interop",
+        "cadence_tickets",
+        "cadence_notifications",
+        "cadence_econsent",
+        "cadence_safety",
+        "cadence_org",
+        "cadence_eisf",
+    ]
 
-    # Import bases
-    from apps.execution.database.models import Base as ExecBase
-    from apps.interop.models import Base as InteropBase
-    from apps.notifications.models import Base as NotificationsBase
-    from apps.org.models import Base as OrgBase
-    from apps.quality.models import Base as QualityBase
-    from apps.safety.models import Base as SafetyBase
-    from apps.tickets.models import Base as TicketsBase
+    base_postgres_url = (
+        get_postgres_base_config()
+        .replace("postgresql+asyncpg://", "postgresql://")
+        .rstrip("/")
+    )
 
-    service_bases = {
-        "cadence_edc": ExecBase,
-        "cadence_etmf": ETMFBase,
-        "cadence_ctms": CTMSBase,
-        "cadence_quality": QualityBase,
-        "cadence_interop": InteropBase,
-        "cadence_tickets": TicketsBase,
-        "cadence_notifications": NotificationsBase,
-        "cadence_econsent": EConsentBase,
-        "cadence_safety": SafetyBase,
-        "cadence_org": OrgBase,
-        "cadence_eisf": EISFBase,
-    }
-
-    import unittest.mock
-
-    base_postgres_url = get_postgres_base_config()
-    is_mocked = isinstance(create_async_engine, unittest.mock.Mock)
-    for db_prefix, base in service_bases.items():
+    for db_prefix in service_dbs:
         if (
             os.environ.get("USE_LIVE_DB") != "true"
-            and not is_mocked
             and db_prefix not in _initialized_databases
         ):
             continue
         db_name = f"{db_prefix}{worker_suffix}"
-        db_url = f"{base_postgres_url}{db_name}"
-        engine = create_async_engine(db_url)
+        db_url = f"{base_postgres_url}/{db_name}"
         try:
-            async with engine.begin() as conn:
-                # Disable triggers and foreign keys for safe, trigger-free TRUNCATE of audited/restricted tables
-                await conn.execute(text("SET session_replication_role = 'replica';"))
-
-                # Truncate all tables in a single statement for extreme speedup, with fallback
-                table_names = [
-                    f'"{table.name}"' for table in base.metadata.sorted_tables
-                ]
-                if table_names:
-                    truncate_query = f"TRUNCATE TABLE {', '.join(table_names)} RESTART IDENTITY CASCADE;"
-                    try:
-                        await conn.execute(text(truncate_query))
-                    except Exception:
-                        # Fallback to per-table truncate/delete if combined fails
-                        for table in reversed(base.metadata.sorted_tables):
-                            try:
-                                await conn.execute(
-                                    text(
-                                        f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'
-                                    )
-                                )
-                            except Exception:
-                                with contextlib.suppress(Exception):
-                                    await conn.execute(table.delete())
-
-                # Also truncate audit schema tables if they exist
-                with contextlib.suppress(Exception):
+            conn = await asyncpg.connect(db_url, timeout=10)
+            try:
+                await conn.execute("SET session_replication_role = 'replica';")
+                tables = await conn.fetch(
+                    "SELECT schemaname, tablename FROM pg_tables WHERE schemaname IN ('public', 'audit_schema') AND tablename != 'alembic_version';"
+                )
+                if tables:
+                    quoted = [f'"{r["schemaname"]}"."{r["tablename"]}"' for r in tables]
                     await conn.execute(
-                        text(
-                            'TRUNCATE TABLE "audit_schema"."audit_logs" RESTART IDENTITY CASCADE;'
-                        )
+                        f"TRUNCATE TABLE {', '.join(quoted)} RESTART IDENTITY CASCADE;"
                     )
-                with contextlib.suppress(Exception):
-                    await conn.execute(
-                        text(
-                            'TRUNCATE TABLE "audit_schema"."audit_ledger_seals" RESTART IDENTITY CASCADE;'
-                        )
-                    )
-
-                # Restore triggers/fk checks back to normal
-                await conn.execute(text("SET session_replication_role = 'origin';"))
-            print(f"[conftest] PostgreSQL database {db_name} cleaned successfully.")
+                await conn.execute("SET session_replication_role = 'origin';")
+            finally:
+                await conn.close()
         except Exception as e:
             print(f"[conftest] Error cleaning database {db_name}: {e}")
-        finally:
-            await engine.dispose()
 
 
 @pytest_asyncio.fixture(autouse=True)

@@ -10,12 +10,15 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from apps.designer.domain.cdisc.usdm_models import (
     Activity,
+    BiomedicalConcept,
+    BiomedicalConceptProperty,
     Code,
     EligibilityCriterion,
     Encounter,
     StudyArm,
     StudyDesign,
     StudyEpoch,
+    StudyVersion,
     SyntaxTemplate,
     USDMStudy,
 )
@@ -24,11 +27,14 @@ MODELS = [
     Code,
     SyntaxTemplate,
     EligibilityCriterion,
+    BiomedicalConceptProperty,
+    BiomedicalConcept,
     Activity,
     Encounter,
     StudyArm,
     StudyEpoch,
     StudyDesign,
+    StudyVersion,
     USDMStudy,
 ]
 

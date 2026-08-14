@@ -434,3 +434,14 @@ class DocumentVersionsResponse(BaseModel):
     study_id: str
     artifact_code: str
     versions: list[DocumentVersionEntry]
+
+
+class SeedEDLRequest(BaseModel):
+    milestones: list[str] | None = Field(
+        None,
+        description="Optional list of milestones to seed. Defaults to STUDY_INITIATION, ETHICS_SUBMISSION, SITE_ACTIVATION, FSI.",
+    )
+    reason_for_change: str = Field(
+        "Zero-Click USDM Study Ingestion",
+        description="Part 11 change justification reason for seeding EDL",
+    )

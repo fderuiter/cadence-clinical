@@ -1,54 +1,89 @@
-# E2E Test Infra: Cadence Clinical Phase 1 Deliverables
+# Test Infrastructure: "Zero-Click" USDM Study Build & Automated Synthesis
 
-## Test Philosophy
-- Opaque-box, requirement-driven testing based on `ORIGINAL_REQUEST.md`.
-- Derived from user requirements, clinical standards (CDISC, MedDRA, WHODrug, HL7, SAS XPT), and GxP 21 CFR Part 11 mandates.
-- Methodology: 4-Tier Test Architecture (Category-Partition, Boundary Value Analysis, Pairwise Combinatorial Testing, Real-World Workload Testing).
+## 1. Overview
 
-## Feature Inventory
-| # | Feature | Source (Requirement) | Tier 1 (Feature) | Tier 2 (Boundary) | Tier 3 (Pairwise) | Tier 4 (Scenario) |
-|---|---------|----------------------|:----------------:|:-----------------:|:-----------------:|:-----------------:|
-| 1 | Medical Coding Queue & Filter | ORIGINAL_REQUEST §R1 | 5 | 5 | ✓ | ✓ |
-| 2 | MedDRA & WHODrug Traversal | ORIGINAL_REQUEST §R1 | 5 | 5 | ✓ | ✓ |
-| 3 | Single & Batch Assignment | ORIGINAL_REQUEST §R1 | 5 | 5 | ✓ | ✓ |
-| 4 | Dictionary Up-versioning Impact | ORIGINAL_REQUEST §R1 | 5 | 5 | ✓ | ✓ |
-| 5 | Query Escalation & Resolution | ORIGINAL_REQUEST §R1 | 5 | 5 | ✓ | ✓ |
-| 6 | Relational DataLock Model | ORIGINAL_REQUEST §R2 | 5 | 5 | ✓ | ✓ |
-| 7 | Hierarchical Lock Inheritance | ORIGINAL_REQUEST §R2 | 5 | 5 | ✓ | ✓ |
-| 8 | Dual-Signature & Step-up Token | ORIGINAL_REQUEST §R2 | 5 | 5 | ✓ | ✓ |
-| 9 | Unlock Justification (>=50 chars)| ORIGINAL_REQUEST §R2 | 5 | 5 | ✓ | ✓ |
-| 10 | Multi-format Lab Ingestion | ORIGINAL_REQUEST §R3 | 5 | 5 | ✓ | ✓ |
-| 11 | UCUM Normalization & Range Eval | ORIGINAL_REQUEST §R3 | 5 | 5 | ✓ | ✓ |
-| 12 | Discrepancy & SAE Auto-Queries | ORIGINAL_REQUEST §R3 | 5 | 5 | ✓ | ✓ |
-| 13 | SAS Transport (XPT v5/v8) Binary | ORIGINAL_REQUEST §R4 | 5 | 5 | ✓ | ✓ |
-| 14 | CDISC ODM-XML v1.3.2 Export | ORIGINAL_REQUEST §R4 | 5 | 5 | ✓ | ✓ |
-| 15 | CDISC Dataset-JSON v1.0.0 Export| ORIGINAL_REQUEST §R4 | 5 | 5 | ✓ | ✓ |
-| 16 | De-identified CSV Export | ORIGINAL_REQUEST §R4 | 5 | 5 | ✓ | ✓ |
-| 17 | UI Components & Navigation | ORIGINAL_REQUEST §R1-R4 | 5 | 5 | ✓ | ✓ |
+This document specifies the testing architecture, tiered verification strategy, test harness design, and Requirement Traceability Matrix (RTM) alignment for the **Zero-Click Study Build** capability within the Cadence Clinical Research Platform.
 
-## Test Architecture
-- Test runner: `pytest` with `pytest-asyncio` and `pytest-xdist`.
-- In-memory database isolation: SQLite async fixtures (`sqlite+aiosqlite:///:memory:`) with `deploy_database_triggers()` and `get_auth_headers()` for high-speed deterministic testing.
-- Target test suites:
-  1. `apps/execution/tests/test_medical_coding.py`
-  2. `apps/execution/tests/test_data_locks_persistence.py`
-  3. `apps/execution/tests/test_lab_batch_ingestion.py`
-  4. `apps/execution/tests/test_biostat_exports.py`
-  5. `tests/e2e/test_phase1_e2e_suite.py`
+The test suite is implemented in:
+```
+apps/designer/tests/test_zero_click_usdm_build.py
+```
 
-## Real-World Application Scenarios (Tier 4)
-| # | Scenario | Features Exercised | Complexity |
-|---|----------|--------------------|------------|
-| 1 | Global Oncology Trial Multi-Site Lock | Relational lock inheritance, step-up token auth, unlock with audit | High |
-| 2 | High-Throughput Central Lab Ingestion | CSV/HL7/FHIR batch parsing, UCUM conversion, critical SAE alerts | High |
-| 3 | MedDRA Upversioning & Batch Coding | Batch coding assignment, impact analysis, query escalation | High |
-| 4 | Regulatory Submission Bundle Generation | SAS XPT v5/v8, ODM-XML with audit records, Dataset-JSON 1.0.0 | High |
-| 5 | Full Lifecycle End-to-End Workflow | Ingestion -> Lock -> Coding -> Export -> Traceability | High |
+---
 
-## Coverage & GxP Compliance Thresholds
-- Tier 1: $\ge 5$ test cases per feature (Happy-path isolation)
-- Tier 2: $\ge 5$ test cases per feature (Boundary & edge conditions)
-- Tier 3: Pairwise combinations across all interdependent modules
-- Tier 4: $\ge 5$ end-to-end multi-module workflow scenarios
-- GxP Requirement Tagging: All tests tagged with `@req:PRD-SYS-xxx`, `@req:PRD-LAB-001`, `@req:Trace-xx`
-- Target module line coverage: $\ge 85\%$ across execution modules.
+## 2. Test Pyramid & 4-Tier Strategy
+
+```
+                      ┌──────────────────────────────────────────────┐
+                      │                   TIER 4                     │
+                      │         Real-World Scenarios & SLA           │
+                      │   (Phase II Oncology, < 5.0s Benchmark,      │
+                      │          21 CFR Part 11 Audit Trail)         │
+                      └───────────────────────┬──────────────────────┘
+                                              │
+                                              ▼
+                      ┌──────────────────────────────────────────────┐
+                      │                   TIER 3                     │
+                      │         Cross-Feature Combinations           │
+                      │   (End-to-End Ingest -> Synthesize eCRFs     │
+                      │       -> Compile SoA -> Seed eTMF EDL)       │
+                      └───────────────────────┬──────────────────────┘
+                                              │
+                                              ▼
+                      ┌──────────────────────────────────────────────┐
+                      │                   TIER 2                     │
+                      │          Boundary & Corner Cases             │
+                      │   (Atomic Rollback, Malformed USDM,          │
+                      │      Unmapped Domains, Cyclic Logic)         │
+                      └───────────────────────┬──────────────────────┘
+                                              │
+                                              ▼
+                      ┌──────────────────────────────────────────────┐
+                      │                   TIER 1                     │
+                      │            Core Feature Coverage             │
+                      │   (USDM Graph Ingestion, eCRF Synthesis,     │
+                      │       SoA Compilation, DIA TMF Seeding)      │
+                      └──────────────────────────────────────────────┘
+```
+
+---
+
+## 3. Tiered Test Inventory
+
+| Tier | Test Function | Target Capabilities | Requirement Traceability |
+| :--- | :--- | :--- | :--- |
+| **Tier 1** | `test_tier1_usdm_graph_ingestion_transactional` | Transactional parsing & Cypher graph creation of `Study`, `StudyDesign`, `StudyEpoch`, `StudyArm`, `Encounter`, `Activity`, `EligibilityCriterion` with relational graph semantics (`HAS_EPOCH`, `HAS_ARM`, `CONTAINS_ENCOUNTER`, `HAS_ACTIVITY`, `PERFORMS`, `HAS_CRITERION`). | `@req:PRD-SYS-001`<br>`@req:PRD-DDF-001` |
+| **Tier 1** | `test_tier1_ecrf_layout_synthesis_engine` | Automated CDASH form synthesis across domains (`VS`, `EG`, `LB`, `QS`, `PE`, `DM`, `AE`), widget rendering (`vas_slider`, `body_map_74_zone`), and declarative edit checks (`VS_SYSBP > VS_DIABP`, `EG_QTC <= 500`). | `@req:PRD-CRF-004` |
+| **Tier 1** | `test_tier1_soa_matrix_compilation_from_graph` | Dynamic Schedule of Activities (SoA) visit-vs-procedure matrix compilation from graph `PERFORMS` edges into `SoAMatrixView` projection. | `@req:PRD-MDR-007` |
+| **Tier 1** | `test_tier1_etmf_edl_seeding_milestones_and_zones` | Automated DIA TMF Reference Model 11-Zone catalog resolution and mandatory Expected Document List (EDL) seeding across trial lifecycle milestones (`INITIATION`, `CONDUCT`, `CLOSEOUT`). | `@req:PRD-TMF-001` |
+| **Tier 2** | `test_tier2_atomic_rollback_on_invalid_usdm_payload` | Error handling and atomic rejection of corrupted, non-dict, or incomplete USDM JSON payloads. | `@req:PRD-SYS-001` |
+| **Tier 2** | `test_tier2_edge_cases_empty_and_unmapped_entities` | Graceful fallback on unmapped CDASH domains (auto-generating default status/comments fields) and AST cycle detection for skip-logic rules. | `@req:PRD-DDF-001`<br>`@req:PRD-CRF-004` |
+| **Tier 3** | `test_tier3_end_to_end_zero_click_build_pipeline` | Complete interconnected pipeline: Ingest USDM -> Populate Graph -> Synthesize eCRFs -> Compile SoA Matrix -> Seed DIA TMF EDL. | `@req:PRD-SYS-001`<br>`@req:PRD-DDF-001`<br>`@req:PRD-MDR-007`<br>`@req:PRD-TMF-001` |
+| **Tier 4** | `test_tier4_phase2_oncology_real_world_protocol` | Complex real-world Phase II Oncology study: multi-epoch, multi-arm, 74-zone SNOMED CT body map, VAS pain slider, cardiac safety QTc monitoring, CTCAE grading, and DIA TMF EDL. | `@req:PRD-DDF-001`<br>`@req:PRD-CRF-004` |
+| **Tier 4** | `test_tier4_execution_performance_benchmark_under_5s` | Non-functional performance benchmark asserting end-to-end extraction and synthesis pipeline executes in < 5.0 seconds. | `@req:PRD-DDF-001` |
+| **Tier 4** | `test_tier4_part11_gxp_audit_and_change_justification` | 21 CFR Part 11 compliance enforcing gateway signature verification, user identity attribution, and rejection of empty/missing change justifications (HTTP 400 / 403). | `@req:PRD-SYS-001` |
+
+---
+
+## 4. Test Environment & Mock Graph Driver
+
+The test suite runs with 100% test isolation and zero external network dependencies:
+- **Neo4j Emulation**: Leverages `MockGraphDriver` (`packages/database/mock_graph.py`) to simulate asynchronous Cypher graph execution, recording all created sessions, nodes, and relationships in memory.
+- **HMAC Gateway Security**: Test helper `get_gateway_auth_headers` generates authentic v2 gateway cryptographic HMAC-SHA256 signatures for `GatewayAuthMiddleware` verification.
+- **Deterministic Heuristics**: In the absence of live LLM endpoints (`LLM_API_KEY`), the extraction service uses high-fidelity heuristic parsing for fast, reproducible CI test execution.
+
+---
+
+## 5. Execution Commands
+
+```bash
+# Run the Zero-Click Study Build test suite with verbose output
+uv run pytest -o addopts="" apps/designer/tests/test_zero_click_usdm_build.py -v
+
+# Run code style and import ordering verification
+uv run ruff check apps/designer/tests/test_zero_click_usdm_build.py
+uv run ruff format --check apps/designer/tests/test_zero_click_usdm_build.py
+
+# Run workspace-wide GxP compliance synchronization
+uv run python scripts/sync_gxp.py
+```

@@ -1283,6 +1283,11 @@ def main():
         "dist",
     }
 
+    # Files to completely exclude from markdown scanning
+    exclude_files = {
+        "ORIGINAL_REQUEST.md",
+    }
+
     strict = False
     args_to_process = []
     for arg in sys.argv[1:]:
@@ -1296,7 +1301,7 @@ def main():
     if args_to_process:
         for arg in args_to_process:
             p = Path(arg).resolve()
-            if p.is_file() and p.suffix == ".md":
+            if p.is_file() and p.suffix == ".md" and p.name not in exclude_files:
                 md_files.append(p)
     else:
         for root, dirs, files in os.walk(repo_root):
@@ -1305,7 +1310,7 @@ def main():
                 d for d in dirs if d not in exclude_dirs and not d.startswith(".")
             ]
             for f in files:
-                if f.endswith(".md"):
+                if f.endswith(".md") and f not in exclude_files:
                     file_path = Path(root) / f
                     md_files.append(file_path)
 

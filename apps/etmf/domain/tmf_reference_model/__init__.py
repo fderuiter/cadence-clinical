@@ -15,6 +15,7 @@ __all__ = [
     "resolve_artifact",
     "validate_hierarchy",
     "get_mandatory_artifacts",
+    "normalize_milestone",
     "MILESTONE_MANDATORY_ARTIFACTS",
 ]
 
@@ -470,7 +471,7 @@ def get_registered_versions() -> list[str]:
     return _registry.get_registered_versions()
 
 
-MILESTONE_MANDATORY_ARTIFACTS = {
+MILESTONE_MANDATORY_ARTIFACTS: dict[str, list[str]] = {
     "INITIATION": [
         "01.01.01",
     ],
@@ -485,7 +486,71 @@ MILESTONE_MANDATORY_ARTIFACTS = {
         "10.02.01",
         "11.01.02",
     ],
+    "STUDY_INITIATION": [
+        "01.01.01",  # Zone 1: Clinical Trial Protocol
+        "01.01.03",  # Zone 1: Protocol Sign-off
+        "01.03.01",  # Zone 1: Trial Monitoring Plan
+        "02.01.01",  # Zone 2: Investigator's Brochure
+        "07.02.01",  # Zone 7: Safety Management Plan
+        "10.01.01",  # Zone 10: Data Management Plan
+        "10.01.02",  # Zone 10: Define-XML Specifications
+        "10.02.01",  # Zone 10: Blank CRF
+        "11.01.01",  # Zone 11: Statistical Analysis Plan
+    ],
+    "ETHICS_SUBMISSION": [
+        "01.01.01",  # Zone 1: Clinical Trial Protocol
+        "02.01.01",  # Zone 2: Investigator's Brochure
+        "03.01.01",  # Zone 3: Regulatory Authority Submission
+        "04.01.01",  # Zone 4: IRB/IEC Approval
+        "05.02.05",  # Zone 5: Informed Consent Form
+    ],
+    "SITE_ACTIVATION": [
+        "04.01.01",  # Zone 4: IRB/IEC Approval
+        "04.02.01",  # Zone 4: IRB/IEC Approval Notification
+        "05.01.01",  # Zone 5: Site Feasibility Survey
+        "05.02.01",  # Zone 5: FDA Form 1572
+        "05.02.02",  # Zone 5: Financial Disclosure
+        "05.02.03",  # Zone 5: Investigator CV
+        "05.02.04",  # Zone 5: Delegation of Authority Log
+        "05.02.05",  # Zone 5: Informed Consent Form
+        "05.03.01",  # Zone 5: Site Training Records
+        "08.01.01",  # Zone 8: Central Laboratory Certificate
+        "08.02.01",  # Zone 8: Laboratory Reference Ranges
+        "09.01.01",  # Zone 9: Vendor Service Agreement
+    ],
+    "FSI": [
+        "01.01.01",  # Zone 1: Clinical Trial Protocol
+        "05.02.05",  # Zone 5: Informed Consent Form
+        "06.01.01",  # Zone 6: Investigational Product Records
+        "06.02.01",  # Zone 6: IP Shipping Records
+        "07.01.01",  # Zone 7: Serious Adverse Event Report
+        "10.02.01",  # Zone 10: Blank CRF
+    ],
 }
+
+
+def normalize_milestone(milestone: str) -> str:
+    norm = milestone.strip().upper().replace(" ", "_").replace("-", "_")
+    if norm in ("INITIATION", "STUDY_START", "START"):
+        return "INITIATION"
+    if norm in ("CONDUCT", "DATA_COLLECTION"):
+        return "CONDUCT"
+    if norm in ("CLOSEOUT", "STUDY_CLOSED", "LOCK", "STUDY_LOCK"):
+        return "CLOSEOUT"
+    if norm in ("STUDY_INITIATION", "STUDYINITIATION"):
+        return "STUDY_INITIATION"
+    if norm in (
+        "ETHICS_SUBMISSION",
+        "ETHICSSUBMISSION",
+        "ETHICS",
+        "REGULATORY_SUBMISSION",
+    ):
+        return "ETHICS_SUBMISSION"
+    if norm in ("SITE_ACTIVATION", "SITEACTIVATION", "ACTIVATION"):
+        return "SITE_ACTIVATION"
+    if norm in ("FSI", "FIRST_SUBJECT_IN", "FIRST_PATIENT_IN", "FPI"):
+        return "FSI"
+    return norm
 
 
 def resolve_artifact(
@@ -600,16 +665,10 @@ def get_mandatory_artifacts(milestone: str, version: str) -> list[Artifact]:
     except KeyError:
         raise ValueError(f"Unknown catalog version '{version}'.")
 
-    milestone_normalized = milestone.strip().upper()
-    if milestone_normalized in ("INITIATION", "STUDY START"):
-        canonical_milestone = "INITIATION"
-    elif milestone_normalized in ("CONDUCT", "DATA COLLECTION"):
-        canonical_milestone = "CONDUCT"
-    elif milestone_normalized in ("CLOSEOUT", "STUDY CLOSED", "LOCK"):
-        canonical_milestone = "CLOSEOUT"
-    else:
+    canonical_milestone = normalize_milestone(milestone)
+    if canonical_milestone not in MILESTONE_MANDATORY_ARTIFACTS:
         raise ValueError(
-            f"Unknown milestone '{milestone}'. Supported milestones are: INITIATION, CONDUCT, CLOSEOUT."
+            f"Unknown milestone '{milestone}'. Supported milestones are: {', '.join(sorted(MILESTONE_MANDATORY_ARTIFACTS.keys()))}."
         )
 
     codes = MILESTONE_MANDATORY_ARTIFACTS[canonical_milestone]

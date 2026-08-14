@@ -1,5 +1,7 @@
 import base64
 import hashlib
+import inspect
+import uuid
 from datetime import UTC, date, datetime
 from typing import Any
 
@@ -16,9 +18,16 @@ from apps.etmf.cryptography import (
 from apps.etmf.domain.acl import ProtocolVersionRefDTO
 from apps.etmf.domain.tmf_reference_model import (
     get_active_catalog,
+    get_mandatory_artifacts,
+    normalize_milestone,
     validate_hierarchy,
 )
-from apps.etmf.models import TMFAuditLog, TMFDocument, is_site_level_artifact
+from apps.etmf.models import (
+    ExpectedDocument,
+    TMFAuditLog,
+    TMFDocument,
+    is_site_level_artifact,
+)
 from packages.security.signature import SignatureManifestation, SigningReason
 
 ProtocolVersionRef = ProtocolVersionRefDTO
@@ -471,3 +480,186 @@ async def ingest_tmf_document(
     except Exception as e:
         # Savepoint automatically rolled back on exception block exit
         raise e
+
+
+async def seed_etmf_expected_documents_for_study(
+    study_id: str,
+    db_session: Any = None,
+    created_by: str = "system",
+    reason_for_change: str = "Zero-Click USDM Study Ingestion",
+    milestones: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Seed Expected Document List (EDL) for a study across DIA TMF Zones 1–11.
+
+    Pre-populates mandatory expected documents across trial milestones
+    (STUDY_INITIATION, ETHICS_SUBMISSION, SITE_ACTIVATION, FSI, INITIATION,
+    CONDUCT, CLOSEOUT).
+
+    Enforces idempotency, GxP audit fields (created_by, reason_for_change,
+    version_index=1), and supports both live SQLAlchemy async/sync sessions
+    and offline in-memory execution.
+
+    Args:
+        study_id: The unique identifier of the clinical study.
+        db_session: Optional SQLAlchemy AsyncSession, sync Session, or ETMFRepository.
+        created_by: User or system actor initiating the seeding.
+        reason_for_change: 21 CFR Part 11 justification.
+        milestones: Optional list of specific milestone identifiers to seed.
+            Defaults to [STUDY_INITIATION, ETHICS_SUBMISSION, SITE_ACTIVATION, FSI].
+
+    Returns:
+        List of dictionaries representing seeded expected document records.
+    """
+    catalog = get_active_catalog()
+    version = catalog.version
+
+    target_milestones = milestones or [
+        "STUDY_INITIATION",
+        "ETHICS_SUBMISSION",
+        "SITE_ACTIVATION",
+        "FSI",
+    ]
+
+    canonical_milestones = [normalize_milestone(m) for m in target_milestones]
+
+    # Collect mandatory artifacts per milestone
+    milestone_artifacts: list[tuple[str, Any]] = []
+    for ms in canonical_milestones:
+        try:
+            arts = get_mandatory_artifacts(ms, version)
+            for art in arts:
+                milestone_artifacts.append((ms, art))
+        except ValueError:
+            continue
+
+    seeded_records: list[dict[str, Any]] = []
+
+    if db_session is None:
+        # Offline in-memory execution mode
+        seen_keys: set[tuple[str, str, str | None]] = set()
+        for ms, art in milestone_artifacts:
+            key = (art.name, ms, None)
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            doc_id = str(uuid.uuid4())
+            record = {
+                "id": doc_id,
+                "study_id": study_id,
+                "site_id": None,
+                "milestone": ms,
+                "artifact_type": art.name,
+                "artifact_code": art.code,
+                "zone": art.zone_code,
+                "section": art.section_code,
+                "created_by": created_by,
+                "reason_for_change": reason_for_change,
+                "version_index": 1,
+                "metadata_json": {
+                    "default_seeded": True,
+                    "artifact_code": art.code,
+                    "source": "zero_click_usdm",
+                },
+            }
+            seeded_records.append(record)
+        return seeded_records
+
+    # Database session execution (async, sync, or repository)
+    actual_session = getattr(db_session, "session", db_session)
+    is_async = hasattr(actual_session, "execute") and (
+        isinstance(actual_session, AsyncSession)
+        or inspect.iscoroutinefunction(actual_session.execute)
+    )
+
+    # 1. Fetch existing records for idempotency
+    stmt = select(ExpectedDocument).where(ExpectedDocument.study_id == study_id)
+    if is_async:
+        res = await actual_session.execute(stmt)
+        existing_docs = list(res.scalars().all())
+    elif hasattr(actual_session, "execute"):
+        res = actual_session.execute(stmt)
+        existing_docs = list(res.scalars().all())
+    elif hasattr(db_session, "get_expected_documents_by_study"):
+        existing_docs = list(await db_session.get_expected_documents_by_study(study_id))
+    else:
+        existing_docs = []
+
+    existing_map: dict[tuple[str, str, str | None], ExpectedDocument] = {
+        (doc.artifact_type, doc.milestone, doc.site_id): doc for doc in existing_docs
+    }
+
+    new_entities: list[ExpectedDocument] = []
+    for ms, art in milestone_artifacts:
+        key = (art.name, ms, None)
+        if key in existing_map:
+            doc = existing_map[key]
+            art_code = (
+                doc.metadata_json.get("artifact_code")
+                if doc.metadata_json and isinstance(doc.metadata_json, dict)
+                else art.code
+            )
+            seeded_records.append(
+                {
+                    "id": doc.id,
+                    "study_id": doc.study_id,
+                    "site_id": doc.site_id,
+                    "milestone": doc.milestone,
+                    "artifact_type": doc.artifact_type,
+                    "artifact_code": art_code,
+                    "zone": doc.zone,
+                    "section": doc.section,
+                    "created_by": doc.created_by,
+                    "reason_for_change": doc.reason_for_change,
+                    "version_index": doc.version_index,
+                    "metadata_json": doc.metadata_json,
+                }
+            )
+            continue
+
+        doc_id = str(uuid.uuid4())
+        doc_entity = ExpectedDocument(
+            id=doc_id,
+            study_id=study_id,
+            site_id=None,
+            milestone=ms,
+            artifact_type=art.name,
+            zone=art.zone_code,
+            section=art.section_code,
+            created_by=created_by,
+            reason_for_change=reason_for_change,
+            version_index=1,
+            metadata_json={
+                "default_seeded": True,
+                "artifact_code": art.code,
+                "source": "zero_click_usdm",
+            },
+        )
+        new_entities.append(doc_entity)
+        existing_map[key] = doc_entity
+        seeded_records.append(
+            {
+                "id": doc_id,
+                "study_id": study_id,
+                "site_id": None,
+                "milestone": ms,
+                "artifact_type": art.name,
+                "artifact_code": art.code,
+                "zone": art.zone_code,
+                "section": art.section_code,
+                "created_by": created_by,
+                "reason_for_change": reason_for_change,
+                "version_index": 1,
+                "metadata_json": doc_entity.metadata_json,
+            }
+        )
+
+    if new_entities:
+        for ent in new_entities:
+            actual_session.add(ent)
+
+        if is_async:
+            await actual_session.flush()
+        elif hasattr(actual_session, "flush"):
+            actual_session.flush()
+
+    return seeded_records
