@@ -43,7 +43,9 @@ def mock_sidecar_service(monkeypatch):
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app=sidecar_app)
         ) as client:
-            res = await client.post("http://localhost/api/v1/cdisc/bundle", json=payload)
+            res = await client.post(
+                "http://localhost/api/v1/cdisc/bundle", json=payload
+            )
             res.raise_for_status()
             return res.json()
 
