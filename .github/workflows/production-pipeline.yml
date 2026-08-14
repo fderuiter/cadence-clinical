@@ -44,11 +44,11 @@ jobs:
       # Run GxP Dependency & Vulnerability Audit Gate
       - name: Run GxP Dependency Validation
         run: |
-          python scripts/validate_vulnerabilities.py
+          uv run python scripts/validate_vulnerabilities.py
 
       - name: Generate Reports with Overrides
         run: |
-          python scripts/generate_rtm.py --output-dir tmp_etmf --dynamic-timestamp
+          uv run python scripts/generate_rtm.py --output-dir tmp_etmf --dynamic-timestamp
 
       - name: Verify Isolated Generation
         run: |

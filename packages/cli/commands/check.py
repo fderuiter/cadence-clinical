@@ -56,7 +56,10 @@ def run_check(
     repo_root = Path(__file__).resolve().parents[3]
 
     all_gates = [
-        ("path-patterns", ["python3", "scripts/validate_path_patterns.py", "--all"]),
+        (
+            "path-patterns",
+            [sys.executable, "scripts/validate_path_patterns.py", "--all"],
+        ),
         (
             "ruff-lint",
             [
@@ -84,9 +87,9 @@ def run_check(
                 "apps/execution/database/models.py",
             ],
         ),
-        ("secrets-scan", ["python3", "scripts/clean_secrets_baseline.py"]),
-        ("adr-validation", ["python3", "scripts/validate_adrs.py"]),
-        ("markdown-validation", ["python3", "scripts/validate_markdown.py"]),
+        ("secrets-scan", [sys.executable, "scripts/clean_secrets_baseline.py"]),
+        ("adr-validation", [sys.executable, "scripts/validate_adrs.py"]),
+        ("markdown-validation", [sys.executable, "scripts/validate_markdown.py"]),
         (
             "security-audit",
             [
@@ -102,9 +105,12 @@ def run_check(
                 "packages",
             ],
         ),
-        ("import-boundaries", ["python3", "scripts/validate_imports.py"]),
-        ("architecture-drift", ["python3", "scripts/validate_architecture_drift.py"]),
-        ("contract-verification", ["python3", "scripts/verify_contracts.py"]),
+        ("import-boundaries", [sys.executable, "scripts/validate_imports.py"]),
+        (
+            "architecture-drift",
+            [sys.executable, "scripts/validate_architecture_drift.py"],
+        ),
+        ("contract-verification", [sys.executable, "scripts/verify_contracts.py"]),
     ]
 
     selected_gates = [g for g in all_gates if not gate or g[0] == gate]

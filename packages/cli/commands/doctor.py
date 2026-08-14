@@ -1,6 +1,7 @@
-"""Doctor diagnostic subcommand for validating environment, dependencies, ports, and databases."""
+"""Doctor diagnostic subcommand for validating and auto-healing environment, dependencies, ports, and databases."""
 
 import socket
+import sqlite3
 import subprocess
 import sys
 from pathlib import Path
@@ -19,8 +20,17 @@ from packages.cli.formatting import (
 )
 
 doctor_app = typer.Typer(
-    help="Run system diagnostics and verify development environment health."
+    help="Run system diagnostics and auto-heal development environment issues."
 )
+
+SQLITE_DBS = [
+    "econsent.db",
+    "eisf.db",
+    "interop.db",
+    "notifications.db",
+    "safety.db",
+    "tickets.db",
+]
 
 
 def is_port_in_use(port: int, host: str = "127.0.0.1") -> bool:
@@ -41,16 +51,46 @@ def check_tool_version(cmd: list[str]) -> str | None:
     return None
 
 
+def _auto_heal_databases(repo_root: Path) -> list[str]:
+    """Auto-heals missing SQLite storage files by seeding initial schemas."""
+    actions = []
+    for db_name in SQLITE_DBS:
+        db_path = repo_root / db_name
+        if not db_path.exists() or db_path.stat().st_size == 0:
+            with sqlite3.connect(db_path) as conn:
+                conn.execute(
+                    "CREATE TABLE IF NOT EXISTS _schema_init (id INTEGER PRIMARY KEY, initialized_at TEXT)"
+                )
+                conn.commit()
+            actions.append(f"Initialized local SQLite database: {db_name}")
+    return actions
+
+
 @doctor_app.callback(invoke_without_command=True)
-def run_doctor(ctx: typer.Context) -> None:
-    """Performs comprehensive diagnostics of the Cadence development environment."""
+def run_doctor(
+    ctx: typer.Context,
+    auto_fix: bool = typer.Option(
+        False,
+        "--auto-fix",
+        "-f",
+        help="Automatically remediate missing databases and recoverable environment issues",
+    ),
+) -> None:
+    """Performs comprehensive diagnostics and optional auto-healing of the Cadence development environment."""
     json_mode = is_json_mode(ctx.obj)
+    repo_root = Path(__file__).resolve().parents[3]
+
+    healed_actions: list[str] = []
+    if auto_fix:
+        healed_actions = _auto_heal_databases(repo_root)
+
     diagnostics: dict[str, Any] = {
         "status": "healthy",
         "python": {},
         "binaries": {},
         "databases": {},
         "ports": {},
+        "auto_healed": healed_actions,
         "recommendations": [],
     }
 
@@ -92,16 +132,7 @@ def run_doctor(ctx: typer.Context) -> None:
             )
 
     # 3. Database Check
-    repo_root = Path(__file__).resolve().parents[3]
-    sqlite_dbs = [
-        "econsent.db",
-        "eisf.db",
-        "interop.db",
-        "notifications.db",
-        "safety.db",
-        "tickets.db",
-    ]
-    for db_name in sqlite_dbs:
+    for db_name in SQLITE_DBS:
         db_path = repo_root / db_name
         diagnostics["databases"][db_name] = {
             "type": "sqlite",
@@ -145,9 +176,13 @@ def run_doctor(ctx: typer.Context) -> None:
 
     # Rich Terminal Output
     print_header(
-        "Cadence Clinical Environment Diagnostics",
+        "Cadence Clinical Environment Diagnostics & Auto-Healing",
         "Validating runtime environment, CLI dependencies, database files, and ports",
     )
+
+    if healed_actions:
+        for act in healed_actions:
+            print_success(act)
 
     # Binaries Table
     t_tools = create_table(
@@ -171,7 +206,7 @@ def run_doctor(ctx: typer.Context) -> None:
         status_text = (
             "[green]Ready[/green]"
             if info["exists"]
-            else "[yellow]Not Created (Run 'cadence db seed')[/yellow]"
+            else "[yellow]Not Created (Run 'cadence doctor -f' or 'cadence db seed')[/yellow]"
         )
         size_kb = f"{info['size_bytes'] / 1024:.1f} KB" if info["exists"] else "0 KB"
         t_db.add_row(db_name, status_text, size_kb)

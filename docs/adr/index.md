@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-14: Standardized Hexagonal Architecture and Unified Developer Experience Suite](2026-08-14-standardized-hexagonal-architecture-and-unified-developer-experience-suite.md)
 
 - [2026-08-14: Standardized Hexagonal Architecture and Unified Developer CLI](2026-08-14-standardized-hexagonal-architecture-and-unified-developer-cli.md)
 
@@ -251,6 +252,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-17: Interactive Mermaid Diagrams and Responsive Layout Controls](2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md)
 
 ### 7. DevOps, Tooling & CI/CD
+- [2026-08-14: GitHub Pages Documentation Hosting](2026-08-14-github-pages-documentation-hosting.md)
 
 - [2026-08-14: Isolated Concurrent Pytest Harness and Worker Lifecycle](2026-08-14-isolated-concurrent-pytest-harness-and-worker-lifecycle.md)
 
