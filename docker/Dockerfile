@@ -13,9 +13,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Ensure we use the virtual environment by default
 ENV PATH="/opt/.venv/bin:$PATH"
 ENV PYTHONPATH="/app"
-ENV AUDIT_LOG_SECRET_KEY="test-gxp-audit-secret-key-placeholder-abc"
-ENV GATEWAY_SECRET="internal-gateway-secret-12345"
-ENV SIGNING_SECRET="designer-amendment-secure-key-12345"
-ENV INBOUND_EMAIL_HMAC_SECRET="test-email-hmac-secret-placeholder-xyz"
+ENV AUDIT_LOG_SECRET_KEY=""
+ENV GATEWAY_SECRET=""
+ENV SIGNING_SECRET=""
+ENV INBOUND_EMAIL_HMAC_SECRET=""
 
 CMD ["python", "--version"]

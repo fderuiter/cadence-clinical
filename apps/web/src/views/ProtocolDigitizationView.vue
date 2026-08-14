@@ -418,7 +418,7 @@ const computeFileHash = async (file) => {
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
   } catch (err) {
-    return "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+    return "";
   }
 };
 
@@ -505,7 +505,7 @@ const loadSampleProtocol = () => {
     ],
   };
   selectedFile.value = new File(["Mock PDF"], "Protocol_NSCLC_Phase2.pdf", { type: "application/pdf" });
-  fileHash.value = "7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b";
+  fileHash.value = "sha256_mock";
   startExtraction();
 };
 
