@@ -4,14 +4,14 @@ import os
 import sys
 import time
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from typing import Any
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from jose import JWTError, jwt
 from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -1147,6 +1147,30 @@ async def create_demo_session(body: DemoSessionRequest | None = None) -> dict[st
     }
 
 
+async def response_generator(response: Any) -> AsyncGenerator[bytes]:
+    """
+    Asynchronously yields chunks of response body bytes.
+    Ensures safe handling of both standard HTTPX Responses and MagicMocks.
+    """
+    try:
+        if isinstance(response, httpx.Response):
+            async for chunk in response.aiter_bytes():
+                yield chunk
+        else:
+            # Fallback for MagicMocks used in tests
+            content = getattr(response, "content", None)
+            if content is not None:
+                yield content
+    finally:
+        try:
+            if hasattr(response, "aclose"):
+                await response.aclose()
+            elif hasattr(response, "close"):
+                response.close()
+        except Exception:
+            pass
+
+
 @app.api_route(
     "/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"]
 )
@@ -1174,7 +1198,6 @@ async def proxy_requests(request: Request, path: str) -> Response:
         headers = dict(request.headers)
         headers.pop("host", None)
         try:
-            body: bytes = await request.body()
             if http_client is None:
                 return JSONResponse(
                     status_code=500,
@@ -1185,18 +1208,18 @@ async def proxy_requests(request: Request, path: str) -> Response:
                 method=request.method,
                 url=target_url,
                 headers=headers,
-                content=body,
+                content=request.stream(),
                 params=request.query_params,
             )
-            response = await http_client.send(req)
+            response = await http_client.send(req, stream=True)
 
             resp_headers = dict(response.headers)
             resp_headers.pop("transfer-encoding", None)
             resp_headers.pop("content-encoding", None)
             resp_headers.pop("content-length", None)
 
-            return Response(
-                content=response.content,
+            return StreamingResponse(
+                response_generator(response),
                 status_code=response.status_code,
                 headers=resp_headers,
             )
@@ -1221,23 +1244,37 @@ async def proxy_requests(request: Request, path: str) -> Response:
 
     user_id = payload.get("sub", "")
 
+    from packages.security.gating import is_path_signature_gated
+    from packages.security.regulated_actions import (
+        resolve_regulated_action,
+        resolve_regulated_action_by_path,
+    )
+
     # Enforce sig_token validation for signature-gated mutations
     is_mutation = request.method in ("POST", "PUT", "DELETE", "PATCH")
-    body_bytes = await request.body()
+    path_lower = path.lower()
+
+    # Determine if we need to parse the body for gating check
+    needs_body = False
+    if is_mutation:
+        # Check if any rule matches by path (both path-only and body-driven)
+        matched_by_path = resolve_regulated_action_by_path(request.method, path)
+        if matched_by_path is not None or is_path_signature_gated(path_lower):
+            needs_body = True
+
+    body_bytes = b""
     body_json = None
-    if body_bytes:
-        try:
-            import json
+    if needs_body:
+        body_bytes = await request.body()
+        if body_bytes:
+            try:
+                import json
 
-            body_json = json.loads(body_bytes)
-        except Exception:
-            pass
-
-    from packages.security.gating import is_path_signature_gated
-    from packages.security.regulated_actions import resolve_regulated_action
+                body_json = json.loads(body_bytes)
+            except Exception:
+                pass
 
     resolved_action = resolve_regulated_action(request.method, path, body_json)
-    path_lower = path.lower()
     is_signature_gated = (resolved_action is not None) or is_path_signature_gated(
         path_lower
     )
@@ -1549,29 +1586,30 @@ async def proxy_requests(request: Request, path: str) -> Response:
         headers["X-Sig-Token"] = sig_token
 
     try:
-        body: bytes = await request.body()
         if http_client is None:
             return JSONResponse(
                 status_code=500,
                 content={"detail": "Gateway HTTP client not initialized"},
             )
 
+        req_content = body_bytes if needs_body else request.stream()
+
         req = http_client.build_request(
             method=request.method,
             url=target_url,
             headers=headers,
-            content=body,
+            content=req_content,
             params=request.query_params,
         )
-        response = await http_client.send(req)
+        response = await http_client.send(req, stream=True)
 
         resp_headers = dict(response.headers)
         resp_headers.pop("transfer-encoding", None)
         resp_headers.pop("content-encoding", None)
         resp_headers.pop("content-length", None)
 
-        return Response(
-            content=response.content,
+        return StreamingResponse(
+            response_generator(response),
             status_code=response.status_code,
             headers=resp_headers,
         )

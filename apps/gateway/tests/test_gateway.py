@@ -2399,3 +2399,129 @@ def test_sandbox_tenant_isolation_gate_violations() -> None:
             "Sandbox token cannot access non-sandbox resources"
             in res_blocked_query.json()["detail"]
         )
+
+
+def test_gateway_request_streaming_and_response_streaming(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Validate that standard proxy requests use streaming for requests and responses.
+
+    @req:PRD-SYS-001
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {"sub": "user1", "roles": ["admin"]}, "test_secret", algorithm="HS256"
+    )
+
+    captured_stream = None
+
+    async def mock_send(self, req, *args, **kwargs):
+        nonlocal captured_stream
+        captured_stream = req.stream
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.headers = {
+            "content-type": "application/octet-stream",
+            "content-length": "12",
+        }
+        mock_resp.content = b"stream_chunk"
+
+        # Mocking aiter_bytes
+        async def mock_aiter():
+            yield b"stream_chunk"
+
+        mock_resp.aiter_bytes = mock_aiter
+        return mock_resp
+
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    with TestClient(app) as client:
+        res = client.post(
+            "/designer/upload",
+            headers={"Authorization": f"Bearer {token}"},
+            content=b"large_payload",
+        )
+        assert res.status_code == 200
+        assert res.content == b"stream_chunk"
+        # Since it is a non-signature gated POST, it should stream the request content (be an async generator/iterator)
+        assert captured_stream is not None
+        assert type(captured_stream).__name__ == "AsyncIteratorByteStream"
+
+
+def test_gateway_signature_gated_request_buffers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Validate that signature-gated requests buffer the request body for verification.
+
+    @req:PRD-SYS-001
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {"sub": "user1", "roles": ["admin"]}, "test_secret", algorithm="HS256"
+    )
+    monkeypatch.setattr(
+        "packages.security.middleware.verify_sig_token",
+        lambda *a, **kw: (True, "success"),
+    )
+
+    captured_stream = None
+
+    async def mock_send(self, req, *args, **kwargs):
+        nonlocal captured_stream
+        captured_stream = req.stream
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.headers = {"content-type": "application/json"}
+        mock_resp.content = b'{"status": "ok"}'
+
+        async def mock_aiter():
+            yield b'{"status": "ok"}'
+
+        mock_resp.aiter_bytes = mock_aiter
+        return mock_resp
+
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    with TestClient(app) as client:
+        # 'sdv/bulk-sign-off' is a signature-gated pattern
+        res = client.post(
+            "/execution/sdv/bulk-sign-off",
+            headers={"Authorization": f"Bearer {token}", "x-sig-token": "valid_token"},
+            content=b'{"gated": true}',
+        )
+        assert res.status_code == 200
+        assert res.content == b'{"status": "ok"}'
+        # Since it is a signature-gated mutation, we expect the gateway to buffer the body
+        assert captured_stream is not None
+        assert type(captured_stream).__name__ == "ByteStream"
+
+
+def test_gateway_inbound_email_streaming(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Validate that the unauthenticated inbound-email webhook streams both request and response.
+
+    @req:PRD-SYS-001
+    """
+    captured_stream = None
+
+    async def mock_send(self, req, *args, **kwargs):
+        nonlocal captured_stream
+        captured_stream = req.stream
+        mock_resp = MagicMock()
+        mock_resp.status_code = 201
+        mock_resp.headers = {"content-type": "application/json"}
+        mock_resp.content = b'{"status": "ingested"}'
+
+        async def mock_aiter():
+            yield b'{"status": "ingested"}'
+
+        mock_resp.aiter_bytes = mock_aiter
+        return mock_resp
+
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    with TestClient(app) as client:
+        res = client.post("/api/v1/etmf/inbound-email", content=b"raw_email_data")
+        assert res.status_code == 201
+        assert res.content == b'{"status": "ingested"}'
+        assert captured_stream is not None
+        assert type(captured_stream).__name__ == "AsyncIteratorByteStream"

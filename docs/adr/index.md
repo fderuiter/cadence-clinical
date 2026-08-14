@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-14: Gateway Catch All Streaming](2026-08-14-gateway-catch-all-streaming.md)
 - [2026-08-14: Pluggable Relational SQLModel Database Store for Security Audit Logs](2026-08-14-pluggable-relational-sqlmodel-database-store-for-security-audit-logs.md)
 
 - [2026-08-13: Standardize on Plural Adapters with Build-time Path Linting](2026-08-13-standardize-on-plural-adapters-with-build-time-path-linting.md)
