@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-14: Graph-Native Zero-Downtime Protocol Amendment and In-Flight Subject Migration Engine](2026-08-14-graph-native-zero-downtime-protocol-amendment-and-in-flight-subject-migration-engine.md)
 - [2026-08-13: AI-Native USDM Protocol Digitization and Automated eCRF Synthesis](2026-08-13-ai-native-usdm-protocol-digitization-and-automated-ecrf-synthesis.md)
 - [2026-08-14: Pluggable Relational SQLModel Database Store for Security Audit Logs](2026-08-14-pluggable-relational-sqlmodel-database-store-for-security-audit-logs.md)
 

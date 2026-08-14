@@ -10,6 +10,7 @@ _submodule_mappings = {
     # subject
     "ClinicalSubject": "subject",
     "SubjectConsent": "subject",
+    "InformedConsentRecord": "subject",
     "SiteStaffMember": "subject",
     "DOADelegationRecord": "subject",
     "DOAAuditLog": "subject",

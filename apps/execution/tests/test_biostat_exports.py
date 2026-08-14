@@ -444,6 +444,111 @@ def test_xpt_reader_error_handling():
         _read_xpt_v8(b"HEADER RECORD*******LIBV8   HEADER RECORD!!!!!!!" + b" " * 200)
 
 
+def test_sas_xpt_trailing_and_all_blank_rows_roundtrip():
+    """Validates 100% roundtrip fidelity for datasets with trailing blank rows and all-blank rows.
+
+    @req:PRD-SYS-001
+    @req:Trace-1
+    @req:Trace-17
+    """
+    # Scenario A: 5 records (3 non-blank + 2 trailing empty strings)
+    recs_a = [
+        {"VAR1": "HELLO"},
+        {"VAR1": "WORLD"},
+        {"VAR1": "FOO"},
+        {"VAR1": ""},
+        {"VAR1": ""},
+    ]
+    meta_a = [{"name": "VAR1", "type": "string", "length": 8}]
+    b_v5_a = write_xpt("TEST", recs_a, version="v5", variables_metadata=meta_a)
+    _, parsed_v5_a = read_xpt(b_v5_a)
+    assert len(parsed_v5_a) == 5
+    assert parsed_v5_a == recs_a
+
+    b_v8_a = write_xpt("TEST", recs_a, version="v8", variables_metadata=meta_a)
+    _, parsed_v8_a = read_xpt(b_v8_a)
+    assert len(parsed_v8_a) == 5
+    assert parsed_v8_a == recs_a
+
+    # Scenario B: 100 records (85 populated + 15 trailing blank strings)
+    recs_b = [{"VAR1": f"R{i}"} for i in range(85)] + [{"VAR1": ""} for _ in range(15)]
+    meta_b = [{"name": "VAR1", "type": "string", "length": 8}]
+    b_v5_b = write_xpt("TEST", recs_b, version="v5", variables_metadata=meta_b)
+    _, parsed_v5_b = read_xpt(b_v5_b)
+    assert len(parsed_v5_b) == 100
+    assert parsed_v5_b == recs_b
+
+    b_v8_b = write_xpt("TEST", recs_b, version="v8", variables_metadata=meta_b)
+    _, parsed_v8_b = read_xpt(b_v8_b)
+    assert len(parsed_v8_b) == 100
+    assert parsed_v8_b == recs_b
+
+    # Scenario C: 2 records (all blank strings)
+    recs_c = [{"VAR1": ""}, {"VAR1": ""}]
+    meta_c = [{"name": "VAR1", "type": "string", "length": 8}]
+    b_v5_c = write_xpt("TEST", recs_c, version="v5", variables_metadata=meta_c)
+    _, parsed_v5_c = read_xpt(b_v5_c)
+    assert len(parsed_v5_c) == 2
+    assert parsed_v5_c == recs_c
+
+    b_v8_c = write_xpt("TEST", recs_c, version="v8", variables_metadata=meta_c)
+    _, parsed_v8_c = read_xpt(b_v8_c)
+    assert len(parsed_v8_c) == 2
+    assert parsed_v8_c == recs_c
+
+
+def test_xpt_external_dataset_zero_header_count():
+    """Validates parsing of legacy/external XPT files containing 0 in the OBS header count field.
+
+    @req:PRD-SYS-001
+    @req:Trace-1
+    """
+    import struct
+
+    # Construct minimal valid v5 XPT with 1 numeric variable and 0 count in OBS header
+    rec_headers = (
+        b"HEADER RECORD*******LIBRARY HEADER RECORD!!!!!!!000000000000000000000000000000  "
+        + b"SAS     SAS     SASLIB  6.06    bsd4.3  "
+        + b" " * 40
+        + b"HEADER RECORD*******MEMBER  HEADER RECORD!!!!!!!000000000000000001600000000000  "
+        + b"HEADER RECORD*******DSCRPTR HEADER RECORD!!!!!!!000000000000000000000000000000  "
+        + b"SAS     SASDATA TEST    6.06    bsd4.3  "
+        + b" " * 40
+        + b"HEADER RECORD*******NAMESTR HEADER RECORD!!!!!!!000000000000000001400001000000  "
+    )
+    namestr_entry = struct.pack(
+        ">hhhh8s40s8shhh2s8shhi52s",
+        1,
+        0,
+        8,
+        1,
+        b"NUMVAR  ",
+        b"Number Variable                         ",
+        b" " * 8,
+        0,
+        0,
+        0,
+        b"\x00\x00",
+        b" " * 8,
+        0,
+        0,
+        0,
+        b" " * 52,
+    )
+    namestr_block = namestr_entry + b" " * 20  # Pad to 160 (multiple of 80)
+    obs_header_zeros = (
+        b"HEADER RECORD*******OBS     HEADER RECORD!!!!!!!" + b"0" * 30 + b"  "
+    )
+    # 2 rows of 8-byte numeric floats + 64 bytes of card padding (spaces)
+    obs_block = obs_header_zeros + double_to_ibm(42.0) + double_to_ibm(99.5) + b" " * 64
+
+    full_xpt = rec_headers + namestr_block + obs_block
+    meta, parsed = read_xpt(full_xpt)
+    assert len(parsed) == 2
+    assert parsed[0]["NUMVAR"] == 42.0
+    assert parsed[1]["NUMVAR"] == 99.5
+
+
 # =========================================================================
 # 2. CDISC ODM-XML v1.3.2 Serializer Tests
 # =========================================================================
