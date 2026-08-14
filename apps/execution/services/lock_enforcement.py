@@ -52,7 +52,7 @@ class DataLockEnforcer:
                 # Form-level lock check
                 if lock.scope == LockScopeEnum.FORM:
                     raise FormLockedError(
-                        f"eCRF form '{form_id}' is in {lock.status.value} state. Modifications blocked."
+                        f"eCRF form '{form_id}' is in {(lock.status.value if hasattr(lock.status, 'value') else str(lock.status))} state. Modifications blocked."
                     )
 
                 # Field-level lock check
@@ -62,5 +62,5 @@ class DataLockEnforcer:
                     and lock.field_name in field_updates
                 ):
                     raise FormLockedError(
-                        f"Field '{lock.field_name}' on form '{form_id}' is in {lock.status.value} state. Modifications blocked."
+                        f"Field '{lock.field_name}' on form '{form_id}' is in {(lock.status.value if hasattr(lock.status, 'value') else str(lock.status))} state. Modifications blocked."
                     )

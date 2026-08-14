@@ -22,9 +22,12 @@ def test_run_pre_boot_migrations_success(mock_run):
     # Should run fine without raising any exceptions or calling sys.exit
     start.run_pre_boot_migrations("execution", "apps/execution/database/migrate.py")
 
-    mock_run.assert_called_once_with(
-        [sys.executable, "apps/execution/database/migrate.py"]
-    )
+    mock_run.assert_called_once()
+    assert mock_run.call_args[0][0] == [
+        sys.executable,
+        "apps/execution/database/migrate.py",
+    ]
+    assert "PYTHONPATH" in mock_run.call_args[1]["env"]
 
 
 @patch("scripts.start.subprocess.run")
@@ -34,9 +37,12 @@ def test_run_pre_boot_migrations_failure(mock_exit, mock_run):
 
     start.run_pre_boot_migrations("execution", "apps/execution/database/migrate.py")
 
-    mock_run.assert_called_once_with(
-        [sys.executable, "apps/execution/database/migrate.py"]
-    )
+    mock_run.assert_called_once()
+    assert mock_run.call_args[0][0] == [
+        sys.executable,
+        "apps/execution/database/migrate.py",
+    ]
+    assert "PYTHONPATH" in mock_run.call_args[1]["env"]
     mock_exit.assert_called_once_with(42)
 
 

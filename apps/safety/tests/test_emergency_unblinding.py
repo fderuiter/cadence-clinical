@@ -79,7 +79,11 @@ def get_sig_token(
         "iat": time.time(),
         "exp": time.time() + 60.0,
     }
-    return jwt.encode(payload, "internal-gateway-secret-12345", algorithm="HS256")
+    return jwt.encode(
+        payload,
+        os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345"),
+        algorithm="HS256",
+    )
 
 
 def get_unblind_payload(

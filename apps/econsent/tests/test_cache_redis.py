@@ -35,12 +35,16 @@ def test_redis_unreachable_graceful_fallback():
             # Simulate Redis connection failure on ping/subscribe
             mock_redis.side_effect = Exception("Connection refused")
 
-            cache = ApprovedTranslationCache()
+            with patch.object(
+                ApprovedTranslationCache, "_run_subscriber", return_value=None
+            ):
+                cache = ApprovedTranslationCache()
 
-            # Local operations still work
-            cache.set_cached("t1", 1, "es", {"name": "Spanish Translation"})
-            data, expired = cache.get_cached("t1", 1, "es")
-            assert data == {"name": "Spanish Translation"}
+                # Local operations still work
+                cache.set_cached("t1", 1, "es", {"name": "Spanish Translation"})
+                data, expired = cache.get_cached("t1", 1, "es")
+                assert data == {"name": "Spanish Translation"}
+                cache.close()
 
 
 def test_redis_publish_on_invalidate_and_clear():

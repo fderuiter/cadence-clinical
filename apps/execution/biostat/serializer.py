@@ -339,32 +339,52 @@ def _build_item_group(
 
 
 def serialize_to_dataset_json(
-    data: list[Any] | dict[str, list[Any]],
-    study_id: str,
+    data: list[Any] | dict[str, list[Any]] | None = None,
+    study_id: str = "STUDY-001",
     metadata_version_id: str = "MDV.001",
     file_oid: str | None = None,
     originator: str | None = None,
     source_system: str | None = None,
     source_system_version: str | None = None,
+    dataset_name: str | None = None,
+    dataset_label: str | None = None,
+    items_metadata: list[dict[str, Any]] | None = None,
+    records: list[Any] | None = None,
+    **kwargs: Any,
 ) -> DatasetJSON:
     """Serializes dataset lists or mapped bundles into CDISC Dataset-JSON structure."""
+    if data is None and records is not None:
+        if items_metadata and records and isinstance(records[0], (list, tuple)):
+            col_names = [
+                m.get("name") or m.get("OID") or f"VAR{i}"
+                for i, m in enumerate(items_metadata)
+            ]
+            row_dicts = []
+            for row in records:
+                row_dicts.append({col_names[i]: val for i, val in enumerate(row)})
+            data = row_dicts
+        else:
+            data = records
+
     item_group_data = {}
 
     if isinstance(data, dict):
         # Bundle of multiple datasets
-        for name, records in data.items():
-            if not records:
-                records = []
-            item_group_data[f"IG.{name.upper()}"] = _build_item_group(name, records)
+        for name, recs in data.items():
+            item_group_data[f"IG.{name.upper()}"] = _build_item_group(name, recs or [])
     else:
-        # Single dataset list
         if not data:
-            raise ValueError("Input data list is empty. Cannot infer dataset name.")
+            data = []
+        name = dataset_name or "DATASET"
+        if data:
+            first_rec = _to_dict(data[0]) if isinstance(data[0], (dict, object)) else {}
+            if not dataset_name:
+                name = first_rec.get("DOMAIN") or "DATASET"
 
-        first_rec = _to_dict(data[0])
-        name = first_rec.get("DOMAIN") or "DATASET"
-
-        item_group_data[f"IG.{name.upper()}"] = _build_item_group(name, data)
+        ig = _build_item_group(name, data)
+        if dataset_label:
+            ig.label = dataset_label
+        item_group_data[f"IG.{name.upper()}"] = ig
 
     clinical_data = ClinicalData(
         studyOID=study_id,
@@ -383,3 +403,13 @@ def serialize_to_dataset_json(
         sourceSystemVersion=source_system_version,
         clinicalData=clinical_data,
     )
+
+
+def serialize_dataset_json(*args: Any, **kwargs: Any) -> str:
+    """Serializes dataset to CDISC Dataset-JSON string with schema compliance."""
+    import json
+
+    res = serialize_to_dataset_json(*args, **kwargs)
+    data_dict = res.model_dump(by_alias=True)
+    data_dict["datasetJsonVersion"] = "1.0.0"
+    return json.dumps(data_dict)

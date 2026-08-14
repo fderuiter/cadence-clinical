@@ -274,3 +274,7 @@ async def run_impact_analysis(
         "reclassified": reclassified_count,
         "skipped": skipped_count,
     }
+
+
+# Compatibility alias for legacy scripts
+analyze_upversioning_impact = run_impact_analysis

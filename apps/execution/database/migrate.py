@@ -59,6 +59,12 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
     if dialect_name == "postgresql":
         # Create schema functions and triggers
         await conn.execute(
+            text(
+                "DO $$ BEGIN CREATE SCHEMA IF NOT EXISTS audit_schema; "
+                "EXCEPTION WHEN duplicate_schema OR unique_violation THEN NULL; END $$;"
+            )
+        )
+        await conn.execute(
             text("""
             CREATE OR REPLACE FUNCTION audit_schema.prevent_audit_mutation()
             RETURNS TRIGGER AS $$
@@ -76,8 +82,8 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                         OLD.action IS DISTINCT FROM NEW.action OR
                         OLD.user_id IS DISTINCT FROM NEW.user_id OR
                         OLD.timestamp IS DISTINCT FROM NEW.timestamp OR
-                        OLD.old_values::jsonb IS DISTINCT FROM NEW.old_values::jsonb OR
-                        OLD.new_values::jsonb IS DISTINCT FROM NEW.new_values::jsonb OR
+                        OLD.old_values::text IS DISTINCT FROM NEW.old_values::text OR
+                        OLD.new_values::text IS DISTINCT FROM NEW.new_values::text OR
                         OLD.version_index IS DISTINCT FROM NEW.version_index OR
                         OLD.change_reason IS DISTINCT FROM NEW.change_reason) THEN
                         RAISE EXCEPTION 'GxP Compliance Violation: Modification or deletion of audit logs is strictly prohibited.';
@@ -693,7 +699,7 @@ async def run_migrations(database_url: str) -> None:
         print("Schema migration completed successfully.")
     except Exception as e:
         print(f"Schema migration failed: {e}")
-        sys.exit(1)
+        raise
     finally:
         await engine.dispose()
 
@@ -715,7 +721,10 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    asyncio.run(run_migrations(args.db_url))
+    try:
+        asyncio.run(run_migrations(args.db_url))
+    except Exception:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

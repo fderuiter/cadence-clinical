@@ -69,3 +69,13 @@ class DataLockResponse(BaseModel):
     is_active: bool = Field(True, description="Active status")
     locked_at: str | None = Field(None, description="Lock timestamp")
     unlocked_at: str | None = Field(None, description="Unlock timestamp")
+
+
+class LockStatusResponse(BaseModel):
+    """Status summary of all in-memory and global locks."""
+
+    locked_sites: list[str] = Field(default_factory=list)
+    locked_visits: list[str] = Field(default_factory=list)
+    locked_forms: list[str] = Field(default_factory=list)
+    locked_subjects: list[str] = Field(default_factory=list)
+    trial_locked: bool = False

@@ -82,7 +82,7 @@ def build_audit_record(
 
 def serialize_to_odm_xml(
     study_id: str,
-    data: dict[str, list[Any]] | list[Any],
+    data: dict[str, list[Any]] | list[Any] | None = None,
     metadata_version_oid: str = "MDV.001",
     file_oid: str | None = None,
     originator: str = "Cadence EDC/CDM",
@@ -90,6 +90,9 @@ def serialize_to_odm_xml(
     source_system_version: str = "1.0.0",
     audit_user: str = "system",
     change_reason: str = "Regulatory Submission Export",
+    study_name: str | None = None,
+    clinical_data: list[Any] | None = None,
+    **kwargs: Any,
 ) -> str:
     """Serializes clinical records into a valid CDISC ODM-XML v1.3.2 document string.
 
@@ -125,11 +128,37 @@ def serialize_to_odm_xml(
         },
     )
 
+    if data is None and clinical_data is not None:
+        data = clinical_data
+
     # Normalize data bundle
     datasets: dict[str, list[dict[str, Any]]] = {}
     if isinstance(data, dict):
         for k, v in data.items():
             datasets[k.upper()] = [_to_dict(r) for r in (v or [])]
+    elif (
+        isinstance(data, list)
+        and data
+        and isinstance(data[0], dict)
+        and "item_id" in data[0]
+    ):
+        for r in data:
+            grp = (r.get("item_group_id") or "DATASET").upper()
+            item_name = r.get("item_id")
+            val = r.get("value")
+            rec = {
+                "USUBJID": r.get("subject_id") or r.get("USUBJID") or "SUBJ-001",
+                "SUBJID": r.get("subject_id") or r.get("SUBJID") or "SUBJ-001",
+                "SITEID": r.get("site_id") or r.get("SITEID"),
+                "VISIT": r.get("visit_id") or r.get("VISIT"),
+                item_name: val,
+                "_audit_user": r.get("user_id"),
+                "_audit_reason": r.get("reason_for_change"),
+                "_audit_timestamp": r.get("timestamp"),
+            }
+            if grp not in datasets:
+                datasets[grp] = []
+            datasets[grp].append(rec)
     else:
         if data:
             first_r = _to_dict(data[0])
@@ -142,7 +171,7 @@ def serialize_to_odm_xml(
     study_el = ET.SubElement(root, f"{{{ODM_NS}}}Study", attrib={"OID": study_id})
     gv = ET.SubElement(study_el, f"{{{ODM_NS}}}GlobalVariables")
     sn = ET.SubElement(gv, f"{{{ODM_NS}}}StudyName")
-    sn.text = f"Study {study_id}"
+    sn.text = study_name or f"Study {study_id}"
     sd = ET.SubElement(gv, f"{{{ODM_NS}}}StudyDescription")
     sd.text = f"Protocol & Clinical Observations for {study_id}"
     pn = ET.SubElement(gv, f"{{{ODM_NS}}}ProtocolName")
@@ -219,12 +248,25 @@ def serialize_to_odm_xml(
             cd_el, f"{{{ODM_NS}}}SubjectData", attrib={"SubjectKey": sub_id}
         )
 
+        sample_rec = next(iter(next(iter(domains.values())))) if domains else {}
+        sub_audit_user = (
+            sample_rec.get("_audit_user") or sample_rec.get("user_id") or audit_user
+        )
+        sub_audit_reason = (
+            sample_rec.get("_audit_reason")
+            or sample_rec.get("reason_for_change")
+            or change_reason
+        )
+        sub_audit_ts = (
+            sample_rec.get("_audit_timestamp") or sample_rec.get("timestamp") or now_iso
+        )
+
         # Embedded subject-level <AuditRecord>
         subj_el.append(
             build_audit_record(
-                user_id=audit_user,
-                reason_for_change=change_reason,
-                timestamp=now_iso,
+                user_id=sub_audit_user,
+                reason_for_change=sub_audit_reason,
+                timestamp=sub_audit_ts,
                 location_id=None,
             )
         )
@@ -308,3 +350,7 @@ def validate_odm_xml_string(xml_str: str) -> bool:
         return clin_data is not None
     except Exception:
         return False
+
+
+# Compatibility alias for legacy scripts
+generate_odm_xml = serialize_to_odm_xml

@@ -127,9 +127,34 @@ def deidentify_record(row: dict[str, Any], salt: str) -> dict[str, Any]:
             if val is not None and isinstance(val, str) and val.strip():
                 r[identifier_field] = pseudonymize_value(val, salt)
 
-    # 3. Apply date shifting
+    # 3. Direct PII scrubbing and date shifting
+    pii_direct = {
+        "patient_name",
+        "patientname",
+        "name",
+        "first_name",
+        "last_name",
+        "ssn",
+        "social_security_number",
+        "email",
+        "phone",
+        "telephone",
+        "address",
+        "street",
+        "zipcode",
+        "postal_code",
+    }
+    pii_dates = {
+        "birth_date",
+        "birthdate",
+        "dob",
+        "date_of_birth",
+    }
     for field_name in list(r.keys()):
-        if field_name in SDTM_DATE_FIELDS:
+        fn_lower = field_name.lower()
+        if fn_lower in pii_direct:
+            r[field_name] = "[REDACTED]"
+        elif fn_lower in pii_dates or field_name in SDTM_DATE_FIELDS:
             val = r[field_name]
             if val is not None and isinstance(val, str) and val.strip():
                 r[field_name] = shift_partial_date(val, offset)

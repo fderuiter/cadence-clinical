@@ -896,3 +896,73 @@ async def trigger_impact_analysis(
         logger.error(f"ValueError in up-versioning impact analysis: {e}", exc_info=True)
         # Raise InvalidCodingActionError or standard exceptions rather than HTTPException
         raise InvalidCodingActionError(str(e))
+
+
+class MedicalCodingService:
+    """Service wrapper for medical coding operations."""
+
+    @staticmethod
+    async def raise_coding_query(
+        session: Any,
+        observation_id: str | None = None,
+        assignment_id: str | None = None,
+        query_text: str | None = None,
+        user_id: str = "system",
+        reason: str | None = None,
+        actor: str | None = None,
+    ) -> Any:
+        from sqlalchemy import select
+
+        from apps.execution.database.models import ClinicalQuery
+
+        repo = _get_repository(session)
+        resolved_actor = actor or user_id or "system"
+
+        if not assignment_id and observation_id:
+            assignments = await repo.list_assignments(observation_id=observation_id)
+            if assignments:
+                assignment_id = str(assignments[0].id)
+            else:
+                obs = await repo.get_observation(observation_id)
+                study_id = obs.study_id if obs else "STUDY-001"
+                site_id = getattr(obs, "site_id", None) if obs else None
+                subject_id = obs.subject_id if obs else "SUBJ-001"
+                visit_id = getattr(obs, "visit_id", None) if obs else None
+                domain = getattr(obs, "domain", "AE") if obs else "AE"
+                test_code = getattr(obs, "test_code", "AETERM") if obs else "AETERM"
+                explanation_text = query_text or "Coding clarification required."
+                query = ClinicalQuery(
+                    study_id=study_id,
+                    site_id=site_id,
+                    subject_id=subject_id,
+                    visit_id=visit_id,
+                    domain=domain,
+                    test_code=test_code,
+                    status="OPEN",
+                    explanation=explanation_text,
+                    message=explanation_text,
+                    observation_id=observation_id,
+                    origin="SYSTEM_CODING",
+                    query_type="SYSTEM_CODING",
+                    form_id=f"{domain.upper()}_FORM",
+                    field_id=test_code,
+                    action_required="CLARIFY_VERBATIM",
+                    priority="HIGH",
+                    created_by=resolved_actor,
+                )
+                await repo.save_query(query)
+                if hasattr(session, "flush"):
+                    await session.flush()
+                return query
+
+        res = await raise_coding_query(
+            session=session,
+            assignment_id=assignment_id,
+            query_text=query_text,
+            reason=reason,
+            actor=resolved_actor,
+        )
+        query_id = res["query_id"]
+        stmt = select(ClinicalQuery).where(ClinicalQuery.id == query_id)
+        q_res = await session.execute(stmt)
+        return q_res.scalar_one_or_none() or query_id

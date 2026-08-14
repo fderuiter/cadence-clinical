@@ -41,6 +41,7 @@ class ApprovedTranslationCache:
 
         self._pub_client = None
         self._sub_thread = None
+        self._stop_event = threading.Event()
 
         if self.redis_host:
             try:
@@ -61,9 +62,14 @@ class ApprovedTranslationCache:
             )
             self._sub_thread.start()
 
+    def close(self) -> None:
+        """Stops background threads and cleans up resources."""
+        if hasattr(self, "_stop_event"):
+            self._stop_event.set()
+
     def _run_subscriber(self) -> None:
         """Background thread logic for listening to Redis invalidation events."""
-        while True:
+        while not self._stop_event.is_set():
             try:
                 r = redis.Redis(
                     host=self.redis_host,
@@ -112,7 +118,8 @@ class ApprovedTranslationCache:
                 logger.warning(
                     f"Redis cache invalidation subscriber disconnected or failed to connect: {e}. Retrying in 5 seconds..."
                 )
-                time.sleep(5)
+                if self._stop_event.wait(5):
+                    break
 
     def _publish_message(self, payload: dict[str, Any]) -> None:
         """Safely publishes invalidation payload to Redis, ignoring errors with warnings."""

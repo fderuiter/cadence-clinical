@@ -377,9 +377,11 @@ async def seed_test_catalog(session: Any) -> None:
 @pytest_asyncio.fixture(autouse=True)
 async def setup_e2e_db() -> AsyncGenerator[None]:
     """Isolate each E2E test with a clean in-memory SQLite schema and seeded catalogs."""
+    from apps.execution.coding.matcher import coding_cache
     from apps.execution.database.migrate import deploy_database_triggers
 
     TrialLockManager.reset()
+    coding_cache.clear()
     db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -392,8 +394,8 @@ async def setup_e2e_db() -> AsyncGenerator[None]:
 
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
-    await db_manager.close()
     TrialLockManager.reset()
+    coding_cache.clear()
 
 
 @pytest_asyncio.fixture
