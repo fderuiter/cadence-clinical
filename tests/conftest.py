@@ -8,8 +8,12 @@ from typing import Any
 import pytest
 from neo4j.exceptions import TransientError
 
+_faulthandler_log = None
 if hasattr(signal, "SIGUSR1"):
-    faulthandler.register(signal.SIGUSR1, all_threads=True)
+    _faulthandler_log = open(  # noqa: SIM115 - retained for the pytest process lifetime
+        f"/tmp/cadence-pytest-stack-{os.getpid()}.log", "w", encoding="utf-8"
+    )
+    faulthandler.register(signal.SIGUSR1, file=_faulthandler_log, all_threads=True)
 
 # Ensure offline terminology fallback is active for test isolation and speed
 os.environ.setdefault("TERMINOLOGY_OFFLINE", "true")
