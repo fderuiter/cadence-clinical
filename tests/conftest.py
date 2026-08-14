@@ -1237,10 +1237,7 @@ async def clean_postgres_databases():
 
     suffix = _current_worker_suffix or _build_worker_suffix()
     for db_prefix in SERVICE_DB_PREFIXES:
-        if (
-            os.environ.get("USE_LIVE_DB") != "true"
-            and db_prefix not in _initialized_databases
-        ):
+        if not is_live_db_requested() and db_prefix not in _initialized_databases:
             continue
         db_name = f"{db_prefix}{suffix}"
         db_url = f"{base_postgres_url}/{db_name}"
@@ -1267,9 +1264,9 @@ async def clean_postgres_databases():
 async def cleanup_databases_fixture():
     """Autouse fixture that clears live Neo4j and PostgreSQL databases
 
-    before and after every single test case when USE_LIVE_DB=true is active.
+    before and after every single test case when live DB testing is active.
     """
-    is_live_db = os.environ.get("USE_LIVE_DB") == "true"
+    is_live_db = is_live_db_requested()
 
     if not is_live_db:
         yield

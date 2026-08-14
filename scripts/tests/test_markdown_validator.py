@@ -661,8 +661,11 @@ def test_exclude_tests_from_codebase_map(tmp_path):
     assert "AnotherTestModel" not in codebase_map
 
 
-def test_degraded_linter_warnings_and_fallback(tmp_path, capsys):
+def test_degraded_linter_warnings_and_fallback(tmp_path, capsys, monkeypatch):
     """Verifies that a dynamic import failure emits a degraded coverage warning to stderr, then falls back."""
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    monkeypatch.delenv("CI", raising=False)
+
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
 
@@ -705,8 +708,11 @@ class BrokenModel(BaseModel):
     assert len(vm.errors) == 0
 
 
-def test_degraded_linter_warnings_and_fallback_failure(tmp_path, capsys):
+def test_degraded_linter_warnings_and_fallback_failure(tmp_path, capsys, monkeypatch):
     """Verifies that if fallback also fails (missing required field), errors are reported."""
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    monkeypatch.delenv("CI", raising=False)
+
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
 
