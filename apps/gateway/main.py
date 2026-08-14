@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import logging
 import os
 import sys
@@ -337,6 +338,47 @@ SERVICES = {
 jwks_cache: dict[str, Any] | None = None
 http_client: httpx.AsyncClient | None = None
 jwks_fetch_lock = asyncio.Lock()
+jwks_task: asyncio.Task | None = None
+
+
+async def _background_jwks_loop() -> None:
+    """
+    Background worker loop to fetch and periodically refresh JWKS.
+    Implements:
+    - Initial post-bootstrap fetch.
+    - Exponential backoff retry loop if initial or subsequent fetches fail (initially 1s delay, doubling, capped at 300s/5m).
+    - Hourly refresh cycle on success.
+    - Safe error handling and preservation of cached keys during failed refreshes.
+    """
+    global jwks_cache, http_client
+    delay = 1.0
+    while True:
+        try:
+            client = http_client if http_client is not None else httpx.AsyncClient()
+            resp = await client.get(JWKS_URL, timeout=5.0)
+            if resp.status_code == 200:
+                jwks_cache = resp.json()
+                delay = 1.0
+                await asyncio.sleep(3600.0)
+            else:
+                logger = logging.getLogger("gateway")
+                logger.warning(
+                    f"Failed to fetch JWKS in background loop: HTTP status code {resp.status_code}. Retrying in {delay}s..."
+                )
+                await asyncio.sleep(delay)
+                delay = min(delay * 2.0, 300.0)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger = logging.getLogger("gateway")
+            logger.warning(
+                f"Failed to fetch JWKS in background loop: {str(e)}. Retrying in {delay}s..."
+            )
+            try:
+                await asyncio.sleep(delay)
+            except asyncio.CancelledError:
+                break
+            delay = min(delay * 2.0, 300.0)
 
 
 def _is_kid_cached(kid: str | None) -> bool:
@@ -356,15 +398,10 @@ async def startup() -> None:
     Creates an HTTP client instance and attempts to fetch Keycloak JWKS
     public keys for local caching, unless SKIP_JWKS_FETCH is enabled.
     """
-    global jwks_cache, http_client
+    global jwks_cache, http_client, jwks_task
     http_client = httpx.AsyncClient()
     if not os.getenv("SKIP_JWKS_FETCH"):
-        try:
-            resp = await http_client.get(JWKS_URL, timeout=5.0)
-            if resp.status_code == 200:
-                jwks_cache = resp.json()
-        except Exception:
-            pass
+        jwks_task = asyncio.create_task(_background_jwks_loop())
 
 
 @app.on_event("shutdown")
@@ -374,7 +411,12 @@ async def shutdown() -> None:
 
     Closes the global asynchronous HTTP client to prevent resource leaks.
     """
-    global http_client
+    global http_client, jwks_task
+    if jwks_task:
+        jwks_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await jwks_task
+        jwks_task = None
     if http_client:
         await http_client.aclose()
 

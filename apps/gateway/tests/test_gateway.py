@@ -2399,3 +2399,173 @@ def test_sandbox_tenant_isolation_gate_violations() -> None:
             "Sandbox token cannot access non-sandbox resources"
             in res_blocked_query.json()["detail"]
         )
+
+
+@pytest.fixture(autouse=True)
+async def cleanup_jwks_task() -> Any:
+    import asyncio
+    import contextlib
+
+    yield
+    from apps.gateway import main as gateway_main
+
+    if gateway_main.jwks_task and not gateway_main.jwks_task.done():
+        gateway_main.jwks_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await gateway_main.jwks_task
+    gateway_main.jwks_task = None
+
+
+@pytest.mark.asyncio
+async def test_background_jwks_loop_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+    import contextlib
+
+    import httpx
+
+    from apps.gateway import main as gateway_main
+
+    monkeypatch.setattr(gateway_main, "jwks_cache", None)
+
+    jwks = {"keys": [{"kid": "test-kid"}]}
+
+    class MockResponse:
+        status_code = 200
+
+        def json(self) -> dict:
+            return jwks
+
+    fetch_count = 0
+
+    async def mock_get(*args: Any, **kwargs: Any) -> MockResponse:
+        nonlocal fetch_count
+        fetch_count += 1
+        return MockResponse()
+
+    if gateway_main.http_client is None:
+        gateway_main.http_client = httpx.AsyncClient()
+    monkeypatch.setattr(gateway_main.http_client, "get", mock_get)
+
+    sleep_calls = []
+
+    async def mock_sleep(seconds: float) -> None:
+        sleep_calls.append(seconds)
+        raise asyncio.CancelledError()
+
+    monkeypatch.setattr(asyncio, "sleep", mock_sleep)
+
+    task = asyncio.create_task(gateway_main._background_jwks_loop())
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+    assert fetch_count == 1
+    assert gateway_main.jwks_cache == jwks
+    assert sleep_calls == [3600.0]
+
+
+@pytest.mark.asyncio
+async def test_background_jwks_loop_backoff_and_recovery(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import asyncio
+    import contextlib
+
+    import httpx
+
+    from apps.gateway import main as gateway_main
+
+    monkeypatch.setattr(gateway_main, "jwks_cache", {"keys": ["existing-key"]})
+
+    class MockFailedResponse:
+        status_code = 500
+
+    class MockSuccessResponse:
+        status_code = 200
+
+        def json(self) -> dict:
+            return {"keys": ["new-key"]}
+
+    fetch_count = 0
+
+    async def mock_get(*args: Any, **kwargs: Any) -> Any:
+        nonlocal fetch_count
+        fetch_count += 1
+        if fetch_count < 4:
+            return MockFailedResponse()
+        return MockSuccessResponse()
+
+    if gateway_main.http_client is None:
+        gateway_main.http_client = httpx.AsyncClient()
+    monkeypatch.setattr(gateway_main.http_client, "get", mock_get)
+
+    original_sleep = asyncio.sleep
+    sleep_calls = []
+
+    async def mock_sleep(seconds: float) -> None:
+        sleep_calls.append(seconds)
+        if len(sleep_calls) == 4:
+            raise asyncio.CancelledError()
+        await original_sleep(0)
+
+    monkeypatch.setattr(asyncio, "sleep", mock_sleep)
+
+    task = asyncio.create_task(gateway_main._background_jwks_loop())
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+    assert fetch_count == 4
+    assert gateway_main.jwks_cache == {"keys": ["new-key"]}
+    assert sleep_calls == [1.0, 2.0, 4.0, 3600.0]
+
+
+@pytest.mark.asyncio
+async def test_background_jwks_loop_backoff_cap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import asyncio
+    import contextlib
+
+    import httpx
+
+    from apps.gateway import main as gateway_main
+
+    class MockFailedResponse:
+        status_code = 500
+
+    async def mock_get(*args: Any, **kwargs: Any) -> MockFailedResponse:
+        return MockFailedResponse()
+
+    if gateway_main.http_client is None:
+        gateway_main.http_client = httpx.AsyncClient()
+    monkeypatch.setattr(gateway_main.http_client, "get", mock_get)
+
+    original_sleep = asyncio.sleep
+    sleep_calls = []
+
+    async def mock_sleep(seconds: float) -> None:
+        sleep_calls.append(seconds)
+        if len(sleep_calls) == 12:
+            raise asyncio.CancelledError()
+        await original_sleep(0)
+
+    monkeypatch.setattr(asyncio, "sleep", mock_sleep)
+
+    task = asyncio.create_task(gateway_main._background_jwks_loop())
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+    expected_sleeps = [
+        1.0,
+        2.0,
+        4.0,
+        8.0,
+        16.0,
+        32.0,
+        64.0,
+        128.0,
+        256.0,
+        300.0,
+        300.0,
+        300.0,
+    ]
+    assert sleep_calls == expected_sleeps
