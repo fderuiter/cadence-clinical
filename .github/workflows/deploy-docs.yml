@@ -1,4 +1,4 @@
-name: Deploy Interactive Web Demo
+name: Deploy Developer Documentation
 
 on:
   workflow_call:
@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build Static Demo
+    name: Build Developer Documentation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -34,16 +34,32 @@ jobs:
           node-version: "20"
           cache: "pnpm"
 
-      - name: Install dependencies
+      - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build Web Application
-        run: pnpm --filter web build
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install Python dependencies
+        run: uv sync --locked --all-extras
+
+      - name: Build UI package
+        run: pnpm --filter ui build
+
+      - name: Build Documentation Portal
+        run: pnpm docs:build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: apps/web/dist
+          path: docs/.vitepress/dist
 
   deploy:
     name: Deploy to GitHub Pages

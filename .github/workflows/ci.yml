@@ -19,6 +19,8 @@ jobs:
     permissions:
       contents: read
     outputs:
+      cadence_outcome: ${{ steps.run_cadence_check.outcome }}
+      contracts_outcome: ${{ steps.run_contracts.outcome }}
       linting_outcome: ${{ steps.run_linting.outcome }}
       frontend_outcome: ${{ steps.run_frontend.outcome }}
       adr_outcome: ${{ steps.run_adr.outcome }}
@@ -67,6 +69,16 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --locked --all-extras
+
+      - name: Run Cadence Architecture & Sentinel Check
+        id: run_cadence_check
+        if: always()
+        run: uv run cadence check --parallel
+
+      - name: Run Hexagonal Contract Verification
+        id: run_contracts
+        if: always()
+        run: uv run python scripts/verify_contracts.py
 
       - name: Run linting
         id: run_linting
@@ -629,6 +641,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          CADENCE_OUTCOME: ${{ needs.style.outputs.cadence_outcome }}
+          CONTRACTS_OUTCOME: ${{ needs.style.outputs.contracts_outcome }}
           LINTING_OUTCOME: ${{ needs.style.outputs.linting_outcome }}
           TEST_OUTCOME: ${{ (needs.unit-tests.outputs.test_outcome == 'success' && needs.integration-tests.outputs.test_outcome == 'success') && 'success' || 'failure' }}
           FRONTEND_OUTCOME: ${{ needs.style.outputs.frontend_outcome }}
@@ -757,12 +771,12 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/production-pipeline.yml
 
-  deploy-demo:
-    name: Call Deploy Demo
+  deploy-docs:
+    name: Call Deploy Docs
     needs: [release-and-archive]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
       pages: write
       id-token: write
-    uses: ./.github/workflows/deploy-demo.yml
+    uses: ./.github/workflows/deploy-docs.yml

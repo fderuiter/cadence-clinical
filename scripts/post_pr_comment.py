@@ -15,6 +15,8 @@ import subprocess
 import sys
 
 ROW_KEYS: dict[str, str] = {
+    "Cadence Architecture & Sentinels": "cadence",
+    "Hexagonal Contract Verification": "contracts",
     "Linting & Formatting": "lint",
     "Backend Tests & Coverage": "test",
     "Frontend Checks": "frontend",
@@ -32,6 +34,8 @@ ROW_KEYS: dict[str, str] = {
 }
 
 FIX_COMMANDS: dict[str, str] = {
+    "cadence": "`uv run cadence fix`",
+    "contracts": "`uv run python scripts/verify_contracts.py`",
     "lint": "`uv run ruff check . --fix && uv run ruff format .`",
     "test": "`uv run pytest -n auto`",
     "frontend": "`pnpm -r format && pnpm -r lint`",
@@ -336,6 +340,8 @@ def build_comment_body(
     )
 
     checks = [
+        ("Cadence Architecture & Sentinels", "cadence"),
+        ("Hexagonal Contract Verification", "contracts"),
         ("Linting & Formatting (Ruff)", "lint"),
         ("Backend Tests & Coverage (pytest)", "test"),
         ("Requirements Traceability", "traceability"),
@@ -596,6 +602,8 @@ def main() -> None:
             )
 
         raw_new_outcomes: dict[str, str] = {
+            "cadence": os.environ.get("CADENCE_OUTCOME", ""),
+            "contracts": os.environ.get("CONTRACTS_OUTCOME", ""),
             "lint": os.environ.get("LINTING_OUTCOME", ""),
             "test": os.environ.get("TEST_OUTCOME", ""),
             "frontend": os.environ.get("FRONTEND_OUTCOME", ""),

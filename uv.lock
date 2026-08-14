@@ -33,6 +33,7 @@ members = [
     "packages-hexagonal",
     "packages-security",
     "packages-storage",
+    "packages-testing",
 ]
 
 [[package]]
@@ -2038,6 +2039,23 @@ dependencies = [
 requires-dist = [
     { name = "aioboto3", specifier = ">=13.0.0" },
     { name = "boto3", specifier = ">=1.34.0" },
+    { name = "pydantic", specifier = ">=2.6.0" },
+]
+
+[[package]]
+name = "packages-testing"
+version = "0.1.0"
+source = { editable = "packages/testing" }
+dependencies = [
+    { name = "packages-hexagonal" },
+    { name = "packages-security" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "packages-hexagonal", editable = "packages/hexagonal" },
+    { name = "packages-security", editable = "packages/security" },
     { name = "pydantic", specifier = ">=2.6.0" },
 ]
 

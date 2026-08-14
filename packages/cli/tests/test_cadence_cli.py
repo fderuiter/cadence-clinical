@@ -1,9 +1,11 @@
 """Unit tests for the Cadence CLI commands and formatting."""
 
 import json
+from pathlib import Path
 
 from typer.testing import CliRunner
 
+from packages.cli.commands.test import _find_target_test_file
 from packages.cli.main import app
 
 runner = CliRunner()
@@ -34,6 +36,23 @@ def test_cli_doctor_json():
     assert "binaries" in data
     assert "databases" in data
     assert "ports" in data
+
+
+def test_cli_doctor_auto_fix_json():
+    """Verify doctor --auto-fix remediates environment and emits JSON."""
+    result = runner.invoke(app, ["--json", "doctor", "--auto-fix"])
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert "auto_healed" in data
+
+
+def test_cli_dev_json():
+    """Verify dev command json output returns service manifest."""
+    result = runner.invoke(app, ["--json", "dev", "gateway", "execution"])
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["status"] == "ready"
+    assert len(data["services"]) == 2
 
 
 def test_cli_db_status_json():
@@ -67,3 +86,18 @@ def test_cli_db_seed_json():
     data = json.loads(result.output)
     assert data["success"] is True
     assert "seeded_entities" in data
+
+
+def test_find_target_test_file_resolution(tmp_path: Path):
+    """Verify smart test file resolver maps source changes to test files."""
+    repo = tmp_path
+    app_dir = repo / "apps" / "execution"
+    test_dir = app_dir / "tests"
+    test_dir.mkdir(parents=True)
+    src_file = app_dir / "evaluator.py"
+    src_file.write_text("# evaluator", encoding="utf-8")
+    test_file = test_dir / "test_evaluator.py"
+    test_file.write_text("# test", encoding="utf-8")
+
+    res = _find_target_test_file(src_file, repo)
+    assert res == "apps/execution/tests/test_evaluator.py"

@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "packages-testing"
+version = "0.1.0"
+description = "Cadence Clinical Centralized Test Infrastructure & Domain Factories"
+requires-python = ">=3.14"
+dependencies = [
+    "pydantic>=2.6.0",
+    "packages-hexagonal",
+    "packages-security",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+exclude = ["tests"]
+
+[tool.hatch.build.targets.wheel.sources]
+"" = "packages/testing"

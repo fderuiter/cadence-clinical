@@ -29,6 +29,7 @@ packages-deid = { workspace = true }
 packages-storage = { workspace = true }
 packages-hexagonal = { workspace = true }
 packages-compliance = { workspace = true }
+packages-testing = { workspace = true }
 apps-ctms = { workspace = true }
 apps-designer = { workspace = true }
 apps-econsent = { workspace = true }

@@ -24,6 +24,12 @@ fix_app = typer.Typer(
 @fix_app.callback(invoke_without_command=True)
 def run_fix(
     ctx: typer.Context,
+    all_remediations: bool = typer.Option(
+        False,
+        "--all",
+        "-a",
+        help="Execute all self-healing, schema synchronization, and formatting steps",
+    ),
     sync_gxp: bool = typer.Option(
         False,
         "--sync-gxp",
@@ -35,10 +41,32 @@ def run_fix(
     repo_root = Path(__file__).resolve().parents[3]
 
     steps = [
-        ("Ruff Linter Fix", ["uv", "run", "ruff", "check", ".", "--fix"]),
+        (
+            "Ruff Linter Fix",
+            [
+                "uv",
+                "run",
+                "ruff",
+                "check",
+                ".",
+                "--fix",
+                "--exclude",
+                "apps/execution/database/models.py",
+            ],
+        ),
         (
             "Ruff Code Formatter",
-            ["uv", "run", "ruff", "format", "--target-version", "py313", "."],
+            [
+                "uv",
+                "run",
+                "ruff",
+                "format",
+                "--target-version",
+                "py313",
+                ".",
+                "--exclude",
+                "apps/execution/database/models.py",
+            ],
         ),
         ("ADR Index Auto-Fix", ["python3", "scripts/validate_adrs.py", "--fix-index"]),
         (
@@ -58,7 +86,7 @@ def run_fix(
         ),
     ]
 
-    if sync_gxp:
+    if all_remediations or sync_gxp:
         steps.append(
             ("GxP Compliance Sync", ["uv", "run", "python", "scripts/sync_gxp.py"])
         )

@@ -510,6 +510,16 @@ When running automated test suites concurrently or under `pytest-xdist`:
   uv run python scripts/clean_test_dbs.py --run-id <run_uid>
   ```
 
+### 18. Documentation Portal & GitHub Pages Hosting Standard
+
+GitHub Pages for Cadence Clinical is exclusively dedicated to hosting the **VitePress Developer Documentation Portal**:
+
+- **Root Pages Hosting:** The documentation portal is deployed at repository root (`https://<owner>.github.io/cadence-clinical/`).
+- **Exclusion of Web Demo from Pages:** `apps/web` is reserved strictly for local development (`pnpm dev`), component testing, and CI verification; it is never deployed to GitHub Pages.
+- **Workflow Canonical Name:** Deployments must use `.github/workflows/deploy-docs.yml` (triggered automatically downstream via `.github/workflows/ci.yml` upon push to `main`, or manually via `workflow_dispatch`). Do not recreate or reference legacy `deploy-demo.yml`.
+- **Docs Build Dependencies:** Compiling docs via `pnpm docs:build` (`node scripts/build-docs.js`) requires both Node.js (20+) / pnpm (9+) and Python (3.14+) / uv to execute ADR validators, markdown link assertions, schema visualizers, and draft RTM compilation before static VitePress assembly.
+- **VitePress Config Invariants:** `docs/.vitepress/config.mjs` must maintain `base: process.env.VITEPRESS_BASE || "/cadence-clinical/"` and `outDir: path.resolve(__dirname, "dist")`.
+
 ---
 
 ## GxP & HIPAA Compliance Scan Protocol

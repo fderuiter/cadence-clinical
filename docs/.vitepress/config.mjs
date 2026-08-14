@@ -92,8 +92,8 @@ export default withMermaid(
     title: "Cadence Clinical Portal",
     description:
       "Metadata-Driven Clinical Execution Platform Documentation Portal",
-    base: "/cadence-clinical/docs/",
-    outDir: path.resolve(__dirname, "../../apps/web/dist/docs"),
+    base: process.env.VITEPRESS_BASE || "/cadence-clinical/",
+    outDir: path.resolve(__dirname, "dist"),
     ignoreDeadLinks: true,
     themeConfig: {
       search: {

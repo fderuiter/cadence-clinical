@@ -150,6 +150,7 @@ APPROVED_SUBDIRECTORIES = {
     "verification/",
     "docker/",
     ".github/",
+    ".cadence/",
 }
 
 
