@@ -476,6 +476,9 @@ def test_load_and_validate_ledger_multiple_entries_same_id(tmp_path):
 
 
 @patch("scripts.validate_vulnerabilities.load_and_validate_ledger")
+@patch("scripts.validate_vulnerabilities.scan_for_inline_bypasses", return_value=[])
+@patch("scripts.validate_vulnerabilities.scan_for_manifest_bypasses", return_value=[])
+@patch("scripts.validate_vulnerabilities.scan_for_config_bypasses", return_value=[])
 @patch("scripts.validate_vulnerabilities.execute_pip_audit")
 @patch("scripts.validate_vulnerabilities.execute_pnpm_audit")
 @patch("scripts.validate_vulnerabilities.extract_active_vulnerabilities")
@@ -487,6 +490,9 @@ def test_validate_vulnerabilities_compound_matching(
     mock_extract_python,
     mock_execute_pnpm,
     mock_execute_pip,
+    _mock_config_scan,
+    _mock_manifest_scan,
+    _mock_inline_scan,
     mock_load_ledger,
 ):
     """Verify that compliance run fails if vuln ID matches but package name mismatches, and passes if both match."""
@@ -552,6 +558,9 @@ def test_validate_vulnerabilities_compound_matching(
 
 
 @patch("scripts.validate_vulnerabilities.load_and_validate_ledger")
+@patch("scripts.validate_vulnerabilities.scan_for_inline_bypasses", return_value=[])
+@patch("scripts.validate_vulnerabilities.scan_for_manifest_bypasses", return_value=[])
+@patch("scripts.validate_vulnerabilities.scan_for_config_bypasses", return_value=[])
 @patch("scripts.validate_vulnerabilities.execute_pip_audit")
 @patch("scripts.validate_vulnerabilities.execute_pnpm_audit")
 @patch("scripts.validate_vulnerabilities.extract_active_vulnerabilities")
@@ -563,6 +572,9 @@ def test_validate_vulnerabilities_multiple_identical_vuln_ids(
     mock_extract_python,
     mock_execute_pnpm,
     mock_execute_pip,
+    _mock_config_scan,
+    _mock_manifest_scan,
+    _mock_inline_scan,
     mock_load_ledger,
 ):
     """Verify that multiple entries with identical vuln IDs but different packages are validated independently."""

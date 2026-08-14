@@ -25,8 +25,9 @@ def scan_for_inline_bypasses() -> list[tuple[str, int, str]]:
     """Scan the entire repository recursively for undocumented inline bypass flags.
 
     The scan identifies instances where short-form (`-i`) or long-form (`--ignore-vuln`,
-    `--ignore-vulnerability`) bypass options are used adjacent to (i.e., on the same line as)
-    dependency audit utility execution. It ignores standard non-audit tool uses of `-i`.
+    `--ignore-vulnerability`) bypass options are used adjacent to dependency audit utility
+    execution in source, workflow, documentation, and shell/configuration files. Generated,
+    dependency, database, and non-command data artifacts are excluded.
 
     Returns:
         list[tuple[str, int, str]]: A list of tuples containing (file_path, line_number, line_content)
@@ -41,6 +42,15 @@ def scan_for_inline_bypasses() -> list[tuple[str, int, str]]:
     flag_pattern = re.compile(
         r"(?:\s|^)-(i)\b|(?:\s|^)--(ignore-vuln|ignore-vulnerability)\b"
     )
+    comment_pattern = re.compile(r"(?:\s+|^)#.*$")
+    logical_boundary_pattern = re.compile(
+        r"^-(?:\s*)(name|run|uses|task|step|job)\b", re.IGNORECASE
+    )
+    section_boundary_pattern = re.compile(
+        r"^(jobs|steps|tasks|stages):\s*$", re.IGNORECASE
+    )
+    folded_block_pattern = re.compile(r">\s*[+-]?\s*$")
+    shell_boundary_pattern = re.compile(r"&&|;|\|\||\|")
     violations: list[tuple[str, int, str]] = []
 
     excluded_dirs = {
@@ -49,42 +59,55 @@ def scan_for_inline_bypasses() -> list[tuple[str, int, str]]:
         "venv",
         "__pycache__",
         ".pytest_cache",
+        ".mypy_cache",
+        ".pnpm-store",
+        ".ruff_cache",
+        ".tox",
+        "build",
+        "coverage",
+        "dist",
         "node_modules",
         "tests",
     }
+    scannable_suffixes = {
+        ".bash",
+        ".cfg",
+        ".conf",
+        ".ini",
+        ".js",
+        ".jsx",
+        ".md",
+        ".py",
+        ".sh",
+        ".toml",
+        ".ts",
+        ".tsx",
+        ".txt",
+        ".vue",
+        ".yaml",
+        ".yml",
+        ".zsh",
+    }
+    scannable_names = {"Dockerfile", "Makefile"}
 
     try:
         for root, dirs, files in os.walk(REPO_ROOT):
             # Filter out excluded directories in-place to prevent traversing them
-            dirs[:] = [d for d in dirs if d not in excluded_dirs]
+            dirs[:] = [
+                directory
+                for directory in dirs
+                if directory not in excluded_dirs and not directory.endswith("-data")
+            ]
 
             for file in files:
                 file_path = os.path.join(root, file)
                 # Ignore this validation script itself to prevent false positives
                 if "validate_vulnerabilities.py" in file:
                     continue
-                # Skip binary and format extensions that are not source files
-                if any(
-                    file_path.endswith(ext)
-                    for ext in [
-                        ".png",
-                        ".jpg",
-                        ".jpeg",
-                        ".gif",
-                        ".ico",
-                        ".svg",
-                        ".zip",
-                        ".tar.gz",
-                        ".tgz",
-                        ".pdf",
-                        ".db",
-                        ".sqlite",
-                        ".pyc",
-                        ".woff",
-                        ".woff2",
-                        ".ttf",
-                        ".eot",
-                    ]
+                _, suffix = os.path.splitext(file)
+                if (
+                    suffix.lower() not in scannable_suffixes
+                    and file not in scannable_names
                 ):
                     continue
 
@@ -97,7 +120,9 @@ def scan_for_inline_bypasses() -> list[tuple[str, int, str]]:
 
                         for line_num, line in enumerate(f, 1):
                             # Strip trailing whitespace and comments
-                            line_no_comment = re.sub(r"(?:\s+|^)#.*$", "", line)
+                            line_no_comment = (
+                                comment_pattern.sub("", line) if "#" in line else line
+                            )
                             stripped = line_no_comment.strip()
 
                             if stripped:
@@ -116,16 +141,8 @@ def scan_for_inline_bypasses() -> list[tuple[str, int, str]]:
                             if (
                                 stripped.startswith("---")
                                 or stripped.startswith("...")
-                                or re.match(
-                                    r"^-\s*(name|run|uses|task|step|job)\b",
-                                    stripped,
-                                    re.IGNORECASE,
-                                )
-                                or re.match(
-                                    r"^(jobs|steps|tasks|stages):\s*$",
-                                    stripped,
-                                    re.IGNORECASE,
-                                )
+                                or logical_boundary_pattern.match(stripped)
+                                or section_boundary_pattern.match(stripped)
                             ):
                                 is_boundary = True
 
@@ -135,7 +152,7 @@ def scan_for_inline_bypasses() -> list[tuple[str, int, str]]:
                                 continue
 
                             # Check if starting a YAML folded block (e.g. run: >)
-                            if is_yaml and re.search(r">\s*[+-]?\s*$", stripped):
+                            if is_yaml and folded_block_pattern.search(stripped):
                                 in_folded_block = True
                                 block_indent = len(line_no_comment) - len(
                                     line_no_comment.lstrip(" ")
@@ -143,7 +160,7 @@ def scan_for_inline_bypasses() -> list[tuple[str, int, str]]:
 
                             # 2. Check for shell execution boundaries within the line.
                             # We split the line by standard shell boundaries: &&, ;, ||, |
-                            segments = re.split(r"&&|;|\|\||\|", line_no_comment)
+                            segments = shell_boundary_pattern.split(line_no_comment)
 
                             for idx, seg in enumerate(segments):
                                 seg_stripped = seg.strip()
