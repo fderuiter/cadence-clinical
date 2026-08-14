@@ -190,9 +190,16 @@ class TestOfflineSchemaDrift:
             ["node", str(parser_script), abs_file_path],
             capture_output=True,
             text=True,
-            check=True,
+            check=False,
             cwd=str(repo_root),
         )
+        if res.returncode != 0:
+            print(f"DEBUG: node failed with exit code {res.returncode}")
+            print(f"DEBUG: stdout: {res.stdout}")
+            print(f"DEBUG: stderr: {res.stderr}")
+            raise subprocess.CalledProcessError(
+                res.returncode, res.args, output=res.stdout, stderr=res.stderr
+            )
         return json.loads(res.stdout)
 
     def parse_backend(self, file_path: str) -> dict[str, dict[str, str]]:
