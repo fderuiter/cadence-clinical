@@ -3,7 +3,7 @@ import inspect
 import json
 import uuid
 from collections.abc import AsyncGenerator, Callable
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from datetime import datetime
 from typing import Any
 
@@ -49,6 +49,11 @@ _VISIT_LOCK_CHECKERS: list[Callable[[str], bool]] = []
 _SUBJECT_LOCK_CHECKERS: list[Callable[[str], bool]] = []
 _FORM_LOCK_CHECKERS: list[Callable[[str], bool]] = []
 
+_LOCKED_SITES_PROVIDERS: list[Callable[[], Any]] = []
+_LOCKED_VISITS_PROVIDERS: list[Callable[[], Any]] = []
+_LOCKED_SUBJECTS_PROVIDERS: list[Callable[[], Any]] = []
+_LOCKED_FORMS_PROVIDERS: list[Callable[[], Any]] = []
+
 
 def register_trial_lock_checker(checker: Callable[[], bool]) -> None:
     """Register a callback that checks if a trial-wide lock is active."""
@@ -75,6 +80,26 @@ def register_form_lock_checker(checker: Callable[[str], bool]) -> None:
     _FORM_LOCK_CHECKERS.append(checker)
 
 
+def register_locked_sites_provider(provider: Callable[[], Any]) -> None:
+    """Register a callback that provides a list or set of active locked site IDs."""
+    _LOCKED_SITES_PROVIDERS.append(provider)
+
+
+def register_locked_visits_provider(provider: Callable[[], Any]) -> None:
+    """Register a callback that provides a list or set of active locked visit IDs."""
+    _LOCKED_VISITS_PROVIDERS.append(provider)
+
+
+def register_locked_subjects_provider(provider: Callable[[], Any]) -> None:
+    """Register a callback that provides a list or set of active locked subject IDs."""
+    _LOCKED_SUBJECTS_PROVIDERS.append(provider)
+
+
+def register_locked_forms_provider(provider: Callable[[], Any]) -> None:
+    """Register a callback that provides a list or set of active locked form IDs."""
+    _LOCKED_FORMS_PROVIDERS.append(provider)
+
+
 def is_trial_locked() -> bool:
     """Check if any registered lock checker is active."""
     return any(checker() for checker in _TRIAL_LOCK_CHECKERS)
@@ -83,6 +108,42 @@ def is_trial_locked() -> bool:
 def is_site_locked(site_id: str) -> bool:
     """Check if any registered site lock checker is active."""
     return any(checker(site_id) for checker in _SITE_LOCK_CHECKERS)
+
+
+def get_locked_sites() -> set[str]:
+    """Retrieve all locked site IDs from all registered providers."""
+    locked = set()
+    for provider in _LOCKED_SITES_PROVIDERS:
+        with suppress(Exception):
+            locked.update(str(x) for x in provider())
+    return locked
+
+
+def get_locked_visits() -> set[str]:
+    """Retrieve all locked visit IDs from all registered providers."""
+    locked = set()
+    for provider in _LOCKED_VISITS_PROVIDERS:
+        with suppress(Exception):
+            locked.update(str(x) for x in provider())
+    return locked
+
+
+def get_locked_subjects() -> set[str]:
+    """Retrieve all locked subject IDs from all registered providers."""
+    locked = set()
+    for provider in _LOCKED_SUBJECTS_PROVIDERS:
+        with suppress(Exception):
+            locked.update(str(x) for x in provider())
+    return locked
+
+
+def get_locked_forms() -> set[str]:
+    """Retrieve all locked form IDs from all registered providers."""
+    locked = set()
+    for provider in _LOCKED_FORMS_PROVIDERS:
+        with suppress(Exception):
+            locked.update(str(x) for x in provider())
+    return locked
 
 
 def is_visit_locked(visit_id: str) -> bool:
@@ -109,24 +170,11 @@ def propagate_session_context(session: Session) -> None:
     try:
         from sqlalchemy import text
 
-        try:
-            from apps.execution.trial_lock import TrialLockManager
-
-            is_trial_locked_val = "true" if TrialLockManager.is_locked() else "false"
-            locked_sites_val = ",".join(str(s) for s in TrialLockManager._locked_sites)
-            locked_visits_val = ",".join(
-                str(v) for v in TrialLockManager._locked_visits
-            )
-            locked_subjects_val = ",".join(
-                str(s) for s in TrialLockManager._locked_subjects
-            )
-            locked_forms_val = ",".join(str(f) for f in TrialLockManager._locked_forms)
-        except ImportError:
-            is_trial_locked_val = "true" if is_trial_locked() else "false"
-            locked_sites_val = ""
-            locked_visits_val = ""
-            locked_subjects_val = ""
-            locked_forms_val = ""
+        is_trial_locked_val = "true" if is_trial_locked() else "false"
+        locked_sites_val = ",".join(get_locked_sites())
+        locked_visits_val = ",".join(get_locked_visits())
+        locked_subjects_val = ",".join(get_locked_subjects())
+        locked_forms_val = ",".join(get_locked_forms())
 
         from packages.security.context import (
             current_change_reason,

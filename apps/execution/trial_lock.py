@@ -5,6 +5,10 @@ import time
 from apps.execution.notifications_client import publish_notification
 from packages.database import (
     register_form_lock_checker,
+    register_locked_forms_provider,
+    register_locked_sites_provider,
+    register_locked_subjects_provider,
+    register_locked_visits_provider,
     register_site_lock_checker,
     register_subject_lock_checker,
     register_trial_lock_checker,
@@ -316,3 +320,8 @@ register_site_lock_checker(TrialLockManager.is_site_locked)
 register_visit_lock_checker(TrialLockManager.is_visit_locked)
 register_subject_lock_checker(TrialLockManager.is_subject_locked)
 register_form_lock_checker(TrialLockManager.is_form_locked)
+
+register_locked_sites_provider(lambda: TrialLockManager._locked_sites)
+register_locked_visits_provider(lambda: TrialLockManager._locked_visits)
+register_locked_subjects_provider(lambda: TrialLockManager._locked_subjects)
+register_locked_forms_provider(lambda: TrialLockManager._locked_forms)
