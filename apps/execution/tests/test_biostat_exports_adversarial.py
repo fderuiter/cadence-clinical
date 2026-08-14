@@ -19,30 +19,16 @@ Requirements:
 - @req:Trace-12
 """
 
-import math
-import random
-import re
 import xml.etree.ElementTree as ET
-from datetime import UTC, datetime, timedelta
+from datetime import datetime
 
 import pytest
 
 from apps.execution.biostat.deid import (
-    deidentify_export_data,
     deidentify_record,
     scrub_error_message,
-    shift_partial_date,
-)
-from apps.execution.biostat.models import (
-    ClinicalData,
-    DatasetJSON,
-    DatasetJSONItemGroup,
-    SUPPRecord,
-    VariableMetadata,
 )
 from apps.execution.biostat.odm_xml import (
-    _infer_odm_data_type,
-    build_audit_record,
     serialize_to_odm_xml,
     validate_odm_xml_string,
 )
@@ -62,9 +48,6 @@ from apps.execution.biostat.validator import (
     validate_dataset_json,
 )
 from apps.execution.biostat.xpt import (
-    _format_sas_datetime,
-    _infer_variable_type_and_length,
-    _pad_card,
     double_to_ibm,
     ibm_to_double,
     read_xpt,
@@ -76,8 +59,6 @@ from packages.deid.transforms import (
     cap_age_string,
     get_subject_date_shift,
     normalize_and_cap_age,
-    pseudonymize_value,
-    shift_date_string,
 )
 
 # =============================================================================
@@ -149,7 +130,9 @@ def test_ibm360_float_codec_exhaustive_boundaries():
 
     # 6. Truncated byte buffers
     assert ibm_to_double(b"\x00") == 0.0
-    assert ibm_to_double(b"\x41\x10") == ibm_to_double(b"\x41\x10\x00\x00\x00\x00\x00\x00")
+    assert ibm_to_double(b"\x41\x10") == ibm_to_double(
+        b"\x41\x10\x00\x00\x00\x00\x00\x00"
+    )
 
 
 def test_ibm360_collision_with_dot_missing_value():
@@ -168,7 +151,7 @@ def test_ibm360_collision_with_dot_missing_value():
 
 
 def test_xpt_blank_character_row_truncation():
-    """Demonstrates XPT reader truncation bug when a dataset contains an observation with all blank characters.
+    """Validates XPT reader fidelity on middle blank rows, trailing blank rows, and all-blank datasets.
 
     @req:PRD-SYS-001
     @req:Trace-1
@@ -184,8 +167,37 @@ def test_xpt_blank_character_row_truncation():
     ]
     xpt_bytes = write_xpt("TEST_BLANK", records, version="v5", variables_metadata=meta)
     m, parsed = read_xpt(xpt_bytes)
-    # Currently fails because read_xpt prematurely breaks on all(b == 32 for b in r_chunk)
-    assert len(parsed) == 3, f"Expected 3 records, but parser truncated to {len(parsed)} records"
+    assert len(parsed) == 3, (
+        f"Expected 3 records, but parser truncated to {len(parsed)} records"
+    )
+
+    # Scenario A: 5 records with trailing empty strings
+    recs_a = [
+        {"VAR1": "HELLO"},
+        {"VAR1": "WORLD"},
+        {"VAR1": "FOO"},
+        {"VAR1": ""},
+        {"VAR1": ""},
+    ]
+    meta_a = [{"name": "VAR1", "type": "string", "length": 8}]
+    b_a = write_xpt("TEST_A", recs_a, version="v5", variables_metadata=meta_a)
+    _, parsed_a = read_xpt(b_a)
+    assert len(parsed_a) == 5, f"Expected 5, got {len(parsed_a)}"
+    assert parsed_a == recs_a
+
+    # Scenario B: 100 records with 15 trailing blanks
+    recs_b = [{"VAR1": f"R{i}"} for i in range(85)] + [{"VAR1": ""} for _ in range(15)]
+    b_b = write_xpt("TEST_B", recs_b, version="v5", variables_metadata=meta_a)
+    _, parsed_b = read_xpt(b_b)
+    assert len(parsed_b) == 100, f"Expected 100, got {len(parsed_b)}"
+    assert parsed_b == recs_b
+
+    # Scenario C: 2 records (all blank)
+    recs_c = [{"VAR1": ""}, {"VAR1": ""}]
+    b_c = write_xpt("TEST_C", recs_c, version="v5", variables_metadata=meta_a)
+    _, parsed_c = read_xpt(b_c)
+    assert len(parsed_c) == 2, f"Expected 2, got {len(parsed_c)}"
+    assert parsed_c == recs_c
 
 
 def test_xpt_80byte_card_framing_and_padding_stress():
@@ -199,13 +211,18 @@ def test_xpt_80byte_card_framing_and_padding_stress():
     # Test varying variable counts: 1 to 25 variables
     for num_vars in [1, 2, 3, 5, 8, 10, 15, 20, 25]:
         records = [
-            {f"VAR_{i}": f"VAL_{row}_{i}" if i % 2 == 0 else row * 10.5 + i for i in range(num_vars)}
+            {
+                f"VAR_{i}": f"VAL_{row}_{i}" if i % 2 == 0 else row * 10.5 + i
+                for i in range(num_vars)
+            }
             for row in range(7)  # Odd number of rows to test observation padding
         ]
 
         # 1. Test XPT v5
         xpt5 = write_xpt("TESTDS", records, version="v5")
-        assert len(xpt5) % 80 == 0, f"XPT v5 with {num_vars} vars not multiple of 80: {len(xpt5)}"
+        assert len(xpt5) % 80 == 0, (
+            f"XPT v5 with {num_vars} vars not multiple of 80: {len(xpt5)}"
+        )
         assert b"HEADER RECORD*******LIBRARY HEADER RECORD!!!!!!!" in xpt5
         assert b"HEADER RECORD*******NAMESTR HEADER RECORD!!!!!!!" in xpt5
         assert b"HEADER RECORD*******OBS     HEADER RECORD!!!!!!!" in xpt5
@@ -217,7 +234,9 @@ def test_xpt_80byte_card_framing_and_padding_stress():
 
         # 2. Test XPT v8
         xpt8 = write_xpt("TESTDS_LONG_V8", records, version="v8")
-        assert len(xpt8) % 80 == 0, f"XPT v8 with {num_vars} vars not multiple of 80: {len(xpt8)}"
+        assert len(xpt8) % 80 == 0, (
+            f"XPT v8 with {num_vars} vars not multiple of 80: {len(xpt8)}"
+        )
         assert b"HEADER RECORD*******LIBV8   HEADER RECORD!!!!!!!" in xpt8
         assert b"HEADER RECORD*******NAMSTRV8HEADER RECORD!!!!!!!" in xpt8
         assert b"HEADER RECORD*******OBSV8   HEADER RECORD!!!!!!!" in xpt8
@@ -270,13 +289,15 @@ def test_xpt_large_dataset_roundtrip_integrity():
     """
     records = []
     for i in range(500):
-        records.append({
-            "USUBJID": f"SUBJ-{i:04d}",
-            "AGE": float(20 + (i % 60)),
-            "WEIGHT": 50.0 + (i * 0.125),
-            "ARM": "ACTIVE ARM" if i % 2 == 0 else "PLACEBO",
-            "FLAG": "Y" if i % 5 == 0 else "N",
-        })
+        records.append(
+            {
+                "USUBJID": f"SUBJ-{i:04d}",
+                "AGE": float(20 + (i % 60)),
+                "WEIGHT": 50.0 + (i * 0.125),
+                "ARM": "ACTIVE ARM" if i % 2 == 0 else "PLACEBO",
+                "FLAG": "Y" if i % 5 == 0 else "N",
+            }
+        )
 
     xpt_bytes = write_xpt("BIGDATA", records, version="v5")
     assert len(xpt_bytes) % 80 == 0
@@ -358,7 +379,9 @@ def test_odm_xml_21cfr_part11_audit_trail_embedded():
     subj_audit = subj_data.find("odm:AuditRecord", odm_ns)
     assert subj_audit is not None
     assert subj_audit.find("odm:UserRef", odm_ns).attrib["UserOID"] == "dr_smith"
-    assert subj_audit.find("odm:ReasonForChange", odm_ns).text == "Baseline physical exam"
+    assert (
+        subj_audit.find("odm:ReasonForChange", odm_ns).text == "Baseline physical exam"
+    )
     assert subj_audit.find("odm:DateTimeStamp", odm_ns).text == ts
 
     # 2. Item-level AuditRecord
@@ -368,7 +391,10 @@ def test_odm_xml_21cfr_part11_audit_trail_embedded():
     item_audit = item_data.find("odm:AuditRecord", odm_ns)
     assert item_audit is not None
     assert item_audit.find("odm:UserRef", odm_ns).attrib["UserOID"] == "nurse_jones"
-    assert item_audit.find("odm:ReasonForChange", odm_ns).text == "Direct measurement on calibrated cuff"
+    assert (
+        item_audit.find("odm:ReasonForChange", odm_ns).text
+        == "Direct measurement on calibrated cuff"
+    )
 
 
 def test_odm_xml_escaping_and_special_characters():
@@ -410,10 +436,28 @@ def test_dataset_json_pydantic_v2_model_and_2d_matrix():
     @req:Trace-1
     """
     records = [
-        {"STUDYID": "STUDY-001", "DOMAIN": "DM", "USUBJID": "SUBJ-001", "AGE": 30, "SEX": "M", "RACE": "WHITE", "ARM": "ARM A"},
-        {"STUDYID": "STUDY-001", "DOMAIN": "DM", "USUBJID": "SUBJ-002", "AGE": 45, "SEX": "F", "RACE": "ASIAN", "ARM": "ARM B"},
+        {
+            "STUDYID": "STUDY-001",
+            "DOMAIN": "DM",
+            "USUBJID": "SUBJ-001",
+            "AGE": 30,
+            "SEX": "M",
+            "RACE": "WHITE",
+            "ARM": "ARM A",
+        },
+        {
+            "STUDYID": "STUDY-001",
+            "DOMAIN": "DM",
+            "USUBJID": "SUBJ-002",
+            "AGE": 45,
+            "SEX": "F",
+            "RACE": "ASIAN",
+            "ARM": "ARM B",
+        },
     ]
-    ds_json_obj = serialize_to_dataset_json(records, study_id="STUDY-001", dataset_name="DM")
+    ds_json_obj = serialize_to_dataset_json(
+        records, study_id="STUDY-001", dataset_name="DM"
+    )
 
     assert ds_json_obj.datasetJSONVersion == "1.0.0"
     assert ds_json_obj.clinicalData is not None
@@ -439,7 +483,12 @@ def test_validator_missing_required_variables_code():
     # DM missing SEX, RACE, ARM
     bad_dm = {
         "DM": [
-            {"STUDYID": "STUDY-001", "DOMAIN": "DM", "USUBJID": "SUBJ-001", "SUBJID": "001"}
+            {
+                "STUDYID": "STUDY-001",
+                "DOMAIN": "DM",
+                "USUBJID": "SUBJ-001",
+                "SUBJID": "001",
+            }
         ]
     }
     bad_json = serialize_to_dataset_json(bad_dm, study_id="STUDY-001")
@@ -459,8 +508,24 @@ def test_validator_empty_studyid_usubjid_code():
     """
     bad_records = {
         "DM": [
-            {"STUDYID": "   ", "DOMAIN": "DM", "USUBJID": "SUBJ-001", "SUBJID": "001", "SEX": "M", "RACE": "WHITE", "ARM": "ARM A"},
-            {"STUDYID": "STUDY-001", "DOMAIN": "DM", "USUBJID": "", "SUBJID": "002", "SEX": "F", "RACE": "WHITE", "ARM": "ARM A"},
+            {
+                "STUDYID": "   ",
+                "DOMAIN": "DM",
+                "USUBJID": "SUBJ-001",
+                "SUBJID": "001",
+                "SEX": "M",
+                "RACE": "WHITE",
+                "ARM": "ARM A",
+            },
+            {
+                "STUDYID": "STUDY-001",
+                "DOMAIN": "DM",
+                "USUBJID": "",
+                "SUBJID": "002",
+                "SEX": "F",
+                "RACE": "WHITE",
+                "ARM": "ARM A",
+            },
         ]
     }
     bad_json = serialize_to_dataset_json(bad_records, study_id="STUDY-001")
@@ -477,8 +542,22 @@ def test_validator_duplicate_sequence_code():
     """
     bad_ae = {
         "AE": [
-            {"STUDYID": "STUDY-001", "DOMAIN": "AE", "USUBJID": "SUBJ-001", "AESEQ": 1, "AETERM": "Fever", "AESER": "N"},
-            {"STUDYID": "STUDY-001", "DOMAIN": "AE", "USUBJID": "SUBJ-001", "AESEQ": 1, "AETERM": "Chills", "AESER": "N"},
+            {
+                "STUDYID": "STUDY-001",
+                "DOMAIN": "AE",
+                "USUBJID": "SUBJ-001",
+                "AESEQ": 1,
+                "AETERM": "Fever",
+                "AESER": "N",
+            },
+            {
+                "STUDYID": "STUDY-001",
+                "DOMAIN": "AE",
+                "USUBJID": "SUBJ-001",
+                "AESEQ": 1,
+                "AETERM": "Chills",
+                "AESER": "N",
+            },
         ]
     }
     bad_json = serialize_to_dataset_json(bad_ae, study_id="STUDY-001")
@@ -642,14 +721,18 @@ def test_deid_deterministic_date_shift_range_and_invariants():
     for i in range(5000):
         subj_id = f"SUBJ-TEST-{i:05d}"
         shift = get_subject_date_shift(subj_id, salt)
-        assert -365 <= shift <= 365, f"Shift {shift} out of [-365, +365] bounds for {subj_id}"
+        assert -365 <= shift <= 365, (
+            f"Shift {shift} out of [-365, +365] bounds for {subj_id}"
+        )
         seen_offsets.add(shift)
 
         # Determinism check: repeating with same salt returns same shift
         assert get_subject_date_shift(subj_id, salt) == shift
 
     # Verify coverage across the distribution (expecting wide spread)
-    assert len(seen_offsets) > 700, f"Expected near-complete coverage of 731 days, got {len(seen_offsets)}"
+    assert len(seen_offsets) > 700, (
+        f"Expected near-complete coverage of 731 days, got {len(seen_offsets)}"
+    )
 
 
 def test_deid_longitudinal_parity_across_multi_domain_patient_journey():
@@ -727,7 +810,10 @@ def test_deid_age_capping_and_string_redaction():
     assert normalize_and_cap_age("89") == "89"
 
     # Text cap
-    assert cap_age_string("Subject is age 95 with severe hypertension") == "Subject is age 89+ with severe hypertension"
+    assert (
+        cap_age_string("Subject is age 95 with severe hypertension")
+        == "Subject is age 89+ with severe hypertension"
+    )
     assert cap_age_string("92 years old male") == "89+ years old male"
     assert cap_age_string("45 years old female") == "45 years old female"
 

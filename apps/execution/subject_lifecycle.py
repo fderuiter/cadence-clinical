@@ -186,3 +186,73 @@ def withdraw_subject_model(subject: Any, reason: str) -> None:
     subject.status = "WITHDRAWN"
     subject.withdrawn_at = datetime.now()
     subject.withdrawal_reason = reason
+
+
+class ReConsentRequiredException(Exception):
+    """Raised when data entry is attempted on a subject requiring amendment re-consent."""
+
+    pass
+
+
+async def validate_subject_version_gating(
+    session: Any,
+    subject_id: str,
+    target_visit_id: str,
+    active_protocol_version: str,
+    requires_reconsent: bool,
+) -> str:
+    """Verifies subject re-consent compliance before permitting form data entry.
+
+    Requirements: PRD-SUB-007, PRD-SYS-001
+    """
+    from sqlalchemy import or_, select
+
+    from apps.execution.database.models import ClinicalSubject, SubjectConsent
+
+    # 1. Fetch Subject
+    stmt = select(ClinicalSubject).where(
+        or_(
+            ClinicalSubject.id == subject_id,
+            ClinicalSubject.subject_id == subject_id,
+        )
+    )
+    result = await session.execute(stmt)
+    subject = result.scalars().first()
+    if not subject:
+        raise ValueError(f"Subject {subject_id} not found.")
+
+    subject_canonical_id = getattr(subject, "subject_id", None) or subject.id
+    current_active_ver = getattr(subject, "active_protocol_version", None)
+
+    # 2. Check if subject has signed consent for the active protocol version
+    if requires_reconsent and current_active_ver != active_protocol_version:
+        stmt_icf = select(SubjectConsent).where(
+            or_(
+                SubjectConsent.subject_id == subject_canonical_id,
+                SubjectConsent.subject_id == subject.id,
+            ),
+            or_(
+                SubjectConsent.version_tag == active_protocol_version,
+                SubjectConsent.protocol_version == active_protocol_version,
+            ),
+            or_(
+                SubjectConsent.icf_signed.is_(True),
+                SubjectConsent.status == "SIGNED",
+            ),
+            SubjectConsent.is_deleted.is_(False),
+        )
+        icf_res = await session.execute(stmt_icf)
+        signed_icf = icf_res.scalars().first()
+
+        if not signed_icf:
+            raise ReConsentRequiredException(
+                f"Protocol Amendment {active_protocol_version} is active. "
+                f"Subject {subject_id} must execute re-consent before data entry on visit {target_visit_id}."
+            )
+
+        # Advance subject version
+        subject.active_protocol_version = active_protocol_version
+        await session.flush()
+
+    return subject.active_protocol_version or active_protocol_version
+

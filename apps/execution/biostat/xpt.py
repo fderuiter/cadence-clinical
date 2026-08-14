@@ -307,11 +307,9 @@ def write_xpt_v5(
     out.extend(namestr_bytes)
 
     # 4. Observation Header Record
-    out.extend(
-        _pad_card(
-            "HEADER RECORD*******OBS     HEADER RECORD!!!!!!!000000000000000000000000000000  "
-        )
-    )
+    num_recs = len(records)
+    obs_card = f"HEADER RECORD*******OBS     HEADER RECORD!!!!!!!{num_recs:030d}  "
+    out.extend(_pad_card(obs_card))
 
     # 5. Observation Records
     obs_bytes = bytearray()
@@ -474,11 +472,9 @@ def write_xpt_v8(
     out.extend(namestr_bytes)
 
     # V8 Obs Header
-    out.extend(
-        _pad_card(
-            "HEADER RECORD*******OBSV8   HEADER RECORD!!!!!!!000000000000000000000000000000  "
-        )
-    )
+    num_recs = len(records)
+    obs_card = f"HEADER RECORD*******OBSV8   HEADER RECORD!!!!!!!{num_recs:030d}  "
+    out.extend(_pad_card(obs_card))
 
     # Obs data
     obs_bytes = bytearray()
@@ -599,6 +595,12 @@ def _read_xpt_v5(data: bytes) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     if obs_idx == -1:
         raise ValueError("Invalid XPT v5 file: OBS header record not found.")
 
+    obs_header_card = data[obs_idx : obs_idx + 80].decode("ascii", errors="replace")
+    count_str = obs_header_card[48:78].strip()
+    explicit_num_records = (
+        int(count_str) if count_str.isdigit() and int(count_str) > 0 else None
+    )
+
     obs_start = obs_idx + 80
     obs_data = data[obs_start:]
 
@@ -610,14 +612,25 @@ def _read_xpt_v5(data: bytes) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     records: list[dict[str, Any]] = []
 
     if row_len > 0:
-        has_numeric = any(v["type"] == 1 for v in variables)
+        numeric_vars = [v for v in variables if v["type"] == 1]
         num_rows = len(obs_data) // row_len
+        if explicit_num_records is not None:
+            num_rows = min(num_rows, explicit_num_records)
         for r_idx in range(num_rows):
             r_start = r_idx * row_len
             r_chunk = obs_data[r_start : r_start + row_len]
-            remaining = obs_data[r_start:]
-            # Check if this is trailing 80-byte card boundary padding (less than 80 bytes to EOF and all spaces)
-            if has_numeric and len(remaining) < 80 and all(b == 32 for b in remaining):
+            if len(r_chunk) < row_len:
+                break
+            # If numeric variables exist and all of them in this chunk are ASCII spaces (0x20),
+            # this chunk is trailing card boundary padding (valid SAS numeric is never 8 ASCII spaces).
+            if (
+                explicit_num_records is None
+                and numeric_vars
+                and all(
+                    r_chunk[v["pos"] : v["pos"] + v["length"]] == b" " * v["length"]
+                    for v in numeric_vars
+                )
+            ):
                 break
             rec = {}
             for v in variables:
@@ -673,6 +686,12 @@ def _read_xpt_v8(data: bytes) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     if obs_idx == -1:
         raise ValueError("Invalid XPT v8 file: OBSV8 header record not found.")
 
+    obs_header_card = data[obs_idx : obs_idx + 80].decode("ascii", errors="replace")
+    count_str = obs_header_card[48:78].strip()
+    explicit_num_records = (
+        int(count_str) if count_str.isdigit() and int(count_str) > 0 else None
+    )
+
     obs_start = obs_idx + 80
     obs_data = data[obs_start:]
 
@@ -684,14 +703,25 @@ def _read_xpt_v8(data: bytes) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     records: list[dict[str, Any]] = []
 
     if row_len > 0:
-        has_numeric = any(v["type"] == 1 for v in variables)
+        numeric_vars = [v for v in variables if v["type"] == 1]
         num_rows = len(obs_data) // row_len
+        if explicit_num_records is not None:
+            num_rows = min(num_rows, explicit_num_records)
         for r_idx in range(num_rows):
             r_start = r_idx * row_len
             r_chunk = obs_data[r_start : r_start + row_len]
-            remaining = obs_data[r_start:]
-            # Check if this is trailing 80-byte card boundary padding (less than 80 bytes to EOF and all spaces)
-            if has_numeric and len(remaining) < 80 and all(b == 32 for b in remaining):
+            if len(r_chunk) < row_len:
+                break
+            # If numeric variables exist and all of them in this chunk are ASCII spaces (0x20),
+            # this chunk is trailing card boundary padding (valid SAS numeric is never 8 ASCII spaces).
+            if (
+                explicit_num_records is None
+                and numeric_vars
+                and all(
+                    r_chunk[v["pos"] : v["pos"] + v["length"]] == b" " * v["length"]
+                    for v in numeric_vars
+                )
+            ):
                 break
             rec = {}
             for v in variables:

@@ -126,6 +126,55 @@
           </div>
         </div>
 
+        <!-- Protocol Amendment Re-Consent Gating Banner (PRD-SUB-007) -->
+        <div
+          v-if="isReconsentGated"
+          id="reconsent-gating-banner"
+          class="reconsent-banner"
+          style="
+            background-color: #fef2f2;
+            border: 2px solid #ef4444;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+          "
+        >
+          <div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: #991b1b; display: flex; align-items: center; gap: 8px;">
+              <span>⚠️</span>
+              <span>Protocol Amendment Active (v2.0.0) — Re-Consent Required</span>
+            </div>
+            <p style="margin: 4px 0 0 0; font-size: 0.875rem; color: #7f1d1d;">
+              This subject must complete re-consent for Protocol Version 2.0.0 before further visit data entry can be saved (PRD-SUB-007). All input fields are currently locked.
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button
+              id="btn-open-econsent"
+              type="button"
+              class="btn btn-primary"
+              style="background-color: #dc2626; color: white; font-weight: bold; padding: 8px 14px; font-size: 0.85rem; border-radius: 6px; border: none; cursor: pointer;"
+              @click="openEconsentModal"
+            >
+              ✍️ Open eConsent Form
+            </button>
+            <button
+              id="btn-upload-paper-icf"
+              type="button"
+              class="btn btn-secondary"
+              style="background-color: #ffffff; color: #991b1b; border: 1px solid #f87171; font-weight: bold; padding: 8px 14px; font-size: 0.85rem; border-radius: 6px; cursor: pointer;"
+              @click="openPaperIcfModal"
+            >
+              📄 Upload Signed Paper ICF
+            </button>
+          </div>
+        </div>
+
         <!-- Batch Verification Action Bar -->
         <div
           v-if="selectedBatchFields.length > 0"
@@ -168,6 +217,7 @@
           class="clinical-form responsive-grid"
           @submit.prevent
         >
+          <fieldset :disabled="isReconsentGated" style="border: none; padding: 0; margin: 0; display: contents;">
           <template v-for="field in store.ecrfFields" :key="field.id">
             <div
               v-show="store.fieldVisibility[field.id] !== false"

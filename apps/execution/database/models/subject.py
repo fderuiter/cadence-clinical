@@ -48,6 +48,9 @@ class ClinicalSubject(AuditedModel):
     investigational_product_id: Mapped[str | None] = mapped_column(
         String(255), nullable=True
     )
+    active_protocol_version: Mapped[str | None] = mapped_column(
+        String(50), default="1.0.0", nullable=True
+    )
 
     @validates("status")
     def validate_status(self, key, value):
@@ -100,12 +103,17 @@ class SubjectConsent(AuditedModel):
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
     site_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     version_tag: Mapped[str] = mapped_column(String(50), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    protocol_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    status: Mapped[str] = mapped_column(String(50), default="SIGNED", nullable=False)
     icf_signed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     icf_signed_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     requires_reconsent: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
+
+
+InformedConsentRecord = SubjectConsent
 
 
 class SiteStaffMember(AuditedModel):
