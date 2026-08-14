@@ -286,6 +286,13 @@ I/E criteria represent the gating rules that determine whether a subject is perm
 - _Example Expression:_ `eCRF.DM.AGE >= 18 && eCRF.IC.SIGN_STATUS == 'SIGNED'`
 - During the Screening Visit data entry, the EDC execution engine must execute these expressions in real-time. If any expression evaluates to `FALSE`, the subject state must immediately transition to `Screen Failed` and the user must be blocked from randomized treatment allocation.
 
+#### PRD-DDF-001: AI-Native USDM Protocol Digitization & Automated eCRF/SoA Synthesis Engine
+
+- The platform must provide an end-to-end automated Digital Data Flow (DDF) pipeline that parses unstructured clinical protocol documents (PDF/DOCX) using structured clinical LLM schemas (Pydantic v2).
+- Extracted parameters must compile directly into CDISC USDM v4.0 graph models in Neo4j (`Study`, `StudyProtocolVersion`, `StudyArm`, `StudyEpoch`, `Encounter`, `Activity`, `EligibilityCriterion`, `BiomedicalConcept`).
+- The system must automatically synthesize CDASH-compliant eCRF forms (VS, EG, LB, QS, PE, AE, DM), VAS sliders, 74-zone SNOMED CT body maps, and XPath/AST skip-logic validation rules in under 60 seconds with static circular dependency checks.
+- Changes committed to the graph must enforce 21 CFR Part 11 audit attribution and user change reason justifications.
+
 ---
 
 ## 5. Electronic Data Capture (EDC) & eCRF Engine

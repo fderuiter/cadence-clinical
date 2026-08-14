@@ -36,6 +36,8 @@ from apps.execution.database.models import (
     DictionaryType as DBDictionaryType,
 )
 from apps.execution.presentation.routers.dictionaries_schemas import (
+    BatchAssignRequest,
+    BatchAssignResponse,
     CoderActionRequest,
     CodingAssignmentResponse,
     DictionaryImportRequest,
@@ -48,6 +50,8 @@ from apps.execution.presentation.routers.dictionaries_schemas import (
     MedDRACodingResult,
     MedDRATargetLevelEnum,
     ProblemDetails,
+    RaiseQueryRequest,
+    RaiseQueryResponse,
     UCUMConvertRequest,
     UCUMConvertResponse,
     UCUMUnitValue,
@@ -478,3 +482,101 @@ async def process_coding_action(
             version=as_db.version,
             is_deleted=as_db.is_deleted,
         )
+
+
+@router.post(
+    "/api/v1/execution/coding/assignments/batch-assign",
+    response_model=BatchAssignResponse,
+)
+@router.post(
+    "/api/v1/execution/coding/batch-assign",
+    response_model=BatchAssignResponse,
+    include_in_schema=False,
+)
+async def post_batch_assign(
+    payload: BatchAssignRequest,
+    roles: list[str] = Depends(get_normalized_roles),
+) -> BatchAssignResponse:
+    """Performs batch medical coding assignment across multiple assignments with GxP audit logging."""
+    from apps.execution.coding import batch_assign_codes
+
+    actor = current_user_id.get() or "system"
+    async with db_manager.get_session_maker()() as session, session.begin():
+        items_payload = (
+            [it.model_dump() for it in payload.items] if payload.items else None
+        )
+        res = await batch_assign_codes(
+            session=session,
+            assignment_ids=payload.assignment_ids,
+            items=items_payload,
+            code=payload.code,
+            term=payload.term,
+            dictionary_type=payload.dictionary_type,
+            dictionary_version=payload.dictionary_version,
+            reason=payload.reason_for_change or payload.reason,
+            action=payload.action,
+            actor=actor,
+        )
+        return BatchAssignResponse(
+            success_count=res["success_count"],
+            failed_count=res["failed_count"],
+            results=res["results"],
+        )
+
+
+@router.post(
+    "/api/v1/execution/coding/assignments/{assignment_id}/raise-query",
+    response_model=RaiseQueryResponse,
+)
+@router.post(
+    "/api/v1/execution/coding/assignments/{assignment_id}/query",
+    response_model=RaiseQueryResponse,
+    include_in_schema=False,
+)
+async def post_raise_coding_query(
+    assignment_id: str,
+    payload: RaiseQueryRequest,
+    roles: list[str] = Depends(get_normalized_roles),
+) -> RaiseQueryResponse:
+    """Escalates a coding discrepancy into a ClinicalQuery on the associated observation/eCRF record."""
+    from apps.execution.coding import raise_coding_query as raise_query_service
+
+    actor = current_user_id.get() or "system"
+    async with db_manager.get_session_maker()() as session, session.begin():
+        try:
+            res = await raise_query_service(
+                session=session,
+                assignment_id=assignment_id,
+                query_text=payload.query_text or payload.message or payload.explanation,
+                reason=payload.reason_for_change or payload.reason,
+                actor=actor,
+            )
+            return RaiseQueryResponse(
+                query_id=res["query_id"],
+                status=res["status"],
+                assignment_id=res["assignment_id"],
+                explanation=res.get("explanation"),
+            )
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get(
+    "/api/v1/execution/coding/queue",
+    response_model=list[CodingAssignmentResponse],
+)
+async def get_coding_queue(
+    observation_id: str | None = None,
+    status: str | None = None,
+    verbatim_text: str | None = None,
+    dictionary_type: str | None = None,
+    roles: list[str] = Depends(get_normalized_roles),
+) -> list[CodingAssignmentResponse]:
+    """Retrieves the active coding queue."""
+    return await list_coding_assignments(
+        observation_id=observation_id,
+        status=status,
+        verbatim_text=verbatim_text,
+        dictionary_type=dictionary_type,
+        roles=roles,
+    )

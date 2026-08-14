@@ -411,6 +411,50 @@ async def process_coding_action(
         hierarchy = None
         assignment.recoding_status = RecodingState.NONE
 
+        study_id = "STUDY-001"
+        site_id = None
+        subject_id = "SUBJ-001"
+        visit_id = None
+        domain = assignment.domain or "AE"
+        test_code = assignment.source_field or "AETERM"
+
+        if assignment.observation_id:
+            obs = await repo.get_observation(assignment.observation_id)
+            if obs:
+                study_id = obs.study_id or study_id
+                site_id = getattr(obs, "site_id", None)
+                subject_id = obs.subject_id or subject_id
+                visit_id = obs.visit_id
+                domain = obs.domain or domain
+                test_code = obs.test_code or test_code
+
+        from apps.execution.database.models import ClinicalQuery
+
+        q_explanation = (
+            reason_for_change
+            or f"The verbatim term '{assignment.verbatim_text}' in field {test_code} is uncodable. Please clarify spelling or clinical term."
+        )
+        query = ClinicalQuery(
+            study_id=study_id,
+            site_id=site_id,
+            subject_id=subject_id,
+            visit_id=visit_id,
+            domain=domain,
+            test_code=test_code,
+            status="OPEN",
+            explanation=q_explanation,
+            message=q_explanation,
+            observation_id=assignment.observation_id,
+            origin="SYSTEM_CODING",
+            query_type="SYSTEM_CODING",
+            form_id=f"{domain.upper()}_FORM",
+            field_id=test_code,
+            action_required="CLARIFY_VERBATIM",
+            priority="HIGH",
+            created_by=resolved_actor,
+        )
+        await repo.save_query(query)
+
     # 2. Update assignment state
     assignment.status = status
     assignment.coded_code = coded_code
@@ -478,6 +522,358 @@ async def process_coding_action(
             await repo.add_outbox_entry(outbox_entry)
 
     return assignment
+
+
+async def batch_assign_codes(
+    session: Any,
+    assignment_ids: list[str] | None = None,
+    items: list[dict[str, Any]] | None = None,
+    code: str | None = None,
+    term: str | None = None,
+    dictionary_type: str | None = None,
+    dictionary_version: str | None = None,
+    reason: str | None = None,
+    action: str = "ACCEPT",
+    actor: str = "system",
+) -> dict[str, Any]:
+    """Performs batch medical coding assignment across multiple assignments with GxP audit logging."""
+    repo = _get_repository(session)
+
+    # Resolve actor from context or parameter
+    resolved_actor = actor
+    if not resolved_actor or resolved_actor == "system":
+        try:
+            from apps.execution.database.context import current_user_id
+
+            resolved_actor = current_user_id.get() or "system"
+        except (LookupError, ValueError):  # fmt: skip
+            resolved_actor = "system"
+
+    work_items: list[dict[str, Any]] = []
+    if items:
+        for it in items:
+            work_items.append(
+                {
+                    "assignment_id": it.get("assignment_id") or it.get("id"),
+                    "code": it.get("code") or code,
+                    "term": it.get("term") or term,
+                    "action": it.get("action") or action or "ACCEPT",
+                    "suggestion_index": it.get("suggestion_index"),
+                    "reason_for_change": it.get("reason_for_change")
+                    or it.get("reason")
+                    or reason,
+                    "dictionary_version": it.get("dictionary_version")
+                    or dictionary_version,
+                }
+            )
+    elif assignment_ids:
+        for aid in assignment_ids:
+            work_items.append(
+                {
+                    "assignment_id": aid,
+                    "code": code,
+                    "term": term,
+                    "action": action or "ACCEPT",
+                    "suggestion_index": None,
+                    "reason_for_change": reason,
+                    "dictionary_version": dictionary_version,
+                }
+            )
+
+    results: list[dict[str, Any]] = []
+    success_count = 0
+    failed_count = 0
+
+    for item in work_items:
+        aid = item["assignment_id"]
+        if not aid:
+            failed_count += 1
+            results.append(
+                {
+                    "assignment_id": "",
+                    "status": "FAILED",
+                    "error": "Missing assignment_id",
+                }
+            )
+            continue
+
+        try:
+            assignment = await repo.get_assignment(aid)
+            dict_type_str = _get_value(assignment.dictionary_type)
+            version = item["dictionary_version"] or assignment.dictionary_version
+            item_action = (item["action"] or "ACCEPT").upper()
+            item_code = item["code"]
+            item_term = item["term"]
+            item_reason = (
+                item["reason_for_change"]
+                or reason
+                or f"Batch assignment action: {item_action}"
+            )
+
+            old_code = assignment.coded_code
+            old_term = assignment.coded_term
+            old_version = assignment.dictionary_version
+            old_hierarchy = assignment.hierarchy or {}
+
+            coded_code = None
+            coded_term = None
+            score = 1.0
+            hierarchy = None
+
+            if item_action == "ACCEPT":
+                if item_code:
+                    coded_code = item_code.strip()
+                    if item_term:
+                        coded_term = item_term.strip()
+                    if dict_type_str == "MEDDRA":
+                        term_rec = await repo.validate_meddra_term(version, coded_code)
+                        if term_rec:
+                            if not coded_term:
+                                coded_term = term_rec.term_name
+                            hier_list = await repo.get_meddra_hierarchy(
+                                term_rec, version
+                            )
+                            hierarchy = {"hierarchies": hier_list}
+                        else:
+                            coded_term = coded_term or "Coded Term"
+                    elif dict_type_str == "WHODRUG":
+                        rec_rec = await repo.validate_whodrug_record(
+                            version, coded_code
+                        )
+                        if rec_rec:
+                            if not coded_term:
+                                coded_term = rec_rec.preferred_name
+                            atc_ctx, ings = await repo.get_whodrug_context(
+                                rec_rec, version
+                            )
+                            hierarchy = {"atc_context": atc_ctx, "ingredients": ings}
+                        else:
+                            coded_term = coded_term or "Coded Drug"
+                else:
+                    # Pick from suggestions
+                    sug_list = assignment.suggestions or []
+                    if not isinstance(sug_list, list) or len(sug_list) == 0:
+                        raise InvalidCodingActionError(
+                            f"No suggestions available for assignment '{aid}'. Specify code for batch assignment."
+                        )
+                    sug_idx = item.get("suggestion_index") or 0
+                    if sug_idx < 0 or sug_idx >= len(sug_list):
+                        sug_idx = 0
+                    sug = sug_list[sug_idx]
+                    coded_code = sug.get("code") or sug.get("drug_code")
+                    coded_term = (
+                        sug.get("term_name")
+                        or sug.get("preferred_name")
+                        or sug.get("drug_name")
+                    )
+                    score = sug.get("score", 1.0)
+                    if dict_type_str == "MEDDRA":
+                        hierarchy = {"hierarchies": sug.get("hierarchies") or []}
+                    else:
+                        hierarchy = {
+                            "atc_context": sug.get("atc_context") or [],
+                            "ingredients": sug.get("ingredients") or [],
+                        }
+
+            elif item_action == "OVERRIDE":
+                if not item_code:
+                    raise InvalidCodingActionError(
+                        f"Code is required for OVERRIDE action on assignment '{aid}'."
+                    )
+                coded_code = item_code.strip()
+                if item_term:
+                    coded_term = item_term.strip()
+                if dict_type_str == "MEDDRA":
+                    term_rec = await repo.validate_meddra_term(version, coded_code)
+                    if term_rec:
+                        if not coded_term:
+                            coded_term = term_rec.term_name
+                        hier_list = await repo.get_meddra_hierarchy(term_rec, version)
+                        hierarchy = {"hierarchies": hier_list}
+                    else:
+                        coded_term = coded_term or "Coded Term"
+                elif dict_type_str == "WHODRUG":
+                    rec_rec = await repo.validate_whodrug_record(version, coded_code)
+                    if rec_rec:
+                        if not coded_term:
+                            coded_term = rec_rec.preferred_name
+                        atc_ctx, ings = await repo.get_whodrug_context(rec_rec, version)
+                        hierarchy = {"atc_context": atc_ctx, "ingredients": ings}
+                    else:
+                        coded_term = coded_term or "Coded Drug"
+
+            assignment.status = CodingState.CODED
+            assignment.recoding_status = RecodingState.NONE
+            assignment.coded_code = coded_code
+            assignment.coded_term = coded_term
+            assignment.score = score
+            assignment.hierarchy = hierarchy
+            assignment.assigned_by = resolved_actor
+            assignment.assigned_at = datetime.now(UTC).replace(tzinfo=None)
+
+            await repo.save_assignment(assignment)
+
+            # Record in clinical coding ledger
+            await repo.add_ledger(
+                {
+                    "assignment_id": assignment.id,
+                    "verbatim_text": assignment.verbatim_text,
+                    "observation_id": assignment.observation_id,
+                    "dictionary_type": assignment.dictionary_type,
+                    "old_dictionary_version": old_version if old_code else None,
+                    "old_coded_code": old_code,
+                    "old_coded_term": old_term,
+                    "new_dictionary_version": version,
+                    "new_coded_code": coded_code,
+                    "new_coded_term": coded_term,
+                    "recoding_reason": item_reason,
+                    "decision_by": resolved_actor,
+                    "decision_at": datetime.now(UTC).replace(tzinfo=None),
+                    "old_hierarchy": old_hierarchy,
+                    "new_hierarchy": hierarchy,
+                    "recoding_status": assignment.recoding_status,
+                }
+            )
+
+            # Resolve active queries
+            if assignment.observation_id:
+                active_queries = await repo.get_active_queries(
+                    assignment.observation_id
+                )
+                for active_q in active_queries:
+                    import uuid
+
+                    from apps.execution.database.models import IntegrationOutbox
+
+                    payload = {
+                        "actor": resolved_actor,
+                        "timestamp": datetime.now(UTC).isoformat(),
+                        "observation_id": assignment.observation_id,
+                        "query_id": active_q.id,
+                        "justification": item_reason,
+                        "action": item_action,
+                        "coded_code": coded_code,
+                    }
+                    outbox_entry = IntegrationOutbox(
+                        id=str(uuid.uuid4()),
+                        event_type="EDC_QUERY_RESOLVE",
+                        payload=payload,
+                        status="PENDING",
+                        attempts=0,
+                        correlation_id=f"query-resolve-{active_q.id}-{uuid.uuid4().hex[:8]}",
+                        created_by=resolved_actor,
+                        reason_for_change=item_reason,
+                    )
+                    await repo.add_outbox_entry(outbox_entry)
+
+            success_count += 1
+            results.append(
+                {
+                    "assignment_id": aid,
+                    "status": "SUCCESS",
+                    "coded_code": coded_code,
+                    "coded_term": coded_term,
+                }
+            )
+        except Exception as e:
+            failed_count += 1
+            results.append(
+                {
+                    "assignment_id": aid,
+                    "status": "FAILED",
+                    "error": str(e),
+                }
+            )
+
+    return {
+        "success_count": success_count,
+        "failed_count": failed_count,
+        "results": results,
+    }
+
+
+async def raise_coding_query(
+    session: Any,
+    assignment_id: str,
+    query_text: str | None = None,
+    reason: str | None = None,
+    actor: str = "system",
+) -> dict[str, Any]:
+    """Escalates a coding discrepancy into a ClinicalQuery on the associated observation/eCRF record."""
+    from apps.execution.database.models import ClinicalQuery
+
+    repo = _get_repository(session)
+
+    # Resolve actor
+    resolved_actor = actor
+    if not resolved_actor or resolved_actor == "system":
+        try:
+            from apps.execution.database.context import current_user_id
+
+            resolved_actor = current_user_id.get() or "system"
+        except (LookupError, ValueError):  # fmt: skip
+            resolved_actor = "system"
+
+    assignment = await repo.get_assignment(assignment_id)
+
+    # Update assignment state
+    assignment.status = CodingState.QUERY_PENDING
+    assignment.recoding_status = RecodingState.NONE
+    assignment.assigned_by = resolved_actor
+    assignment.assigned_at = datetime.now(UTC).replace(tzinfo=None)
+    await repo.save_assignment(assignment)
+
+    study_id = "STUDY-001"
+    site_id = None
+    subject_id = "SUBJ-001"
+    visit_id = None
+    domain = assignment.domain or "AE"
+    test_code = assignment.source_field or "AETERM"
+
+    if assignment.observation_id:
+        obs = await repo.get_observation(assignment.observation_id)
+        if obs:
+            study_id = obs.study_id or study_id
+            site_id = getattr(obs, "site_id", None)
+            subject_id = obs.subject_id or subject_id
+            visit_id = obs.visit_id
+            domain = obs.domain or domain
+            test_code = obs.test_code or test_code
+
+    explanation_text = (
+        query_text
+        or f"The verbatim term '{assignment.verbatim_text}' in field {test_code} requires clinical clarification."
+    )
+
+    query = ClinicalQuery(
+        study_id=study_id,
+        site_id=site_id,
+        subject_id=subject_id,
+        visit_id=visit_id,
+        domain=domain,
+        test_code=test_code,
+        status="OPEN",
+        explanation=explanation_text,
+        message=explanation_text,
+        observation_id=assignment.observation_id,
+        origin="SYSTEM_CODING",
+        query_type="SYSTEM_CODING",
+        form_id=f"{domain.upper()}_FORM",
+        field_id=test_code,
+        action_required="CLARIFY_VERBATIM",
+        priority="HIGH",
+        created_by=resolved_actor,
+    )
+    await repo.save_query(query)
+    if hasattr(session, "flush"):
+        await session.flush()
+
+    return {
+        "query_id": str(query.id),
+        "status": query.status,
+        "assignment_id": str(assignment.id),
+        "explanation": query.explanation,
+    }
 
 
 async def trigger_impact_analysis(

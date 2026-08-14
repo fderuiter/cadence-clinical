@@ -174,8 +174,8 @@ try {
       "Warning: Shared UI primitives package build failed, continuing anyway..."
     );
   }
-  runCommand("python3 scripts/validate_adrs.py");
-  runCommand("python3 scripts/validate_markdown.py");
+  runCommand("uv run python scripts/validate_adrs.py");
+  runCommand("uv run python scripts/validate_markdown.py");
   runCommand("uv run python scripts/generate_schema_documentation.py");
 
   // 2. Run compliance compiler
@@ -188,9 +188,9 @@ try {
     envDraft && !["0", "false", "no", "off"].includes(envDraft.toLowerCase());
 
   if (hasReport && !isEnvDraft) {
-    runCommand("python3 scripts/generate_rtm.py");
+    runCommand("uv run python scripts/generate_rtm.py");
   } else {
-    runCommand("python3 scripts/generate_rtm.py --draft");
+    runCommand("uv run python scripts/generate_rtm.py --draft");
   }
 
   // 3. Prepare files for VitePress

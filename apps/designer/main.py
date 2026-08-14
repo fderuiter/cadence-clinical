@@ -128,6 +128,9 @@ from apps.designer.presentation.routers.designer_routes import (
 from apps.designer.presentation.routers.designer_routes import (
     router as designer_router,
 )
+from apps.designer.presentation.routers.digitization import (
+    router as digitization_router,
+)
 from apps.designer.presentation.routers.protocol_export import router as export_router
 from apps.designer.presentation.routers.quality_sentinel import (
     router as sentinel_router,
@@ -156,6 +159,7 @@ app.include_router(sentinel_router)
 app.include_router(cascade_router)
 app.include_router(export_router)
 app.include_router(comments_router)
+app.include_router(digitization_router)
 app.include_router(designer_router)
 
 

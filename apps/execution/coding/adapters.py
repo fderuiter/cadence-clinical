@@ -11,6 +11,7 @@ from apps.execution.coding.matcher import _get_meddra_hierarchy, _get_whodrug_co
 from apps.execution.database.models import (
     ClinicalCodingAssignment,
     ClinicalCodingLedger,
+    ClinicalObservation,
     ClinicalQuery,
     CodingState,
     MedDRATerm,
@@ -150,3 +151,10 @@ class SQLCodingRepository:
         self, rec_record: Any, version: str
     ) -> tuple[list[Any], list[Any]]:
         return await _get_whodrug_context(self.session, rec_record, version)
+
+    async def get_observation(self, observation_id: str) -> ClinicalObservation | None:
+        stmt = select(ClinicalObservation).where(
+            ClinicalObservation.id == observation_id
+        )
+        res = await self.session.execute(stmt)
+        return res.scalars().first()

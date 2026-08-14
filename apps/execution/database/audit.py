@@ -137,9 +137,20 @@ def receive_before_flush(session: Session, flush_context, instances):
             return
 
     # Check for read-only freeze
-    if TrialLockManager.is_locked() and (
-        session.new or session.dirty or session.deleted
-    ):
+    has_clinical_mutations = any(
+        hasattr(obj, "__tablename__")
+        and obj.__tablename__
+        not in (
+            "audit_logs",
+            "audit_ledger_seals",
+            "data_locks",
+            "integration_outbox",
+            "security_audit_logs",
+        )
+        for obj in list(session.new) + list(session.dirty) + list(session.deleted)
+    )
+
+    if TrialLockManager.is_locked() and has_clinical_mutations:
         raise PermissionError(
             "Trial is currently locked in a read-only state due to a security violation."
         )
@@ -224,7 +235,13 @@ def receive_before_flush(session: Session, flush_context, instances):
 
     # Check for site-level and visit-level locks
     for obj in list(session.new) + list(session.dirty) + list(session.deleted):
-        if not hasattr(obj, "__tablename__") or obj.__tablename__ == "audit_logs":
+        if not hasattr(obj, "__tablename__") or obj.__tablename__ in (
+            "audit_logs",
+            "audit_ledger_seals",
+            "data_locks",
+            "integration_outbox",
+            "security_audit_logs",
+        ):
             continue
 
         # Check standard re-consent requirements for subject-covered records
@@ -510,22 +527,117 @@ def receive_before_flush(session: Session, flush_context, instances):
                     except Exception:
                         pass
 
+        # Collect persistent active data locks from DB and session
+        active_db_locks = []
+        try:
+            with session.no_autoflush:
+                from sqlalchemy import select
+
+                from .models.lock import DataLock
+
+                stmt_active_locks = select(DataLock).where(DataLock.is_active.is_(True))
+                active_db_locks = list(
+                    session.execute(stmt_active_locks).scalars().all()
+                )
+        except Exception:
+            pass
+
+        for session_lock in (
+            list(session.new)
+            + list(session.dirty)
+            + list(session.identity_map.values())
+        ):
+            if (
+                hasattr(session_lock, "__tablename__")
+                and session_lock.__tablename__ == "data_locks"
+            ):
+                if (
+                    getattr(session_lock, "is_active", False) is True
+                    and session_lock not in active_db_locks
+                ):
+                    active_db_locks.append(session_lock)
+                elif (
+                    getattr(session_lock, "is_active", False) is False
+                    and session_lock in active_db_locks
+                ):
+                    active_db_locks.remove(session_lock)
+
+        locked_studies = set()
+        locked_sites = set(TrialLockManager._locked_sites)
+        locked_visits = set(TrialLockManager._locked_visits)
+        locked_subjects = set(TrialLockManager._locked_subjects)
+        locked_forms = set(TrialLockManager._locked_forms)
+        locked_fields = set(TrialLockManager._locked_fields)
+
+        for lk in active_db_locks:
+            st = (lk.scope_type or "").upper()
+            sid = str(lk.scope_id) if lk.scope_id else None
+            if st in ("STUDY", "TRIAL"):
+                if sid:
+                    locked_studies.add(sid)
+                if lk.study_id:
+                    locked_studies.add(str(lk.study_id))
+            elif st == "SITE":
+                if sid:
+                    locked_sites.add(sid)
+                if lk.site_id:
+                    locked_sites.add(str(lk.site_id))
+            elif st == "SUBJECT":
+                if sid:
+                    locked_subjects.add(sid)
+                if lk.subject_id:
+                    locked_subjects.add(str(lk.subject_id))
+            elif st == "VISIT":
+                if sid:
+                    locked_visits.add(sid)
+                if lk.visit_id:
+                    locked_visits.add(str(lk.visit_id))
+            elif st == "FORM":
+                if sid:
+                    locked_forms.add(sid)
+                if lk.form_id:
+                    locked_forms.add(str(lk.form_id))
+            elif st == "FIELD":
+                if sid:
+                    locked_fields.add(sid)
+                if lk.field_name:
+                    locked_fields.add(str(lk.field_name))
+                    if lk.form_id:
+                        locked_fields.add(f"{lk.form_id}:{lk.field_name}")
+
+        # Check 6-tier hierarchical lock inheritance: Study -> Site -> Subject -> Visit -> Form -> Field
+        study_id = getattr(obj, "study_id", None) or getattr(obj, "study", None)
+        if study_id is not None and (
+            str(study_id) in locked_studies
+            or (TrialLockManager.is_locked() and str(study_id))
+        ):
+            raise PermissionError(
+                f"Study {study_id} is currently locked in a read-only state."
+            )
+
         site_id = getattr(obj, "site_id", None) or getattr(obj, "site", None)
-        if site_id is not None and TrialLockManager.is_site_locked(str(site_id)):
+        if site_id is not None and (
+            str(site_id) in locked_sites
+            or TrialLockManager.is_site_locked(str(site_id))
+        ):
             raise PermissionError(
                 f"Site {site_id} is currently locked in a read-only state."
             )
 
         visit_id = getattr(obj, "visit_id", None) or getattr(obj, "visit", None)
-        if visit_id is not None and TrialLockManager.is_visit_locked(str(visit_id)):
+        if visit_id is not None and (
+            str(visit_id) in locked_visits
+            or TrialLockManager.is_visit_locked(str(visit_id))
+        ):
             raise PermissionError(
                 f"Visit {visit_id} is currently locked in a read-only state."
             )
 
         # Check subject-level locks
         subject_id = getattr(obj, "subject_id", None) or getattr(obj, "subject", None)
-        if subject_id is not None and TrialLockManager.is_subject_locked(
-            str(subject_id)
+        if subject_id is not None and (
+            str(subject_id) in locked_subjects
+            or TrialLockManager.is_subject_locked(str(subject_id))
         ):
             raise PermissionError(
                 f"Subject {subject_id} is currently locked in a read-only state."
@@ -537,9 +649,31 @@ def receive_before_flush(session: Session, flush_context, instances):
             or getattr(obj, "form", None)
             or getattr(obj, "page_id", None)
         )
-        if form_id is not None and TrialLockManager.is_form_locked(str(form_id)):
+        if form_id is not None and (
+            str(form_id) in locked_forms
+            or TrialLockManager.is_form_locked(str(form_id))
+        ):
             raise PermissionError(
                 f"Form {form_id} is currently locked in a read-only state."
+            )
+
+        # Check field-level locks
+        field_name = getattr(obj, "test_code", None) or getattr(obj, "field_name", None)
+        obj_id = getattr(obj, "id", None)
+        if field_name is not None:
+            if (
+                str(field_name) in locked_fields
+                or (form_id and f"{form_id}:{field_name}" in locked_fields)
+                or TrialLockManager.is_field_locked(
+                    str(field_name), str(form_id) if form_id else None
+                )
+            ):
+                raise PermissionError(
+                    f"Field {field_name} is currently locked in a read-only state."
+                )
+        if obj_id is not None and str(obj_id) in locked_fields:
+            raise PermissionError(
+                f"Field record {obj_id} is currently locked in a read-only state."
             )
 
         # Check if subject is unblinded and restrict subsequent non-safety writes

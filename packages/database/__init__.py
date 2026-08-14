@@ -117,7 +117,7 @@ def receive_before_flush(session: Session, flush_context, instances):
         tablename = getattr(obj, "__tablename__", "")
         # fmt: off
         if tablename in {
-            "audit_logs", "audit_ledger_seals", "integration_outbox", "safety_audit_logs", "ticket_audit_logs",
+            "audit_logs", "audit_ledger_seals", "data_locks", "integration_outbox", "safety_audit_logs", "ticket_audit_logs",
             "org_audit_logs", "audit_schema.audit_logs", "audit_schema.audit_ledger_seals", "notifications",
             "notification_records", "notification_audit_logs", "notification_deliveries", "notifications_audit_logs",
             "tmf_documents", "tmf_audit_logs", "tmf_seals", "tmf_expected_documents", "tmf_document_qc_transitions",

@@ -38,7 +38,26 @@ logger = logging.getLogger(__name__)
 def _get_val(obj: object | dict[str, Any], key: str, default: Any = None) -> Any:
     """Helper to fetch an attribute or dict key gracefully."""
     if isinstance(obj, dict):
-        return obj.get(key, default)
+        val = obj.get(key)
+        if val is not None:
+            return val
+        synonyms = {
+            "low_bound": ["range_low", "low", "ref_low", "reference_range_low"],
+            "high_bound": ["range_high", "high", "ref_high", "reference_range_high"],
+            "range_low": ["low_bound", "low", "ref_low"],
+            "range_high": ["high_bound", "high", "ref_high"],
+            "critical_low": ["crit_low", "panic_low"],
+            "critical_high": ["crit_high", "panic_high"],
+            "source": ["lab_source"],
+            "lab_source": ["source"],
+            "sex_applicability": ["sex", "gender"],
+            "sex": ["sex_applicability", "gender"],
+        }
+        if key in synonyms:
+            for syn in synonyms[key]:
+                if syn in obj and obj[syn] is not None:
+                    return obj[syn]
+        return default
     return getattr(obj, key, default)
 
 

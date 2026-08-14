@@ -91,6 +91,18 @@
             <div class="nav-category-title">Design &amp; Metadata</div>
             <ul class="nav-menu">
               <li
+                id="tab-btn-digitization"
+                class="nav-item"
+                :class="{ active: $route.name === 'digitization' }"
+              >
+                <router-link v-slot="{ navigate }" to="/digitization" custom>
+                  <button type="button" @click="navigate">
+                    <span class="nav-icon">⚡</span>
+                    <span class="nav-label">Protocol AI Digitizer</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
                 id="tab-btn-mdr"
                 class="nav-item"
                 :class="{ active: $route.name === 'mdr' && $route.query.tab !== 'canvas' }"
@@ -158,6 +170,30 @@
                 </router-link>
               </li>
               <li
+                id="tab-btn-coding"
+                class="nav-item"
+                :class="{ active: $route.name === 'coding' }"
+              >
+                <router-link v-slot="{ navigate }" to="/coding" custom>
+                  <button type="button" @click="navigate">
+                    <span class="nav-icon">🏷️</span>
+                    <span class="nav-label">Medical Coding</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
+                id="tab-btn-data-lock"
+                class="nav-item"
+                :class="{ active: $route.name === 'data-lock' }"
+              >
+                <router-link v-slot="{ navigate }" to="/data-lock" custom>
+                  <button type="button" @click="navigate">
+                    <span class="nav-icon">🔐</span>
+                    <span class="nav-label">Data Lock Console</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
                 id="tab-btn-ctms"
                 class="nav-item"
                 :class="{ active: $route.name === 'ctms' }"
@@ -190,6 +226,18 @@
                   <button type="button" @click="navigate">
                     <span class="nav-icon">🔒</span>
                     <span class="nav-label">Part 11 Audit Ledger</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
+                id="tab-btn-exports"
+                class="nav-item"
+                :class="{ active: $route.name === 'exports' }"
+              >
+                <router-link v-slot="{ navigate }" to="/exports" custom>
+                  <button type="button" @click="navigate">
+                    <span class="nav-icon">📤</span>
+                    <span class="nav-label">Data Export Wizard</span>
                   </button>
                 </router-link>
               </li>
@@ -597,4 +645,14 @@ const canViewEtmf = computed(() => {
     "sponsor_admin",
   ]);
 });
+
+const canViewCoding = computed(() => {
+  return hasRequiredRole(authStore.normalizedRoles, [
+    "data_manager",
+    "sponsor_designer",
+    "sponsor_admin",
+    "super_admin",
+  ]);
+});
 </script>
+

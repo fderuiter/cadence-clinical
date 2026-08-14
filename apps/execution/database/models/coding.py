@@ -210,11 +210,12 @@ class DictionaryImportJob(AuditedModel):
     __tablename__ = "dictionary_import_jobs"
 
     dictionary_type: Mapped[DictionaryType] = mapped_column(
-        Enum(DictionaryType, name="dictionary_type_enum"), nullable=False
+        Enum(DictionaryType, name="dictionary_type_enum", native_enum=False),
+        nullable=False,
     )
     dictionary_version: Mapped[str] = mapped_column(String(50), nullable=False)
     status: Mapped[ImportState] = mapped_column(
-        Enum(ImportState, name="import_state_enum"),
+        Enum(ImportState, name="import_state_enum", native_enum=False),
         default=ImportState.PENDING,
         nullable=False,
     )
@@ -246,18 +247,19 @@ class ClinicalCodingAssignment(AuditedModel):
     )  # e.g., "AE.AETERM"
     observation_id: Mapped[str] = mapped_column(String(255), nullable=True)
     dictionary_type: Mapped[DictionaryType] = mapped_column(
-        Enum(DictionaryType, name="dictionary_type_assignment_enum"), nullable=False
+        Enum(DictionaryType, name="dictionary_type_assignment_enum", native_enum=False),
+        nullable=False,
     )
     dictionary_version: Mapped[str] = mapped_column(String(50), nullable=False)
     coded_code: Mapped[str] = mapped_column(String(50), nullable=True)
     coded_term: Mapped[str] = mapped_column(String(255), nullable=True)
     status: Mapped[CodingState] = mapped_column(
-        Enum(CodingState, name="coding_state_enum"),
+        Enum(CodingState, name="coding_state_enum", native_enum=False),
         default=CodingState.UNCODED,
         nullable=False,
     )
     recoding_status: Mapped[RecodingState] = mapped_column(
-        Enum(RecodingState, name="recoding_state_enum"),
+        Enum(RecodingState, name="recoding_state_enum", native_enum=False),
         default=RecodingState.NONE,
         nullable=False,
     )
@@ -287,7 +289,8 @@ class ClinicalCodingLedger(AuditedModel):
     verbatim_text: Mapped[str] = mapped_column(String(1000), nullable=False)
     observation_id: Mapped[str] = mapped_column(String(255), nullable=True)
     dictionary_type: Mapped[DictionaryType] = mapped_column(
-        Enum(DictionaryType, name="dictionary_type_ledger_enum"), nullable=False
+        Enum(DictionaryType, name="dictionary_type_ledger_enum", native_enum=False),
+        nullable=False,
     )
     old_dictionary_version: Mapped[str] = mapped_column(String(50), nullable=True)
     old_coded_code: Mapped[str] = mapped_column(String(50), nullable=True)

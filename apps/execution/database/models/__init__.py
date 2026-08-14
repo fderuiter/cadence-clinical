@@ -78,6 +78,10 @@ _submodule_mappings = {
     "ProcessedOfflineBatch": "sync",
     # outbox
     "IntegrationOutbox": "outbox",
+    # lock
+    "DataLock": "lock",
+    "ScopeTypeEnum": "lock",
+    "LockTypeEnum": "lock",
 }
 
 

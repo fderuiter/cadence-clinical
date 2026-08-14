@@ -1,6 +1,6 @@
 """Pydantic transport schemas for granular data locking and unlocking REST API.
 
-Requirements: PRD-SYS-001
+Requirements: PRD-SYS-001, PRD-SYS-002, PRD-MDR-002, Trace-1, Trace-3, Trace-13, Trace-17
 """
 
 from pydantic import BaseModel, Field
@@ -9,36 +9,63 @@ from .lock_models import DataLockRecord, LockScopeEnum
 
 
 class DataLockRequest(BaseModel):
-    """Request payload to execute form, item group, or field-level data locking.
+    """Request payload to execute form, item group, field, subject, visit, site, or study data locking."""
 
-    Requirements: PRD-SYS-001
-    """
-
-    study_id: str = Field(..., description="Target protocol study ID")
-    subject_id: str = Field(..., description="Target subject ID")
-    form_id: str = Field(..., description="Target eCRF form ID")
+    study_id: str | None = Field(None, description="Target protocol study ID")
+    site_id: str | None = Field(None, description="Target site ID")
+    subject_id: str | None = Field(None, description="Target subject ID")
+    visit_id: str | None = Field(None, description="Target visit ID")
+    form_id: str | None = Field(None, description="Target eCRF form ID")
     item_group_id: str | None = Field(
         None, description="Optional target item group code"
     )
     field_name: str | None = Field(
         None, description="Optional target field variable name"
     )
-    scope: LockScopeEnum = Field(
-        LockScopeEnum.FORM, description="Lock scope: FORM, ITEM_GROUP, FIELD"
+    scope: LockScopeEnum | str | None = Field(
+        None,
+        description="Lock scope: STUDY, TRIAL, SITE, SUBJECT, VISIT, FORM, ITEM_GROUP, FIELD",
     )
-    action: str = Field("LOCK", description="Action to perform: LOCK, FREEZE, UNLOCK")
-    reason_for_change: str = Field(
-        ..., description="Mandatory GxP 21 CFR Part 11 justification reason"
+    scope_type: str | None = Field(
+        None, description="Scope type name: STUDY, SITE, SUBJECT, VISIT, FORM, FIELD"
+    )
+    scope_id: str | None = Field(
+        None, description="Target identifier for the specified scope"
+    )
+    action: str = Field(
+        "LOCK", description="Action to perform: LOCK, FREEZE, HARD_LOCK, UNLOCK"
+    )
+    lock_type: str | None = Field(
+        None, description="Lock classification: FROZEN, LOCKED, HARD_LOCK, SOFT_LOCK"
+    )
+    reason_for_change: str | None = Field(
+        None, description="Mandatory GxP 21 CFR Part 11 justification reason"
+    )
+    reason: str | None = Field(
+        None, description="Convenience alias for reason_for_change"
+    )
+    justification: str | None = Field(
+        None, description="Mandatory >=50 character justification for unlock operations"
+    )
+    lock_id: str | None = Field(
+        None, description="Specific lock ID targeted for unlock operation"
     )
 
 
 class DataLockResponse(BaseModel):
-    """Response payload for data lock/unlock operations.
-
-    Requirements: PRD-SYS-001
-    """
+    """Response payload for data lock/unlock operations."""
 
     lock_id: str = Field(..., description="Lock record identifier")
-    status: str = Field(..., description="Resulting status: LOCKED, FROZEN, UNLOCKED")
+    status: str = Field(
+        ..., description="Resulting status: LOCKED, FROZEN, HARD_LOCK, UNLOCKED"
+    )
     message: str = Field(..., description="Operation result confirmation message")
-    record: DataLockRecord = Field(..., description="Updated data lock record")
+    record: DataLockRecord | dict | None = Field(
+        None, description="Updated data lock record"
+    )
+    scope_type: str | None = Field(None, description="Scope type")
+    scope_id: str | None = Field(None, description="Scope ID")
+    lock_type: str | None = Field(None, description="Lock type")
+    is_active: bool = Field(True, description="Active status")
+    locked_at: str | None = Field(None, description="Lock timestamp")
+    unlocked_at: str | None = Field(None, description="Unlock timestamp")

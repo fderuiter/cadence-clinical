@@ -75,6 +75,15 @@ const routes = [
     },
   },
   {
+    path: "/digitization",
+    name: "digitization",
+    component: () => import("../views/ProtocolDigitizationView.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresRole: ["sponsor_designer", "data_manager", "sponsor_admin"],
+    },
+  },
+  {
     path: "/icf-builder",
     name: "icf-builder",
     component: () => import("../views/ICFBuilderView.vue"),
@@ -141,6 +150,48 @@ const routes = [
     meta: {
       requiresAuth: true,
       requiresRole: ["sponsor_designer", "data_manager", "sponsor_admin"],
+    },
+  },
+  {
+    path: "/coding",
+    name: "coding",
+    component: () => import("../views/MedicalCodingView.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresRole: [
+        "data_manager",
+        "sponsor_designer",
+        "sponsor_admin",
+        "super_admin",
+      ],
+    },
+  },
+  {
+    path: "/data-lock",
+    name: "data-lock",
+    component: () => import("../views/DataLockView.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresRole: [
+        "data_manager",
+        "sponsor_designer",
+        "sponsor_admin",
+        "super_admin",
+      ],
+    },
+  },
+  {
+    path: "/exports",
+    name: "exports",
+    component: () => import("../views/ExportWizardView.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresRole: [
+        "data_manager",
+        "sponsor_designer",
+        "sponsor_admin",
+        "super_admin",
+      ],
     },
   },
   {
