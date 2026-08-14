@@ -126,6 +126,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-01: Cryptographic Signature Verification Engine for Part 11 eSignatures](2026-08-01-cryptographic-signature-verification-engine-for-esignatures.md)
 
 ### 3. Clinical Data Interoperability & Standards
+- [2026-08-14: Offline TypeScript Schema Generator using SQLModel Base Metadata](2026-08-14-offline-typescript-schema-generator-using-sqlmodel-base-metadata.md)
 
 - [2026-08-11: Key-Based Sync Reconciliation](2026-08-11-key-based-sync-reconciliation.md)
 
