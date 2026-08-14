@@ -387,9 +387,7 @@ def patch_init_db(suffix: str | None = None) -> None:
     base_postgres_url = get_postgres_base_config()
 
     def patched_exec_init_db(self, database_url: str, **kwargs):
-        if is_live_db_requested() or database_url.startswith(
-            ("postgres", "postgresql")
-        ):
+        if database_url.startswith(("postgres", "postgresql")):
             db_name = f"cadence_edc{target_suffix}"
             _initialized_databases.add("cadence_edc")
             new_url = f"{base_postgres_url}{db_name}"
@@ -397,9 +395,7 @@ def patch_init_db(suffix: str | None = None) -> None:
         return original_exec_init_db(self, database_url, **kwargs)
 
     def patched_rel_init_db(self, database_url: str, **kwargs):
-        if is_live_db_requested() or database_url.startswith(
-            ("postgres", "postgresql")
-        ):
+        if database_url.startswith(("postgres", "postgresql")):
             base_name = service_map.get(self.service_name, "cadence_edc")
             db_name = f"{base_name}{target_suffix}"
             _initialized_databases.add(base_name)
@@ -412,8 +408,10 @@ def patch_init_db(suffix: str | None = None) -> None:
     original_drop_all = MetaData.drop_all
 
     def patched_drop_all(self, bind=None, tables=None, checkfirst=True):
-        if is_live_db_requested() or os.environ.get("TEST_DATABASE_URL", "").startswith(
-            ("postgres", "postgresql")
+        if (
+            bind
+            and getattr(bind, "dialect", None)
+            and bind.dialect.name == "postgresql"
         ):
             return None
         return original_drop_all(self, bind=bind, tables=tables, checkfirst=checkfirst)
