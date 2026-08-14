@@ -6,7 +6,6 @@ non-destructive historical retention, and re-consent gating.
 Requirements: PRD-SYS-001, PRD-SUB-007
 """
 
-import datetime as dt
 import hashlib
 import hmac
 import json
@@ -141,12 +140,16 @@ async def test_amendment_cloning_preserves_base_version() -> None:
     assert res["new_version_tag"] == "2.0.0"
 
     # Verify base version 1.0.0 remains frozen and unchanged
-    v1 = next(v for v in MOCK_STUDY_VERSIONS[study_id] if v.get("version_tag") == "1.0.0")
+    v1 = next(
+        v for v in MOCK_STUDY_VERSIONS[study_id] if v.get("version_tag") == "1.0.0"
+    )
     assert v1["status"] == "APPROVED"
     assert v1["version_index"] == 1
 
     # Verify v2.0.0 draft amendment is spawned
-    v2 = next(v for v in MOCK_STUDY_VERSIONS[study_id] if v.get("version_tag") == "2.0.0")
+    v2 = next(
+        v for v in MOCK_STUDY_VERSIONS[study_id] if v.get("version_tag") == "2.0.0"
+    )
     assert v2["status"] == "DRAFT_AMENDMENT"
     assert v2["requires_reconsent"] is True
     assert v2["parent_version"] == "1.0.0"
@@ -217,9 +220,7 @@ async def test_subject_historical_visits_preserve_v1_schema() -> None:
         assert res["migrated_submissions_count"] == 1
 
         # Query all submissions for this subject
-        stmt = select(FormSubmission).where(
-            FormSubmission.subject_id == "SUBJ-HIST-01"
-        )
+        stmt = select(FormSubmission).where(FormSubmission.subject_id == "SUBJ-HIST-01")
         submissions = (await session.execute(stmt)).scalars().all()
 
         # Historical v1 submission should exist as read-only preserved copy
