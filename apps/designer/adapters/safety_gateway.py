@@ -185,4 +185,4 @@ def safe_driver_factory(*args: Any, **kwargs: Any) -> SafeDriver:
     return SafeDriver(drv)
 
 
-AsyncGraphDatabase.driver = safe_driver_factory
+AsyncGraphDatabase.driver = safe_driver_factory  # type: ignore[assignment,method-assign]

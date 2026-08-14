@@ -11,6 +11,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 1. Core Platform & Execution Engine
 
+- [2026-08-14: Standardized Hexagonal Architecture and Unified Developer CLI](2026-08-14-standardized-hexagonal-architecture-and-unified-developer-cli.md)
+
 - [2026-08-14: Graph-Native Zero-Downtime Protocol Amendment and In-Flight Subject Migration Engine](2026-08-14-graph-native-zero-downtime-protocol-amendment-and-in-flight-subject-migration-engine.md)
 - [2026-08-13: AI-Native USDM Protocol Digitization and Automated eCRF Synthesis](2026-08-13-ai-native-usdm-protocol-digitization-and-automated-ecrf-synthesis.md)
 - [2026-08-14: Pluggable Relational SQLModel Database Store for Security Audit Logs](2026-08-14-pluggable-relational-sqlmodel-database-store-for-security-audit-logs.md)
@@ -249,6 +251,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-17: Interactive Mermaid Diagrams and Responsive Layout Controls](2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md)
 
 ### 7. DevOps, Tooling & CI/CD
+
 - [2026-08-14: Isolated Concurrent Pytest Harness and Worker Lifecycle](2026-08-14-isolated-concurrent-pytest-harness-and-worker-lifecycle.md)
 
 - [2026-08-11: Standardize Hatch build configurations for clean namespace wheels](2026-08-11-standardize-hatch-build-configurations-for-clean-namespace-wheels.md)

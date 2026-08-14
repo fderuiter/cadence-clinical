@@ -31,13 +31,11 @@ from apps.etmf.infrastructure.repositories import SQLETMFRepository
 from apps.etmf.ingestion_service import seed_etmf_expected_documents_for_study
 from apps.etmf.main import app
 from apps.etmf.tests.test_etmf import get_auth_headers
-from apps.execution.trial_lock import TrialLockManager
 
 
 @pytest.fixture(autouse=True)
 def setup_db():
     """Setup isolated in-memory database for testing."""
-    TrialLockManager.reset()
     db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
     import asyncio
 
@@ -47,7 +45,6 @@ def setup_db():
 
     asyncio.run(create_all())
     yield
-    TrialLockManager.reset()
 
     async def drop_all():
         async with db_manager.engine.begin() as conn:

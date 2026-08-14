@@ -1,7 +1,6 @@
-"""
-Abstract Ports for the Medical Coding Service (Hexagonal Decoupling).
-"""
+"""Abstract Ports for the Medical Coding Service (Hexagonal Decoupling)."""
 
+from abc import abstractmethod
 from typing import Any
 
 from packages.hexagonal import RepositoryPort
@@ -10,10 +9,12 @@ from packages.hexagonal import RepositoryPort
 class CodingRepositoryPort(RepositoryPort[Any]):
     """Port defining persistence and dictionary validation operations for Medical Coding."""
 
+    @abstractmethod
     async def get_assignment(self, assignment_id: str) -> Any:
         """Retrieve a single active coding assignment by ID."""
-        ...
+        pass
 
+    @abstractmethod
     async def list_assignments(
         self,
         observation_id: str | None = None,
@@ -22,46 +23,56 @@ class CodingRepositoryPort(RepositoryPort[Any]):
         dictionary_type: str | None = None,
     ) -> list[Any]:
         """List active coding assignments with filters."""
-        ...
+        pass
 
+    @abstractmethod
     async def save_assignment(self, assignment: Any) -> None:
         """Persist/update a coding assignment."""
-        ...
+        pass
 
-    async def add_ledger(self, ledger_data: dict) -> None:
+    @abstractmethod
+    async def add_ledger(self, ledger_data: dict[str, Any]) -> None:
         """Create and add a coding ledger entry."""
-        ...
+        pass
 
+    @abstractmethod
     async def get_active_queries(self, observation_id: str) -> list[Any]:
         """Retrieve active SYSTEM_CODING queries for an observation."""
-        ...
+        pass
 
+    @abstractmethod
     async def save_query(self, query: Any) -> None:
         """Persist/update a clinical query."""
-        ...
+        pass
 
+    @abstractmethod
     async def add_outbox_entry(self, entry: Any) -> None:
         """Add an outbox entry to the repository."""
-        ...
+        pass
 
+    @abstractmethod
     async def validate_meddra_term(self, version: str, code: str) -> Any:
         """Validate code and version in MedDRA dictionary."""
-        ...
+        pass
 
+    @abstractmethod
     async def validate_whodrug_record(self, version: str, code: str) -> Any:
         """Validate code and version in WHODrug dictionary."""
-        ...
+        pass
 
+    @abstractmethod
     async def get_meddra_hierarchy(self, term_record: Any, version: str) -> list[Any]:
         """Retrieve MedDRA hierarchy path for a term record."""
-        ...
+        pass
 
+    @abstractmethod
     async def get_whodrug_context(
         self, rec_record: Any, version: str
     ) -> tuple[list[Any], list[Any]]:
         """Retrieve ATC context and ingredients for a WHODrug record."""
-        ...
+        pass
 
+    @abstractmethod
     async def get_observation(self, observation_id: str) -> Any:
         """Retrieve a clinical observation by ID."""
-        ...
+        pass

@@ -103,6 +103,8 @@ export default withMermaid(
         { text: "Home", link: "/" },
         { text: "Doc Index", link: "/DOCUMENTATION_INDEX" },
         { text: "Architecture", link: "/ARCHITECTURE" },
+        { text: "CLI Reference", link: "/cli" },
+        { text: "UI Components", link: "/components/index" },
         { text: "Agents", link: "/AGENTS" },
         { text: "SRS", link: "/SRS" },
       ],
@@ -116,7 +118,18 @@ export default withMermaid(
               link: "/DOCUMENTATION_INDEX",
             },
             { text: "System Architecture", link: "/ARCHITECTURE" },
+            { text: "Developer CLI (`cadence`)", link: "/cli" },
             { text: "AI Agents & Instructions", link: "/AGENTS" },
+          ],
+        },
+        {
+          text: "Enterprise UI Components",
+          items: [
+            { text: "Component Catalog Overview", link: "/components/index" },
+            { text: "ClinicalDataTable", link: "/components/data-table" },
+            { text: "ClinicalModal", link: "/components/modal" },
+            { text: "PersonaSwitcher", link: "/components/persona-switcher" },
+            { text: "AuditLogViewer", link: "/components/audit-viewer" },
           ],
         },
         {

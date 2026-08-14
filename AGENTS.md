@@ -21,6 +21,7 @@ Capture (EDC) into an automated Digital Data Flow (DDF) platform.
 | Execution DB       | Async SQLAlchemy + SQLModel for PostgreSQL (`apps/execution/`)                    |
 | Clinical Standards | CDISC USDM v3.0/v4.0, CDISC ODM XML/JSON                                          |
 | GxP Audit Fields   | `created_at`, `created_by`, `reason_for_change`, `version_index` (21 CFR Part 11) |
+| CLI & DX Tooling   | Cadence CLI (`uv run cadence`) in `packages/cli/`                                  |
 
 ---
 
@@ -105,6 +106,58 @@ This pattern applies to **every** SQLAlchemy `.where()`, `.filter()`, and
 via the CLI `--exclude` flag **and** via `[tool.ruff.lint.per-file-ignores]`
 in `pyproject.toml`. **Do not add `# noqa` directives to that file; the
 exclusion is global.**
+
+---
+
+### PEP 695 Generic Classes Pattern (UP046)
+
+In Python 3.14+, generic classes must use native type parameter syntax rather than inheriting from `typing.Generic`.
+
+```python
+# ✘ WRONG — triggers Ruff UP046
+from typing import Generic, TypeVar
+
+T = TypeVar("T")
+
+class RepositoryPort(Generic[T], ABC):
+    ...
+
+# ✔ CORRECT — native PEP 695 type parameter syntax
+class RepositoryPort[T](ABC):
+    ...
+```
+
+---
+
+### Safe Tarfile Extraction Pattern (Bandit B202 / CWE-22)
+
+When extracting archives (e.g. database snapshot restorations), never call `tar.extractall()` without verifying member paths against directory traversal:
+
+```python
+# ✔ CORRECT — filters out members with path traversal or absolute paths
+with tarfile.open(archive_path, "r:gz") as tar:
+    safe_members = [
+        m for m in tar.getmembers()
+        if not m.name.startswith("/") and ".." not in m.name
+    ]
+    tar.extractall(path=repo_root, members=safe_members)  # nosec B202: verified safe members
+```
+
+---
+
+### Primary Developer & Agent CLI Commands (`cadence`)
+
+Agents should always prefer the unified `cadence` CLI (`packages/cli`) for local development, diagnostic, and validation tasks:
+
+| Task | Command | Description |
+| :--- | :--- | :--- |
+| System Diagnostics | `uv run cadence doctor` | Validates Python, dependencies, databases, and ports (supports `--json`) |
+| Quality Gates | `uv run cadence check` | Concurrently runs all 10 architecture sentinels and quality gates |
+| Auto-Remediation | `uv run cadence fix` | Auto-remediates lints, formats code, aligns ADRs and schemas |
+| Test Runner | `uv run cadence test` | Runs unit/integration/frontend test suites with filtering |
+| Multi-Engine Seeding | `uv run cadence db seed --tier full` | Seeds multi-engine clinical test scenarios across Neo4j, PG, and SQLite |
+| GxP Sync | `uv run cadence gxp sync` | Runs tests, regenerates RTM, and stages docs |
+| Service Scaffolding | `uv run cadence scaffold adr "Title"` | Scaffolds new ADRs and auto-indexes under `docs/adr/index.md` |
 
 ---
 
@@ -442,6 +495,7 @@ Always ensure package manager artifacts and temporary caches (`.pnpm-store/`, `.
 ### 17. Pytest/xdist Test Database Isolation & Recovery (`scripts/clean_test_dbs.py`)
 
 When running automated test suites concurrently or under `pytest-xdist`:
+
 - **Unique Database Suffixes:** Every pytest run generates a unique 8-character alphanumeric run ID (`PYTEST_XDIST_TESTRUNUID`), and each worker node receives a dedicated suffix (`_{run_uid}_{worker_id}`). All PostgreSQL databases for microservices are named using this pattern to guarantee complete collision-free concurrency across parallel runs on the same machine.
 - **Controller Boundary:** The xdist controller coordinates test distribution across workers and executes 0 tests; it never creates or migrates database schemas.
 - **Orphan Database Cleanup:** If a test process is forcefully killed (`SIGKILL`) or interrupted before session unconfiguration hooks finish, orphaned worker test databases can be inspected and purged using the CLI helper:

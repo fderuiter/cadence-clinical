@@ -4,7 +4,7 @@ Requirements: PRD-SYS-001, PRD-SYS-004, PRD-CRF-008, Trace-1, Trace-7, Trace-12
 """
 
 import os
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import select
@@ -92,8 +92,8 @@ async def run_sdtm_extraction(
     observations = await reconcile_observations(session, observations, target_version)
 
     dom_upper = domain.strip().upper()
-    records = []
-    supp_records = []
+    records: list[Any] = []
+    supp_records: list[Any] = []
     if dom_upper == "DM":
         records = extract_dm(subjects, observations)
     elif dom_upper == "AE":
@@ -234,8 +234,8 @@ async def export_sdtm_domain(
         )
 
     fmt_clean = format.strip().lower()
-    actual_salt = salt or os.getenv(
-        "BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765"
+    actual_salt: str = (
+        salt or os.getenv("BIOSTAT_EXPORT_SALT") or "secure-clinical-salt-98765"
     )  # pragma: allowlist secret
 
     async with db_manager.get_session_maker()() as session:
@@ -249,7 +249,10 @@ async def export_sdtm_domain(
 
             # Apply deterministic de-identification
             if privacy_profile.upper() != "UNRESTRICTED":
-                export_data = deidentify_export_data(export_data, actual_salt)
+                export_data = cast(
+                    dict[str, list[dict[str, Any]]],
+                    deidentify_export_data(export_data, actual_salt),
+                )
                 records = export_data.get(dom_upper, [])
 
             if fmt_clean in ("xpt", "sas_xpt"):
@@ -405,8 +408,8 @@ async def export_adam_dataset(
         )
 
     fmt_clean = format.strip().lower()
-    actual_salt = salt or os.getenv(
-        "BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765"
+    actual_salt: str = (
+        salt or os.getenv("BIOSTAT_EXPORT_SALT") or "secure-clinical-salt-98765"
     )  # pragma: allowlist secret
 
     async with db_manager.get_session_maker()() as session:
@@ -415,7 +418,9 @@ async def export_adam_dataset(
 
             # Apply deterministic de-identification
             if privacy_profile.upper() != "UNRESTRICTED":
-                records = deidentify_export_data(records, actual_salt)
+                records = cast(
+                    list[dict[str, Any]], deidentify_export_data(records, actual_salt)
+                )
 
             if fmt_clean in ("xpt", "sas_xpt"):
                 xpt_bytes = write_xpt(
@@ -558,8 +563,8 @@ async def export_biostat_bundle(
 ) -> Any:
     """Exports all SDTM domains and ADaM datasets bundled in Dataset-JSON, CSV ZIP, or ODM-XML."""
     fmt_clean = format.strip().lower()
-    actual_salt = salt or os.getenv(
-        "BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765"
+    actual_salt: str = (
+        salt or os.getenv("BIOSTAT_EXPORT_SALT") or "secure-clinical-salt-98765"
     )  # pragma: allowlist secret
 
     async with db_manager.get_session_maker()() as session:
@@ -586,7 +591,10 @@ async def export_biostat_bundle(
 
             # Apply deterministic de-identification
             if privacy_profile.upper() != "UNRESTRICTED":
-                bundle_data = deidentify_export_data(bundle_data, actual_salt)
+                bundle_data = cast(
+                    dict[str, list[dict[str, Any]]],
+                    deidentify_export_data(bundle_data, actual_salt),
+                )
 
             if fmt_clean in ("zip", "csv_zip"):
                 zip_bytes = serialize_bundle_to_csv_zip(
@@ -707,8 +715,10 @@ async def execute_export_wizard(
         domains = ["DM", "AE", "VS", "LB", "MH", "CM"]
         datasets = ["ADSL", "ADAE", "ADVS"]
 
-    actual_salt = request_data.salt or os.getenv(
-        "BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765"
+    actual_salt: str = (
+        request_data.salt
+        or os.getenv("BIOSTAT_EXPORT_SALT")
+        or "secure-clinical-salt-98765"
     )  # pragma: allowlist secret
 
     async with db_manager.get_session_maker()() as session:
@@ -746,7 +756,10 @@ async def execute_export_wizard(
 
             # Apply de-identification
             if request_data.privacy_profile.upper() != "UNRESTRICTED":
-                bundle_data = deidentify_export_data(bundle_data, actual_salt)
+                bundle_data = cast(
+                    dict[str, list[dict[str, Any]]],
+                    deidentify_export_data(bundle_data, actual_salt),
+                )
 
             if fmt in ("xpt_v5", "xpt_v8", "xpt", "sas_xpt"):
                 # If single dataset, return binary XPT; if multiple, package in zip

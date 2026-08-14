@@ -10,11 +10,11 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2618
-- **Passed:** 2599 🟢
+- **Total Automated Test Cases Run:** 2627
+- **Passed:** 2608 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
-- **Overall Operational Pass Rate:** 99.27%
+- **Overall Operational Pass Rate:** 99.28%
 
 ## 2. Installation Qualification (IQ)
 
@@ -68,6 +68,7 @@ apps-org                 0.1.0
 apps-quality             0.1.0
 apps-safety              0.1.0
 apps-tickets             0.1.0
+ast-serialize            0.8.0
 asyncpg                  0.31.0
 attrs                    26.1.0
 babel                    2.18.0
@@ -114,6 +115,7 @@ jinja2                   3.1.6
 jmespath                 1.1.0
 jsonschema               4.26.0
 jsonschema-specifications 2025.9.1
+librt                    0.15.0
 license-expression       30.4.4
 lxml                     6.1.1
 mako                     1.3.12
@@ -122,10 +124,13 @@ markupsafe               3.0.3
 mdurl                    0.1.2
 msgpack                  1.2.1
 multidict                6.7.1
+mypy                     2.3.0
+mypy-extensions          1.1.0
 neo4j                    6.2.0
 nodeenv                  1.10.0
 numpy                    2.5.1
 openpyxl                 3.1.5
+packages-cli             0.1.0
 packages-compliance      0.1.0
 packages-database        0.1.0
 packages-deid            0.1.0
@@ -135,6 +140,7 @@ packages-storage         0.1.0
 packageurl-python        0.17.6
 packaging                26.2
 pandas                   3.0.3
+pathspec                 1.1.1
 pillow                   12.3.0
 pip                      26.1.2
 pip-api                  0.0.34
@@ -181,6 +187,7 @@ rpds-py                  2026.6.3
 rsa                      4.9.1
 ruff                     0.15.22
 s3transfer               0.14.0
+shellingham              1.5.4
 six                      1.17.0
 sortedcontainers         2.4.0
 soupsieve                2.9.1
@@ -193,6 +200,7 @@ tinycss2                 1.5.1
 tinyhtml5                2.1.0
 tomli                    2.4.1
 tomli-w                  1.2.0
+typer                    0.27.1
 typing-extensions        4.16.0
 typing-inspection        0.4.2
 tzdata                   2026.3
@@ -586,7 +594,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_usdm_importer_warning_unknown_concepts`                                           | `apps.designer.tests.test_usdm_graph_importer`                              | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
 | `test_usdm_model_immutability`                                                          | `apps.designer.tests.test_usdm_immutability`                                | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_tier1_ecrf_layout_synthesis_engine`                                               | `apps.designer.tests.test_zero_click_usdm_build`                            | PRD-CRF-004                                                                        | 🟢 PASSED  | < 1s     |
-| `test_tier1_etmf_edl_seeding_milestones_and_zones`                                      | `apps.designer.tests.test_zero_click_usdm_build`                            | PRD-TMF-001                                                                        | 🟢 PASSED  | < 1s     |
+| `test_tier1_etmf_edl_seeding_milestones_and_zones`                                      | `apps.designer.tests.test_zero_click_usdm_build`                            | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
 | `test_tier1_soa_matrix_compilation_from_graph`                                          | `apps.designer.tests.test_zero_click_usdm_build`                            | PRD-MDR-007                                                                        | 🟢 PASSED  | < 1s     |
 | `test_tier1_soa_matrix_compiler_usdm_model`                                             | `apps.designer.tests.test_zero_click_usdm_build`                            | PRD-MDR-007                                                                        | 🟢 PASSED  | < 1s     |
 | `test_tier1_usdm_graph_ingestion_transactional`                                         | `apps.designer.tests.test_zero_click_usdm_build`                            | PRD-DDF-001, PRD-SYS-001                                                           | 🟢 PASSED  | < 1s     |
@@ -2127,6 +2135,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_tickets_unauthorized_site_scope_blocking`                                         | `apps.tickets.tests.test_tickets_service`                                   | Trace-16                                                                           | 🟢 PASSED  | < 1s     |
 | `test_tickets_validation_invalid_enums`                                                 | `apps.tickets.tests.test_tickets_service`                                   | Trace-16                                                                           | 🟢 PASSED  | < 1s     |
 | `test_unauthenticated_requests_are_rejected`                                            | `apps.tickets.tests.test_tickets_service`                                   | Trace-16                                                                           | 🟢 PASSED  | < 1s     |
+| `test_cli_db_seed_json`                                                                 | `packages.cli.tests.test_cadence_cli`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_cli_db_snapshot_and_restore`                                                      | `packages.cli.tests.test_cadence_cli`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_cli_db_status_json`                                                               | `packages.cli.tests.test_cadence_cli`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_cli_doctor_json`                                                                  | `packages.cli.tests.test_cadence_cli`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_cli_help`                                                                         | `packages.cli.tests.test_cadence_cli`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_change_request_audit_trail_recorded`                                              | `packages.compliance.tests.test_compliance_change_request`                  | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_change_request_requires_dual_approval`                                            | `packages.compliance.tests.test_compliance_change_request`                  | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_compliance_change_request_audit_trail`                                            | `packages.compliance.tests.test_compliance_change_request`                  | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
@@ -2338,6 +2351,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_subject_stratification_factors_locking_domain`                                    | `packages.hexagonal.tests.test_hexagonal_domain`                            | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
 | `test_unblinding_and_withdrawal_domain`                                                 | `packages.hexagonal.tests.test_hexagonal_domain`                            | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
 | `test_workflows_with_in_memory_repositories`                                            | `packages.hexagonal.tests.test_hexagonal_domain`                            | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
+| `test_aggregate_root_events`                                                            | `packages.hexagonal.tests.test_hexagonal_kernel`                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_base_entity_equality`                                                             | `packages.hexagonal.tests.test_hexagonal_kernel`                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_domain_error_http_mappings`                                                       | `packages.hexagonal.tests.test_hexagonal_kernel`                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_value_object_equality`                                                            | `packages.hexagonal.tests.test_hexagonal_kernel`                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_api_routers_contain_no_direct_db_calls[ctms]`                                     | `packages.hexagonal.tests.test_hexagonal_ports_adapters`                    | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_api_routers_contain_no_direct_db_calls[designer]`                                 | `packages.hexagonal.tests.test_hexagonal_ports_adapters`                    | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_api_routers_contain_no_direct_db_calls[econsent]`                                 | `packages.hexagonal.tests.test_hexagonal_ports_adapters`                    | _Regression/Helper_                                                                | ⚪ SKIPPED | < 1s     |
