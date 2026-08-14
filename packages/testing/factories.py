@@ -64,7 +64,7 @@ class QueryDiscrepancyFactory(BaseModel):
     field_name: str = "SYSBP"
     query_text: str = "Systolic blood pressure out of expected physiological range."
     status: str = "OPEN"
-    created_by: str = "cra.monitor@example.com"
+    created_by: str = "cra.monitor@example.com"  # deid-ignore
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     @classmethod
@@ -110,7 +110,7 @@ class AuditLogFactory(BaseModel):
     """Factory for creating 21 CFR Part 11 compliant audit trail log entries."""
 
     id: str = Field(default_factory=lambda: f"AUDIT-{uuid.uuid4().hex[:8]}")
-    user_id: str = "site.crc@example.com"
+    user_id: str = "site.crc@example.com"  # deid-ignore
     action: str = "UPDATE_OBSERVATION"
     resource_type: str = "ClinicalObservation"
     resource_id: str = "OBS-001"
