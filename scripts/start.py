@@ -53,9 +53,14 @@ def run_web_server(service: str, host: str, port: int, extra_args: list[str]) ->
     to preserve signal propagation (SIGTERM/SIGINT) as PID 1, or falls back to
     subprocess.run.
     """
-    if service.lower() == "gateway" and os.getenv("GATEWAY_ENGINE", "python").lower() == "nestjs":
+    if (
+        service.lower() == "gateway"
+        and os.getenv("GATEWAY_ENGINE", "python").lower() == "nestjs"
+    ):
         fallback_port = 8014
-        print(f"[GATEWAY] Launching background legacy Python gateway on port {fallback_port} for CDISC/eCOA/USDM/OpenAPI routing...")
+        print(
+            f"[GATEWAY] Launching background legacy Python gateway on port {fallback_port} for CDISC/eCOA/USDM/OpenAPI routing..."
+        )
         python_cmd = [
             sys.executable,
             "-m",
