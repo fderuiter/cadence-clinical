@@ -33,7 +33,10 @@ fix: ## Auto-fix all ruff lint violations and reformat code (safe to run anytime
 lint-paths: ## Run lightweight path-pattern boundary linter
 	python3 scripts/validate_path_patterns.py --all
 
-lint: lint-paths ## Check lint (no auto-fix)
+typecheck: ## Run static type checking for repository contracts
+	python3 scripts/verify_contracts.py
+
+lint: lint-paths typecheck ## Check lint (no auto-fix)
 	pnpm -r lint
 	uv run ruff check . --exclude apps/execution/database/models.py
 

@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2412
-- **Passed:** 2398 🟢
+- **Total Automated Test Cases Run:** 2415
+- **Passed:** 2401 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 14 ⚪
 - **Overall Operational Pass Rate:** 99.42%
@@ -2301,6 +2301,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_soa_permissions_definitions`                                                      | `packages.security.tests.test_rbac_permissions`                             | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_soa_permissions_matrix_mapping`                                                   | `packages.security.tests.test_rbac_permissions`                             | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_unknown_role_returns_empty_permissions`                                           | `packages.security.tests.test_rbac_permissions`                             | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_commit_within_active_transaction`                                                 | `packages.security.tests.test_sqlmodel_audit_store`                         | PRD-SYS-001                                  | 🟢 PASSED  | < 1s     |
+| `test_pluggable_sqlmodel_store_async`                                                   | `packages.security.tests.test_sqlmodel_audit_store`                         | PRD-SYS-001                                  | 🟢 PASSED  | < 1s     |
+| `test_pluggable_sqlmodel_store_sync`                                                    | `packages.security.tests.test_sqlmodel_audit_store`                         | PRD-SYS-001                                  | 🟢 PASSED  | < 1s     |
 | `test_local_storage_provider_integrity_failure`                                         | `packages.storage.tests.test_blob_store`                                    | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_local_storage_provider_lifecycle`                                                 | `packages.storage.tests.test_blob_store`                                    | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_local_storage_provider_not_found`                                                 | `packages.storage.tests.test_blob_store`                                    | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |

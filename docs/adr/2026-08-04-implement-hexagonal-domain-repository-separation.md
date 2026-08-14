@@ -58,7 +58,7 @@ By decoupling the core domain rules from database-specific frameworks using a **
 
 - **Affected Repositories / Services:**
   - `apps/execution/domain/models.py` (Pure Python entities)
-  - `apps/execution/domain/repositories.py` (Port Protocols & concrete Adapters)
+  - `apps/execution/domain/ports.py` (Port Protocols & concrete Adapters)
   - `apps/execution/domain/__init__.py` (Clean public package interface)
 - **Verification Plan:**
   - Run `pytest tests/test_hexagonal_domain.py` to assert both pure domain transition logic, in-memory workflow tests, and SQLAlchemy repository integration tests.
