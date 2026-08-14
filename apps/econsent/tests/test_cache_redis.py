@@ -283,12 +283,14 @@ def test_redis_subscriber_invalidate_template():
 
         with (
             patch("redis.Redis", return_value=mock_r),
-            patch("time.sleep", side_effect=InterruptedError("Stop loop")),
             patch.object(
                 ApprovedTranslationCache, "_run_subscriber", return_value=None
             ),
         ):
             cache = ApprovedTranslationCache()
+            cache._stop_event.wait = MagicMock(
+                side_effect=InterruptedError("Stop loop")
+            )
             cache.set_cached("t1", 1, "en", {"foo": "bar"})
             cache.set_cached("t1", 2, "en", {"baz": "qux"})
             cache.set_cached("t2", 1, "en", {"other": "data"})
