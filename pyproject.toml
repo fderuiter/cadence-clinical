@@ -94,7 +94,7 @@ ignore = [
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "--cov=apps --cov=packages --cov-fail-under=80"
+addopts = "--cov=apps --cov=packages --cov-fail-under=80 --dist=worksteal"
 testpaths = [
     "tests",
     "apps",
