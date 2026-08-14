@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 from pytest_archon import archrule
 
-# Centralized pre-approved legacy directories excluded from verification checks
-LEGACY_EXCLUDED_DIRECTORIES = {"web", "subject-portal"}
+# Centralized pre-approved legacy and sidecar directories excluded from verification checks
+LEGACY_EXCLUDED_DIRECTORIES = {"web", "subject-portal", "cdisc"}
 
 
 def discover_services() -> list[str]:

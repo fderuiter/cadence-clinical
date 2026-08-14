@@ -861,154 +861,10 @@
       }
     },
     "/{path}": {
-      "options": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__options",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__options",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__options",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
       "head": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__options",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__options",
+        "operationId": "proxy_requests__path__head",
         "parameters": [
           {
             "name": "path",
@@ -1044,7 +900,7 @@
       "delete": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__options",
+        "operationId": "proxy_requests__path__head",
         "parameters": [
           {
             "name": "path",
@@ -1080,7 +936,7 @@
       "patch": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__options",
+        "operationId": "proxy_requests__path__head",
         "parameters": [
           {
             "name": "path",
@@ -1107,6 +963,280 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__head",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__head",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__head",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__head",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cdisc/api/v1/cdisc/sdtm/{domain}": {
+      "post": {
+        "summary": "Map Sdtm",
+        "operationId": "map_sdtm_api_v1_cdisc_sdtm__domain__post",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Domain"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Cdisc_SDTMRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cdisc_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cdisc/api/v1/cdisc/adam/{dataset}": {
+      "post": {
+        "summary": "Map Adam",
+        "operationId": "map_adam_api_v1_cdisc_adam__dataset__post",
+        "parameters": [
+          {
+            "name": "dataset",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Dataset"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Cdisc_ADaMRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cdisc_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cdisc/api/v1/cdisc/bundle": {
+      "post": {
+        "summary": "Map Bundle",
+        "operationId": "map_bundle_api_v1_cdisc_bundle_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Cdisc_BundleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cdisc_HTTPValidationError"
                 }
               }
             }
@@ -25246,6 +25376,851 @@
         ],
         "title": "ValidationError"
       },
+      "Cdisc_ADaMRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "subjects": {
+            "items": {
+              "$ref": "#/components/schemas/Cdisc_SubjectDTO"
+            },
+            "type": "array",
+            "title": "Subjects"
+          },
+          "observations": {
+            "items": {
+              "$ref": "#/components/schemas/Cdisc_ObservationDTO"
+            },
+            "type": "array",
+            "title": "Observations"
+          },
+          "visits": {
+            "items": {
+              "$ref": "#/components/schemas/Cdisc_VisitDTO"
+            },
+            "type": "array",
+            "title": "Visits",
+            "default": []
+          },
+          "migration_rules": {
+            "items": {
+              "$ref": "#/components/schemas/Cdisc_MigrationRuleDTO"
+            },
+            "type": "array",
+            "title": "Migration Rules",
+            "default": []
+          },
+          "target_version": {
+            "type": "string",
+            "title": "Target Version",
+            "default": "1.0"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "subjects",
+          "observations"
+        ],
+        "title": "ADaMRequest"
+      },
+      "Cdisc_BundleRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "subjects": {
+            "items": {
+              "$ref": "#/components/schemas/Cdisc_SubjectDTO"
+            },
+            "type": "array",
+            "title": "Subjects"
+          },
+          "observations": {
+            "items": {
+              "$ref": "#/components/schemas/Cdisc_ObservationDTO"
+            },
+            "type": "array",
+            "title": "Observations"
+          },
+          "visits": {
+            "items": {
+              "$ref": "#/components/schemas/Cdisc_VisitDTO"
+            },
+            "type": "array",
+            "title": "Visits",
+            "default": []
+          },
+          "migration_rules": {
+            "items": {
+              "$ref": "#/components/schemas/Cdisc_MigrationRuleDTO"
+            },
+            "type": "array",
+            "title": "Migration Rules",
+            "default": []
+          },
+          "target_version": {
+            "type": "string",
+            "title": "Target Version",
+            "default": "1.0"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "subjects",
+          "observations"
+        ],
+        "title": "BundleRequest"
+      },
+      "Cdisc_HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/Cdisc_ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Cdisc_MigrationRuleDTO": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "source_version": {
+            "type": "string",
+            "title": "Source Version"
+          },
+          "target_version": {
+            "type": "string",
+            "title": "Target Version"
+          },
+          "rule_type": {
+            "type": "string",
+            "title": "Rule Type"
+          },
+          "source_field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Field"
+          },
+          "target_field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Field"
+          },
+          "default_value_string": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Value String"
+          },
+          "default_value_float": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Value Float"
+          },
+          "is_deleted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Deleted",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "source_version",
+          "target_version",
+          "rule_type"
+        ],
+        "title": "MigrationRuleDTO"
+      },
+      "Cdisc_ObservationDTO": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "visit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Id"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain"
+          },
+          "observation_date": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observation Date"
+          },
+          "test_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Code"
+          },
+          "test_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Name"
+          },
+          "value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "value_string": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value String"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "normalized_value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalized Value"
+          },
+          "normalized_unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalized Unit"
+          },
+          "is_outlier": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Outlier",
+            "default": false
+          },
+          "is_sdv_verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Sdv Verified",
+            "default": false
+          },
+          "sdv_verified_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sdv Verified By"
+          },
+          "sdv_verified_at": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sdv Verified At"
+          },
+          "page_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Id"
+          },
+          "lab_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lab Source"
+          },
+          "lab_site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lab Site Id"
+          },
+          "lab_indicator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lab Indicator"
+          },
+          "lab_out_of_range": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lab Out Of Range",
+            "default": false
+          },
+          "matched_normal_bounds": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Normal Bounds"
+          },
+          "protocol_version_tag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol Version Tag"
+          },
+          "protocol_version_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol Version Index"
+          },
+          "provenance": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provenance"
+          },
+          "is_deleted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Deleted",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "subject_id",
+          "study_id"
+        ],
+        "title": "ObservationDTO"
+      },
+      "Cdisc_SDTMRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "subjects": {
+            "items": {
+              "$ref": "#/components/schemas/Cdisc_SubjectDTO"
+            },
+            "type": "array",
+            "title": "Subjects"
+          },
+          "observations": {
+            "items": {
+              "$ref": "#/components/schemas/Cdisc_ObservationDTO"
+            },
+            "type": "array",
+            "title": "Observations"
+          },
+          "visits": {
+            "items": {
+              "$ref": "#/components/schemas/Cdisc_VisitDTO"
+            },
+            "type": "array",
+            "title": "Visits",
+            "default": []
+          },
+          "migration_rules": {
+            "items": {
+              "$ref": "#/components/schemas/Cdisc_MigrationRuleDTO"
+            },
+            "type": "array",
+            "title": "Migration Rules",
+            "default": []
+          },
+          "target_version": {
+            "type": "string",
+            "title": "Target Version",
+            "default": "1.0"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "subjects",
+          "observations"
+        ],
+        "title": "SDTMRequest"
+      },
+      "Cdisc_SubjectDTO": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "usubjid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usubjid"
+          },
+          "demographics": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Demographics"
+          },
+          "encrypted_demographics": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Encrypted Demographics"
+          },
+          "rfstdtc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rfstdtc"
+          },
+          "rfendtc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rfendtc"
+          },
+          "is_deleted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Deleted",
+            "default": false
+          },
+          "enrollment_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enrollment Index"
+          },
+          "randomization_date": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Randomization Date"
+          },
+          "randt": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Randt"
+          },
+          "end_of_study_date": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Of Study Date"
+          },
+          "eosdt": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eosdt"
+          },
+          "death_date": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Death Date"
+          },
+          "dthdtc": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dthdtc"
+          },
+          "actarm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actarm"
+          },
+          "ACTARM": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actarm"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "subject_id",
+          "study_id"
+        ],
+        "title": "SubjectDTO"
+      },
+      "Cdisc_ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "Cdisc_VisitDTO": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "visit_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Name"
+          },
+          "visit_date": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Date"
+          },
+          "is_deleted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Deleted",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "subject_id",
+          "study_id"
+        ],
+        "title": "VisitDTO"
+      },
       "Ctms_BudgetLineItemCreate": {
         "properties": {
           "category": {
@@ -38919,6 +39894,7 @@
         "required": [
           "id",
           "study_id",
+          "site_id",
           "subject_id",
           "form_id",
           "status",

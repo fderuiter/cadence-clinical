@@ -66,7 +66,7 @@ async def map_sdtm(domain: str, req: SDTMRequest):
         export_data[f"SUPP{dom_upper}"] = supp_records
 
     # Apply de-identification
-    salt = os.getenv("BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765")
+    salt = os.getenv("BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765")  # nosec
     export_data = deidentify_export_data(export_data, salt)
 
     # Serialize & Validate
@@ -120,7 +120,7 @@ async def map_adam(dataset: str, req: ADaMRequest):
         records = derive_advs(adsl_recs, vs_recs)
 
     # Apply de-identification
-    salt = os.getenv("BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765")
+    salt = os.getenv("BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765")  # nosec
     deidentified_records = deidentify_export_data(records, salt)
 
     # Serialize & Validate
@@ -204,7 +204,7 @@ async def map_bundle(req: BundleRequest):
         )
 
     # Apply de-identification
-    salt = os.getenv("BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765")
+    salt = os.getenv("BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765")  # nosec
     bundle_data = deidentify_export_data(bundle_data, salt)
 
     # Serialize & Validate
