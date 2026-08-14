@@ -46,7 +46,13 @@ export interface ClinicalCodingAssignment {
   dictionary_version: string;
   coded_code?: string | null;
   coded_term?: string | null;
-  status: "UNCODED" | "SUGGESTED" | "CODED" | "AUTO_CODED" | "QUERY_PENDING" | "RECODING_REQUIRED";
+  status:
+    | "UNCODED"
+    | "SUGGESTED"
+    | "CODED"
+    | "AUTO_CODED"
+    | "QUERY_PENDING"
+    | "RECODING_REQUIRED";
   recoding_status: "NONE" | "PENDING" | "COMPLETED" | "CANCELLED";
   assigned_by?: string | null;
   assigned_at: string;
