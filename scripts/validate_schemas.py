@@ -15,7 +15,29 @@ Compliance:
 import importlib
 import os
 import sys
+from pathlib import Path
 from typing import Any
+
+# Add repository root to sys.path
+app_root = str(Path(__file__).resolve().parent.parent)
+if app_root not in sys.path:
+    sys.path.insert(0, app_root)
+
+# Enforce Python 3.14+ runtime before loading standard modules or packages
+if sys.version_info < (3, 14):
+    try:
+        from scripts.runtime_guard import enforce_python_runtime
+
+        enforce_python_runtime()
+    except Exception:
+        sys.stderr.write(
+            f"[FATAL] Incompatible Python runtime {sys.version.split()[0]} ({sys.executable}).\n"
+            "Cadence Clinical requires Python 3.14+.\n"
+            "Please run: uv run python scripts/validate_schemas.py\n"
+        )
+        sys.exit(1)
+
+from scripts.runtime_guard import enforce_python_runtime, print_runtime_info
 
 # Prevent import errors due to missing secret keys in offline environment
 os.environ.setdefault(
@@ -30,11 +52,6 @@ os.environ.setdefault(
     "GATEWAY_SECRET",
     "test-gateway-secret-placeholder-123",  # pragma: allowlist secret
 )
-
-# Set up python path for local imports and package paths to ensure absolute isolation
-app_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if app_root not in sys.path:
-    sys.path.insert(0, app_root)
 
 packages_dir = os.path.join(app_root, "packages")
 for name in ["database", "deid", "security", "ui"]:
@@ -97,6 +114,7 @@ def validate_schemas() -> bool:
         bool: True if the schema compilation and namespaces are 100% correct and
               safe from collisions; False otherwise.
     """
+    print_runtime_info("validate_schemas.py")
     print("--- Starting Static Schema Compilation & Namespacing Checks ---")
 
     if IMPORT_ERRORS:

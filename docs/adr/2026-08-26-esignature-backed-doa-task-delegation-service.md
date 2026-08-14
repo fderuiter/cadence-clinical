@@ -90,5 +90,5 @@ Execute the complete test suite and linter checks locally before committing:
 uv run pytest tests/test_doa_service.py --no-cov
 uv run ruff check . --fix
 uv run ruff format .
-python3 scripts/validate_adrs.py
+uv run python scripts/validate_adrs.py
 ```

@@ -49,7 +49,7 @@ describe("AppShell.vue - Application Shell Component", () => {
     expect(wrapper.find(".test-slot").text()).toBe(
       "Dynamic Workspace Page Content"
     );
-    expect(wrapper.text()).toContain("Demo Mode");
+    expect(wrapper.text()).toContain("Active Sandbox Mode");
   });
 
   it("dynamically shows or hides sidebar navigation items based on normalized roles", async () => {

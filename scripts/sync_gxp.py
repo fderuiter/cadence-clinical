@@ -46,6 +46,27 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Add repository root to sys.path
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+# Enforce Python 3.14+ runtime before loading standard modules or packages
+if sys.version_info < (3, 14):
+    try:
+        from scripts.runtime_guard import enforce_python_runtime
+
+        enforce_python_runtime()
+    except Exception:
+        sys.stderr.write(
+            f"[FATAL] Incompatible Python runtime {sys.version.split()[0]} ({sys.executable}).\n"
+            "Cadence Clinical requires Python 3.14+.\n"
+            "Please run: uv run python scripts/sync_gxp.py\n"
+        )
+        sys.exit(1)
+
+from scripts.runtime_guard import enforce_python_runtime, print_runtime_info
+
 # Mark that the GxP sync process is running, so spawned scripts know they aren't run directly.
 # Triggered CI/CD compliance validation run.
 os.environ["GXP_SYNC_RUNNING"] = "1"
@@ -264,7 +285,7 @@ def step_run_tests(dry_run: bool) -> None:
         # Merge reports
         _run(
             [
-                "python3",
+                sys.executable,
                 "scripts/merge_junit.py",
                 JUNIT_REPORT,
                 "report_main.xml",
@@ -385,6 +406,7 @@ def main() -> None:
     if args.commit and args.dry_run:
         parser.error("--commit and --dry-run are mutually exclusive.")
 
+    print_runtime_info("sync_gxp.py")
     print("Cadence Clinical — GxP Compliance Sync")
     print("=" * 60)
     if args.dry_run:

@@ -79,7 +79,7 @@ ignore = [
 "**/tests/**" = ["S101"]
 "**/test_*.py" = ["S101"]
 "**/*_test.py" = ["S101"]
-"scripts/**" = ["S101"]
+"scripts/**" = ["S101", "E402", "UP036"]
 
 # ---------------------------------------------------------------------------
 # SQLAlchemy boolean filter pattern — IMPORTANT for all contributors

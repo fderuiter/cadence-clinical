@@ -25,6 +25,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
       - name: Set up Python 3.14
         uses: actions/setup-python@v5
         with:
@@ -34,4 +39,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
         run: |
-          python3 scripts/sync_github_project.py
+          uv run python scripts/sync_github_project.py

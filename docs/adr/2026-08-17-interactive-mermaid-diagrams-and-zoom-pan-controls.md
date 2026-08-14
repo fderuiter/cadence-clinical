@@ -56,4 +56,4 @@ This decision implements requirements under Trace-1.
 ## 6. Implementation & Verification
 
 - **Affected Repositories / Services:** Documentation workspace files (`package.json`, `pnpm-lock.yaml`, `docs/.vitepress/config.mjs`, `docs/.vitepress/theme/index.js`, `docs/.vitepress/theme/custom.css`).
-- **Verification Plan:** Verify success of documentation compilation by running `pnpm run build:docs` and ensuring the ADR is correctly indexed by running `python3 scripts/validate_adrs.py`.
+- **Verification Plan:** Verify success of documentation compilation by running `pnpm run build:docs` and ensuring the ADR is correctly indexed by running `uv run python scripts/validate_adrs.py`.

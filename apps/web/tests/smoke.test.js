@@ -33,8 +33,8 @@ describe("Vue SPA Smoke Tests", () => {
       },
     });
 
-    expect(wrapper.html()).toContain("Cadence");
-    expect(wrapper.html()).toContain("Showcase Modules");
+    expect(wrapper.text()).toContain("Cadence");
+    expect(wrapper.text()).toContain("Design & Metadata");
   });
 
   it("mounts MdrView and renders USDM structure", () => {

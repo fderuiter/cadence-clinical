@@ -73,6 +73,6 @@ Chosen option: Option 2. We standardise on the plural `adapters` layout because 
 
 ### Verification Plan:
 
-- ADR validation verified offline via `python3 scripts/validate_adrs.py`.
-- Path pattern lint tests executed and verified via `make lint-paths` or `python3 scripts/validate_path_patterns.py`.
+- ADR validation verified offline via `uv run python scripts/validate_adrs.py`.
+- Path pattern lint tests executed and verified via `make lint-paths` or `uv run python scripts/validate_path_patterns.py`.
 - Architectural boundary tests verified via `pytest packages/hexagonal`.

@@ -57,5 +57,5 @@ To enforce high data integrity and ensure alignment with the CDISC Unified Study
   - `pyproject.toml`
 - **Verification Plan:**
   - Backend immutability unit tests: `apps/designer/tests/test_usdm_immutability.py`
-  - Automated ADR checks: `python3 scripts/validate_adrs.py`
+  - Automated ADR checks: `uv run python scripts/validate_adrs.py`
   - Requirements Traceability Matrix validation: `uv run python scripts/sync_gxp.py`

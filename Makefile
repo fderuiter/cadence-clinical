@@ -36,10 +36,10 @@ fix: ## Auto-fix all ruff lint violations, format code, and sync schemas (safe t
 	uv run cadence fix
 
 lint-paths: ## Run lightweight path-pattern boundary linter
-	python3 scripts/validate_path_patterns.py --all
+	uv run python scripts/validate_path_patterns.py --all
 
 typecheck: ## Run static type checking for repository contracts
-	python3 scripts/verify_contracts.py
+	uv run python scripts/verify_contracts.py
 
 lint: lint-paths typecheck ## Check lint (no auto-fix)
 	pnpm -r lint
@@ -69,7 +69,7 @@ rtm: ## Validate that checked-in RTM docs are up to date (read-only, no test run
 ##@ Architecture & Documentation
 
 adr: ## Scaffold a new Architecture Decision Record (prompts for title/domain/req)
-	python3 scripts/create_adr.py
+	uv run python scripts/create_adr.py
 
 docs: ## Serve the VitePress documentation portal locally
 	pnpm docs:dev

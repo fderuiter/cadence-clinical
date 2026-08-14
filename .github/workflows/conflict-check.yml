@@ -79,7 +79,7 @@ jobs:
         run: |
           # Only attempt self-healing if PR_NUMBER is set
           if [ -n "$PR_NUMBER" ]; then
-            python3 .github/trusted-base/scripts/self_heal.py
+            uv run python .github/trusted-base/scripts/self_heal.py
           fi
 
       - name: Post PR Quality Checklist Comment on Conflict Fallback
@@ -90,7 +90,7 @@ jobs:
           CONFLICT_OUTCOME: "failure"
         run: |
           if [ -f ".github/trusted-base/scripts/post_pr_comment.py" ]; then
-            python3 .github/trusted-base/scripts/post_pr_comment.py
+            uv run python .github/trusted-base/scripts/post_pr_comment.py
           else
-            python3 scripts/post_pr_comment.py
+            uv run python scripts/post_pr_comment.py
           fi

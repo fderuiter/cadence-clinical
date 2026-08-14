@@ -294,7 +294,7 @@ reference a unique Requirement ID (`PRD-SYS-xxx` or `Trace-x`).
 Architectural or design changes require scaffolding a new ADR:
 
 ```bash
-python3 scripts/create_adr.py --title "Short Title" --domain "core-platform" --req "PRD-SYS-xxx"
+uv run python scripts/create_adr.py --title "Short Title" --domain "core-platform" --req "PRD-SYS-xxx"
 ```
 
 This creates a dated ADR file under `docs/adr/` (e.g. `2026-07-29-short-title.md`) and
@@ -335,11 +335,11 @@ When CI fails, use this table to identify the root cause and exact fix:
 | `GxP compliance documentation is out of sync`    | RTM docs not regenerated after test changes                                                      | `uv run python scripts/sync_gxp.py` then commit `docs/SDLC/`                                                                                                                  |
 | `Would reformat: <file>` (ruff format check)     | Code not formatted                                                                               | `uv run ruff format .`                                                                                                                                                        |
 | `Coverage < 80%`                                 | New code paths not covered                                                                       | Add tests for the uncovered lines in the coverage report                                                                                                                      |
-| `ADR validation failed`                          | Architectural change without a matching ADR                                                      | `python3 scripts/create_adr.py ...` — fill in rationale                                                                                                                       |
+| `ADR validation failed`                          | Architectural change without a matching ADR                                                      | `uv run python scripts/create_adr.py ...` — fill in rationale                                                                                                                  |
 | `Bandit: high severity issue`                    | Security-sensitive pattern in code                                                               | Fix the flagged pattern; if intentional add `# nosec B<code>: <justification>`                                                                                                |
 | `Secret detected`                                | Credential or token in source                                                                    | Remove the secret; update `.secrets.baseline` with `detect-secrets scan`                                                                                                      |
 | `DEID compliance scan failure`                   | Sensitive PII/PHI (SSN, Email, Date) flagged in files                                            | Apply inline bypass (e.g., `# deid-ignore`) in mock/test files; remove actual sensitive data                                                                                  |
-| `Code Duplication Detected Above Threshold`      | A consecutive block of 15 or more normalized lines of code is duplicated across different files. | Run `python3 scripts/detect_duplication.py` to identify, refactor to share logic, or add to the inline list of ignored sets inside `scripts/detect_duplication.py` if exempt. |
+| `Code Duplication Detected Above Threshold`      | A consecutive block of 15 or more normalized lines of code is duplicated across different files. | Run `uv run python scripts/detect_duplication.py` to identify, refactor to share logic, or add to the inline list of ignored sets inside `scripts/detect_duplication.py` if exempt. |
 
 ---
 
@@ -391,7 +391,7 @@ Never commit `.docx` files — they are gitignored. Rebuild protocol templates
 dynamically:
 
 ```bash
-python3 scripts/regenerate_templates.py
+uv run python scripts/regenerate_templates.py
 ```
 
 ### 3. RTM Synchronization (updated)
@@ -464,16 +464,16 @@ Agents must run the duplication scanner locally to verify changes before pushing
 
 - **Workspace-wide Scan:**
   ```bash
-  python3 scripts/detect_duplication.py
+  uv run python scripts/detect_duplication.py
   ```
 - **Targeted Scan (Changed Files Mode):**
   Pass specific target files as arguments to run the scanner in a faster, incremental mode:
   ```bash
-  python3 scripts/detect_duplication.py apps/execution/main.py apps/execution/routers/sdv.py
+  uv run python scripts/detect_duplication.py apps/execution/main.py apps/execution/routers/sdv.py
   ```
   To dynamically run against all staged and unstaged modified files from Git:
   ```bash
-  python3 scripts/detect_duplication.py $(git diff --name-only | grep -E '\.(py|js|vue|css)$')
+  uv run python scripts/detect_duplication.py $(git diff --name-only | grep -E '\.(py|js|vue|css)$')
   ```
 
 #### How to Whitelist Legitimate Duplications (Inline Exemptions)
@@ -750,24 +750,35 @@ make db-reset-offline
 
 Agents may invoke these tools directly when needed:
 
-| Command                                                                          | Purpose                                                                                               |
-| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `make ports`                                                                     | Check that all 13 microservice, database, and frontend ports are free and available                   |
-| `make db-reset`                                                                  | Concurrently wipe, migrate, and seed all SQL/NoSQL/graph databases in under 15 seconds                |
-| `make db-reset-offline`                                                          | Execute database resets offline, generating warnings instead of crashing if databases are unreachable |
-| `uv run ruff check . --fix`                                                      | Auto-fix all fixable lint errors (I001, F-strings, etc.)                                              |
-| `uv run ruff format .`                                                           | Auto-format all Python files                                                                          |
-| `uv run python scripts/sync_gxp.py`                                              | Full GxP compliance sync (tests → RTM → stage)                                                        |
-| `uv run python scripts/sync_gxp.py --dry-run`                                    | Validate GxP docs without modifying files                                                             |
-| `python3 scripts/create_adr.py --title "..." --domain "..." --req "PRD-SYS-xxx"` | Scaffold ADR                                                                                          |
-| `python3 scripts/validate_adrs.py --fix-index`                                   | Rebuild the ADR index                                                                                 |
-| `python3 scripts/validate_markdown.py`                                           | Check all Markdown link integrity                                                                     |
-| `uv run pytest -n auto --cov=apps --cov=packages`                                | Run full test suite with coverage                                                                     |
-| `uv run bandit -c pyproject.toml -ll -ii -r apps packages`                       | Static security analysis                                                                              |
-| `uv run python -m packages.deid.cli [paths...]`                                  | Local de-identification (DEID) scanner to check specific files/directories for PII/PHI leakage        |
-| `uv run python scripts/audit_security.py`                                        | Execute standard repository-wide security and credentials sweep                                       |
-| `python3 scripts/detect_duplication.py`                                          | Run workspace-wide code duplication scanner                                                           |
-| `python3 scripts/detect_duplication.py <files>`                                  | Run duplication scanner in target changed-files mode                                                  |
+| Command                                                                                  | Purpose                                                                                               |
+| ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `make ports`                                                                             | Check that all 13 microservice, database, and frontend ports are free and available                   |
+| `make db-reset`                                                                          | Concurrently wipe, migrate, and seed all SQL/NoSQL/graph databases in under 15 seconds                |
+| `make db-reset-offline`                                                                  | Execute database resets offline, generating warnings instead of crashing if databases are unreachable |
+| `uv run ruff check . --fix`                                                              | Auto-fix all fixable lint errors (I001, F-strings, etc.)                                              |
+| `uv run ruff format .`                                                                   | Auto-format all Python files                                                                          |
+| `uv run python scripts/sync_gxp.py`                                                      | Full GxP compliance sync (tests → RTM → stage)                                                        |
+| `uv run python scripts/sync_gxp.py --dry-run`                                            | Validate GxP docs without modifying files                                                             |
+| `uv run python scripts/create_adr.py --title "..." --domain "..." --req "PRD-SYS-xxx"`   | Scaffold ADR                                                                                          |
+| `uv run python scripts/validate_adrs.py --fix-index`                                     | Rebuild the ADR index                                                                                 |
+| `uv run python scripts/validate_markdown.py`                                             | Check all Markdown link integrity                                                                     |
+| `uv run pytest -n auto --cov=apps --cov=packages`                                        | Run full test suite with coverage                                                                     |
+| `uv run bandit -c pyproject.toml -ll -ii -r apps packages`                               | Static security analysis                                                                              |
+| `uv run python -m packages.deid.cli [paths...]`                                          | Local de-identification (DEID) scanner to check specific files/directories for PII/PHI leakage        |
+| `uv run python scripts/audit_security.py`                                                | Execute standard repository-wide security and credentials sweep                                       |
+| `uv run python scripts/detect_duplication.py`                                            | Run workspace-wide code duplication scanner                                                           |
+| `uv run python scripts/detect_duplication.py <files>`                                    | Run duplication scanner in target changed-files mode                                                  |
+
+---
+
+## Workspace Python Runtime Guard & Validator Standard
+
+All developer utility and validation scripts located under `scripts/` require Python 3.14+ features and dependencies managed by `uv`.
+
+- **Automatic Runtime Guard:** Every validator script invokes `scripts.runtime_guard.enforce_python_runtime()` at startup. Running with an incompatible interpreter (e.g. system Python 3.9) immediately halts execution with a fatal error message and non-zero exit status, preventing silent degradation of validation checks.
+- **Canonical Invocations:** Always invoke scripts through `uv run python scripts/<name>.py` or via the unified `cadence` CLI (`uv run cadence check`, `uv run cadence dev`).
+- **Telemetry Logging:** Validator scripts emit an informational runtime banner (`[INFO] Python Runtime: ...`) on startup reporting the active Python version and executable path.
+- **Strict Model Validation:** In CI and under strict mode, dynamic model validation in `scripts/validate_markdown.py` enforces full Pydantic validation without silent fallback to shallow AST. For local debugging, `--allow-degraded` is available.
 
 ---
 
@@ -785,5 +796,5 @@ Before submitting a PR, verify all items:
 - [ ] GxP compliance docs are up to date: `uv run python scripts/sync_gxp.py` run and committed.
 - [ ] `docs/SDLC/` Markdown docs updated if a service boundary or data flow changed.
 - [ ] Local compliance and security sweeps run and pass, with any false positives bypassed using standard comment pragmas (restricted to mock/test files).
-- [ ] No code duplication failures (run `python3 scripts/detect_duplication.py` locally to verify, or whitelist if exempt).
+- [ ] No code duplication failures (run `uv run python scripts/detect_duplication.py` locally to verify, or whitelist if exempt).
 - [ ] No binary `.docx` files, `report.xml`, or secrets are staged.

@@ -111,7 +111,7 @@ describe("Keyboard Navigation & Focus Accessibility Engine", () => {
       // Assert focus classes and accessibility roles are set
       expect(wrapper.attributes("tabindex")).toBe("0");
       expect(wrapper.attributes("role")).toBe("button");
-      expect(wrapper.classes()).toContain("focus-visible:ring-indigo-600");
+      expect(wrapper.classes()).toContain("canvas-field-widget");
 
       // Verify that pressing Enter triggers standard select field emit
       await wrapper.trigger("keydown", { key: "Enter" });

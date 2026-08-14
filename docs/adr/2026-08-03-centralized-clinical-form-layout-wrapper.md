@@ -74,4 +74,4 @@ This decision addresses the following requirements:
 - **Verification Plan:**
   - Verify through unit and integration tests: `pnpm --filter web test:unit`
   - Confirm all clinical workflows function using end-to-end tests: `pnpm --filter web test:e2e`
-  - Confirm markdown and ADR compliance via `python3 scripts/validate_adrs.py` and `python3 scripts/validate_markdown.py`.
+  - Confirm markdown and ADR compliance via `uv run python scripts/validate_adrs.py` and `uv run python scripts/validate_markdown.py`.

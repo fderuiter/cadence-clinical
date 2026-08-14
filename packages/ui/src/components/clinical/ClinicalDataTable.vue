@@ -53,7 +53,9 @@ const sortedData = computed(() => {
   });
 });
 
-const totalPages = computed(() => Math.ceil(sortedData.value.length / props.pageSize) || 1);
+const totalPages = computed(
+  () => Math.ceil(sortedData.value.length / props.pageSize) || 1
+);
 
 const paginatedData = computed(() => {
   const start = (currentPage.value - 1) * props.pageSize;
@@ -80,7 +82,12 @@ const toggleRowSelection = (row) => {
       <span class="table-meta">{{ sortedData.length }} total record(s)</span>
     </div>
 
-    <div class="table-wrapper" role="region" aria-label="Clinical Data Table" tabindex="0">
+    <div
+      class="table-wrapper"
+      role="region"
+      aria-label="Clinical Data Table"
+      tabindex="0"
+    >
       <table class="clinical-table">
         <thead>
           <tr>
@@ -92,13 +99,25 @@ const toggleRowSelection = (row) => {
               :key="col.key"
               :class="['col-header', { sortable: col.sortable }]"
               scope="col"
-              :aria-sort="sortKey === col.key ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'"
+              :aria-sort="
+                sortKey === col.key
+                  ? sortOrder === 'asc'
+                    ? 'ascending'
+                    : 'descending'
+                  : 'none'
+              "
               @click="toggleSort(col)"
             >
               <div class="header-content">
                 <span>{{ col.label }}</span>
                 <span v-if="col.sortable" class="sort-icon" aria-hidden="true">
-                  {{ sortKey === col.key ? (sortOrder === 'asc' ? '▲' : '▼') : '⇅' }}
+                  {{
+                    sortKey === col.key
+                      ? sortOrder === "asc"
+                        ? "▲"
+                        : "▼"
+                      : "⇅"
+                  }}
                 </span>
               </div>
             </th>
@@ -126,7 +145,10 @@ const toggleRowSelection = (row) => {
             </td>
           </tr>
           <tr v-if="paginatedData.length === 0">
-            <td :colspan="columns.length + (selectable ? 1 : 0)" class="empty-cell">
+            <td
+              :colspan="columns.length + (selectable ? 1 : 0)"
+              class="empty-cell"
+            >
               No clinical records found.
             </td>
           </tr>

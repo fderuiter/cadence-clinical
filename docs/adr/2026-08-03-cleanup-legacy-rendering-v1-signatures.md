@@ -61,4 +61,4 @@ This cleanup relates directly to the system integrity, code quality, and maintai
   - `tests/test_api_contract_validation.py` (Whitelist active routes for reordering/assignments)
 - **Verification Plan:**
   - Run `uv run pytest` to ensure all 2050 test cases pass cleanly with 85%+ code coverage.
-  - Execute `python3 scripts/validate_adrs.py` to verify ADR structure and requirement tracing.
+  - Execute `uv run python scripts/validate_adrs.py` to verify ADR structure and requirement tracing.

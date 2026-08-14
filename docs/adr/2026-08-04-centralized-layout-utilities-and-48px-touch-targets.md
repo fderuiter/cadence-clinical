@@ -55,4 +55,4 @@ Chosen option: **Option 2 (Token-Based Centralized Responsive Utilities)** becau
   - `SignatureCaptureModal.vue`, `ApprovalHandoffModal.vue`
 - **Verification Plan:**
   - Execute frontend tests using `pnpm -r test` to ensure layout helper assertions continue to pass.
-  - Run `python3 scripts/validate_adrs.py` to confirm successful ADR indexing and formatting.
+  - Run `uv run python scripts/validate_adrs.py` to confirm successful ADR indexing and formatting.

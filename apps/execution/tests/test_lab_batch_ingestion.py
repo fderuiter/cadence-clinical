@@ -48,7 +48,7 @@ from apps.execution.services.lab_ingestion_service import (
     parse_hl7_v2_payload,
 )
 
-GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # nosec B105: mock test fallback
 
 
 def get_auth_headers(

@@ -23,7 +23,7 @@ repos:
     hooks:
       - id: detect-secrets
         args: ["--baseline", ".secrets.baseline"]
-        exclude: "pnpm-lock.yaml|uv.lock|tests/fixtures/keys/"
+        exclude: "pnpm-lock.yaml|uv.lock|tests/fixtures/keys/|docs/CDISC/|docs/NCI/"
         stages: [pre-commit, pre-push, manual]
 
   - repo: https://github.com/hadolint/hadolint
@@ -42,41 +42,41 @@ repos:
 
       - id: clean-secrets-baseline
         name: Clean Secrets Baseline
-        entry: python3 scripts/clean_secrets_baseline.py
+        entry: uv run python scripts/clean_secrets_baseline.py
         language: system
         files: \.secrets\.baseline$
         pass_filenames: false
 
       - id: detect-code-duplication
         name: Detect Code Duplication
-        entry: python3 scripts/detect_duplication.py
+        entry: uv run python scripts/detect_duplication.py
         language: system
         files: \.(py|js|vue|css)$
         pass_filenames: true
 
       - id: validate-adrs
         name: Validate ADRs
-        entry: python3 scripts/validate_adrs.py
+        entry: uv run python scripts/validate_adrs.py
         language: system
         files: ^(docs/adr/|apps/gateway/|packages/security/|packages/ui/|apps/execution/database/|pyproject.toml$|package.json$|apps/execution/.*(models|migrations))
         pass_filenames: true
 
       - id: validate-architecture-drift
         name: Validate Architecture Drift
-        entry: python3 scripts/validate_architecture_drift.py
+        entry: uv run python scripts/validate_architecture_drift.py
         language: system
         files: ^(docker/docker-compose\.yml|ARCHITECTURE\.md|docs/SDLC/02_Technical_Design_Document_TDD\.md)$
         pass_filenames: false
 
       - id: validate-markdown
         name: Validate Custom Markdown
-        entry: python3 scripts/validate_markdown.py
+        entry: uv run python scripts/validate_markdown.py
         language: system
         files: \.md$
 
       - id: validate-imports
         name: Cross-Service Import Validator
-        entry: python3 scripts/validate_imports.py
+        entry: uv run python scripts/validate_imports.py
         language: system
         files: ^(apps/|packages/|scripts/validate_imports\.py)
         pass_filenames: false
@@ -98,20 +98,20 @@ repos:
 
       - id: auto-stage-openapi
         name: Auto-Stage OpenAPI Schemas
-        entry: python3 scripts/pre_commit_openapi.py
+        entry: uv run python scripts/pre_commit_openapi.py
         language: system
         pass_filenames: false
         stages: [pre-commit]
 
       - id: validate-path-patterns
         name: Lightweight Path-Pattern Boundary Linter
-        entry: python3 scripts/validate_path_patterns.py
+        entry: uv run python scripts/validate_path_patterns.py
         language: system
         pass_filenames: true
 
       - id: backend-static-verify
         name: Backend Port Contract Static Verification
-        entry: python3 scripts/verify_contracts.py
+        entry: uv run python scripts/verify_contracts.py
         language: system
         files: ^(apps/execution/domain/ports\.py|apps/execution/adapters/repositories\.py|apps/execution/infrastructure/repositories/execution_repositories\.py|apps/execution/application/ports\.py)$
         pass_filenames: false

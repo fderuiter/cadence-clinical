@@ -56,4 +56,4 @@ This decision addresses the following requirements:
 ## 6. Implementation & Verification
 
 - **Affected Repositories / Services:** `packages/ui/`
-- **Verification Plan:** Verify utilizing `pnpm --filter ui lint` and running `python3 scripts/validate_adrs.py`.
+- **Verification Plan:** Verify utilizing `pnpm --filter ui lint` and running `uv run python scripts/validate_adrs.py`.

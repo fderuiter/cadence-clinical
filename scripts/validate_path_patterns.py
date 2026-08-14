@@ -13,6 +13,27 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Add repository root to sys.path
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+# Enforce Python 3.14+ runtime before loading standard modules or packages
+if sys.version_info < (3, 14):
+    try:
+        from scripts.runtime_guard import enforce_python_runtime
+
+        enforce_python_runtime()
+    except Exception:
+        sys.stderr.write(
+            f"[FATAL] Incompatible Python runtime {sys.version.split()[0]} ({sys.executable}).\n"
+            "Cadence Clinical requires Python 3.14+.\n"
+            "Please run: uv run python scripts/validate_path_patterns.py\n"
+        )
+        sys.exit(1)
+
+from scripts.runtime_guard import enforce_python_runtime, print_runtime_info
+
 # Static mapping of file extensions/patterns to their permitted target folders
 RULES = {
     "*.py": {
@@ -271,6 +292,7 @@ def main():
         "--all", action="store_true", help="Validate all tracked files in git"
     )
     args = parser.parse_args()
+    print_runtime_info("validate_path_patterns.py")
 
     repo_root = Path(__file__).resolve().parent.parent
 

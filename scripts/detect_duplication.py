@@ -11,7 +11,26 @@ import os
 import re
 import sys
 
+# Add repository root to sys.path
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
+# Enforce Python 3.14+ runtime before loading standard modules or packages
+if sys.version_info < (3, 14):
+    try:
+        from scripts.runtime_guard import enforce_python_runtime
+
+        enforce_python_runtime()
+    except Exception:
+        sys.stderr.write(
+            f"[FATAL] Incompatible Python runtime {sys.version.split()[0]} ({sys.executable}).\n"
+            "Cadence Clinical requires Python 3.14+.\n"
+            "Please run: uv run python scripts/detect_duplication.py\n"
+        )
+        sys.exit(1)
+
+from scripts.runtime_guard import enforce_python_runtime, print_runtime_info
 
 
 def normalize_line(line: str) -> str:
@@ -95,6 +114,7 @@ def scan_file_for_lines(
 
 def main() -> None:
     """Main execution entry point."""
+    print_runtime_info("detect_duplication.py")
     print("--- Running Cadence Code Duplication Scanner ---")
 
     # Command line arguments can specify target files (e.g. from pre-commit or git diff)

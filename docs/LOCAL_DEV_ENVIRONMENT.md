@@ -194,8 +194,8 @@ This invokes `concurrently` to run **7 concurrent quality pipelines**:
 2. **`pnpm lint`**: Inspects frontend structures (ESLint) and Python syntaxes (`uv run ruff check .`).
 3. **`pnpm test`**: Parallel execution of Vitest UI unit/component tests and Pytest Python backend checks (`uv run pytest`).
 4. **`node scripts/check-links.js`**: Scans relative file/directory references in all markdown documentation files to ensure 100% valid relative references.
-5. **`python3 scripts/validate_adrs.py`**: Verifies numbering consistency, structure, and detects architectural changes lacking required Architecture Decision Records.
-6. **`python3 scripts/validate_markdown.py`**: A custom validation utility parsing markdown files to check CLI option patterns, Python AST function signature match validity, and Pydantic-based JSON blocks.
+5. **`uv run python scripts/validate_adrs.py`**: Verifies numbering consistency, structure, and detects architectural changes lacking required Architecture Decision Records.
+6. **`uv run python scripts/validate_markdown.py`**: A custom validation utility parsing markdown files to check CLI option patterns, Python AST function signature match validity, and Pydantic-based JSON blocks.
 7. **`uv run bandit`**: Deep security scanner identifying common security hazards inside `apps/` and `packages/` utilizing configurations in `pyproject.toml`.
 
 ---

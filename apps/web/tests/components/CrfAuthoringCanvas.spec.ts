@@ -78,7 +78,7 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
     expect(wrapper.text()).toContain("[VS.DIABP]");
 
     // Check we have the highlighted primary border on selected item
-    const selectedWidget = wrapper.find(".border-indigo-600");
+    const selectedWidget = wrapper.find(".is-selected");
     expect(selectedWidget.exists()).toBe(true);
     expect(selectedWidget.text()).toContain("Systolic Blood Pressure");
   });
@@ -309,7 +309,9 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
 
     const placeholder = wrapper.find(".empty-dropzone-placeholder");
     expect(placeholder.exists()).toBe(true);
-    expect(placeholder.text()).toContain("Drag and drop field widgets here");
+    expect(placeholder.text()).toContain(
+      "Drag and drop clinical field widgets here"
+    );
   });
 
   describe("Viewport-Aware Grid Inspector Suite", () => {

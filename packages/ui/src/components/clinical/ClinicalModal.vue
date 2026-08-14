@@ -89,8 +89,12 @@ onUnmounted(() => {
 
         <div class="modal-footer">
           <slot name="footer">
-            <button class="btn btn-secondary" @click="closeModal">Cancel</button>
-            <button class="btn btn-primary" @click="emit('confirm')">Confirm</button>
+            <button class="btn btn-secondary" @click="closeModal">
+              Cancel
+            </button>
+            <button class="btn btn-primary" @click="emit('confirm')">
+              Confirm
+            </button>
           </slot>
         </div>
       </div>
@@ -117,7 +121,9 @@ onUnmounted(() => {
 .clinical-modal-dialog {
   background: var(--color-surface, #ffffff);
   border-radius: 8px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
   border: 1px solid var(--color-border, #e2e8f0);
   display: flex;
   flex-direction: column;
@@ -126,10 +132,18 @@ onUnmounted(() => {
   outline: none;
 }
 
-.size-sm { max-width: 400px; }
-.size-md { max-width: 560px; }
-.size-lg { max-width: 800px; }
-.size-xl { max-width: 1100px; }
+.size-sm {
+  max-width: 400px;
+}
+.size-md {
+  max-width: 560px;
+}
+.size-lg {
+  max-width: 800px;
+}
+.size-xl {
+  max-width: 1100px;
+}
 
 .modal-header {
   display: flex;

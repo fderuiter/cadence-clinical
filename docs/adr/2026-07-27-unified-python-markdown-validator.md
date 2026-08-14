@@ -53,4 +53,4 @@ This decision implements requirements under Trace-1.
 ## 6. Implementation & Verification
 
 - **Affected Repositories / Services:** `.github/workflows/ci.yml`, `package.json`, `.pre-commit-config.yaml`
-- **Verification Plan:** Verified via `python3 scripts/validate_markdown.py` and unit tests in `tests/test_markdown_validator.py`.
+- **Verification Plan:** Verified via `uv run python scripts/validate_markdown.py` and unit tests in `tests/test_markdown_validator.py`.

@@ -10,10 +10,31 @@ import datetime
 import os
 import re
 import sys
+from pathlib import Path
+
+# Add repository root to sys.path
+REPO_ROOT = str(Path(__file__).resolve().parent.parent)
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
+# Enforce Python 3.14+ runtime before loading standard modules or packages
+if sys.version_info < (3, 14):
+    try:
+        from scripts.runtime_guard import enforce_python_runtime
+
+        enforce_python_runtime()
+    except Exception:
+        sys.stderr.write(
+            f"[FATAL] Incompatible Python runtime {sys.version.split()[0]} ({sys.executable}).\n"
+            "Cadence Clinical requires Python 3.14+.\n"
+            "Please run: uv run python scripts/create_adr.py\n"
+        )
+        sys.exit(1)
+
+from scripts.runtime_guard import enforce_python_runtime, print_runtime_info
 
 # Directory constants
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-REPO_ROOT = os.path.dirname(SCRIPT_DIR)
 ADR_DIR = os.path.join(REPO_ROOT, "docs", "adr")
 INDEX_FILE = os.path.join(ADR_DIR, "index.md")
 
@@ -179,6 +200,7 @@ def prompt_interactive() -> tuple[str, str, str]:
 
 
 def main():
+    print_runtime_info("create_adr.py")
     parser = argparse.ArgumentParser(
         description="CLI Developer Helper for Creating Architectural Decision Records (ADRs)."
     )

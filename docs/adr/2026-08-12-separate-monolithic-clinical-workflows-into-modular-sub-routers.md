@@ -54,4 +54,4 @@ This decision implements and traces requirements under Trace-1, Trace-2, PRD-QRY
 ## 6. Implementation & Verification
 
 - **Affected Repositories / Services:** `apps/execution`
-- **Verification Plan:** Validated by running the extensive execution test suite `pytest apps/execution/tests/` and checking compliance via `python3 scripts/validate_adrs.py`.
+- **Verification Plan:** Validated by running the extensive execution test suite `pytest apps/execution/tests/` and checking compliance via `uv run python scripts/validate_adrs.py`.

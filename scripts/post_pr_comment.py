@@ -13,6 +13,28 @@ import os
 import re
 import subprocess
 import sys
+from pathlib import Path
+
+# Add repository root to sys.path
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+# Enforce Python 3.14+ runtime before loading standard modules or packages
+if sys.version_info < (3, 14):
+    try:
+        from scripts.runtime_guard import enforce_python_runtime
+
+        enforce_python_runtime()
+    except Exception:
+        sys.stderr.write(
+            f"[FATAL] Incompatible Python runtime {sys.version.split()[0]} ({sys.executable}).\n"
+            "Cadence Clinical requires Python 3.14+.\n"
+            "Please run: uv run python scripts/post_pr_comment.py\n"
+        )
+        sys.exit(1)
+
+from scripts.runtime_guard import enforce_python_runtime
 
 ROW_KEYS: dict[str, str] = {
     "Cadence Architecture & Sentinels": "cadence",
@@ -39,16 +61,16 @@ FIX_COMMANDS: dict[str, str] = {
     "lint": "`uv run ruff check . --fix && uv run ruff format .`",
     "test": "`uv run pytest -n auto`",
     "frontend": "`pnpm -r format && pnpm -r lint`",
-    "adr": "`python3 scripts/validate_adrs.py`",
+    "adr": "`uv run python scripts/validate_adrs.py`",
     "audit": "`uv run pre-commit run detect-secrets --all-files`",
     "conflict": "`git fetch origin main && git merge origin/main`",
     "deid": "`uv run python -m packages.deid.cli`",
-    "duplication": "`python3 scripts/detect_duplication.py`",
-    "traceability": "`python3 scripts/generate_rtm.py --validate`",
+    "duplication": "`uv run python scripts/detect_duplication.py`",
+    "traceability": "`uv run python scripts/generate_rtm.py --validate`",
     "gxp_validation": "`uv run pytest tests/validation/`",
     "migration": "`uv run python3 apps/execution/database/rollback.py`",
-    "markdown": "`python3 scripts/validate_markdown.py`",
-    "architecture": "`python3 scripts/validate_architecture_drift.py`",
+    "markdown": "`uv run python scripts/validate_markdown.py`",
+    "architecture": "`uv run python scripts/validate_architecture_drift.py`",
 }
 
 

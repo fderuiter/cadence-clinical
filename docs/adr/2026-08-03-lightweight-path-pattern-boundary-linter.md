@@ -63,5 +63,5 @@ This decision addresses structural and layout verification requirements under **
   - `package.json` (Updated `lint` script command)
   - `tests/validation/test_path_boundary_linter.py` (Unit and negative scenario integration tests)
 - **Verification Plan:**
-  - Execute `python3 scripts/validate_path_patterns.py --all` to verify standard layout alignment.
+  - Execute `uv run python scripts/validate_path_patterns.py --all` to verify standard layout alignment.
   - Run `uv run pytest tests/validation/test_path_boundary_linter.py` to ensure all linter test scenarios pass cleanly.
