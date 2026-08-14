@@ -145,16 +145,39 @@ with tarfile.open(archive_path, "r:gz") as tar:
 
 ---
 
+### Centralized Test Infrastructure (`packages/testing`)
+
+When authoring unit or integration tests across microservices or packages, agents must use `packages/testing` rather than defining ad-hoc mock payloads or dictionaries:
+
+1. **Domain Entity Factories:** Use `SubjectFactory`, `ProtocolDefinitionFactory`, `ClinicalObservationFactory`, `QueryDiscrepancyFactory`, `ConsentRecordFactory`, `DocumentMetadataFactory`, or `AuditLogFactory` from `packages.testing.factories`.
+2. **In-Memory Repository Fakes:** Use `InMemoryRepository[T]` from `packages.testing.fakes` to test application use cases without touching live databases.
+3. **Security Context & Gateway Auth Mocks:** Use `create_test_auth_headers`, `create_test_security_context`, or `create_test_token` from `packages.testing.security` to produce authentic HMAC signatures.
+
+```python
+from packages.testing.factories import SubjectFactory
+from packages.testing.fakes import InMemoryRepository
+from packages.testing.security import create_test_auth_headers
+
+def test_subject_registration():
+    repo = InMemoryRepository()
+    subject = SubjectFactory.create(site_id="SITE-101", status="ENROLLED")
+    headers = create_test_auth_headers(user_id="crc.user", roles=["site_crc"])
+```
+
+---
+
 ### Primary Developer & Agent CLI Commands (`cadence`)
 
 Agents should always prefer the unified `cadence` CLI (`packages/cli`) for local development, diagnostic, and validation tasks:
 
 | Task | Command | Description |
 | :--- | :--- | :--- |
-| System Diagnostics | `uv run cadence doctor` | Validates Python, dependencies, databases, and ports (supports `--json`) |
-| Quality Gates | `uv run cadence check` | Concurrently runs all 10 architecture sentinels and quality gates |
-| Auto-Remediation | `uv run cadence fix` | Auto-remediates lints, formats code, aligns ADRs and schemas |
-| Test Runner | `uv run cadence test` | Runs unit/integration/frontend test suites with filtering |
+| Interactive Dev TUI | `uv run cadence dev --tui` | Multi-service interactive Rich cockpit with live logs & hotkey restarts |
+| Test Watcher | `uv run cadence test --watch` | Smart file-system watcher re-running tests on code edits |
+| Fast Unit Tests | `uv run cadence test --fast` | Sub-second unit tests bypassing heavy coverage calculations |
+| System Diagnostics | `uv run cadence doctor --auto-fix` | Validates environment and auto-initializes missing SQLite schemas |
+| Quality Gates | `uv run cadence check --parallel` | Concurrently runs all 10 architecture sentinels and quality gates |
+| Auto-Remediation | `uv run cadence fix --all` | Auto-remediates lints, formats code, aligns ADRs, schemas, and RTM |
 | Multi-Engine Seeding | `uv run cadence db seed --tier full` | Seeds multi-engine clinical test scenarios across Neo4j, PG, and SQLite |
 | GxP Sync | `uv run cadence gxp sync` | Runs tests, regenerates RTM, and stages docs |
 | Service Scaffolding | `uv run cadence scaffold adr "Title"` | Scaffolds new ADRs and auto-indexes under `docs/adr/index.md` |
@@ -519,6 +542,14 @@ GitHub Pages for Cadence Clinical is exclusively dedicated to hosting the **Vite
 - **Workflow Canonical Name:** Deployments must use `.github/workflows/deploy-docs.yml` (triggered automatically downstream via `.github/workflows/ci.yml` upon push to `main`, or manually via `workflow_dispatch`). Do not recreate or reference legacy `deploy-demo.yml`.
 - **Docs Build Dependencies:** Compiling docs via `pnpm docs:build` (`node scripts/build-docs.js`) requires both Node.js (20+) / pnpm (9+) and Python (3.14+) / uv to execute ADR validators, markdown link assertions, schema visualizers, and draft RTM compilation before static VitePress assembly.
 - **VitePress Config Invariants:** `docs/.vitepress/config.mjs` must maintain `base: process.env.VITEPRESS_BASE || "/cadence-clinical/"` and `outDir: path.resolve(__dirname, "dist")`.
+
+### 19. Python 3.14 AST Parsing & Subprocess Script Invariant
+
+When authoring scripts, CLI subcommands, or quality gates that parse Python syntax or AST (`scripts/verify_contracts.py`, `scripts/validate_imports.py`), always invoke sub-processes using `sys.executable` or `uv run python` rather than bare `python3`. Older macOS system Python runtimes lack support for PEP 695 generic class syntax (`class Repo[T]:`) and will fail with syntax errors.
+
+### 20. Targeted Pytest Execution (`--no-cov`)
+
+Running a single test file (e.g. `uv run pytest scripts/tests/test_pr_comment.py`) invokes the monorepo root `pyproject.toml` configuration with `--cov-fail-under=80`, which will fail because global monorepo coverage cannot be reached from an isolated test file. When executing targeted test runs, always append `--no-cov` (or use `uv run cadence test --fast` / `uv run cadence test --target <path>`).
 
 ---
 
