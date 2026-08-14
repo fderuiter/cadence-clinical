@@ -202,8 +202,15 @@ router.beforeEach(async (to) => {
     }
 
     if (!authStore.isAuthenticated) {
-      // If we are not in demo mode, trigger Keycloak redirect or fallback to /login
-      if (!authStore.isDemoMode) {
+      // In demo mode or sandbox, auto-initialize ephemeral session for frictionless navigation
+      if (authStore.isDemoMode) {
+        try {
+          await authStore.login();
+        } catch (e) {
+          console.warn("Auto demo login failed, redirecting to /login", e);
+          return { path: "/login", query: { redirect: to.fullPath } };
+        }
+      } else {
         try {
           await authStore.login({
             redirectUri:
@@ -216,8 +223,6 @@ router.beforeEach(async (to) => {
           console.error("Authentication redirection failed:", err);
           return { path: "/login", query: { redirect: to.fullPath } };
         }
-      } else {
-        return { path: "/login", query: { redirect: to.fullPath } };
       }
     }
 

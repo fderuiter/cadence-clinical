@@ -15,7 +15,83 @@ export const ROLE_ALIASES = {
   designer: ["sponsor_designer"],
   sponsor_designer: ["sponsor_designer"],
   study_designer: ["sponsor_designer"],
+  admin: [
+    "sponsor_admin",
+    "sponsor_designer",
+    "data_manager",
+    "site_investigator",
+    "crc",
+    "cra",
+    "monitor",
+    "auditor",
+    "tmf_auditor",
+  ],
+  sponsor_admin: [
+    "sponsor_admin",
+    "sponsor_designer",
+    "data_manager",
+    "site_investigator",
+    "crc",
+    "cra",
+    "monitor",
+    "auditor",
+    "tmf_auditor",
+  ],
+  super_admin: [
+    "sponsor_admin",
+    "sponsor_designer",
+    "data_manager",
+    "site_investigator",
+    "crc",
+    "cra",
+    "monitor",
+    "auditor",
+    "tmf_auditor",
+  ],
 };
+
+export const PERSONA_PRESETS = [
+  {
+    key: "super_admin",
+    label: "👑 Super Admin (All Access)",
+    roles: [
+      "Sponsor Admin",
+      "Sponsor Designer",
+      "Data Manager",
+      "Site Investigator",
+      "CRC",
+      "CRA",
+      "Monitor",
+      "Auditor",
+      "TMF Auditor",
+    ],
+  },
+  {
+    key: "sponsor_designer",
+    label: "📋 Sponsor Protocol Designer",
+    roles: ["Sponsor Designer", "Data Manager"],
+  },
+  {
+    key: "site_crc",
+    label: "🩺 Site Coordinator / CRC",
+    roles: ["Site Investigator", "CRC"],
+  },
+  {
+    key: "cra_monitor",
+    label: "📊 CRA Clinical Monitor",
+    roles: ["CRA", "Monitor"],
+  },
+  {
+    key: "data_manager",
+    label: "⚙️ Clinical Data Manager",
+    roles: ["Data Manager", "Sponsor Designer"],
+  },
+  {
+    key: "auditor",
+    label: "🔒 GxP & Part 11 Auditor",
+    roles: ["Auditor", "TMF Auditor"],
+  },
+];
 
 export const useAuthStore = defineStore("auth", {
   state: () => {
@@ -36,7 +112,17 @@ export const useAuthStore = defineStore("auth", {
       idToken: saved.idToken || null,
       refreshToken: saved.refreshToken || null,
       user: saved.user || null, // includes identity details like username, email, firstName, lastName, and id
-      rawRoles: saved.rawRoles || [],
+      rawRoles: saved.rawRoles || [
+        "Sponsor Admin",
+        "Sponsor Designer",
+        "Data Manager",
+        "Site Investigator",
+        "CRC",
+        "CRA",
+        "Monitor",
+        "Auditor",
+      ],
+      currentPersona: saved.currentPersona || "super_admin",
       isDemoMode: saved.isDemoMode !== undefined ? saved.isDemoMode : true, // defaults to true, set to false if Keycloak initializes successfully
     };
   },
@@ -57,13 +143,19 @@ export const useAuthStore = defineStore("auth", {
     token: (state) => state.accessToken,
     normalizedRoles: (state) => {
       if (state.isDemoMode && !state.isAuthenticated) {
-        // Fallback demo roles normalized
-        return ["monitor", "sponsor_admin"];
+        return [
+          "sponsor_admin",
+          "sponsor_designer",
+          "data_manager",
+          "site_investigator",
+          "crc",
+          "cra",
+          "monitor",
+          "auditor",
+        ];
       }
       // Normalize raw roles to UI roles
       return state.rawRoles.map((role) => {
-        // Map Keycloak realm roles to standard UI roles (lowercase with underscores)
-        // E.g. "Sponsor Admin" -> "sponsor_admin", "Data Manager" -> "data_manager"
         const normalized = role
           .trim()
           .toLowerCase()
@@ -74,6 +166,9 @@ export const useAuthStore = defineStore("auth", {
           normalized === "sponsor_designer"
         ) {
           return "sponsor_designer";
+        }
+        if (normalized === "admin" || normalized === "super_admin") {
+          return "sponsor_admin";
         }
         return normalized;
       });
@@ -149,7 +244,17 @@ export const useAuthStore = defineStore("auth", {
             },
             body: JSON.stringify({
               username: "demo-user",
-              roles: ["site investigator", "cra", "admin", "auditor"],
+              roles: [
+                "Sponsor Admin",
+                "Sponsor Designer",
+                "Data Manager",
+                "Site Investigator",
+                "CRC",
+                "CRA",
+                "Monitor",
+                "Auditor",
+                "TMF Auditor",
+              ],
               tenant_id: "sandbox-tenant-default",
             }),
           });
@@ -165,7 +270,17 @@ export const useAuthStore = defineStore("auth", {
               lastName: "User",
               id: "demo-sub-id",
             };
-            this.rawRoles = data.roles;
+            this.rawRoles = data.roles || [
+              "Sponsor Admin",
+              "Sponsor Designer",
+              "Data Manager",
+              "Site Investigator",
+              "CRC",
+              "CRA",
+              "Monitor",
+              "Auditor",
+              "TMF Auditor",
+            ];
           } else {
             throw new Error("Demo session endpoint failed");
           }
@@ -180,14 +295,25 @@ export const useAuthStore = defineStore("auth", {
           this.rawRoles = [
             "Sponsor Admin",
             "Sponsor Designer",
-            "CRA",
             "Data Manager",
             "Site Investigator",
+            "CRC",
+            "CRA",
+            "Monitor",
             "Auditor",
+            "TMF Auditor",
           ];
         }
       }
       this.persist();
+    },
+    switchPersona(personaKey) {
+      const found = PERSONA_PRESETS.find((p) => p.key === personaKey);
+      if (found) {
+        this.currentPersona = personaKey;
+        this.rawRoles = [...found.roles];
+        this.persist();
+      }
     },
     async logout(options = {}) {
       if (window.keycloakInstance && !this.isDemoMode) {

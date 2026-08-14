@@ -1,47 +1,45 @@
 <template>
   <div
-    class="form-section-container bg-gray-50 rounded-xl border border-gray-200 shadow-sm mb-6 overflow-hidden"
+    class="form-section-container"
     :class="{
-      'border-indigo-200 ring-2 ring-indigo-50':
-        !section.isCollapsed && isDragging,
+      'is-active-section': !section.isCollapsed && isDragging,
     }"
   >
     <!-- Section Header Card -->
     <div
-      class="section-header px-4 py-3 bg-white border-b border-gray-200 flex items-center justify-between cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-inset"
+      class="section-header-card"
       v-keyboard-click="toggleCollapse"
-      @click="toggleCollapse"
       :aria-expanded="!section.isCollapsed"
+      @click="toggleCollapse"
     >
-      <div class="flex items-center gap-3">
+      <div class="section-header-left">
         <!-- Drag Handle for Section Reordering -->
         <span
-          class="section-drag-handle cursor-move text-gray-400 hover:text-gray-600 text-lg"
+          class="section-drag-handle"
+          title="Drag to reorder section"
           @click.stop
         >
           ☰
         </span>
-        <h3 class="text-base font-bold text-gray-800">
+        <h3 class="section-title">
           {{ section.name || "Unnamed Section" }}
         </h3>
-        <span
-          class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full font-medium font-mono"
-        >
+        <span class="section-field-count">
           {{ section.items?.length || 0 }}
           {{ (section.items?.length || 0) === 1 ? "field" : "fields" }}
         </span>
       </div>
 
       <!-- Action Controls -->
-      <div class="flex items-center gap-2" @click.stop>
+      <div class="section-header-right" @click.stop>
         <button
-          class="btn-add-item bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold px-2.5 py-1.5 rounded transition flex items-center gap-1"
+          class="btn-add-field"
           @click="addNewItem"
         >
-          <span>➕</span> Add Row
+          <span>➕</span> Add Field
         </button>
         <button
-          class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold px-2.5 py-1.5 rounded transition"
+          class="btn-section-toggle"
           @click="toggleCollapse"
         >
           {{ section.isCollapsed ? "Expand" : "Collapse" }}
@@ -50,13 +48,13 @@
     </div>
 
     <!-- Section Body: Draggable Nested Items List -->
-    <div v-show="!section.isCollapsed" class="section-body p-4 transition-all">
+    <div v-show="!section.isCollapsed" class="section-body">
       <!-- Visual Dropzone Indicator when empty -->
       <div
         v-if="!section.items || section.items.length === 0"
-        class="empty-dropzone-placeholder border-2 border-dashed border-gray-300 rounded-lg p-6 text-center text-sm text-gray-400 bg-white"
+        class="empty-dropzone-placeholder"
       >
-        Drag and drop field widgets here
+        Drag and drop clinical field widgets here or click "+ Add Field"
       </div>
 
       <!-- Nested Draggable with group fields for inter-section field moves -->
@@ -65,7 +63,7 @@
         item-key="id"
         group="fields"
         handle=".field-drag-handle"
-        class="grid grid-cols-12 gap-4"
+        class="crf-grid-container"
         :class="{ 'dragging-active': isDragging }"
         @start="isDragging = true"
         @end="isDragging = false"
@@ -73,7 +71,7 @@
         <template #item="{ element: field }">
           <div
             :class="gridSpanClass(field.gridSpan)"
-            class="field-item-wrapper relative"
+            class="field-item-wrapper"
           >
             <CanvasFieldWidget
               :field="field"
@@ -252,8 +250,16 @@ function onDuplicateField(fieldId) {
 </script>
 
 <style scoped>
+.crf-grid-container {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
 .field-item-wrapper {
   transition: all 0.2s ease;
+  position: relative;
 }
 
 .col-span-1 {

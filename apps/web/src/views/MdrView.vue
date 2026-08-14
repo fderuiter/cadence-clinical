@@ -8,37 +8,50 @@
       </p>
     </div>
 
-    <!-- Sub-Issue 8 Tab Navigation -->
+    <!-- Tab Navigation -->
     <div
       class="tabs-navigation"
       style="
         display: flex;
-        gap: 12px;
-        margin-bottom: 20px;
-        border-bottom: 2px solid var(--border);
-        padding-bottom: 10px;
+        gap: 10px;
+        margin-bottom: 24px;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 12px;
+        flex-wrap: wrap;
       "
     >
       <button
         class="btn tab-btn-soa"
         :class="activeTab === 'soa' ? 'btn-primary' : 'btn-secondary'"
+        style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px;"
         @click="activeTab = 'soa'"
       >
-        📋 Interactive SoA &amp; USDM
+        📋 Schedule of Activities (SoA)
+      </button>
+      <button
+        id="btn-tab-canvas-top"
+        class="btn tab-btn-canvas"
+        :class="activeTab === 'canvas' ? 'btn-primary' : 'btn-secondary'"
+        style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px;"
+        @click="activeTab = 'canvas'"
+      >
+        🎨 eCRF Visual Form Designer
       </button>
       <button
         class="btn tab-btn-mdr"
         :class="activeTab === 'mdr' ? 'btn-primary' : 'btn-secondary'"
+        style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px;"
         @click="activeTab = 'mdr'"
       >
-        🔍 MDR Concept Browse &amp; Edit
+        🔍 NCI Concept Registry
       </button>
       <button
         class="btn tab-btn-diff"
         :class="activeTab === 'diff' ? 'btn-primary' : 'btn-secondary'"
+        style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px;"
         @click="activeTab = 'diff'"
       >
-        ⚖️ Alignment &amp; Differences Report
+        ⚖️ Protocol Revision Alignment
       </button>
     </div>
 
@@ -493,107 +506,101 @@
         </div>
       </div>
 
-      <!-- Visual protocol editor layout -->
-      <div class="grid-2-responsive">
-        <!-- USDM study JSON -->
-        <div class="card json-editor-container">
-          <div class="card-title">
-            <span>CDISC USDM Study Protocol JSON</span>
-            <button
-              id="btn-reset-usdm"
-              class="badge"
-              style="
-                cursor: pointer;
-                background-color: var(--accent);
-                color: white;
-                border: none;
-              "
-              @click="resetUsdm"
-            >
-              Reset Mock JSON
-            </button>
+      <!-- Schedule of Activities & Timeline (Full Width) -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div
+          class="card-header"
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+          "
+        >
+          <div>
+            <span class="card-title" style="font-size: 1.1rem; font-weight: 700;">Schedule of Activities (SoA) Matrix &amp; Protocol Timeline</span>
+            <p style="font-size: 0.78rem; color: #64748b; margin: 2px 0 0 0;">
+              Interactively inspect visits, epochs, study arms, and planned clinical activities.
+            </p>
           </div>
-          <textarea
-            id="usdm-json"
-            v-model="usdmText"
-            class="json-editor"
-            spellcheck="false"
-            aria-label="CDISC USDM Study Protocol JSON"
-          />
-          <p style="font-size: 0.8rem; color: #64748b; margin-top: 8px">
-            Edit this mock USDM JSON definition and click "Update Visualizer"
-            below to dynamically re-render the Schedule of Activities Matrix.
-          </p>
-          <div
-            style="margin-top: 12px; display: flex; justify-content: flex-end"
-          >
+          <div style="display: flex; gap: 8px; align-items: center;">
             <button
-              id="btn-update-soa"
-              class="btn btn-primary"
-              @click="updateSoa"
+              class="btn btn-secondary"
+              style="font-size: 0.82rem; padding: 6px 12px;"
+              @click="showUsdmJson = !showUsdmJson"
             >
-              Update Visualizer
+              {{ showUsdmJson ? "Hide USDM JSON Source" : "📄 CDISC USDM JSON Source" }}
             </button>
-          </div>
-        </div>
-
-        <!-- Schedule of Activities / eCRF Canvas -->
-        <div class="card">
-          <div
-            class="card-header"
-            style="
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              border-bottom: 1px solid var(--border);
-              padding-bottom: 12px;
-              margin-bottom: 16px;
-            "
-          >
-            <div style="display: flex; gap: 8px; align-items: center">
-              <span class="card-title" style="margin-right: 12px"
-                >Schedule of Activities (SoA) Matrix</span
-              >
-              <button
-                id="btn-tab-soa"
-                class="btn"
-                :class="!showCanvas ? 'btn-primary' : 'btn-secondary'"
-                style="font-size: 0.85rem; padding: 6px 12px"
-                @click="showCanvas = false"
-              >
-                SoA Matrix
-              </button>
-              <button
-                id="btn-tab-canvas"
-                class="btn"
-                :class="showCanvas ? 'btn-primary' : 'btn-secondary'"
-                style="font-size: 0.85rem; padding: 6px 12px"
-                @click="showCanvas = true"
-              >
-                eCRF Canvas
-              </button>
-            </div>
             <span
               v-if="store.soaLoading"
               style="font-size: 0.8rem; font-weight: normal; color: #64748b"
-              >(Syncing...)</span
-            >
-          </div>
-
-          <div v-if="!showCanvas" id="soa-matrix-container">
-            <ClinicalSoAMatrix :soa-data="soaData" />
-            <ClinicalGanttVisualizer />
-          </div>
-
-          <div v-else id="crf-canvas-container">
-            <CrfAuthoringCanvas
-              :form-schema="formSchema"
-              :selected-field-id="selectedFieldId"
-              @select-field="onSelectField"
-              @update-schema="onUpdateSchema"
-            />
+            >(Syncing...)</span>
           </div>
         </div>
+
+        <div id="soa-matrix-container">
+          <ClinicalSoAMatrix :soa-data="soaData" />
+          <div style="margin-top: 24px;">
+            <ClinicalGanttVisualizer />
+          </div>
+        </div>
+      </div>
+
+      <!-- Collapsible USDM JSON Source Editor -->
+      <div v-if="showUsdmJson" class="card json-editor-container" style="margin-top: 16px;">
+        <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+          <span>CDISC USDM Study Protocol JSON</span>
+          <button
+            id="btn-reset-usdm"
+            class="badge"
+            style="
+              cursor: pointer;
+              background-color: var(--accent);
+              color: white;
+              border: none;
+              padding: 4px 8px;
+            "
+            @click="resetUsdm"
+          >
+            Reset Mock JSON
+          </button>
+        </div>
+        <textarea
+          id="usdm-json"
+          v-model="usdmText"
+          class="json-editor"
+          spellcheck="false"
+          aria-label="CDISC USDM Study Protocol JSON"
+          style="min-height: 220px; font-family: monospace; font-size: 0.85rem;"
+        />
+        <div
+          style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;"
+        >
+          <p style="font-size: 0.8rem; color: #64748b; margin: 0;">
+            Edit this CDISC USDM JSON definition and click "Update Visualizer" to dynamically re-render the Matrix.
+          </p>
+          <button
+            id="btn-update-soa"
+            class="btn btn-primary"
+            @click="updateSoa"
+          >
+            Update Visualizer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: eCRF VISUAL CANVAS DESIGNER -->
+    <div v-else-if="activeTab === 'canvas'">
+      <div id="crf-canvas-container">
+        <CrfAuthoringCanvas
+          :form-schema="formSchema"
+          :selected-field-id="selectedFieldId"
+          @select-field="onSelectField"
+          @update-schema="onUpdateSchema"
+        />
       </div>
     </div>
 
@@ -964,7 +971,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, reactive } from "vue";
+import { ref, computed, watch, reactive, onMounted } from "vue";
+import { useRoute } from "vue-router";
 import { useClinicalStore } from "../stores/clinical";
 import ClinicalSoAMatrix from "../components/clinical/ClinicalSoAMatrix.vue";
 import ClinicalGanttVisualizer from "../components/clinical/ClinicalGanttVisualizer.vue";
@@ -974,6 +982,8 @@ import ReasonModal from "../components/ReasonModal.vue";
 import CrfAuthoringCanvas from "../components/crf/CrfAuthoringCanvas.vue";
 import { useDesignerStore } from "../stores/designer.js";
 import OnboardingTour from "../components/OnboardingTour.vue";
+
+const route = useRoute();
 
 const mdrReasonOptions = [
   { value: "Initial Entry", text: "Initial Study Configuration" },
@@ -985,6 +995,7 @@ const mdrReasonOptions = [
 const store = useClinicalStore();
 const designerStore = useDesignerStore();
 
+const showUsdmJson = ref(false);
 const selectedFieldId = computed(() => designerStore.selectedFieldId);
 const formSchema = computed({
   get: () => designerStore.activeForm,
@@ -1003,7 +1014,18 @@ function onUpdateSchema(newSchema) {
 }
 
 // Sub-Issue 8 States
-const activeTab = ref("soa"); // 'soa', 'mdr', 'diff'
+const activeTab = ref(route.query.tab === "canvas" ? "canvas" : "soa"); // 'soa', 'canvas', 'mdr', 'diff'
+
+watch(
+  () => route.query.tab,
+  (newTab) => {
+    if (newTab === "canvas") {
+      activeTab.value = "canvas";
+    } else if (newTab === "soa") {
+      activeTab.value = "soa";
+    }
+  }
+);
 const conceptSearchQuery = ref("");
 const searchingConcepts = ref(false);
 const conceptResults = ref([]);

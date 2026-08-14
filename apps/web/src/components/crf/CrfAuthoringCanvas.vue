@@ -1,63 +1,44 @@
 <template>
-  <div class="authoring-canvas-layout flex flex-col lg:flex-row gap-6">
+  <div class="authoring-canvas-layout">
     <!-- Left/Center Side: Resizable Canvas Area -->
-    <div class="flex-1 flex flex-col gap-4">
-      <div
-        class="canvas-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200"
-      >
-        <div>
-          <h2 class="text-xl font-bold text-slate-800">
-            eCRF Authoring Canvas
-          </h2>
-          <p class="text-xs text-slate-500">
-            Drag sections to reorder, drag fields to layout & configure
-            responsive columns.
+    <div class="canvas-main-pane">
+      <div class="canvas-header">
+        <div class="canvas-header-info">
+          <h2>eCRF Authoring Canvas &amp; Responsive Form Builder</h2>
+          <p>
+            Drag sections to reorder, add field widgets, configure CDASH bindings &amp; test responsive viewports.
           </p>
         </div>
 
-        <div class="flex items-center gap-4 flex-wrap">
+        <div class="canvas-header-controls">
           <!-- Viewport Selector Buttons -->
-          <div
-            class="viewport-selector flex bg-slate-100 p-1 rounded-lg border border-slate-200"
-          >
+          <div class="viewport-selector">
             <button
-              class="btn-viewport-desktop px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1"
-              :class="
-                designerStore.viewport === 'desktop'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-800'
-              "
+              class="btn-viewport btn-viewport-desktop"
+              :class="{ active: designerStore.viewport === 'desktop' }"
               @click="designerStore.setViewport('desktop')"
             >
-              🖥️ <span>Desktop</span>
+              🖥️ <span>Desktop (12-Col)</span>
             </button>
             <button
-              class="btn-viewport-tablet px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1"
-              :class="
-                designerStore.viewport === 'tablet'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-800'
-              "
+              class="btn-viewport btn-viewport-tablet"
+              :class="{ active: designerStore.viewport === 'tablet' }"
               @click="designerStore.setViewport('tablet')"
             >
-              📟 <span>Tablet</span>
+              📟 <span>Tablet (8-Col)</span>
             </button>
             <button
-              class="btn-viewport-mobile px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1"
-              :class="
-                designerStore.viewport === 'mobile'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-800'
-              "
+              class="btn-viewport btn-viewport-mobile"
+              :class="{ active: designerStore.viewport === 'mobile' }"
               @click="designerStore.setViewport('mobile')"
             >
-              📱 <span>Mobile</span>
+              📱 <span>Mobile (4-Col)</span>
             </button>
           </div>
 
           <div
             v-if="formSchema"
-            class="text-xs bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-full text-indigo-700 font-medium"
+            class="form-schema-badge"
           >
             Form: {{ formSchema.name || "Draft" }}
           </div>
@@ -65,11 +46,9 @@
       </div>
 
       <!-- Resizable Canvas Stage wrapper -->
-      <div
-        class="canvas-stage-wrapper bg-slate-50 p-4 rounded-2xl border border-slate-200 overflow-x-auto"
-      >
+      <div class="canvas-stage-wrapper">
         <div
-          class="authoring-canvas-stage p-6 bg-white rounded-xl border border-slate-200 min-h-[400px] transition-all duration-300"
+          class="authoring-canvas-stage"
           :class="{
             'touch-simulation-active': designerStore.viewport !== 'desktop',
           }"
@@ -79,7 +58,7 @@
             v-model="sections"
             item-key="id"
             handle=".section-drag-handle"
-            class="sections-drag-list space-y-4"
+            class="sections-drag-list"
             @change="handleSectionReorder"
           >
             <template #item="{ element: section }">
@@ -96,49 +75,38 @@
     </div>
 
     <!-- Right Side: Layout Inspector & Form Compiler Panel -->
-    <div
-      class="w-full lg:w-80 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col gap-6 flex-shrink-0"
-    >
+    <div class="properties-inspector-pane">
       <!-- 1. Viewport Warnings Section -->
-      <div class="warnings-section">
-        <h3
-          class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex justify-between items-center"
-        >
+      <div class="warnings-section-card">
+        <div class="inspector-section-title">
           <span>Viewport Warnings</span>
-          <span
-            class="warning-count bg-amber-100 text-amber-800 text-xxs font-bold px-2 py-0.5 rounded-full"
-          >
+          <span class="warning-count-badge">
             {{ layoutWarnings.length }}
           </span>
-        </h3>
+        </div>
 
         <div
           v-if="layoutWarnings.length === 0"
-          class="text-xs text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-lg p-3 flex items-center gap-2"
+          class="warnings-box-clean"
         >
           <span>✅</span> No layout warnings for this viewport.
         </div>
 
-        <div v-else class="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+        <div v-else style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;">
           <div
             v-for="warning in layoutWarnings"
             :key="warning.fieldId"
-            class="warning-item border border-amber-200 bg-amber-50/50 hover:bg-amber-50 rounded-lg p-2.5 transition-colors cursor-pointer"
+            style="border: 1px solid #fef08a; background-color: #fefce8; border-radius: 6px; padding: 8px; cursor: pointer;"
             @click="onSelectField(warning.fieldId)"
           >
-            <div
-              class="flex items-center justify-between font-semibold text-xs text-amber-800 mb-0.5"
-            >
-              <span class="truncate max-w-[150px]">{{ warning.label }}</span>
-              <span
-                class="text-[10px] bg-amber-100 px-1 py-0.2 rounded font-mono"
-                >Span: {{ warning.gridSpan }}</span
-              >
+            <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 0.75rem; color: #854d0e; margin-bottom: 2px;">
+              <span>{{ warning.label }}</span>
+              <span style="font-family: monospace; font-size: 0.7rem; background: #fef3c7; padding: 1px 4px; border-radius: 4px;">Span: {{ warning.gridSpan }}</span>
             </div>
-            <p class="text-[11px] text-amber-700 leading-snug">
+            <p style="font-size: 0.72rem; color: #a16207; margin: 0; line-height: 1.3;">
               {{ warning.message }}
             </p>
-            <div class="text-[10px] text-slate-400 mt-1 italic">
+            <div style="font-size: 0.68rem; color: #94a3b8; margin-top: 4px; font-style: italic;">
               In: {{ warning.sectionName }}
             </div>
           </div>
@@ -146,57 +114,43 @@
       </div>
 
       <!-- 2. Properties Inspector Section -->
-      <div class="selected-field-section border-t border-slate-100 pt-5">
-        <h3
-          class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3"
-        >
+      <div style="border-top: 1px solid #e2e8f0; padding-top: 16px;">
+        <div class="inspector-section-title">
           Properties Inspector
-        </h3>
+        </div>
 
         <div
           v-if="!selectedField"
-          class="text-xs text-slate-500 italic bg-slate-50 border border-slate-100 rounded-lg p-3"
+          style="font-size: 0.78rem; color: #64748b; font-style: italic; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;"
         >
-          Select a field widget on the canvas to inspect and edit its layout
-          attributes.
+          Select a field widget on the canvas to inspect and edit its attributes.
         </div>
 
         <div
           v-else
-          class="space-y-4 bg-slate-50 border border-slate-100 rounded-xl p-4"
+          style="display: flex; flex-direction: column; gap: 12px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px;"
         >
-          <div
-            class="flex items-center justify-between text-xs font-semibold text-slate-700 border-b border-slate-200 pb-2"
-          >
-            <span class="truncate max-w-[120px]">{{
-              selectedField.label
-            }}</span>
-            <span
-              class="font-mono text-xxs bg-slate-200 px-1.5 py-0.5 rounded text-slate-600"
-              >{{ selectedField.id }}</span
-            >
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+            <span style="font-weight: 700; font-size: 0.85rem; color: #1e293b;">{{ selectedField.label }}</span>
+            <span style="font-family: monospace; font-size: 0.72rem; background-color: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: #475569;">{{ selectedField.id }}</span>
           </div>
 
-          <div class="form-group flex flex-col gap-1.5">
-            <label class="text-xxs font-bold text-slate-500 uppercase"
-              >Field Label</label
-            >
+          <div class="inspector-field-group">
+            <label>Field Label</label>
             <input
               id="inspect-field-label"
               v-model="selectedFieldLabel"
               type="text"
-              class="inspect-label-input w-full border border-slate-200 rounded-md px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500 bg-white"
+              class="inspector-input"
             />
           </div>
 
-          <div class="form-group flex flex-col gap-1.5">
-            <label class="text-xxs font-bold text-slate-500 uppercase"
-              >Grid Span (1-12 Columns)</label
-            >
+          <div class="inspector-field-group">
+            <label>Grid Span (1-12 Columns)</label>
             <select
               id="inspect-field-span"
               v-model="selectedFieldGridSpan"
-              class="inspect-span-select w-full border border-slate-200 rounded-md px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500 bg-white font-medium"
+              class="inspector-select"
             >
               <option v-for="n in 12" :key="n" :value="n">
                 {{ n }}
@@ -211,13 +165,11 @@
             </select>
           </div>
 
-          <div class="form-group flex flex-col gap-1.5">
-            <label class="text-xxs font-bold text-slate-500 uppercase"
-              >Field Type</label
-            >
+          <div class="inspector-field-group">
+            <label>Field Type</label>
             <select
               v-model="selectedFieldType"
-              class="w-full border border-slate-200 rounded-md px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500 bg-white"
+              class="inspector-select"
             >
               <option value="text">Text Input</option>
               <option value="numeric">Numeric Input</option>
@@ -229,71 +181,66 @@
             </select>
           </div>
 
-          <div class="flex items-center gap-2">
+          <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
             <input
               id="inspect-field-required"
               v-model="selectedFieldRequired"
               type="checkbox"
-              class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              style="width: 16px; height: 16px; cursor: pointer; accent-color: #026597;"
             />
             <label
               for="inspect-field-required"
-              class="text-xs font-medium text-slate-700"
-              >Required Field</label
+              style="font-size: 0.8rem; font-weight: 600; color: #334155; cursor: pointer;"
             >
+              Required Field
+            </label>
           </div>
         </div>
       </div>
 
       <!-- 3. Form Compiler Section -->
-      <div class="compiler-section border-t border-slate-100 pt-5">
-        <h3
-          class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3"
-        >
+      <div style="border-top: 1px solid #e2e8f0; padding-top: 16px;">
+        <div class="inspector-section-title">
           Form Compiler
-        </h3>
+        </div>
 
-        <div
-          class="space-y-3 bg-slate-50 border border-slate-100 rounded-xl p-4"
-        >
-          <div class="flex flex-col gap-2">
-            <div class="flex items-center gap-2">
-              <input
-                id="dismiss-warnings-checkbox"
-                v-model="dismissedWarnings"
-                type="checkbox"
-                class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              <label
-                for="dismiss-warnings-checkbox"
-                class="text-xs font-medium text-slate-700"
-              >
-                Dismiss layout warnings
-              </label>
-            </div>
-
-            <div
-              v-if="dismissedWarnings && layoutWarnings.length > 0"
-              class="layout-justification-box mt-1"
+        <div style="display: flex; flex-direction: column; gap: 12px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input
+              id="dismiss-warnings-checkbox"
+              v-model="dismissedWarnings"
+              type="checkbox"
+              style="width: 16px; height: 16px; cursor: pointer; accent-color: #026597;"
+            />
+            <label
+              for="dismiss-warnings-checkbox"
+              style="font-size: 0.8rem; font-weight: 600; color: #334155; cursor: pointer;"
             >
-              <label
-                for="layout-justification-input"
-                class="text-xxs font-bold text-slate-500 uppercase block mb-1"
-              >
-                Clinical Justification (Required)
-              </label>
-              <textarea
-                id="layout-justification-input"
-                v-model="layoutJustification"
-                placeholder="Provide a clinical justification for this layout deviation..."
-                class="w-full text-xs p-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 bg-white"
-                rows="2"
-              ></textarea>
-            </div>
+              Dismiss layout warnings
+            </label>
+          </div>
+
+          <div
+            v-if="dismissedWarnings && layoutWarnings.length > 0"
+            class="layout-justification-box"
+          >
+            <label
+              for="layout-justification-input"
+              style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 4px;"
+            >
+              Clinical Justification (Required)
+            </label>
+            <textarea
+              id="layout-justification-input"
+              v-model="layoutJustification"
+              placeholder="Provide a clinical justification for this layout deviation..."
+              style="width: 100%; font-size: 0.8rem; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;"
+              rows="2"
+            ></textarea>
           </div>
 
           <button
-            class="w-full btn-compile bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2 px-3 rounded-md transition shadow-sm"
+            class="btn-compile-schema"
             @click="compileForm"
           >
             Compile Form Schema
@@ -302,23 +249,15 @@
           <!-- Compilation Feedback messages -->
           <div
             v-if="compilationStatus === 'blocked'"
-            class="compilation-error text-xs text-red-700 bg-red-50 border border-red-100 rounded-lg p-2.5 flex items-start gap-1.5 font-medium leading-snug"
+            style="color: #b91c1c; background-color: #fee2e2; border: 1px solid #fca5a5; padding: 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 600;"
           >
-            <span class="flex-shrink-0">❌</span>
-            <span
-              >Compilation blocked: active layout warnings must be resolved or
-              explicitly dismissed!</span
-            >
+            ❌ Compilation blocked: active layout warnings must be resolved or explicitly dismissed!
           </div>
           <div
             v-if="compilationStatus === 'success'"
-            class="compilation-success text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg p-2.5 flex items-start gap-1.5 font-medium leading-snug"
+            style="color: #15803d; background-color: #dcfce7; border: 1px solid #86efac; padding: 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 600;"
           >
-            <span class="flex-shrink-0">🎉</span>
-            <span
-              >Compilation successful! Form schema successfully
-              translated.</span
-            >
+            🎉 Form schema successfully compiled &amp; validated!
           </div>
         </div>
       </div>

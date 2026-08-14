@@ -3,7 +3,7 @@ import { defineStore } from "pinia";
 export const useOnboardingStore = defineStore("onboarding", {
   state: () => {
     let currentStep = 1;
-    let isActive = true;
+    let isActive = false;
     let disabled = false;
     let events = [];
 
