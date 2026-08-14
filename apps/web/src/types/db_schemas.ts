@@ -42,12 +42,12 @@ export interface ClinicalCodingAssignment {
   verbatim_text: string;
   source_field?: string | null;
   observation_id?: string | null;
-  dictionary_type: string;
+  dictionary_type: "MEDDRA" | "WHODRUG" | "LOINC" | "SNOMED";
   dictionary_version: string;
   coded_code?: string | null;
   coded_term?: string | null;
-  status: string;
-  recoding_status: string;
+  status: "UNCODED" | "SUGGESTED" | "CODED" | "AUTO_CODED" | "QUERY_PENDING" | "RECODING_REQUIRED";
+  recoding_status: "NONE" | "PENDING" | "COMPLETED" | "CANCELLED";
   assigned_by?: string | null;
   assigned_at: string;
   score?: number | null;
@@ -63,7 +63,7 @@ export interface ClinicalCodingLedger {
   assignment_id: string;
   verbatim_text: string;
   observation_id?: string | null;
-  dictionary_type: string;
+  dictionary_type: "MEDDRA" | "WHODRUG" | "LOINC" | "SNOMED";
   old_dictionary_version?: string | null;
   old_coded_code?: string | null;
   old_coded_term?: string | null;
@@ -75,7 +75,7 @@ export interface ClinicalCodingLedger {
   decision_at: string;
   old_hierarchy?: Record<string, any> | null;
   new_hierarchy?: Record<string, any> | null;
-  recoding_status?: string | null;
+  recoding_status?: "NONE" | "PENDING" | "COMPLETED" | "CANCELLED" | null;
   id: string;
   version: number;
   is_deleted: boolean;
@@ -249,9 +249,9 @@ export interface ConsentSignature {
 }
 
 export interface DictionaryImportJob {
-  dictionary_type: string;
+  dictionary_type: "MEDDRA" | "WHODRUG" | "LOINC" | "SNOMED";
   dictionary_version: string;
-  status: string;
+  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
   started_at: string;
   completed_at?: string | null;
   progress_percentage: number;
@@ -287,6 +287,11 @@ export interface FormSubmission {
   form_id: string;
   status: string;
   signature_manifest?: Record<string, any> | null;
+  protocol_version?: string | null;
+  payload?: Record<string, any> | null;
+  is_active: boolean;
+  is_readonly: boolean;
+  cloned_from_id?: string | null;
   id: string;
   version: number;
   is_deleted: boolean;
@@ -480,6 +485,17 @@ export interface SDVSignOff {
   created_by?: string | null;
   reason_for_change?: string | null;
   version_index: number;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
+export interface SiteComplianceCache {
+  study_id: string;
+  site_id?: string | null;
+  milestone: string;
+  is_complete: boolean;
+  missing_documents?: string | null;
   id: string;
   version: number;
   is_deleted: boolean;
