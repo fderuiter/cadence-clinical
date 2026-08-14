@@ -82,6 +82,56 @@ class CoderActionRequest(BaseModel):
         return self
 
 
+class BatchAssignItem(BaseModel):
+    assignment_id: str
+    action: str = "ACCEPT"
+    code: str | None = None
+    term: str | None = None
+    suggestion_index: int | None = None
+    reason_for_change: str | None = None
+
+
+class BatchAssignRequest(BaseModel):
+    assignment_ids: list[str] | None = None
+    items: list[BatchAssignItem] | None = None
+    code: str | None = None
+    term: str | None = None
+    dictionary_type: str | None = None
+    dictionary_version: str | None = None
+    reason: str | None = None
+    reason_for_change: str | None = None
+    action: str = "ACCEPT"
+
+
+class BatchAssignResultItem(BaseModel):
+    assignment_id: str
+    status: str
+    coded_code: str | None = None
+    coded_term: str | None = None
+    error: str | None = None
+
+
+class BatchAssignResponse(BaseModel):
+    success_count: int
+    failed_count: int
+    results: list[dict[str, Any]] = []
+
+
+class RaiseQueryRequest(BaseModel):
+    query_text: str | None = None
+    message: str | None = None
+    explanation: str | None = None
+    reason: str | None = None
+    reason_for_change: str | None = None
+
+
+class RaiseQueryResponse(BaseModel):
+    query_id: str
+    status: str
+    assignment_id: str
+    explanation: str | None = None
+
+
 class ImpactAnalysisRequest(BaseModel):
     dictionary_type: DictTypeEnum
     new_version: str

@@ -88,6 +88,7 @@ from apps.execution.routers.doa import router as doa_router
 from apps.execution.routers.documents import router as documents_router
 from apps.execution.routers.eisf import router as eisf_router
 from apps.execution.routers.exports import router as exports_router
+from apps.execution.routers.labs import router as labs_router
 from apps.execution.routers.locks import router as locks_router
 from apps.execution.routers.offline import router as offline_router
 from apps.execution.routers.queries import router as queries_router
@@ -331,6 +332,7 @@ app.include_router(unblinding_router)
 app.include_router(queries_router)
 app.include_router(dictionaries_router)
 app.include_router(exports_router)
+app.include_router(labs_router)
 
 
 @app.exception_handler(RequestValidationError)

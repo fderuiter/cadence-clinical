@@ -33,7 +33,7 @@ Define standard audit and metadata fields manually in each service's Pydantic mo
 
 ### Option 2: Shared Pydantic v2 Audit Base Schema (Selected)
 
-Define a reusable `AuditFields` model/mixin in `packages/core-models/audit.py` that can be imported by any microservice, including eConsent and Organization Directory.
+Define a reusable `AuditFields` model or mixin in `packages/core-models/audit.py` that can be imported by any microservice, including eConsent and Organization Directory.
 
 - Pros:
   - ✅ Standardizes FDA 21 CFR Part 11 validation (e.g. non-empty `reason_for_change` validation).

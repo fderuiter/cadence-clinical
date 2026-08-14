@@ -61,3 +61,7 @@ class CodingRepositoryPort(RepositoryPort[Any]):
     ) -> tuple[list[Any], list[Any]]:
         """Retrieve ATC context and ingredients for a WHODrug record."""
         ...
+
+    async def get_observation(self, observation_id: str) -> Any:
+        """Retrieve a clinical observation by ID."""
+        ...

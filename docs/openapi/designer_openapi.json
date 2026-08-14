@@ -394,6 +394,123 @@
         }
       }
     },
+    "/api/v1/designer/digitization/extract": {
+      "post": {
+        "tags": [
+          "protocol_digitization"
+        ],
+        "summary": "Extract Protocol Digitization",
+        "description": "Extracts structured CDISC USDM v4.0 parameters from an uploaded clinical protocol file.\n\nAccepts PDF, DOCX, or text files.",
+        "operationId": "extract_protocol_digitization_api_v1_designer_digitization_extract_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_extract_protocol_digitization_api_v1_designer_digitization_extract_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/USDMProtocolExtractionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/designer/digitization/sample": {
+      "get": {
+        "tags": [
+          "protocol_digitization"
+        ],
+        "summary": "Get Sample Protocol Extraction",
+        "description": "Returns a canonical pre-extracted USDM v4.0 study structure for instant review and sandboxing.",
+        "operationId": "get_sample_protocol_extraction_api_v1_designer_digitization_sample_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/USDMProtocolExtractionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/designer/studies/{study_id}/commit-usdm": {
+      "post": {
+        "tags": [
+          "protocol_digitization"
+        ],
+        "summary": "Commit Usdm To Study",
+        "description": "Commits extracted USDM entities to the Neo4j graph and synthesizes CDASH eCRF forms.\n\nGuarantees 21 CFR Part 11 audit attribution and GxP change justification.",
+        "operationId": "commit_usdm_to_study_api_v1_designer_studies__study_id__commit_usdm_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommitUSDMRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommitUSDMResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/studies/{study_id}": {
       "get": {
         "summary": "Get Legacy Study",
@@ -6852,6 +6969,20 @@
         ],
         "title": "BlockDetailResponse"
       },
+      "Body_extract_protocol_digitization_api_v1_designer_digitization_extract_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_extract_protocol_digitization_api_v1_designer_digitization_extract_post"
+      },
       "Body_upload_mapping_csv_api_v1_mappings_upload_post": {
         "properties": {
           "file": {
@@ -7252,6 +7383,78 @@
           "text"
         ],
         "title": "CommentThreadCreate"
+      },
+      "CommitUSDMRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique study identifier"
+          },
+          "data": {
+            "$ref": "#/components/schemas/USDMProtocolExtractionResponse",
+            "description": "USDM extraction data"
+          },
+          "change_reason": {
+            "type": "string",
+            "title": "Change Reason",
+            "description": "GxP change justification reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "data",
+          "change_reason"
+        ],
+        "title": "CommitUSDMRequest",
+        "description": "Request payload for committing extracted USDM protocol data into Neo4j."
+      },
+      "CommitUSDMResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "version_id": {
+            "type": "string",
+            "title": "Version Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "nodes_created": {
+            "type": "integer",
+            "title": "Nodes Created"
+          },
+          "relationships_created": {
+            "type": "integer",
+            "title": "Relationships Created"
+          },
+          "synthesized_forms": {
+            "items": {
+              "$ref": "#/components/schemas/SynthesizedECRFForm"
+            },
+            "type": "array",
+            "title": "Synthesized Forms"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "version_id",
+          "status",
+          "nodes_created",
+          "relationships_created",
+          "message"
+        ],
+        "title": "CommitUSDMResponse",
+        "description": "Response payload following USDM graph population and eCRF synthesis."
       },
       "ComparisonOperator": {
         "type": "string",
@@ -8486,6 +8689,221 @@
         ],
         "title": "ExpressionNode",
         "description": "Recursive node inside a structured clinical expression tree (AST).\nSupported types are: logical, comparison, field_ref, constant."
+      },
+      "ExtractedActivity": {
+        "properties": {
+          "activity_name": {
+            "type": "string",
+            "title": "Activity Name",
+            "description": "Procedure e.g., '12-Lead ECG', 'Vital Signs'"
+          },
+          "cdash_domain": {
+            "type": "string",
+            "title": "Cdash Domain",
+            "description": "CDASH domain code e.g., 'EG', 'VS', 'LB'"
+          },
+          "biomedical_concept_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Biomedical Concept Code",
+            "description": "NCI Thesaurus or SNOMED CT concept code"
+          },
+          "assigned_visit_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Assigned Visit Names",
+            "description": "List of visit names where this procedure is scheduled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "activity_name",
+          "cdash_domain"
+        ],
+        "title": "ExtractedActivity",
+        "description": "Represents a clinical procedure or assessment extracted from the protocol."
+      },
+      "ExtractedArm": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Arm name e.g., 'Dose Escalation Cohort A'"
+          },
+          "arm_type": {
+            "type": "string",
+            "enum": [
+              "EXPERIMENTAL",
+              "ACTIVE_COMPARATOR",
+              "PLACEBO_COMPARATOR",
+              "SHAM_COMPARATOR",
+              "NO_INTERVENTION"
+            ],
+            "title": "Arm Type",
+            "description": "Arm classification type"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Clinical description of the arm"
+          },
+          "target_sample_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Sample Size",
+            "description": "Target planned sample size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "arm_type"
+        ],
+        "title": "ExtractedArm",
+        "description": "Represents a clinical study arm extracted from protocol documentation."
+      },
+      "ExtractedCriterion": {
+        "properties": {
+          "criterion_type": {
+            "type": "string",
+            "enum": [
+              "INCLUSION",
+              "EXCLUSION"
+            ],
+            "title": "Criterion Type",
+            "description": "Criterion classification"
+          },
+          "identifier": {
+            "type": "string",
+            "title": "Identifier",
+            "description": "e.g. 'INC-01', 'EXC-04'"
+          },
+          "text_expression": {
+            "type": "string",
+            "title": "Text Expression",
+            "description": "Original protocol text requirement"
+          },
+          "logical_expression": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logical Expression",
+            "description": "Compiled logical check e.g., 'DM.AGE >= 18'"
+          }
+        },
+        "type": "object",
+        "required": [
+          "criterion_type",
+          "identifier",
+          "text_expression"
+        ],
+        "title": "ExtractedCriterion",
+        "description": "Represents an eligibility criterion extracted from the protocol."
+      },
+      "ExtractedEpoch": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Epoch name e.g., 'Screening', 'Treatment', 'Follow-up'"
+          },
+          "epoch_type": {
+            "type": "string",
+            "enum": [
+              "SCREENING",
+              "TREATMENT",
+              "WASHOUT",
+              "FOLLOW_UP",
+              "RUN_IN"
+            ],
+            "title": "Epoch Type",
+            "description": "Epoch categorization type"
+          },
+          "sequence_index": {
+            "type": "integer",
+            "title": "Sequence Index",
+            "description": "Chronological sequence order index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "epoch_type",
+          "sequence_index"
+        ],
+        "title": "ExtractedEpoch",
+        "description": "Represents a trial epoch extracted from protocol documentation."
+      },
+      "ExtractedVisit": {
+        "properties": {
+          "visit_name": {
+            "type": "string",
+            "title": "Visit Name",
+            "description": "Visit name e.g., 'Visit 1 / Day 1 (Baseline)'"
+          },
+          "epoch_name": {
+            "type": "string",
+            "title": "Epoch Name",
+            "description": "Associated parent epoch identifier name"
+          },
+          "target_day": {
+            "type": "integer",
+            "title": "Target Day",
+            "description": "Target protocol timeline day"
+          },
+          "window_lower_days": {
+            "type": "integer",
+            "title": "Window Lower Days",
+            "description": "Visit window lower margin in days",
+            "default": 0
+          },
+          "window_upper_days": {
+            "type": "integer",
+            "title": "Window Upper Days",
+            "description": "Visit window upper margin in days",
+            "default": 0
+          },
+          "is_mandatory": {
+            "type": "boolean",
+            "title": "Is Mandatory",
+            "description": "Whether visit is required for protocol compliance",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "visit_name",
+          "epoch_name",
+          "target_day"
+        ],
+        "title": "ExtractedVisit",
+        "description": "Represents a study encounter or visit extracted from the protocol."
       },
       "FeasibilityReport": {
         "properties": {
@@ -10504,6 +10922,51 @@
         "title": "SynopsisExportResponse",
         "description": "Response payload containing base64 encoded document export stream.\n\nRequirements: PRD-SYS-001"
       },
+      "SynthesizedECRFForm": {
+        "properties": {
+          "form_id": {
+            "type": "string",
+            "title": "Form Id",
+            "description": "Unique form identifier"
+          },
+          "form_name": {
+            "type": "string",
+            "title": "Form Name",
+            "description": "Human-readable form title"
+          },
+          "cdash_domain": {
+            "type": "string",
+            "title": "Cdash Domain",
+            "description": "CDASH domain code"
+          },
+          "items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Items",
+            "description": "eCRF form item definitions"
+          },
+          "rules": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Rules",
+            "description": "Compiled validation and skip rules"
+          }
+        },
+        "type": "object",
+        "required": [
+          "form_id",
+          "form_name",
+          "cdash_domain"
+        ],
+        "title": "SynthesizedECRFForm",
+        "description": "Synthesized CDASH eCRF form definition compiled from extracted activities."
+      },
       "TerminologyConcept": {
         "properties": {
           "code": {
@@ -10726,6 +11189,94 @@
           "reason"
         ],
         "title": "TransitionItemRequest"
+      },
+      "USDMProtocolExtractionResponse": {
+        "properties": {
+          "study_title": {
+            "type": "string",
+            "title": "Study Title",
+            "description": "Clinical study title"
+          },
+          "protocol_id": {
+            "type": "string",
+            "title": "Protocol Id",
+            "description": "Protocol identification code"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "PHASE_I",
+              "PHASE_I_II",
+              "PHASE_II",
+              "PHASE_III",
+              "PHASE_IV"
+            ],
+            "title": "Phase",
+            "description": "Clinical development phase"
+          },
+          "therapeutic_area": {
+            "type": "string",
+            "title": "Therapeutic Area",
+            "description": "Therapeutic area e.g., 'Oncology', 'Cardiology'"
+          },
+          "arms": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractedArm"
+            },
+            "type": "array",
+            "title": "Arms",
+            "description": "Extracted study arms"
+          },
+          "epochs": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractedEpoch"
+            },
+            "type": "array",
+            "title": "Epochs",
+            "description": "Extracted trial epochs"
+          },
+          "visits": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractedVisit"
+            },
+            "type": "array",
+            "title": "Visits",
+            "description": "Extracted encounters / visits"
+          },
+          "activities": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractedActivity"
+            },
+            "type": "array",
+            "title": "Activities",
+            "description": "Extracted Schedule of Activities procedures"
+          },
+          "criteria": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractedCriterion"
+            },
+            "type": "array",
+            "title": "Criteria",
+            "description": "Extracted inclusion/exclusion criteria"
+          },
+          "confidence_score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence Score",
+            "description": "Overall LLM extraction confidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_title",
+          "protocol_id",
+          "phase",
+          "therapeutic_area",
+          "confidence_score"
+        ],
+        "title": "USDMProtocolExtractionResponse",
+        "description": "Structured response representing complete USDM v4.0 protocol parameters."
       },
       "UpdateArmRequest": {
         "properties": {

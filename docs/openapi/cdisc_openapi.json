@@ -861,46 +861,10 @@
       }
     },
     "/{path}": {
-      "options": {
+      "patch": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__options",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__options",
+        "operationId": "proxy_requests__path__patch",
         "parameters": [
           {
             "name": "path",
@@ -936,79 +900,7 @@
       "get": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__options",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "head": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__options",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__options",
+        "operationId": "proxy_requests__path__patch",
         "parameters": [
           {
             "name": "path",
@@ -1044,7 +936,7 @@
       "delete": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__options",
+        "operationId": "proxy_requests__path__patch",
         "parameters": [
           {
             "name": "path",
@@ -1077,10 +969,118 @@
           }
         }
       },
-      "patch": {
+      "put": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__options",
+        "operationId": "proxy_requests__path__patch",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__patch",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__patch",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__patch",
         "parameters": [
           {
             "name": "path",
@@ -3455,6 +3455,123 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Designer_FormReviewCommentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/designer/api/v1/designer/digitization/extract": {
+      "post": {
+        "tags": [
+          "protocol_digitization"
+        ],
+        "summary": "Extract Protocol Digitization",
+        "description": "Extracts structured CDISC USDM v4.0 parameters from an uploaded clinical protocol file.\n\nAccepts PDF, DOCX, or text files.",
+        "operationId": "extract_protocol_digitization_api_v1_designer_digitization_extract_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Designer_Body_extract_protocol_digitization_api_v1_designer_digitization_extract_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_USDMProtocolExtractionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/designer/api/v1/designer/digitization/sample": {
+      "get": {
+        "tags": [
+          "protocol_digitization"
+        ],
+        "summary": "Get Sample Protocol Extraction",
+        "description": "Returns a canonical pre-extracted USDM v4.0 study structure for instant review and sandboxing.",
+        "operationId": "get_sample_protocol_extraction_api_v1_designer_digitization_sample_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_USDMProtocolExtractionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/designer/api/v1/designer/studies/{study_id}/commit-usdm": {
+      "post": {
+        "tags": [
+          "protocol_digitization"
+        ],
+        "summary": "Commit Usdm To Study",
+        "description": "Commits extracted USDM entities to the Neo4j graph and synthesizes CDASH eCRF forms.\n\nGuarantees 21 CFR Part 11 audit attribution and GxP change justification.",
+        "operationId": "commit_usdm_to_study_api_v1_designer_studies__study_id__commit_usdm_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Designer_CommitUSDMRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_CommitUSDMResponse"
                 }
               }
             }
@@ -13556,7 +13673,7 @@
           "DataLock"
         ],
         "summary": "Lock Data Endpoint",
-        "description": "Execute form, item-group, or field-level data lock or freeze operation.\n\nRequirements: PRD-SYS-001",
+        "description": "Execute study, site, subject, visit, form, or field-level data lock or freeze operation.\n\nRequirements: PRD-SYS-001, PRD-SYS-002, Trace-1, Trace-3, Trace-17",
         "operationId": "lock_data_endpoint_api_v1_execution_locks_lock_post",
         "requestBody": {
           "content": {
@@ -13598,7 +13715,7 @@
           "DataLock"
         ],
         "summary": "Unlock Data Endpoint",
-        "description": "Execute GxP data unlock override operation.\n\nRequirements: PRD-SYS-001",
+        "description": "Execute GxP data unlock override operation enforcing >= 50 chars justification.\n\nRequirements: PRD-SYS-001, PRD-SYS-002, Trace-1, Trace-3, Trace-17",
         "operationId": "unlock_data_endpoint_api_v1_execution_locks_unlock_post",
         "requestBody": {
           "content": {
@@ -13640,7 +13757,7 @@
           "DataLock"
         ],
         "summary": "Get Form Lock Status Endpoint",
-        "description": "Retrieve active data locks for specified eCRF form submission.\n\nRequirements: PRD-SYS-001",
+        "description": "Retrieve active data locks for specified eCRF form submission.\n\nRequirements: PRD-SYS-001, Trace-1, Trace-17",
         "operationId": "get_form_lock_status_endpoint_api_v1_execution_locks_status__form_id__get",
         "parameters": [
           {
@@ -13664,6 +13781,73 @@
                     "$ref": "#/components/schemas/Execution_DataLockRecord"
                   },
                   "title": "Response Get Form Lock Status Endpoint Api V1 Execution Locks Status  Form Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/locks": {
+      "get": {
+        "summary": "Get Lock Status",
+        "description": "Retrieve the current lock/freeze status of sites, visits, forms, subjects, and study-wide trial.",
+        "operationId": "get_lock_status_api_v1_execution_locks_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_LockStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/locks/tree": {
+      "get": {
+        "tags": [
+          "DataLock"
+        ],
+        "summary": "Get Lock Hierarchy Tree Endpoint",
+        "description": "Retrieve complete lock status tree across Study -> Sites -> Subjects -> Visits -> Forms hierarchy.",
+        "operationId": "get_lock_hierarchy_tree_endpoint_api_v1_execution_locks_tree_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Study ID to query",
+              "default": "STUDY-001",
+              "title": "Study Id"
+            },
+            "description": "Study ID to query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Lock Hierarchy Tree Endpoint Api V1 Execution Locks Tree Get"
                 }
               }
             }
@@ -16280,13 +16464,210 @@
         }
       }
     },
+    "/execution/api/v1/execution/coding/assignments/batch-assign": {
+      "post": {
+        "tags": [
+          "Dictionaries"
+        ],
+        "summary": "Post Batch Assign",
+        "description": "Performs batch medical coding assignment across multiple assignments with GxP audit logging.",
+        "operationId": "post_batch_assign_api_v1_execution_coding_assignments_batch_assign_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_BatchAssignRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_BatchAssignResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/coding/assignments/{assignment_id}/raise-query": {
+      "post": {
+        "tags": [
+          "Dictionaries"
+        ],
+        "summary": "Post Raise Coding Query",
+        "description": "Escalates a coding discrepancy into a ClinicalQuery on the associated observation/eCRF record.",
+        "operationId": "post_raise_coding_query_api_v1_execution_coding_assignments__assignment_id__raise_query_post",
+        "parameters": [
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assignment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_RaiseQueryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_RaiseQueryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/coding/queue": {
+      "get": {
+        "tags": [
+          "Dictionaries"
+        ],
+        "summary": "Get Coding Queue",
+        "description": "Retrieves the active coding queue.",
+        "operationId": "get_coding_queue_api_v1_execution_coding_queue_get",
+        "parameters": [
+          {
+            "name": "observation_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Observation Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "verbatim_text",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Verbatim Text"
+            }
+          },
+          {
+            "name": "dictionary_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dictionary Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_CodingAssignmentResponse"
+                  },
+                  "title": "Response Get Coding Queue Api V1 Execution Coding Queue Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/execution/api/v1/execution/biostat/sdtm/{domain}": {
       "get": {
         "tags": [
           "CDISC Exports"
         ],
         "summary": "Export Sdtm Domain",
-        "description": "Exports SDTM domain data (DM, AE, VS, LB, MH, CM) in CDISC Dataset-JSON format.",
+        "description": "Exports SDTM domain data (DM, AE, VS, LB, MH, CM) in Dataset-JSON, SAS XPT, ODM-XML, or CSV format.",
         "operationId": "export_sdtm_domain_api_v1_execution_biostat_sdtm__domain__get",
         "parameters": [
           {
@@ -16308,6 +16689,60 @@
               "title": "Study Id"
             },
             "description": "The unique study identifier"
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Target export format: json, xpt, odm, csv",
+              "default": "json",
+              "title": "Format"
+            },
+            "description": "Target export format: json, xpt, odm, csv"
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "SAS XPT version if format is xpt (v5 or v8)",
+              "default": "v5",
+              "title": "Version"
+            },
+            "description": "SAS XPT version if format is xpt (v5 or v8)"
+          },
+          {
+            "name": "privacy_profile",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED",
+              "default": "SAFE_HARBOR",
+              "title": "Privacy Profile"
+            },
+            "description": "Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED"
+          },
+          {
+            "name": "salt",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "HMAC pseudonymization salt",
+              "title": "Salt"
+            },
+            "description": "HMAC pseudonymization salt"
           }
         ],
         "responses": {
@@ -16316,8 +16751,6 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
                   "title": "Response Export Sdtm Domain Api V1 Execution Biostat Sdtm  Domain  Get"
                 }
               }
@@ -16342,7 +16775,7 @@
           "CDISC Exports"
         ],
         "summary": "Export Adam Dataset",
-        "description": "Exports ADaM dataset data (ADSL, ADAE, ADVS) in CDISC Dataset-JSON format.",
+        "description": "Exports ADaM dataset data (ADSL, ADAE, ADVS) in Dataset-JSON, SAS XPT, ODM-XML, or CSV format.",
         "operationId": "export_adam_dataset_api_v1_execution_biostat_adam__dataset__get",
         "parameters": [
           {
@@ -16364,6 +16797,60 @@
               "title": "Study Id"
             },
             "description": "The unique study identifier"
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Target export format: json, xpt, odm, csv",
+              "default": "json",
+              "title": "Format"
+            },
+            "description": "Target export format: json, xpt, odm, csv"
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "SAS XPT version if format is xpt (v5 or v8)",
+              "default": "v5",
+              "title": "Version"
+            },
+            "description": "SAS XPT version if format is xpt (v5 or v8)"
+          },
+          {
+            "name": "privacy_profile",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED",
+              "default": "SAFE_HARBOR",
+              "title": "Privacy Profile"
+            },
+            "description": "Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED"
+          },
+          {
+            "name": "salt",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "HMAC pseudonymization salt",
+              "title": "Salt"
+            },
+            "description": "HMAC pseudonymization salt"
           }
         ],
         "responses": {
@@ -16372,8 +16859,6 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
                   "title": "Response Export Adam Dataset Api V1 Execution Biostat Adam  Dataset  Get"
                 }
               }
@@ -16398,7 +16883,7 @@
           "CDISC Exports"
         ],
         "summary": "Export Biostat Bundle",
-        "description": "Exports all SDTM domains and ADaM datasets bundled in a single CDISC Dataset-JSON document.",
+        "description": "Exports all SDTM domains and ADaM datasets bundled in Dataset-JSON, CSV ZIP, or ODM-XML.",
         "operationId": "export_biostat_bundle_api_v1_execution_biostat_bundle_get",
         "parameters": [
           {
@@ -16411,6 +16896,48 @@
               "title": "Study Id"
             },
             "description": "The unique study identifier"
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Target export format: json, zip, csv_zip, odm",
+              "default": "json",
+              "title": "Format"
+            },
+            "description": "Target export format: json, zip, csv_zip, odm"
+          },
+          {
+            "name": "privacy_profile",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED",
+              "default": "SAFE_HARBOR",
+              "title": "Privacy Profile"
+            },
+            "description": "Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED"
+          },
+          {
+            "name": "salt",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "HMAC pseudonymization salt",
+              "title": "Salt"
+            },
+            "description": "HMAC pseudonymization salt"
           }
         ],
         "responses": {
@@ -16419,9 +16946,195 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
                   "title": "Response Export Biostat Bundle Api V1 Execution Biostat Bundle Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/exports/wizard": {
+      "post": {
+        "tags": [
+          "CDISC Exports"
+        ],
+        "summary": "Execute Export Wizard",
+        "description": "Executes a parameterized export job from the Regulatory Export Wizard.",
+        "operationId": "execute_export_wizard_api_v1_execution_exports_wizard_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_ExportBundleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Execute Export Wizard Api V1 Execution Exports Wizard Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/labs/ingest": {
+      "post": {
+        "tags": [
+          "Laboratory Ingestion"
+        ],
+        "summary": "Ingest Lab Batch Endpoint",
+        "description": "Ingest central or local laboratory batch data (CSV, HL7 v2.x, or FHIR JSON).\n\nSupports JSON payloads containing CSV/HL7 strings or FHIR Observation objects/bundles,\nas well as multipart/form-data file uploads.\n\nArgs:\n    request: FastAPI HTTP request instance.\n    background_tasks: BackgroundTasks context for dispatching critical alerts.\n    payload_body: Optional parsed JSON body.\n    roles: Verified principal roles ensuring write permissions.\n\nReturns:\n    LabBatchIngestResult: Summary of batch processing statistics and auto-queries.",
+        "operationId": "ingest_lab_batch_endpoint_api_v1_execution_labs_ingest_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_LabBatchIngestResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/labs/batch-status": {
+      "get": {
+        "tags": [
+          "Laboratory Ingestion"
+        ],
+        "summary": "Get Batch Status Endpoint",
+        "description": "Retrieve status and metrics for previous lab batch ingestion jobs.",
+        "operationId": "get_batch_status_endpoint_api_v1_execution_labs_batch_status_get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional batch ID to query",
+              "title": "Batch Id"
+            },
+            "description": "Optional batch ID to query"
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional study ID filter",
+              "title": "Study Id"
+            },
+            "description": "Optional study ID filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Execution_LabBatchIngestResult"
+                      }
+                    },
+                    {
+                      "$ref": "#/components/schemas/Execution_LabBatchIngestResult"
+                    }
+                  ],
+                  "title": "Response Get Batch Status Endpoint Api V1 Execution Labs Batch Status Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/labs/batch-status/{batch_id}": {
+      "get": {
+        "tags": [
+          "Laboratory Ingestion"
+        ],
+        "summary": "Get Batch Status By Id Endpoint",
+        "description": "Query execution status and statistics of a specific laboratory batch by ID.",
+        "operationId": "get_batch_status_by_id_endpoint_api_v1_execution_labs_batch_status__batch_id__get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_LabBatchIngestResult"
                 }
               }
             }
@@ -18272,25 +18985,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Execution_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/execution/api/v1/execution/locks": {
-      "get": {
-        "summary": "Get Lock Status",
-        "description": "Retrieve the current lock/freeze status of sites, visits, forms, subjects, and study-wide trial.",
-        "operationId": "get_lock_status_api_v1_execution_locks_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_LockStatusResponse"
                 }
               }
             }
@@ -27390,6 +28084,20 @@
         ],
         "title": "BlockDetailResponse"
       },
+      "Designer_Body_extract_protocol_digitization_api_v1_designer_digitization_extract_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_extract_protocol_digitization_api_v1_designer_digitization_extract_post"
+      },
       "Designer_Body_upload_mapping_csv_api_v1_mappings_upload_post": {
         "properties": {
           "file": {
@@ -27790,6 +28498,78 @@
           "text"
         ],
         "title": "CommentThreadCreate"
+      },
+      "Designer_CommitUSDMRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique study identifier"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Designer_USDMProtocolExtractionResponse",
+            "description": "USDM extraction data"
+          },
+          "change_reason": {
+            "type": "string",
+            "title": "Change Reason",
+            "description": "GxP change justification reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "data",
+          "change_reason"
+        ],
+        "title": "CommitUSDMRequest",
+        "description": "Request payload for committing extracted USDM protocol data into Neo4j."
+      },
+      "Designer_CommitUSDMResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "version_id": {
+            "type": "string",
+            "title": "Version Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "nodes_created": {
+            "type": "integer",
+            "title": "Nodes Created"
+          },
+          "relationships_created": {
+            "type": "integer",
+            "title": "Relationships Created"
+          },
+          "synthesized_forms": {
+            "items": {
+              "$ref": "#/components/schemas/Designer_SynthesizedECRFForm"
+            },
+            "type": "array",
+            "title": "Synthesized Forms"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "version_id",
+          "status",
+          "nodes_created",
+          "relationships_created",
+          "message"
+        ],
+        "title": "CommitUSDMResponse",
+        "description": "Response payload following USDM graph population and eCRF synthesis."
       },
       "Designer_ComparisonOperator": {
         "type": "string",
@@ -29024,6 +29804,221 @@
         ],
         "title": "ExpressionNode",
         "description": "Recursive node inside a structured clinical expression tree (AST).\nSupported types are: logical, comparison, field_ref, constant."
+      },
+      "Designer_ExtractedActivity": {
+        "properties": {
+          "activity_name": {
+            "type": "string",
+            "title": "Activity Name",
+            "description": "Procedure e.g., '12-Lead ECG', 'Vital Signs'"
+          },
+          "cdash_domain": {
+            "type": "string",
+            "title": "Cdash Domain",
+            "description": "CDASH domain code e.g., 'EG', 'VS', 'LB'"
+          },
+          "biomedical_concept_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Biomedical Concept Code",
+            "description": "NCI Thesaurus or SNOMED CT concept code"
+          },
+          "assigned_visit_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Assigned Visit Names",
+            "description": "List of visit names where this procedure is scheduled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "activity_name",
+          "cdash_domain"
+        ],
+        "title": "ExtractedActivity",
+        "description": "Represents a clinical procedure or assessment extracted from the protocol."
+      },
+      "Designer_ExtractedArm": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Arm name e.g., 'Dose Escalation Cohort A'"
+          },
+          "arm_type": {
+            "type": "string",
+            "enum": [
+              "EXPERIMENTAL",
+              "ACTIVE_COMPARATOR",
+              "PLACEBO_COMPARATOR",
+              "SHAM_COMPARATOR",
+              "NO_INTERVENTION"
+            ],
+            "title": "Arm Type",
+            "description": "Arm classification type"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Clinical description of the arm"
+          },
+          "target_sample_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Sample Size",
+            "description": "Target planned sample size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "arm_type"
+        ],
+        "title": "ExtractedArm",
+        "description": "Represents a clinical study arm extracted from protocol documentation."
+      },
+      "Designer_ExtractedCriterion": {
+        "properties": {
+          "criterion_type": {
+            "type": "string",
+            "enum": [
+              "INCLUSION",
+              "EXCLUSION"
+            ],
+            "title": "Criterion Type",
+            "description": "Criterion classification"
+          },
+          "identifier": {
+            "type": "string",
+            "title": "Identifier",
+            "description": "e.g. 'INC-01', 'EXC-04'"
+          },
+          "text_expression": {
+            "type": "string",
+            "title": "Text Expression",
+            "description": "Original protocol text requirement"
+          },
+          "logical_expression": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logical Expression",
+            "description": "Compiled logical check e.g., 'DM.AGE >= 18'"
+          }
+        },
+        "type": "object",
+        "required": [
+          "criterion_type",
+          "identifier",
+          "text_expression"
+        ],
+        "title": "ExtractedCriterion",
+        "description": "Represents an eligibility criterion extracted from the protocol."
+      },
+      "Designer_ExtractedEpoch": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Epoch name e.g., 'Screening', 'Treatment', 'Follow-up'"
+          },
+          "epoch_type": {
+            "type": "string",
+            "enum": [
+              "SCREENING",
+              "TREATMENT",
+              "WASHOUT",
+              "FOLLOW_UP",
+              "RUN_IN"
+            ],
+            "title": "Epoch Type",
+            "description": "Epoch categorization type"
+          },
+          "sequence_index": {
+            "type": "integer",
+            "title": "Sequence Index",
+            "description": "Chronological sequence order index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "epoch_type",
+          "sequence_index"
+        ],
+        "title": "ExtractedEpoch",
+        "description": "Represents a trial epoch extracted from protocol documentation."
+      },
+      "Designer_ExtractedVisit": {
+        "properties": {
+          "visit_name": {
+            "type": "string",
+            "title": "Visit Name",
+            "description": "Visit name e.g., 'Visit 1 / Day 1 (Baseline)'"
+          },
+          "epoch_name": {
+            "type": "string",
+            "title": "Epoch Name",
+            "description": "Associated parent epoch identifier name"
+          },
+          "target_day": {
+            "type": "integer",
+            "title": "Target Day",
+            "description": "Target protocol timeline day"
+          },
+          "window_lower_days": {
+            "type": "integer",
+            "title": "Window Lower Days",
+            "description": "Visit window lower margin in days",
+            "default": 0
+          },
+          "window_upper_days": {
+            "type": "integer",
+            "title": "Window Upper Days",
+            "description": "Visit window upper margin in days",
+            "default": 0
+          },
+          "is_mandatory": {
+            "type": "boolean",
+            "title": "Is Mandatory",
+            "description": "Whether visit is required for protocol compliance",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "visit_name",
+          "epoch_name",
+          "target_day"
+        ],
+        "title": "ExtractedVisit",
+        "description": "Represents a study encounter or visit extracted from the protocol."
       },
       "Designer_FeasibilityReport": {
         "properties": {
@@ -31042,6 +32037,51 @@
         "title": "SynopsisExportResponse",
         "description": "Response payload containing base64 encoded document export stream.\n\nRequirements: PRD-SYS-001"
       },
+      "Designer_SynthesizedECRFForm": {
+        "properties": {
+          "form_id": {
+            "type": "string",
+            "title": "Form Id",
+            "description": "Unique form identifier"
+          },
+          "form_name": {
+            "type": "string",
+            "title": "Form Name",
+            "description": "Human-readable form title"
+          },
+          "cdash_domain": {
+            "type": "string",
+            "title": "Cdash Domain",
+            "description": "CDASH domain code"
+          },
+          "items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Items",
+            "description": "eCRF form item definitions"
+          },
+          "rules": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Rules",
+            "description": "Compiled validation and skip rules"
+          }
+        },
+        "type": "object",
+        "required": [
+          "form_id",
+          "form_name",
+          "cdash_domain"
+        ],
+        "title": "SynthesizedECRFForm",
+        "description": "Synthesized CDASH eCRF form definition compiled from extracted activities."
+      },
       "Designer_TerminologyConcept": {
         "properties": {
           "code": {
@@ -31264,6 +32304,94 @@
           "reason"
         ],
         "title": "TransitionItemRequest"
+      },
+      "Designer_USDMProtocolExtractionResponse": {
+        "properties": {
+          "study_title": {
+            "type": "string",
+            "title": "Study Title",
+            "description": "Clinical study title"
+          },
+          "protocol_id": {
+            "type": "string",
+            "title": "Protocol Id",
+            "description": "Protocol identification code"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "PHASE_I",
+              "PHASE_I_II",
+              "PHASE_II",
+              "PHASE_III",
+              "PHASE_IV"
+            ],
+            "title": "Phase",
+            "description": "Clinical development phase"
+          },
+          "therapeutic_area": {
+            "type": "string",
+            "title": "Therapeutic Area",
+            "description": "Therapeutic area e.g., 'Oncology', 'Cardiology'"
+          },
+          "arms": {
+            "items": {
+              "$ref": "#/components/schemas/Designer_ExtractedArm"
+            },
+            "type": "array",
+            "title": "Arms",
+            "description": "Extracted study arms"
+          },
+          "epochs": {
+            "items": {
+              "$ref": "#/components/schemas/Designer_ExtractedEpoch"
+            },
+            "type": "array",
+            "title": "Epochs",
+            "description": "Extracted trial epochs"
+          },
+          "visits": {
+            "items": {
+              "$ref": "#/components/schemas/Designer_ExtractedVisit"
+            },
+            "type": "array",
+            "title": "Visits",
+            "description": "Extracted encounters / visits"
+          },
+          "activities": {
+            "items": {
+              "$ref": "#/components/schemas/Designer_ExtractedActivity"
+            },
+            "type": "array",
+            "title": "Activities",
+            "description": "Extracted Schedule of Activities procedures"
+          },
+          "criteria": {
+            "items": {
+              "$ref": "#/components/schemas/Designer_ExtractedCriterion"
+            },
+            "type": "array",
+            "title": "Criteria",
+            "description": "Extracted inclusion/exclusion criteria"
+          },
+          "confidence_score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence Score",
+            "description": "Overall LLM extraction confidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_title",
+          "protocol_id",
+          "phase",
+          "therapeutic_area",
+          "confidence_score"
+        ],
+        "title": "USDMProtocolExtractionResponse",
+        "description": "Structured response representing complete USDM v4.0 protocol parameters."
       },
       "Designer_UpdateArmRequest": {
         "properties": {
@@ -36752,6 +37880,200 @@
         ],
         "title": "ApproveTaskDelegationRequest"
       },
+      "Execution_BatchAssignItem": {
+        "properties": {
+          "assignment_id": {
+            "type": "string",
+            "title": "Assignment Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action",
+            "default": "ACCEPT"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "term": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Term"
+          },
+          "suggestion_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggestion Index"
+          },
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "assignment_id"
+        ],
+        "title": "BatchAssignItem"
+      },
+      "Execution_BatchAssignRequest": {
+        "properties": {
+          "assignment_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignment Ids"
+          },
+          "items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Execution_BatchAssignItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Items"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "term": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Term"
+          },
+          "dictionary_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dictionary Type"
+          },
+          "dictionary_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dictionary Version"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action",
+            "default": "ACCEPT"
+          }
+        },
+        "type": "object",
+        "title": "BatchAssignRequest"
+      },
+      "Execution_BatchAssignResponse": {
+        "properties": {
+          "success_count": {
+            "type": "integer",
+            "title": "Success Count"
+          },
+          "failed_count": {
+            "type": "integer",
+            "title": "Failed Count"
+          },
+          "results": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Results",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "success_count",
+          "failed_count"
+        ],
+        "title": "BatchAssignResponse"
+      },
       "Execution_BatchSignOffRequest": {
         "properties": {
           "study_id": {
@@ -38168,17 +39490,62 @@
             "description": "Unique data lock record identifier"
           },
           "study_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Study Id",
             "description": "Target protocol study ID"
           },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Target clinical site ID"
+          },
           "subject_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Subject Id",
             "description": "Target clinical trial subject ID"
           },
+          "visit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Id",
+            "description": "Target clinical visit ID"
+          },
           "form_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Form Id",
             "description": "Target eCRF form submission ID"
           },
@@ -38207,18 +39574,89 @@
             "description": "Optional target field variable name"
           },
           "scope": {
-            "$ref": "#/components/schemas/Execution_LockScopeEnum",
-            "description": "Lock scope: FORM, ITEM_GROUP, FIELD"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Execution_LockScopeEnum"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Scope",
+            "description": "Lock scope: STUDY, SITE, SUBJECT, VISIT, FORM, ITEM_GROUP, FIELD",
+            "default": "FORM"
+          },
+          "scope_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Type",
+            "description": "Scope type identifier string"
+          },
+          "scope_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Id",
+            "description": "Target entity ID for specified scope"
           },
           "status": {
-            "$ref": "#/components/schemas/Execution_LockStatusEnum",
-            "description": "Lock status: UNLOCKED, FROZEN, LOCKED",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Execution_LockStatusEnum"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Status",
+            "description": "Lock status: UNLOCKED, FROZEN, LOCKED, HARD_LOCK, SOFT_LOCK",
             "default": "LOCKED"
+          },
+          "lock_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lock Type",
+            "description": "Lock type string: FROZEN, LOCKED, HARD_LOCK"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "description": "Indicates if the lock is actively enforced",
+            "default": true
           },
           "locked_by": {
             "type": "string",
             "title": "Locked By",
             "description": "User ID who executed data lock"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By",
+            "description": "Alias for locked_by user ID"
           },
           "reason_for_change": {
             "type": "string",
@@ -38229,36 +39667,137 @@
             "type": "string",
             "title": "Locked At",
             "description": "UTC ISO timestamp of lock execution"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At",
+            "description": "Alias for locked_at timestamp"
+          },
+          "unlocked_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unlocked By",
+            "description": "User ID executing unlock override"
+          },
+          "unlocked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unlocked At",
+            "description": "UTC ISO timestamp of unlock override"
+          },
+          "unlock_justification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unlock Justification",
+            "description": "Mandatory >=50 character GxP unlock justification reason"
+          },
+          "signature_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Token",
+            "description": "21 CFR Part 11 step-up token digest"
           }
         },
         "type": "object",
         "required": [
           "lock_id",
-          "study_id",
-          "subject_id",
-          "form_id",
-          "scope",
           "locked_by",
           "reason_for_change",
           "locked_at"
         ],
         "title": "DataLockRecord",
-        "description": "Data lock state record representing frozen or locked clinical eCRF data.\n\nRequirements: PRD-SYS-001"
+        "description": "Data lock state record representing frozen or locked clinical eCRF data."
       },
       "Execution_DataLockRequest": {
         "properties": {
           "study_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Study Id",
             "description": "Target protocol study ID"
           },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Target site ID"
+          },
           "subject_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Subject Id",
             "description": "Target subject ID"
           },
+          "visit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Id",
+            "description": "Target visit ID"
+          },
           "form_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Form Id",
             "description": "Target eCRF form ID"
           },
@@ -38287,31 +39826,114 @@
             "description": "Optional target field variable name"
           },
           "scope": {
-            "$ref": "#/components/schemas/Execution_LockScopeEnum",
-            "description": "Lock scope: FORM, ITEM_GROUP, FIELD",
-            "default": "FORM"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Execution_LockScopeEnum"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope",
+            "description": "Lock scope: STUDY, TRIAL, SITE, SUBJECT, VISIT, FORM, ITEM_GROUP, FIELD"
+          },
+          "scope_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Type",
+            "description": "Scope type name: STUDY, SITE, SUBJECT, VISIT, FORM, FIELD"
+          },
+          "scope_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Id",
+            "description": "Target identifier for the specified scope"
           },
           "action": {
             "type": "string",
             "title": "Action",
-            "description": "Action to perform: LOCK, FREEZE, UNLOCK",
+            "description": "Action to perform: LOCK, FREEZE, HARD_LOCK, UNLOCK",
             "default": "LOCK"
           },
+          "lock_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lock Type",
+            "description": "Lock classification: FROZEN, LOCKED, HARD_LOCK, SOFT_LOCK"
+          },
           "reason_for_change": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Reason For Change",
             "description": "Mandatory GxP 21 CFR Part 11 justification reason"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Convenience alias for reason_for_change"
+          },
+          "justification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Justification",
+            "description": "Mandatory >=50 character justification for unlock operations"
+          },
+          "lock_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lock Id",
+            "description": "Specific lock ID targeted for unlock operation"
           }
         },
         "type": "object",
-        "required": [
-          "study_id",
-          "subject_id",
-          "form_id",
-          "reason_for_change"
-        ],
         "title": "DataLockRequest",
-        "description": "Request payload to execute form, item group, or field-level data locking.\n\nRequirements: PRD-SYS-001"
+        "description": "Request payload to execute form, item group, field, subject, visit, site, or study data locking."
       },
       "Execution_DataLockResponse": {
         "properties": {
@@ -38323,7 +39945,7 @@
           "status": {
             "type": "string",
             "title": "Status",
-            "description": "Resulting status: LOCKED, FROZEN, UNLOCKED"
+            "description": "Resulting status: LOCKED, FROZEN, HARD_LOCK, UNLOCKED"
           },
           "message": {
             "type": "string",
@@ -38331,19 +39953,96 @@
             "description": "Operation result confirmation message"
           },
           "record": {
-            "$ref": "#/components/schemas/Execution_DataLockRecord",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Execution_DataLockRecord"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record",
             "description": "Updated data lock record"
+          },
+          "scope_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Type",
+            "description": "Scope type"
+          },
+          "scope_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Id",
+            "description": "Scope ID"
+          },
+          "lock_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lock Type",
+            "description": "Lock type"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "description": "Active status",
+            "default": true
+          },
+          "locked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked At",
+            "description": "Lock timestamp"
+          },
+          "unlocked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unlocked At",
+            "description": "Unlock timestamp"
           }
         },
         "type": "object",
         "required": [
           "lock_id",
           "status",
-          "message",
-          "record"
+          "message"
         ],
         "title": "DataLockResponse",
-        "description": "Response payload for data lock/unlock operations.\n\nRequirements: PRD-SYS-001"
+        "description": "Response payload for data lock/unlock operations."
       },
       "Execution_DelegateTaskRequest": {
         "properties": {
@@ -38728,6 +40427,94 @@
         ],
         "title": "ETMFCompletenessWebhookPayload"
       },
+      "Execution_ExportBundleRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "format": {
+            "type": "string",
+            "title": "Format",
+            "description": "Target format: dataset_json, xpt_v5, xpt_v8, odm_xml, csv, csv_zip",
+            "default": "dataset_json"
+          },
+          "domains": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Domains",
+            "description": "List of SDTM domains to include (e.g. DM, AE, VS, LB, MH, CM)"
+          },
+          "datasets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Datasets",
+            "description": "List of ADaM datasets to include (e.g. ADSL, ADAE, ADVS)"
+          },
+          "site_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Site Ids",
+            "description": "Optional list of site IDs to filter by"
+          },
+          "cohorts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Cohorts",
+            "description": "Optional list of subject cohorts/arms to filter by"
+          },
+          "privacy_profile": {
+            "type": "string",
+            "title": "Privacy Profile",
+            "description": "Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED",
+            "default": "SAFE_HARBOR"
+          },
+          "xpt_version": {
+            "type": "string",
+            "title": "Xpt Version",
+            "description": "SAS Transport version: v5 or v8",
+            "default": "v5"
+          },
+          "include_audit_trail": {
+            "type": "boolean",
+            "title": "Include Audit Trail",
+            "description": "Whether to include GxP audit records in ODM-XML / CSV",
+            "default": true
+          },
+          "metadata_version_oid": {
+            "type": "string",
+            "title": "Metadata Version Oid",
+            "description": "ODM / Dataset-JSON metadata version OID",
+            "default": "MDV.001"
+          },
+          "salt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Salt",
+            "description": "Optional HMAC salt override for deterministic de-identification"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "ExportBundleRequest",
+        "description": "Pydantic schema representing clinical dataset export request parameters."
+      },
       "Execution_FormSubmissionApprove": {
         "properties": {
           "signature_manifest": {
@@ -38919,6 +40706,7 @@
         "required": [
           "id",
           "study_id",
+          "site_id",
           "subject_id",
           "form_id",
           "status",
@@ -39213,6 +41001,79 @@
           "started_at"
         ],
         "title": "JobStatusResponse"
+      },
+      "Execution_LabBatchIngestResult": {
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id"
+          },
+          "format": {
+            "type": "string",
+            "title": "Format"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "total_processed": {
+            "type": "integer",
+            "title": "Total Processed",
+            "default": 0
+          },
+          "ingested_count": {
+            "type": "integer",
+            "title": "Ingested Count",
+            "default": 0
+          },
+          "out_of_range_count": {
+            "type": "integer",
+            "title": "Out Of Range Count",
+            "default": 0
+          },
+          "critical_alerts": {
+            "type": "integer",
+            "title": "Critical Alerts",
+            "default": 0
+          },
+          "queries_raised": {
+            "type": "integer",
+            "title": "Queries Raised",
+            "default": 0
+          },
+          "errors": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Errors"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id",
+          "format",
+          "status"
+        ],
+        "title": "LabBatchIngestResult",
+        "description": "Summary of batch ingestion processing."
       },
       "Execution_LabRangeRecalculateRequest": {
         "properties": {
@@ -39727,22 +41588,29 @@
       "Execution_LockScopeEnum": {
         "type": "string",
         "enum": [
+          "STUDY",
+          "TRIAL",
+          "SITE",
+          "SUBJECT",
+          "VISIT",
           "FORM",
           "ITEM_GROUP",
           "FIELD"
         ],
         "title": "LockScopeEnum",
-        "description": "Granular lock scope boundaries.\n\nRequirements: PRD-SYS-001"
+        "description": "Granular lock scope boundaries."
       },
       "Execution_LockStatusEnum": {
         "type": "string",
         "enum": [
           "UNLOCKED",
           "FROZEN",
-          "LOCKED"
+          "LOCKED",
+          "HARD_LOCK",
+          "SOFT_LOCK"
         ],
         "title": "LockStatusEnum",
-        "description": "Data lock lifecycle status.\n\nRequirements: PRD-SYS-001"
+        "description": "Data lock lifecycle status."
       },
       "Execution_LockStatusResponse": {
         "properties": {
@@ -41400,6 +43268,101 @@
         ],
         "title": "QueryUpdate",
         "description": "Pydantic schema for general state transitions."
+      },
+      "Execution_RaiseQueryRequest": {
+        "properties": {
+          "query_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query Text"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "title": "RaiseQueryRequest"
+      },
+      "Execution_RaiseQueryResponse": {
+        "properties": {
+          "query_id": {
+            "type": "string",
+            "title": "Query Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "assignment_id": {
+            "type": "string",
+            "title": "Assignment Id"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query_id",
+          "status",
+          "assignment_id"
+        ],
+        "title": "RaiseQueryResponse"
       },
       "Execution_RedactPDFRequest": {
         "properties": {

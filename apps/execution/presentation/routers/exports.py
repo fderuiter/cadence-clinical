@@ -1,12 +1,12 @@
-"""FastAPI router for CDISC dataset exports.
+"""FastAPI router for CDISC and Regulatory Biostatistical Dataset Exports.
 
-Requirements: PRD-SYS-009
+Requirements: PRD-SYS-001, PRD-SYS-004, PRD-CRF-008, Trace-1, Trace-7, Trace-12
 """
 
 import os
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import select
 
 from apps.execution.biostat import (
@@ -19,8 +19,16 @@ from apps.execution.biostat import (
     extract_lb,
     extract_mh,
     extract_vs,
+    serialize_bundle_to_csv_zip,
+    serialize_to_csv,
     serialize_to_dataset_json,
+    serialize_to_odm_xml,
     validate_dataset_json,
+    write_xpt,
+)
+from apps.execution.biostat.deid import (
+    deidentify_export_data,
+    scrub_error_message,
 )
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import (
@@ -30,9 +38,11 @@ from apps.execution.database.models import (
     ClinicalVisit,
     SubjectConsent,
 )
+from apps.execution.presentation.routers.exports_schemas import ExportBundleRequest
 from packages.security import (
     ROLE_CRA,
     ROLE_DATA_MANAGER,
+    ROLE_SPONSOR_ADMIN,
     require_roles,
 )
 
@@ -40,18 +50,29 @@ router = APIRouter(prefix="/api/v1/execution", tags=["CDISC Exports"])
 
 
 async def run_sdtm_extraction(
-    session: Any, study_id: str, domain: str
+    session: Any,
+    study_id: str,
+    domain: str,
+    site_ids: list[str] | None = None,
+    cohorts: list[str] | None = None,
 ) -> tuple[list[dict], list[Any]]:
     """Helper to retrieve and transform raw observations to SDTM records."""
     stmt_subj = select(ClinicalSubject).where(
         ClinicalSubject.study_id == study_id,
         ClinicalSubject.is_deleted.is_(False),
     )
+    if site_ids:
+        stmt_subj = stmt_subj.where(ClinicalSubject.site_id.in_(site_ids))
     res_subj = await session.execute(stmt_subj)
     subjects = res_subj.scalars().all()
 
+    subj_ids = [s.subject_id for s in subjects]
+    if not subj_ids:
+        return [], []
+
     stmt_obs = select(ClinicalObservation).where(
         ClinicalObservation.study_id == study_id,
+        ClinicalObservation.subject_id.in_(subj_ids),
         ClinicalObservation.is_deleted.is_(False),
     )
     res_obs = await session.execute(stmt_obs)
@@ -100,23 +121,41 @@ async def run_sdtm_extraction(
     else:
         raise ValueError(f"Unsupported SDTM domain: {domain}")
 
+    # Optional cohort filter on ARM
+    if cohorts and records:
+        cohort_set = set(c.upper() for c in cohorts)
+        records = [r for r in records if str(r.get("ARM", "")).upper() in cohort_set]
+
     for r in records:
         if "DOMAIN" not in r:
             r["DOMAIN"] = dom_upper
     return records, supp_records
 
 
-async def run_adam_derivation(session: Any, study_id: str, dataset: str) -> list[dict]:
+async def run_adam_derivation(
+    session: Any,
+    study_id: str,
+    dataset: str,
+    site_ids: list[str] | None = None,
+    cohorts: list[str] | None = None,
+) -> list[dict]:
     """Helper to retrieve and derive ADaM analysis records."""
     stmt_subj = select(ClinicalSubject).where(
         ClinicalSubject.study_id == study_id,
         ClinicalSubject.is_deleted.is_(False),
     )
+    if site_ids:
+        stmt_subj = stmt_subj.where(ClinicalSubject.site_id.in_(site_ids))
     res_subj = await session.execute(stmt_subj)
     subjects = res_subj.scalars().all()
 
+    subj_ids = [s.subject_id for s in subjects]
+    if not subj_ids:
+        return []
+
     stmt_obs = select(ClinicalObservation).where(
         ClinicalObservation.study_id == study_id,
+        ClinicalObservation.subject_id.in_(subj_ids),
         ClinicalObservation.is_deleted.is_(False),
     )
     res_obs = await session.execute(stmt_obs)
@@ -136,34 +175,56 @@ async def run_adam_derivation(session: Any, study_id: str, dataset: str) -> list
     observations = await reconcile_observations(session, observations, target_version)
 
     ds_upper = dataset.strip().upper()
+    records: list[dict] = []
     if ds_upper == "ADSL":
-        return derive_adsl(subjects, observations)
-    if ds_upper == "ADAE":
+        records = derive_adsl(subjects, observations)
+    elif ds_upper == "ADAE":
         adsl_recs = derive_adsl(subjects, observations)
         ae_recs, _ = extract_ae(subjects, observations)
         records = derive_adae(adsl_recs, ae_recs)
         for r in records:
             if "AEDECOD" not in r or r["AEDECOD"] is None:
                 r["AEDECOD"] = r.get("AETERM", "")
-        return records
-    if ds_upper == "ADVS":
+    elif ds_upper == "ADVS":
         adsl_recs = derive_adsl(subjects, observations)
         vs_recs, _ = extract_vs(subjects, observations)
-        return derive_advs(adsl_recs, vs_recs)
-    raise ValueError(f"Unsupported ADaM dataset: {dataset}")
+        records = derive_advs(adsl_recs, vs_recs)
+    else:
+        raise ValueError(f"Unsupported ADaM dataset: {dataset}")
+
+    if cohorts and records:
+        cohort_set = set(c.upper() for c in cohorts)
+        records = [r for r in records if str(r.get("ARM", "")).upper() in cohort_set]
+
+    return records
 
 
 @router.get("/biostat/sdtm/{domain}")
 async def export_sdtm_domain(
     domain: str,
     study_id: str = Query(..., description="The unique study identifier"),
+    format: str = Query(
+        "json", description="Target export format: json, xpt, odm, csv"
+    ),
+    version: str = Query(
+        "v5", description="SAS XPT version if format is xpt (v5 or v8)"
+    ),
+    privacy_profile: str = Query(
+        "SAFE_HARBOR",
+        description="Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED",
+    ),
+    salt: str | None = Query(None, description="HMAC pseudonymization salt"),
     roles: list[str] = Depends(
         require_roles(
-            ROLE_CRA, ROLE_DATA_MANAGER, "sponsor_statistician", "statistician"
+            ROLE_CRA,
+            ROLE_DATA_MANAGER,
+            ROLE_SPONSOR_ADMIN,
+            "sponsor_statistician",
+            "statistician",
         )
     ),
-) -> dict:
-    """Exports SDTM domain data (DM, AE, VS, LB, MH, CM) in CDISC Dataset-JSON format."""
+) -> Any:
+    """Exports SDTM domain data (DM, AE, VS, LB, MH, CM) in Dataset-JSON, SAS XPT, ODM-XML, or CSV format."""
     dom_upper = domain.strip().upper()
     valid_domains = {"DM", "AE", "VS", "LB", "MH", "CM"}
     if dom_upper not in valid_domains:
@@ -171,6 +232,11 @@ async def export_sdtm_domain(
             status_code=400,
             detail=f"Unsupported SDTM domain: '{domain}'. Must be one of {sorted(list(valid_domains))}",
         )
+
+    fmt_clean = format.strip().lower()
+    actual_salt = salt or os.getenv(
+        "BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765"
+    )  # pragma: allowlist secret
 
     async with db_manager.get_session_maker()() as session:
         try:
@@ -181,17 +247,79 @@ async def export_sdtm_domain(
             if supp_records:
                 export_data[f"SUPP{dom_upper}"] = supp_records
 
-            # Apply deterministic de-identification transform
-            salt = os.getenv(
-                "BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765"
-            )  # pragma: allowlist secret
-            from apps.execution.biostat.deid import (
-                deidentify_export_data,
-                scrub_error_message,
-            )
+            # Apply deterministic de-identification
+            if privacy_profile.upper() != "UNRESTRICTED":
+                export_data = deidentify_export_data(export_data, actual_salt)
+                records = export_data.get(dom_upper, [])
 
-            export_data = deidentify_export_data(export_data, salt)
+            if fmt_clean in ("xpt", "sas_xpt"):
+                xpt_bytes = write_xpt(
+                    dataset_name=dom_upper,
+                    records=records,
+                    version=version,
+                )
+                export_log = BiostatExport(
+                    study_id=study_id,
+                    export_type="SDTM_XPT",
+                    dataset_name=dom_upper,
+                    status="SUCCESS",
+                )
+                session.add(export_log)
+                await session.commit()
+                return Response(
+                    content=xpt_bytes,
+                    media_type="application/x-sas-xport",
+                    headers={
+                        "Content-Disposition": f"attachment; filename={dom_upper.lower()}.xpt"
+                    },
+                )
 
+            if fmt_clean in ("odm", "xml", "odm_xml"):
+                xml_str = serialize_to_odm_xml(
+                    study_id=study_id,
+                    data=export_data,
+                    audit_user="system_exporter",
+                    change_reason="Regulatory Submission Export",
+                )
+                export_log = BiostatExport(
+                    study_id=study_id,
+                    export_type="SDTM_ODM",
+                    dataset_name=dom_upper,
+                    status="SUCCESS",
+                )
+                session.add(export_log)
+                await session.commit()
+                return Response(
+                    content=xml_str,
+                    media_type="application/xml",
+                    headers={
+                        "Content-Disposition": f"attachment; filename={dom_upper.lower()}_odm.xml"
+                    },
+                )
+
+            if fmt_clean in ("csv", "text_csv"):
+                csv_str = serialize_to_csv(
+                    records=records,
+                    privacy_profile=privacy_profile,
+                    salt=actual_salt,
+                )
+                export_log = BiostatExport(
+                    study_id=study_id,
+                    export_type="SDTM_CSV",
+                    dataset_name=dom_upper,
+                    status="SUCCESS",
+                )
+                session.add(export_log)
+                await session.commit()
+                return Response(
+                    content=csv_str,
+                    media_type="text/csv",
+                    headers={
+                        "Content-Disposition": f"attachment; filename={dom_upper.lower()}.csv"
+                    },
+                )
+
+            # Default: Dataset-JSON format
             dataset_json = serialize_to_dataset_json(
                 data=export_data, study_id=study_id
             )
@@ -207,9 +335,10 @@ async def export_sdtm_domain(
             await session.commit()
 
             return dataset_json.model_dump()
-        except DatasetJSONValidationError as e:
-            from apps.execution.biostat.deid import scrub_error_message
 
+        except HTTPException:
+            raise
+        except DatasetJSONValidationError as e:
             scrubbed_msg = scrub_error_message(str(e))
             export_log = BiostatExport(
                 study_id=study_id,
@@ -225,8 +354,6 @@ async def export_sdtm_domain(
                 detail=f"Dataset-JSON validation failed: {scrubbed_msg}",
             )
         except Exception as e:
-            from apps.execution.biostat.deid import scrub_error_message
-
             scrubbed_msg = scrub_error_message(str(e))
             export_log = BiostatExport(
                 study_id=study_id,
@@ -238,7 +365,8 @@ async def export_sdtm_domain(
             session.add(export_log)
             await session.commit()
             raise HTTPException(
-                status_code=500, detail=f"Export execution failed: {scrubbed_msg}"
+                status_code=500,
+                detail=f"Export execution failed: {scrubbed_msg}",
             )
 
 
@@ -246,13 +374,28 @@ async def export_sdtm_domain(
 async def export_adam_dataset(
     dataset: str,
     study_id: str = Query(..., description="The unique study identifier"),
+    format: str = Query(
+        "json", description="Target export format: json, xpt, odm, csv"
+    ),
+    version: str = Query(
+        "v5", description="SAS XPT version if format is xpt (v5 or v8)"
+    ),
+    privacy_profile: str = Query(
+        "SAFE_HARBOR",
+        description="Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED",
+    ),
+    salt: str | None = Query(None, description="HMAC pseudonymization salt"),
     roles: list[str] = Depends(
         require_roles(
-            ROLE_CRA, ROLE_DATA_MANAGER, "sponsor_statistician", "statistician"
+            ROLE_CRA,
+            ROLE_DATA_MANAGER,
+            ROLE_SPONSOR_ADMIN,
+            "sponsor_statistician",
+            "statistician",
         )
     ),
-) -> dict:
-    """Exports ADaM dataset data (ADSL, ADAE, ADVS) in CDISC Dataset-JSON format."""
+) -> Any:
+    """Exports ADaM dataset data (ADSL, ADAE, ADVS) in Dataset-JSON, SAS XPT, ODM-XML, or CSV format."""
     ds_upper = dataset.strip().upper()
     valid_datasets = {"ADSL", "ADAE", "ADVS"}
     if ds_upper not in valid_datasets:
@@ -261,23 +404,89 @@ async def export_adam_dataset(
             detail=f"Unsupported ADaM dataset: '{dataset}'. Must be one of {sorted(list(valid_datasets))}",
         )
 
+    fmt_clean = format.strip().lower()
+    actual_salt = salt or os.getenv(
+        "BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765"
+    )  # pragma: allowlist secret
+
     async with db_manager.get_session_maker()() as session:
         try:
             records = await run_adam_derivation(session, study_id, ds_upper)
 
-            # Apply deterministic de-identification transform
-            salt = os.getenv(
-                "BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765"
-            )  # pragma: allowlist secret
-            from apps.execution.biostat.deid import (
-                deidentify_export_data,
-                scrub_error_message,
-            )
+            # Apply deterministic de-identification
+            if privacy_profile.upper() != "UNRESTRICTED":
+                records = deidentify_export_data(records, actual_salt)
 
-            deidentified_records = deidentify_export_data(records, salt)
+            if fmt_clean in ("xpt", "sas_xpt"):
+                xpt_bytes = write_xpt(
+                    dataset_name=ds_upper,
+                    records=records,
+                    version=version,
+                )
+                export_log = BiostatExport(
+                    study_id=study_id,
+                    export_type="ADaM_XPT",
+                    dataset_name=ds_upper,
+                    status="SUCCESS",
+                )
+                session.add(export_log)
+                await session.commit()
+                return Response(
+                    content=xpt_bytes,
+                    media_type="application/x-sas-xport",
+                    headers={
+                        "Content-Disposition": f"attachment; filename={ds_upper.lower()}.xpt"
+                    },
+                )
 
+            if fmt_clean in ("odm", "xml", "odm_xml"):
+                xml_str = serialize_to_odm_xml(
+                    study_id=study_id,
+                    data={ds_upper: records},
+                    audit_user="system_exporter",
+                    change_reason="Regulatory Submission Export",
+                )
+                export_log = BiostatExport(
+                    study_id=study_id,
+                    export_type="ADaM_ODM",
+                    dataset_name=ds_upper,
+                    status="SUCCESS",
+                )
+                session.add(export_log)
+                await session.commit()
+                return Response(
+                    content=xml_str,
+                    media_type="application/xml",
+                    headers={
+                        "Content-Disposition": f"attachment; filename={ds_upper.lower()}_odm.xml"
+                    },
+                )
+
+            if fmt_clean in ("csv", "text_csv"):
+                csv_str = serialize_to_csv(
+                    records=records,
+                    privacy_profile=privacy_profile,
+                    salt=actual_salt,
+                )
+                export_log = BiostatExport(
+                    study_id=study_id,
+                    export_type="ADaM_CSV",
+                    dataset_name=ds_upper,
+                    status="SUCCESS",
+                )
+                session.add(export_log)
+                await session.commit()
+                return Response(
+                    content=csv_str,
+                    media_type="text/csv",
+                    headers={
+                        "Content-Disposition": f"attachment; filename={ds_upper.lower()}.csv"
+                    },
+                )
+
+            # Default: Dataset-JSON format
             dataset_json = serialize_to_dataset_json(
-                data={ds_upper: deidentified_records}, study_id=study_id
+                data={ds_upper: records}, study_id=study_id
             )
             validate_dataset_json(dataset_json)
 
@@ -291,9 +500,10 @@ async def export_adam_dataset(
             await session.commit()
 
             return dataset_json.model_dump()
-        except DatasetJSONValidationError as e:
-            from apps.execution.biostat.deid import scrub_error_message
 
+        except HTTPException:
+            raise
+        except DatasetJSONValidationError as e:
             scrubbed_msg = scrub_error_message(str(e))
             export_log = BiostatExport(
                 study_id=study_id,
@@ -309,8 +519,6 @@ async def export_adam_dataset(
                 detail=f"Dataset-JSON validation failed: {scrubbed_msg}",
             )
         except Exception as e:
-            from apps.execution.biostat.deid import scrub_error_message
-
             scrubbed_msg = scrub_error_message(str(e))
             export_log = BiostatExport(
                 study_id=study_id,
@@ -322,20 +530,38 @@ async def export_adam_dataset(
             session.add(export_log)
             await session.commit()
             raise HTTPException(
-                status_code=500, detail=f"Export execution failed: {scrubbed_msg}"
+                status_code=500,
+                detail=f"Export execution failed: {scrubbed_msg}",
             )
 
 
 @router.get("/biostat/bundle")
 async def export_biostat_bundle(
     study_id: str = Query(..., description="The unique study identifier"),
+    format: str = Query(
+        "json", description="Target export format: json, zip, csv_zip, odm"
+    ),
+    privacy_profile: str = Query(
+        "SAFE_HARBOR",
+        description="Privacy policy: SAFE_HARBOR, LIMITED_DATA_SET, GDPR_PSEUDONYMIZED, UNRESTRICTED",
+    ),
+    salt: str | None = Query(None, description="HMAC pseudonymization salt"),
     roles: list[str] = Depends(
         require_roles(
-            ROLE_CRA, ROLE_DATA_MANAGER, "sponsor_statistician", "statistician"
+            ROLE_CRA,
+            ROLE_DATA_MANAGER,
+            ROLE_SPONSOR_ADMIN,
+            "sponsor_statistician",
+            "statistician",
         )
     ),
-) -> dict:
-    """Exports all SDTM domains and ADaM datasets bundled in a single CDISC Dataset-JSON document."""
+) -> Any:
+    """Exports all SDTM domains and ADaM datasets bundled in Dataset-JSON, CSV ZIP, or ODM-XML."""
+    fmt_clean = format.strip().lower()
+    actual_salt = salt or os.getenv(
+        "BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765"
+    )  # pragma: allowlist secret
+
     async with db_manager.get_session_maker()() as session:
         try:
             bundle_data = {}
@@ -358,17 +584,56 @@ async def export_biostat_bundle(
                     detail="No biostat records found for the given study.",
                 )
 
-            # Apply deterministic de-identification transform
-            salt = os.getenv(
-                "BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765"
-            )  # pragma: allowlist secret
-            from apps.execution.biostat.deid import (
-                deidentify_export_data,
-                scrub_error_message,
-            )
+            # Apply deterministic de-identification
+            if privacy_profile.upper() != "UNRESTRICTED":
+                bundle_data = deidentify_export_data(bundle_data, actual_salt)
 
-            bundle_data = deidentify_export_data(bundle_data, salt)
+            if fmt_clean in ("zip", "csv_zip"):
+                zip_bytes = serialize_bundle_to_csv_zip(
+                    bundle_data=bundle_data,
+                    privacy_profile=privacy_profile,
+                    salt=actual_salt,
+                )
+                export_log = BiostatExport(
+                    study_id=study_id,
+                    export_type="BUNDLE_CSV_ZIP",
+                    dataset_name=None,
+                    status="SUCCESS",
+                )
+                session.add(export_log)
+                await session.commit()
+                return Response(
+                    content=zip_bytes,
+                    media_type="application/zip",
+                    headers={
+                        "Content-Disposition": f"attachment; filename={study_id.lower()}_datasets.zip"
+                    },
+                )
 
+            if fmt_clean in ("odm", "xml", "odm_xml"):
+                xml_str = serialize_to_odm_xml(
+                    study_id=study_id,
+                    data=bundle_data,
+                    audit_user="system_exporter",
+                    change_reason="Regulatory Submission Export",
+                )
+                export_log = BiostatExport(
+                    study_id=study_id,
+                    export_type="BUNDLE_ODM",
+                    dataset_name=None,
+                    status="SUCCESS",
+                )
+                session.add(export_log)
+                await session.commit()
+                return Response(
+                    content=xml_str,
+                    media_type="application/xml",
+                    headers={
+                        "Content-Disposition": f"attachment; filename={study_id.lower()}_odm.xml"
+                    },
+                )
+
+            # Default: Dataset-JSON format
             dataset_json = serialize_to_dataset_json(
                 data=bundle_data, study_id=study_id
             )
@@ -384,9 +649,10 @@ async def export_biostat_bundle(
             await session.commit()
 
             return dataset_json.model_dump()
-        except DatasetJSONValidationError as e:
-            from apps.execution.biostat.deid import scrub_error_message
 
+        except HTTPException:
+            raise
+        except DatasetJSONValidationError as e:
             scrubbed_msg = scrub_error_message(str(e))
             export_log = BiostatExport(
                 study_id=study_id,
@@ -402,8 +668,6 @@ async def export_biostat_bundle(
                 detail=f"Dataset-JSON validation failed: {scrubbed_msg}",
             )
         except Exception as e:
-            from apps.execution.biostat.deid import scrub_error_message
-
             scrubbed_msg = scrub_error_message(str(e))
             export_log = BiostatExport(
                 study_id=study_id,
@@ -415,5 +679,219 @@ async def export_biostat_bundle(
             session.add(export_log)
             await session.commit()
             raise HTTPException(
-                status_code=500, detail=f"Export execution failed: {scrubbed_msg}"
+                status_code=500,
+                detail=f"Export execution failed: {scrubbed_msg}",
+            )
+
+
+@router.post("/exports/wizard")
+async def execute_export_wizard(
+    request_data: ExportBundleRequest,
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_CRA,
+            ROLE_DATA_MANAGER,
+            ROLE_SPONSOR_ADMIN,
+            "sponsor_statistician",
+            "statistician",
+        )
+    ),
+) -> Any:
+    """Executes a parameterized export job from the Regulatory Export Wizard."""
+    study_id = request_data.study_id
+    fmt = request_data.format.strip().lower()
+    domains = [d.upper() for d in (request_data.domains or [])]
+    datasets = [d.upper() for d in (request_data.datasets or [])]
+    if not domains and not datasets:
+        # Default to all standard domains
+        domains = ["DM", "AE", "VS", "LB", "MH", "CM"]
+        datasets = ["ADSL", "ADAE", "ADVS"]
+
+    actual_salt = request_data.salt or os.getenv(
+        "BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765"
+    )  # pragma: allowlist secret
+
+    async with db_manager.get_session_maker()() as session:
+        try:
+            bundle_data: dict[str, list[dict]] = {}
+            for dom in domains:
+                records, supp_records = await run_sdtm_extraction(
+                    session,
+                    study_id,
+                    dom,
+                    site_ids=request_data.site_ids,
+                    cohorts=request_data.cohorts,
+                )
+                if records:
+                    bundle_data[dom] = records
+                if supp_records:
+                    bundle_data[f"SUPP{dom}"] = supp_records
+
+            for ds in datasets:
+                records = await run_adam_derivation(
+                    session,
+                    study_id,
+                    ds,
+                    site_ids=request_data.site_ids,
+                    cohorts=request_data.cohorts,
+                )
+                if records:
+                    bundle_data[ds] = records
+
+            if not bundle_data:
+                raise HTTPException(
+                    status_code=404,
+                    detail="No clinical records matched the export criteria.",
+                )
+
+            # Apply de-identification
+            if request_data.privacy_profile.upper() != "UNRESTRICTED":
+                bundle_data = deidentify_export_data(bundle_data, actual_salt)
+
+            if fmt in ("xpt_v5", "xpt_v8", "xpt", "sas_xpt"):
+                # If single dataset, return binary XPT; if multiple, package in zip
+                ver = (
+                    "v8"
+                    if fmt == "xpt_v8" or request_data.xpt_version == "v8"
+                    else "v5"
+                )
+                if len(bundle_data) == 1:
+                    ds_name, ds_recs = next(iter(bundle_data.items()))
+                    xpt_content = write_xpt(ds_name, ds_recs, version=ver)
+                    export_log = BiostatExport(
+                        study_id=study_id,
+                        export_type=f"WIZARD_{fmt.upper()}",
+                        dataset_name=ds_name,
+                        status="SUCCESS",
+                    )
+                    session.add(export_log)
+                    await session.commit()
+                    return Response(
+                        content=xpt_content,
+                        media_type="application/x-sas-xport",
+                        headers={
+                            "Content-Disposition": f"attachment; filename={ds_name.lower()}.xpt"
+                        },
+                    )
+                import io
+                import zipfile
+
+                zip_buf = io.BytesIO()
+                with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+                    for ds_name, ds_recs in bundle_data.items():
+                        xpt_bytes = write_xpt(ds_name, ds_recs, version=ver)
+                        zf.writestr(f"{ds_name.lower()}.xpt", xpt_bytes)
+                export_log = BiostatExport(
+                    study_id=study_id,
+                    export_type=f"WIZARD_{fmt.upper()}_ZIP",
+                    dataset_name=None,
+                    status="SUCCESS",
+                )
+                session.add(export_log)
+                await session.commit()
+                return Response(
+                    content=zip_buf.getvalue(),
+                    media_type="application/zip",
+                    headers={
+                        "Content-Disposition": f"attachment; filename={study_id.lower()}_xpt_bundle.zip"
+                    },
+                )
+
+            if fmt in ("odm_xml", "odm", "xml"):
+                xml_str = serialize_to_odm_xml(
+                    study_id=study_id,
+                    data=bundle_data,
+                    metadata_version_oid=request_data.metadata_version_oid,
+                    audit_user="wizard_exporter",
+                    change_reason="Export Wizard Regulatory Extract",
+                )
+                export_log = BiostatExport(
+                    study_id=study_id,
+                    export_type="WIZARD_ODM_XML",
+                    dataset_name=None,
+                    status="SUCCESS",
+                )
+                session.add(export_log)
+                await session.commit()
+                return Response(
+                    content=xml_str,
+                    media_type="application/xml",
+                    headers={
+                        "Content-Disposition": f"attachment; filename={study_id.lower()}_odm.xml"
+                    },
+                )
+
+            if fmt in ("csv", "csv_zip"):
+                zip_bytes = serialize_bundle_to_csv_zip(
+                    bundle_data=bundle_data,
+                    privacy_profile=request_data.privacy_profile,
+                    salt=actual_salt,
+                    include_audit_fields=request_data.include_audit_trail,
+                )
+                export_log = BiostatExport(
+                    study_id=study_id,
+                    export_type="WIZARD_CSV_ZIP",
+                    dataset_name=None,
+                    status="SUCCESS",
+                )
+                session.add(export_log)
+                await session.commit()
+                return Response(
+                    content=zip_bytes,
+                    media_type="application/zip",
+                    headers={
+                        "Content-Disposition": f"attachment; filename={study_id.lower()}_csv_bundle.zip"
+                    },
+                )
+
+            # Default Dataset-JSON
+            dataset_json = serialize_to_dataset_json(
+                data=bundle_data,
+                study_id=study_id,
+                metadata_version_id=request_data.metadata_version_oid,
+            )
+            validate_dataset_json(dataset_json)
+
+            export_log = BiostatExport(
+                study_id=study_id,
+                export_type="WIZARD_DATASET_JSON",
+                dataset_name=None,
+                status="SUCCESS",
+            )
+            session.add(export_log)
+            await session.commit()
+
+            return dataset_json.model_dump()
+
+        except HTTPException:
+            raise
+        except DatasetJSONValidationError as e:
+            scrubbed_msg = scrub_error_message(str(e))
+            export_log = BiostatExport(
+                study_id=study_id,
+                export_type=f"WIZARD_{fmt.upper()}",
+                dataset_name=None,
+                status="FAILED",
+                error_message=scrubbed_msg,
+            )
+            session.add(export_log)
+            await session.commit()
+            raise HTTPException(
+                status_code=422,
+                detail=f"Export validation failed: {scrubbed_msg}",
+            )
+        except Exception as e:
+            scrubbed_msg = scrub_error_message(str(e))
+            export_log = BiostatExport(
+                study_id=study_id,
+                export_type=f"WIZARD_{fmt.upper()}",
+                dataset_name=None,
+                status="FAILED",
+                error_message=scrubbed_msg,
+            )
+            session.add(export_log)
+            await session.commit()
+            raise HTTPException(
+                status_code=500,
+                detail=f"Export execution failed: {scrubbed_msg}",
             )

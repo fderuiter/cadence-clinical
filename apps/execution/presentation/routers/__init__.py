@@ -6,6 +6,7 @@ from apps.execution.presentation.routers.auditor import router as auditor_router
 from apps.execution.presentation.routers.doa import router as doa_router
 from apps.execution.presentation.routers.documents import router as documents_router
 from apps.execution.presentation.routers.eisf import router as eisf_router
+from apps.execution.presentation.routers.labs import router as labs_router
 from apps.execution.presentation.routers.locks import router as locks_router
 from apps.execution.presentation.routers.offline import router as offline_router
 from apps.execution.presentation.routers.safety import router as safety_router
@@ -19,6 +20,7 @@ __all__ = [
     "doa_router",
     "documents_router",
     "eisf_router",
+    "labs_router",
     "locks_router",
     "offline_router",
     "safety_router",

@@ -208,6 +208,28 @@ class TrialLockManager:
     _locked_visits = set()
     _locked_forms = set()
     _locked_subjects = set()
+    _locked_fields = set()
+
+    @classmethod
+    def lock_field(cls, field_name: str, form_id: str | None = None):
+        """Locks a specific field by field_name or composite form:field."""
+        cls._locked_fields.add(str(field_name))
+        if form_id:
+            cls._locked_fields.add(f"{form_id}:{field_name}")
+
+    @classmethod
+    def unlock_field(cls, field_name: str, form_id: str | None = None):
+        """Unlocks a specific field."""
+        cls._locked_fields.discard(str(field_name))
+        if form_id:
+            cls._locked_fields.discard(f"{form_id}:{field_name}")
+
+    @classmethod
+    def is_field_locked(cls, field_name: str, form_id: str | None = None) -> bool:
+        """Checks if a field is locked."""
+        if str(field_name) in cls._locked_fields:
+            return True
+        return bool(form_id and f"{form_id}:{field_name}" in cls._locked_fields)
 
     @classmethod
     def lock_site(cls, site_id: str):
@@ -308,6 +330,7 @@ class TrialLockManager:
         # Explicitly clear new collections to maintain test isolation (Task 1)
         cls._locked_forms.clear()
         cls._locked_subjects.clear()
+        cls._locked_fields.clear()
 
 
 # Register checkers to decoupled packages.database

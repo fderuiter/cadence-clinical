@@ -674,7 +674,12 @@ async def run_migrations(database_url: str) -> None:
     try:
         async with engine.begin() as conn:
             if engine.dialect.name == "postgresql":
-                await conn.execute(text("CREATE SCHEMA IF NOT EXISTS audit_schema;"))
+                await conn.execute(
+                    text(
+                        "DO $$ BEGIN CREATE SCHEMA IF NOT EXISTS audit_schema; "
+                        "EXCEPTION WHEN duplicate_schema OR unique_violation THEN NULL; END $$;"
+                    )
+                )
 
             # Setup metadata tables
             await conn.run_sync(Base.metadata.create_all)

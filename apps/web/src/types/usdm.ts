@@ -1,5 +1,5 @@
 // Auto-generated from OpenAPI schema definition
-// Generated on: 2026-08-14T03:23:42.930Z
+// Generated on: 2026-08-14T04:11:32.148Z
 
 export interface ActivityAssignmentRequest {
   visit_id: string;
@@ -99,6 +99,10 @@ export interface BlockDetailResponse {
   created_at: string;
 }
 
+export interface Body_extract_protocol_digitization_api_v1_designer_digitization_extract_post {
+  file: string;
+}
+
 export interface Body_upload_mapping_csv_api_v1_mappings_upload_post {
   file: string;
 }
@@ -182,6 +186,22 @@ export interface CommentThread {
 export interface CommentThreadCreate {
   block_id: string;
   text: string;
+}
+
+export interface CommitUSDMRequest {
+  study_id: string;
+  data: USDMProtocolExtractionResponse;
+  change_reason: string;
+}
+
+export interface CommitUSDMResponse {
+  study_id: string;
+  version_id: string;
+  status: string;
+  nodes_created: number;
+  relationships_created: number;
+  synthesized_forms?: SynthesizedECRFForm[];
+  message: string;
 }
 
 export type ComparisonOperator = "==" | "!=" | "<" | "<=" | ">" | ">=";
@@ -399,6 +419,42 @@ export interface ExpressionNode_Output {
   operands?: ExpressionNode_Output[] | null;
   value?: any | null;
   field_ref?: FieldReference_Output | null;
+}
+
+export interface ExtractedActivity {
+  activity_name: string;
+  cdash_domain: string;
+  biomedical_concept_code?: string | null;
+  assigned_visit_names?: string[];
+}
+
+export interface ExtractedArm {
+  name: string;
+  arm_type: "EXPERIMENTAL" | "ACTIVE_COMPARATOR" | "PLACEBO_COMPARATOR" | "SHAM_COMPARATOR" | "NO_INTERVENTION";
+  description?: string | null;
+  target_sample_size?: number | null;
+}
+
+export interface ExtractedCriterion {
+  criterion_type: "INCLUSION" | "EXCLUSION";
+  identifier: string;
+  text_expression: string;
+  logical_expression?: string | null;
+}
+
+export interface ExtractedEpoch {
+  name: string;
+  epoch_type: "SCREENING" | "TREATMENT" | "WASHOUT" | "FOLLOW_UP" | "RUN_IN";
+  sequence_index: number;
+}
+
+export interface ExtractedVisit {
+  visit_name: string;
+  epoch_name: string;
+  target_day: number;
+  window_lower_days?: number;
+  window_upper_days?: number;
+  is_mandatory?: boolean;
 }
 
 export interface FeasibilityReport {
@@ -779,6 +835,14 @@ export interface SynopsisExportResponse {
   filename: string;
 }
 
+export interface SynthesizedECRFForm {
+  form_id: string;
+  form_name: string;
+  cdash_domain: string;
+  items?: Record<string, any>[];
+  rules?: Record<string, any>[];
+}
+
 export interface TerminologyConcept {
   code: string;
   decode: string;
@@ -812,6 +876,19 @@ export interface TransitionItemRequest {
   name?: string | null;
   label?: string | null;
   value?: string | null;
+}
+
+export interface USDMProtocolExtractionResponse {
+  study_title: string;
+  protocol_id: string;
+  phase: "PHASE_I" | "PHASE_I_II" | "PHASE_II" | "PHASE_III" | "PHASE_IV";
+  therapeutic_area: string;
+  arms?: ExtractedArm[];
+  epochs?: ExtractedEpoch[];
+  visits?: ExtractedVisit[];
+  activities?: ExtractedActivity[];
+  criteria?: ExtractedCriterion[];
+  confidence_score: number;
 }
 
 export interface UpdateArmRequest {
