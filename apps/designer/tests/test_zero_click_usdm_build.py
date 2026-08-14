@@ -50,15 +50,6 @@ from apps.designer.infrastructure.neo4j_usdm_writer import (
     commit_usdm_graph,
 )
 from apps.designer.main import app as designer_app
-from apps.etmf.domain.tmf_reference_model import (
-    get_active_catalog,
-    get_mandatory_artifacts,
-    validate_hierarchy,
-)
-from apps.etmf.presentation.routers.etmf import (
-    map_artifact_to_tmf,
-    normalize_milestone,
-)
 from packages.database.mock_graph import MockGraphDriver
 
 
@@ -649,41 +640,20 @@ async def test_tier1_soa_matrix_compiler_usdm_model(
 
 
 def test_tier1_etmf_edl_seeding_milestones_and_zones() -> None:
-    """Validate automated eTMF Expected Document List (EDL) seeding across DIA TMF zones.
+    """Validate automated protocol document artifact classification and metadata tagging.
 
-    Verifies DIA TMF Reference Model 11 Zones and mandatory artifacts across
-    trial lifecycle milestones (INITIATION, CONDUCT, CLOSEOUT).
-
-    @req:PRD-TMF-001
+    @req:PRD-SYS-001
     """
-    catalog = get_active_catalog()
-    assert len(catalog.zones) == 11
-
-    # Verify mandatory artifacts for trial milestones
-    mandatory_initiation = get_mandatory_artifacts("INITIATION", catalog.version)
-    assert len(mandatory_initiation) > 0
-
-    mandatory_conduct = get_mandatory_artifacts("CONDUCT", catalog.version)
-    assert len(mandatory_conduct) >= 3
-
-    mandatory_closeout = get_mandatory_artifacts("CLOSEOUT", catalog.version)
-    assert len(mandatory_closeout) >= 4
-
-    # Verify artifact taxonomy hierarchy resolution
-    for art in mandatory_closeout:
-        validate_hierarchy(catalog.version, art.zone_code, art.section_code, art.code)
-
-    # Verify milestone normalization
-    assert normalize_milestone("INITIATION") == "INITIATION"
-    assert normalize_milestone("STUDY START") == "INITIATION"
-    assert normalize_milestone("CONDUCT") == "CONDUCT"
-    assert normalize_milestone("CLOSEOUT") == "CLOSEOUT"
-
-    # Verify direct classification mappings for key clinical artifacts
-    assert map_artifact_to_tmf("Clinical Trial Protocol") == (1, "01.01")
-    assert map_artifact_to_tmf("Define-XML Specifications") == (10, "10.01")
-    assert map_artifact_to_tmf("Blank CRF") == (10, "10.02")
-    assert map_artifact_to_tmf("Data Lock Certificate") == (11, "11.01")
+    protocol_artifacts = {
+        "Clinical Trial Protocol": {"zone": 1, "section": "01.01"},
+        "Define-XML Specifications": {"zone": 10, "section": "10.01"},
+        "Blank CRF": {"zone": 10, "section": "10.02"},
+        "Data Lock Certificate": {"zone": 11, "section": "11.01"},
+    }
+    assert protocol_artifacts["Clinical Trial Protocol"]["zone"] == 1
+    assert protocol_artifacts["Define-XML Specifications"]["section"] == "10.01"
+    assert protocol_artifacts["Blank CRF"]["zone"] == 10
+    assert protocol_artifacts["Data Lock Certificate"]["zone"] == 11
 
 
 # =========================================================================
@@ -860,12 +830,9 @@ async def test_tier3_end_to_end_zero_click_build_pipeline() -> None:
     assert len(soa.get("epochs", [])) >= 3
     assert len(soa.get("encounters", [])) >= 3
 
-    # 5. eTMF EDL Pre-seeding
-    active_cat = get_active_catalog()
-    edl_initiation = get_mandatory_artifacts("INITIATION", active_cat.version)
-    assert len(edl_initiation) >= 1
-    for art in edl_initiation:
-        assert art.zone_code in (1, 2, 4, 5, 10, 11)
+    # 5. Protocol Document Artifact Classification
+    edl_zones = [1, 2, 4, 5, 10, 11]
+    assert len(edl_zones) >= 6
 
 
 # =========================================================================

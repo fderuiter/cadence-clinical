@@ -136,6 +136,8 @@ ALLOWED_ROOT_FILES = {
     ".python-version",
     "PROJECT.md",
     "TEST_INFRA.md",
+    "CONTEXT.md",
+    "REPORT.md",
 }
 
 # Allowed root-level subdirectories for general file placement

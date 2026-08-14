@@ -22,6 +22,7 @@ exclude = [
 ]
 
 [tool.uv.sources]
+packages-cli = { workspace = true }
 packages-security = { workspace = true }
 packages-database = { workspace = true }
 packages-deid = { workspace = true }
@@ -163,9 +164,12 @@ dependencies = [
     "docxcompose>=2.2.0",
     "sqlmodel>=0.0.39",
     "jsonschema>=4.20.0",
+    "typer>=0.12.0",
+    "rich>=13.7.0",
 ]
 
 [project.scripts]
+cadence = "packages.cli.main:main"
 deid-scan = "packages.deid.cli:main"
 
 [project.optional-dependencies]
@@ -184,6 +188,7 @@ dev = [
     "pytest-playwright>=0.4.0",
     "pytest-xdist>=3.5.0",
     "pytest-archon>=0.0.5",
+    "mypy>=1.9.0",
 ]
 
 [tool.hatch.build.targets.wheel]
