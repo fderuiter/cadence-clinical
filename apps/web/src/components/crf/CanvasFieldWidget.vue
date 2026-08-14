@@ -1,52 +1,50 @@
 <template>
   <div
-    class="canvas-field-widget p-3 rounded-lg border-2 transition-all relative group bg-white shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2"
-    :class="[
-      isSelected
-        ? 'border-indigo-600 ring-2 ring-indigo-100'
-        : hasWarning
-          ? 'border-amber-400 bg-amber-50/10 hover:border-amber-500'
-          : 'border-gray-200 hover:border-gray-300',
-    ]"
+    class="canvas-field-widget"
+    :class="{
+      'is-selected': isSelected,
+      'has-warning': hasWarning,
+    }"
     v-keyboard-click="selectField"
     @click="selectField"
   >
     <!-- Field Header / Metadata -->
-    <div class="flex justify-between items-start mb-2">
-      <div class="flex items-center gap-2">
+    <div class="field-widget-top">
+      <div class="field-widget-info">
         <!-- Drag Handle -->
         <span
-          class="field-drag-handle cursor-move text-gray-400 hover:text-gray-600 text-lg select-none"
+          class="field-drag-handle"
+          title="Drag to reorder field"
           @click.stop
         >
           ⋮⋮
         </span>
-        <span class="font-medium text-gray-800 text-sm">
+        <span class="field-label-text">
           {{ field.label || "Untitled Field" }}
-          <span v-if="field.required" class="text-red-500 font-bold">*</span>
+          <span v-if="field.required" class="field-required-star">*</span>
         </span>
       </div>
 
       <!-- SDTM Tag Badge -->
       <span
         v-if="field.cdash || field.sdtm"
-        class="sdtm-tag-badge bg-blue-50 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded border border-blue-100"
+        class="sdtm-tag-badge"
       >
         [{{ field.cdash || field.sdtm }}]
       </span>
     </div>
 
     <!-- Interactive Field Preview -->
-    <div class="field-preview mt-2" @click.stop="selectField">
+    <div class="field-preview-container" @click.stop="selectField">
       <template v-if="field.type === 'text'">
         <input
           type="text"
           disabled
-          class="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
+          class="field-preview-input"
           :class="{
             'touch-target-interactive': designerStore.viewport !== 'desktop',
           }"
-          placeholder="Text input preview"
+          placeholder="Text input preview..."
         />
       </template>
 
@@ -54,7 +52,7 @@
         <input
           type="number"
           disabled
-          class="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
+          class="field-preview-input"
           :class="{
             'touch-target-interactive': designerStore.viewport !== 'desktop',
           }"
@@ -66,7 +64,7 @@
         <input
           type="date"
           disabled
-          class="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
+          class="field-preview-input"
           :class="{
             'touch-target-interactive': designerStore.viewport !== 'desktop',
           }"
@@ -76,7 +74,7 @@
       <template v-else-if="field.type === 'select'">
         <select
           disabled
-          class="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
+          class="field-preview-input"
           :class="{
             'touch-target-interactive': designerStore.viewport !== 'desktop',
           }"
@@ -93,20 +91,20 @@
       </template>
 
       <template v-else-if="field.type === 'radio'">
-        <div class="flex flex-wrap gap-4 items-center">
+        <div style="display: flex; gap: 12px; align-items: center; padding: 4px 0;">
           <label
             v-for="opt in field.options || [
               { value: 'Y', label: 'Yes' },
               { value: 'N', label: 'No' },
             ]"
             :key="opt.value"
-            class="flex items-center gap-1.5 text-sm text-gray-500 cursor-not-allowed"
+            style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #475569; cursor: pointer;"
             :class="{ 'touch-target': designerStore.viewport !== 'desktop' }"
           >
             <input
               type="radio"
               disabled
-              class="text-indigo-600 focus:ring-indigo-500 h-4 w-4 border-gray-300"
+              style="cursor: pointer; accent-color: #026597;"
               :class="{
                 'touch-target-interactive':
                   designerStore.viewport !== 'desktop',
@@ -118,22 +116,18 @@
       </template>
 
       <template v-else-if="field.type === 'grid'">
-        <div class="border border-gray-200 rounded-md overflow-hidden text-xs">
-          <table class="w-full bg-gray-50 text-gray-400 cursor-not-allowed">
+        <div style="border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; font-size: 0.75rem;">
+          <table style="width: 100%; background: #f8fafc; border-collapse: collapse;">
             <thead>
-              <tr class="bg-gray-100 border-b border-gray-200">
-                <th class="p-1.5 text-left border-r border-gray-200">Col 1</th>
-                <th class="p-1.5 text-left">Col 2</th>
+              <tr style="background: #f1f5f9; border-bottom: 1px solid #e2e8f0;">
+                <th style="padding: 4px 8px; text-align: left; border-right: 1px solid #e2e8f0;">Column 1</th>
+                <th style="padding: 4px 8px; text-align: left;">Column 2</th>
               </tr>
             </thead>
             <tbody>
-              <tr class="border-b border-gray-200">
-                <td class="p-1.5 border-r border-gray-200">-</td>
-                <td class="p-1.5">-</td>
-              </tr>
               <tr>
-                <td class="p-1.5 border-r border-gray-200">-</td>
-                <td class="p-1.5">-</td>
+                <td style="padding: 4px 8px; border-right: 1px solid #e2e8f0; color: #94a3b8;">Data item A</td>
+                <td style="padding: 4px 8px; color: #94a3b8;">Data item B</td>
               </tr>
             </tbody>
           </table>
@@ -144,16 +138,15 @@
         v-else-if="field.type === 'file' || field.type === 'file upload'"
       >
         <div
-          class="border-2 border-dashed border-gray-300 rounded-md p-4 text-center bg-gray-50 text-xs text-gray-400 cursor-not-allowed flex flex-col items-center justify-center gap-1"
+          style="border: 2px dashed #cbd5e1; border-radius: 6px; padding: 12px; text-align: center; background: #f8fafc; font-size: 0.75rem; color: #64748b;"
         >
-          <span class="text-lg">📁</span>
-          <span>Click or drag file to upload</span>
+          <span>📁 Attachment Upload Area</span>
         </div>
       </template>
 
       <template v-else>
-        <div class="text-xs text-gray-400 italic">
-          Custom field type preview
+        <div style="font-size: 0.75rem; color: #94a3b8; font-style: italic;">
+          Standard clinical field preview
         </div>
       </template>
     </div>
@@ -161,26 +154,27 @@
     <!-- Selected Actions Toolbar -->
     <div
       v-if="isSelected"
-      class="widget-actions absolute -top-4 right-2 flex items-center gap-1 bg-indigo-600 text-white rounded-md shadow px-1.5 py-0.5 z-10 text-xs"
+      class="widget-actions"
+      style="position: absolute; top: -12px; right: 8px; display: flex; gap: 4px; background-color: #026597; color: white; border-radius: 6px; padding: 2px 6px; z-index: 10; font-size: 0.72rem; box-shadow: 0 2px 6px rgba(0,0,0,0.15);"
     >
       <button
-        class="hover:bg-indigo-700 px-1.5 py-0.5 rounded transition font-medium"
+        style="background: none; border: none; color: white; cursor: pointer; font-weight: 600; padding: 2px 4px;"
         title="Duplicate Field"
         @click.stop="$emit('duplicate-field', field.id)"
       >
         Duplicate
       </button>
-      <span class="text-indigo-400 select-none">|</span>
+      <span style="color: #93c5fd; user-select: none;">|</span>
       <button
-        class="hover:bg-indigo-700 px-1.5 py-0.5 rounded transition font-medium"
+        style="background: none; border: none; color: white; cursor: pointer; font-weight: 600; padding: 2px 4px;"
         title="Inspect Properties"
         @click.stop="$emit('select-field', field.id)"
       >
         Inspect
       </button>
-      <span class="text-indigo-400 select-none">|</span>
+      <span style="color: #93c5fd; user-select: none;">|</span>
       <button
-        class="hover:bg-red-700 hover:text-white text-red-200 px-1.5 py-0.5 rounded transition font-medium"
+        style="background: none; border: none; color: #fca5a5; cursor: pointer; font-weight: 600; padding: 2px 4px;"
         title="Delete Field"
         @click.stop="$emit('delete-field', field.id)"
       >
@@ -191,10 +185,10 @@
     <!-- Layout Warning Banner -->
     <div
       v-if="hasWarning"
-      class="layout-warning bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded p-2 mt-3 flex items-start gap-1.5"
+      style="background-color: #fefce8; border: 1px solid #fef08a; color: #854d0e; font-size: 0.72rem; border-radius: 6px; padding: 6px 8px; margin-top: 8px; display: flex; align-items: flex-start; gap: 6px;"
     >
-      <span class="flex-shrink-0">⚠️</span>
-      <span class="warning-text font-medium">{{ warningMessage }}</span>
+      <span>⚠️</span>
+      <span style="font-weight: 600;">{{ warningMessage }}</span>
     </div>
   </div>
 </template>

@@ -67,10 +67,11 @@
       </div>
     </div>
 
-    <div class="grid-2-responsive">
-      <!-- Dynamic eCRF Form -->
-      <div class="card">
-        <div class="card-title">Subject eCRF Data Entry Form</div>
+    <div class="ecrf-workspace-layout" style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
+      <!-- Left Column: Dynamic eCRF Form -->
+      <div class="ecrf-form-column" style="flex: 1 1 580px; min-width: 0;">
+        <div class="card">
+          <div class="card-title">Subject eCRF Data Entry Form</div>
 
         <!-- Sub-Issue 9: Subject & Visit Selection Panel -->
         <div
@@ -280,218 +281,221 @@
         </div>
       </div>
 
-      <!-- Live Form State & Meta -->
-      <div
-        class="card"
-        style="display: flex; flex-direction: column; gap: 16px"
-      >
-        <div>
-          <div class="card-title">CDASH Metadata Specification</div>
-          <p style="font-size: 0.85rem; color: #475569; margin-bottom: 8px">
-            The fields on the left are dynamically rendered using structural
-            CDASH metadata tags (e.g. <code>DM.BRTHDT</code>,
-            <code>VS.VSSBP</code>).
-          </p>
-        </div>
-
+      <!-- Right Column: Verification & CDASH Metadata Tools -->
+      <div class="ecrf-side-column" style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 20px;">
+        <!-- PI Sign-Off Worklist and Verification Card -->
         <div
-          style="
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 12px;
-            background-color: #f8fafc;
-          "
+          class="card"
+          style="display: flex; flex-direction: column; gap: 16px"
         >
-          <h3
-            style="
-              font-size: 0.9rem;
-              font-weight: 700;
-              margin-bottom: 8px;
-              color: var(--primary);
-            "
-          >
-            Real-time Field Validation Rules:
-          </h3>
-          <ul
-            style="
-              font-size: 0.8rem;
-              padding-left: 20px;
-              color: #475569;
-              display: flex;
-              flex-direction: column;
-              gap: 6px;
-            "
-          >
-            <li><strong>Birth Date:</strong> Must match YYYY-MM-DD pattern.</li>
-            <li>
-              <strong>Systolic BP:</strong> Numeric value between 50 and 250
-              mmHg.
-            </li>
-            <li>
-              <strong>Diastolic BP:</strong> Numeric value between 30 and 150
-              mmHg.
-            </li>
-            <li>
-              <strong>Pulse Rate:</strong> Numeric value between 30 and 200 bpm.
-            </li>
-          </ul>
-        </div>
-
-        <div
-          style="
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 12px;
-            background-color: #f8fafc;
-          "
-        >
-          <h3
-            style="
-              font-size: 0.9rem;
-              font-weight: 700;
-              margin-bottom: 8px;
-              color: var(--primary);
-            "
-          >
-            Query Management Actions:
-          </h3>
-          <p style="font-size: 0.8rem; color: #475569; line-height: 1.4">
-            Click the 💬 / ⚠️ flags next to input fields to raise, answer,
-            close, or reopen discrepancy notes. All query transitions are
-            audit-logged in real-time.
+          <div class="card-title">PI Sign-Off Worklist &amp; Verification</div>
+          <p style="font-size: 0.85rem; color: #475569; margin-bottom: 4px">
+            Perform a 21 CFR Part 11 compliant electronic signature. This action
+            requires re-authenticating the Principal Investigator credentials to
+            obtain a secure single-use signature token.
           </p>
-        </div>
-      </div>
 
-      <!-- PI Sign-Off Worklist and Verification Card -->
-      <div
-        class="card"
-        style="display: flex; flex-direction: column; gap: 16px"
-      >
-        <div class="card-title">PI Sign-Off Worklist &amp; Verification</div>
-        <p style="font-size: 0.85rem; color: #475569; margin-bottom: 4px">
-          Perform a 21 CFR Part 11 compliant electronic signature. This action
-          requires re-authenticating the Principal Investigator credentials to
-          obtain a secure single-use signature token.
-        </p>
-
-        <div style="display: flex; flex-direction: column; gap: 12px">
-          <div class="form-group">
-            <label for="signoff-target-type"
-              >Sign-Off Scope (Granularity)</label
-            >
-            <select
-              id="signoff-target-type"
-              v-model="signoffTargetType"
-              style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 4px;
-              "
-            >
-              <option value="FORM">FORM Level</option>
-              <option value="VISIT">VISIT Level</option>
-              <option value="SUBJECT">SUBJECT Level</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="signoff-target-id">Select Target ID</label>
-            <select
-              id="signoff-target-id"
-              v-model="signoffTargetId"
-              style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 4px;
-              "
-            >
-              <option value="">-- Choose ID --</option>
-              <template v-if="signoffTargetType === 'SUBJECT'">
-                <option
-                  v-for="sub in availableSubjects"
-                  :key="sub"
-                  :value="sub"
-                >
-                  {{ sub }}
-                </option>
-              </template>
-              <template v-else-if="signoffTargetType === 'VISIT'">
-                <option
-                  v-for="visit in availableVisits"
-                  :key="visit"
-                  :value="visit"
-                >
-                  {{ visit }}
-                </option>
-              </template>
-              <template v-else-if="signoffTargetType === 'FORM'">
-                <option
-                  v-for="form in availableFormSubmissions"
-                  :key="form"
-                  :value="form"
-                >
-                  {{ form }}
-                </option>
-              </template>
-              <option value="custom">-- Enter Custom --</option>
-            </select>
-          </div>
-
-          <div v-if="signoffTargetId === 'custom'" class="form-group">
-            <label for="signoff-custom-target-id">Custom Target ID Value</label>
-            <input
-              id="signoff-custom-target-id"
-              type="text"
-              placeholder="Enter custom target ID..."
-              style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 4px;
-              "
-              @input="(e) => (customTargetId = e.target.value)"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="signoff-reason">Signing Reason / Attestation</label>
-            <select
-              id="signoff-reason"
-              v-model="signoffReason"
-              style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 4px;
-              "
-            >
-              <option
-                v-for="reason in validSigningReasons"
-                :key="reason"
-                :value="reason"
+          <div style="display: flex; flex-direction: column; gap: 12px">
+            <div class="form-group">
+              <label for="signoff-target-type"
+                >Sign-Off Scope (Granularity)</label
               >
-                {{ reason }}
-              </option>
-            </select>
+              <select
+                id="signoff-target-type"
+                v-model="signoffTargetType"
+                style="
+                  width: 100%;
+                  padding: 8px;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                "
+              >
+                <option value="FORM">FORM Level</option>
+                <option value="VISIT">VISIT Level</option>
+                <option value="SUBJECT">SUBJECT Level</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="signoff-target-id">Select Target ID</label>
+              <select
+                id="signoff-target-id"
+                v-model="signoffTargetId"
+                style="
+                  width: 100%;
+                  padding: 8px;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                "
+              >
+                <option value="">-- Choose ID --</option>
+                <template v-if="signoffTargetType === 'SUBJECT'">
+                  <option
+                    v-for="sub in availableSubjects"
+                    :key="sub"
+                    :value="sub"
+                  >
+                    {{ sub }}
+                  </option>
+                </template>
+                <template v-else-if="signoffTargetType === 'VISIT'">
+                  <option
+                    v-for="visit in availableVisits"
+                    :key="visit"
+                    :value="visit"
+                  >
+                    {{ visit }}
+                  </option>
+                </template>
+                <template v-else-if="signoffTargetType === 'FORM'">
+                  <option
+                    v-for="form in availableFormSubmissions"
+                    :key="form"
+                    :value="form"
+                  >
+                    {{ form }}
+                  </option>
+                </template>
+                <option value="custom">-- Enter Custom --</option>
+              </select>
+            </div>
+
+            <div v-if="signoffTargetId === 'custom'" class="form-group">
+              <label for="signoff-custom-target-id">Custom Target ID Value</label>
+              <input
+                id="signoff-custom-target-id"
+                type="text"
+                placeholder="Enter custom target ID..."
+                style="
+                  width: 100%;
+                  padding: 8px;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                "
+                @input="(e) => (customTargetId = e.target.value)"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="signoff-reason">Signing Reason / Attestation</label>
+              <select
+                id="signoff-reason"
+                v-model="signoffReason"
+                style="
+                  width: 100%;
+                  padding: 8px;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                "
+              >
+                <option
+                  v-for="reason in validSigningReasons"
+                  :key="reason"
+                  :value="reason"
+                >
+                  {{ reason }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; margin-top: 8px">
+            <button
+              id="btn-pi-signoff"
+              class="btn btn-primary"
+              type="button"
+              @click="handleSignOffSubmit"
+            >
+              ✍️ Sign Off Target
+            </button>
           </div>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; margin-top: 8px">
-          <button
-            id="btn-pi-signoff"
-            class="btn btn-primary"
-            type="button"
-            @click="handleSignOffSubmit"
+        <!-- Live Form State & CDASH Meta Card -->
+        <div
+          class="card"
+          style="display: flex; flex-direction: column; gap: 16px"
+        >
+          <div>
+            <div class="card-title">CDASH Metadata Specification</div>
+            <p style="font-size: 0.85rem; color: #475569; margin-bottom: 8px">
+              The fields on the left are dynamically rendered using structural
+              CDASH metadata tags (e.g. <code>DM.BRTHDT</code>,
+              <code>VS.VSSBP</code>).
+            </p>
+          </div>
+
+          <div
+            style="
+              border: 1px solid var(--border);
+              border-radius: 8px;
+              padding: 12px;
+              background-color: #f8fafc;
+            "
           >
-            ✍️ Sign Off Target
-          </button>
+            <h3
+              style="
+                font-size: 0.9rem;
+                font-weight: 700;
+                margin-bottom: 8px;
+                color: var(--primary);
+              "
+            >
+              Real-time Field Validation Rules:
+            </h3>
+            <ul
+              style="
+                font-size: 0.8rem;
+                padding-left: 20px;
+                color: #475569;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+              "
+            >
+              <li><strong>Birth Date:</strong> Must match YYYY-MM-DD pattern.</li>
+              <li>
+                <strong>Systolic BP:</strong> Numeric value between 50 and 250 mmHg.
+              </li>
+              <li>
+                <strong>Diastolic BP:</strong> Numeric value between 30 and 150 mmHg.
+              </li>
+              <li>
+                <strong>Pulse Rate:</strong> Numeric value between 30 and 200 bpm.
+              </li>
+            </ul>
+          </div>
+
+          <div
+            style="
+              border: 1px solid var(--border);
+              border-radius: 8px;
+              padding: 12px;
+              background-color: #f8fafc;
+            "
+          >
+            <h3
+              style="
+                font-size: 0.9rem;
+                font-weight: 700;
+                margin-bottom: 8px;
+                color: var(--primary);
+              "
+            >
+              Query Management Actions:
+            </h3>
+            <p style="font-size: 0.8rem; color: #475569; line-height: 1.4">
+              Click the 💬 / ⚠️ flags next to input fields to raise, answer,
+              close, or reopen discrepancy notes. All query transitions are
+              audit-logged in real-time.
+            </p>
+          </div>
         </div>
       </div>
+    </div>
 
-      <!-- Protocol Ingestion & Candidate Review Card -->
+    <!-- Full-Width Bottom Section: Protocol Ingestion & Review -->
+    <div style="margin-top: 24px;">
       <div
         class="card"
         style="
@@ -928,14 +932,11 @@
               font-size: 0.85rem;
               text-align: center;
             "
-            class="promoted-success-banner"
-          >
-            🎉 This candidate draft has been successfully promoted to formal
-            draft study version!
           </div>
         </div>
       </div>
     </div>
+  </div>
 
     <!-- Reason for Change Modal Dialog -->
     <ReasonModal

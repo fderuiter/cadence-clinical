@@ -119,6 +119,17 @@ To ensure proper GxP boundaries and architectural decoupling across the Cadence 
 
 ---
 
+### Frontend Architecture & Styling Standard (Vanilla CSS)
+
+`apps/web` utilizes standard **Vanilla CSS** with a centralized design token system in `apps/web/src/style.css`.
+
+- **No Tailwind CSS:** Do not use Tailwind CSS utility classes in `apps/web` Vue components (e.g. `flex-col`, `gap-4`, `grid-cols-12`, `bg-slate-50`). They are not processed by the Vite pipeline and will result in unstyled, broken interfaces.
+- **Enterprise Design Tokens:** Use semantic CSS variables (`var(--primary)`, `var(--surface)`, `var(--border)`, `var(--radius-md)`) and standard scoped CSS.
+- **Full-Width Authoring Workspaces:** High-density clinical workspaces (such as the Schedule of Activities Matrix and Arm-Aware Gantt Visualizer) must occupy full screen width. Auxiliary inspection panes (e.g. raw CDISC USDM JSON viewers) must be placed in collapsible drawers rather than rigid side columns.
+- **Interactive Multi-Persona Support:** `apps/web` must provide a top-bar Role/Persona switcher (`super_admin`, `sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `auditor`) to allow seamless demonstration and testing of all clinical module workflows.
+
+---
+
 ## GxP Compliance Sync Protocol
 
 The CI `compliance` job regenerates the RTM docs and diffs them against the
@@ -407,6 +418,14 @@ ignored_pair = {
 ### 14. Non-Interactive PNPM Execution in Containerized & Scripted Contexts
 
 When executing `pnpm install` in Docker containers, background tasks, or scripts where TTY interaction is unavailable, set `CI=true` or configure `confirmModulesPurge=false` to prevent `ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY` errors when syncing host-mounted `node_modules`.
+
+### 15. Keycloak Local Development Persistence
+
+When configuring Keycloak in `docker/docker-compose.yml` for local sandbox development, use `KC_DB=dev-file` rather than the default in-memory or raw file locks. This ensures realm imports and user credentials persist cleanly across container restarts without H2 database locking collisions.
+
+### 16. pnpm Workspace Cache Hygiene
+
+Always ensure package manager artifacts and temporary caches (`.pnpm-store/`, `.pnpm/`, `.pnpm-debug.log*`) remain gitignored to prevent workspace bloat and merge conflicts across branches.
 
 ---
 
