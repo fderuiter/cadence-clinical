@@ -46,7 +46,10 @@ async def create_protocol_amendment(
         study_versions = MOCK_STUDY_VERSIONS.get(study_id, [])
         matching_base = None
         for v in study_versions:
-            if v.get("version_tag") == base_version_tag or v.get("tag") == base_version_tag:
+            if (
+                v.get("version_tag") == base_version_tag
+                or v.get("tag") == base_version_tag
+            ):
                 matching_base = v
                 break
 

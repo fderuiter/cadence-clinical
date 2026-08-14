@@ -188,10 +188,14 @@ def withdraw_subject_model(subject: Any, reason: str) -> None:
     subject.withdrawal_reason = reason
 
 
-class ReConsentRequiredException(Exception):
+class ReConsentRequiredError(Exception):
     """Raised when data entry is attempted on a subject requiring amendment re-consent."""
 
     pass
+
+
+# Backward compatibility alias
+ReConsentRequiredException = ReConsentRequiredError
 
 
 async def validate_subject_version_gating(
@@ -255,4 +259,3 @@ async def validate_subject_version_gating(
         await session.flush()
 
     return subject.active_protocol_version or active_protocol_version
-
