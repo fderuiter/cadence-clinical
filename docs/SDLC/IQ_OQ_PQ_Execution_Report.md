@@ -1,7 +1,7 @@
 # GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report
 
-*Execution Date:* 2026-07-23 22:38:25 UTC
-*Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B
+_Execution Date:_ 2026-07-23 22:38:25 UTC
+_Regulatory Protocol:_ FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B
 
 ## 1. Executive Summary & Verification Declaration
 
@@ -9,6 +9,7 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
+
 - **Total Automated Test Cases Run:** 38
 - **Passed:** 38 🟢
 - **Failed/Errors:** 0 🔴
@@ -20,6 +21,7 @@ Based on the executed automated verification suite, the platform meets all prede
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
 
 ### 2.1 System Environment Metadata
+
 - **Operating System / Platform:** linux (containerized target specification)
 - **Python Version:** 3.14.5 (Docker execution environment baseline)
 - **Database Provider (Execution Engine):** PostgreSQL / SQLite in-memory fallback
@@ -27,14 +29,16 @@ The Installation Qualification verifies that the software execution environment,
 - **Identity Management Gateway:** Keycloak OIDC Router
 
 ### 2.2 Static Analysis & Security Gateways
-| Tool | Target Standard | Status | Outcome / Verification Reference |
-| :--- | :--- | :--- | :--- |
-| **Ruff / Black** | PEP 8 / Clean Code formatting | Passed | Zero warnings, style rules enforced. |
-| **Bandit Security** | Secure Python programming | Passed | No high-severity vulnerabilities found in application code. |
-| **pip-audit** | Dependency vulnerability auditing | Passed | Zero CVEs detected on active virtualenv packages. |
-| **Git Secrets** | Secret leakage prevention | Passed | Clean commit signatures, no exposed API tokens. |
+
+| Tool                | Target Standard                   | Status | Outcome / Verification Reference                            |
+| :------------------ | :-------------------------------- | :----- | :---------------------------------------------------------- |
+| **Ruff / Black**    | PEP 8 / Clean Code formatting     | Passed | Zero warnings, style rules enforced.                        |
+| **Bandit Security** | Secure Python programming         | Passed | No high-severity vulnerabilities found in application code. |
+| **pip-audit**       | Dependency vulnerability auditing | Passed | Zero CVEs detected on active virtualenv packages.           |
+| **Git Secrets**     | Secret leakage prevention         | Passed | Clean commit signatures, no exposed API tokens.             |
 
 ### 2.3 Installed Dependency Package Ledger (Pip List)
+
 ```
 Package                 Version     Editable project location
 ----------------------- ----------- -------------------------
@@ -212,67 +216,72 @@ zopfli                   0.4.3
 The Operational Qualification verifies that individual clinical operations, state machine transitions, cryptographic workflows, database-level triggers, and blinding boundaries are executed accurately according to functional requirements.
 
 ### 3.1 Traceability Mappings Verification
-| Test Case Name | Classname / Suite | Target Req | Status | Duration |
-| :--- | :--- | :--- | :--- | :--- |
-| `test_tier1_feature01_coding_queue_and_filter` | `tests.e2e.test_phase1_e2e_suite` | PRD-SYS-001, Trace-1 | 🟢 PASSED | < 1s |
-| `test_tier1_feature02_meddra_and_whodrug_traversal` | `tests.e2e.test_phase1_e2e_suite` | PRD-MDR-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_tier1_feature03_single_and_batch_coding_assignment` | `tests.e2e.test_phase1_e2e_suite` | PRD-SYS-001, Trace-1, Trace-28 | 🟢 PASSED | < 1s |
-| `test_tier1_feature04_dictionary_upversioning_impact` | `tests.e2e.test_phase1_e2e_suite` | PRD-SYS-001, Trace-30 | 🟢 PASSED | < 1s |
-| `test_tier1_feature05_query_escalation_and_resolution` | `tests.e2e.test_phase1_e2e_suite` | PRD-QRY-001, Trace-1 | 🟢 PASSED | < 1s |
-| `test_tier1_feature06_relational_datalock_persistence` | `tests.e2e.test_phase1_e2e_suite` | PRD-MDR-002, PRD-SYS-001, Trace-1 | 🟢 PASSED | < 1s |
-| `test_tier1_feature07_hierarchical_lock_inheritance` | `tests.e2e.test_phase1_e2e_suite` | PRD-MDR-002, Trace-3 | 🟢 PASSED | < 1s |
-| `test_tier1_feature08_dual_signature_step_up_token` | `tests.e2e.test_phase1_e2e_suite` | Trace-13, Trace-17 | 🟢 PASSED | < 1s |
-| `test_tier1_feature09_unlock_justification_enforcement` | `tests.e2e.test_phase1_e2e_suite` | PRD-SYS-001, Trace-1, Trace-28 | 🟢 PASSED | < 1s |
-| `test_tier1_feature10_multi_format_lab_ingestion` | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001, Trace-15 | 🟢 PASSED | < 1s |
-| `test_tier1_feature11_ucum_normalization_and_range_eval` | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001, PRD-MDR-001 | 🟢 PASSED | < 1s |
-| `test_tier1_feature12_lab_discrepancy_and_sae_auto_queries` | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001, PRD-QRY-001, Trace-15 | 🟢 PASSED | < 1s |
-| `test_tier1_feature13_sas_transport_binary_export` | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, Trace-7 | 🟢 PASSED | < 1s |
-| `test_tier1_feature14_cdisc_odm_xml_export_with_audits` | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, PRD-SYS-001, Trace-1 | 🟢 PASSED | < 1s |
-| `test_tier1_feature15_cdisc_dataset_json_export` | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008 | 🟢 PASSED | < 1s |
-| `test_tier1_feature16_deidentified_csv_export` | `tests.e2e.test_phase1_e2e_suite` | Trace-12 | 🟢 PASSED | < 1s |
-| `test_tier1_feature17_ui_router_and_navigation_metadata` | `tests.e2e.test_phase1_e2e_suite` | Trace-11 | 🟢 PASSED | < 1s |
-| `test_tier2_boundary01_empty_lab_payload_rejected` | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001 | 🟢 PASSED | < 1s |
-| `test_tier2_boundary02_invalid_hl7_segments_rejected` | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001 | 🟢 PASSED | < 1s |
-| `test_tier2_boundary03_unlock_justification_under_50_chars_rejected` | `tests.e2e.test_phase1_e2e_suite` | PRD-SYS-001, Trace-1 | 🟢 PASSED | < 1s |
-| `test_tier2_boundary04_hard_lock_without_step_up_token_rejected` | `tests.e2e.test_phase1_e2e_suite` | Trace-17 | 🟢 PASSED | < 1s |
-| `test_tier2_boundary05_incompatible_ucum_unit_conversion` | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001 | 🟢 PASSED | < 1s |
-| `test_tier2_boundary06_nonexistent_dictionary_term_resolution` | `tests.e2e.test_phase1_e2e_suite` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_tier2_boundary07_invalid_sdtm_domain_export_rejected` | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008 | 🟢 PASSED | < 1s |
-| `test_tier2_boundary08_unauthorized_lock_action_rejected` | `tests.e2e.test_phase1_e2e_suite` | Trace-27 | 🟢 PASSED | < 1s |
-| `test_tier2_boundary09_replay_sig_token_prevention` | `tests.e2e.test_phase1_e2e_suite` | Trace-17 | 🟢 PASSED | < 1s |
-| `test_tier2_boundary10_deidentification_empty_demographics` | `tests.e2e.test_phase1_e2e_suite` | Trace-12 | 🟢 PASSED | < 1s |
-| `test_tier3_pairwise01_form_lock_then_medical_coding` | `tests.e2e.test_phase1_e2e_suite` | PRD-MDR-002, PRD-SYS-001, Trace-1 | 🟢 PASSED | < 1s |
-| `test_tier3_pairwise02_out_of_range_lab_then_subject_lock` | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001, PRD-MDR-002, PRD-QRY-001 | 🟢 PASSED | < 1s |
-| `test_tier3_pairwise03_batch_coding_then_biostat_export` | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_tier3_pairwise04_subject_lock_followed_by_lab_ingestion` | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001, PRD-MDR-002 | 🟢 PASSED | < 1s |
-| `test_tier3_pairwise05_upversioning_impact_then_query_escalation` | `tests.e2e.test_phase1_e2e_suite` | PRD-QRY-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_tier3_pairwise06_hard_lock_step_up_then_unlock_and_export` | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, Trace-1, Trace-17 | 🟢 PASSED | < 1s |
-| `test_tier4_scenario01_oncology_trial_multisite_lock` | `tests.e2e.test_phase1_e2e_suite` | PRD-MDR-002, Trace-1, Trace-13, Trace-17 | 🟢 PASSED | < 1s |
-| `test_tier4_scenario02_high_throughput_lab_batch_ingestion` | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001, PRD-QRY-001, Trace-15 | 🟢 PASSED | < 1s |
-| `test_tier4_scenario03_meddra_upversioning_and_batch_coding` | `tests.e2e.test_phase1_e2e_suite` | PRD-QRY-001, PRD-SYS-001, Trace-1 | 🟢 PASSED | < 1s |
-| `test_tier4_scenario04_regulatory_submission_bundle_generation` | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, Trace-12, Trace-7 | 🟢 PASSED | < 1s |
-| `test_tier4_scenario05_full_lifecycle_e2e_trial_workflow` | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, PRD-LAB-001, PRD-MDR-002, PRD-QRY-001, PRD-SYS-001, Trace-1, Trace-17 | 🟢 PASSED | < 1s |
+
+| Test Case Name                                                       | Classname / Suite                 | Target Req                                                                         | Status    | Duration |
+| :------------------------------------------------------------------- | :-------------------------------- | :--------------------------------------------------------------------------------- | :-------- | :------- |
+| `test_tier1_feature01_coding_queue_and_filter`                       | `tests.e2e.test_phase1_e2e_suite` | PRD-SYS-001, Trace-1                                                               | 🟢 PASSED | < 1s     |
+| `test_tier1_feature02_meddra_and_whodrug_traversal`                  | `tests.e2e.test_phase1_e2e_suite` | PRD-MDR-001, PRD-SYS-001                                                           | 🟢 PASSED | < 1s     |
+| `test_tier1_feature03_single_and_batch_coding_assignment`            | `tests.e2e.test_phase1_e2e_suite` | PRD-SYS-001, Trace-1, Trace-28                                                     | 🟢 PASSED | < 1s     |
+| `test_tier1_feature04_dictionary_upversioning_impact`                | `tests.e2e.test_phase1_e2e_suite` | PRD-SYS-001, Trace-30                                                              | 🟢 PASSED | < 1s     |
+| `test_tier1_feature05_query_escalation_and_resolution`               | `tests.e2e.test_phase1_e2e_suite` | PRD-QRY-001, Trace-1                                                               | 🟢 PASSED | < 1s     |
+| `test_tier1_feature06_relational_datalock_persistence`               | `tests.e2e.test_phase1_e2e_suite` | PRD-MDR-002, PRD-SYS-001, Trace-1                                                  | 🟢 PASSED | < 1s     |
+| `test_tier1_feature07_hierarchical_lock_inheritance`                 | `tests.e2e.test_phase1_e2e_suite` | PRD-MDR-002, Trace-3                                                               | 🟢 PASSED | < 1s     |
+| `test_tier1_feature08_dual_signature_step_up_token`                  | `tests.e2e.test_phase1_e2e_suite` | Trace-13, Trace-17                                                                 | 🟢 PASSED | < 1s     |
+| `test_tier1_feature09_unlock_justification_enforcement`              | `tests.e2e.test_phase1_e2e_suite` | PRD-SYS-001, Trace-1, Trace-28                                                     | 🟢 PASSED | < 1s     |
+| `test_tier1_feature10_multi_format_lab_ingestion`                    | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001, Trace-15                                                              | 🟢 PASSED | < 1s     |
+| `test_tier1_feature11_ucum_normalization_and_range_eval`             | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001, PRD-MDR-001                                                           | 🟢 PASSED | < 1s     |
+| `test_tier1_feature12_lab_discrepancy_and_sae_auto_queries`          | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001, PRD-QRY-001, Trace-15                                                 | 🟢 PASSED | < 1s     |
+| `test_tier1_feature13_sas_transport_binary_export`                   | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, Trace-7                                                               | 🟢 PASSED | < 1s     |
+| `test_tier1_feature14_cdisc_odm_xml_export_with_audits`              | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, PRD-SYS-001, Trace-1                                                  | 🟢 PASSED | < 1s     |
+| `test_tier1_feature15_cdisc_dataset_json_export`                     | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008                                                                        | 🟢 PASSED | < 1s     |
+| `test_tier1_feature16_deidentified_csv_export`                       | `tests.e2e.test_phase1_e2e_suite` | Trace-12                                                                           | 🟢 PASSED | < 1s     |
+| `test_tier1_feature17_ui_router_and_navigation_metadata`             | `tests.e2e.test_phase1_e2e_suite` | Trace-11                                                                           | 🟢 PASSED | < 1s     |
+| `test_tier2_boundary01_empty_lab_payload_rejected`                   | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001                                                                        | 🟢 PASSED | < 1s     |
+| `test_tier2_boundary02_invalid_hl7_segments_rejected`                | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001                                                                        | 🟢 PASSED | < 1s     |
+| `test_tier2_boundary03_unlock_justification_under_50_chars_rejected` | `tests.e2e.test_phase1_e2e_suite` | PRD-SYS-001, Trace-1                                                               | 🟢 PASSED | < 1s     |
+| `test_tier2_boundary04_hard_lock_without_step_up_token_rejected`     | `tests.e2e.test_phase1_e2e_suite` | Trace-17                                                                           | 🟢 PASSED | < 1s     |
+| `test_tier2_boundary05_incompatible_ucum_unit_conversion`            | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001                                                                        | 🟢 PASSED | < 1s     |
+| `test_tier2_boundary06_nonexistent_dictionary_term_resolution`       | `tests.e2e.test_phase1_e2e_suite` | PRD-SYS-001                                                                        | 🟢 PASSED | < 1s     |
+| `test_tier2_boundary07_invalid_sdtm_domain_export_rejected`          | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008                                                                        | 🟢 PASSED | < 1s     |
+| `test_tier2_boundary08_unauthorized_lock_action_rejected`            | `tests.e2e.test_phase1_e2e_suite` | Trace-27                                                                           | 🟢 PASSED | < 1s     |
+| `test_tier2_boundary09_replay_sig_token_prevention`                  | `tests.e2e.test_phase1_e2e_suite` | Trace-17                                                                           | 🟢 PASSED | < 1s     |
+| `test_tier2_boundary10_deidentification_empty_demographics`          | `tests.e2e.test_phase1_e2e_suite` | Trace-12                                                                           | 🟢 PASSED | < 1s     |
+| `test_tier3_pairwise01_form_lock_then_medical_coding`                | `tests.e2e.test_phase1_e2e_suite` | PRD-MDR-002, PRD-SYS-001, Trace-1                                                  | 🟢 PASSED | < 1s     |
+| `test_tier3_pairwise02_out_of_range_lab_then_subject_lock`           | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001, PRD-MDR-002, PRD-QRY-001                                              | 🟢 PASSED | < 1s     |
+| `test_tier3_pairwise03_batch_coding_then_biostat_export`             | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, PRD-SYS-001                                                           | 🟢 PASSED | < 1s     |
+| `test_tier3_pairwise04_subject_lock_followed_by_lab_ingestion`       | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001, PRD-MDR-002                                                           | 🟢 PASSED | < 1s     |
+| `test_tier3_pairwise05_upversioning_impact_then_query_escalation`    | `tests.e2e.test_phase1_e2e_suite` | PRD-QRY-001, PRD-SYS-001                                                           | 🟢 PASSED | < 1s     |
+| `test_tier3_pairwise06_hard_lock_step_up_then_unlock_and_export`     | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, Trace-1, Trace-17                                                     | 🟢 PASSED | < 1s     |
+| `test_tier4_scenario01_oncology_trial_multisite_lock`                | `tests.e2e.test_phase1_e2e_suite` | PRD-MDR-002, Trace-1, Trace-13, Trace-17                                           | 🟢 PASSED | < 1s     |
+| `test_tier4_scenario02_high_throughput_lab_batch_ingestion`          | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001, PRD-QRY-001, Trace-15                                                 | 🟢 PASSED | < 1s     |
+| `test_tier4_scenario03_meddra_upversioning_and_batch_coding`         | `tests.e2e.test_phase1_e2e_suite` | PRD-QRY-001, PRD-SYS-001, Trace-1                                                  | 🟢 PASSED | < 1s     |
+| `test_tier4_scenario04_regulatory_submission_bundle_generation`      | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, Trace-12, Trace-7                                                     | 🟢 PASSED | < 1s     |
+| `test_tier4_scenario05_full_lifecycle_e2e_trial_workflow`            | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, PRD-LAB-001, PRD-MDR-002, PRD-QRY-001, PRD-SYS-001, Trace-1, Trace-17 | 🟢 PASSED | < 1s     |
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 
 Performance Qualification documents the verification of end-to-end clinical workflow scenarios defined in Section 5 of the QA & Validation Plan.
 
 ### TC-VAL-LOG-001: Protocol Version Locking & Immutability Rejection
+
 - **Target Requirements:** PRD-MDR-001, PRD-UNI-003
 - **Description:** Verifies that locked study version nodes in Neo4j are completely immutable, and direct database manipulations are rejected.
 - **Verification Status:** ✅ Verified Compliant via Automated Integration Suite
 
 ### TC-VAL-LOG-002: Stratification Factor Re-randomization Rejections
+
 - **Target Requirements:** PRD-SUB-002, PRD-SUB-001
 - **Description:** Verifies that stratification factor modifications and backward state machine updates are strictly forbidden once randomized.
 - **Verification Status:** ✅ Verified Compliant via Automated Integration Suite
 
 ### TC-VAL-LOG-003: Offline Mode Data Entry, Sync Collision & Conflict Resolution
+
 - **Target Requirements:** PRD-EDC-004, PRD-UNI-002
 - **Description:** Verifies that offline data entries are synchronized accurately, conflict resolution runs deterministically, and the audit ledger captures all states.
 - **Verification Status:** ✅ Verified Compliant via Automated Integration Suite
 
 ### TC-VAL-LOG-004: Re-authentication Enforcement during Emergency Unblinding
+
 - **Target Requirements:** PRD-MDR-003, PRD-UNI-002
 - **Description:** Verifies that unblinding requests require strict multi-factor re-authentication, trigger immediate unblinded state transition, lock the trial on tampering, and dispatch security alerts.
 - **Verification Status:** ✅ Verified Compliant via Automated Integration Suite
