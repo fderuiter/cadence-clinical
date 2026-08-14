@@ -1237,7 +1237,10 @@ async def clean_postgres_databases():
 
     suffix = _current_worker_suffix or _build_worker_suffix()
     for db_prefix in SERVICE_DB_PREFIXES:
-        if db_prefix not in _initialized_databases:
+        if (
+            os.environ.get("USE_LIVE_DB") != "true"
+            and db_prefix not in _initialized_databases
+        ):
             continue
         db_name = f"{db_prefix}{suffix}"
         db_url = f"{base_postgres_url}/{db_name}"
