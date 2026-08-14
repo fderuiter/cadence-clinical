@@ -322,7 +322,7 @@ def seed_clinical_data(
             (
                 "NTF-001",
                 "EMAIL",
-                "crc.site101@example.com",
+                "crc.site101@example.com",  # deid-ignore
                 "Protocol Amendment v2.0 Pending Re-Consent",
                 "DELIVERED",
                 "2026-08-12T09:00:00Z",
