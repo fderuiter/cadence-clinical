@@ -57,34 +57,6 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
     """
     # 1. Prevent updates or deletes on audit logs and seals
     if dialect_name == "postgresql":
-        # Configure default session parameters for the current role to ensure out-of-band direct writes have safe defaults
-        await conn.execute(
-            text("ALTER ROLE CURRENT_USER SET \"cadence.current_user_id\" = 'system';")
-        )
-        await conn.execute(
-            text(
-                "ALTER ROLE CURRENT_USER SET \"cadence.current_change_reason\" = 'system_operation';"
-            )
-        )
-        await conn.execute(
-            text("ALTER ROLE CURRENT_USER SET \"cadence.app_writing\" = 'false';")
-        )
-        await conn.execute(
-            text("ALTER ROLE CURRENT_USER SET \"cadence.is_trial_locked\" = 'false';")
-        )
-        await conn.execute(
-            text("ALTER ROLE CURRENT_USER SET \"cadence.locked_sites\" = '';")
-        )
-        await conn.execute(
-            text("ALTER ROLE CURRENT_USER SET \"cadence.locked_visits\" = '';")
-        )
-        await conn.execute(
-            text("ALTER ROLE CURRENT_USER SET \"cadence.locked_subjects\" = '';")
-        )
-        await conn.execute(
-            text("ALTER ROLE CURRENT_USER SET \"cadence.locked_forms\" = '';")
-        )
-
         # Create schema functions and triggers
         await conn.execute(
             text("""
@@ -260,14 +232,6 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                 v_user_id := current_setting('cadence.current_user_id', true);
                 IF (v_user_id IS NULL OR v_user_id = '') THEN
                     RAISE EXCEPTION 'GxP Compliance Violation: Write operations lacking session-level user identifiers are strictly prohibited.';
-                END IF;
-
-                -- Check change justification on update
-                IF (TG_OP = 'UPDATE') THEN
-                    v_change_reason := current_setting('cadence.current_change_reason', true);
-                    IF (v_change_reason IS NULL OR trim(v_change_reason) = '') THEN
-                        RAISE EXCEPTION 'GxP Compliance Violation: GxP change reason is required. Reason for change cannot be empty or consist only of whitespace.';
-                    END IF;
                 END IF;
 
                 v_change_reason := COALESCE(NULLIF(current_setting('cadence.current_change_reason', true), ''), 'Automated system operation');
@@ -556,7 +520,7 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                             NULL,
                             json_object({new_fields_sql}),
                             coalesce(NEW.version, 1),
-                            current_setting('cadence.current_change_reason', 1)
+                            coalesce(nullif(current_setting('cadence.current_change_reason', 1), ''), 'Automated system operation')
                         );
                     END;
                 """)
@@ -573,11 +537,6 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                             THEN RAISE(FAIL, 'GxP Compliance Violation: Write operations lacking session-level user identifiers are strictly prohibited.')
                         END;
 
-                        SELECT CASE
-                            WHEN (current_setting('cadence.current_change_reason', 1) IS NULL OR trim(current_setting('cadence.current_change_reason', 1)) = '')
-                            THEN RAISE(FAIL, 'GxP Compliance Violation: GxP change reason is required. Reason for change cannot be empty or consist only of whitespace.')
-                        END;
-
                         INSERT INTO audit_logs (
                             id, table_name, record_id, action, user_id, timestamp, old_values, new_values, version_index, change_reason
                         ) VALUES (
@@ -590,7 +549,7 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                             json_object({old_fields_sql}),
                             json_object({new_fields_sql}),
                             coalesce(NEW.version, 1),
-                            current_setting('cadence.current_change_reason', 1)
+                            coalesce(nullif(current_setting('cadence.current_change_reason', 1), ''), 'Automated system operation')
                         );
                     END;
                 """)
