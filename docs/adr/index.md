@@ -66,6 +66,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 2. API Gateway, Security & Identity
 
+- [2026-08-14: Background Dynamic JWKS Cache Refresher](2026-08-14-background-dynamic-jwks-cache-refresher.md)
+
 - [2026-08-12: NestJS API Gateway Promise Coalescing and Eager Key Prefetching](2026-08-12-nestjs-api-gateway-promise-coalescing.md)
 
 - [2026-08-12: Unified Cryptographic Fingerprint Verification API](2026-08-12-unified-cryptographic-fingerprint-verification-api.md)
