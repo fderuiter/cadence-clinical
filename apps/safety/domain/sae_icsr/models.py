@@ -331,7 +331,9 @@ class ICSRSuspectDrug(BaseModel):
 class SafetyReportModel(BaseModel):
     """Safety report details block nested inside PORR_IN049016UV."""
 
-    report_identifiers: ICSRReportIdentifiers = Field(..., description="ICSR report identifiers")
+    report_identifiers: ICSRReportIdentifiers = Field(
+        ..., description="ICSR report identifiers"
+    )
     patient: ICSRPatient = Field(..., description="Patient details")
     reactions: list[ICSRReactionEvent] = Field(
         default_factory=list, description="List of reactions/events"
@@ -341,17 +343,19 @@ class SafetyReportModel(BaseModel):
     )
 
 
-class PORR_IN049016UV(BaseModel):
+class PorrIn049016Uv(BaseModel):
     """Clinical safety report message wrapper."""
 
     safety_report: SafetyReportModel = Field(..., description="Safety report details")
 
 
-class MCCI_IN200100UV01(BaseModel):
+class McciIn200100Uv01(BaseModel):
     """Transmission message wrapper conforming to HL7 V3 XML architecture."""
 
     header: ICSRHeader = Field(..., description="ICSR message header")
-    porr_in049016uv: PORR_IN049016UV = Field(..., description="Clinical safety report wrapper")
+    porr_in049016uv: PorrIn049016Uv = Field(
+        ..., description="Clinical safety report wrapper"
+    )
 
 
 class IndividualCaseSafetyReport(VersionedModel):
@@ -370,38 +374,38 @@ class IndividualCaseSafetyReport(VersionedModel):
     suspect_drugs: list[ICSRSuspectDrug] = Field(
         default_factory=list, description="List of suspect drugs"
     )
-    mcci_in200100uv01: MCCI_IN200100UV01 | None = Field(
+    mcci_in200100uv01: McciIn200100Uv01 | None = Field(
         None, description="Hierarchical HL7 structure"
     )
 
     @model_validator(mode="after")
-    def populate_hierarchical_structure(self) -> "IndividualCaseSafetyReport":
+    def populate_hierarchical_structure(self) -> IndividualCaseSafetyReport:
         if self.mcci_in200100uv01 is None:
-            self.mcci_in200100uv01 = MCCI_IN200100UV01(
+            self.mcci_in200100uv01 = McciIn200100Uv01(
                 header=self.header,
-                porr_in049016uv=PORR_IN049016UV(
+                porr_in049016uv=PorrIn049016Uv(
                     safety_report=SafetyReportModel(
                         report_identifiers=self.report_identifiers,
                         patient=self.patient,
                         reactions=self.reactions,
                         suspect_drugs=self.suspect_drugs,
                     )
-                )
+                ),
             )
         return self
 
     def sync_to_nested(self) -> None:
         """Syncs flat fields to the hierarchical mcci_in200100uv01 field."""
-        self.mcci_in200100uv01 = MCCI_IN200100UV01(
+        self.mcci_in200100uv01 = McciIn200100Uv01(
             header=self.header,
-            porr_in049016uv=PORR_IN049016UV(
+            porr_in049016uv=PorrIn049016Uv(
                 safety_report=SafetyReportModel(
                     report_identifiers=self.report_identifiers,
                     patient=self.patient,
                     reactions=self.reactions,
                     suspect_drugs=self.suspect_drugs,
                 )
-            )
+            ),
         )
 
     def sync_to_flat(self) -> None:

@@ -391,13 +391,19 @@ def test_missing_drugs_or_drug_fields_fails():
                     </reactions>"""
 
     # 1. Missing suspect_drugs element entirely
-    xml_content = base_xml_prefix + "</safety_report></PORR_IN049016UV></MCCI_IN200100UV01></ichicsr>"
+    xml_content = (
+        base_xml_prefix
+        + "</safety_report></PORR_IN049016UV></MCCI_IN200100UV01></ichicsr>"
+    )
     is_valid, msg = validate_icsr_xml(xml_content)
     assert is_valid is False
     assert "Missing mandatory element 'suspect_drugs'" in msg
 
     # 2. Empty suspect_drugs list
-    xml_content = base_xml_prefix + "<suspect_drugs></suspect_drugs></safety_report></PORR_IN049016UV></MCCI_IN200100UV01></ichicsr>"
+    xml_content = (
+        base_xml_prefix
+        + "<suspect_drugs></suspect_drugs></safety_report></PORR_IN049016UV></MCCI_IN200100UV01></ichicsr>"
+    )
     is_valid, msg = validate_icsr_xml(xml_content)
     assert is_valid is False
     assert "at least one suspect drug is required" in msg

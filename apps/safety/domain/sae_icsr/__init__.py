@@ -5,15 +5,15 @@ from apps.safety.domain.sae_icsr.models import (
     ICSRReportIdentifiers,
     ICSRSuspectDrug,
     IndividualCaseSafetyReport,
+    McciIn200100Uv01,
     MedDRACoding,
+    PorrIn049016Uv,
+    SafetyReportModel,
     SeriousAdverseEvent,
     VersionedModel,
     normalize_seriousness_val,
     normalize_severity_val,
     validate_dtc_format,
-    SafetyReportModel,
-    PORR_IN049016UV,
-    MCCI_IN200100UV01,
 )
 
 __all__ = [
@@ -30,6 +30,6 @@ __all__ = [
     "normalize_severity_val",
     "validate_dtc_format",
     "SafetyReportModel",
-    "PORR_IN049016UV",
-    "MCCI_IN200100UV01",
+    "PorrIn049016Uv",
+    "McciIn200100Uv01",
 ]

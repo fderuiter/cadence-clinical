@@ -654,7 +654,9 @@ async def export_safety_case(
     pseudonymized_patient_id = pseudonymize_value(raw_patient_id, salt)
 
     if icsr_copy.mcci_in200100uv01 is not None:
-        nested_patient = icsr_copy.mcci_in200100uv01.porr_in049016uv.safety_report.patient
+        nested_patient = (
+            icsr_copy.mcci_in200100uv01.porr_in049016uv.safety_report.patient
+        )
         nested_patient.patient_id = pseudonymized_patient_id
         nested_patient.birth_date = None
         icsr_copy.sync_to_flat()

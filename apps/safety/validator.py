@@ -25,16 +25,25 @@ def validate_e2b_xml_structure(xml_content: str) -> tuple[bool, str]:
     # Verify nested wrappers MCCI_IN200100UV01 and PORR_IN049016UV
     mcci = root.find(f"{ns}MCCI_IN200100UV01")
     if mcci is None:
-        return False, "Missing mandatory element 'MCCI_IN200100UV01' inside root 'ichicsr'"
+        return (
+            False,
+            "Missing mandatory element 'MCCI_IN200100UV01' inside root 'ichicsr'",
+        )
 
     porr = mcci.find(f"{ns}PORR_IN049016UV")
     if porr is None:
-        return False, "Missing mandatory element 'PORR_IN049016UV' inside wrapper 'MCCI_IN200100UV01'"
+        return (
+            False,
+            "Missing mandatory element 'PORR_IN049016UV' inside wrapper 'MCCI_IN200100UV01'",
+        )
 
     # Verify message identifiers (header)
     header = mcci.find(f"{ns}header")
     if header is None:
-        return False, "Missing mandatory element 'header' inside wrapper 'MCCI_IN200100UV01'"
+        return (
+            False,
+            "Missing mandatory element 'header' inside wrapper 'MCCI_IN200100UV01'",
+        )
 
     for field in [
         "message_id",
@@ -52,7 +61,10 @@ def validate_e2b_xml_structure(xml_content: str) -> tuple[bool, str]:
     # Verify safety-report identifiers
     safety_report = porr.find(f"{ns}safety_report")
     if safety_report is None:
-        return False, "Missing mandatory element 'safety_report' inside wrapper 'PORR_IN049016UV'"
+        return (
+            False,
+            "Missing mandatory element 'safety_report' inside wrapper 'PORR_IN049016UV'",
+        )
 
     ww_id = safety_report.find(f"{ns}worldwide_unique_case_id")
     if ww_id is None or not ww_id.text or not ww_id.text.strip():
