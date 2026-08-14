@@ -40,6 +40,7 @@ import os
 import time
 import uuid
 from collections.abc import AsyncGenerator
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -1064,10 +1065,9 @@ async def test_tier1_feature17_ui_router_and_navigation_metadata() -> None:
 
     @req:Trace-11
     """
-    router_file = "/Users/fred/Code/cadence-clinical/apps/web/src/router/index.js"
-    appshell_file = (
-        "/Users/fred/Code/cadence-clinical/apps/web/src/components/AppShell.vue"
-    )
+    repo_root = Path(__file__).resolve().parents[2]
+    router_file = repo_root / "apps" / "web" / "src" / "router" / "index.js"
+    appshell_file = repo_root / "apps" / "web" / "src" / "components" / "AppShell.vue"
 
     with open(router_file, encoding="utf-8") as f:
         router_content = f.read()
