@@ -44,6 +44,18 @@ class CodingRepositoryPort(RepositoryPort[Any]):
         """Add an outbox entry to the repository."""
         ...
 
+    async def add_query_resolve_outbox_entry(
+        self,
+        query_id: str,
+        observation_id: str,
+        resolved_actor: str,
+        reason_for_change: str | None,
+        action_upper: str,
+        coded_code: str | None,
+    ) -> None:
+        """Create and persist an outbox entry to resolve clinical coding queries."""
+        ...
+
     async def validate_meddra_term(self, version: str, code: str) -> Any:
         """Validate code and version in MedDRA dictionary."""
         ...
@@ -60,4 +72,14 @@ class CodingRepositoryPort(RepositoryPort[Any]):
         self, rec_record: Any, version: str
     ) -> tuple[list[Any], list[Any]]:
         """Retrieve ATC context and ingredients for a WHODrug record."""
+        ...
+
+    async def list_meddra_terms(
+        self, version: str, target_level: str | None = None
+    ) -> list[Any]:
+        """Retrieve list of MedDRA terms for a given version and level."""
+        ...
+
+    async def list_whodrug_records(self, version: str) -> list[Any]:
+        """Retrieve list of WHODrug records for a given version."""
         ...

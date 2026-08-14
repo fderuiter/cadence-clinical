@@ -15,18 +15,6 @@ import time
 from typing import Any
 
 from rapidfuzz.distance import Levenshtein
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from apps.execution.database.models import (
-    MedDRAHierarchy,
-    MedDRATerm,
-    WHODrugATC,
-    WHODrugDrugATC,
-    WHODrugDrugIngredient,
-    WHODrugIngredient,
-    WHODrugRecord,
-)
 
 # Clinical Stop Phrases (multi-word, case-insensitive)
 STOP_PHRASES = [
@@ -273,83 +261,36 @@ class CodingCache:
 coding_cache = CodingCache()
 
 
-async def _get_meddra_hierarchy(
-    session: AsyncSession, term: MedDRATerm, version: str
-) -> list[dict[str, Any]]:
-    """Retrieves full hierarchy paths for a MedDRA term."""
-    stmt = select(MedDRAHierarchy).where(MedDRAHierarchy.dictionary_version == version)
-    if term.level == "LLT":
-        stmt = stmt.where(MedDRAHierarchy.llt_code == term.code)
-    elif term.level == "PT":
-        stmt = stmt.where(MedDRAHierarchy.pt_code == term.code)
-    else:
-        stmt = stmt.where(
-            (MedDRAHierarchy.hlt_code == term.code)
-            | (MedDRAHierarchy.hlgt_code == term.code)
-            | (MedDRAHierarchy.soc_code == term.code)
-        )
+_repository_factory = None
 
-    res = await session.execute(stmt)
-    hierarchies = res.scalars().all()
 
-    if not hierarchies:
-        return []
+def register_repository_factory(factory: Any) -> None:
+    """Register the repository factory at application startup to avoid dynamic imports."""
+    global _repository_factory
+    _repository_factory = factory
 
-    unique_codes = set()
-    for h in hierarchies:
-        unique_codes.add(h.pt_code)
-        unique_codes.add(h.hlt_code)
-        unique_codes.add(h.hlgt_code)
-        unique_codes.add(h.soc_code)
-        if h.llt_code and h.llt_code != "NONE":
-            unique_codes.add(h.llt_code)
 
-    term_map = {}
-    if unique_codes:
-        term_stmt = select(MedDRATerm).where(
-            MedDRATerm.dictionary_version == version,
-            MedDRATerm.code.in_(list(unique_codes)),
-        )
-        term_res = await session.execute(term_stmt)
-        for t in term_res.scalars().all():
-            term_map[(t.code, t.level)] = t.term_name
+def _get_repository(repo_or_session: Any) -> Any:
+    """Helper to resolve database session or repository adapter."""
+    if hasattr(repo_or_session, "execute"):
+        if _repository_factory is not None:
+            return _repository_factory(repo_or_session)
+        # Fallback to dynamic load if not registered
+        from apps.execution.coding.adapters import SQLCodingRepository
 
-    results = []
-    for h in hierarchies:
-        results.append(
-            {
-                "llt_code": h.llt_code,
-                "llt_name": term_map.get(
-                    (h.llt_code, "LLT"),
-                    term.term_name if h.llt_code == term.code else "",
-                ),
-                "pt_code": h.pt_code,
-                "pt_name": term_map.get((h.pt_code, "PT"), ""),
-                "hlt_code": h.hlt_code,
-                "hlt_name": term_map.get((h.hlt_code, "HLT"), ""),
-                "hlgt_code": h.hlgt_code,
-                "hlgt_name": term_map.get((h.hlgt_code, "HLGT"), ""),
-                "soc_code": h.soc_code,
-                "soc_name": term_map.get((h.soc_code, "SOC"), ""),
-                "primary_soc_flag": h.primary_soc_flag,
-            }
-        )
-    return results
+        return SQLCodingRepository(repo_or_session)
+    return repo_or_session
 
 
 async def _match_meddra(
-    session: AsyncSession,
+    repo: Any,
     verbatim: str,
     norm_verbatim: str,
     version: str,
     target_level: str | None = None,
 ) -> dict[str, Any]:
     """Matches a verbatim term against MedDRA dictionary candidates."""
-    stmt = select(MedDRATerm).where(MedDRATerm.dictionary_version == version)
-    if target_level:
-        stmt = stmt.where(MedDRATerm.level == target_level.upper())
-    res = await session.execute(stmt)
-    terms = res.scalars().all()
+    terms = await repo.list_meddra_terms(version, target_level)
 
     if not terms:
         return {
@@ -360,21 +301,21 @@ async def _match_meddra(
 
     scored_candidates = []
     for t in terms:
-        norm_candidate = normalize_term(t.term_name)
+        norm_candidate = normalize_term(t["term_name"])
         score = calculate_combined_score(norm_verbatim, norm_candidate)
         scored_candidates.append((score, t))
 
     # Sort deterministically
-    scored_candidates.sort(key=lambda x: (-x[0], x[1].term_name, x[1].code))
+    scored_candidates.sort(key=lambda x: (-x[0], x[1]["term_name"], x[1]["code"]))
 
     highest_score, highest_term = scored_candidates[0]
 
     if highest_score >= 0.85:
-        match_hierarchy = await _get_meddra_hierarchy(session, highest_term, version)
+        match_hierarchy = await repo.get_meddra_hierarchy(highest_term, version)
         match_data = {
-            "code": highest_term.code,
-            "term_name": highest_term.term_name,
-            "level": highest_term.level,
+            "code": highest_term["code"],
+            "term_name": highest_term["term_name"],
+            "level": highest_term["level"],
             "score": highest_score,
             "hierarchies": match_hierarchy,
         }
@@ -388,12 +329,12 @@ async def _match_meddra(
         suggestions_list = []
         for score, t in scored_candidates:
             if 0.60 <= score < 0.85:
-                hierarchy = await _get_meddra_hierarchy(session, t, version)
+                hierarchy = await repo.get_meddra_hierarchy(t, version)
                 suggestions_list.append(
                     {
-                        "code": t.code,
-                        "term_name": t.term_name,
-                        "level": t.level,
+                        "code": t["code"],
+                        "term_name": t["term_name"],
+                        "level": t["level"],
                         "score": score,
                         "hierarchies": hierarchy,
                     }
@@ -413,61 +354,14 @@ async def _match_meddra(
     }
 
 
-async def _get_whodrug_context(
-    session: AsyncSession, record: WHODrugRecord, version: str
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Retrieves ATC context and ingredients for a WHODrug record."""
-    atc_links_stmt = select(WHODrugDrugATC).where(
-        WHODrugDrugATC.dictionary_version == version,
-        WHODrugDrugATC.drug_code == record.drug_code,
-    )
-    atc_links_res = await session.execute(atc_links_stmt)
-    atc_codes = [link.atc_code for link in atc_links_res.scalars().all()]
-
-    atc_details = []
-    if atc_codes:
-        atc_stmt = select(WHODrugATC).where(
-            WHODrugATC.dictionary_version == version,
-            WHODrugATC.atc_code.in_(atc_codes),
-        )
-        atc_res = await session.execute(atc_stmt)
-        atc_details = [
-            {"atc_code": a.atc_code, "description": a.description}
-            for a in atc_res.scalars().all()
-        ]
-
-    ing_links_stmt = select(WHODrugDrugIngredient).where(
-        WHODrugDrugIngredient.dictionary_version == version,
-        WHODrugDrugIngredient.drug_code == record.drug_code,
-    )
-    ing_links_res = await session.execute(ing_links_stmt)
-    ing_codes = [link.ingredient_code for link in ing_links_res.scalars().all()]
-
-    ing_details = []
-    if ing_codes:
-        ing_stmt = select(WHODrugIngredient).where(
-            WHODrugIngredient.dictionary_version == version,
-            WHODrugIngredient.ingredient_code.in_(ing_codes),
-        )
-        ing_res = await session.execute(ing_stmt)
-        ing_details = [
-            {"ingredient_code": i.ingredient_code, "ingredient_name": i.ingredient_name}
-            for i in ing_res.scalars().all()
-        ]
-
-    return atc_details, ing_details
-
-
 async def _match_whodrug(
-    session: AsyncSession,
+    repo: Any,
     verbatim: str,
     norm_verbatim: str,
     version: str,
 ) -> dict[str, Any]:
     """Matches a verbatim term against WHODrug record candidates."""
-    stmt = select(WHODrugRecord).where(WHODrugRecord.dictionary_version == version)
-    res = await session.execute(stmt)
-    records = res.scalars().all()
+    records = await repo.list_whodrug_records(version)
 
     if not records:
         return {
@@ -478,10 +372,10 @@ async def _match_whodrug(
 
     scored_candidates = []
     for r in records:
-        norm_pref = normalize_term(r.preferred_name)
+        norm_pref = normalize_term(r["preferred_name"])
         score_pref = calculate_combined_score(norm_verbatim, norm_pref)
 
-        norm_drug = normalize_term(r.drug_name) if r.drug_name else ""
+        norm_drug = normalize_term(r["drug_name"]) if r["drug_name"] else ""
         score_drug = (
             calculate_combined_score(norm_verbatim, norm_drug) if norm_drug else 0.0
         )
@@ -490,18 +384,20 @@ async def _match_whodrug(
         scored_candidates.append((score, r))
 
     # Sort deterministically
-    scored_candidates.sort(key=lambda x: (-x[0], x[1].preferred_name, x[1].drug_code))
+    scored_candidates.sort(
+        key=lambda x: (-x[0], x[1]["preferred_name"], x[1]["drug_code"])
+    )
 
     highest_score, highest_record = scored_candidates[0]
 
     if highest_score >= 0.85:
-        atc_context, ingredients = await _get_whodrug_context(
-            session, highest_record, version
+        atc_context, ingredients = await repo.get_whodrug_context(
+            highest_record, version
         )
         match_data = {
-            "drug_code": highest_record.drug_code,
-            "preferred_name": highest_record.preferred_name,
-            "drug_name": highest_record.drug_name,
+            "drug_code": highest_record["drug_code"],
+            "preferred_name": highest_record["preferred_name"],
+            "drug_name": highest_record["drug_name"],
             "score": highest_score,
             "atc_context": atc_context,
             "ingredients": ingredients,
@@ -516,14 +412,12 @@ async def _match_whodrug(
         suggestions_list = []
         for score, r in scored_candidates:
             if 0.60 <= score < 0.85:
-                atc_context, ingredients = await _get_whodrug_context(
-                    session, r, version
-                )
+                atc_context, ingredients = await repo.get_whodrug_context(r, version)
                 suggestions_list.append(
                     {
-                        "drug_code": r.drug_code,
-                        "preferred_name": r.preferred_name,
-                        "drug_name": r.drug_name,
+                        "drug_code": r["drug_code"],
+                        "preferred_name": r["preferred_name"],
+                        "drug_name": r["drug_name"],
                         "score": score,
                         "atc_context": atc_context,
                         "ingredients": ingredients,
@@ -545,7 +439,7 @@ async def _match_whodrug(
 
 
 async def match_verbatim_term(
-    session: AsyncSession,
+    session: Any,
     verbatim: str,
     dictionary_type: str,
     version: str,
@@ -575,13 +469,15 @@ async def match_verbatim_term(
     except Exception:
         pass
 
+    repo = _get_repository(session)
+
     try:
         if dict_upper == "MEDDRA":
             result = await _match_meddra(
-                session, verbatim, norm_verbatim, version, target_level
+                repo, verbatim, norm_verbatim, version, target_level
             )
         else:
-            result = await _match_whodrug(session, verbatim, norm_verbatim, version)
+            result = await _match_whodrug(repo, verbatim, norm_verbatim, version)
 
         with contextlib.suppress(Exception):
             coding_cache.set(cache_key, result)

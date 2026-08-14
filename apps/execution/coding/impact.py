@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.execution.coding.matcher import _get_meddra_hierarchy, _get_whodrug_context
+from apps.execution.coding.adapters import _get_meddra_hierarchy, _get_whodrug_context
 from apps.execution.database.models import (
     ClinicalCodingAssignment,
     ClinicalCodingLedger,

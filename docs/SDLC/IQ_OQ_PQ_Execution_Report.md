@@ -10,11 +10,11 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2415
-- **Passed:** 2401 🟢
+- **Total Automated Test Cases Run:** 2416
+- **Passed:** 2397 🟢
 - **Failed/Errors:** 0 🔴
-- **Skipped:** 14 ⚪
-- **Overall Operational Pass Rate:** 99.42%
+- **Skipped:** 19 ⚪
+- **Overall Operational Pass Rate:** 99.21%
 
 ## 2. Installation Qualification (IQ)
 
@@ -1211,6 +1211,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_cache_degradation_and_stale_on_error`                                             | `apps.execution.tests.test_medical_coding_matcher`                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_cache_ttl_configuration`                                                          | `apps.execution.tests.test_medical_coding_matcher`                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_cache_unavailability_graceful_degradation`                                        | `apps.execution.tests.test_medical_coding_matcher`                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_matcher_database_less_with_mock_port`                                             | `apps.execution.tests.test_medical_coding_matcher`                          | PRD-SYS-049                                  | 🟢 PASSED  | < 1s     |
 | `test_meddra_matching_integration`                                                      | `apps.execution.tests.test_medical_coding_matcher`                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_normalize_term[Clinical history of hepatitises-clinic hepatitis]`                 | `apps.execution.tests.test_medical_coding_matcher`                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_normalize_term[Mild headache-headache]`                                           | `apps.execution.tests.test_medical_coding_matcher`                          | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
@@ -2419,11 +2420,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_success_with_draft_flag`                                                          | `scripts.tests.test_gxp_fail_fast`                                          | PRD-SYS-001                                  | 🟢 PASSED  | < 1s     |
 | `test_layout_gating_approved_and_logged`                                                | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_layout_gating_missing_justification_rejected`                                     | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
-| `test_layout_validation_integration`                                                    | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
-| `test_layout_validation_invisible`                                                      | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
-| `test_layout_validation_overlap`                                                        | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
-| `test_layout_validation_scrambled_sequence`                                             | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
-| `test_layout_validation_valid`                                                          | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_layout_validation_integration`                                                    | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                          | ⚪ SKIPPED | < 1s     |
+| `test_layout_validation_invisible`                                                      | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                          | ⚪ SKIPPED | < 1s     |
+| `test_layout_validation_overlap`                                                        | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                          | ⚪ SKIPPED | < 1s     |
+| `test_layout_validation_scrambled_sequence`                                             | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                          | ⚪ SKIPPED | < 1s     |
+| `test_layout_validation_valid`                                                          | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                          | ⚪ SKIPPED | < 1s     |
 | `test_aggregate_eligibility_evaluation_scenarios`                                       | `scripts.tests.test_m4_challenger1_stress`                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_ctms_document_renderer_fallback`                                                  | `scripts.tests.test_m4_challenger1_stress`                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_ctms_sync_reconciliation_signature_enforcement_errors`                            | `scripts.tests.test_m4_challenger1_stress`                                  | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |

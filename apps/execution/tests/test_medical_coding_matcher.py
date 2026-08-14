@@ -1,5 +1,6 @@
 import os
 import time
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -17,6 +18,7 @@ from apps.execution.coding.matcher import (
     stem_word,
     token_cosine_similarity,
 )
+from apps.execution.coding.ports import CodingRepositoryPort
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import (
     Base,
@@ -370,3 +372,109 @@ async def test_cache_unavailability_graceful_degradation():
             )
             assert result["status"] == "AUTO-CODED"
             assert result["match"]["code"] == "10019211"
+
+
+class DummyMockCodingRepository(CodingRepositoryPort):
+    """A database-less mock repository implementing CodingRepositoryPort."""
+
+    def __init__(
+        self,
+        meddra_terms=None,
+        whodrug_records=None,
+        hierarchies=None,
+        whodrug_context=None,
+    ):
+        self.meddra_terms = meddra_terms or []
+        self.whodrug_records = whodrug_records or []
+        self.hierarchies = hierarchies or []
+        self.whodrug_context = whodrug_context or ([], [])
+
+    async def get_by_id(self, entity_id: str) -> Any:
+        return None
+
+    async def save(self, entity: Any) -> Any:
+        return entity
+
+    async def get_assignment(self, assignment_id: str) -> Any:
+        return None
+
+    async def list_assignments(self, **kwargs) -> list[Any]:
+        return []
+
+    async def save_assignment(self, assignment: Any) -> None:
+        pass
+
+    async def add_ledger(self, ledger_data: dict) -> None:
+        pass
+
+    async def get_active_queries(self, observation_id: str) -> list[Any]:
+        return []
+
+    async def save_query(self, query: Any) -> None:
+        pass
+
+    async def add_outbox_entry(self, entry: Any) -> None:
+        pass
+
+    async def add_query_resolve_outbox_entry(self, **kwargs) -> None:
+        pass
+
+    async def validate_meddra_term(self, version: str, code: str) -> Any:
+        return None
+
+    async def validate_whodrug_record(self, version: str, code: str) -> Any:
+        return None
+
+    async def get_meddra_hierarchy(self, term_record: Any, version: str) -> list[Any]:
+        return self.hierarchies
+
+    async def get_whodrug_context(
+        self, rec_record: Any, version: str
+    ) -> tuple[list[Any], list[Any]]:
+        return self.whodrug_context
+
+    async def list_meddra_terms(
+        self, version: str, target_level: str | None = None
+    ) -> list[Any]:
+        return self.meddra_terms
+
+    async def list_whodrug_records(self, version: str) -> list[Any]:
+        return self.whodrug_records
+
+
+@pytest.mark.asyncio
+async def test_matcher_database_less_with_mock_port():
+    """Verify that the fuzzy matcher runs in a database-less environment using dummy mock data on the ports.
+
+    @req:PRD-SYS-049
+    """
+
+    mock_terms = [
+        {"code": "1111", "term_name": "Hypotension", "level": "LLT"},
+        {"code": "2222", "term_name": "Hypertension", "level": "LLT"},
+    ]
+    mock_hierarchies = [
+        {
+            "llt_code": "1111",
+            "llt_name": "Hypotension",
+            "pt_code": "1001",
+            "pt_name": "Hypotension PT",
+            "hlt_code": "2001",
+            "hlt_name": "Vascular HLT",
+            "hlgt_code": "3001",
+            "hlgt_name": "Vascular HLGT",
+            "soc_code": "4001",
+            "soc_name": "Cardiac SOC",
+            "primary_soc_flag": "Y",
+        }
+    ]
+    repo = DummyMockCodingRepository(
+        meddra_terms=mock_terms, hierarchies=mock_hierarchies
+    )
+
+    result = await match_verbatim_term(
+        repo, "hypotension", "MEDDRA", "26.0", target_level="LLT"
+    )
+    assert result["status"] == "AUTO-CODED"
+    assert result["match"]["code"] == "1111"
+    assert result["match"]["hierarchies"][0]["soc_name"] == "Cardiac SOC"

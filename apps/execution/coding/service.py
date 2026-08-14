@@ -10,7 +10,11 @@ from datetime import UTC, datetime
 from typing import Any
 
 # Matcher utility
-from apps.execution.coding.matcher import match_verbatim_term
+from apps.execution.coding.adapters import SQLCodingRepository
+from apps.execution.coding.matcher import (
+    match_verbatim_term,
+    register_repository_factory,
+)
 
 # Core Exceptions
 from apps.execution.exceptions import (
@@ -19,6 +23,9 @@ from apps.execution.exceptions import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Register repository factory for matcher to resolve session to repository port
+register_repository_factory(SQLCodingRepository)
 
 
 # Standard Python Enums for Decoupled Domain
@@ -45,12 +52,20 @@ class DictionaryType(enum.StrEnum):
     SNOMED = "SNOMED"
 
 
+_repository_factory = SQLCodingRepository
+
+
+def register_coding_repository_factory(factory: Any) -> None:
+    """Register a custom repository factory for testing or database-less run."""
+    global _repository_factory
+    _repository_factory = factory
+
+
 def _get_repository(repo_or_session: Any) -> Any:
     """Helper to resolve database session or repository adapter."""
     if hasattr(repo_or_session, "execute"):
-        from apps.execution.coding.adapters import SQLCodingRepository
-
-        return SQLCodingRepository(repo_or_session)
+        if _repository_factory is not None:
+            return _repository_factory(repo_or_session)
     return repo_or_session
 
 
@@ -449,33 +464,14 @@ async def process_coding_action(
         # Transition query closure to an Asynchronous EDC Query Closure via the transactional outbox
         active_queries = await repo.get_active_queries(assignment.observation_id)
         for active_q in active_queries:
-            import uuid
-
-            from apps.execution.database.models import IntegrationOutbox
-
-            payload = {
-                "actor": resolved_actor,
-                "timestamp": datetime.now(UTC).isoformat(),
-                "observation_id": assignment.observation_id,
-                "query_id": active_q.id,
-                "justification": reason_for_change
-                or f"Manual decision: {action_upper}",
-                "action": action_upper,
-                "coded_code": coded_code,
-            }
-
-            outbox_entry = IntegrationOutbox(
-                id=str(uuid.uuid4()),
-                event_type="EDC_QUERY_RESOLVE",
-                payload=payload,
-                status="PENDING",
-                attempts=0,
-                correlation_id=f"query-resolve-{active_q.id}-{uuid.uuid4().hex[:8]}",
-                created_by=resolved_actor,
-                reason_for_change=reason_for_change
-                or f"Manual decision: {action_upper}",
+            await repo.add_query_resolve_outbox_entry(
+                query_id=active_q.id,
+                observation_id=assignment.observation_id,
+                resolved_actor=resolved_actor,
+                reason_for_change=reason_for_change,
+                action_upper=action_upper,
+                coded_code=coded_code,
             )
-            await repo.add_outbox_entry(outbox_entry)
 
     return assignment
 

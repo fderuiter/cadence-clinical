@@ -109,6 +109,26 @@ class InMemoryCodingRepository:
     async def add_outbox_entry(self, entry: Any) -> None:
         self.outbox.append(entry)
 
+    async def add_query_resolve_outbox_entry(
+        self,
+        query_id: str,
+        observation_id: str,
+        resolved_actor: str,
+        reason_for_change: str | None,
+        action_upper: str,
+        coded_code: str | None,
+    ) -> None:
+        self.outbox.append(
+            {
+                "query_id": query_id,
+                "observation_id": observation_id,
+                "resolved_actor": resolved_actor,
+                "reason_for_change": reason_for_change,
+                "action_upper": action_upper,
+                "coded_code": coded_code,
+            }
+        )
+
     async def validate_meddra_term(self, version: str, code: str) -> Any:
         return "mock_meddra_record" if code == "10029300" else None
 
