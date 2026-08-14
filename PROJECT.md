@@ -1,106 +1,155 @@
-# Project: Cadence Clinical Research Software Platform — Phase 1 Deliverables
+# Project: Cadence Clinical — "Zero-Click" Study Build
 
 ## Architecture
-Cadence synthesizes upstream Clinical Metadata Management (MDR) in Neo4j with downstream Electronic Data Capture (EDC) and Clinical Data Management (CDM) in PostgreSQL into an automated Digital Data Flow (DDF) platform.
+Cadence Clinical Research Software is a unified eClinical platform synthesizing upstream Clinical Metadata Management (MDR) with downstream Electronic Data Capture (EDC) into an automated Digital Data Flow (DDF).
 
+### Data Flow & Component Decoupling
 ```
+[User / USDM v4.0 JSON Payload]
+             │
+             ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                 Frontend: apps/web (Vue 3)                  │
-│   - /coding (MedicalCodingView, CodingQueueTable, etc.)     │
-│   - /data-lock (DataLockView, Hierarchical Tree, Modals)    │
-│   - /exports (ExportWizardView: 5-step regulatory wizard)   │
-│   - Navigation: AppShell.vue (Vanilla CSS Tokens)           │
-└──────────────────────────────┬──────────────────────────────┘
-                               │ REST / OpenAPI + Gateway Auth (X-Sig-Token)
-┌──────────────────────────────▼──────────────────────────────┐
-│            Backend Execution API: apps/execution            │
-│  - /api/v1/execution/coding (Queue, MedDRA/WHODrug, Query)  │
-│  - /api/v1/execution/locks (Relational DataLock, Hier. Gating)
-│  - /api/v1/execution/labs (CSV / HL7 / FHIR Ingestion)      │
-│  - /api/v1/execution/biostat (SAS XPT v5/v8, ODM-XML, JSON) │
-├─────────────────────────────────────────────────────────────┤
-│  Database Layer: PostgreSQL (SQLModel + Async SQLAlchemy)    │
-│  - AuditedModel GxP Hooks, Merkle Root Seals, Lock Check    │
+│ Frontend: MdrView.vue (USDM Ingestion Modal & Metrics)      │
+│  - Client-side Zod validation (usdm-schemas)                │
+│  - Real-time synthesis dashboard (< 3.0s SLA display)       │
+│  - 21 CFR Part 11 ReasonModal promotion to active EDC build │
+└──────────────┬──────────────────────────────────────────────┘
+               │ HTTP POST /api/v1/designer/studies/{id}/commit-usdm
+               ▼
+┌─────────────────────────────────────────────────────────────┐
+│ apps/designer/ (Metadata Designer & Protocol Authoring)     │
+│  1. USDMGraphImporter (apps/designer/domain/cdisc/)         │
+│     - Ingests Study, StudyVersion, StudyDesign, Epochs,    │
+│       Arms, Encounters, Activities, BiomedicalConcepts,     │
+│       EligibilityCriteria.                                  │
+│     - Establishes PERFORMS, MEASURES_CONCEPT, HAS_CRITERION │
+│     - Neo4j transactional write with atomic rollback.       │
+│  2. CRF Synthesizer (apps/designer/domain/synthesis/)       │
+│     - CDASH variable & VLM mapping                          │
+│     - UI widgets: text, numeric, select, vas_slider,        │
+│       body_map (74-zone SNOMED CT)                          │
+│     - Responsive 12/8/4-col layouts & declarative checks    │
+│  3. SoA Compiler (apps/designer/domain/synthesis/)          │
+│     - Compiles SoAMatrixView payload from PERFORMS edges    │
+└──────────────┬──────────────────────────────────────────────┘
+               │ Internal Gateway HTTP Request (Authenticated)
+               ▼
+┌─────────────────────────────────────────────────────────────┐
+│ apps/etmf/ (Electronic Trial Master File)                   │
+│  4. eTMF Ingestion Service (apps/etmf/ingestion_service.py) │
+│     - Seeds DIA TMF Reference Model Zones 1–11 EDL records  │
+│       (Zones 1, 2, 4, 5 mandatory) for trial milestones:    │
+│       STUDY_INITIATION, ETHICS_SUBMISSION,                  │
+│       SITE_ACTIVATION, FSI.                                 │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ## Feature Inventory
 | # | Feature | Description | Milestone | Source |
 |---|---------|-------------|-----------|--------|
-| 1 | Medical Coding Queue & API | Paginated uncoded/suggested terms with dictionary match score filtering | M1 | ORIGINAL_REQUEST §R1 |
-| 2 | MedDRA & WHODrug Hierarchy Traversal | Term search and hierarchy tree lookups (LLT->PT->HLT->HLGT->SOC, ATC) | M1 | ORIGINAL_REQUEST §R1 |
-| 3 | Batch Assignment & GxP Audit | Single/batch coding assignment with reason-for-change audit logging | M1 | ORIGINAL_REQUEST §R1 |
-| 4 | Dictionary Upversioning Impact | Impact analysis engine (unchanged, deprecated, reclassified terms) | M1 | ORIGINAL_REQUEST §R1 |
-| 5 | Automated eCRF Query Escalation | Raising discrepancies and clinical query generation from coding queue | M1 | ORIGINAL_REQUEST §R1 |
-| 6 | Medical Coding UI Workbench | MedicalCodingView.vue, CodingQueueTable.vue, Modals, Drawers, Pinia store | M1 | ORIGINAL_REQUEST §R1 |
-| 7 | Relational DataLock SQLModel | Persisted DataLock table in PostgreSQL with scope and audit columns | M2 | ORIGINAL_REQUEST §R2 |
-| 8 | Hierarchical Lock Interceptor | Database interceptor enforcing Study->Site->Subject->Visit->Form->Field | M2 | ORIGINAL_REQUEST §R2 |
-| 9 | Dual-Signature & Step-up Token | Step-up token authorization (X-Sig-Token) on hard-lock actions | M2 | ORIGINAL_REQUEST §R2 |
-| 10 | Unlock Justification Enforcement | Strict validation requiring >=50 char justification on unlock | M2 | ORIGINAL_REQUEST §R2 |
-| 11 | Data Lock Console UI | DataLockView.vue with hierarchical tree navigation and status badges | M2 | ORIGINAL_REQUEST §R2 |
-| 12 | Multi-format Lab Ingestion | lab_ingestion_service.py parsing CSV, HL7 v2.x (ORU^R01), and FHIR | M3 | ORIGINAL_REQUEST §R3 |
-| 13 | UCUM Normalization & Range Eval | Unit conversion & age/sex stratified reference range evaluation | M3 | ORIGINAL_REQUEST §R3 |
-| 14 | Lab Discrepancy & SAE Auto-Queries | Out-of-range query triggers & critical threshold investigator alerts | M3 | ORIGINAL_REQUEST §R3 |
-| 15 | SAS Transport (XPT v5/v8) Binary Export | Binary serializers generating valid SAS XPT v5 and XPT v8 files | M4 | ORIGINAL_REQUEST §R4 |
-| 16 | CDISC ODM-XML v1.3.2 Serializer | Regulatory XML generator with embedded <AuditRecord> trails | M4 | ORIGINAL_REQUEST §R4 |
-| 17 | CDISC Dataset-JSON v1.0.0 Export | SDTM and ADaM Dataset-JSON 1.0.0 serialization | M4 | ORIGINAL_REQUEST §R4 |
-| 18 | HIPAA/GDPR De-identified CSV Export | Deterministic pseudonymization, date shifting, and CSV serialization | M4 | ORIGINAL_REQUEST §R4 |
-| 19 | Clinical Data Export Wizard UI | Multi-step ExportWizardView.vue managing selection, filters, download | M4 | ORIGINAL_REQUEST §R4 |
-| 20 | E2E Testing Suite (Tiers 1-4) | Comprehensive requirement-driven opaque-box E2E test suite | M5 | ORIGINAL_REQUEST §R5 |
-| 21 | GxP Sync & RTM Traceability | scripts/sync_gxp.py execution and @req: docstring synchronization | M5 | ORIGINAL_REQUEST §R5 |
-| 22 | Code Quality & UI Standards Pass | Ruff I001/E712, >=85% test coverage, pnpm run build verification | M5 | ORIGINAL_REQUEST §R5 |
+| F1 | USDM Data Models | Pydantic v2 data models for BiomedicalConcept, BiomedicalConceptProperty, StudyVersion, Activity, etc. in `apps/designer/domain/cdisc/usdm_models.py` | M1 | Survey |
+| F2 | Transactional Neo4j Importer | `USDMGraphImporter` in `apps/designer/domain/cdisc/usdm_importer.py` ingesting Study, StudyVersion, StudyDesign, StudyEpoch, StudyArm, Encounter, Activity, BiomedicalConcept, EligibilityCriterion with atomic rollback | M1 | Survey |
+| F3 | Relational Graph Semantics | Graph relationships `PERFORMS`, `MEASURES_CONCEPT`, `HAS_CRITERION`, `HAS_VERSION`, `HAS_DESIGN`, `HAS_EPOCH`, `HAS_ARM`, `CONTAINS_ENCOUNTER`, `HAS_ACTIVITY`, `HAS_CONCEPT` | M1 | Survey |
+| F4 | eCRF Layout Synthesis Engine | `synthesize_crf_layout_from_usdm` in `apps/designer/domain/synthesis/crf_synthesizer.py` mapping CDASH domains, VLM data types, UI widgets (`text`, `numeric`, `select`, `vas_slider`, `body_map`), and 12/8/4-col responsive layouts | M2 | Survey |
+| F5 | Declarative Validation Rules | Automated edit check rule compilation (`VS_SYSBP > VS_DIABP`, `EG_QTC <= 500`, range checks) in `crf_synthesizer.py` | M2 | Survey |
+| F6 | SoA Matrix Compilation | `compile_soa_matrix_payload` in `apps/designer/domain/synthesis/soa_compiler.py` querying Neo4j `PERFORMS` edges into `SoAMatrixView` payload | M3 | Survey |
+| F7 | eTMF EDL Seeding | `seed_etmf_expected_documents_for_study` in `apps/etmf/ingestion_service.py` populating DIA TMF Reference Model Zones 1–11 (Zones 1, 2, 4, 5 mandatory) across trial milestones | M4 | Survey |
+| F8 | Service REST & Ingestion Endpoints | REST endpoints in `apps/designer/` and `apps/etmf/` coordinating transactional ingestion, synthesis, and EDL seeding | M4 | Survey |
+| F9 | Frontend USDM Ingestion Modal | Interactive modal with file dropzone, JSON paste, sample loader, and client-side Zod validation in `apps/web/src/views/MdrView.vue` | M5 | Survey |
+| F10 | Synthesis Summary Metrics Dashboard | Real-time summary dashboard card with entity counts, synthesized CDASH forms, validation rules, eTMF EDL count, and < 3.0s SLA indicator | M5 | Survey |
+| F11 | One-Click Promotion to EDC | One-click promotion button triggering 21 CFR Part 11 Electronic Signature / ReasonModal and activating study build | M5 | Survey |
+| F12 | Automated E2E Test Suite | Comprehensive tests in `apps/designer/tests/test_zero_click_usdm_build.py` covering transactional ingestion, form synthesis, SoA compilation, EDL seeding, and < 5.0s benchmark | M6 | Survey |
+| F13 | GxP & Code Quality Gates | Verification via `uv run python scripts/sync_gxp.py`, `uv run ruff check .`, `uv run ruff format --check .`, and `pnpm --filter @cadence/web build` | M6 | Survey |
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M1 | Medical Coding Workbench | Backend batch assign & query escalation endpoints; Frontend MedicalCodingView, CodingQueueTable, DictionaryBrowserModal, UpversioningImpactDrawer, coding.js store; test_medical_coding_workbench.py | None | IN_PROGRESS |
-| M2 | Persistent Data Lock & Freeze System | Relational DataLock SQLModel, hierarchical database interceptor, step-up token auth, unlock justification (>=50 chars); Frontend DataLockView; test_data_locks_persistence.py | None | IN_PROGRESS |
-| M3 | Lab Batch Ingestion Pipeline | lab_ingestion_service.py (CSV, HL7 v2, FHIR), UCUM conversion, reference range evaluation, out-of-range and SAE auto-query generation; test_lab_batch_ingestion.py | None | IN_PROGRESS |
-| M4 | Regulatory Biostatistical Export Wizard | SAS Transport (XPT v5/v8) serializer, CDISC ODM-XML v1.3.2 serializer with audit trails, de-identified CSV serializer, backend export routes; Frontend ExportWizardView; test_biostat_exports.py | None | IN_PROGRESS |
-| M5 | E2E Testing, GxP Sync & Adversarial Hardening | E2E Test Suite (Tiers 1-4), 100% pass across all execution suites with >=85% coverage, sync_gxp.py RTM generation, pnpm build, and forensic integrity audit | M1, M2, M3, M4 | PLANNED |
+| M1 | USDM Graph Ingestion & Neo4j Model | F1, F2, F3 (`usdm_models.py`, `usdm_importer.py`) | None | DONE |
+| M2 | Automated eCRF Layout Synthesis Engine | F4, F5 (`crf_synthesizer.py`) | M1 | PLANNED |
+| M3 | Dynamic SoA Matrix Compilation | F6 (`soa_compiler.py`) | M1 | PLANNED |
+| M4 | Automated eTMF EDL Seeding & Integration | F7, F8 (`ingestion_service.py`, etmf router/service) | M1 | PLANNED |
+| M5 | Frontend MdrView USDM Ingestion Experience | F9, F10, F11 (`MdrView.vue`) | M2, M3, M4 | PLANNED |
+| M6 | Test Suite, GxP Sync & Build Quality Gate | F12, F13 (`test_zero_click_usdm_build.py`, `sync_gxp.py`, ruff, pnpm build) | M1, M2, M3, M4, M5 | PLANNED |
 
 ## Interface Contracts
 
-### Medical Coding Workbench
-- `POST /api/v1/execution/coding/assignments/batch-assign`:
-  - Request: `{ assignment_ids: list[str], code: str, dictionary_type: str, dictionary_version: str, reason: str }`
-  - Response: `{ success_count: int, failed_count: int, results: list[dict] }`
-- `POST /api/v1/execution/coding/assignments/{id}/raise-query`:
-  - Request: `{ query_text: str, reason: str }`
-  - Response: `{ query_id: str, status: str, assignment_id: str }`
+### M1 USDMGraphImporter ↔ Downstream Synthesizers (M2, M3)
+- `USDMGraphImporter(driver: Any | None = None)`
+- `async def import_usdm(self, payload: dict[str, Any] | USDMStudy, user_id: str = "system", change_reason: str = "Zero-Click USDM Study Ingestion") -> USDMImportResult`
+- Output `USDMImportResult`:
+```python
+class USDMImportResult(BaseModel):
+    study_id: str
+    protocol_title: str
+    phase: Optional[str] = None
+    therapeutic_area: Optional[str] = None
+    nodes_created: int
+    relationships_created: int
+    entity_counts: dict[str, int]  # arms, epochs, encounters, activities, biomedical_concepts, eligibility_criteria
+    validation_warnings: list[str] = []
+```
 
-### Data Lock & Freeze System
-- `POST /api/v1/execution/locks/lock`:
-  - Request: `{ scope_type: str, scope_id: str, lock_type: str, reason: str }`
-  - Headers: `X-Sig-Token` (required for HARD_LOCK)
-  - Response: `{ lock_id: str, status: str, locked_at: str }`
-- `POST /api/v1/execution/locks/unlock`:
-  - Request: `{ lock_id: str, justification: str (min 50 chars), reason: str }`
-  - Response: `{ lock_id: str, status: "UNLOCKED", unlocked_at: str }`
+### M2 CRF Synthesizer ↔ Frontend / EDC Engine
+- `def synthesize_crf_layout_from_usdm(study: USDMStudy | dict[str, Any] | list[dict]) -> list[SynthesizedECRFForm]`
+- Output `SynthesizedECRFForm`:
+```python
+class SynthesizedECRFForm(BaseModel):
+    form_id: str
+    form_name: str
+    cdash_domain: str
+    items: list[dict[str, Any]]  # id, label, cdash_variable, data_type, widget_type, grid_span, mandatory, constraints, options
+    rules: list[dict[str, Any]]  # rule_id, rule_name, target_variable, condition_expression, action, error_message
+```
 
-### Lab Batch Ingestion
-- `POST /api/v1/execution/labs/ingest`:
-  - Request: multipart/form-data or JSON `{ format: "csv"|"hl7"|"fhir", payload: str, study_id: str, site_id: str }`
-  - Response: `{ total_processed: int, ingested_count: int, out_of_range_count: int, critical_alerts: int, errors: list }`
+### M3 SoA Compiler ↔ ClinicalSoAMatrix.vue
+- `def compile_soa_matrix_payload(driver: Any | None, study_id_or_data: str | USDMStudy | dict) -> dict[str, Any]`
+- Output matches `SoAMatrixView`:
+```json
+{
+  "id": "study-soa-001",
+  "study_id": "study-soa-001",
+  "name": "CADENCE-001",
+  "protocolTitle": "Phase II Study",
+  "epochs": [{"epoch_id": "EP-01", "epoch_name": "Screening", "sequence": 1, "arm_id": null}],
+  "encounters": [{"encounter_id": "V-01", "encounter_name": "Visit 1", "epoch_id": "EP-01", "sequence": 1, "arm_id": null, "target_day": 1}],
+  "arms": [{"arm_id": "ARM-01", "arm_name": "Arm 1", "sequence": 1}],
+  "rows": [
+    {
+      "activity_id": "ACT-01",
+      "activity_name": "Vital Signs",
+      "cells": [
+        {
+          "activity_id": "ACT-01",
+          "encounter_id": "V-01",
+          "epoch_id": "EP-01",
+          "is_applicable": true,
+          "details": "Day 1"
+        }
+      ]
+    }
+  ]
+}
+```
+            "is_applicable": true,
+            "details": null,
+            "arm_id": null,
+            "derived_from_soa": false
+          }
+        ]
+      }
+    ]
+  }
+  ```
 
-### Biostatistical Exports
-- `POST /api/v1/execution/biostat/export`:
-  - Request: `{ format: "xpt_v5"|"xpt_v8"|"odm_xml"|"dataset_json"|"csv", domain: str, study_id: str, privacy_profile: dict }`
-  - Response: StreamingResponse or file download URL with Content-Type header.
+### M4 eTMF EDL Seeder ↔ Designer / Ingestion Workflow
+- `def seed_etmf_expected_documents_for_study(study_id: str, db_session: Any = None, created_by: str = "system", reason_for_change: str = "Zero-Click USDM Study Ingestion") -> list[dict[str, Any]]`
+- Populates DIA TMF Reference Model Zones (1, 2, 4, 5, 6, 7, 8, 10, 11) for milestones: `STUDY_INITIATION`, `ETHICS_SUBMISSION`, `SITE_ACTIVATION`, `FSI`.
 
 ## Code Layout
-- Backend:
-  - Models: `apps/execution/database/models/` (dynamic registration via `__init__.py`)
-  - Coding logic: `apps/execution/coding/`
-  - Lock interceptor: `apps/execution/database/audit.py`, `apps/execution/domain/lock_models.py`, `apps/execution/database/models/lock.py`
-  - Lab ingestion: `apps/execution/services/lab_ingestion_service.py` (and `apps/execution/lab_ranges.py`, `ucum.py`)
-  - Biostat exports: `apps/execution/biostat/`
-  - API Routers: `apps/execution/presentation/routers/`
-  - Test suites: `apps/execution/tests/`
-- Frontend:
-  - Views: `apps/web/src/views/` (`MedicalCodingView.vue`, `DataLockView.vue`, `ExportWizardView.vue`)
-  - Components: `apps/web/src/components/` and `apps/web/src/features/`
-  - Stores: `apps/web/src/stores/` (`coding.js`, etc.)
-  - Routing: `apps/web/src/router/index.js`
-  - Navigation: `apps/web/src/components/AppShell.vue`
-  - Styling: `apps/web/src/style.css` (Vanilla CSS semantic tokens only)
+- `apps/designer/domain/cdisc/usdm_models.py`: Pydantic USDM models and BiomedicalConcept definitions.
+- `apps/designer/domain/cdisc/usdm_importer.py`: USDMGraphImporter with transactional Cypher and rollback.
+- `apps/designer/domain/synthesis/crf_synthesizer.py`: CDASH form synthesis, widget mapping, and edit check rules.
+- `apps/designer/domain/synthesis/soa_compiler.py`: Dynamic SoA matrix compiler from graph PERFORMS edges.
+- `apps/etmf/ingestion_service.py`: Automated DIA TMF EDL seeding.
+- `apps/web/src/views/MdrView.vue`: Frontend USDM Ingestion Modal, Metrics Card, and Promotion to EDC.
+- `apps/designer/tests/test_zero_click_usdm_build.py`: Master automated test suite.

@@ -11,6 +11,7 @@ from apps.etmf.domain.ports import ETMFRepositoryPort
 from apps.etmf.domain.tmf_reference_model import (
     get_active_catalog,
     get_mandatory_artifacts,
+    normalize_milestone,
     resolve_artifact,
 )
 from apps.etmf.export import generate_binder_zip
@@ -47,6 +48,7 @@ from apps.etmf.presentation.dtos import (
     ManualRedactResponse,
     PaginatedAuditLogResponse,
     RedactRequest,
+    SeedEDLRequest,
     SignDocumentRequest,
     StudyArchiveItemResult,
     StudyArchiveRequest,
@@ -74,46 +76,45 @@ def get_etmf_repository() -> ETMFRepositoryPort:
     return SQLETMFRepository()
 
 
-def normalize_milestone(milestone: str) -> str:
-    norm = milestone.strip().upper()
-    if norm in ("INITIATION", "STUDY START"):
-        return "INITIATION"
-    if norm in ("CONDUCT", "DATA COLLECTION"):
-        return "CONDUCT"
-    if norm in ("CLOSEOUT", "STUDY CLOSED", "LOCK"):
-        return "CLOSEOUT"
-    return norm
-
-
-async def seed_default_edl(
-    repo: ETMFRepositoryPort, study_id: str, milestone: str
-) -> None:
+async def seed_default_edl(repo: Any, study_id: str, milestone: str) -> None:
     canonical = normalize_milestone(milestone)
-    existing = await repo.get_expected_documents_by_study_and_site(study_id, None)
-    existing = [e for e in existing if e.milestone == canonical]
-    if existing:
-        return
+    if hasattr(repo, "get_expected_documents_by_study_and_site"):
+        existing = await repo.get_expected_documents_by_study_and_site(study_id, None)
+        existing = [e for e in existing if e.milestone == canonical]
+        if existing:
+            return
 
-    version = get_active_catalog().version
-    try:
-        mandatory_artifacts = get_mandatory_artifacts(canonical, version)
-    except ValueError:
-        return
+        version = get_active_catalog().version
+        try:
+            mandatory_artifacts = get_mandatory_artifacts(canonical, version)
+        except ValueError:
+            return
 
-    for art in mandatory_artifacts:
-        doc = ExpectedDocument(
+        for art in mandatory_artifacts:
+            doc = ExpectedDocument(
+                study_id=study_id,
+                milestone=canonical,
+                artifact_type=art.name,
+                zone=art.zone_code,
+                section=art.section_code,
+                created_by="system",
+                reason_for_change="System-initiated default seeding of expected documents list",
+                version_index=1,
+                metadata_json={"default_seeded": True, "artifact_code": art.code},
+            )
+            await repo.save_expected_document(doc)
+        if hasattr(repo, "session") and repo.session:
+            await repo.session.flush()
+    else:
+        from apps.etmf.ingestion_service import seed_etmf_expected_documents_for_study
+
+        await seed_etmf_expected_documents_for_study(
             study_id=study_id,
-            milestone=canonical,
-            artifact_type=art.name,
-            zone=art.zone_code,
-            section=art.section_code,
+            db_session=repo,
             created_by="system",
             reason_for_change="System-initiated default seeding of expected documents list",
-            version_index=1,
-            metadata_json={"default_seeded": True},
+            milestones=[canonical],
         )
-        await repo.save_expected_document(doc)
-    await repo.session.flush()
 
 
 def map_artifact_to_tmf(artifact_type: str) -> tuple[int, str]:
@@ -863,6 +864,84 @@ async def update_expectation(
         reason_for_change=exp.reason_for_change,
         version_index=exp.version_index,
     )
+
+
+@router.post(
+    "/api/v1/etmf/studies/{study_id}/seed-edl",
+    response_model=list[ExpectedDocumentResponse],
+    status_code=201,
+)
+@transactional
+async def seed_edl_endpoint(
+    request: Request,
+    study_id: str,
+    payload: SeedEDLRequest | None = None,
+    repo: ETMFRepositoryPort = Depends(get_etmf_repository),
+    principal: Principal = Depends(get_principal),
+) -> list[ExpectedDocumentResponse]:
+    """Seed Expected Document List (EDL) for a study across DIA TMF zones and milestones."""
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+
+    if not has_permission(principal, "etmf_edl:create"):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Inspectors are restricted to read-only access.",
+        )
+
+    from apps.etmf.lock_client import verify_trial_lock_status
+
+    if await verify_trial_lock_status():
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Trial is currently locked in a read-only state due to a security violation.",
+        )
+
+    milestones = payload.milestones if payload else None
+    reason_for_change = (
+        payload.reason_for_change
+        if payload and payload.reason_for_change
+        else "Zero-Click USDM Study Ingestion"
+    )
+
+    from apps.etmf.ingestion_service import seed_etmf_expected_documents_for_study
+
+    seeded_dicts = await seed_etmf_expected_documents_for_study(
+        study_id=study_id,
+        db_session=repo.session,
+        created_by=user_id,
+        reason_for_change=reason_for_change,
+        milestones=milestones,
+    )
+
+    await write_audit_log(
+        repo=repo,
+        user_id=user_id,
+        user_role=user_roles,
+        action="EDL_UPDATE",
+        document_id=None,
+        details=f"Seeded {len(seeded_dicts)} expected documents for study '{study_id}'. Reason: {reason_for_change}",
+        reason_for_change=reason_for_change,
+    )
+
+    expectations = await repo.get_expected_documents_by_study(study_id)
+    return [
+        ExpectedDocumentResponse(
+            id=exp.id,
+            study_id=exp.study_id,
+            site_id=exp.site_id,
+            milestone=exp.milestone,
+            artifact_type=exp.artifact_type,
+            zone=exp.zone,
+            section=exp.section,
+            metadata_json=exp.metadata_json,
+            created_at=exp.created_at.isoformat(),
+            created_by=exp.created_by,
+            reason_for_change=exp.reason_for_change,
+            version_index=exp.version_index,
+        )
+        for exp in expectations
+    ]
 
 
 @router.get("/api/v1/etmf/completeness", response_model=CompletenessResponse)

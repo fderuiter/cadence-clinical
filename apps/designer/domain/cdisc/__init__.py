@@ -12,12 +12,15 @@ from .cdisc_library_client import (
 from .terminology_cache import CdiscTerminologyCache
 from .usdm_models import (
     Activity,
+    BiomedicalConcept,
+    BiomedicalConceptProperty,
     Code,
     EligibilityCriterion,
     Encounter,
     StudyArm,
     StudyDesign,
     StudyEpoch,
+    StudyVersion,
     SyntaxTemplate,
     USDMStudy,
 )
@@ -29,6 +32,8 @@ from .usdm_transport_models import (
 
 __all__ = [
     "Activity",
+    "BiomedicalConcept",
+    "BiomedicalConceptProperty",
     "CdashDomainDefinition",
     "CdiscLibraryClient",
     "CdiscLibraryConfig",
@@ -43,6 +48,7 @@ __all__ = [
     "StudyArm",
     "StudyDesign",
     "StudyEpoch",
+    "StudyVersion",
     "SyntaxTemplate",
     "USDMStudy",
     "UsdmExportResponse",
