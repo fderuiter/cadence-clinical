@@ -22,10 +22,19 @@ def validate_e2b_xml_structure(xml_content: str) -> tuple[bool, str]:
     if root.tag != f"{ns}ichicsr":
         return False, f"Invalid root element: expected '{ns}ichicsr', got '{root.tag}'"
 
+    # Verify nested wrappers MCCI_IN200100UV01 and PORR_IN049016UV
+    mcci = root.find(f"{ns}MCCI_IN200100UV01")
+    if mcci is None:
+        return False, "Missing mandatory element 'MCCI_IN200100UV01' inside root 'ichicsr'"
+
+    porr = mcci.find(f"{ns}PORR_IN049016UV")
+    if porr is None:
+        return False, "Missing mandatory element 'PORR_IN049016UV' inside wrapper 'MCCI_IN200100UV01'"
+
     # Verify message identifiers (header)
-    header = root.find(f"{ns}header")
+    header = mcci.find(f"{ns}header")
     if header is None:
-        return False, "Missing mandatory element 'header' inside root 'ichicsr'"
+        return False, "Missing mandatory element 'header' inside wrapper 'MCCI_IN200100UV01'"
 
     for field in [
         "message_id",
@@ -41,9 +50,9 @@ def validate_e2b_xml_structure(xml_content: str) -> tuple[bool, str]:
             )
 
     # Verify safety-report identifiers
-    safety_report = root.find(f"{ns}safety_report")
+    safety_report = porr.find(f"{ns}safety_report")
     if safety_report is None:
-        return False, "Missing mandatory element 'safety_report' inside root 'ichicsr'"
+        return False, "Missing mandatory element 'safety_report' inside wrapper 'PORR_IN049016UV'"
 
     ww_id = safety_report.find(f"{ns}worldwide_unique_case_id")
     if ww_id is None or not ww_id.text or not ww_id.text.strip():
@@ -53,9 +62,9 @@ def validate_e2b_xml_structure(xml_content: str) -> tuple[bool, str]:
         )
 
     # Verify required patient details
-    patient = root.find(f"{ns}patient")
+    patient = safety_report.find(f"{ns}patient")
     if patient is None:
-        return False, "Missing mandatory element 'patient' inside root 'ichicsr'"
+        return False, "Missing mandatory element 'patient' inside safety_report"
 
     for field in ["patient_id", "sex"]:
         elem = patient.find(f"{ns}{field}")
@@ -63,9 +72,9 @@ def validate_e2b_xml_structure(xml_content: str) -> tuple[bool, str]:
             return False, f"Missing or empty mandatory patient attribute '{field}'"
 
     # Verify reaction list contains at least one reaction and reaction_term is valid
-    reactions_elem = root.find(f"{ns}reactions")
+    reactions_elem = safety_report.find(f"{ns}reactions")
     if reactions_elem is None:
-        return False, "Missing mandatory element 'reactions' inside root 'ichicsr'"
+        return False, "Missing mandatory element 'reactions' inside safety_report"
 
     reactions = reactions_elem.findall(f"{ns}reaction")
     if not reactions:
@@ -83,9 +92,9 @@ def validate_e2b_xml_structure(xml_content: str) -> tuple[bool, str]:
             )
 
     # Verify suspect drugs list contains at least one drug and drug_name, drug_role are valid
-    drugs_elem = root.find(f"{ns}suspect_drugs")
+    drugs_elem = safety_report.find(f"{ns}suspect_drugs")
     if drugs_elem is None:
-        return False, "Missing mandatory element 'suspect_drugs' inside root 'ichicsr'"
+        return False, "Missing mandatory element 'suspect_drugs' inside safety_report"
 
     drugs = drugs_elem.findall(f"{ns}suspect_drug")
     if not drugs:

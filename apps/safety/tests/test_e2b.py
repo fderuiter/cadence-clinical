@@ -127,9 +127,13 @@ def test_missing_header_fails():
     """Verify that validation fails when header is missing."""
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
     <ichicsr xmlns="urn:hl7-org:v3">
-        <safety_report>
-            <worldwide_unique_case_id>123</worldwide_unique_case_id>
-        </safety_report>
+        <MCCI_IN200100UV01>
+            <PORR_IN049016UV>
+                <safety_report>
+                    <worldwide_unique_case_id>123</worldwide_unique_case_id>
+                </safety_report>
+            </PORR_IN049016UV>
+        </MCCI_IN200100UV01>
     </ichicsr>"""
     is_valid, msg = validate_icsr_xml(xml_content)
     assert is_valid is False
@@ -156,16 +160,20 @@ def test_missing_header_fields_fail():
 
         xml_content = f"""<?xml version="1.0" encoding="utf-8"?>
         <ichicsr xmlns="urn:hl7-org:v3">
-            <header>
-                <message_id>{header_vals["message_id"]}</message_id>
-                <sender_organization>{header_vals["sender_organization"]}</sender_organization>
-                <receiver_organization>{header_vals["receiver_organization"]}</receiver_organization>
-                <transmission_date>{header_vals["transmission_date"]}</transmission_date>
-                <message_type>ICHICSR</message_type>
-            </header>
-            <safety_report>
-                <worldwide_unique_case_id>123</worldwide_unique_case_id>
-            </safety_report>
+            <MCCI_IN200100UV01>
+                <header>
+                    <message_id>{header_vals["message_id"]}</message_id>
+                    <sender_organization>{header_vals["sender_organization"]}</sender_organization>
+                    <receiver_organization>{header_vals["receiver_organization"]}</receiver_organization>
+                    <transmission_date>{header_vals["transmission_date"]}</transmission_date>
+                    <message_type>ICHICSR</message_type>
+                </header>
+                <PORR_IN049016UV>
+                    <safety_report>
+                        <worldwide_unique_case_id>123</worldwide_unique_case_id>
+                    </safety_report>
+                </PORR_IN049016UV>
+            </MCCI_IN200100UV01>
         </ichicsr>"""
         is_valid, msg = validate_icsr_xml(xml_content)
         assert is_valid is False
@@ -176,12 +184,16 @@ def test_missing_safety_report_fails():
     """Verify that validation fails when safety_report is missing."""
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
     <ichicsr xmlns="urn:hl7-org:v3">
-        <header>
-            <message_id>123</message_id>
-            <sender_organization>S</sender_organization>
-            <receiver_organization>R</receiver_organization>
-            <transmission_date>2026-07-25</transmission_date>
-        </header>
+        <MCCI_IN200100UV01>
+            <header>
+                <message_id>123</message_id>
+                <sender_organization>S</sender_organization>
+                <receiver_organization>R</receiver_organization>
+                <transmission_date>2026-07-25</transmission_date>
+            </header>
+            <PORR_IN049016UV>
+            </PORR_IN049016UV>
+        </MCCI_IN200100UV01>
     </ichicsr>"""
     is_valid, msg = validate_icsr_xml(xml_content)
     assert is_valid is False
@@ -192,15 +204,19 @@ def test_missing_worldwide_unique_case_id_fails():
     """Verify that validation fails when worldwide_unique_case_id is empty or missing."""
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
     <ichicsr xmlns="urn:hl7-org:v3">
-        <header>
-            <message_id>123</message_id>
-            <sender_organization>S</sender_organization>
-            <receiver_organization>R</receiver_organization>
-            <transmission_date>2026-07-25</transmission_date>
-        </header>
-        <safety_report>
-            <worldwide_unique_case_id> </worldwide_unique_case_id>
-        </safety_report>
+        <MCCI_IN200100UV01>
+            <header>
+                <message_id>123</message_id>
+                <sender_organization>S</sender_organization>
+                <receiver_organization>R</receiver_organization>
+                <transmission_date>2026-07-25</transmission_date>
+            </header>
+            <PORR_IN049016UV>
+                <safety_report>
+                    <worldwide_unique_case_id> </worldwide_unique_case_id>
+                </safety_report>
+            </PORR_IN049016UV>
+        </MCCI_IN200100UV01>
     </ichicsr>"""
     is_valid, msg = validate_icsr_xml(xml_content)
     assert is_valid is False
@@ -211,15 +227,19 @@ def test_missing_patient_fails():
     """Verify that validation fails when patient is missing."""
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
     <ichicsr xmlns="urn:hl7-org:v3">
-        <header>
-            <message_id>123</message_id>
-            <sender_organization>S</sender_organization>
-            <receiver_organization>R</receiver_organization>
-            <transmission_date>2026-07-25</transmission_date>
-        </header>
-        <safety_report>
-            <worldwide_unique_case_id>123</worldwide_unique_case_id>
-        </safety_report>
+        <MCCI_IN200100UV01>
+            <header>
+                <message_id>123</message_id>
+                <sender_organization>S</sender_organization>
+                <receiver_organization>R</receiver_organization>
+                <transmission_date>2026-07-25</transmission_date>
+            </header>
+            <PORR_IN049016UV>
+                <safety_report>
+                    <worldwide_unique_case_id>123</worldwide_unique_case_id>
+                </safety_report>
+            </PORR_IN049016UV>
+        </MCCI_IN200100UV01>
     </ichicsr>"""
     is_valid, msg = validate_icsr_xml(xml_content)
     assert is_valid is False
@@ -235,19 +255,23 @@ def test_missing_patient_fields_fail():
 
         xml_content = f"""<?xml version="1.0" encoding="utf-8"?>
         <ichicsr xmlns="urn:hl7-org:v3">
-            <header>
-                <message_id>123</message_id>
-                <sender_organization>S</sender_organization>
-                <receiver_organization>R</receiver_organization>
-                <transmission_date>2026-07-25</transmission_date>
-            </header>
-            <safety_report>
-                <worldwide_unique_case_id>123</worldwide_unique_case_id>
-            </safety_report>
-            <patient>
-                <patient_id>{patient_vals["patient_id"]}</patient_id>
-                <sex>{patient_vals["sex"]}</sex>
-            </patient>
+            <MCCI_IN200100UV01>
+                <header>
+                    <message_id>123</message_id>
+                    <sender_organization>S</sender_organization>
+                    <receiver_organization>R</receiver_organization>
+                    <transmission_date>2026-07-25</transmission_date>
+                </header>
+                <PORR_IN049016UV>
+                    <safety_report>
+                        <worldwide_unique_case_id>123</worldwide_unique_case_id>
+                        <patient>
+                            <patient_id>{patient_vals["patient_id"]}</patient_id>
+                            <sex>{patient_vals["sex"]}</sex>
+                        </patient>
+                    </safety_report>
+                </PORR_IN049016UV>
+            </MCCI_IN200100UV01>
         </ichicsr>"""
         is_valid, msg = validate_icsr_xml(xml_content)
         assert is_valid is False
@@ -259,19 +283,23 @@ def test_missing_reactions_or_reaction_term_fails():
     # 1. Missing reactions element entirely
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
     <ichicsr xmlns="urn:hl7-org:v3">
-        <header>
-            <message_id>123</message_id>
-            <sender_organization>S</sender_organization>
-            <receiver_organization>R</receiver_organization>
-            <transmission_date>2026-07-25</transmission_date>
-        </header>
-        <safety_report>
-            <worldwide_unique_case_id>123</worldwide_unique_case_id>
-        </safety_report>
-        <patient>
-            <patient_id>SUBJ-001</patient_id>
-            <sex>F</sex>
-        </patient>
+        <MCCI_IN200100UV01>
+            <header>
+                <message_id>123</message_id>
+                <sender_organization>S</sender_organization>
+                <receiver_organization>R</receiver_organization>
+                <transmission_date>2026-07-25</transmission_date>
+            </header>
+            <PORR_IN049016UV>
+                <safety_report>
+                    <worldwide_unique_case_id>123</worldwide_unique_case_id>
+                    <patient>
+                        <patient_id>SUBJ-001</patient_id>
+                        <sex>F</sex>
+                    </patient>
+                </safety_report>
+            </PORR_IN049016UV>
+        </MCCI_IN200100UV01>
     </ichicsr>"""
     is_valid, msg = validate_icsr_xml(xml_content)
     assert is_valid is False
@@ -280,20 +308,24 @@ def test_missing_reactions_or_reaction_term_fails():
     # 2. Empty reaction list
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
     <ichicsr xmlns="urn:hl7-org:v3">
-        <header>
-            <message_id>123</message_id>
-            <sender_organization>S</sender_organization>
-            <receiver_organization>R</receiver_organization>
-            <transmission_date>2026-07-25</transmission_date>
-        </header>
-        <safety_report>
-            <worldwide_unique_case_id>123</worldwide_unique_case_id>
-        </safety_report>
-        <patient>
-            <patient_id>SUBJ-001</patient_id>
-            <sex>F</sex>
-        </patient>
-        <reactions></reactions>
+        <MCCI_IN200100UV01>
+            <header>
+                <message_id>123</message_id>
+                <sender_organization>S</sender_organization>
+                <receiver_organization>R</receiver_organization>
+                <transmission_date>2026-07-25</transmission_date>
+            </header>
+            <PORR_IN049016UV>
+                <safety_report>
+                    <worldwide_unique_case_id>123</worldwide_unique_case_id>
+                    <patient>
+                        <patient_id>SUBJ-001</patient_id>
+                        <sex>F</sex>
+                    </patient>
+                    <reactions></reactions>
+                </safety_report>
+            </PORR_IN049016UV>
+        </MCCI_IN200100UV01>
     </ichicsr>"""
     is_valid, msg = validate_icsr_xml(xml_content)
     assert is_valid is False
@@ -302,24 +334,28 @@ def test_missing_reactions_or_reaction_term_fails():
     # 3. Empty reaction_term in reaction
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
     <ichicsr xmlns="urn:hl7-org:v3">
-        <header>
-            <message_id>123</message_id>
-            <sender_organization>S</sender_organization>
-            <receiver_organization>R</receiver_organization>
-            <transmission_date>2026-07-25</transmission_date>
-        </header>
-        <safety_report>
-            <worldwide_unique_case_id>123</worldwide_unique_case_id>
-        </safety_report>
-        <patient>
-            <patient_id>SUBJ-001</patient_id>
-            <sex>F</sex>
-        </patient>
-        <reactions>
-            <reaction>
-                <reaction_term>  </reaction_term>
-            </reaction>
-        </reactions>
+        <MCCI_IN200100UV01>
+            <header>
+                <message_id>123</message_id>
+                <sender_organization>S</sender_organization>
+                <receiver_organization>R</receiver_organization>
+                <transmission_date>2026-07-25</transmission_date>
+            </header>
+            <PORR_IN049016UV>
+                <safety_report>
+                    <worldwide_unique_case_id>123</worldwide_unique_case_id>
+                    <patient>
+                        <patient_id>SUBJ-001</patient_id>
+                        <sex>F</sex>
+                    </patient>
+                    <reactions>
+                        <reaction>
+                            <reaction_term>  </reaction_term>
+                        </reaction>
+                    </reactions>
+                </safety_report>
+            </PORR_IN049016UV>
+        </MCCI_IN200100UV01>
     </ichicsr>"""
     is_valid, msg = validate_icsr_xml(xml_content)
     assert is_valid is False
@@ -334,33 +370,34 @@ def test_missing_drugs_or_drug_fields_fails():
     # Base XML with valid headers, patient, and reaction
     base_xml_prefix = """<?xml version="1.0" encoding="utf-8"?>
     <ichicsr xmlns="urn:hl7-org:v3">
-        <header>
-            <message_id>123</message_id>
-            <sender_organization>S</sender_organization>
-            <receiver_organization>R</receiver_organization>
-            <transmission_date>2026-07-25</transmission_date>
-        </header>
-        <safety_report>
-            <worldwide_unique_case_id>123</worldwide_unique_case_id>
-        </safety_report>
-        <patient>
-            <patient_id>SUBJ-001</patient_id>
-            <sex>F</sex>
-        </patient>
-        <reactions>
-            <reaction>
-                <reaction_term>Headache</reaction_term>
-            </reaction>
-        </reactions>"""
+        <MCCI_IN200100UV01>
+            <header>
+                <message_id>123</message_id>
+                <sender_organization>S</sender_organization>
+                <receiver_organization>R</receiver_organization>
+                <transmission_date>2026-07-25</transmission_date>
+            </header>
+            <PORR_IN049016UV>
+                <safety_report>
+                    <worldwide_unique_case_id>123</worldwide_unique_case_id>
+                    <patient>
+                        <patient_id>SUBJ-001</patient_id>
+                        <sex>F</sex>
+                    </patient>
+                    <reactions>
+                        <reaction>
+                            <reaction_term>Headache</reaction_term>
+                        </reaction>
+                    </reactions>"""
 
     # 1. Missing suspect_drugs element entirely
-    xml_content = base_xml_prefix + "</ichicsr>"
+    xml_content = base_xml_prefix + "</safety_report></PORR_IN049016UV></MCCI_IN200100UV01></ichicsr>"
     is_valid, msg = validate_icsr_xml(xml_content)
     assert is_valid is False
     assert "Missing mandatory element 'suspect_drugs'" in msg
 
     # 2. Empty suspect_drugs list
-    xml_content = base_xml_prefix + "<suspect_drugs></suspect_drugs></ichicsr>"
+    xml_content = base_xml_prefix + "<suspect_drugs></suspect_drugs></safety_report></PORR_IN049016UV></MCCI_IN200100UV01></ichicsr>"
     is_valid, msg = validate_icsr_xml(xml_content)
     assert is_valid is False
     assert "at least one suspect drug is required" in msg
@@ -369,13 +406,16 @@ def test_missing_drugs_or_drug_fields_fails():
     xml_content = (
         base_xml_prefix
         + """
-        <suspect_drugs>
-            <suspect_drug>
-                <drug_name> </drug_name>
-                <drug_role>SUSPECT</drug_role>
-            </suspect_drug>
-        </suspect_drugs>
-    </ichicsr>"""
+                <suspect_drugs>
+                    <suspect_drug>
+                        <drug_name> </drug_name>
+                        <drug_role>SUSPECT</drug_role>
+                    </suspect_drug>
+                </suspect_drugs>
+            </safety_report>
+        </PORR_IN049016UV>
+    </MCCI_IN200100UV01>
+</ichicsr>"""
     )
     is_valid, msg = validate_icsr_xml(xml_content)
     assert is_valid is False
@@ -388,13 +428,16 @@ def test_missing_drugs_or_drug_fields_fails():
     xml_content = (
         base_xml_prefix
         + """
-        <suspect_drugs>
-            <suspect_drug>
-                <drug_name>DrugA</drug_name>
-                <drug_role></drug_role>
-            </suspect_drug>
-        </suspect_drugs>
-    </ichicsr>"""
+                <suspect_drugs>
+                    <suspect_drug>
+                        <drug_name>DrugA</drug_name>
+                        <drug_role></drug_role>
+                    </suspect_drug>
+                </suspect_drugs>
+            </safety_report>
+        </PORR_IN049016UV>
+    </MCCI_IN200100UV01>
+</ichicsr>"""
     )
     is_valid, msg = validate_icsr_xml(xml_content)
     assert is_valid is False

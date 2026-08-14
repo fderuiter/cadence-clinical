@@ -11,6 +11,9 @@ from apps.safety.domain.sae_icsr.models import (
     normalize_seriousness_val,
     normalize_severity_val,
     validate_dtc_format,
+    SafetyReportModel,
+    PORR_IN049016UV,
+    MCCI_IN200100UV01,
 )
 
 __all__ = [
@@ -26,4 +29,7 @@ __all__ = [
     "normalize_seriousness_val",
     "normalize_severity_val",
     "validate_dtc_format",
+    "SafetyReportModel",
+    "PORR_IN049016UV",
+    "MCCI_IN200100UV01",
 ]

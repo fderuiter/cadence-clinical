@@ -15,6 +15,7 @@ def render_icsr_to_xml(icsr: IndividualCaseSafetyReport) -> str:
     Returns:
         str: The rendered XML string.
     """
+    icsr.sync_to_nested()
     templates_dir = os.path.join(os.path.dirname(__file__), "templates")
     env = Environment(
         loader=FileSystemLoader(templates_dir),
