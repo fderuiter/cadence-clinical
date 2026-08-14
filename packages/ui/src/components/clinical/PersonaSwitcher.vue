@@ -9,12 +9,42 @@ const props = defineProps({
   personas: {
     type: Array,
     default: () => [
-      { id: "super_admin", label: "Super Administrator", role: "admin", badge: "Admin" },
-      { id: "sponsor_designer", label: "Protocol Author", role: "sponsor_designer", badge: "Designer" },
-      { id: "site_crc", label: "Site Coordinator (CRC)", role: "site_crc", badge: "Site" },
-      { id: "cra_monitor", label: "CRA Monitor", role: "cra_monitor", badge: "Monitor" },
-      { id: "data_manager", label: "Clinical Data Manager", role: "data_manager", badge: "DM" },
-      { id: "auditor", label: "Independent Auditor", role: "auditor", badge: "Auditor" },
+      {
+        id: "super_admin",
+        label: "Super Administrator",
+        role: "admin",
+        badge: "Admin",
+      },
+      {
+        id: "sponsor_designer",
+        label: "Protocol Author",
+        role: "sponsor_designer",
+        badge: "Designer",
+      },
+      {
+        id: "site_crc",
+        label: "Site Coordinator (CRC)",
+        role: "site_crc",
+        badge: "Site",
+      },
+      {
+        id: "cra_monitor",
+        label: "CRA Monitor",
+        role: "cra_monitor",
+        badge: "Monitor",
+      },
+      {
+        id: "data_manager",
+        label: "Clinical Data Manager",
+        role: "data_manager",
+        badge: "DM",
+      },
+      {
+        id: "auditor",
+        label: "Independent Auditor",
+        role: "auditor",
+        badge: "Auditor",
+      },
     ],
   },
 });
@@ -24,7 +54,9 @@ const emit = defineEmits(["update:modelValue", "change"]);
 const isOpen = ref(false);
 
 const activePersona = computed(() => {
-  return props.personas.find((p) => p.id === props.modelValue) || props.personas[0];
+  return (
+    props.personas.find((p) => p.id === props.modelValue) || props.personas[0]
+  );
 });
 
 const selectPersona = (persona) => {
@@ -48,10 +80,17 @@ const selectPersona = (persona) => {
         <span class="persona-label">{{ activePersona.label }}</span>
         <span class="persona-badge">{{ activePersona.badge }}</span>
       </div>
-      <span class="dropdown-arrow" aria-hidden="true">{{ isOpen ? '▲' : '▼' }}</span>
+      <span class="dropdown-arrow" aria-hidden="true">{{
+        isOpen ? "▲" : "▼"
+      }}</span>
     </button>
 
-    <div v-if="isOpen" class="persona-menu" role="menu" aria-label="Available Personas">
+    <div
+      v-if="isOpen"
+      class="persona-menu"
+      role="menu"
+      aria-label="Available Personas"
+    >
       <div class="menu-header">Active Persona & Role Scope</div>
       <button
         v-for="persona in personas"
@@ -135,7 +174,9 @@ const selectPersona = (persona) => {
   background: var(--color-surface, #ffffff);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
   z-index: 1000;
   overflow: hidden;
 }

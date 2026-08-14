@@ -271,28 +271,7 @@ router.beforeEach(async (to) => {
     }
 
     if (!authStore.isAuthenticated) {
-      // In demo mode or sandbox, auto-initialize ephemeral session for frictionless navigation
-      if (authStore.isDemoMode) {
-        try {
-          await authStore.login();
-        } catch (e) {
-          console.warn("Auto demo login failed, redirecting to /login", e);
-          return { path: "/login", query: { redirect: to.fullPath } };
-        }
-      } else {
-        try {
-          await authStore.login({
-            redirectUri:
-              window.location.origin +
-              (import.meta.env.BASE_URL || "/cadence-clinical/") +
-              to.fullPath.replace(/^\//, ""),
-          });
-          return false; // Abort navigation as page is redirecting
-        } catch (err) {
-          console.error("Authentication redirection failed:", err);
-          return { path: "/login", query: { redirect: to.fullPath } };
-        }
-      }
+      return { path: "/login", query: { redirect: to.fullPath } };
     }
 
     // Role-based authorization guard

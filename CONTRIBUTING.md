@@ -319,7 +319,7 @@ If introducing architectural changes, scaffold a domain-indexed ADR:
 ```bash
 make adr
 # Or directly:
-python3 scripts/create_adr.py --title "Your Title" --domain "core-platform" --req "PRD-SYS-001"
+uv run python scripts/create_adr.py --title "Your Title" --domain "core-platform" --req "PRD-SYS-001"
 ```
 
 ADRs are automatically indexed into `docs/adr/index.md` and validated on commit.
@@ -414,7 +414,7 @@ Key distinctions:
 
 ## 9. Binary File Hygiene
 
-- **Never commit `.docx` files.** They are gitignored. Use `python3 scripts/regenerate_templates.py` to rebuild protocol templates dynamically.
+- **Never commit `.docx` files.** They are gitignored. Use `uv run python scripts/regenerate_templates.py` to rebuild protocol templates dynamically.
 - **Never commit `report.xml`.** It is gitignored. Generate it locally with `uv run pytest --junitxml=report.xml` but do not stage it.
 - **Never commit `.env` or secret files.** Use `detect-secrets` baseline workflow.
 

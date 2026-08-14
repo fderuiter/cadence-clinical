@@ -16,6 +16,27 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Add repository root to sys.path
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+# Enforce Python 3.14+ runtime before loading standard modules or packages
+if sys.version_info < (3, 14):
+    try:
+        from scripts.runtime_guard import enforce_python_runtime
+
+        enforce_python_runtime()
+    except Exception:
+        sys.stderr.write(
+            f"[FATAL] Incompatible Python runtime {sys.version.split()[0]} ({sys.executable}).\n"
+            "Cadence Clinical requires Python 3.14+.\n"
+            "Please run: uv run python scripts/validate_markdown.py\n"
+        )
+        sys.exit(1)
+
+from scripts.runtime_guard import enforce_python_runtime, print_runtime_info
+
 # Inject default/mock environment configurations to prevent top-level execution errors during module loading
 MOCK_ENV_VARS = {
     "DATABASE_URL": "postgresql://mock_user:mock_pass@localhost:5432/mock_db",  # pragma: allowlist secret
@@ -839,6 +860,8 @@ def validate_json_block(
     repo_root,
     root_dirs,
     root_files,
+    strict=False,
+    allow_degraded=False,
 ):
     cleaned = clean_json_text(content)
     try:
@@ -947,22 +970,44 @@ def validate_json_block(
                 else:
                     success = True
             else:
+                is_ci = (
+                    os.environ.get("GITHUB_ACTIONS") == "true"
+                    or os.environ.get("CI") == "true"
+                )
+                if (strict or is_ci) and not allow_degraded:
+                    add_error(
+                        file_path,
+                        start_line,
+                        f"Failed to dynamically load Pydantic model '{matched_model_name}': {import_error or 'Unknown error'}",
+                    )
+                else:
+                    warning_msg = (
+                        f"[WARNING] Degraded linter coverage at {file_path}:{start_line}\n"
+                        f"Failed to dynamically load Pydantic model '{matched_model_name}'.\n"
+                        f"Underlying import error: {import_error or 'Unknown error'}\n"
+                        f"Falling back to basic shallow AST structure verification."
+                    )
+                    print(warning_msg, file=sys.stderr)
+        except Exception as e:
+            import_error = f"{type(e).__name__}: {str(e)}"
+            is_ci = (
+                os.environ.get("GITHUB_ACTIONS") == "true"
+                or os.environ.get("CI") == "true"
+            )
+            if (strict or is_ci) and not allow_degraded:
+                add_error(
+                    file_path,
+                    start_line,
+                    f"Failed to dynamically load Pydantic model '{matched_model_name}': {import_error}",
+                )
+            else:
                 warning_msg = (
                     f"[WARNING] Degraded linter coverage at {file_path}:{start_line}\n"
                     f"Failed to dynamically load Pydantic model '{matched_model_name}'.\n"
-                    f"Underlying import error: {import_error or 'Unknown error'}\n"
+                    f"Underlying import error: {import_error}\n"
                     f"Falling back to basic shallow AST structure verification."
                 )
                 print(warning_msg, file=sys.stderr)
-        except Exception as e:
-            import_error = f"{type(e).__name__}: {str(e)}"
-            warning_msg = (
-                f"[WARNING] Degraded linter coverage at {file_path}:{start_line}\n"
-                f"Failed to dynamically load Pydantic model '{matched_model_name}'.\n"
-                f"Underlying import error: {import_error}\n"
-                f"Falling back to basic shallow AST structure verification."
-            )
-            print(warning_msg, file=sys.stderr)
 
         if not success and not err_msgs:
             fields = get_model_fields_ast_from_map(matched_model_name, codebase_map)
@@ -998,7 +1043,13 @@ def check_preceding_skip(code_block_start_line, lines):
 
 
 def process_markdown_file(
-    file_path, repo_root, root_dirs, root_files, codebase_map=None, strict=False
+    file_path,
+    repo_root,
+    root_dirs,
+    root_files,
+    codebase_map=None,
+    strict=False,
+    allow_degraded=False,
 ):
     """Parses a markdown file to validate inline paths, links, and code blocks."""
     if codebase_map is None:
@@ -1153,6 +1204,8 @@ def process_markdown_file(
                                 repo_root,
                                 root_dirs,
                                 root_files,
+                                strict=strict,
+                                allow_degraded=allow_degraded,
                             )
 
                 in_code_block = False
@@ -1289,12 +1342,20 @@ def main():
     }
 
     strict = False
+    allow_degraded = False
+    quiet = False
     args_to_process = []
     for arg in sys.argv[1:]:
         if arg in ("--strict", "-s"):
             strict = True
+        elif arg == "--allow-degraded":
+            allow_degraded = True
+        elif arg in ("--quiet", "-q"):
+            quiet = True
         else:
             args_to_process.append(arg)
+
+    print_runtime_info("validate_markdown.py", quiet=quiet)
 
     # Scan and process target .md files
     md_files = []
@@ -1323,7 +1384,13 @@ def main():
         print(f"Scanning {len(md_files)} markdown files across the repository...")
     for md_file in sorted(md_files):
         process_markdown_file(
-            md_file, repo_root, root_dirs, root_files, codebase_map, strict=strict
+            md_file,
+            repo_root,
+            root_dirs,
+            root_files,
+            codebase_map,
+            strict=strict,
+            allow_degraded=allow_degraded,
         )
 
     if errors:

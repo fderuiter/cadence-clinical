@@ -54,4 +54,4 @@ This decision implements requirements under Trace-8.
 ## 6. Implementation & Verification
 
 - **Affected Repositories / Services:** `packages/security`, `scripts/`
-- **Verification Plan:** Verify with `python3 scripts/validate_adrs.py`, `uv run ruff check .`, and `pnpm -r lint`.
+- **Verification Plan:** Verify with `uv run python scripts/validate_adrs.py`, `uv run ruff check .`, and `pnpm -r lint`.

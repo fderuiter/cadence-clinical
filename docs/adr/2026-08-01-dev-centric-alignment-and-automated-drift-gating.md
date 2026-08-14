@@ -64,5 +64,5 @@ This decision implements requirements under **Trace-16** and **Trace-7**.
   - `.pre-commit-config.yaml` (Updated)
   - `package.json` (Updated)
 - **Verification Plan:**
-  - Execute `python3 scripts/validate_architecture_drift.py` locally and as part of `pnpm check`.
+  - Execute `uv run python scripts/validate_architecture_drift.py` locally and as part of `pnpm check`.
   - Verify that omitting a service from either document's Mermaid diagram triggers a clean exit code `1` failure, and successful representation returns `0`.

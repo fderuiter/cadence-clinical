@@ -202,6 +202,6 @@ with open(ct_path, "r", encoding="utf-8") as f:
 
 ## 💡 Maintenance & Verification Guidelines
 
-1. **Validation**: When updating markdown or adding schemas under `docs/CDISC/`, run `python3 scripts/validate_markdown.py`.
+1. **Validation**: When updating markdown or adding schemas under `docs/CDISC/`, run `uv run python scripts/validate_markdown.py`.
 2. **Binary Files**: Word documents (`.docx`) in this directory serve as reference documentation. Do not commit temporary `.docx` outputs during test runs.
 3. **Controlled Terminology Updates**: When upgrading CDISC CT releases, keep both `.json` and `.xlsx` files synchronized to maintain fallback parity across APIs and tools.

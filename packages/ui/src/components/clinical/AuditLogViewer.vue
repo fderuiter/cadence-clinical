@@ -18,7 +18,8 @@ const selectedFilter = ref("ALL");
 
 const filteredLogs = computed(() => {
   return props.logs.filter((log) => {
-    const matchesFilter = selectedFilter.value === "ALL" || log.action === selectedFilter.value;
+    const matchesFilter =
+      selectedFilter.value === "ALL" || log.action === selectedFilter.value;
     if (!matchesFilter) return false;
     if (!searchQuery.value) return true;
     const q = searchQuery.value.toLowerCase();
@@ -47,7 +48,11 @@ const filteredLogs = computed(() => {
           placeholder="Filter by user, action, reason..."
           aria-label="Filter audit entries"
         />
-        <select v-model="selectedFilter" class="audit-select" aria-label="Filter by action">
+        <select
+          v-model="selectedFilter"
+          class="audit-select"
+          aria-label="Filter by action"
+        >
           <option value="ALL">All Actions</option>
           <option value="CREATE">CREATE</option>
           <option value="UPDATE">UPDATE</option>
@@ -67,9 +72,13 @@ const filteredLogs = computed(() => {
         <div class="timeline-marker"></div>
         <div class="timeline-content">
           <div class="content-header">
-            <span class="action-tag" :data-action="entry.action">{{ entry.action }}</span>
+            <span class="action-tag" :data-action="entry.action">{{
+              entry.action
+            }}</span>
             <span class="timestamp">{{ entry.timestamp }}</span>
-            <span class="user-id">by <strong>{{ entry.user_id }}</strong></span>
+            <span class="user-id"
+              >by <strong>{{ entry.user_id }}</strong></span
+            >
           </div>
 
           <div class="target-info">
@@ -77,10 +86,14 @@ const filteredLogs = computed(() => {
           </div>
 
           <div v-if="entry.reason_for_change" class="change-reason">
-            <span class="reason-label">Reason for Change:</span> {{ entry.reason_for_change }}
+            <span class="reason-label">Reason for Change:</span>
+            {{ entry.reason_for_change }}
           </div>
 
-          <div v-if="entry.changes && entry.changes.length > 0" class="field-diffs">
+          <div
+            v-if="entry.changes && entry.changes.length > 0"
+            class="field-diffs"
+          >
             <table class="diff-table">
               <thead>
                 <tr>
@@ -91,9 +104,11 @@ const filteredLogs = computed(() => {
               </thead>
               <tbody>
                 <tr v-for="(change, cIdx) in entry.changes" :key="cIdx">
-                  <td><code>{{ change.field }}</code></td>
-                  <td class="diff-old">{{ change.old_val ?? 'null' }}</td>
-                  <td class="diff-new">{{ change.new_val ?? 'null' }}</td>
+                  <td>
+                    <code>{{ change.field }}</code>
+                  </td>
+                  <td class="diff-old">{{ change.old_val ?? "null" }}</td>
+                  <td class="diff-new">{{ change.new_val ?? "null" }}</td>
                 </tr>
               </tbody>
             </table>
@@ -156,7 +171,8 @@ const filteredLogs = computed(() => {
   gap: 8px;
 }
 
-.audit-search, .audit-select {
+.audit-search,
+.audit-select {
   padding: 6px 10px;
   font-size: 13px;
   border: 1px solid var(--color-border, #e2e8f0);
@@ -214,10 +230,22 @@ const filteredLogs = computed(() => {
   color: #334155;
 }
 
-.action-tag[data-action="CREATE"] { background: #dcfce7; color: #15803d; }
-.action-tag[data-action="UPDATE"] { background: #e0f2fe; color: #0369a1; }
-.action-tag[data-action="DELETE"] { background: #fee2e2; color: #b91c1c; }
-.action-tag[data-action="SIGN"] { background: #fef9c3; color: #854d0e; }
+.action-tag[data-action="CREATE"] {
+  background: #dcfce7;
+  color: #15803d;
+}
+.action-tag[data-action="UPDATE"] {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+.action-tag[data-action="DELETE"] {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.action-tag[data-action="SIGN"] {
+  background: #fef9c3;
+  color: #854d0e;
+}
 
 .timestamp {
   color: var(--color-text-muted, #475569);
@@ -256,7 +284,8 @@ const filteredLogs = computed(() => {
   border: 1px solid var(--color-border, #e2e8f0);
 }
 
-.diff-table th, .diff-table td {
+.diff-table th,
+.diff-table td {
   padding: 6px 10px;
   border: 1px solid var(--color-border, #e2e8f0);
 }

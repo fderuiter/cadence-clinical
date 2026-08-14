@@ -58,7 +58,7 @@ The project board is fully synchronized with repository issues and configured wi
 To maintain the project board as new issues are created or status changes:
 
 ```bash
-python3 scripts/sync_github_project.py
+uv run python scripts/sync_github_project.py
 ```
 
 This script automatically:
@@ -91,5 +91,5 @@ All Pull Requests (PRs) must satisfy the 5-point Definition of Done before mergi
 Every issue must cite its governing requirement identifiers:
 
 1. **Requirements Level**: `PRD-SYS-xxx`, `PRD-EDC-xxx`, or `Trace-x`.
-2. **Architecture Level**: `ADR-xxx` (created via `python3 scripts/create_adr.py` for architectural changes).
+2. **Architecture Level**: `ADR-xxx` (created via `uv run python scripts/create_adr.py` for architectural changes).
 3. **Traceability Level**: RTM entry in `docs/SDLC/Requirements_Traceability_Matrix.md`.

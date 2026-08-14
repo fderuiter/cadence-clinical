@@ -7,7 +7,7 @@
   >
     <!-- Section Header Card -->
     <div
-      class="section-header-card"
+      class="section-header-card section-header"
       v-keyboard-click="toggleCollapse"
       :aria-expanded="!section.isCollapsed"
       @click="toggleCollapse"
@@ -32,7 +32,7 @@
 
       <!-- Action Controls -->
       <div class="section-header-right" @click.stop>
-        <button class="btn-add-field" @click="addNewItem">
+        <button class="btn-add-field btn-add-item" @click="addNewItem">
           <span>➕</span> Add Field
         </button>
         <button class="btn-section-toggle" @click="toggleCollapse">

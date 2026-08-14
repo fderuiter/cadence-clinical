@@ -11,8 +11,28 @@ import re
 import sys
 from pathlib import Path
 
-# Paths to the target configuration and documentation files
+# Add repository root to sys.path
 REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+# Enforce Python 3.14+ runtime before loading standard modules or packages
+if sys.version_info < (3, 14):
+    try:
+        from scripts.runtime_guard import enforce_python_runtime
+
+        enforce_python_runtime()
+    except Exception:
+        sys.stderr.write(
+            f"[FATAL] Incompatible Python runtime {sys.version.split()[0]} ({sys.executable}).\n"
+            "Cadence Clinical requires Python 3.14+.\n"
+            "Please run: uv run python scripts/validate_architecture_drift.py\n"
+        )
+        sys.exit(1)
+
+from scripts.runtime_guard import enforce_python_runtime, print_runtime_info
+
+# Paths to the target configuration and documentation files
 COMPOSE_PATH = REPO_ROOT / "docker" / "docker-compose.yml"
 ARCH_PATH = REPO_ROOT / "ARCHITECTURE.md"
 TDD_PATH = REPO_ROOT / "docs" / "SDLC" / "02_Technical_Design_Document_TDD.md"
@@ -209,6 +229,7 @@ def validate_feature_matrix(matrix_path: Path, active_services: list[str]) -> bo
 
 
 def main():
+    print_runtime_info("validate_architecture_drift.py")
     print("Running Automated Architecture Drift Gating Linter...")
 
     # 1. Get the active local services from docker-compose

@@ -18,7 +18,7 @@
 /apps/tickets/           @clinical-platform/clinical-operations
 /apps/web/               @clinical-platform/client-ux
 
-# Clinical Domains under packages/
+/packages/cli/             @clinical-platform/integration-and-routing
 /packages/compliance/    @clinical-platform/compliance-and-safety
 /packages/database/      @clinical-platform/clinical-operations
 /packages/deid/          @clinical-platform/security-and-privacy
@@ -27,5 +27,6 @@
 /packages/hexagonal/     @clinical-platform/clinical-operations
 /packages/security/      @clinical-platform/security-and-privacy
 /packages/storage/       @clinical-platform/document-management
+/packages/testing/       @clinical-platform/compliance-and-safety
 /packages/ui/            @clinical-platform/client-ux
 /packages/usdm-schemas/  @clinical-platform/integration-and-routing

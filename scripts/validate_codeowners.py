@@ -11,6 +11,28 @@ organizational team.
 import os
 import re
 import sys
+from pathlib import Path
+
+# Add repository root to sys.path
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+# Enforce Python 3.14+ runtime before loading standard modules or packages
+if sys.version_info < (3, 14):
+    try:
+        from scripts.runtime_guard import enforce_python_runtime
+
+        enforce_python_runtime()
+    except Exception:
+        sys.stderr.write(
+            f"[FATAL] Incompatible Python runtime {sys.version.split()[0]} ({sys.executable}).\n"
+            "Cadence Clinical requires Python 3.14+.\n"
+            "Please run: uv run python scripts/validate_codeowners.py\n"
+        )
+        sys.exit(1)
+
+from scripts.runtime_guard import enforce_python_runtime
 
 # Regex pattern for valid organizational teams: @org-name/team-name
 TEAM_PATTERN = re.compile(r"^@[a-zA-Z0-9\-_\.]+/[a-zA-Z0-9\-_\.]+$")

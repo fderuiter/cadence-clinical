@@ -54,4 +54,4 @@ This decision directly implements requirements under PRD-CRF-006.
 ## 6. Implementation & Verification
 
 - **Affected Repositories / Services:** `packages/ui/`
-- **Verification Plan:** Verify with `pnpm --filter ui build`, local testing, and `python3 scripts/validate_adrs.py`.
+- **Verification Plan:** Verify with `pnpm --filter ui build`, local testing, and `uv run python scripts/validate_adrs.py`.

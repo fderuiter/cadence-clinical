@@ -80,4 +80,4 @@ This decision directly implements requirements under **Trace-3**.
   - `apps/designer/delta.py`: Logic implementing write lock checks, versioning chains, in-use checks, and cloning.
 - **Verification**:
   - Verified via robust test suite under `tests/test_global_library_api.py`.
-  - Continuous integration pipeline runs validation scripts `python3 scripts/validate_adrs.py` to ensure all structural format rules are correctly parsed.
+  - Continuous integration pipeline runs validation scripts `uv run python scripts/validate_adrs.py` to ensure all structural format rules are correctly parsed.

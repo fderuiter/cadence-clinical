@@ -81,6 +81,15 @@
           >
             Logout
           </button>
+          <button
+            v-else-if="!authStore.isAuthenticated && !authStore.isDemoMode"
+            id="btn-login"
+            class="btn btn-login-action"
+            title="Log in to session"
+            @click="authStore.login()"
+          >
+            Login
+          </button>
         </div>
       </div>
     </header>
@@ -94,6 +103,7 @@
             <div class="nav-category-title">Design &amp; Metadata</div>
             <ul class="nav-menu">
               <li
+                v-if="canAccess(['sponsor_designer', 'data_manager', 'sponsor_admin'])"
                 id="tab-btn-digitization"
                 class="nav-item"
                 :class="{ active: $route.name === 'digitization' }"
@@ -106,6 +116,7 @@
                 </router-link>
               </li>
               <li
+                v-if="canAccess(['sponsor_designer', 'data_manager', 'sponsor_admin'])"
                 id="tab-btn-mdr"
                 class="nav-item"
                 :class="{
@@ -121,6 +132,7 @@
                 </router-link>
               </li>
               <li
+                v-if="canAccess(['sponsor_designer', 'data_manager', 'sponsor_admin'])"
                 id="tab-btn-crf-designer"
                 class="nav-item"
                 :class="{
@@ -136,6 +148,7 @@
                 </router-link>
               </li>
               <li
+                v-if="canAccess(['sponsor_designer', 'data_manager', 'sponsor_admin'])"
                 id="tab-btn-icf-builder"
                 class="nav-item"
                 :class="{
@@ -152,6 +165,7 @@
                 </router-link>
               </li>
               <li
+                v-if="canAccess(['sponsor_designer', 'data_manager', 'sponsor_admin'])"
                 id="tab-btn-rules"
                 class="nav-item"
                 :class="{ active: $route.name === 'rules' }"
@@ -164,6 +178,7 @@
                 </router-link>
               </li>
               <li
+                v-if="canAccess(['sponsor_designer', 'data_manager', 'sponsor_admin', 'cra', 'monitor', 'site_investigator', 'crc'])"
                 id="tab-btn-amendment-diff"
                 class="nav-item"
                 :class="{ active: $route.name === 'amendment-diff' }"
@@ -183,6 +198,7 @@
             <div class="nav-category-title">Execution &amp; EDC</div>
             <ul class="nav-menu">
               <li
+                v-if="canAccess(['site_investigator', 'crc', 'data_manager', 'sponsor_admin', 'cra', 'monitor'])"
                 id="tab-btn-ecrf"
                 class="nav-item"
                 :class="{ active: $route.name === 'ecrf' }"
@@ -195,6 +211,7 @@
                 </router-link>
               </li>
               <li
+                v-if="canAccess(['data_manager', 'sponsor_designer', 'sponsor_admin'])"
                 id="tab-btn-coding"
                 class="nav-item"
                 :class="{ active: $route.name === 'coding' }"
@@ -207,6 +224,7 @@
                 </router-link>
               </li>
               <li
+                v-if="canAccess(['data_manager', 'sponsor_designer', 'sponsor_admin'])"
                 id="tab-btn-data-lock"
                 class="nav-item"
                 :class="{ active: $route.name === 'data-lock' }"
@@ -219,6 +237,7 @@
                 </router-link>
               </li>
               <li
+                v-if="canAccess(['cra', 'monitor', 'sponsor_admin'])"
                 id="tab-btn-ctms"
                 class="nav-item"
                 :class="{ active: $route.name === 'ctms' }"
@@ -231,6 +250,7 @@
                 </router-link>
               </li>
               <li
+                v-if="canAccess(['cra', 'monitor', 'auditor', 'tmf_auditor', 'sponsor_admin'])"
                 id="tab-btn-etmf"
                 class="nav-item"
                 :class="{ active: $route.name === 'etmf' }"
@@ -243,6 +263,7 @@
                 </router-link>
               </li>
               <li
+                v-if="canAccess(['auditor', 'tmf_auditor', 'sponsor_admin'])"
                 id="tab-btn-audit"
                 class="nav-item"
                 :class="{
@@ -257,6 +278,7 @@
                 </router-link>
               </li>
               <li
+                v-if="canAccess(['data_manager', 'sponsor_designer', 'sponsor_admin'])"
                 id="tab-btn-exports"
                 class="nav-item"
                 :class="{ active: $route.name === 'exports' }"
@@ -535,11 +557,17 @@ import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
 import { useOnboardingStore } from "../stores/onboarding";
+import { hasRequiredRole } from "../router";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
 
 const authStore = useAuthStore();
 const clinicalStore = useClinicalStore();
 const onboardingStore = useOnboardingStore();
+
+function canAccess(requiredRoles) {
+  if (!requiredRoles || requiredRoles.length === 0) return true;
+  return hasRequiredRole(authStore.normalizedRoles, requiredRoles);
+}
 
 const brandName = import.meta.env.VITE_BRAND_NAME || "Cadence Clinical";
 const parts = brandName.split(" ");

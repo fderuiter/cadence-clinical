@@ -11,7 +11,7 @@ To ensure a unified user experience, prevent UI duplication, and maintain strict
 ### 1. Issue Linking & Requirements Sync
 
 - [ ] **Automated Issue Closing Syntax:** Body contains explicit issue closing link (e.g. `Fixes #123`, `Closes #456`).
-- [ ] **Requirement & ADR Sync:** If this PR introduces scope or architectural changes, the corresponding PRD/SRS requirement (`PRD-SYS-xxx`) has been updated in the issue/code docstrings, and an ADR was scaffolded using `python3 scripts/create_adr.py`.
+- [ ] **Requirement & ADR Sync:** If this PR introduces scope or architectural changes, the corresponding PRD/SRS requirement (`PRD-SYS-xxx`) has been updated in the issue/code docstrings, and an ADR was scaffolded using `uv run python scripts/create_adr.py`.
 - [ ] **Documentation Portal Build:** Documentation links and VitePress build checks (`node scripts/build-docs.js`) pass without broken links.
 
 ### 2. Reusable UI Components & Design System Audit

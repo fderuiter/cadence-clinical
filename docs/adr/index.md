@@ -5,7 +5,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Standard ADR Template & Scaffolding
 
 - [ADR Template](TEMPLATE.md)
-- Developer CLI helper: `python3 scripts/create_adr.py`
+- Developer CLI helper: `uv run python scripts/create_adr.py`
 
 ## Domain-Based Decisions Log
 

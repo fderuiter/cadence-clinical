@@ -90,4 +90,4 @@ We chose Option 2 because it perfectly satisfies the requirement for a lightweig
   - `apps/safety/validator.py` (Pure Python structural validation rules)
 - **Verification Plan:**
   - Execute `uv run pytest tests/test_safety_e2b.py --no-cov` to verify that all valid/invalid rendering and validation paths work correctly.
-  - Run `python3 scripts/validate_adrs.py` to ensure complete ADR index tracking.
+  - Run `uv run python scripts/validate_adrs.py` to ensure complete ADR index tracking.

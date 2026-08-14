@@ -34,7 +34,16 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
       });
 
       // Check fallback normalized roles
-      expect(authStore.normalizedRoles).toEqual(["monitor", "sponsor_admin"]);
+      expect(authStore.normalizedRoles).toEqual([
+        "sponsor_admin",
+        "sponsor_designer",
+        "data_manager",
+        "site_investigator",
+        "crc",
+        "cra",
+        "monitor",
+        "auditor",
+      ]);
     });
 
     it("allows mockup login and logout when keycloak is not initialized", async () => {

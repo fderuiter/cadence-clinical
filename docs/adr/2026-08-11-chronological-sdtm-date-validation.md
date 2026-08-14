@@ -65,5 +65,5 @@ Add model-level validators (`@model_validator(mode="after")`) to `SDTMRecordAE`,
   - `apps/execution/domain/sdtm/sdtm_models.py` (Add model validators, enforce `SVSTDTC` required)
   - `apps/execution/services/sdtm_mapper.py` (Refactor mappings and domains)
 - **Verification Plan:**
-  - Enforce via automated validation scripts (`python3 scripts/validate_adrs.py`).
+  - Enforce via automated validation scripts (`uv run python scripts/validate_adrs.py`).
   - Unit and integration testing via `pytest apps/execution/tests/test_sdtm_mapper.py`.

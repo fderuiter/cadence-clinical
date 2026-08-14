@@ -68,4 +68,4 @@ By packaging the custom `toBeAccessible` matcher within `packages/ui` and distri
   - `package.json` & individual config files: Configured the Vitest coverage thresholds.
 - **Verification Plan:**
   - Running `pnpm run test` executes unified unit tests verifying coverage meets the 80% statement, branch, and function thresholds.
-  - Running `python3 scripts/validate_adrs.py` validates the format, requirements mapping, and chronology of this ADR.
+  - Running `uv run python scripts/validate_adrs.py` validates the format, requirements mapping, and chronology of this ADR.

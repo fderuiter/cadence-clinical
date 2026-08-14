@@ -637,6 +637,16 @@ jobs:
           path: .
           merge-multiple: true
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
       - name: Post PR Comment
         env:
           GH_TOKEN: ${{ secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
@@ -655,7 +665,7 @@ jobs:
           TRACEABILITY_OUTCOME: ${{ needs.style.outputs.traceability_outcome }}
           MARKDOWN_OUTCOME: ${{ needs.style.outputs.markdown_outcome }}
           ARCHITECTURE_OUTCOME: ${{ needs.style.outputs.architecture_outcome }}
-        run: python3 scripts/post_pr_comment.py
+        run: uv run python scripts/post_pr_comment.py
   classify:
     name: Classify Change
     if: github.event_name == 'pull_request'

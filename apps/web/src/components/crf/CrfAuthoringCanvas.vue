@@ -75,10 +75,10 @@
     <!-- Right Side: Layout Inspector & Form Compiler Panel -->
     <div class="properties-inspector-pane">
       <!-- 1. Viewport Warnings Section -->
-      <div class="warnings-section-card">
+      <div class="warnings-section-card warnings-section">
         <div class="inspector-section-title">
           <span>Viewport Warnings</span>
-          <span class="warning-count-badge">
+          <span class="warning-count-badge warning-count">
             {{ layoutWarnings.length }}
           </span>
         </div>
@@ -364,13 +364,14 @@
             ></textarea>
           </div>
 
-          <button class="btn-compile-schema" @click="compileForm">
+          <button class="btn-compile-schema btn-compile" @click="compileForm">
             Compile Form Schema
           </button>
 
           <!-- Compilation Feedback messages -->
           <div
             v-if="compilationStatus === 'blocked'"
+            class="compilation-error"
             style="
               color: #b91c1c;
               background-color: #fee2e2;
@@ -386,6 +387,7 @@
           </div>
           <div
             v-if="compilationStatus === 'success'"
+            class="compilation-success"
             style="
               color: #15803d;
               background-color: #dcfce7;
@@ -396,7 +398,7 @@
               font-weight: 600;
             "
           >
-            🎉 Form schema successfully compiled &amp; validated!
+            ✅ Form compiled successfully to valid CDISC USDM structure!
           </div>
         </div>
       </div>

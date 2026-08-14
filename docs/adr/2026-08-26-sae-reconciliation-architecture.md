@@ -92,5 +92,5 @@ Execute the complete safety reconciliation and background job validation suite t
 
 ```bash
 uv run pytest tests/test_sae_reconciliation.py tests/test_sae_reconciliation_jobs.py --no-cov
-python3 scripts/validate_adrs.py
+uv run python scripts/validate_adrs.py
 ```

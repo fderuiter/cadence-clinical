@@ -1,3 +1,4 @@
+import ast
 import subprocess
 from pathlib import Path
 from unittest import mock
@@ -819,3 +820,102 @@ def active_syntax_error():
     err = vm.errors[0]
     assert err["line"] == 12
     assert "Python SyntaxError" in err["message"]
+
+
+def test_dynamic_pydantic_model_import_failure_strict_mode(tmp_path, monkeypatch):
+    """Verify that dynamic model import failures produce fatal errors in strict/CI mode."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    class_ast = ast.parse("class MockUserModel(BaseModel):\n    username: str\n").body[
+        0
+    ]
+    codebase_map = {
+        "MockUserModel": [
+            {
+                "file_path": repo_root / "models.py",
+                "type": "class",
+                "node": class_ast,
+            }
+        ]
+    }
+
+    # Simulate dynamic import failure
+    def mock_import_class(class_name, cb_map):
+        return None, "ImportError: cannot import name 'UTC' from 'datetime'"
+
+    monkeypatch.setattr(vm, "import_class_by_name_from_map", mock_import_class)
+
+    content = '{"username": "alice"}'
+    lines = ["Here is `MockUserModel` example:", "```json", content, "```"]
+    md_file = repo_root / "test.md"
+
+    # Strict mode enabled
+    vm.validate_json_block(
+        md_file,
+        2,
+        content,
+        codebase_map,
+        lines,
+        repo_root,
+        set(),
+        set(),
+        strict=True,
+        allow_degraded=False,
+    )
+
+    assert len(vm.errors) == 1
+    assert (
+        "Failed to dynamically load Pydantic model 'MockUserModel'"
+        in vm.errors[0]["message"]
+    )
+    assert "cannot import name 'UTC'" in vm.errors[0]["message"]
+
+
+def test_dynamic_pydantic_model_import_failure_allow_degraded(
+    tmp_path, monkeypatch, capsys
+):
+    """Verify that --allow-degraded falls back to shallow AST validation on import failure."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    class_ast = ast.parse("class MockUserModel(BaseModel):\n    username: str\n").body[
+        0
+    ]
+    codebase_map = {
+        "MockUserModel": [
+            {
+                "file_path": repo_root / "models.py",
+                "type": "class",
+                "node": class_ast,
+            }
+        ]
+    }
+
+    def mock_import_class(class_name, cb_map):
+        return None, "ModuleNotFoundError: No module named 'broken'"
+
+    monkeypatch.setattr(vm, "import_class_by_name_from_map", mock_import_class)
+
+    content = '{"username": "alice"}'
+    lines = ["Here is `MockUserModel` example:", "```json", content, "```"]
+    md_file = repo_root / "test.md"
+
+    # allow_degraded enabled
+    vm.validate_json_block(
+        md_file,
+        2,
+        content,
+        codebase_map,
+        lines,
+        repo_root,
+        set(),
+        set(),
+        strict=False,
+        allow_degraded=True,
+    )
+
+    # Should not add a fatal error because username field matches AST
+    assert len(vm.errors) == 0
+    captured = capsys.readouterr()
+    assert "[WARNING] Degraded linter coverage" in captured.err

@@ -142,20 +142,8 @@ export const useAuthStore = defineStore("auth", {
     },
     token: (state) => state.accessToken,
     normalizedRoles: (state) => {
-      if (state.isDemoMode && !state.isAuthenticated) {
-        return [
-          "sponsor_admin",
-          "sponsor_designer",
-          "data_manager",
-          "site_investigator",
-          "crc",
-          "cra",
-          "monitor",
-          "auditor",
-        ];
-      }
       // Normalize raw roles to UI roles
-      return state.rawRoles.map((role) => {
+      return (state.rawRoles || []).map((role) => {
         const normalized = role
           .trim()
           .toLowerCase()

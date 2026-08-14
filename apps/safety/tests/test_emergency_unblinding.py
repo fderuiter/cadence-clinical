@@ -81,7 +81,7 @@ def get_sig_token(
     }
     return jwt.encode(
         payload,
-        os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345"),
+        os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345"),  # nosec B105: mock test fallback
         algorithm="HS256",
     )
 

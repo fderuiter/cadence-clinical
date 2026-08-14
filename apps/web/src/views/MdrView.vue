@@ -1891,10 +1891,10 @@ function onUpdateSchema(newSchema) {
 }
 
 // Sub-Issue 8 States
-const activeTab = ref(route.query.tab === "canvas" ? "canvas" : "soa"); // 'soa', 'canvas', 'mdr', 'diff'
+const activeTab = ref(route?.query?.tab === "canvas" ? "canvas" : "soa"); // 'soa', 'canvas', 'mdr', 'diff'
 
 watch(
-  () => route.query.tab,
+  () => route?.query?.tab,
   (newTab) => {
     if (newTab === "canvas") {
       activeTab.value = "canvas";

@@ -96,7 +96,7 @@ When working on a new GitHub issue or modifying system functionality, follow thi
 2. **Architecture & Decision Level (`ADR`)**:
    - If the change introduces new dependencies, database model changes, shared package utilities, or gateway routes, create a new ADR using the CLI tool:
      ```bash
-     python3 scripts/create_adr.py --title "Your Architectural Decision Title" --domain "core-platform" --req "PRD-SYS-001"
+     uv run python scripts/create_adr.py --title "Your Architectural Decision Title" --domain "core-platform" --req "PRD-SYS-001"
      ```
 3. **Traceability Level (`RTM`)**:
    - Write automated pytest or vitest unit/integration tests referencing the requirement ID or feature.

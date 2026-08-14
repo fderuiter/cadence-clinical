@@ -65,5 +65,5 @@ This decision implements requirements under PRD-SYS-001.
   - `apps/execution/infrastructure/repositories/execution_repositories.py` (Concrete database and in-memory mock repositories)
   - `scripts/verify_contracts.py` (Static contract type checking orchestrator)
 - **Verification Plan:**
-  - Run `python3 scripts/verify_contracts.py` to confirm that all repository signatures fully comply with their ports.
+  - Run `uv run python scripts/verify_contracts.py` to confirm that all repository signatures fully comply with their ports.
   - Integrate contract type check into `.pre-commit-config.yaml`, `package.json` (`pnpm check`), and the `Makefile` (`make typecheck`).
