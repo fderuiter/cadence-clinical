@@ -12,6 +12,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ### 1. Core Platform & Execution Engine
 
 - [2026-08-13: Standardize on Plural Adapters with Build-time Path Linting](2026-08-13-standardize-on-plural-adapters-with-build-time-path-linting.md)
+- [2026-08-13: Write-Time Soft-Versioning and Active Inactive Cloning for eCRF Form Submissions](2026-08-13-write-time-soft-versioning-and-active-inactive-cloning-for-ecrf-form-submissions.md)
 
 - [2026-08-12: Decoupled PostgreSQL Schema Introspection and Database Triggers for GxP Compliance](2026-08-12-decoupled-postgresql-schema-introspection-and-database-triggers-for-gxp-compliance.md)
 
