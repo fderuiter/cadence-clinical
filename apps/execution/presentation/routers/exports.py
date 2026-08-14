@@ -4,30 +4,20 @@ Requirements: PRD-SYS-009
 """
 
 import os
+from datetime import date, datetime
 from typing import Any
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 
-from apps.execution.biostat import (
-    DatasetJSONValidationError,
-    derive_adae,
-    derive_adsl,
-    derive_advs,
-    extract_ae,
-    extract_dm,
-    extract_lb,
-    extract_mh,
-    extract_vs,
-    serialize_to_dataset_json,
-    validate_dataset_json,
-)
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import (
     BiostatExport,
     ClinicalObservation,
     ClinicalSubject,
     ClinicalVisit,
+    MigrationRule,
     SubjectConsent,
 )
 from packages.security import (
@@ -38,83 +28,92 @@ from packages.security import (
 
 router = APIRouter(prefix="/api/v1/execution", tags=["CDISC Exports"])
 
+CDISC_SIDECAR_URL = os.getenv("CDISC_SIDECAR_URL", "http://localhost:8000")
 
-async def run_sdtm_extraction(
-    session: Any, study_id: str, domain: str
-) -> tuple[list[dict], list[Any]]:
-    """Helper to retrieve and transform raw observations to SDTM records."""
-    stmt_subj = select(ClinicalSubject).where(
-        ClinicalSubject.study_id == study_id,
-        ClinicalSubject.is_deleted.is_(False),
-    )
-    res_subj = await session.execute(stmt_subj)
-    subjects = res_subj.scalars().all()
 
-    stmt_obs = select(ClinicalObservation).where(
-        ClinicalObservation.study_id == study_id,
-        ClinicalObservation.is_deleted.is_(False),
-    )
-    res_obs = await session.execute(stmt_obs)
-    observations = list(res_obs.scalars().all())
-
-    # Dynamic non-destructive protocol reconciliation
-    from apps.execution.migration_rules import reconcile_observations
-
-    stmt_target_version = (
-        select(SubjectConsent.version_tag)
-        .where(SubjectConsent.study_id == study_id)
-        .order_by(SubjectConsent.version_index.desc())
-        .limit(1)
-    )
-    res_target = await session.execute(stmt_target_version)
-    target_version = res_target.scalar() or "1.0"
-    observations = await reconcile_observations(session, observations, target_version)
-
-    dom_upper = domain.strip().upper()
-    records = []
-    supp_records = []
-    if dom_upper == "DM":
-        records = extract_dm(subjects, observations)
-    elif dom_upper == "AE":
-        records, supp_records = extract_ae(subjects, observations)
-    elif dom_upper == "VS":
-        records, supp_records = extract_vs(subjects, observations)
-    elif dom_upper == "LB":
-        records, supp_records = extract_lb(subjects, observations)
-    elif dom_upper == "MH":
-        records, supp_records = extract_mh(subjects, observations)
-    elif dom_upper == "CM":
-        from apps.execution.sdtm_mapper import map_cm
-
-        stmt_visit = select(ClinicalVisit).where(
-            ClinicalVisit.study_id == study_id,
-            ClinicalVisit.is_deleted.is_(False),
+async def call_sidecar_sdtm(domain: str, payload: dict) -> dict:
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        response = await client.post(
+            f"{CDISC_SIDECAR_URL}/api/v1/cdisc/sdtm/{domain}", json=payload
         )
-        res_visit = await session.execute(stmt_visit)
-        visits = res_visit.scalars().all()
-        cm_models = map_cm(subjects, visits, observations)
-        records = [
-            cm.model_dump() if hasattr(cm, "model_dump") else cm.dict()
-            for cm in cm_models
-        ]
+        response.raise_for_status()
+        return response.json()
+
+
+async def call_sidecar_adam(dataset: str, payload: dict) -> dict:
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        response = await client.post(
+            f"{CDISC_SIDECAR_URL}/api/v1/cdisc/adam/{dataset}", json=payload
+        )
+        response.raise_for_status()
+        return response.json()
+
+
+async def call_sidecar_bundle(payload: dict) -> dict:
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        response = await client.post(
+            f"{CDISC_SIDECAR_URL}/api/v1/cdisc/bundle", json=payload
+        )
+        response.raise_for_status()
+        return response.json()
+
+
+def model_to_dict(obj: Any) -> dict[str, Any]:
+    if obj is None:
+        return {}
+
+    data = {}
+    if hasattr(obj, "__table__"):
+        for col in obj.__table__.columns:
+            val = getattr(obj, col.name)
+            if isinstance(val, (datetime, date)):
+                data[col.name] = val.isoformat()
+            else:
+                data[col.name] = val
     else:
-        raise ValueError(f"Unsupported SDTM domain: {domain}")
+        for k, v in obj.__dict__.items():
+            if k.startswith("_"):
+                continue
+            if isinstance(v, (datetime, date)):
+                data[k] = v.isoformat()
+            else:
+                data[k] = v
 
-    for r in records:
-        if "DOMAIN" not in r:
-            r["DOMAIN"] = dom_upper
-    return records, supp_records
+    # Add extra dynamic properties accessed in mappings
+    for prop in [
+        "actarm",
+        "ACTARM",
+        "randomization_date",
+        "randt",
+        "end_of_study_date",
+        "eosdt",
+        "death_date",
+        "dthdtc",
+        "rfstdtc",
+        "RFSTDTC",
+        "rfendtc",
+        "RFENDTC",
+    ]:
+        if hasattr(obj, prop) and prop not in data:
+            val = getattr(obj, prop)
+            if isinstance(val, (datetime, date)):
+                data[prop] = val.isoformat()
+            else:
+                data[prop] = val
+
+    return data
 
 
-async def run_adam_derivation(session: Any, study_id: str, dataset: str) -> list[dict]:
-    """Helper to retrieve and derive ADaM analysis records."""
+async def fetch_cdisc_input_data(session: Any, study_id: str) -> dict[str, Any]:
+    # 1. Subjects
     stmt_subj = select(ClinicalSubject).where(
         ClinicalSubject.study_id == study_id,
         ClinicalSubject.is_deleted.is_(False),
     )
     res_subj = await session.execute(stmt_subj)
-    subjects = res_subj.scalars().all()
+    subjects = list(res_subj.scalars().all())
 
+    # 2. Observations
     stmt_obs = select(ClinicalObservation).where(
         ClinicalObservation.study_id == study_id,
         ClinicalObservation.is_deleted.is_(False),
@@ -122,9 +121,23 @@ async def run_adam_derivation(session: Any, study_id: str, dataset: str) -> list
     res_obs = await session.execute(stmt_obs)
     observations = list(res_obs.scalars().all())
 
-    # Dynamic non-destructive protocol reconciliation
-    from apps.execution.migration_rules import reconcile_observations
+    # 3. Visits
+    stmt_visit = select(ClinicalVisit).where(
+        ClinicalVisit.study_id == study_id,
+        ClinicalVisit.is_deleted.is_(False),
+    )
+    res_visit = await session.execute(stmt_visit)
+    visits = list(res_visit.scalars().all())
 
+    # 4. Migration rules
+    stmt_rules = select(MigrationRule).where(
+        MigrationRule.study_id == study_id,
+        MigrationRule.is_deleted.is_(False),
+    )
+    res_rules = await session.execute(stmt_rules)
+    migration_rules = list(res_rules.scalars().all())
+
+    # 5. Target version (consent)
     stmt_target_version = (
         select(SubjectConsent.version_tag)
         .where(SubjectConsent.study_id == study_id)
@@ -133,24 +146,14 @@ async def run_adam_derivation(session: Any, study_id: str, dataset: str) -> list
     )
     res_target = await session.execute(stmt_target_version)
     target_version = res_target.scalar() or "1.0"
-    observations = await reconcile_observations(session, observations, target_version)
 
-    ds_upper = dataset.strip().upper()
-    if ds_upper == "ADSL":
-        return derive_adsl(subjects, observations)
-    if ds_upper == "ADAE":
-        adsl_recs = derive_adsl(subjects, observations)
-        ae_recs, _ = extract_ae(subjects, observations)
-        records = derive_adae(adsl_recs, ae_recs)
-        for r in records:
-            if "AEDECOD" not in r or r["AEDECOD"] is None:
-                r["AEDECOD"] = r.get("AETERM", "")
-        return records
-    if ds_upper == "ADVS":
-        adsl_recs = derive_adsl(subjects, observations)
-        vs_recs, _ = extract_vs(subjects, observations)
-        return derive_advs(adsl_recs, vs_recs)
-    raise ValueError(f"Unsupported ADaM dataset: {dataset}")
+    return {
+        "subjects": subjects,
+        "observations": observations,
+        "visits": visits,
+        "migration_rules": migration_rules,
+        "target_version": target_version,
+    }
 
 
 @router.get("/biostat/sdtm/{domain}")
@@ -172,74 +175,83 @@ async def export_sdtm_domain(
             detail=f"Unsupported SDTM domain: '{domain}'. Must be one of {sorted(list(valid_domains))}",
         )
 
+    # 1. Fetch raw data from DB
     async with db_manager.get_session_maker()() as session:
+        db_data = await fetch_cdisc_input_data(session, study_id)
+        await session.commit()
+        await session.close()
+
+    # 2. Serialize raw database records into clean, plain JSON payloads
+    payload = {
+        "study_id": study_id,
+        "subjects": [model_to_dict(s) for s in db_data["subjects"]],
+        "observations": [model_to_dict(o) for o in db_data["observations"]],
+        "visits": [model_to_dict(v) for v in db_data["visits"]],
+        "migration_rules": [model_to_dict(r) for r in db_data["migration_rules"]],
+        "target_version": db_data["target_version"],
+    }
+
+    # 3. Dispatch a synchronous HTTP request to the sidecar service
+    try:
+        dataset_json_dict = await call_sidecar_sdtm(dom_upper, payload)
+
+        # Log SUCCESS
+        export_log = BiostatExport(
+            study_id=study_id,
+            export_type="SDTM",
+            dataset_name=dom_upper,
+            status="SUCCESS",
+        )
+        async with db_manager.get_session_maker()() as log_session:
+            log_session.add(export_log)
+            await log_session.commit()
+
+        return dataset_json_dict
+
+    except httpx.HTTPStatusError as e:
+        scrubbed_msg = e.response.text
         try:
-            records, supp_records = await run_sdtm_extraction(
-                session, study_id, dom_upper
-            )
-            export_data = {dom_upper: records}
-            if supp_records:
-                export_data[f"SUPP{dom_upper}"] = supp_records
+            err_detail = e.response.json().get("detail", scrubbed_msg)
+            if isinstance(err_detail, list):
+                err_detail = str(err_detail)
+            scrubbed_msg = err_detail
+        except Exception:
+            pass
 
-            # Apply deterministic de-identification transform
-            salt = os.getenv(
-                "BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765"
-            )  # pragma: allowlist secret
-            from apps.execution.biostat.deid import (
-                deidentify_export_data,
-                scrub_error_message,
-            )
+        export_log = BiostatExport(
+            study_id=study_id,
+            export_type="SDTM",
+            dataset_name=dom_upper,
+            status="FAILED",
+            error_message=scrubbed_msg,
+        )
+        async with db_manager.get_session_maker()() as log_session:
+            log_session.add(export_log)
+            await log_session.commit()
 
-            export_data = deidentify_export_data(export_data, salt)
+        raise HTTPException(
+            status_code=e.response.status_code,
+            detail=scrubbed_msg,
+        )
+    except Exception as e:
+        from apps.execution.biostat.deid import scrub_error_message
 
-            dataset_json = serialize_to_dataset_json(
-                data=export_data, study_id=study_id
-            )
-            validate_dataset_json(dataset_json)
+        scrubbed_msg = scrub_error_message(str(e))
 
-            export_log = BiostatExport(
-                study_id=study_id,
-                export_type="SDTM",
-                dataset_name=dom_upper,
-                status="SUCCESS",
-            )
-            session.add(export_log)
-            await session.commit()
+        export_log = BiostatExport(
+            study_id=study_id,
+            export_type="SDTM",
+            dataset_name=dom_upper,
+            status="FAILED",
+            error_message=scrubbed_msg,
+        )
+        async with db_manager.get_session_maker()() as log_session:
+            log_session.add(export_log)
+            await log_session.commit()
 
-            return dataset_json.model_dump()
-        except DatasetJSONValidationError as e:
-            from apps.execution.biostat.deid import scrub_error_message
-
-            scrubbed_msg = scrub_error_message(str(e))
-            export_log = BiostatExport(
-                study_id=study_id,
-                export_type="SDTM",
-                dataset_name=dom_upper,
-                status="FAILED",
-                error_message=scrubbed_msg,
-            )
-            session.add(export_log)
-            await session.commit()
-            raise HTTPException(
-                status_code=422,
-                detail=f"Dataset-JSON validation failed: {scrubbed_msg}",
-            )
-        except Exception as e:
-            from apps.execution.biostat.deid import scrub_error_message
-
-            scrubbed_msg = scrub_error_message(str(e))
-            export_log = BiostatExport(
-                study_id=study_id,
-                export_type="SDTM",
-                dataset_name=dom_upper,
-                status="FAILED",
-                error_message=scrubbed_msg,
-            )
-            session.add(export_log)
-            await session.commit()
-            raise HTTPException(
-                status_code=500, detail=f"Export execution failed: {scrubbed_msg}"
-            )
+        raise HTTPException(
+            status_code=500, detail=f"Export execution failed: {scrubbed_msg}"
+        )
 
 
 @router.get("/biostat/adam/{dataset}")
@@ -261,69 +273,83 @@ async def export_adam_dataset(
             detail=f"Unsupported ADaM dataset: '{dataset}'. Must be one of {sorted(list(valid_datasets))}",
         )
 
+    # 1. Fetch raw data from DB
     async with db_manager.get_session_maker()() as session:
+        db_data = await fetch_cdisc_input_data(session, study_id)
+        await session.commit()
+        await session.close()
+
+    # 2. Serialize raw database records into clean, plain JSON payloads
+    payload = {
+        "study_id": study_id,
+        "subjects": [model_to_dict(s) for s in db_data["subjects"]],
+        "observations": [model_to_dict(o) for o in db_data["observations"]],
+        "visits": [model_to_dict(v) for v in db_data["visits"]],
+        "migration_rules": [model_to_dict(r) for r in db_data["migration_rules"]],
+        "target_version": db_data["target_version"],
+    }
+
+    # 3. Dispatch a synchronous HTTP request to the sidecar service
+    try:
+        dataset_json_dict = await call_sidecar_adam(ds_upper, payload)
+
+        # Log SUCCESS
+        export_log = BiostatExport(
+            study_id=study_id,
+            export_type="ADaM",
+            dataset_name=ds_upper,
+            status="SUCCESS",
+        )
+        async with db_manager.get_session_maker()() as log_session:
+            log_session.add(export_log)
+            await log_session.commit()
+
+        return dataset_json_dict
+
+    except httpx.HTTPStatusError as e:
+        scrubbed_msg = e.response.text
         try:
-            records = await run_adam_derivation(session, study_id, ds_upper)
+            err_detail = e.response.json().get("detail", scrubbed_msg)
+            if isinstance(err_detail, list):
+                err_detail = str(err_detail)
+            scrubbed_msg = err_detail
+        except Exception:
+            pass
 
-            # Apply deterministic de-identification transform
-            salt = os.getenv(
-                "BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765"
-            )  # pragma: allowlist secret
-            from apps.execution.biostat.deid import (
-                deidentify_export_data,
-                scrub_error_message,
-            )
+        export_log = BiostatExport(
+            study_id=study_id,
+            export_type="ADaM",
+            dataset_name=ds_upper,
+            status="FAILED",
+            error_message=scrubbed_msg,
+        )
+        async with db_manager.get_session_maker()() as log_session:
+            log_session.add(export_log)
+            await log_session.commit()
 
-            deidentified_records = deidentify_export_data(records, salt)
+        raise HTTPException(
+            status_code=e.response.status_code,
+            detail=scrubbed_msg,
+        )
+    except Exception as e:
+        from apps.execution.biostat.deid import scrub_error_message
 
-            dataset_json = serialize_to_dataset_json(
-                data={ds_upper: deidentified_records}, study_id=study_id
-            )
-            validate_dataset_json(dataset_json)
+        scrubbed_msg = scrub_error_message(str(e))
 
-            export_log = BiostatExport(
-                study_id=study_id,
-                export_type="ADaM",
-                dataset_name=ds_upper,
-                status="SUCCESS",
-            )
-            session.add(export_log)
-            await session.commit()
+        export_log = BiostatExport(
+            study_id=study_id,
+            export_type="ADaM",
+            dataset_name=ds_upper,
+            status="FAILED",
+            error_message=scrubbed_msg,
+        )
+        async with db_manager.get_session_maker()() as log_session:
+            log_session.add(export_log)
+            await log_session.commit()
 
-            return dataset_json.model_dump()
-        except DatasetJSONValidationError as e:
-            from apps.execution.biostat.deid import scrub_error_message
-
-            scrubbed_msg = scrub_error_message(str(e))
-            export_log = BiostatExport(
-                study_id=study_id,
-                export_type="ADaM",
-                dataset_name=ds_upper,
-                status="FAILED",
-                error_message=scrubbed_msg,
-            )
-            session.add(export_log)
-            await session.commit()
-            raise HTTPException(
-                status_code=422,
-                detail=f"Dataset-JSON validation failed: {scrubbed_msg}",
-            )
-        except Exception as e:
-            from apps.execution.biostat.deid import scrub_error_message
-
-            scrubbed_msg = scrub_error_message(str(e))
-            export_log = BiostatExport(
-                study_id=study_id,
-                export_type="ADaM",
-                dataset_name=ds_upper,
-                status="FAILED",
-                error_message=scrubbed_msg,
-            )
-            session.add(export_log)
-            await session.commit()
-            raise HTTPException(
-                status_code=500, detail=f"Export execution failed: {scrubbed_msg}"
-            )
+        raise HTTPException(
+            status_code=500, detail=f"Export execution failed: {scrubbed_msg}"
+        )
 
 
 @router.get("/biostat/bundle")
@@ -336,84 +362,80 @@ async def export_biostat_bundle(
     ),
 ) -> dict:
     """Exports all SDTM domains and ADaM datasets bundled in a single CDISC Dataset-JSON document."""
+    # 1. Fetch raw data from DB
     async with db_manager.get_session_maker()() as session:
+        db_data = await fetch_cdisc_input_data(session, study_id)
+        await session.commit()
+        await session.close()
+
+    # 2. Serialize raw database records into clean, plain JSON payloads
+    payload = {
+        "study_id": study_id,
+        "subjects": [model_to_dict(s) for s in db_data["subjects"]],
+        "observations": [model_to_dict(o) for o in db_data["observations"]],
+        "visits": [model_to_dict(v) for v in db_data["visits"]],
+        "migration_rules": [model_to_dict(r) for r in db_data["migration_rules"]],
+        "target_version": db_data["target_version"],
+    }
+
+    # 3. Dispatch a synchronous HTTP request to the sidecar service
+    try:
+        dataset_json_dict = await call_sidecar_bundle(payload)
+
+        # Log SUCCESS
+        export_log = BiostatExport(
+            study_id=study_id,
+            export_type="BUNDLE",
+            dataset_name=None,
+            status="SUCCESS",
+        )
+        async with db_manager.get_session_maker()() as log_session:
+            log_session.add(export_log)
+            await log_session.commit()
+
+        return dataset_json_dict
+
+    except httpx.HTTPStatusError as e:
+        scrubbed_msg = e.response.text
         try:
-            bundle_data = {}
-            for dom in ["DM", "AE", "VS", "LB", "MH", "CM"]:
-                records, supp_records = await run_sdtm_extraction(
-                    session, study_id, dom
-                )
-                if records:
-                    bundle_data[dom] = records
-                if supp_records:
-                    bundle_data[f"SUPP{dom}"] = supp_records
-            for ds in ["ADSL", "ADAE", "ADVS"]:
-                records = await run_adam_derivation(session, study_id, ds)
-                if records:
-                    bundle_data[ds] = records
+            err_detail = e.response.json().get("detail", scrubbed_msg)
+            if isinstance(err_detail, list):
+                err_detail = str(err_detail)
+            scrubbed_msg = err_detail
+        except Exception:
+            pass
 
-            if not bundle_data:
-                raise HTTPException(
-                    status_code=404,
-                    detail="No biostat records found for the given study.",
-                )
+        export_log = BiostatExport(
+            study_id=study_id,
+            export_type="BUNDLE",
+            dataset_name=None,
+            status="FAILED",
+            error_message=scrubbed_msg,
+        )
+        async with db_manager.get_session_maker()() as log_session:
+            log_session.add(export_log)
+            await log_session.commit()
 
-            # Apply deterministic de-identification transform
-            salt = os.getenv(
-                "BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765"
-            )  # pragma: allowlist secret
-            from apps.execution.biostat.deid import (
-                deidentify_export_data,
-                scrub_error_message,
-            )
+        raise HTTPException(
+            status_code=e.response.status_code,
+            detail=scrubbed_msg,
+        )
+    except Exception as e:
+        from apps.execution.biostat.deid import scrub_error_message
 
-            bundle_data = deidentify_export_data(bundle_data, salt)
+        scrubbed_msg = scrub_error_message(str(e))
 
-            dataset_json = serialize_to_dataset_json(
-                data=bundle_data, study_id=study_id
-            )
-            validate_dataset_json(dataset_json)
+        export_log = BiostatExport(
+            study_id=study_id,
+            export_type="BUNDLE",
+            dataset_name=None,
+            status="FAILED",
+            error_message=scrubbed_msg,
+        )
+        async with db_manager.get_session_maker()() as log_session:
+            log_session.add(export_log)
+            await log_session.commit()
 
-            export_log = BiostatExport(
-                study_id=study_id,
-                export_type="BUNDLE",
-                dataset_name=None,
-                status="SUCCESS",
-            )
-            session.add(export_log)
-            await session.commit()
-
-            return dataset_json.model_dump()
-        except DatasetJSONValidationError as e:
-            from apps.execution.biostat.deid import scrub_error_message
-
-            scrubbed_msg = scrub_error_message(str(e))
-            export_log = BiostatExport(
-                study_id=study_id,
-                export_type="BUNDLE",
-                dataset_name=None,
-                status="FAILED",
-                error_message=scrubbed_msg,
-            )
-            session.add(export_log)
-            await session.commit()
-            raise HTTPException(
-                status_code=422,
-                detail=f"Dataset-JSON validation failed: {scrubbed_msg}",
-            )
-        except Exception as e:
-            from apps.execution.biostat.deid import scrub_error_message
-
-            scrubbed_msg = scrub_error_message(str(e))
-            export_log = BiostatExport(
-                study_id=study_id,
-                export_type="BUNDLE",
-                dataset_name=None,
-                status="FAILED",
-                error_message=scrubbed_msg,
-            )
-            session.add(export_log)
-            await session.commit()
-            raise HTTPException(
-                status_code=500, detail=f"Export execution failed: {scrubbed_msg}"
-            )
+        raise HTTPException(
+            status_code=500, detail=f"Export execution failed: {scrubbed_msg}"
+        )

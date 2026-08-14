@@ -1,0 +1,27 @@
+[build-system]
+requires = [
+    "hatchling",
+]
+build-backend = "hatchling.build"
+
+[project]
+name = "apps-cdisc"
+version = "0.1.0"
+description = "CDISC Isolated Sidecar Microservice with Pydantic JSON DTOs"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.139.2,<0.140.0",
+    "pydantic>=2.6.0",
+    "packages-deid",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    ".",
+]
+exclude = [
+    "tests",
+]
+
+[tool.hatch.build.targets.wheel.sources]
+"" = "apps/cdisc"
