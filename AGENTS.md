@@ -427,6 +427,23 @@ When configuring Keycloak in `docker/docker-compose.yml` for local sandbox devel
 
 Always ensure package manager artifacts and temporary caches (`.pnpm-store/`, `.pnpm/`, `.pnpm-debug.log*`) remain gitignored to prevent workspace bloat and merge conflicts across branches.
 
+### 17. Pytest/xdist Test Database Isolation & Recovery (`scripts/clean_test_dbs.py`)
+
+When running automated test suites concurrently or under `pytest-xdist`:
+- **Unique Database Suffixes:** Every pytest run generates a unique 8-character alphanumeric run ID (`PYTEST_XDIST_TESTRUNUID`), and each worker node receives a dedicated suffix (`_{run_uid}_{worker_id}`). All PostgreSQL databases for microservices are named using this pattern to guarantee complete collision-free concurrency across parallel runs on the same machine.
+- **Controller Boundary:** The xdist controller coordinates test distribution across workers and executes 0 tests; it never creates or migrates database schemas.
+- **Orphan Database Cleanup:** If a test process is forcefully killed (`SIGKILL`) or interrupted before session unconfiguration hooks finish, orphaned worker test databases can be inspected and purged using the CLI helper:
+  ```bash
+  # List all detected test databases
+  uv run python scripts/clean_test_dbs.py --list
+
+  # Drop all orphaned test databases
+  uv run python scripts/clean_test_dbs.py --all
+
+  # Drop only databases from a specific run UID
+  uv run python scripts/clean_test_dbs.py --run-id <run_uid>
+  ```
+
 ---
 
 ## GxP & HIPAA Compliance Scan Protocol

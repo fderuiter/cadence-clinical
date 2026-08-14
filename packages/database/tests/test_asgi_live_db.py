@@ -8,8 +8,8 @@ from tests.conftest import clean_neo4j_graph, clean_postgres_databases
 
 
 def test_live_db_halt_when_postgres_unreachable():
-    """
-    Acceptance Criteria: The test run halts and provides a clear error message
+    """Acceptance Criteria: The test run halts and provides a clear error message
+
     when local database connections are missing.
     """
     env = os.environ.copy()
@@ -20,7 +20,13 @@ def test_live_db_halt_when_postgres_unreachable():
     )
 
     res = subprocess.run(
-        ["uv", "run", "pytest", "tests/test_reset_db.py", "--no-cov"],
+        [
+            "uv",
+            "run",
+            "pytest",
+            "packages/database/tests/test_reset_db.py",
+            "--no-cov",
+        ],
         env=env,
         capture_output=True,
         text=True,
@@ -37,8 +43,8 @@ def test_live_db_halt_when_postgres_unreachable():
 
 
 def test_live_db_halt_when_neo4j_unreachable():
-    """
-    Acceptance Criteria: The test run halts and provides a offers a clear error message
+    """Acceptance Criteria: The test run halts and provides a offers a clear error message
+
     when local database connections are missing.
     """
     env = os.environ.copy()
@@ -53,7 +59,13 @@ def test_live_db_halt_when_neo4j_unreachable():
         mock_engine_cls.return_value = mock_engine
 
         res = subprocess.run(
-            ["uv", "run", "pytest", "tests/test_reset_db.py", "--no-cov"],
+            [
+                "uv",
+                "run",
+                "pytest",
+                "packages/database/tests/test_reset_db.py",
+                "--no-cov",
+            ],
             env=env,
             capture_output=True,
             text=True,
@@ -69,9 +81,7 @@ def test_live_db_halt_when_neo4j_unreachable():
 
 @pytest.mark.asyncio
 async def test_clean_neo4j_graph_calls_run():
-    """
-    Verify that clean_neo4j_graph attempts to execute DETACH DELETE on the live Neo4j driver.
-    """
+    """Verify that clean_neo4j_graph attempts to execute DETACH DELETE on the live Neo4j driver."""
     mock_session = AsyncMock()
     mock_session_ctx = AsyncMock()
     mock_session_ctx.__aenter__.return_value = mock_session
@@ -89,8 +99,8 @@ async def test_clean_neo4j_graph_calls_run():
 
 @pytest.mark.asyncio
 async def test_clean_postgres_databases_calls_truncate():
-    """
-    Verify that clean_postgres_databases disables triggers, truncates tables,
+    """Verify that clean_postgres_databases disables triggers, truncates tables,
+
     and restores triggers across all service databases.
     """
     mock_conn = AsyncMock()
