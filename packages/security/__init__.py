@@ -2,7 +2,11 @@ from packages.security.audit_logger import (
     AuditLoggerEngine,
     AuditLogPayload,
     AuditLogRecord,
+    AuditStoreAdapter,
     CentralAuditLogger,
+    DbAuditLogRecord,
+    InMemoryAuditStore,
+    SQLModelAuditStore,
     audit_logger_engine,
 )
 from packages.security.context import (
@@ -174,6 +178,10 @@ __all__ = [
     "AuditLoggerEngine",
     "AuditLogPayload",
     "AuditLogRecord",
+    "AuditStoreAdapter",
+    "InMemoryAuditStore",
+    "SQLModelAuditStore",
+    "DbAuditLogRecord",
     "audit_logger_engine",
     "CentralAuditLogger",
     "SignatureVerificationRequest",
