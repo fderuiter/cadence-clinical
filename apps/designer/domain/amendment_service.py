@@ -37,11 +37,11 @@ async def create_protocol_amendment(
     # 1. Fallback for mock/in-memory environment
     if driver is None:
         from apps.designer.db import (
-            MOCK_SOA_DATA,
             MOCK_STUDIES,
             MOCK_STUDY_PROJECTIONS_BY_VERSION,
             MOCK_STUDY_VERSIONS,
         )
+        from apps.designer.delta import MOCK_SOA_DATA
 
         study_versions = MOCK_STUDY_VERSIONS.get(study_id, [])
         matching_base = None

@@ -101,6 +101,24 @@ const routes = [
     },
   },
   {
+    path: "/amendment-diff",
+    name: "amendment-diff",
+    component: () => import("../views/AmendmentDiffView.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresRole: [
+        "sponsor_designer",
+        "data_manager",
+        "sponsor_admin",
+        "super_admin",
+        "cra",
+        "monitor",
+        "site_investigator",
+        "crc",
+      ],
+    },
+  },
+  {
     path: "/ecrf",
     name: "ecrf",
     component: () => import("../views/EcrfView.vue"),
