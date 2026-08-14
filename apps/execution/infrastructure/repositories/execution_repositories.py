@@ -350,7 +350,9 @@ class SQLAlchemyConsentRepository(IConsentRepository):
             reason_for_change=db_obj.reason_for_change,
         )
 
-    async def save_signature(self, signature: ConsentSignatureDomain) -> None:
+    async def save_signature(
+        self, signature: ConsentSignatureDomain
+    ) -> ConsentSignatureDomain:
         stmt = select(ConsentSignature).where(ConsentSignature.id == signature.id)
         result = await self.session.execute(stmt)
         db_obj = result.scalars().first()
@@ -375,6 +377,7 @@ class SQLAlchemyConsentRepository(IConsentRepository):
         db_obj.created_by = signature.created_by
         db_obj.reason_for_change = signature.reason_for_change
         await self.session.flush()
+        return signature
 
     async def get_form_record_by_id(
         self, record_id: str
@@ -509,8 +512,11 @@ class InMemoryConsentRepository(IConsentRepository):
             return None
         return copy.deepcopy(sig)
 
-    async def save_signature(self, signature: ConsentSignatureDomain) -> None:
+    async def save_signature(
+        self, signature: ConsentSignatureDomain
+    ) -> ConsentSignatureDomain:
         self.signatures[signature.id] = copy.deepcopy(signature)
+        return signature
 
     async def delete_signature(self, signature: ConsentSignatureDomain) -> None:
         raise ValueError("Cannot delete consent records")
