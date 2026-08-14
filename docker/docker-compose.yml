@@ -99,7 +99,7 @@ services:
     environment:
       - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin_password
-      - KC_DB=dev-mem
+      - KC_DB=dev-file
       - KC_HEALTH_ENABLED=true
       - BRAND_NAME=Cadence Clinical Research Software
     ports:
@@ -120,7 +120,7 @@ services:
   designer:
     build:
       context: ..
-      dockerfile: apps/designer/Dockerfile
+      dockerfile: docker/Dockerfile
     container_name: cadence-designer
     command:
       [
@@ -147,7 +147,7 @@ services:
   execution:
     build:
       context: ..
-      dockerfile: apps/execution/Dockerfile
+      dockerfile: docker/Dockerfile
     container_name: cadence-execution
     command:
       [
@@ -177,7 +177,7 @@ services:
   org:
     build:
       context: ..
-      dockerfile: apps/org/Dockerfile
+      dockerfile: docker/Dockerfile
     container_name: cadence-org
     command:
       [
@@ -202,7 +202,7 @@ services:
   eisf:
     build:
       context: ..
-      dockerfile: apps/eisf/Dockerfile
+      dockerfile: docker/Dockerfile
     container_name: cadence-eisf
     command:
       [
@@ -227,7 +227,7 @@ services:
   etmf:
     build:
       context: ..
-      dockerfile: apps/etmf/Dockerfile
+      dockerfile: docker/Dockerfile
     container_name: cadence-etmf
     command:
       [
@@ -255,7 +255,7 @@ services:
   ctms:
     build:
       context: ..
-      dockerfile: apps/ctms/Dockerfile
+      dockerfile: docker/Dockerfile
     container_name: cadence-ctms
     command:
       [
@@ -280,7 +280,7 @@ services:
   quality:
     build:
       context: ..
-      dockerfile: apps/quality/Dockerfile
+      dockerfile: docker/Dockerfile
     container_name: cadence-quality
     command:
       [
@@ -305,7 +305,7 @@ services:
   interop:
     build:
       context: ..
-      dockerfile: apps/interop/Dockerfile
+      dockerfile: docker/Dockerfile
     container_name: cadence-interop
     command:
       [
@@ -330,7 +330,7 @@ services:
   tickets:
     build:
       context: ..
-      dockerfile: apps/tickets/Dockerfile
+      dockerfile: docker/Dockerfile
     container_name: cadence-tickets
     command:
       [
@@ -355,7 +355,7 @@ services:
   safety:
     build:
       context: ..
-      dockerfile: apps/safety/Dockerfile
+      dockerfile: docker/Dockerfile
     container_name: cadence-safety
     command:
       [
@@ -381,7 +381,7 @@ services:
   notifications:
     build:
       context: ..
-      dockerfile: apps/notifications/Dockerfile
+      dockerfile: docker/Dockerfile
     container_name: cadence-notifications
     command:
       [
@@ -416,7 +416,7 @@ services:
   econsent:
     build:
       context: ..
-      dockerfile: apps/econsent/Dockerfile
+      dockerfile: docker/Dockerfile
     container_name: cadence-econsent
     command:
       [
@@ -448,7 +448,7 @@ services:
       [
         "sh",
         "-c",
-        "npm install -g pnpm && pnpm install && pnpm --filter subject-portal dev --host 0.0.0.0 --port 5174",
+        "npm install -g pnpm && pnpm config set confirmModulesPurge false && CI=true pnpm install && pnpm --filter subject-portal dev --host 0.0.0.0 --port 5174",
       ]
     volumes:
       - ..:/app
@@ -461,7 +461,7 @@ services:
   gateway:
     build:
       context: ..
-      dockerfile: apps/gateway/Dockerfile
+      dockerfile: docker/Dockerfile
     container_name: cadence-gateway
     command:
       [

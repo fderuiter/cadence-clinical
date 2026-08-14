@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:python3.14-bookworm@sha256:7b57b9f86450f3b0e1e695f269a8342ef62b1660d26829707e7b8c3ff6f827fc AS builder
+FROM ghcr.io/astral-sh/uv:python3.14-bookworm AS builder
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1
 COPY pyproject.toml uv.lock ./
@@ -9,7 +9,7 @@ COPY apps/etmf ./apps/etmf
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --no-dev --package apps-etmf
 
-FROM python:3.14-slim-bookworm@sha256:4b4c73b64c11451f2f8352613d9cfc82fc600cc647e3a985e54d3cd2db0e2a39
+FROM python:3.14-slim-bookworm
 WORKDIR /app
 
 RUN groupadd -g 1000 appuser && \

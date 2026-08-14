@@ -394,6 +394,20 @@ ignored_pair = {
 
 4. **Note:** External configuration files (such as YAML/JSON) must not be created or modified for whitelists, keeping the scanner self-contained and inline.
 
+### 12. Monorepo Containerization & Multi-Architecture Base Images
+
+- **Unified Base Image (`docker/Dockerfile`):** When building and launching containerized microservices in Docker Compose, do not use fragmented per-service Dockerfiles that only copy a subset of `packages/`. Because `pyproject.toml` defines workspace dependencies across packages (`[tool.uv.sources]`), `uv sync` requires the entire workspace structure to parse correctly. All backend services in `docker/docker-compose.yml` should reference `dockerfile: docker/Dockerfile` and rely on live volume mounts (`- ..:/app`).
+- **Avoid Platform-Specific Digest Pinning for Local Dev:** Avoid hardcoding architecture-specific `@sha256:...` digests on base images in Dockerfiles (`python:3.14-slim-bookworm`, `ghcr.io/astral-sh/uv:python3.14-bookworm`) to ensure multi-arch builds succeed seamlessly on both Apple Silicon (ARM64) and x86_64 hosts.
+
+### 13. Subprocess Environment & Fail-Fast Cryptographic Secret Defaults
+
+- **Migration Subprocess `PYTHONPATH`:** When running pre-boot database migrations or initialization routines as subprocesses (e.g., in `scripts/start.py`), always pass `PYTHONPATH=os.getcwd()` in the subprocess environment dictionary to prevent `ModuleNotFoundError: No module named 'apps'` failures.
+- **Development Secret Defaults:** The GxP compliance and Part 11 security modules (`packages/security`) fail fast if cryptographic keys are missing on import. Container environments must export default non-secret development values for `AUDIT_LOG_SECRET_KEY`, `GATEWAY_SECRET`, `SIGNING_SECRET`, and `INBOUND_EMAIL_HMAC_SECRET`.
+
+### 14. Non-Interactive PNPM Execution in Containerized & Scripted Contexts
+
+When executing `pnpm install` in Docker containers, background tasks, or scripts where TTY interaction is unavailable, set `CI=true` or configure `confirmModulesPurge=false` to prevent `ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY` errors when syncing host-mounted `node_modules`.
+
 ---
 
 ## GxP & HIPAA Compliance Scan Protocol
