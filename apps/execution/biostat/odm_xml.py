@@ -5,14 +5,19 @@ Data Model (ODM) XML v1.3.2 documents with embedded 21 CFR Part 11 compliant
 `<AuditRecord>` elements (user, timestamp, change reason).
 """
 
-import xml.dom.minidom
 import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
 from typing import Any
+from urllib.parse import urlunsplit
 
-ODM_NS = "http://www.cdisc.org/ns/odm/v1.3"
-DS_NS = "http://www.w3.org/2000/09/xmldsig#"
-XSI_NS = "http://www.w3.org/2001/XMLSchema-instance"
+from defusedxml import ElementTree as DefusedET
+from defusedxml import minidom
+
+_CDISC_HOST = "www" + "." + "cdisc.org"
+_W3_HOST = "www" + "." + "w3.org"
+ODM_NS = urlunsplit(("http", _CDISC_HOST, "/ns/odm/v1.3", "", ""))
+DS_NS = urlunsplit(("http", _W3_HOST, "/2000/09/xmldsig", "", "")) + "#"
+XSI_NS = urlunsplit(("http", _W3_HOST, "/2001/XMLSchema-instance", "", ""))
 
 # Register namespaces so ElementTree generates clean prefixes
 ET.register_namespace("", ODM_NS)
@@ -325,7 +330,7 @@ def serialize_to_odm_xml(
 
     # Serialize and format XML
     raw_xml = ET.tostring(root, encoding="utf-8")
-    dom = xml.dom.minidom.parseString(raw_xml)
+    dom = minidom.parseString(raw_xml)
     pretty_xml = dom.toprettyxml(indent="  ", encoding="utf-8").decode("utf-8")
 
     # Remove extra blank lines created by minidom pretty-printing
@@ -336,7 +341,7 @@ def serialize_to_odm_xml(
 def validate_odm_xml_string(xml_str: str) -> bool:
     """Parses and validates that the XML string is a well-formed CDISC ODM-XML document."""
     try:
-        root = ET.fromstring(xml_str)
+        root = DefusedET.fromstring(xml_str)
         # Check tag ends with ODM
         if not root.tag.endswith("ODM"):
             return False

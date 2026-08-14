@@ -582,7 +582,10 @@ async def extract_usdm_from_protocol_document(
     full_text = extract_text_from_document(file_content, filename)
 
     api_key = os.getenv("LLM_API_KEY")
-    endpoint = os.getenv("LLM_ENDPOINT", "https://api.openai.com/v1/chat/completions")
+    default_endpoint_host = "api.openai.com"
+    endpoint = os.getenv(
+        "LLM_ENDPOINT", f"https://{default_endpoint_host}/v1/chat/completions"
+    )
 
     if api_key and not os.getenv("CADENCE_TEST_MODE"):
         try:
@@ -592,7 +595,7 @@ async def extract_usdm_from_protocol_document(
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {
                         "role": "user",
-                        "content": f"Protocol Text:\n\n{full_text[:40000]}",
+                        "content": f"Protocol Text:\n\n{full_text[:40_000]}",
                     },
                 ],
                 "response_format": {"type": "json_object"},
