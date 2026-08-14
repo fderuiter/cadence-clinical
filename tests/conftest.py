@@ -37,10 +37,14 @@ def get_postgres_base_config():
 
 
 async def create_databases_async(worker_suffix: str):
-    from sqlalchemy import text
-    from sqlalchemy.ext.asyncio import create_async_engine
+    import asyncpg
 
-    base_url = f"{get_postgres_base_config()}postgres"
+    postgres_url = get_postgres_base_config()
+    clean_url = (
+        postgres_url.replace("postgresql+asyncpg://", "postgresql://").rstrip("/")
+        + "/postgres"
+    )
+
     db_names = [
         f"cadence_edc{worker_suffix}",
         f"cadence_etmf{worker_suffix}",
@@ -55,26 +59,38 @@ async def create_databases_async(worker_suffix: str):
         f"cadence_eisf{worker_suffix}",
     ]
 
-    engine = create_async_engine(base_url, isolation_level="AUTOCOMMIT")
-    async with engine.connect() as conn:
+    conn = await asyncpg.connect(clean_url)
+    try:
         for db_name in db_names:
-            res = await conn.execute(
-                text(f"SELECT 1 FROM pg_database WHERE datname='{db_name}'")
-            )
-            if not res.scalar():
+            await conn.execute(f"""
+                SELECT pg_terminate_backend(pid)
+                FROM pg_stat_activity
+                WHERE datname = '{db_name}'
+                  AND pid <> pg_backend_pid();
+            """)
+            await conn.execute(f"DROP DATABASE IF EXISTS {db_name};")
+            for attempt in range(5):
                 try:
-                    await conn.execute(text(f"CREATE DATABASE {db_name}"))
-                    print(f"[conftest] Created isolated database: {db_name}")
-                except Exception as e:
-                    print(f"[conftest] Error creating database {db_name}: {e}")
-    await engine.dispose()
+                    await conn.execute(f"CREATE DATABASE {db_name};")
+                    print(f"[conftest] Created clean isolated database: {db_name}")
+                    break
+                except Exception:
+                    if attempt == 4:
+                        raise
+                    await asyncio.sleep(0.3)
+    finally:
+        await conn.close()
 
 
 async def drop_databases_async(worker_suffix: str):
-    from sqlalchemy import text
-    from sqlalchemy.ext.asyncio import create_async_engine
+    import asyncpg
 
-    base_url = f"{get_postgres_base_config()}postgres"
+    postgres_url = get_postgres_base_config()
+    clean_url = (
+        postgres_url.replace("postgresql+asyncpg://", "postgresql://").rstrip("/")
+        + "/postgres"
+    )
+
     db_names = [
         f"cadence_edc{worker_suffix}",
         f"cadence_etmf{worker_suffix}",
@@ -89,23 +105,25 @@ async def drop_databases_async(worker_suffix: str):
         f"cadence_eisf{worker_suffix}",
     ]
 
-    engine = create_async_engine(base_url, isolation_level="AUTOCOMMIT")
-    async with engine.connect() as conn:
-        for db_name in db_names:
-            try:
-                await conn.execute(
-                    text(f"""
-                    SELECT pg_terminate_backend(pg_stat_activity.pid)
-                    FROM pg_stat_activity
-                    WHERE pg_stat_activity.datname = '{db_name}'
-                      AND pid <> pg_backend_pid()
-                """)
-                )
-                await conn.execute(text(f"DROP DATABASE IF EXISTS {db_name}"))
-                print(f"[conftest] Dropped isolated database: {db_name}")
-            except Exception as e:
-                print(f"[conftest] Error dropping database {db_name}: {e}")
-    await engine.dispose()
+    try:
+        conn = await asyncpg.connect(clean_url)
+        try:
+            for db_name in db_names:
+                try:
+                    await conn.execute(f"""
+                        SELECT pg_terminate_backend(pid)
+                        FROM pg_stat_activity
+                        WHERE datname = '{db_name}'
+                          AND pid <> pg_backend_pid();
+                    """)
+                    await conn.execute(f"DROP DATABASE IF EXISTS {db_name};")
+                    print(f"[conftest] Dropped isolated database: {db_name}")
+                except Exception as e:
+                    print(f"[conftest] Error dropping database {db_name}: {e}")
+        finally:
+            await conn.close()
+    except Exception as e:
+        print(f"[conftest] Error connecting to postgres for drop: {e}")
 
 
 def run_sync(coro):
@@ -275,6 +293,19 @@ def patch_init_db():
             return original_rel_init_db(self, new_url, **kwargs)
         return original_rel_init_db(self, database_url, **kwargs)
 
+    from sqlalchemy import MetaData
+
+    original_drop_all = MetaData.drop_all
+
+    def patched_drop_all(self, bind=None, tables=None, checkfirst=True):
+        if os.environ.get("USE_LIVE_DB") == "true" or os.environ.get(
+            "TEST_DATABASE_URL", ""
+        ).startswith(("postgres", "postgresql")):
+            return None
+        return original_drop_all(self, bind=bind, tables=tables, checkfirst=checkfirst)
+
+    MetaData.drop_all = patched_drop_all
+
     DatabaseSessionManager.init_db = patched_exec_init_db
     RelationalDatabaseManager.init_db = patched_rel_init_db
 
@@ -286,20 +317,22 @@ try:
     from filelock import FileLock
 
     lock_path = "/tmp/postgres_db_creation.lock"
-    with FileLock(lock_path, timeout=120):
+    with FileLock(lock_path, timeout=180):
         run_sync(create_databases_async(worker_suffix))
-    # Override the env var so any standard fallback uses isolated DB too
-    os.environ["TEST_DATABASE_URL"] = (
-        f"{get_postgres_base_config()}cadence_edc{worker_suffix}"
-    )
-    patch_init_db()
-    databases_pre_created = True
+        # Override the env var so any standard fallback uses isolated DB too
+        os.environ["TEST_DATABASE_URL"] = (
+            f"{get_postgres_base_config()}cadence_edc{worker_suffix}"
+        )
+        patch_init_db()
+        databases_pre_created = True
 
-    if os.environ.get("USE_LIVE_DB") == "true" or os.environ.get(
-        "TEST_DATABASE_URL", ""
-    ).startswith(("postgres", "postgresql")):
-        print("[conftest] Initializing all PostgreSQL schemas...")
-        run_sync(create_all_schemas_async(worker_suffix))
+        if os.environ.get("USE_LIVE_DB") == "true" or os.environ.get(
+            "TEST_DATABASE_URL", ""
+        ).startswith(("postgres", "postgresql")):
+            print(
+                f"[conftest] Initializing all PostgreSQL schemas for worker {worker_suffix}..."
+            )
+            run_sync(create_all_schemas_async(worker_suffix))
 except Exception as e:
     if os.environ.get("GITHUB_ACTIONS") == "true":
         print(f"[conftest] ERROR: Database initialization failed in CI: {e}")
@@ -550,17 +583,9 @@ def concurrency_runner():
     return ConcurrencyRunner()
 
 
-def pytest_sessionfinish(session, exitstatus):
-    """
-    Hook to run after the test session finishes to generate/update the
-    Requirements Traceability Matrix (RTM) and GxP Qualification Report,
-    and to drop worker-isolated databases.
-    """
-    # Clean up worker-isolated databases at the end of the session.
-    # We bypass this teardown if called from a mock session (e.g., inside tests
-    # like test_rtm_generation_conftest_hook_detection in test_cli_etmf_archival.py)
-    # to prevent early database dropping of active parallel worker databases.
-    if databases_pre_created and session.__class__.__name__ != "MockSession":
+def pytest_unconfigure(config):
+    """Clean up worker-isolated databases when the test process unconfigures."""
+    if databases_pre_created:
         worker_id = os.environ.get("PYTEST_XDIST_WORKER")
         worker_suffix = f"_{worker_id}" if worker_id else "_test"
         try:
@@ -568,6 +593,12 @@ def pytest_sessionfinish(session, exitstatus):
         except Exception as e:
             print(f"[conftest] Error tearing down databases: {e}")
 
+
+def pytest_sessionfinish(session, exitstatus):
+    """
+    Hook to run after the test session finishes to generate/update the
+    Requirements Traceability Matrix (RTM) and GxP Qualification Report.
+    """
     # Skip report generation if inside a pytest-xdist worker process
     config = getattr(session, "config", None)
     if config and hasattr(config, "workerinput"):

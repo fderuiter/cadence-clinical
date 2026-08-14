@@ -84,6 +84,8 @@ class TokenConsumptionCache:
         with self._lock:
             self._consumed.clear()
 
+    clear = reset
+
 
 token_consumption_cache = TokenConsumptionCache()
 

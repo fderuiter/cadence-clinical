@@ -592,3 +592,27 @@ async def match_verbatim_term(
         if expired_data is not None:
             return expired_data
         raise e
+
+
+async def find_fuzzy_matches(
+    session: AsyncSession,
+    dictionary_type: str,
+    dictionary_version: str,
+    query: str,
+    limit: int = 5,
+) -> list[dict[str, Any]]:
+    """Helper to find ranked fuzzy matches for a term against dictionary candidates."""
+    if not query or not query.strip():
+        return []
+    res = await match_verbatim_term(
+        session=session,
+        verbatim=query.strip(),
+        dictionary_type=dictionary_type,
+        version=dictionary_version,
+    )
+    matches = []
+    if res.get("match"):
+        matches.append(res["match"])
+    if res.get("suggestions"):
+        matches.extend(res["suggestions"])
+    return matches[:limit]

@@ -65,7 +65,10 @@ def get_auth_headers(
 @pytest_asyncio.fixture(autouse=True)
 async def setup_workbench_db() -> AsyncGenerator[None]:
     """Isolates in-memory database and deploys 21 CFR Part 11 audit triggers."""
+    from apps.execution.coding.matcher import coding_cache
+
     TrialLockManager.reset()
+    coding_cache.clear()
     db_manager.init_db(
         os.getenv("TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:"),
         echo=False,
@@ -78,8 +81,8 @@ async def setup_workbench_db() -> AsyncGenerator[None]:
     yield
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
-    await db_manager.close()
     TrialLockManager.reset()
+    coding_cache.clear()
 
 
 async def seed_workbench_data() -> dict[str, str]:

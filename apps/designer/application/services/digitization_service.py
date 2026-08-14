@@ -25,7 +25,7 @@ from apps.designer.domain.digitization_models import (
     SynthesizedECRFForm,
     USDMProtocolExtractionResponse,
 )
-from apps.designer.infrastructure.usdm_ingestion import (
+from apps.designer.rules import (
     detect_circular_dependencies,
 )
 

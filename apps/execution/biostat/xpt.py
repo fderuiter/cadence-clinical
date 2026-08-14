@@ -514,15 +514,19 @@ def write_xpt_v8(
 
 def write_xpt(
     dataset_name: str,
-    records: list[dict[str, Any]],
+    records: list[dict[str, Any]] | None = None,
     version: str = "v5",
     variables_metadata: list[dict[str, Any]] | None = None,
+    data: list[dict[str, Any]] | None = None,
+    columns: list[str] | None = None,
+    **kwargs: Any,
 ) -> bytes:
     """Entry point to serialize dataset records to SAS XPT format (v5 or v8)."""
+    actual_records = records if records is not None else (data or [])
     ver_clean = version.strip().lower()
     if ver_clean in ("v8", "8"):
-        return write_xpt_v8(dataset_name, records, variables_metadata)
-    return write_xpt_v5(dataset_name, records, variables_metadata)
+        return write_xpt_v8(dataset_name, actual_records, variables_metadata)
+    return write_xpt_v5(dataset_name, actual_records, variables_metadata)
 
 
 def read_xpt(data: bytes) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -689,3 +693,7 @@ def _read_xpt_v8(data: bytes) -> tuple[dict[str, Any], list[dict[str, Any]]]:
         "record_count": len(records),
     }
     return meta, records
+
+
+# Compatibility alias for legacy scripts
+generate_sas_xpt = write_xpt

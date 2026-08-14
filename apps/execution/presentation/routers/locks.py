@@ -426,20 +426,31 @@ async def get_form_lock_status_endpoint(
     return results
 
 
-@router.get("", response_model=list[DataLockRecord])
+@router.get("")
 async def list_data_locks_endpoint(
     study_id: str | None = Query(None, description="Filter by study ID"),
     scope_type: str | None = Query(None, description="Filter by scope type"),
     is_active: bool | None = Query(None, description="Filter by active status"),
     current_user: dict = Depends(get_current_user),
-) -> list[DataLockRecord]:
-    """List data lock records with optional filtering."""
+) -> Any:
+    """List data lock records with optional filtering, or return global lock status if unfiltered."""
     if hasattr(study_id, "default"):
         study_id = None
     if hasattr(scope_type, "default"):
         scope_type = None
     if hasattr(is_active, "default"):
         is_active = None
+
+    if study_id is None and scope_type is None and is_active is None:
+        from apps.execution.domain.lock_transport_models import LockStatusResponse
+
+        return LockStatusResponse(
+            locked_sites=list(TrialLockManager._locked_sites),
+            locked_visits=list(TrialLockManager._locked_visits),
+            locked_forms=list(TrialLockManager._locked_forms),
+            locked_subjects=list(TrialLockManager._locked_subjects),
+            trial_locked=TrialLockManager.is_locked(),
+        )
 
     results: list[DataLockRecord] = []
     seen_ids: set[str] = set()
