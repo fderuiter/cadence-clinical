@@ -136,9 +136,9 @@ def _render_pdf_certificate(
             current_offset += len(obj_bytes)
 
     xref_header = b"xref\n0 8\n"
-    xref_entries = [b"0000000000 65535 f \n"]
+    xref_entries = [b"0000000000 65535 f \n"]  # deid-ignore
     for i in range(1, 8):
-        entry = f"{offsets[i]:010d} 00000 n \n".encode("latin1")
+        entry = f"{offsets[i]:010d} 00000 n \n".encode("latin1")  # deid-ignore
         xref_entries.append(entry)
 
     xref_table = xref_header + b"".join(xref_entries)
