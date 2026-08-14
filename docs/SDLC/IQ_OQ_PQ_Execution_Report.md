@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2416
-- **Passed:** 2397 🟢
+- **Total Automated Test Cases Run:** 2403
+- **Passed:** 2384 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.21%
@@ -2317,19 +2317,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_native_docx_watermarking`                                                         | `packages.storage.tests.test_safe_binary_storage_watermark`                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_native_pdf_watermarking`                                                          | `packages.storage.tests.test_safe_binary_storage_watermark`                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_safe_binary_ingestion_and_export`                                                 | `packages.storage.tests.test_safe_binary_storage_watermark`                 | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
-| `test_cross_service_import_isolation`                                                   | `scripts.test_m4_challenger2_stress`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
-| `test_etmf_protocol_version_ref_invalid_status`                                         | `scripts.test_m4_challenger2_stress`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
-| `test_etmf_protocol_version_ref_invalid_study_id`                                       | `scripts.test_m4_challenger2_stress`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
-| `test_etmf_protocol_version_ref_invalid_version_index`                                  | `scripts.test_m4_challenger2_stress`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
-| `test_etmf_protocol_version_ref_invalid_version_tag`                                    | `scripts.test_m4_challenger2_stress`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
-| `test_etmf_protocol_version_ref_json_serialization`                                     | `scripts.test_m4_challenger2_stress`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
-| `test_etmf_protocol_version_ref_string_trimming`                                        | `scripts.test_m4_challenger2_stress`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
-| `test_etmf_protocol_version_ref_valid`                                                  | `scripts.test_m4_challenger2_stress`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
-| `test_etmf_watermark_decoupling`                                                        | `scripts.test_m4_challenger2_stress`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
-| `test_interop_dsl_parsing_and_evaluation`                                               | `scripts.test_m4_challenger2_stress`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
-| `test_interop_epro_transport_dto_serialization`                                         | `scripts.test_m4_challenger2_stress`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
-| `test_interop_expression_node_dto_validation`                                           | `scripts.test_m4_challenger2_stress`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
-| `test_interop_field_reference_dto`                                                      | `scripts.test_m4_challenger2_stress`                                        | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_api_parameters_parity`                                                            | `scripts.tests.test_api_contract_validation`                                | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_api_paths_and_methods_parity`                                                     | `scripts.tests.test_api_contract_validation`                                | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_api_request_bodies_parity`                                                        | `scripts.tests.test_api_contract_validation`                                | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
