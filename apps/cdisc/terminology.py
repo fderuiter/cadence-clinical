@@ -1,4 +1,3 @@
-import enum
 import re
 from enum import StrEnum
 

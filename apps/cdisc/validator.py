@@ -1,15 +1,9 @@
-import enum
 from typing import Any
 
 from apps.cdisc.models import DatasetJSON, DatasetJSONItemGroup
 from apps.cdisc.terminology import (
     AEOutcome,
     AERelationship,
-    AESeriousness,
-    AESeverity,
-    NullFlavor,
-    Race,
-    Sex,
     normalize_race,
     normalize_seriousness,
     normalize_severity,

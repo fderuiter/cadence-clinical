@@ -1,5 +1,6 @@
+# ruff: noqa: N815
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
@@ -160,67 +161,68 @@ class DatasetJSON(BaseModel):
 
 # --- INPUT JSON DTOS ---
 
+
 class SubjectDTO(BaseModel):
     id: str
     subject_id: str
     study_id: str
-    site_id: Optional[str] = None
-    usubjid: Optional[str] = None
-    demographics: Optional[dict[str, Any]] = None
-    encrypted_demographics: Optional[str] = None
-    rfstdtc: Optional[str] = None
-    rfendtc: Optional[str] = None
-    is_deleted: Optional[bool] = False
-    enrollment_index: Optional[int] = None
-    randomization_date: Optional[Any] = None
-    randt: Optional[Any] = None
-    end_of_study_date: Optional[Any] = None
-    eosdt: Optional[Any] = None
-    death_date: Optional[Any] = None
-    dthdtc: Optional[Any] = None
-    actarm: Optional[str] = None
-    ACTARM: Optional[str] = None
+    site_id: str | None = None
+    usubjid: str | None = None
+    demographics: dict[str, Any] | None = None
+    encrypted_demographics: str | None = None
+    rfstdtc: str | None = None
+    rfendtc: str | None = None
+    is_deleted: bool | None = False
+    enrollment_index: int | None = None
+    randomization_date: Any | None = None
+    randt: Any | None = None
+    end_of_study_date: Any | None = None
+    eosdt: Any | None = None
+    death_date: Any | None = None
+    dthdtc: Any | None = None
+    actarm: str | None = None
+    ACTARM: str | None = None
 
 
 class ObservationDTO(BaseModel):
     id: str
     subject_id: str
     study_id: str
-    site_id: Optional[str] = None
-    visit_id: Optional[str] = None
-    domain: Optional[str] = None
-    observation_date: Optional[Any] = None
-    test_code: Optional[str] = None
-    test_name: Optional[str] = None
-    value: Optional[Any] = None
-    value_string: Optional[str] = None
-    unit: Optional[str] = None
-    normalized_value: Optional[Any] = None
-    normalized_unit: Optional[str] = None
-    is_outlier: Optional[bool] = False
-    is_sdv_verified: Optional[bool] = False
-    sdv_verified_by: Optional[str] = None
-    sdv_verified_at: Optional[Any] = None
-    page_id: Optional[str] = None
-    lab_source: Optional[str] = None
-    lab_site_id: Optional[str] = None
-    lab_indicator: Optional[str] = None
-    lab_out_of_range: Optional[bool] = False
-    matched_normal_bounds: Optional[str] = None
-    protocol_version_tag: Optional[str] = None
-    protocol_version_index: Optional[int] = None
-    provenance: Optional[list[dict[str, Any]]] = None
-    is_deleted: Optional[bool] = False
+    site_id: str | None = None
+    visit_id: str | None = None
+    domain: str | None = None
+    observation_date: Any | None = None
+    test_code: str | None = None
+    test_name: str | None = None
+    value: Any | None = None
+    value_string: str | None = None
+    unit: str | None = None
+    normalized_value: Any | None = None
+    normalized_unit: str | None = None
+    is_outlier: bool | None = False
+    is_sdv_verified: bool | None = False
+    sdv_verified_by: str | None = None
+    sdv_verified_at: Any | None = None
+    page_id: str | None = None
+    lab_source: str | None = None
+    lab_site_id: str | None = None
+    lab_indicator: str | None = None
+    lab_out_of_range: bool | None = False
+    matched_normal_bounds: str | None = None
+    protocol_version_tag: str | None = None
+    protocol_version_index: int | None = None
+    provenance: list[dict[str, Any]] | None = None
+    is_deleted: bool | None = False
 
 
 class VisitDTO(BaseModel):
     id: str
     subject_id: str
     study_id: str
-    site_id: Optional[str] = None
-    visit_name: Optional[str] = None
-    visit_date: Optional[Any] = None
-    is_deleted: Optional[bool] = False
+    site_id: str | None = None
+    visit_name: str | None = None
+    visit_date: Any | None = None
+    is_deleted: bool | None = False
 
 
 class MigrationRuleDTO(BaseModel):
@@ -229,11 +231,11 @@ class MigrationRuleDTO(BaseModel):
     source_version: str
     target_version: str
     rule_type: str
-    source_field: Optional[str] = None
-    target_field: Optional[str] = None
-    default_value_string: Optional[str] = None
-    default_value_float: Optional[float] = None
-    is_deleted: Optional[bool] = False
+    source_field: str | None = None
+    target_field: str | None = None
+    default_value_string: str | None = None
+    default_value_float: float | None = None
+    is_deleted: bool | None = False
 
 
 class SDTMRequest(BaseModel):

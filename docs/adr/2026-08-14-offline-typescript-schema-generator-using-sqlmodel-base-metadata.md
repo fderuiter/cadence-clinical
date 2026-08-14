@@ -1,9 +1,9 @@
 # ADR-2173: Offline TypeScript Schema Generator using SQLModel Base Metadata
 
-* **Status:** Accepted
-* **Date:** 2026-08-14
-* **Authors:** @fderuiter
-* **Deciders:** @fderuiter
+- **Status:** Accepted
+- **Date:** 2026-08-14
+- **Authors:** @fderuiter
+- **Deciders:** @fderuiter
 
 ---
 
@@ -17,30 +17,30 @@ This decision implements requirements under Trace-8.
 
 ## 2. Decision Drivers & Constraints
 
-* **Zero Live Database Requirements:** Eliminate database initialization and migration steps during static code generation.
-* **Hermetic and Secure CI/CD builds:** Keep the style and lint verification jobs fast, completely network-isolated, and dependency-free.
-* **GxP Compliance Parity:** Exclude audit, seal, outbox, and internal configuration tables from the exported type definitions.
+- **Zero Live Database Requirements:** Eliminate database initialization and migration steps during static code generation.
+- **Hermetic and Secure CI/CD builds:** Keep the style and lint verification jobs fast, completely network-isolated, and dependency-free.
+- **GxP Compliance Parity:** Exclude audit, seal, outbox, and internal configuration tables from the exported type definitions.
 
 ## 3. Options Considered
 
 ### Option 1: Live PostgreSQL/SQLite Database Introspection (Legacy)
 
-* **Overview:** Initialize a database, apply migrations via Alembic, connect the introspection engine, inspect schemas from PG catalog, and output TS files.
-* **Pros:**
-  * ✅ Reflects the actual database state including any raw triggers or custom indexes.
-* **Cons:**
-  * ❌ Requires a running database, rendering CI/CD slow and fragile.
-  * ❌ Does not support pure offline static validation workflows.
+- **Overview:** Initialize a database, apply migrations via Alembic, connect the introspection engine, inspect schemas from PG catalog, and output TS files.
+- **Pros:**
+  - ✅ Reflects the actual database state including any raw triggers or custom indexes.
+- **Cons:**
+  - ❌ Requires a running database, rendering CI/CD slow and fragile.
+  - ❌ Does not support pure offline static validation workflows.
 
 ### Option 2: SQLModel Metadata-Driven Static Introspection (Chosen)
 
-* **Overview:** Load SQLAlchemy's `Base.metadata.tables` directly using offline-configured python model imports, avoiding active database connections entirely.
-* **Pros:**
-  * ✅ 100% offline-capable, runs instantly without any service dependencies.
-  * ✅ Precise type mapping from Python types to TypeScript.
-  * ✅ High isolation, complying with GxP audit-trail requirements.
-* **Cons:**
-  * ❌ Requires maintaining mock/default environments during python model loading in the script.
+- **Overview:** Load SQLAlchemy's `Base.metadata.tables` directly using offline-configured python model imports, avoiding active database connections entirely.
+- **Pros:**
+  - ✅ 100% offline-capable, runs instantly without any service dependencies.
+  - ✅ Precise type mapping from Python types to TypeScript.
+  - ✅ High isolation, complying with GxP audit-trail requirements.
+- **Cons:**
+  - ❌ Requires maintaining mock/default environments during python model loading in the script.
 
 ## 4. Decision Outcome
 
@@ -48,10 +48,10 @@ Chosen option: Option 2 because it satisfies Trace-8 while ensuring system maint
 
 ## 5. Consequences & Trade-offs
 
-* **Positive:** Faster static checks, simplified developer setup, and completely secure type generation in isolated containers.
-* **Negative:** Import blocks must be loaded carefully inside Python with appropriate environment variables (`TERMINOLOGY_OFFLINE`, etc.) configured.
+- **Positive:** Faster static checks, simplified developer setup, and completely secure type generation in isolated containers.
+- **Negative:** Import blocks must be loaded carefully inside Python with appropriate environment variables (`TERMINOLOGY_OFFLINE`, etc.) configured.
 
 ## 6. Implementation & Verification
 
-* Target files/packages modified: `scripts/introspect_pg_schema.py` and `apps/web/src/types/db_schemas.ts`.
-* Verification: Run ADR validation and lint steps locally to confirm parity.
+- Target files/packages modified: `scripts/introspect_pg_schema.py` and `apps/web/src/types/db_schemas.ts`.
+- Verification: Run ADR validation and lint steps locally to confirm parity.

@@ -1,10 +1,11 @@
 import contextlib
 import re
+from datetime import date, datetime
 from typing import Any
 
+from apps.cdisc.demographics import decrypt_demographics as decrypt_demographics
 from apps.cdisc.models import SUPPRecord
 from apps.cdisc.terminology import normalize_race, normalize_sex
-from apps.cdisc.demographics import decrypt_demographics as decrypt_demographics
 
 
 def calculate_age(rfstdtc: str | None, brthdtc: str | None) -> int | None:
@@ -23,8 +24,6 @@ def calculate_age(rfstdtc: str | None, brthdtc: str | None) -> int | None:
         return None
 
     try:
-        from datetime import date
-
         rf_y, rf_m, rf_d = map(int, match_rf.groups())
         br_y, br_m, br_d = map(int, match_br.groups())
 
@@ -1152,8 +1151,6 @@ def extract_lb(
     return lb_records, supp_records
 
 
-from datetime import date, datetime
-
 def to_dtc(val: Any) -> str | None:
     """Converts standard dates, datetimes, or validated strings into CDISC DTC format."""
     if val is None:
@@ -1313,7 +1310,9 @@ def map_cm(
                             "CMDOSFRQ": cmdosfrq,
                             "CMROUTE": cmroute,
                             "CMSTDTC": to_dtc(cmstdtc),
-                            "CMENDTC": to_dtc(get_value(o, "cmendtc") or get_value(o, "CMENDTC")),
+                            "CMENDTC": to_dtc(
+                                get_value(o, "cmendtc") or get_value(o, "CMENDTC")
+                            ),
                             "id": get_value(o, "id") or id(o),
                         }
                     )
@@ -1411,4 +1410,3 @@ def map_cm(
             cm_records.append(record)
 
     return cm_records
-
