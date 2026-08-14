@@ -130,6 +130,18 @@ To ensure proper GxP boundaries and architectural decoupling across the Cadence 
 
 ---
 
+### Pytest-Xdist Test Harness Isolation & Database Gating
+
+To maintain complete isolation across concurrent local test runs and prevent worker deadlock:
+
+1. **No Import-Time Database Provisioning:** Database creation, schema migrations, and connection validations must never execute as module-level import side effects in `conftest.py`. All database provisioning must be gated inside `pytest_configure(config)`.
+2. **Controller Zero-Provisioning Boundary:** The pytest-xdist controller process (`is_xdist_controller(config)`) coordinates worker dispatch and runs 0 test cases; it must never provision database schemas.
+3. **Collision-Free Run & Worker Suffixes:** All database names must incorporate both the run identifier and worker identifier (`_{run_uid}_{worker_id}`) via `get_run_uid(config)` and `build_worker_suffix()`, adhering to PostgreSQL's 63-byte identifier limit (`NAMEDATALEN - 1`).
+4. **Bounded Teardown & Async Timeouts:** All async database operations, schema resets, and subprocess invocations must be wrapped with bounded timeouts (5s connection, 15–30s execution) via `asyncio.wait_for` to prevent hanging workers upon disconnection.
+5. **Background Subscriber & Worker Loop Testing:** When testing background worker/subscriber loops that incorporate retry logic (`while not self._stop_event.is_set():`), tests must signal or mock `_stop_event.wait` rather than patching `time.sleep` to guarantee clean loop termination.
+
+---
+
 ## GxP Compliance Sync Protocol
 
 The CI `compliance` job regenerates the RTM docs and diffs them against the
