@@ -62,7 +62,9 @@ def ibm_to_double(b: bytes) -> float | None:
         b = b.ljust(8, b"\x00")
     if b == b"\x00" * 8:
         return 0.0
-    if b[0] == 0x2E:  # ASCII '.'
+    if b == b".\x00\x00\x00\x00\x00\x00\x00" or (
+        b[0] == 0x2E and b[1:8] == b"\x00" * 7
+    ):
         return None
 
     sign = 1 if (b[0] & 0x80) else 0
@@ -600,15 +602,22 @@ def _read_xpt_v5(data: bytes) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     obs_start = obs_idx + 80
     obs_data = data[obs_start:]
 
+    next_hdr = obs_data.find(b"HEADER RECORD*******")
+    if next_hdr != -1:
+        obs_data = obs_data[:next_hdr]
+
     row_len = sum(v["length"] for v in variables)
     records: list[dict[str, Any]] = []
 
     if row_len > 0:
+        has_numeric = any(v["type"] == 1 for v in variables)
         num_rows = len(obs_data) // row_len
         for r_idx in range(num_rows):
-            r_chunk = obs_data[r_idx * row_len : (r_idx + 1) * row_len]
-            # Check if padding reached
-            if all(b == 32 for b in r_chunk):
+            r_start = r_idx * row_len
+            r_chunk = obs_data[r_start : r_start + row_len]
+            remaining = obs_data[r_start:]
+            # Check if this is trailing 80-byte card boundary padding (less than 80 bytes to EOF and all spaces)
+            if has_numeric and len(remaining) < 80 and all(b == 32 for b in remaining):
                 break
             rec = {}
             for v in variables:
@@ -667,14 +676,22 @@ def _read_xpt_v8(data: bytes) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     obs_start = obs_idx + 80
     obs_data = data[obs_start:]
 
+    next_hdr = obs_data.find(b"HEADER RECORD*******")
+    if next_hdr != -1:
+        obs_data = obs_data[:next_hdr]
+
     row_len = sum(v["length"] for v in variables)
     records: list[dict[str, Any]] = []
 
     if row_len > 0:
+        has_numeric = any(v["type"] == 1 for v in variables)
         num_rows = len(obs_data) // row_len
         for r_idx in range(num_rows):
-            r_chunk = obs_data[r_idx * row_len : (r_idx + 1) * row_len]
-            if all(b == 32 for b in r_chunk):
+            r_start = r_idx * row_len
+            r_chunk = obs_data[r_start : r_start + row_len]
+            remaining = obs_data[r_start:]
+            # Check if this is trailing 80-byte card boundary padding (less than 80 bytes to EOF and all spaces)
+            if has_numeric and len(remaining) < 80 and all(b == 32 for b in remaining):
                 break
             rec = {}
             for v in variables:
