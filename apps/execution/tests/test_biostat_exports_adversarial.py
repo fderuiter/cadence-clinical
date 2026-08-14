@@ -19,10 +19,10 @@ Requirements:
 - @req:Trace-12
 """
 
-import xml.etree.ElementTree as ET
 from datetime import datetime
 
 import pytest
+from defusedxml import ElementTree as ET
 
 from apps.execution.biostat.deid import (
     deidentify_record,

@@ -984,6 +984,8 @@
               font-size: 0.85rem;
               text-align: center;
             "
+          >
+            This candidate has already been promoted.
           </div>
         </div>
       </div>

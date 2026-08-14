@@ -255,7 +255,11 @@ def write_xpt_v5(
 
     # Namestr Header Card
     num_vars = len(var_specs)
-    namestr_card = f"HEADER RECORD*******NAMESTR HEADER RECORD!!!!!!!00000000000000000140{num_vars:04d}000000  "
+    namestr_offset = f"{140:020d}"
+    namestr_card = (
+        "HEADER RECORD*******NAMESTR HEADER RECORD!!!!!!!"
+        f"{namestr_offset}{num_vars:04d}000000  "
+    )
     out.extend(_pad_card(namestr_card))
 
     # 3. Build Namestr Records (140 bytes each)
@@ -435,7 +439,11 @@ def write_xpt_v8(
 
     # V8 Namestr Header
     num_vars = len(var_specs)
-    namestr_card = f"HEADER RECORD*******NAMSTRV8HEADER RECORD!!!!!!!00000000000000000512{num_vars:04d}000000  "
+    namestr_offset = f"{512:020d}"
+    namestr_card = (
+        "HEADER RECORD*******NAMSTRV8HEADER RECORD!!!!!!!"
+        f"{namestr_offset}{num_vars:04d}000000  "
+    )
     out.extend(_pad_card(namestr_card))
 
     # V8 Namestr records (512 bytes each, padded)
