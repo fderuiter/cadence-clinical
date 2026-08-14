@@ -261,7 +261,9 @@
             :disabled="!queryMessage.trim() || isSubmittingQuery"
             @click="submitQuery"
           >
-            {{ isSubmittingQuery ? "Raising Query..." : "Raise Discrepancy Query" }}
+            {{
+              isSubmittingQuery ? "Raising Query..." : "Raise Discrepancy Query"
+            }}
           </button>
         </div>
       </div>
@@ -342,7 +344,9 @@
           <button
             type="button"
             class="btn btn-primary"
-            :disabled="!batchCode.trim() || !batchReason.trim() || isSubmittingBatch"
+            :disabled="
+              !batchCode.trim() || !batchReason.trim() || isSubmittingBatch
+            "
             @click="submitBatchCode"
           >
             {{ isSubmittingBatch ? "Applying..." : "Apply Batch Code" }}

@@ -5,13 +5,20 @@
       <div>
         <h4 class="title">Clinical Study Arms &amp; Epoch Progression</h4>
         <p class="subtitle">
-          Timeline mapping of protocol epochs, crossover paths, and subject allocations.
+          Timeline mapping of protocol epochs, crossover paths, and subject
+          allocations.
         </p>
       </div>
       <div class="summary-stats">
-        <span class="pill"><strong>{{ arms.length }}</strong> Study Arms</span>
-        <span class="pill"><strong>{{ epochs.length }}</strong> Protocol Epochs</span>
-        <span class="pill highlight"><strong>{{ totalSampleSize }}</strong> Target Subjects</span>
+        <span class="pill"
+          ><strong>{{ arms.length }}</strong> Study Arms</span
+        >
+        <span class="pill"
+          ><strong>{{ epochs.length }}</strong> Protocol Epochs</span
+        >
+        <span class="pill highlight"
+          ><strong>{{ totalSampleSize }}</strong> Target Subjects</span
+        >
       </div>
     </div>
 
@@ -19,7 +26,10 @@
     <div class="arms-grid">
       <div v-for="arm in arms" :key="arm.name" class="arm-card">
         <div class="arm-card-top">
-          <span class="arm-type-badge" :class="`type-${arm.arm_type.toLowerCase()}`">
+          <span
+            class="arm-type-badge"
+            :class="`type-${arm.arm_type.toLowerCase()}`"
+          >
             {{ formatArmType(arm.arm_type) }}
           </span>
           <span v-if="arm.target_sample_size" class="sample-badge">
@@ -51,7 +61,10 @@
       <div class="sequence-chain">
         <template v-for="(ep, idx) in sortedEpochs" :key="ep.name">
           <div class="sequence-step">
-            <div class="step-badge" :class="`step-${ep.epoch_type.toLowerCase()}`">
+            <div
+              class="step-badge"
+              :class="`step-${ep.epoch_type.toLowerCase()}`"
+            >
               {{ ep.sequence_index }}
             </div>
             <div class="step-info">
@@ -83,11 +96,16 @@ const props = defineProps({
 });
 
 const sortedEpochs = computed(() => {
-  return [...props.epochs].sort((a, b) => (a.sequence_index || 0) - (b.sequence_index || 0));
+  return [...props.epochs].sort(
+    (a, b) => (a.sequence_index || 0) - (b.sequence_index || 0)
+  );
 });
 
 const totalSampleSize = computed(() => {
-  return props.arms.reduce((acc, curr) => acc + (curr.target_sample_size || 0), 0);
+  return props.arms.reduce(
+    (acc, curr) => acc + (curr.target_sample_size || 0),
+    0
+  );
 });
 
 const formatArmType = (type) => {
@@ -178,11 +196,26 @@ const formatArmType = (type) => {
   text-transform: uppercase;
 }
 
-.type-experimental { background-color: #dbeafe; color: #1e40af; }
-.type-active_comparator { background-color: #fef3c7; color: #92400e; }
-.type-placebo_comparator { background-color: #f1f5f9; color: #475569; }
-.type-sham_comparator { background-color: #fce7f3; color: #9d174d; }
-.type-no_intervention { background-color: #f3f4f6; color: #6b7280; }
+.type-experimental {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+.type-active_comparator {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+.type-placebo_comparator {
+  background-color: #f1f5f9;
+  color: #475569;
+}
+.type-sham_comparator {
+  background-color: #fce7f3;
+  color: #9d174d;
+}
+.type-no_intervention {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
 
 .sample-badge {
   font-size: 0.8rem;
@@ -238,11 +271,31 @@ const formatArmType = (type) => {
   opacity: 0.8;
 }
 
-.epoch-screening { background-color: #e0f2fe; border-color: #bae6fd; color: #0369a1; }
-.epoch-treatment { background-color: #dcfce7; border-color: #bbf7d0; color: #15803d; }
-.epoch-washout { background-color: #fef3c7; border-color: #fde68a; color: #b45309; }
-.epoch-follow_up { background-color: #f3e8ff; border-color: #e9d5ff; color: #7e22ce; }
-.epoch-run_in { background-color: #f1f5f9; border-color: #cbd5e1; color: #475569; }
+.epoch-screening {
+  background-color: #e0f2fe;
+  border-color: #bae6fd;
+  color: #0369a1;
+}
+.epoch-treatment {
+  background-color: #dcfce7;
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+.epoch-washout {
+  background-color: #fef3c7;
+  border-color: #fde68a;
+  color: #b45309;
+}
+.epoch-follow_up {
+  background-color: #f3e8ff;
+  border-color: #e9d5ff;
+  color: #7e22ce;
+}
+.epoch-run_in {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #475569;
+}
 
 .epoch-sequence-container {
   background-color: #f8fafc;
@@ -286,11 +339,26 @@ const formatArmType = (type) => {
   font-weight: 700;
 }
 
-.step-screening { background-color: #0284c7; color: #ffffff; }
-.step-treatment { background-color: #16a34a; color: #ffffff; }
-.step-washout { background-color: #d97706; color: #ffffff; }
-.step-follow_up { background-color: #9333ea; color: #ffffff; }
-.step-run_in { background-color: #64748b; color: #ffffff; }
+.step-screening {
+  background-color: #0284c7;
+  color: #ffffff;
+}
+.step-treatment {
+  background-color: #16a34a;
+  color: #ffffff;
+}
+.step-washout {
+  background-color: #d97706;
+  color: #ffffff;
+}
+.step-follow_up {
+  background-color: #9333ea;
+  color: #ffffff;
+}
+.step-run_in {
+  background-color: #64748b;
+  color: #ffffff;
+}
 
 .step-name {
   font-size: 0.8rem;

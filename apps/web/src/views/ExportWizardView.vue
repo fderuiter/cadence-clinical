@@ -5,9 +5,12 @@
       <div class="wizard-title-group">
         <div class="wizard-icon-box">📊</div>
         <div>
-          <h1 class="wizard-main-title">Regulatory Biostatistical Export Wizard</h1>
+          <h1 class="wizard-main-title">
+            Regulatory Biostatistical Export Wizard
+          </h1>
           <p class="wizard-subtitle">
-            CDISC SDTM, ADaM, SAS Transport (XPT v5/v8), ODM-XML v1.3.2 &amp; De-identified Datasets
+            CDISC SDTM, ADaM, SAS Transport (XPT v5/v8), ODM-XML v1.3.2 &amp;
+            De-identified Datasets
           </p>
         </div>
       </div>
@@ -47,7 +50,9 @@
       <section v-if="currentStep === 1" class="step-pane">
         <h2 class="pane-title">Step 1: Choose Regulatory Target Format</h2>
         <p class="pane-description">
-          Select the biostatistical or regulatory submission format required by the statistical analysis plan (SAP) or health authority (FDA / EMA / PMDA).
+          Select the biostatistical or regulatory submission format required by
+          the statistical analysis plan (SAP) or health authority (FDA / EMA /
+          PMDA).
         </p>
 
         <div class="format-grid">
@@ -76,16 +81,31 @@
       <section v-if="currentStep === 2" class="step-pane">
         <div class="pane-header-actions">
           <div>
-            <h2 class="pane-title">Step 2: Select SDTM Domains &amp; ADaM Datasets</h2>
+            <h2 class="pane-title">
+              Step 2: Select SDTM Domains &amp; ADaM Datasets
+            </h2>
             <p class="pane-description">
-              Choose the clinical tabulation domains and derived analysis datasets to include in this export package.
+              Choose the clinical tabulation domains and derived analysis
+              datasets to include in this export package.
             </p>
           </div>
           <div class="domain-quick-actions">
-            <button type="button" class="btn btn-sm" @click="selectAllDomains">Select All</button>
-            <button type="button" class="btn btn-sm" @click="selectSdtmOnly">SDTM Only</button>
-            <button type="button" class="btn btn-sm" @click="selectAdamOnly">ADaM Only</button>
-            <button type="button" class="btn btn-sm btn-outline" @click="clearAllDomains">Clear</button>
+            <button type="button" class="btn btn-sm" @click="selectAllDomains">
+              Select All
+            </button>
+            <button type="button" class="btn btn-sm" @click="selectSdtmOnly">
+              SDTM Only
+            </button>
+            <button type="button" class="btn btn-sm" @click="selectAdamOnly">
+              ADaM Only
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline"
+              @click="clearAllDomains"
+            >
+              Clear
+            </button>
           </div>
         </div>
 
@@ -94,7 +114,10 @@
           <div class="domain-group">
             <h3 class="domain-group-title">
               <span>📋 SDTM Tabulation Domains (v2.0)</span>
-              <span class="count-pill">{{ selectedSdtmCount }} / {{ SDTM_DOMAINS.length }} selected</span>
+              <span class="count-pill"
+                >{{ selectedSdtmCount }} /
+                {{ SDTM_DOMAINS.length }} selected</span
+              >
             </h3>
             <div class="domain-card-list">
               <label
@@ -121,7 +144,10 @@
           <div class="domain-group">
             <h3 class="domain-group-title">
               <span>🔬 ADaM Analysis Datasets (v1.3)</span>
-              <span class="count-pill">{{ selectedAdamCount }} / {{ ADAM_DATASETS.length }} selected</span>
+              <span class="count-pill"
+                >{{ selectedAdamCount }} /
+                {{ ADAM_DATASETS.length }} selected</span
+              >
             </h3>
             <div class="domain-card-list">
               <label
@@ -150,12 +176,15 @@
       <section v-if="currentStep === 3" class="step-pane">
         <h2 class="pane-title">Step 3: Cohort &amp; Site Population Filters</h2>
         <p class="pane-description">
-          Filter data extracts by clinical investigative site, treatment cohort/arm, and visit milestone scope.
+          Filter data extracts by clinical investigative site, treatment
+          cohort/arm, and visit milestone scope.
         </p>
 
         <div class="filter-form-grid">
           <div class="form-group">
-            <label class="form-label" for="study-id-input">Study Identifier *</label>
+            <label class="form-label" for="study-id-input"
+              >Study Identifier *</label
+            >
             <input
               id="study-id-input"
               type="text"
@@ -201,8 +230,13 @@
             <label class="toggle-control">
               <input type="checkbox" v-model="includeUnmapped" />
               <span class="toggle-label">
-                <strong>Include Supplemental Qualifiers (SUPP-- records)</strong>
-                <span class="toggle-sub">Capture non-standard custom CRF variables in normalized SDTM supplemental structures.</span>
+                <strong
+                  >Include Supplemental Qualifiers (SUPP-- records)</strong
+                >
+                <span class="toggle-sub"
+                  >Capture non-standard custom CRF variables in normalized SDTM
+                  supplemental structures.</span
+                >
               </span>
             </label>
           </div>
@@ -211,9 +245,12 @@
 
       <!-- Step 4: Privacy & Governance Profile -->
       <section v-if="currentStep === 4" class="step-pane">
-        <h2 class="pane-title">Step 4: Privacy &amp; De-Identification Profile</h2>
+        <h2 class="pane-title">
+          Step 4: Privacy &amp; De-Identification Profile
+        </h2>
         <p class="pane-description">
-          Configure cryptographic pseudonymization, per-subject date-shifting, age capping, and 21 CFR Part 11 audit trails.
+          Configure cryptographic pseudonymization, per-subject date-shifting,
+          age capping, and 21 CFR Part 11 audit trails.
         </p>
 
         <div class="privacy-profiles-grid">
@@ -237,7 +274,9 @@
 
         <div class="salt-config-panel">
           <div class="form-group">
-            <label class="form-label" for="salt-key-input">Deterministic HMAC Salt Key (Reversible Governance Hash)</label>
+            <label class="form-label" for="salt-key-input"
+              >Deterministic HMAC Salt Key (Reversible Governance Hash)</label
+            >
             <input
               id="salt-key-input"
               type="text"
@@ -246,15 +285,22 @@
               placeholder="e.g. secure-clinical-salt-98765"
             />
             <span class="form-hint">
-              Same salt reproduces identical subject pseudonyms and deterministic date-shift intervals for cross-domain linkability.
+              Same salt reproduces identical subject pseudonyms and
+              deterministic date-shift intervals for cross-domain linkability.
             </span>
           </div>
 
           <label class="toggle-control mt-4">
             <input type="checkbox" v-model="includeAuditTrail" />
             <span class="toggle-label">
-              <strong>Embed Part 11 Audit Trail Metadata (&lt;AuditRecord&gt; / CSV stamps)</strong>
-              <span class="toggle-sub">Include author user ID, ISO timestamp, and GxP reason-for-change logs in the serialized package.</span>
+              <strong
+                >Embed Part 11 Audit Trail Metadata (&lt;AuditRecord&gt; / CSV
+                stamps)</strong
+              >
+              <span class="toggle-sub"
+                >Include author user ID, ISO timestamp, and GxP
+                reason-for-change logs in the serialized package.</span
+              >
             </span>
           </label>
         </div>
@@ -262,9 +308,12 @@
 
       <!-- Step 5: Review & Asynchronous Download Handling -->
       <section v-if="currentStep === 5" class="step-pane">
-        <h2 class="pane-title">Step 5: Review Export Manifest &amp; Download</h2>
+        <h2 class="pane-title">
+          Step 5: Review Export Manifest &amp; Download
+        </h2>
         <p class="pane-description">
-          Verify your regulatory export configuration and launch the serialization pipeline.
+          Verify your regulatory export configuration and launch the
+          serialization pipeline.
         </p>
 
         <div class="manifest-summary-card">
@@ -276,19 +325,29 @@
             </div>
             <div class="summary-item">
               <span class="summary-label">Output Format:</span>
-              <span class="summary-val highlight">{{ formatNameById(selectedFormat) }}</span>
+              <span class="summary-val highlight">{{
+                formatNameById(selectedFormat)
+              }}</span>
             </div>
             <div class="summary-item">
               <span class="summary-label">SDTM Domains:</span>
-              <span class="summary-val">{{ selectedDomains.join(", ") || "None" }}</span>
+              <span class="summary-val">{{
+                selectedDomains.join(", ") || "None"
+              }}</span>
             </div>
             <div class="summary-item">
               <span class="summary-label">ADaM Datasets:</span>
-              <span class="summary-val">{{ selectedDatasets.join(", ") || "None" }}</span>
+              <span class="summary-val">{{
+                selectedDatasets.join(", ") || "None"
+              }}</span>
             </div>
             <div class="summary-item">
               <span class="summary-label">Investigative Sites:</span>
-              <span class="summary-val">{{ selectedSites.length > 0 ? selectedSites.join(", ") : "All Sites" }}</span>
+              <span class="summary-val">{{
+                selectedSites.length > 0
+                  ? selectedSites.join(", ")
+                  : "All Sites"
+              }}</span>
             </div>
             <div class="summary-item">
               <span class="summary-label">Privacy Profile:</span>
@@ -296,7 +355,9 @@
             </div>
             <div class="summary-item">
               <span class="summary-label">GxP Audit Trail:</span>
-              <span class="summary-val">{{ includeAuditTrail ? "Included" : "Excluded" }}</span>
+              <span class="summary-val">{{
+                includeAuditTrail ? "Included" : "Excluded"
+              }}</span>
             </div>
           </div>
         </div>
@@ -319,19 +380,29 @@
 
           <div v-if="exportStatus === 'processing'" class="execution-progress">
             <div class="progress-spinner">⏳</div>
-            <h4 class="progress-title">Executing Biostatistical Serializer Pipeline...</h4>
+            <h4 class="progress-title">
+              Executing Biostatistical Serializer Pipeline...
+            </h4>
             <p class="progress-step">{{ progressStepText }}</p>
             <div class="progress-bar-track">
-              <div class="progress-bar-fill" :style="{ width: progressPercent + '%' }"></div>
+              <div
+                class="progress-bar-fill"
+                :style="{ width: progressPercent + '%' }"
+              ></div>
             </div>
-            <span class="progress-percent-label">{{ progressPercent }}% Completed</span>
+            <span class="progress-percent-label"
+              >{{ progressPercent }}% Completed</span
+            >
           </div>
 
           <div v-if="exportStatus === 'success'" class="execution-success">
             <div class="success-icon">✅</div>
-            <h4 class="success-title">Export Package Generated Successfully!</h4>
+            <h4 class="success-title">
+              Export Package Generated Successfully!
+            </h4>
             <p class="success-desc">
-              Your regulatory-compliant payload has been built, schema-verified, and logged in the GxP Biostat audit ledger.
+              Your regulatory-compliant payload has been built, schema-verified,
+              and logged in the GxP Biostat audit ledger.
             </p>
             <div class="success-actions">
               <button
@@ -355,7 +426,11 @@
             <div class="error-icon">❌</div>
             <h4 class="error-title">Export Pipeline Execution Failed</h4>
             <p class="error-msg">{{ errorMessage }}</p>
-            <button type="button" class="btn btn-primary mt-3" @click="startExportPipeline">
+            <button
+              type="button"
+              class="btn btn-primary mt-3"
+              @click="startExportPipeline"
+            >
               Retry Export
             </button>
           </div>
@@ -405,7 +480,8 @@ const FORMAT_OPTIONS = [
     badge: "FDA Standard",
     standard: "SAS TS-140",
     extension: ".xpt",
-    description: "Standard 80-byte header card images and IBM 360 floating-point format for FDA submission tabulations.",
+    description:
+      "Standard 80-byte header card images and IBM 360 floating-point format for FDA submission tabulations.",
   },
   {
     id: "xpt_v8",
@@ -414,7 +490,8 @@ const FORMAT_OPTIONS = [
     badge: "Extended",
     standard: "SAS XPT v8",
     extension: ".xpt",
-    description: "Extended variable name lengths (up to 32 chars) and long variable labels (up to 256 chars).",
+    description:
+      "Extended variable name lengths (up to 32 chars) and long variable labels (up to 256 chars).",
   },
   {
     id: "odm_xml",
@@ -423,7 +500,8 @@ const FORMAT_OPTIONS = [
     badge: "Audit Embedded",
     standard: "CDISC ODM 1.3.2",
     extension: ".xml",
-    description: "Hierarchical XML package embedding granular 21 CFR Part 11 <AuditRecord> trails and data capture provenance.",
+    description:
+      "Hierarchical XML package embedding granular 21 CFR Part 11 <AuditRecord> trails and data capture provenance.",
   },
   {
     id: "dataset_json",
@@ -432,7 +510,8 @@ const FORMAT_OPTIONS = [
     badge: "Modern API",
     standard: "CDISC Dataset-JSON",
     extension: ".json",
-    description: "Compact JSON format optimized for cloud EDC/CDM exchanges and automated validation pipelines.",
+    description:
+      "Compact JSON format optimized for cloud EDC/CDM exchanges and automated validation pipelines.",
   },
   {
     id: "csv_zip",
@@ -441,23 +520,60 @@ const FORMAT_OPTIONS = [
     badge: "HIPAA Safe Harbor",
     standard: "RFC 4180",
     extension: ".zip",
-    description: "ZIP archive of sanitized tabular CSV datasets with deterministic date-shifting and age capping.",
+    description:
+      "ZIP archive of sanitized tabular CSV datasets with deterministic date-shifting and age capping.",
   },
 ];
 
 const SDTM_DOMAINS = [
-  { id: "DM", label: "Demographics", description: "Subject demographics, age, sex, race, arm" },
-  { id: "AE", label: "Adverse Events", description: "Reported terms, onset/end dates, severity, seriousness" },
-  { id: "VS", label: "Vital Signs", description: "Blood pressure, heart rate, temperature, normalized units" },
-  { id: "LB", label: "Laboratory Findings", description: "Hematology, biochemistry, standard reference ranges" },
-  { id: "MH", label: "Medical History", description: "Prior medical events, SOC coding, onset dates" },
-  { id: "CM", label: "Concomitant Medications", description: "Medication names, dosage, ATC classification" },
+  {
+    id: "DM",
+    label: "Demographics",
+    description: "Subject demographics, age, sex, race, arm",
+  },
+  {
+    id: "AE",
+    label: "Adverse Events",
+    description: "Reported terms, onset/end dates, severity, seriousness",
+  },
+  {
+    id: "VS",
+    label: "Vital Signs",
+    description: "Blood pressure, heart rate, temperature, normalized units",
+  },
+  {
+    id: "LB",
+    label: "Laboratory Findings",
+    description: "Hematology, biochemistry, standard reference ranges",
+  },
+  {
+    id: "MH",
+    label: "Medical History",
+    description: "Prior medical events, SOC coding, onset dates",
+  },
+  {
+    id: "CM",
+    label: "Concomitant Medications",
+    description: "Medication names, dosage, ATC classification",
+  },
 ];
 
 const ADAM_DATASETS = [
-  { id: "ADSL", label: "Subject-Level Analysis", description: "Baseline population flags (SAFFL, ITTFL), treatment dates" },
-  { id: "ADAE", label: "Adverse Events Analysis", description: "Treatment-emergent flags (TRTEMFL), relative days (ASTDY)" },
-  { id: "ADVS", label: "Vital Signs Analysis", description: "Baseline changes (CHG, PCHG), analysis visit numbers" },
+  {
+    id: "ADSL",
+    label: "Subject-Level Analysis",
+    description: "Baseline population flags (SAFFL, ITTFL), treatment dates",
+  },
+  {
+    id: "ADAE",
+    label: "Adverse Events Analysis",
+    description: "Treatment-emergent flags (TRTEMFL), relative days (ASTDY)",
+  },
+  {
+    id: "ADVS",
+    label: "Vital Signs Analysis",
+    description: "Baseline changes (CHG, PCHG), analysis visit numbers",
+  },
 ];
 
 const AVAILABLE_SITES = [
@@ -466,36 +582,61 @@ const AVAILABLE_SITES = [
   { id: "SITE-C", name: "Site 103 - University Research Clinic" },
 ];
 
-const AVAILABLE_COHORTS = ["Active Arm", "Placebo Arm", "Dose Escalation 50mg", "Dose Escalation 100mg"];
+const AVAILABLE_COHORTS = [
+  "Active Arm",
+  "Placebo Arm",
+  "Dose Escalation 50mg",
+  "Dose Escalation 100mg",
+];
 
 const PRIVACY_PROFILES = [
   {
     id: "SAFE_HARBOR",
     name: "HIPAA Safe Harbor (Strict)",
     badge: "De-Identified",
-    description: "Eliminates all 18 HIPAA identifiers with deterministic per-subject date-shifting (-365 to +365 days) and age capping at 89.",
-    rules: ["Ages > 89 capped to 89", "Per-subject date offset preserved", "USUBJID / SITEID HMAC hashed"],
+    description:
+      "Eliminates all 18 HIPAA identifiers with deterministic per-subject date-shifting (-365 to +365 days) and age capping at 89.",
+    rules: [
+      "Ages > 89 capped to 89",
+      "Per-subject date offset preserved",
+      "USUBJID / SITEID HMAC hashed",
+    ],
   },
   {
     id: "LIMITED_DATA_SET",
     name: "Limited Data Set (LDS)",
     badge: "Clinical Research",
-    description: "Retains full clinical date precision and ages up to 89 while hashing direct subject identifiers.",
-    rules: ["Exact calendar dates preserved", "Direct identifiers removed", "For IRB-approved research only"],
+    description:
+      "Retains full clinical date precision and ages up to 89 while hashing direct subject identifiers.",
+    rules: [
+      "Exact calendar dates preserved",
+      "Direct identifiers removed",
+      "For IRB-approved research only",
+    ],
   },
   {
     id: "GDPR_PSEUDONYMIZED",
     name: "GDPR Pseudonymized",
     badge: "EU Data Governance",
-    description: "Reversible salted cryptographic hash allowing re-identification under secure key custody.",
-    rules: ["Salt-keyed HMAC-SHA256", "Relational linkage preserved", "Subject key escrow compliance"],
+    description:
+      "Reversible salted cryptographic hash allowing re-identification under secure key custody.",
+    rules: [
+      "Salt-keyed HMAC-SHA256",
+      "Relational linkage preserved",
+      "Subject key escrow compliance",
+    ],
   },
   {
     id: "UNRESTRICTED",
     name: "Unrestricted Regulatory Raw",
     badge: "Auditor Scope",
-    description: "Raw unmasked identifiers for official FDA/EMA inspectors and data safety monitoring boards.",
-    rules: ["Full unmasked identifiers", "Requires Auditor / DM role", "Full GxP audit log recorded"],
+    description:
+      "Raw unmasked identifiers for official FDA/EMA inspectors and data safety monitoring boards.",
+    rules: [
+      "Full unmasked identifiers",
+      "Requires Auditor / DM role",
+      "Full GxP audit log recorded",
+    ],
   },
 ];
 
@@ -522,7 +663,9 @@ const downloadFileName = ref("export.json");
 
 const selectedSdtmCount = computed(() => selectedDomains.value.length);
 const selectedAdamCount = computed(() => selectedDatasets.value.length);
-const totalSelectedCount = computed(() => selectedDomains.value.length + selectedDatasets.value.length);
+const totalSelectedCount = computed(
+  () => selectedDomains.value.length + selectedDatasets.value.length
+);
 
 function formatNameById(id) {
   const f = FORMAT_OPTIONS.find((opt) => opt.id === id);
@@ -576,7 +719,8 @@ function toggleCohort(arm) {
 async function startExportPipeline() {
   exportStatus.value = "processing";
   progressPercent.value = 15;
-  progressStepText.value = "Extracting clinical observations from PostgreSQL execution ledger...";
+  progressStepText.value =
+    "Extracting clinical observations from PostgreSQL execution ledger...";
 
   const extMap = {
     xpt_v5: ".xpt",
@@ -591,24 +735,12 @@ async function startExportPipeline() {
     // Step-by-step progress update
     await new Promise((resolve) => setTimeout(resolve, 350));
     progressPercent.value = 45;
-    progressStepText.value = "Applying deterministic HMAC-SHA256 pseudonymization and date shifts...";
+    progressStepText.value =
+      "Applying deterministic HMAC-SHA256 pseudonymization and date shifts...";
 
     await new Promise((resolve) => setTimeout(resolve, 400));
     progressPercent.value = 75;
     progressStepText.value = `Serializing to ${formatNameById(selectedFormat.value)} standard...`;
-
-    // Real or simulated backend call
-    const payload = {
-      study_id: studyId.value,
-      format: selectedFormat.value,
-      domains: selectedDomains.value,
-      datasets: selectedDatasets.value,
-      site_ids: selectedSites.value,
-      cohorts: selectedCohorts.value,
-      privacy_profile: privacyProfile.value,
-      salt: hmacSalt.value,
-      include_audit_trail: includeAuditTrail.value,
-    };
 
     // Create a mock client-side Blob or fetch from API if reachable
     let blobContent;
@@ -622,7 +754,11 @@ async function startExportPipeline() {
         itemGroupData: {},
       };
       selectedDomains.value.forEach((d) => {
-        mockResult.itemGroupData[`IG.${d}`] = { records: 1, name: d, label: `${d} Dataset` };
+        mockResult.itemGroupData[`IG.${d}`] = {
+          records: 1,
+          name: d,
+          label: `${d} Dataset`,
+        };
       });
       blobContent = JSON.stringify(mockResult, null, 2);
       mimeType = "application/json";
@@ -643,7 +779,8 @@ async function startExportPipeline() {
     exportStatus.value = "success";
   } catch (err) {
     exportStatus.value = "error";
-    errorMessage.value = err.message || "An unexpected error occurred during export generation.";
+    errorMessage.value =
+      err.message || "An unexpected error occurred during export generation.";
   }
 }
 
@@ -1149,9 +1286,15 @@ function resetExport() {
 }
 
 @keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .progress-title {
@@ -1224,7 +1367,13 @@ function resetExport() {
   font-family: monospace;
 }
 
-.mt-2 { margin-top: 8px; }
-.mt-3 { margin-top: 12px; }
-.mt-4 { margin-top: 16px; }
+.mt-2 {
+  margin-top: 8px;
+}
+.mt-3 {
+  margin-top: 12px;
+}
+.mt-4 {
+  margin-top: 16px;
+}
 </style>

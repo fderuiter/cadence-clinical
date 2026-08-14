@@ -81,7 +81,9 @@ describe("M5: USDM Ingestion & Synthesis Workspace Experience (MdrView.vue)", ()
 
     const modal = wrapper.find("#usdm-ingestion-modal");
     expect(modal.exists()).toBe(true);
-    expect(modal.text()).toContain("Zero-Click USDM Study Ingestion & Synthesis");
+    expect(modal.text()).toContain(
+      "Zero-Click USDM Study Ingestion & Synthesis"
+    );
 
     // Dropzone exists
     const dropzone = modal.find(".dropzone-area");
@@ -162,7 +164,9 @@ describe("M5: USDM Ingestion & Synthesis Workspace Experience (MdrView.vue)", ()
 
     // Assert protocol identity
     expect(cardHtml).toContain("CDNC-2026-001");
-    expect(cardHtml).toContain("A Phase II Randomized Study of Novel Therapeutic vs Control in Advanced Solid Tumors");
+    expect(cardHtml).toContain(
+      "A Phase II Randomized Study of Novel Therapeutic vs Control in Advanced Solid Tumors"
+    );
     expect(cardHtml).toContain("Phase: Phase II");
     expect(cardHtml).toContain("TA: Oncology");
 
@@ -257,9 +261,13 @@ describe("M5: USDM Ingestion & Synthesis Workspace Experience (MdrView.vue)", ()
 
     // Assert Part 11 audit ledger entry recorded
     const ledger = clinicalStore.ledgerBlocks;
-    const promotionBlock = ledger.find((b) => b.action === "USDM_SYNTHESIS_PROMOTION");
+    const promotionBlock = ledger.find(
+      (b) => b.action === "USDM_SYNTHESIS_PROMOTION"
+    );
     expect(promotionBlock).toBeDefined();
-    expect(promotionBlock.reason).toBe("Initial Protocol Synthesis Build Activation");
+    expect(promotionBlock.reason).toBe(
+      "Initial Protocol Synthesis Build Activation"
+    );
     expect(promotionBlock.details.studyId).toBe("CDNC-2026-001");
 
     // Assert designer store active form updated

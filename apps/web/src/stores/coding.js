@@ -61,12 +61,24 @@ export const useCodingStore = defineStore("coding", {
         // Filter by search query
         if (state.filters.search && state.filters.search.trim()) {
           const q = state.filters.search.toLowerCase().trim();
-          const matchVerbatim = (item.verbatim_text || "").toLowerCase().includes(q);
+          const matchVerbatim = (item.verbatim_text || "")
+            .toLowerCase()
+            .includes(q);
           const matchCode = (item.coded_code || "").toLowerCase().includes(q);
           const matchTerm = (item.coded_term || "").toLowerCase().includes(q);
-          const matchField = (item.source_field || "").toLowerCase().includes(q);
-          const matchObs = (item.observation_id || "").toLowerCase().includes(q);
-          if (!matchVerbatim && !matchCode && !matchTerm && !matchField && !matchObs) {
+          const matchField = (item.source_field || "")
+            .toLowerCase()
+            .includes(q);
+          const matchObs = (item.observation_id || "")
+            .toLowerCase()
+            .includes(q);
+          if (
+            !matchVerbatim &&
+            !matchCode &&
+            !matchTerm &&
+            !matchField &&
+            !matchObs
+          ) {
             return false;
           }
         }
@@ -90,7 +102,8 @@ export const useCodingStore = defineStore("coding", {
     },
 
     queryPendingCount: (state) => {
-      return state.assignments.filter((a) => a.status === "QUERY_PENDING").length;
+      return state.assignments.filter((a) => a.status === "QUERY_PENDING")
+        .length;
     },
 
     totalCount: (state) => state.assignments.length,
@@ -348,7 +361,8 @@ export const useCodingStore = defineStore("coding", {
     openBrowser(assignment) {
       this.browserModal.isOpen = true;
       this.browserModal.assignment = assignment;
-      this.browserModal.dictionaryType = assignment?.dictionary_type || "MEDDRA";
+      this.browserModal.dictionaryType =
+        assignment?.dictionary_type || "MEDDRA";
       this.browserModal.searchTerm = assignment?.verbatim_text || "";
       this.browserModal.version = assignment?.dictionary_version || "26.0";
       this.browserModal.targetLevel = "LLT";

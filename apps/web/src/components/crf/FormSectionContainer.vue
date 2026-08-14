@@ -32,16 +32,10 @@
 
       <!-- Action Controls -->
       <div class="section-header-right" @click.stop>
-        <button
-          class="btn-add-field"
-          @click="addNewItem"
-        >
+        <button class="btn-add-field" @click="addNewItem">
           <span>➕</span> Add Field
         </button>
-        <button
-          class="btn-section-toggle"
-          @click="toggleCollapse"
-        >
+        <button class="btn-section-toggle" @click="toggleCollapse">
           {{ section.isCollapsed ? "Expand" : "Collapse" }}
         </button>
       </div>

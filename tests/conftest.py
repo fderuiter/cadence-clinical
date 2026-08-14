@@ -1,10 +1,15 @@
 import asyncio
+import faulthandler
 import os
+import signal
 import uuid
 from typing import Any
 
 import pytest
 from neo4j.exceptions import TransientError
+
+if hasattr(signal, "SIGUSR1"):
+    faulthandler.register(signal.SIGUSR1, all_threads=True)
 
 # Ensure offline terminology fallback is active for test isolation and speed
 os.environ.setdefault("TERMINOLOGY_OFFLINE", "true")
@@ -143,8 +148,21 @@ def run_sync(coro):
         return loop.run_until_complete(coro)
 
 
-worker_id = os.environ.get("PYTEST_XDIST_WORKER")
-worker_suffix = f"_{worker_id}" if worker_id else "_test"
+def _build_worker_suffix() -> str:
+    """Build a database suffix unique to both the test run and worker process."""
+    run_uid = (
+        os.environ.get("PYTEST_XDIST_TESTRUNUID")
+        or os.environ.get("CADENCE_TEST_RUN_ID")
+        or uuid.uuid4().hex
+    )
+    safe_run_uid = "".join(character for character in run_uid if character.isalnum())
+    if not safe_run_uid:
+        safe_run_uid = uuid.uuid4().hex
+    worker_label = os.environ.get("PYTEST_XDIST_WORKER", "main")
+    return f"_{safe_run_uid[:8]}_{worker_label}"
+
+
+worker_suffix = _build_worker_suffix()
 
 
 def verify_live_db_connections():
@@ -316,7 +334,10 @@ databases_pre_created = False
 try:
     from filelock import FileLock
 
-    lock_path = "/tmp/postgres_db_creation.lock"
+    # Independent runs and xdist workers own distinct databases. Scoping the lock
+    # to that database set prevents unrelated local/CI runs from blocking each
+    # other while still protecting a repeated initialization of the same worker.
+    lock_path = f"/tmp/postgres_db_creation{worker_suffix}.lock"
     with FileLock(lock_path, timeout=180):
         run_sync(create_databases_async(worker_suffix))
         # Override the env var so any standard fallback uses isolated DB too
@@ -586,8 +607,6 @@ def concurrency_runner():
 def pytest_unconfigure(config):
     """Clean up worker-isolated databases when the test process unconfigures."""
     if databases_pre_created:
-        worker_id = os.environ.get("PYTEST_XDIST_WORKER")
-        worker_suffix = f"_{worker_id}" if worker_id else "_test"
         try:
             run_sync(drop_databases_async(worker_suffix))
         except Exception as e:

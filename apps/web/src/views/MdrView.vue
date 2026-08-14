@@ -23,7 +23,7 @@
       <button
         class="btn tab-btn-soa"
         :class="activeTab === 'soa' ? 'btn-primary' : 'btn-secondary'"
-        style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px;"
+        style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
         @click="activeTab = 'soa'"
       >
         📋 Schedule of Activities (SoA)
@@ -32,7 +32,7 @@
         id="btn-tab-canvas-top"
         class="btn tab-btn-canvas"
         :class="activeTab === 'canvas' ? 'btn-primary' : 'btn-secondary'"
-        style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px;"
+        style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
         @click="activeTab = 'canvas'"
       >
         🎨 eCRF Visual Form Designer
@@ -40,7 +40,7 @@
       <button
         class="btn tab-btn-mdr"
         :class="activeTab === 'mdr' ? 'btn-primary' : 'btn-secondary'"
-        style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px;"
+        style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
         @click="activeTab = 'mdr'"
       >
         🔍 NCI Concept Registry
@@ -48,7 +48,7 @@
       <button
         class="btn tab-btn-diff"
         :class="activeTab === 'diff' ? 'btn-primary' : 'btn-secondary'"
-        style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px;"
+        style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
         @click="activeTab = 'diff'"
       >
         ⚖️ Protocol Revision Alignment
@@ -82,11 +82,31 @@
             gap: 10px;
           "
         >
-          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <h3 style="font-weight: 800; margin: 0; color: var(--primary); font-size: 1.15rem; display: flex; align-items: center; gap: 6px;">
-              <span>⚡</span> Zero-Click USDM Study Ingestion &amp; Synthesis Metrics
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 10px;
+              flex-wrap: wrap;
+            "
+          >
+            <h3
+              style="
+                font-weight: 800;
+                margin: 0;
+                color: var(--primary);
+                font-size: 1.15rem;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+              "
+            >
+              <span>⚡</span> Zero-Click USDM Study Ingestion &amp; Synthesis
+              Metrics
             </h3>
-            <span class="badge lookup-valid" style="font-weight: 600;">✓ Synthesis Ready</span>
+            <span class="badge lookup-valid" style="font-weight: 600"
+              >✓ Synthesis Ready</span
+            >
             <span
               class="badge"
               style="
@@ -95,19 +115,24 @@
                 font-weight: 600;
               "
             >
-              ⚡ Latency: {{ synthesisResult.latencyMs }}ms (&lt; 3.0s SLA Compliant)
+              ⚡ Latency: {{ synthesisResult.latencyMs }}ms (&lt; 3.0s SLA
+              Compliant)
             </span>
             <span
               v-if="isPromoted"
               class="badge"
-              style="background-color: var(--success); color: white; font-weight: 600;"
+              style="
+                background-color: var(--success);
+                color: white;
+                font-weight: 600;
+              "
             >
               🚀 Active EDC Study Build
             </span>
           </div>
           <button
             class="btn btn-secondary"
-            style="font-size: 0.78rem; padding: 4px 10px;"
+            style="font-size: 0.78rem; padding: 4px 10px"
             @click="synthesisResult = null"
           >
             Dismiss Metrics
@@ -130,24 +155,65 @@
           "
         >
           <div>
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-              <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Study ID:</span>
-              <strong style="font-size: 0.95rem; color: var(--primary); font-family: monospace;">{{ synthesisResult.studyId }}</strong>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 4px;
+              "
+            >
+              <span
+                style="
+                  font-size: 0.75rem;
+                  font-weight: 700;
+                  color: #64748b;
+                  text-transform: uppercase;
+                "
+                >Study ID:</span
+              >
+              <strong
+                style="
+                  font-size: 0.95rem;
+                  color: var(--primary);
+                  font-family: monospace;
+                "
+                >{{ synthesisResult.studyId }}</strong
+              >
             </div>
-            <div style="font-size: 0.88rem; font-weight: 600; color: #1e293b;">
+            <div style="font-size: 0.88rem; font-weight: 600; color: #1e293b">
               {{ synthesisResult.studyTitle }}
             </div>
           </div>
-          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <div
+            style="
+              display: flex;
+              gap: 8px;
+              align-items: center;
+              flex-wrap: wrap;
+            "
+          >
             <span
               class="badge"
-              style="background-color: #e0f2fe; color: #0369a1; font-weight: 600; font-size: 0.8rem; padding: 4px 10px;"
+              style="
+                background-color: #e0f2fe;
+                color: #0369a1;
+                font-weight: 600;
+                font-size: 0.8rem;
+                padding: 4px 10px;
+              "
             >
               Phase: {{ synthesisResult.phase }}
             </span>
             <span
               class="badge"
-              style="background-color: #f3e8ff; color: #7e22ce; font-weight: 600; font-size: 0.8rem; padding: 4px 10px;"
+              style="
+                background-color: #f3e8ff;
+                color: #7e22ce;
+                font-weight: 600;
+                font-size: 0.8rem;
+                padding: 4px 10px;
+              "
             >
               TA: {{ synthesisResult.therapeuticArea }}
             </span>
@@ -174,16 +240,54 @@
               padding: 14px;
             "
           >
-            <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">
+            <div
+              style="
+                font-size: 0.75rem;
+                font-weight: 700;
+                color: #64748b;
+                text-transform: uppercase;
+                margin-bottom: 6px;
+              "
+            >
               Neo4j Graph Entities
             </div>
-            <div style="font-size: 1.4rem; font-weight: 800; color: var(--primary); margin-bottom: 6px;">
-              {{ synthesisResult.graphEntitiesCount }} <span style="font-size: 0.8rem; font-weight: normal; color: #64748b;">nodes</span>
+            <div
+              style="
+                font-size: 1.4rem;
+                font-weight: 800;
+                color: var(--primary);
+                margin-bottom: 6px;
+              "
+            >
+              {{ synthesisResult.graphEntitiesCount }}
+              <span
+                style="font-size: 0.8rem; font-weight: normal; color: #64748b"
+                >nodes</span
+              >
             </div>
-            <div style="font-size: 0.78rem; color: #475569; display: flex; flex-direction: column; gap: 3px;">
-              <span>• Arms: <strong>{{ synthesisResult.armsCount }}</strong> | Epochs: <strong>{{ synthesisResult.epochsCount }}</strong></span>
-              <span>• Visits/Encounters: <strong>{{ synthesisResult.visitsCount }}</strong></span>
-              <span>• Activities: <strong>{{ synthesisResult.activitiesCount }}</strong> | Criteria: <strong>{{ synthesisResult.criteriaCount }}</strong></span>
+            <div
+              style="
+                font-size: 0.78rem;
+                color: #475569;
+                display: flex;
+                flex-direction: column;
+                gap: 3px;
+              "
+            >
+              <span
+                >• Arms: <strong>{{ synthesisResult.armsCount }}</strong> |
+                Epochs: <strong>{{ synthesisResult.epochsCount }}</strong></span
+              >
+              <span
+                >• Visits/Encounters:
+                <strong>{{ synthesisResult.visitsCount }}</strong></span
+              >
+              <span
+                >• Activities:
+                <strong>{{ synthesisResult.activitiesCount }}</strong> |
+                Criteria:
+                <strong>{{ synthesisResult.criteriaCount }}</strong></span
+              >
             </div>
           </div>
 
@@ -197,16 +301,51 @@
               padding: 14px;
             "
           >
-            <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">
+            <div
+              style="
+                font-size: 0.75rem;
+                font-weight: 700;
+                color: #64748b;
+                text-transform: uppercase;
+                margin-bottom: 6px;
+              "
+            >
               Synthesized CDASH eCRFs
             </div>
-            <div style="font-size: 1.4rem; font-weight: 800; color: #0284c7; margin-bottom: 6px;">
-              {{ synthesisResult.formsCount }} <span style="font-size: 0.8rem; font-weight: normal; color: #64748b;">forms</span>
+            <div
+              style="
+                font-size: 1.4rem;
+                font-weight: 800;
+                color: #0284c7;
+                margin-bottom: 6px;
+              "
+            >
+              {{ synthesisResult.formsCount }}
+              <span
+                style="font-size: 0.8rem; font-weight: normal; color: #64748b"
+                >forms</span
+              >
             </div>
-            <div style="font-size: 0.78rem; color: #475569; display: flex; flex-direction: column; gap: 3px;">
-              <span>• CDASH Variables: <strong>{{ synthesisResult.variablesCount }}</strong></span>
-              <span>• Domains: <strong>VS, EG, LB, QS, PE, DM, AE</strong></span>
-              <span>• Custom Widgets: <strong>VAS Slider, 74-Zone Body Map</strong></span>
+            <div
+              style="
+                font-size: 0.78rem;
+                color: #475569;
+                display: flex;
+                flex-direction: column;
+                gap: 3px;
+              "
+            >
+              <span
+                >• CDASH Variables:
+                <strong>{{ synthesisResult.variablesCount }}</strong></span
+              >
+              <span
+                >• Domains: <strong>VS, EG, LB, QS, PE, DM, AE</strong></span
+              >
+              <span
+                >• Custom Widgets:
+                <strong>VAS Slider, 74-Zone Body Map</strong></span
+              >
             </div>
           </div>
 
@@ -220,16 +359,50 @@
               padding: 14px;
             "
           >
-            <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">
+            <div
+              style="
+                font-size: 0.75rem;
+                font-weight: 700;
+                color: #64748b;
+                text-transform: uppercase;
+                margin-bottom: 6px;
+              "
+            >
               Automated Validation Rules
             </div>
-            <div style="font-size: 1.4rem; font-weight: 800; color: #7c3aed; margin-bottom: 6px;">
-              {{ synthesisResult.rulesCount }} <span style="font-size: 0.8rem; font-weight: normal; color: #64748b;">edit checks</span>
+            <div
+              style="
+                font-size: 1.4rem;
+                font-weight: 800;
+                color: #7c3aed;
+                margin-bottom: 6px;
+              "
+            >
+              {{ synthesisResult.rulesCount }}
+              <span
+                style="font-size: 0.8rem; font-weight: normal; color: #64748b"
+                >edit checks</span
+              >
             </div>
-            <div style="font-size: 0.78rem; color: #475569; display: flex; flex-direction: column; gap: 3px;">
-              <span>• Cross-Field Sanity: <strong>CHK_VS_BP_SANITY</strong></span>
-              <span>• Safety Alerts: <strong>CHK_EG_QTC_ALERT, CHK_LB_HEPATIC</strong></span>
-              <span>• Value Bounds: <strong>CHK_DM_AGE, CHK_QS_VAS</strong></span>
+            <div
+              style="
+                font-size: 0.78rem;
+                color: #475569;
+                display: flex;
+                flex-direction: column;
+                gap: 3px;
+              "
+            >
+              <span
+                >• Cross-Field Sanity: <strong>CHK_VS_BP_SANITY</strong></span
+              >
+              <span
+                >• Safety Alerts:
+                <strong>CHK_EG_QTC_ALERT, CHK_LB_HEPATIC</strong></span
+              >
+              <span
+                >• Value Bounds: <strong>CHK_DM_AGE, CHK_QS_VAS</strong></span
+              >
             </div>
           </div>
 
@@ -243,16 +416,47 @@
               padding: 14px;
             "
           >
-            <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">
+            <div
+              style="
+                font-size: 0.75rem;
+                font-weight: 700;
+                color: #64748b;
+                text-transform: uppercase;
+                margin-bottom: 6px;
+              "
+            >
               Seeded DIA TMF EDL
             </div>
-            <div style="font-size: 1.4rem; font-weight: 800; color: #059669; margin-bottom: 6px;">
-              {{ synthesisResult.tmfEdlCount }} <span style="font-size: 0.8rem; font-weight: normal; color: #64748b;">documents</span>
+            <div
+              style="
+                font-size: 1.4rem;
+                font-weight: 800;
+                color: #059669;
+                margin-bottom: 6px;
+              "
+            >
+              {{ synthesisResult.tmfEdlCount }}
+              <span
+                style="font-size: 0.8rem; font-weight: normal; color: #64748b"
+                >documents</span
+              >
             </div>
-            <div style="font-size: 0.78rem; color: #475569; display: flex; flex-direction: column; gap: 3px;">
-              <span>• Pre-Seeded Zones: <strong>1, 2, 4, 5 (of 1–11)</strong></span>
+            <div
+              style="
+                font-size: 0.78rem;
+                color: #475569;
+                display: flex;
+                flex-direction: column;
+                gap: 3px;
+              "
+            >
+              <span
+                >• Pre-Seeded Zones: <strong>1, 2, 4, 5 (of 1–11)</strong></span
+              >
               <span>• Trial Mgt, Central Trial Docs, Regulatory, Site</span>
-              <span>• Milestone: <strong>Initial Study Activation</strong></span>
+              <span
+                >• Milestone: <strong>Initial Study Activation</strong></span
+              >
             </div>
           </div>
         </div>
@@ -289,11 +493,25 @@
             gap: 12px;
           "
         >
-          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <div
+            style="
+              display: flex;
+              gap: 10px;
+              align-items: center;
+              flex-wrap: wrap;
+            "
+          >
             <button
               id="btn-promote-to-edc"
               class="btn btn-primary"
-              style="font-size: 0.9rem; padding: 8px 18px; display: inline-flex; align-items: center; gap: 8px; font-weight: 700;"
+              style="
+                font-size: 0.9rem;
+                padding: 8px 18px;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                font-weight: 700;
+              "
               @click="openPromotionModal"
             >
               <span>🚀</span> Promote to Active EDC Study Build
@@ -301,7 +519,13 @@
             <button
               id="btn-inspect-crf"
               class="btn btn-secondary"
-              style="font-size: 0.85rem; padding: 8px 14px; display: inline-flex; align-items: center; gap: 6px;"
+              style="
+                font-size: 0.85rem;
+                padding: 8px 14px;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+              "
               @click="navigateToCrf"
             >
               <span>🎨</span> Open eCRF Form Designer
@@ -309,7 +533,13 @@
             <button
               id="btn-view-soa"
               class="btn btn-secondary"
-              style="font-size: 0.85rem; padding: 8px 14px; display: inline-flex; align-items: center; gap: 6px;"
+              style="
+                font-size: 0.85rem;
+                padding: 8px 14px;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+              "
               @click="navigateToSoa"
             >
               <span>📋</span> View SoA Matrix
@@ -317,7 +547,7 @@
           </div>
           <button
             class="btn btn-secondary"
-            style="font-size: 0.82rem; padding: 6px 12px;"
+            style="font-size: 0.82rem; padding: 6px 12px"
             @click="openUsdmModal"
           >
             🔄 Ingest Another USDM Protocol
@@ -775,7 +1005,7 @@
       </div>
 
       <!-- Schedule of Activities & Timeline (Full Width) -->
-      <div class="card" style="margin-bottom: 20px;">
+      <div class="card" style="margin-bottom: 20px">
         <div
           class="card-header"
           style="
@@ -788,45 +1018,78 @@
           "
         >
           <div>
-            <span class="card-title" style="font-size: 1.1rem; font-weight: 700;">Schedule of Activities (SoA) Matrix &amp; Protocol Timeline</span>
-            <p style="font-size: 0.78rem; color: #64748b; margin: 2px 0 0 0;">
-              Interactively inspect visits, epochs, study arms, and planned clinical activities.
+            <span class="card-title" style="font-size: 1.1rem; font-weight: 700"
+              >Schedule of Activities (SoA) Matrix &amp; Protocol Timeline</span
+            >
+            <p style="font-size: 0.78rem; color: #64748b; margin: 2px 0 0 0">
+              Interactively inspect visits, epochs, study arms, and planned
+              clinical activities.
             </p>
           </div>
-          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <div
+            style="
+              display: flex;
+              gap: 8px;
+              align-items: center;
+              flex-wrap: wrap;
+            "
+          >
             <button
               id="btn-open-usdm-modal"
               class="btn btn-primary"
-              style="font-size: 0.82rem; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px; font-weight: 700;"
+              style="
+                font-size: 0.82rem;
+                padding: 6px 14px;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                font-weight: 700;
+              "
               @click="openUsdmModal"
             >
               <span>⚡</span> Ingest &amp; Synthesize USDM Protocol
             </button>
             <button
               class="btn btn-secondary"
-              style="font-size: 0.82rem; padding: 6px 12px;"
+              style="font-size: 0.82rem; padding: 6px 12px"
               @click="showUsdmJson = !showUsdmJson"
             >
-              {{ showUsdmJson ? "Hide USDM JSON Source" : "📄 CDISC USDM JSON Source" }}
+              {{
+                showUsdmJson
+                  ? "Hide USDM JSON Source"
+                  : "📄 CDISC USDM JSON Source"
+              }}
             </button>
             <span
               v-if="store.soaLoading"
               style="font-size: 0.8rem; font-weight: normal; color: #64748b"
-            >(Syncing...)</span>
+              >(Syncing...)</span
+            >
           </div>
         </div>
 
         <div id="soa-matrix-container">
           <ClinicalSoAMatrix :soa-data="soaData" />
-          <div style="margin-top: 24px;">
+          <div style="margin-top: 24px">
             <ClinicalGanttVisualizer />
           </div>
         </div>
       </div>
 
       <!-- Collapsible USDM JSON Source Editor -->
-      <div v-if="showUsdmJson" class="card json-editor-container" style="margin-top: 16px;">
-        <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+      <div
+        v-if="showUsdmJson"
+        class="card json-editor-container"
+        style="margin-top: 16px"
+      >
+        <div
+          class="card-title"
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          "
+        >
           <span>CDISC USDM Study Protocol JSON</span>
           <button
             id="btn-reset-usdm"
@@ -849,13 +1112,19 @@
           class="json-editor"
           spellcheck="false"
           aria-label="CDISC USDM Study Protocol JSON"
-          style="min-height: 220px; font-family: monospace; font-size: 0.85rem;"
+          style="min-height: 220px; font-family: monospace; font-size: 0.85rem"
         />
         <div
-          style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;"
+          style="
+            margin-top: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          "
         >
-          <p style="font-size: 0.8rem; color: #64748b; margin: 0;">
-            Edit this CDISC USDM JSON definition and click "Update Visualizer" to dynamically re-render the Matrix.
+          <p style="font-size: 0.8rem; color: #64748b; margin: 0">
+            Edit this CDISC USDM JSON definition and click "Update Visualizer"
+            to dynamically re-render the Matrix.
           </p>
           <button
             id="btn-update-soa"
@@ -1242,17 +1511,27 @@
     >
       <div
         class="modal"
-        style="max-width: 780px; width: 92%; max-height: 90vh; overflow-y: auto;"
+        style="max-width: 780px; width: 92%; max-height: 90vh; overflow-y: auto"
       >
         <div
           id="usdm-modal-title"
           class="modal-header"
-          style="display: flex; justify-content: space-between; align-items: center;"
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          "
         >
           <span>⚡ Zero-Click USDM Study Ingestion &amp; Synthesis</span>
           <button
             class="btn btn-secondary"
-            style="padding: 2px 8px; font-size: 1.1rem; border: none; background: transparent; cursor: pointer;"
+            style="
+              padding: 2px 8px;
+              font-size: 1.1rem;
+              border: none;
+              background: transparent;
+              cursor: pointer;
+            "
             aria-label="Close modal"
             @click="closeUsdmModal"
           >
@@ -1260,10 +1539,20 @@
           </button>
         </div>
         <div class="modal-body">
-          <p style="font-size: 0.85rem; color: #475569; margin-top: 0; margin-bottom: 14px; line-height: 1.4;">
-            Ingest CDISC USDM v3.0 / v4.0 JSON protocols to automatically generate the Neo4j study graph model,
-            synthesize responsive CDASH eCRFs with custom widgets (VAS Pain Slider, 74-Zone Body Map), compile the
-            Schedule of Activities matrix, and pre-seed DIA TMF Expected Document List (EDL) placeholders across Zones 1–11.
+          <p
+            style="
+              font-size: 0.85rem;
+              color: #475569;
+              margin-top: 0;
+              margin-bottom: 14px;
+              line-height: 1.4;
+            "
+          >
+            Ingest CDISC USDM v3.0 / v4.0 JSON protocols to automatically
+            generate the Neo4j study graph model, synthesize responsive CDASH
+            eCRFs with custom widgets (VAS Pain Slider, 74-Zone Body Map),
+            compile the Schedule of Activities matrix, and pre-seed DIA TMF
+            Expected Document List (EDL) placeholders across Zones 1–11.
           </p>
 
           <!-- Dropzone Area -->
@@ -1291,28 +1580,46 @@
               accept=".json,application/json"
               style="display: none"
               @change="handleFileSelected"
+            />
+            <div style="font-size: 1.8rem; margin-bottom: 6px">📁</div>
+            <div
+              style="font-size: 0.9rem; font-weight: 600; color: var(--primary)"
             >
-            <div style="font-size: 1.8rem; margin-bottom: 6px;">📁</div>
-            <div style="font-size: 0.9rem; font-weight: 600; color: var(--primary);">
-              Drag &amp; drop a CDISC USDM protocol (.json) file here, or click to browse
+              Drag &amp; drop a CDISC USDM protocol (.json) file here, or click
+              to browse
             </div>
-            <div style="font-size: 0.78rem; color: #64748b; margin-top: 4px;">
+            <div style="font-size: 0.78rem; color: #64748b; margin-top: 4px">
               Supports CDISC USDM v3.0, v4.0, and DDF JSON specifications
             </div>
           </div>
 
           <!-- Quick Actions & Payload Input -->
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 6px;
+              flex-wrap: wrap;
+              gap: 8px;
+            "
+          >
             <label
               for="usdm-payload-input"
-              style="font-size: 0.82rem; font-weight: 700; color: #334155;"
+              style="font-size: 0.82rem; font-weight: 700; color: #334155"
             >
               Or paste raw CDISC USDM JSON payload:
             </label>
             <button
               id="btn-load-sample-usdm"
               class="btn btn-secondary"
-              style="font-size: 0.78rem; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px;"
+              style="
+                font-size: 0.78rem;
+                padding: 4px 10px;
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+              "
               type="button"
               @click="loadSampleUsdm"
             >
@@ -1340,7 +1647,10 @@
           />
 
           <!-- Client-Side Schema Validation Feedback -->
-          <div v-if="rawUsdmInput && rawUsdmInput.trim()" style="margin-top: 12px;">
+          <div
+            v-if="rawUsdmInput && rawUsdmInput.trim()"
+            style="margin-top: 12px"
+          >
             <!-- Valid state -->
             <div
               v-if="validationStatus.isValid"
@@ -1352,26 +1662,81 @@
                 padding: 10px 14px;
               "
             >
-              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
-                <span class="badge lookup-valid" style="font-weight: 600;">✓ Valid USDM Schema (v4.0 Compliant)</span>
-                <span style="font-size: 0.8rem; color: #166534; font-weight: 700;">
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  flex-wrap: wrap;
+                  gap: 8px;
+                  margin-bottom: 8px;
+                "
+              >
+                <span class="badge lookup-valid" style="font-weight: 600"
+                  >✓ Valid USDM Schema (v4.0 Compliant)</span
+                >
+                <span
+                  style="font-size: 0.8rem; color: #166534; font-weight: 700"
+                >
                   {{ validationSummary.id }}: {{ validationSummary.title }}
                 </span>
               </div>
-              <div style="display: flex; gap: 8px; flex-wrap: wrap; font-size: 0.78rem;">
-                <span class="badge" style="background-color: #dcfce7; color: #15803d; border: 1px solid #86efac;">
+              <div
+                style="
+                  display: flex;
+                  gap: 8px;
+                  flex-wrap: wrap;
+                  font-size: 0.78rem;
+                "
+              >
+                <span
+                  class="badge"
+                  style="
+                    background-color: #dcfce7;
+                    color: #15803d;
+                    border: 1px solid #86efac;
+                  "
+                >
                   {{ validationSummary.armsCount }} Arms
                 </span>
-                <span class="badge" style="background-color: #dcfce7; color: #15803d; border: 1px solid #86efac;">
+                <span
+                  class="badge"
+                  style="
+                    background-color: #dcfce7;
+                    color: #15803d;
+                    border: 1px solid #86efac;
+                  "
+                >
                   {{ validationSummary.epochsCount }} Epochs
                 </span>
-                <span class="badge" style="background-color: #dcfce7; color: #15803d; border: 1px solid #86efac;">
+                <span
+                  class="badge"
+                  style="
+                    background-color: #dcfce7;
+                    color: #15803d;
+                    border: 1px solid #86efac;
+                  "
+                >
                   {{ validationSummary.visitsCount }} Encounters/Visits
                 </span>
-                <span class="badge" style="background-color: #dcfce7; color: #15803d; border: 1px solid #86efac;">
+                <span
+                  class="badge"
+                  style="
+                    background-color: #dcfce7;
+                    color: #15803d;
+                    border: 1px solid #86efac;
+                  "
+                >
                   {{ validationSummary.activitiesCount }} Activities
                 </span>
-                <span class="badge" style="background-color: #dcfce7; color: #15803d; border: 1px solid #86efac;">
+                <span
+                  class="badge"
+                  style="
+                    background-color: #dcfce7;
+                    color: #15803d;
+                    border: 1px solid #86efac;
+                  "
+                >
                   {{ validationSummary.criteriaCount }} Criteria
                 </span>
               </div>
@@ -1388,20 +1753,48 @@
                 padding: 10px 14px;
               "
             >
-              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                <span class="badge lookup-invalid" style="font-weight: 600;">⚠️ Schema Validation Issue</span>
-                <span style="font-size: 0.82rem; color: #991b1b; font-weight: 600;">
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  margin-bottom: 4px;
+                "
+              >
+                <span class="badge lookup-invalid" style="font-weight: 600"
+                  >⚠️ Schema Validation Issue</span
+                >
+                <span
+                  style="font-size: 0.82rem; color: #991b1b; font-weight: 600"
+                >
                   {{ validationStatus.errorMessage }}
                 </span>
               </div>
-              <ul v-if="validationStatus.errors.length > 1" style="margin: 6px 0 0 0; padding-left: 20px; font-size: 0.78rem; color: #991b1b;">
-                <li v-for="(err, idx) in validationStatus.errors" :key="idx">{{ err }}</li>
+              <ul
+                v-if="validationStatus.errors.length > 1"
+                style="
+                  margin: 6px 0 0 0;
+                  padding-left: 20px;
+                  font-size: 0.78rem;
+                  color: #991b1b;
+                "
+              >
+                <li v-for="(err, idx) in validationStatus.errors" :key="idx">
+                  {{ err }}
+                </li>
               </ul>
             </div>
           </div>
         </div>
-        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px;">
-          <button class="btn btn-secondary" type="button" @click="closeUsdmModal">
+        <div
+          class="modal-footer"
+          style="display: flex; justify-content: flex-end; gap: 10px"
+        >
+          <button
+            class="btn btn-secondary"
+            type="button"
+            @click="closeUsdmModal"
+          >
             Cancel
           </button>
           <button
@@ -1409,10 +1802,19 @@
             class="btn btn-primary"
             type="button"
             :disabled="!validationStatus.isValid || isSynthesizing"
-            style="font-weight: 700; display: inline-flex; align-items: center; gap: 6px;"
+            style="
+              font-weight: 700;
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+            "
             @click="executeZeroClickBuild"
           >
-            {{ isSynthesizing ? "⏳ Synthesizing Protocol Build..." : "⚡ Synthesize USDM Protocol" }}
+            {{
+              isSynthesizing
+                ? "⏳ Synthesizing Protocol Build..."
+                : "⚡ Synthesize USDM Protocol"
+            }}
           </button>
         </div>
       </div>
@@ -1448,7 +1850,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, reactive, onMounted } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useClinicalStore } from "../stores/clinical";
 import ClinicalSoAMatrix from "../components/clinical/ClinicalSoAMatrix.vue";
@@ -1480,8 +1882,6 @@ const formSchema = computed({
     designerStore.activeForm = val;
   },
 });
-const showCanvas = ref(false);
-
 function onSelectField(fieldId) {
   designerStore.setSelectedFieldId(fieldId);
 }
@@ -2219,7 +2619,10 @@ const validationSummary = reactive({
 
 const promotionReasonOptions = [
   { value: "Initial Entry", text: "Initial Study Configuration & Build" },
-  { value: "Protocol Amendment", text: "Protocol Ingestion / Synthesis Promotion" },
+  {
+    value: "Protocol Amendment",
+    text: "Protocol Ingestion / Synthesis Promotion",
+  },
   { value: "Correction of Error", text: "Correction of Study Specification" },
   { value: "Other", text: "Other (specify below)" },
 ];
@@ -2227,7 +2630,8 @@ const promotionReasonOptions = [
 const samplePhase2Usdm = {
   id: "CDNC-2026-001",
   name: "CDNC-2026-001",
-  protocolTitle: "A Phase II Randomized Study of Novel Therapeutic vs Control in Advanced Solid Tumors",
+  protocolTitle:
+    "A Phase II Randomized Study of Novel Therapeutic vs Control in Advanced Solid Tumors",
   usdmVersion: "4.0",
   studyDesigns: [
     {
@@ -2239,34 +2643,34 @@ const samplePhase2Usdm = {
           id: "ARM-01",
           name: "Arm A: Novel Therapeutic 100mg Daily",
           armType: "Experimental",
-          description: "Oral administration of 100mg active drug once daily"
+          description: "Oral administration of 100mg active drug once daily",
         },
         {
           id: "ARM-02",
           name: "Arm B: Standard Care Placebo Control",
           armType: "Placebo Comparator",
-          description: "Matching oral placebo tablet once daily"
-        }
+          description: "Matching oral placebo tablet once daily",
+        },
       ],
       epochs: [
         {
           id: "EP-SCR",
           name: "Screening Epoch (Day -28 to -1)",
           epochType: "Screening",
-          sequenceNumber: 1
+          sequenceNumber: 1,
         },
         {
           id: "EP-TRT",
           name: "Treatment Epoch (Cycles 1-6)",
           epochType: "Treatment",
-          sequenceNumber: 2
+          sequenceNumber: 2,
         },
         {
           id: "EP-FU",
           name: "Safety Follow-Up Epoch (Day 30)",
           epochType: "Follow-Up",
-          sequenceNumber: 3
-        }
+          sequenceNumber: 3,
+        },
       ],
       encounters: [
         {
@@ -2274,73 +2678,73 @@ const samplePhase2Usdm = {
           name: "Screening Visit (Day -28 to -1)",
           encounterType: "Screening",
           startDate: "2026-01-01",
-          endDate: "2026-01-28"
+          endDate: "2026-01-28",
         },
         {
           id: "V-C1D1",
           name: "Cycle 1 Day 1 (Baseline)",
           encounterType: "Baseline",
           startDate: "2026-02-01",
-          endDate: "2026-02-01"
+          endDate: "2026-02-01",
         },
         {
           id: "V-C2D1",
           name: "Cycle 2 Day 1",
           encounterType: "Treatment",
           startDate: "2026-03-01",
-          endDate: "2026-03-01"
+          endDate: "2026-03-01",
         },
         {
           id: "V-EOS",
           name: "End of Study / Safety Follow-Up",
           encounterType: "Follow-Up",
           startDate: "2026-08-01",
-          endDate: "2026-08-01"
-        }
+          endDate: "2026-08-01",
+        },
       ],
       activities: [
         {
           id: "ACT-DEM",
           name: "Demographics & Informed Consent",
           description: "Subject demographics, consent, baseline evaluation",
-          definedProcedures: [{ code: "DM", name: "Demographics" }]
+          definedProcedures: [{ code: "DM", name: "Demographics" }],
         },
         {
           id: "ACT-VS",
           name: "Vital Signs & Hemodynamics",
           description: "Blood pressure, heart rate, temperature, weight",
-          definedProcedures: [{ code: "VS", name: "Vital Signs" }]
+          definedProcedures: [{ code: "VS", name: "Vital Signs" }],
         },
         {
           id: "ACT-EG",
           name: "12-Lead Electrocardiogram (ECG)",
           description: "Triplicate 12-lead ECG recording with QTc calculation",
-          definedProcedures: [{ code: "EG", name: "Electrocardiogram" }]
+          definedProcedures: [{ code: "EG", name: "Electrocardiogram" }],
         },
         {
           id: "ACT-LB",
           name: "Safety Laboratory Panel (CBC & Chem)",
           description: "Central laboratory complete blood count and chemistry",
-          definedProcedures: [{ code: "LB", name: "Laboratory" }]
+          definedProcedures: [{ code: "LB", name: "Laboratory" }],
         },
         {
           id: "ACT-QS",
           name: "Patient Pain VAS & Quality of Life",
           description: "100mm Visual Analog Scale for pain and health status",
-          definedProcedures: [{ code: "QS", name: "Questionnaire" }]
+          definedProcedures: [{ code: "QS", name: "Questionnaire" }],
         },
         {
           id: "ACT-PE",
           name: "Physical Exam & 74-Zone Body Map",
           description: "Complete physical examination and anatomical body map",
-          definedProcedures: [{ code: "PE", name: "Physical Examination" }]
+          definedProcedures: [{ code: "PE", name: "Physical Examination" }],
         },
         {
           id: "ACT-AE",
           name: "Adverse Events & Safety Evaluation",
           description: "CTCAE v5.0 graded adverse event evaluation",
-          definedProcedures: [{ code: "AE", name: "Adverse Events" }]
-        }
+          definedProcedures: [{ code: "AE", name: "Adverse Events" }],
+        },
       ],
       eligibilityCriteria: [
         {
@@ -2349,7 +2753,12 @@ const samplePhase2Usdm = {
           criterionType: "Inclusion",
           category: "Demographics",
           text: "Subject must be >= 18 and <= 75 years of age at consent",
-          template: { id: "TMPL-01", name: "Age Template", text: "DM.AGE >= 18 AND DM.AGE <= 75", notes: ["Age criteria"] }
+          template: {
+            id: "TMPL-01",
+            name: "Age Template",
+            text: "DM.AGE >= 18 AND DM.AGE <= 75",
+            notes: ["Age criteria"],
+          },
         },
         {
           id: "INC-02",
@@ -2357,7 +2766,12 @@ const samplePhase2Usdm = {
           criterionType: "Inclusion",
           category: "Diagnosis",
           text: "Histologically confirmed advanced solid tumor malignancy",
-          template: { id: "TMPL-02", name: "Histology Template", text: "MDR.HISTOLOGY == 1", notes: ["Confirmed tumor"] }
+          template: {
+            id: "TMPL-02",
+            name: "Histology Template",
+            text: "MDR.HISTOLOGY == 1",
+            notes: ["Confirmed tumor"],
+          },
         },
         {
           id: "EXC-01",
@@ -2365,7 +2779,12 @@ const samplePhase2Usdm = {
           criterionType: "Exclusion",
           category: "Cardiac Safety",
           text: "Baseline QTc Fridericia > 470 ms or severe arrhythmia",
-          template: { id: "TMPL-03", name: "QTc Template", text: "EG.EGQTC > 470", notes: ["Cardiac safety"] }
+          template: {
+            id: "TMPL-03",
+            name: "QTc Template",
+            text: "EG.EGQTC > 470",
+            notes: ["Cardiac safety"],
+          },
         },
         {
           id: "EXC-02",
@@ -2373,11 +2792,16 @@ const samplePhase2Usdm = {
           criterionType: "Exclusion",
           category: "Hepatic Safety",
           text: "Serum ALT or AST > 3.0x upper limit of normal",
-          template: { id: "TMPL-04", name: "Hepatic Template", text: "LB.ALT > 3 * ULN", notes: ["Liver safety"] }
-        }
-      ]
-    }
-  ]
+          template: {
+            id: "TMPL-04",
+            name: "Hepatic Template",
+            text: "LB.ALT > 3 * ULN",
+            notes: ["Liver safety"],
+          },
+        },
+      ],
+    },
+  ],
 };
 
 function openUsdmModal() {
@@ -2405,7 +2829,7 @@ function handleFileSelected(event) {
   if (file) {
     const reader = new FileReader();
     reader.onload = (e) => {
-      rawUsdmInput.value = (e.target?.result) || "";
+      rawUsdmInput.value = e.target?.result || "";
       validateUsdmPayload();
     };
     reader.readAsText(file);
@@ -2418,7 +2842,7 @@ function handleFileDrop(event) {
   if (file) {
     const reader = new FileReader();
     reader.onload = (e) => {
-      rawUsdmInput.value = (e.target?.result) || "";
+      rawUsdmInput.value = e.target?.result || "";
       validateUsdmPayload();
     };
     reader.readAsText(file);
@@ -2442,17 +2866,25 @@ function validateUsdmPayload() {
     const parsed = JSON.parse(rawUsdmInput.value);
     if (!parsed || typeof parsed !== "object") {
       validationStatus.isValid = false;
-      validationStatus.errorMessage = "Invalid JSON structure. Root must be an object.";
+      validationStatus.errorMessage =
+        "Invalid JSON structure. Root must be an object.";
       validationStatus.errors = ["Root must be an object."];
       return;
     }
 
     const schemaResult = USDMStudySchema.safeParse(parsed);
 
-    let studyId = parsed.id || parsed.studyId || parsed.protocol_id || parsed.name || "";
-    let title = parsed.protocolTitle || parsed.studyTitle || parsed.study_title || parsed.name || "";
+    let studyId =
+      parsed.id || parsed.studyId || parsed.protocol_id || parsed.name || "";
+    let title =
+      parsed.protocolTitle ||
+      parsed.studyTitle ||
+      parsed.study_title ||
+      parsed.name ||
+      "";
     let phase = parsed.phase || "Phase II";
-    let therapeuticArea = parsed.therapeuticArea || parsed.therapeutic_area || "Oncology";
+    let therapeuticArea =
+      parsed.therapeuticArea || parsed.therapeutic_area || "Oncology";
 
     let arms = [];
     let epochs = [];
@@ -2485,7 +2917,11 @@ function validateUsdmPayload() {
     }
 
     const hasStudyInfo = Boolean(studyId || title);
-    const hasStructure = encounters.length > 0 || activities.length > 0 || epochs.length > 0 || arms.length > 0;
+    const hasStructure =
+      encounters.length > 0 ||
+      activities.length > 0 ||
+      epochs.length > 0 ||
+      arms.length > 0;
 
     if (schemaResult.success || (hasStudyInfo && hasStructure)) {
       validationStatus.isValid = true;
@@ -2504,12 +2940,23 @@ function validateUsdmPayload() {
     } else {
       validationStatus.isValid = false;
       const issues = [];
-      if (!hasStudyInfo) issues.push("Missing study identifier (id/studyId) or title (protocolTitle/studyTitle).");
-      if (!hasStructure) issues.push("Missing protocol structure (arms, epochs, encounters/visits, or activities).");
+      if (!hasStudyInfo)
+        issues.push(
+          "Missing study identifier (id/studyId) or title (protocolTitle/studyTitle)."
+        );
+      if (!hasStructure)
+        issues.push(
+          "Missing protocol structure (arms, epochs, encounters/visits, or activities)."
+        );
       if (schemaResult.error) {
-        issues.push(...schemaResult.error.errors.map((e) => `${e.path.join(".") || "root"}: ${e.message}`));
+        issues.push(
+          ...schemaResult.error.errors.map(
+            (e) => `${e.path.join(".") || "root"}: ${e.message}`
+          )
+        );
       }
-      validationStatus.errorMessage = issues[0] || "Invalid USDM specification.";
+      validationStatus.errorMessage =
+        issues[0] || "Invalid USDM specification.";
       validationStatus.errors = issues;
     }
   } catch (err) {
@@ -2528,10 +2975,16 @@ async function executeZeroClickBuild() {
   try {
     const parsed = JSON.parse(rawUsdmInput.value);
 
-    let studyId = parsed.id || parsed.studyId || parsed.protocol_id || "CDNC-2026-001";
-    let title = parsed.protocolTitle || parsed.studyTitle || parsed.study_title || "A Phase II Randomized Study";
+    let studyId =
+      parsed.id || parsed.studyId || parsed.protocol_id || "CDNC-2026-001";
+    let title =
+      parsed.protocolTitle ||
+      parsed.studyTitle ||
+      parsed.study_title ||
+      "A Phase II Randomized Study";
     let phase = parsed.phase || "Phase II";
-    let therapeuticArea = parsed.therapeuticArea || parsed.therapeutic_area || "Oncology";
+    let therapeuticArea =
+      parsed.therapeuticArea || parsed.therapeutic_area || "Oncology";
 
     let rawArms = [];
     let rawEpochs = [];
@@ -2539,7 +2992,11 @@ async function executeZeroClickBuild() {
     let rawActivities = [];
     let rawCriteria = [];
 
-    if (parsed.studyDesigns && Array.isArray(parsed.studyDesigns) && parsed.studyDesigns.length > 0) {
+    if (
+      parsed.studyDesigns &&
+      Array.isArray(parsed.studyDesigns) &&
+      parsed.studyDesigns.length > 0
+    ) {
       const design = parsed.studyDesigns[0];
       rawArms = design.arms || [];
       rawEpochs = design.epochs || [];
@@ -2564,13 +3021,16 @@ async function executeZeroClickBuild() {
       epoch_id: e.id || e.epoch_id || `EP-0${idx + 1}`,
       epoch_name: e.name || e.epoch_name || `Epoch ${idx + 1}`,
       sequence: e.sequenceNumber || e.sequence || idx + 1,
-      arm_id: e.arm_id || (arms[idx % (arms.length || 1)]?.arm_id) || null,
+      arm_id: e.arm_id || arms[idx % (arms.length || 1)]?.arm_id || null,
     }));
 
     const encounters = rawEncounters.map((enc, idx) => ({
       encounter_id: enc.id || enc.encounter_id || `V-0${idx + 1}`,
       encounter_name: enc.name || enc.encounter_name || `Visit ${idx + 1}`,
-      epoch_id: enc.epoch_id || (epochs[Math.min(idx, epochs.length - 1)]?.epoch_id) || "EP-SCR",
+      epoch_id:
+        enc.epoch_id ||
+        epochs[Math.min(idx, epochs.length - 1)]?.epoch_id ||
+        "EP-SCR",
       sequence: idx + 1,
     }));
 
@@ -2579,12 +3039,17 @@ async function executeZeroClickBuild() {
       const actName = act.name || act.activity_name || `Activity ${idx + 1}`;
       const cells = encounters.map((enc, encIdx) => {
         const isApplicable = act.cells
-          ? (act.cells.find((c) => c.encounter_id === enc.encounter_id)?.is_applicable ?? true)
-          : (encIdx === 0 || idx % 2 === 0 || encIdx % 2 === 0);
+          ? (act.cells.find((c) => c.encounter_id === enc.encounter_id)
+              ?.is_applicable ?? true)
+          : encIdx === 0 || idx % 2 === 0 || encIdx % 2 === 0;
         return {
           encounter_id: enc.encounter_id,
           is_applicable: isApplicable,
-          details: isApplicable ? (encIdx === 0 ? "Baseline" : "Standard") : undefined,
+          details: isApplicable
+            ? encIdx === 0
+              ? "Baseline"
+              : "Standard"
+            : undefined,
         };
       });
       return {
@@ -2617,9 +3082,34 @@ async function executeZeroClickBuild() {
           name: "Demographics & Baseline Characteristics (DM)",
           isCollapsed: false,
           items: [
-            { id: "dm-subjinit", label: "Subject Initials", type: "text", cdash: "DM.SUBJINIT", gridSpan: 4, required: true },
-            { id: "dm-age", label: "Age at Screening (Years)", type: "number", cdash: "DM.AGE", gridSpan: 4, required: true },
-            { id: "dm-sex", label: "Sex at Birth", type: "select", cdash: "DM.SEX", gridSpan: 4, required: true, options: [{ value: "M", label: "Male" }, { value: "F", label: "Female" }] },
+            {
+              id: "dm-subjinit",
+              label: "Subject Initials",
+              type: "text",
+              cdash: "DM.SUBJINIT",
+              gridSpan: 4,
+              required: true,
+            },
+            {
+              id: "dm-age",
+              label: "Age at Screening (Years)",
+              type: "number",
+              cdash: "DM.AGE",
+              gridSpan: 4,
+              required: true,
+            },
+            {
+              id: "dm-sex",
+              label: "Sex at Birth",
+              type: "select",
+              cdash: "DM.SEX",
+              gridSpan: 4,
+              required: true,
+              options: [
+                { value: "M", label: "Male" },
+                { value: "F", label: "Female" },
+              ],
+            },
           ],
         },
         {
@@ -2627,9 +3117,30 @@ async function executeZeroClickBuild() {
           name: "Vital Signs & Hemodynamics (VS)",
           isCollapsed: false,
           items: [
-            { id: "vs-sysbp", label: "Systolic Blood Pressure (mmHg)", type: "number", cdash: "VS.SYSBP", gridSpan: 4, required: true },
-            { id: "vs-diabp", label: "Diastolic Blood Pressure (mmHg)", type: "number", cdash: "VS.DIABP", gridSpan: 4, required: true },
-            { id: "vs-hr", label: "Heart Rate / Pulse (bpm)", type: "number", cdash: "VS.HR", gridSpan: 4, required: true },
+            {
+              id: "vs-sysbp",
+              label: "Systolic Blood Pressure (mmHg)",
+              type: "number",
+              cdash: "VS.SYSBP",
+              gridSpan: 4,
+              required: true,
+            },
+            {
+              id: "vs-diabp",
+              label: "Diastolic Blood Pressure (mmHg)",
+              type: "number",
+              cdash: "VS.DIABP",
+              gridSpan: 4,
+              required: true,
+            },
+            {
+              id: "vs-hr",
+              label: "Heart Rate / Pulse (bpm)",
+              type: "number",
+              cdash: "VS.HR",
+              gridSpan: 4,
+              required: true,
+            },
           ],
         },
         {
@@ -2637,8 +3148,29 @@ async function executeZeroClickBuild() {
           name: "Patient-Reported Outcomes & Pain VAS (QS)",
           isCollapsed: false,
           items: [
-            { id: "qs-pain-vas", label: "Pain Visual Analog Scale (0-100mm)", type: "vas_slider", cdash: "QS.QSSCAT_PAIN", gridSpan: 12, required: true, config: { min_value: 0, max_value: 100, step: 1, min_label: "No Pain (0 mm)", max_label: "Worst Possible Pain (100 mm)" } },
-            { id: "qs-global", label: "Global Health Assessment Score (1-10)", type: "number", cdash: "QS.QSORRES", gridSpan: 6, required: false },
+            {
+              id: "qs-pain-vas",
+              label: "Pain Visual Analog Scale (0-100mm)",
+              type: "vas_slider",
+              cdash: "QS.QSSCAT_PAIN",
+              gridSpan: 12,
+              required: true,
+              config: {
+                min_value: 0,
+                max_value: 100,
+                step: 1,
+                min_label: "No Pain (0 mm)",
+                max_label: "Worst Possible Pain (100 mm)",
+              },
+            },
+            {
+              id: "qs-global",
+              label: "Global Health Assessment Score (1-10)",
+              type: "number",
+              cdash: "QS.QSORRES",
+              gridSpan: 6,
+              required: false,
+            },
           ],
         },
         {
@@ -2646,8 +3178,31 @@ async function executeZeroClickBuild() {
           name: "Physical Examination & Anatomical Mapping (PE)",
           isCollapsed: false,
           items: [
-            { id: "pe-body-map", label: "74-Zone SNOMED CT Anatomical Body Map", type: "body_map_74_zone", cdash: "PE.PELOC", gridSpan: 12, required: true, config: { zones_total: 74, snomed_ct_version: "2024-09", multiselect: true } },
-            { id: "pe-finding", label: "Overall Clinical Finding", type: "select", cdash: "PE.PEORRES", gridSpan: 6, required: true, options: [{ value: "NORMAL", label: "Normal" }, { value: "ABNORMAL", label: "Abnormal" }] },
+            {
+              id: "pe-body-map",
+              label: "74-Zone SNOMED CT Anatomical Body Map",
+              type: "body_map_74_zone",
+              cdash: "PE.PELOC",
+              gridSpan: 12,
+              required: true,
+              config: {
+                zones_total: 74,
+                snomed_ct_version: "2024-09",
+                multiselect: true,
+              },
+            },
+            {
+              id: "pe-finding",
+              label: "Overall Clinical Finding",
+              type: "select",
+              cdash: "PE.PEORRES",
+              gridSpan: 6,
+              required: true,
+              options: [
+                { value: "NORMAL", label: "Normal" },
+                { value: "ABNORMAL", label: "Abnormal" },
+              ],
+            },
           ],
         },
         {
@@ -2655,9 +3210,35 @@ async function executeZeroClickBuild() {
           name: "12-Lead Electrocardiogram (EG)",
           isCollapsed: false,
           items: [
-            { id: "eg-hr", label: "Ventricular Rate (bpm)", type: "number", cdash: "EG.EGHR", gridSpan: 4, required: true },
-            { id: "eg-qtc", label: "QTc Fridericia Interval (ms)", type: "number", cdash: "EG.EGQTC", gridSpan: 4, required: true },
-            { id: "eg-interp", label: "ECG Interpretation", type: "select", cdash: "EG.EGORRES", gridSpan: 4, required: true, options: [{ value: "NORMAL", label: "Normal" }, { value: "ABNORMAL_NCS", label: "Abnormal NCS" }, { value: "ABNORMAL_CS", label: "Abnormal CS" }] },
+            {
+              id: "eg-hr",
+              label: "Ventricular Rate (bpm)",
+              type: "number",
+              cdash: "EG.EGHR",
+              gridSpan: 4,
+              required: true,
+            },
+            {
+              id: "eg-qtc",
+              label: "QTc Fridericia Interval (ms)",
+              type: "number",
+              cdash: "EG.EGQTC",
+              gridSpan: 4,
+              required: true,
+            },
+            {
+              id: "eg-interp",
+              label: "ECG Interpretation",
+              type: "select",
+              cdash: "EG.EGORRES",
+              gridSpan: 4,
+              required: true,
+              options: [
+                { value: "NORMAL", label: "Normal" },
+                { value: "ABNORMAL_NCS", label: "Abnormal NCS" },
+                { value: "ABNORMAL_CS", label: "Abnormal CS" },
+              ],
+            },
           ],
         },
       ],
@@ -2674,13 +3255,20 @@ async function executeZeroClickBuild() {
       visitsCount: encounters.length,
       activitiesCount: rows.length,
       criteriaCount: rawCriteria.length || 4,
-      graphEntitiesCount: arms.length + epochs.length + encounters.length + rows.length + (rawCriteria.length || 4),
+      graphEntitiesCount:
+        arms.length +
+        epochs.length +
+        encounters.length +
+        rows.length +
+        (rawCriteria.length || 4),
       formsCount: 7,
       variablesCount: 34,
       rulesCount: 6,
       tmfEdlCount: 14,
-      nodesCreated: arms.length + epochs.length + encounters.length + rows.length + 8,
-      relationshipsCreated: (encounters.length * rows.length) + (epochs.length * arms.length) + 12,
+      nodesCreated:
+        arms.length + epochs.length + encounters.length + rows.length + 8,
+      relationshipsCreated:
+        encounters.length * rows.length + epochs.length * arms.length + 12,
       latencyMs,
       protocolData,
       synthesizedDesignerForm,
@@ -2761,7 +3349,9 @@ function navigateToSoa() {
 
 <style scoped>
 .synthesis-metrics-card {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .dropzone-area:hover,
@@ -2771,7 +3361,9 @@ function navigateToSoa() {
 }
 
 .metric-panel {
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .metric-panel:hover {

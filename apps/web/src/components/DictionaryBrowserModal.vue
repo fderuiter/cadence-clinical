@@ -10,9 +10,9 @@
         <div class="header-titles">
           <h3>
             {{
-              selectedDictType === 'MEDDRA'
-                ? 'MedDRA Hierarchy Browser'
-                : 'WHODrug ATC Classification Browser'
+              selectedDictType === "MEDDRA"
+                ? "MedDRA Hierarchy Browser"
+                : "WHODrug ATC Classification Browser"
             }}
           </h3>
           <span class="header-subtitle">
@@ -160,7 +160,10 @@
                 </div>
                 <div class="result-card-meta">
                   <span class="code-pill">Code: {{ getMatchCode(match) }}</span>
-                  <span v-if="match.primary_soc_flag === 'Y'" class="soc-flag-pill">
+                  <span
+                    v-if="match.primary_soc_flag === 'Y'"
+                    class="soc-flag-pill"
+                  >
                     Primary SOC
                   </span>
                 </div>
@@ -403,7 +406,8 @@ watch(
 );
 
 function onDictionaryTypeChange() {
-  selectedVersion.value = selectedDictType.value === "MEDDRA" ? "26.0" : "2024-03";
+  selectedVersion.value =
+    selectedDictType.value === "MEDDRA" ? "26.0" : "2024-03";
   performSearch();
 }
 

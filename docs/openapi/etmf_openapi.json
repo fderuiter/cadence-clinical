@@ -1033,6 +1033,70 @@
         }
       }
     },
+    "/api/v1/etmf/studies/{study_id}/seed-edl": {
+      "post": {
+        "tags": [
+          "eTMF"
+        ],
+        "summary": "Seed Edl Endpoint",
+        "description": "Seed Expected Document List (EDL) for a study across DIA TMF zones and milestones.",
+        "operationId": "seed_edl_endpoint_api_v1_etmf_studies__study_id__seed_edl_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/SeedEDLRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExpectedDocumentResponse"
+                  },
+                  "title": "Response Seed Edl Endpoint Api V1 Etmf Studies  Study Id  Seed Edl Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/etmf/completeness": {
       "get": {
         "tags": [
@@ -3566,6 +3630,33 @@
           "manifest"
         ],
         "title": "RedactRequest"
+      },
+      "SeedEDLRequest": {
+        "properties": {
+          "milestones": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Milestones",
+            "description": "Optional list of milestones to seed. Defaults to STUDY_INITIATION, ETHICS_SUBMISSION, SITE_ACTIVATION, FSI."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Part 11 change justification reason for seeding EDL",
+            "default": "Zero-Click USDM Study Ingestion"
+          }
+        },
+        "type": "object",
+        "title": "SeedEDLRequest"
       },
       "SignDocumentRequest": {
         "properties": {

@@ -6,7 +6,8 @@
         <div class="canvas-header-info">
           <h2>eCRF Authoring Canvas &amp; Responsive Form Builder</h2>
           <p>
-            Drag sections to reorder, add field widgets, configure CDASH bindings &amp; test responsive viewports.
+            Drag sections to reorder, add field widgets, configure CDASH
+            bindings &amp; test responsive viewports.
           </p>
         </div>
 
@@ -36,10 +37,7 @@
             </button>
           </div>
 
-          <div
-            v-if="formSchema"
-            class="form-schema-badge"
-          >
+          <div v-if="formSchema" class="form-schema-badge">
             Form: {{ formSchema.name || "Draft" }}
           </div>
         </div>
@@ -85,28 +83,72 @@
           </span>
         </div>
 
-        <div
-          v-if="layoutWarnings.length === 0"
-          class="warnings-box-clean"
-        >
+        <div v-if="layoutWarnings.length === 0" class="warnings-box-clean">
           <span>✅</span> No layout warnings for this viewport.
         </div>
 
-        <div v-else style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;">
+        <div
+          v-else
+          style="
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+          "
+        >
           <div
             v-for="warning in layoutWarnings"
             :key="warning.fieldId"
-            style="border: 1px solid #fef08a; background-color: #fefce8; border-radius: 6px; padding: 8px; cursor: pointer;"
+            style="
+              border: 1px solid #fef08a;
+              background-color: #fefce8;
+              border-radius: 6px;
+              padding: 8px;
+              cursor: pointer;
+            "
             @click="onSelectField(warning.fieldId)"
           >
-            <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 0.75rem; color: #854d0e; margin-bottom: 2px;">
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                font-weight: 700;
+                font-size: 0.75rem;
+                color: #854d0e;
+                margin-bottom: 2px;
+              "
+            >
               <span>{{ warning.label }}</span>
-              <span style="font-family: monospace; font-size: 0.7rem; background: #fef3c7; padding: 1px 4px; border-radius: 4px;">Span: {{ warning.gridSpan }}</span>
+              <span
+                style="
+                  font-family: monospace;
+                  font-size: 0.7rem;
+                  background: #fef3c7;
+                  padding: 1px 4px;
+                  border-radius: 4px;
+                "
+                >Span: {{ warning.gridSpan }}</span
+              >
             </div>
-            <p style="font-size: 0.72rem; color: #a16207; margin: 0; line-height: 1.3;">
+            <p
+              style="
+                font-size: 0.72rem;
+                color: #a16207;
+                margin: 0;
+                line-height: 1.3;
+              "
+            >
               {{ warning.message }}
             </p>
-            <div style="font-size: 0.68rem; color: #94a3b8; margin-top: 4px; font-style: italic;">
+            <div
+              style="
+                font-size: 0.68rem;
+                color: #94a3b8;
+                margin-top: 4px;
+                font-style: italic;
+              "
+            >
               In: {{ warning.sectionName }}
             </div>
           </div>
@@ -114,25 +156,62 @@
       </div>
 
       <!-- 2. Properties Inspector Section -->
-      <div style="border-top: 1px solid #e2e8f0; padding-top: 16px;">
-        <div class="inspector-section-title">
-          Properties Inspector
-        </div>
+      <div style="border-top: 1px solid #e2e8f0; padding-top: 16px">
+        <div class="inspector-section-title">Properties Inspector</div>
 
         <div
           v-if="!selectedField"
-          style="font-size: 0.78rem; color: #64748b; font-style: italic; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;"
+          style="
+            font-size: 0.78rem;
+            color: #64748b;
+            font-style: italic;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+          "
         >
-          Select a field widget on the canvas to inspect and edit its attributes.
+          Select a field widget on the canvas to inspect and edit its
+          attributes.
         </div>
 
         <div
           v-else
-          style="display: flex; flex-direction: column; gap: 12px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px;"
+          style="
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 14px;
+          "
         >
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
-            <span style="font-weight: 700; font-size: 0.85rem; color: #1e293b;">{{ selectedField.label }}</span>
-            <span style="font-family: monospace; font-size: 0.72rem; background-color: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: #475569;">{{ selectedField.id }}</span>
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              border-bottom: 1px solid #e2e8f0;
+              padding-bottom: 8px;
+            "
+          >
+            <span
+              style="font-weight: 700; font-size: 0.85rem; color: #1e293b"
+              >{{ selectedField.label }}</span
+            >
+            <span
+              style="
+                font-family: monospace;
+                font-size: 0.72rem;
+                background-color: #e2e8f0;
+                padding: 2px 6px;
+                border-radius: 4px;
+                color: #475569;
+              "
+              >{{ selectedField.id }}</span
+            >
           </div>
 
           <div class="inspector-field-group">
@@ -167,10 +246,7 @@
 
           <div class="inspector-field-group">
             <label>Field Type</label>
-            <select
-              v-model="selectedFieldType"
-              class="inspector-select"
-            >
+            <select v-model="selectedFieldType" class="inspector-select">
               <option value="text">Text Input</option>
               <option value="numeric">Numeric Input</option>
               <option value="date">Date Picker</option>
@@ -181,16 +257,33 @@
             </select>
           </div>
 
-          <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              margin-top: 4px;
+            "
+          >
             <input
               id="inspect-field-required"
               v-model="selectedFieldRequired"
               type="checkbox"
-              style="width: 16px; height: 16px; cursor: pointer; accent-color: #026597;"
+              style="
+                width: 16px;
+                height: 16px;
+                cursor: pointer;
+                accent-color: #026597;
+              "
             />
             <label
               for="inspect-field-required"
-              style="font-size: 0.8rem; font-weight: 600; color: #334155; cursor: pointer;"
+              style="
+                font-size: 0.8rem;
+                font-weight: 600;
+                color: #334155;
+                cursor: pointer;
+              "
             >
               Required Field
             </label>
@@ -199,22 +292,40 @@
       </div>
 
       <!-- 3. Form Compiler Section -->
-      <div style="border-top: 1px solid #e2e8f0; padding-top: 16px;">
-        <div class="inspector-section-title">
-          Form Compiler
-        </div>
+      <div style="border-top: 1px solid #e2e8f0; padding-top: 16px">
+        <div class="inspector-section-title">Form Compiler</div>
 
-        <div style="display: flex; flex-direction: column; gap: 12px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px;">
-          <div style="display: flex; align-items: center; gap: 8px;">
+        <div
+          style="
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 14px;
+          "
+        >
+          <div style="display: flex; align-items: center; gap: 8px">
             <input
               id="dismiss-warnings-checkbox"
               v-model="dismissedWarnings"
               type="checkbox"
-              style="width: 16px; height: 16px; cursor: pointer; accent-color: #026597;"
+              style="
+                width: 16px;
+                height: 16px;
+                cursor: pointer;
+                accent-color: #026597;
+              "
             />
             <label
               for="dismiss-warnings-checkbox"
-              style="font-size: 0.8rem; font-weight: 600; color: #334155; cursor: pointer;"
+              style="
+                font-size: 0.8rem;
+                font-weight: 600;
+                color: #334155;
+                cursor: pointer;
+              "
             >
               Dismiss layout warnings
             </label>
@@ -226,7 +337,14 @@
           >
             <label
               for="layout-justification-input"
-              style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 4px;"
+              style="
+                font-size: 0.72rem;
+                font-weight: 700;
+                color: #64748b;
+                text-transform: uppercase;
+                display: block;
+                margin-bottom: 4px;
+              "
             >
               Clinical Justification (Required)
             </label>
@@ -234,28 +352,49 @@
               id="layout-justification-input"
               v-model="layoutJustification"
               placeholder="Provide a clinical justification for this layout deviation..."
-              style="width: 100%; font-size: 0.8rem; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;"
+              style="
+                width: 100%;
+                font-size: 0.8rem;
+                padding: 8px;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+                box-sizing: border-box;
+              "
               rows="2"
             ></textarea>
           </div>
 
-          <button
-            class="btn-compile-schema"
-            @click="compileForm"
-          >
+          <button class="btn-compile-schema" @click="compileForm">
             Compile Form Schema
           </button>
 
           <!-- Compilation Feedback messages -->
           <div
             v-if="compilationStatus === 'blocked'"
-            style="color: #b91c1c; background-color: #fee2e2; border: 1px solid #fca5a5; padding: 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 600;"
+            style="
+              color: #b91c1c;
+              background-color: #fee2e2;
+              border: 1px solid #fca5a5;
+              padding: 10px;
+              border-radius: 6px;
+              font-size: 0.78rem;
+              font-weight: 600;
+            "
           >
-            ❌ Compilation blocked: active layout warnings must be resolved or explicitly dismissed!
+            ❌ Compilation blocked: active layout warnings must be resolved or
+            explicitly dismissed!
           </div>
           <div
             v-if="compilationStatus === 'success'"
-            style="color: #15803d; background-color: #dcfce7; border: 1px solid #86efac; padding: 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 600;"
+            style="
+              color: #15803d;
+              background-color: #dcfce7;
+              border: 1px solid #86efac;
+              padding: 10px;
+              border-radius: 6px;
+              font-size: 0.78rem;
+              font-weight: 600;
+            "
           >
             🎉 Form schema successfully compiled &amp; validated!
           </div>

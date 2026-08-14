@@ -30,10 +30,7 @@
     </div>
 
     <!-- 21 CFR Part 11 Role Gating Notice if unauthorized -->
-    <div
-      v-if="!hasAccess"
-      class="card gating-banner"
-    >
+    <div v-if="!hasAccess" class="card gating-banner">
       <div class="gating-content">
         <span class="gating-icon">🚫</span>
         <div>
