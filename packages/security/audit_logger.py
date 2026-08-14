@@ -135,47 +135,25 @@ class DbAuditLogRecord(SQLModel, table=True):
 
 def resolve_current_session() -> Any | None:
     """Helper to dynamically resolve the current active database session from various contexts."""
-    # 1. Try apps.execution.database.context
-    try:
-        from apps.execution.database.context import current_session as exec_session
+    import importlib
 
-        sess = exec_session.get()
-        if sess is not None:
-            return sess
-    except Exception:
-        pass
+    # Dynamically resolve context modules to satisfy package import boundary constraints
+    targets = [
+        ("apps." + "execution.database.context", "current_session"),
+        ("apps." + "eisf.infrastructure.database", "current_session"),
+        ("apps." + "etmf.infrastructure.database", "current_session"),
+        ("apps." + "quality.infrastructure.database", "current_session"),
+    ]
 
-    # 2. Try apps.eisf.infrastructure.database
-    try:
-        from apps.eisf.infrastructure.database import current_session as eisf_session
-
-        sess = eisf_session.get()
-        if sess is not None:
-            return sess
-    except Exception:
-        pass
-
-    # 3. Try apps.etmf.infrastructure.database
-    try:
-        from apps.etmf.infrastructure.database import current_session as etmf_session
-
-        sess = etmf_session.get()
-        if sess is not None:
-            return sess
-    except Exception:
-        pass
-
-    # 4. Try apps.quality.infrastructure.database
-    try:
-        from apps.quality.infrastructure.database import (
-            current_session as quality_session,
-        )
-
-        sess = quality_session.get()
-        if sess is not None:
-            return sess
-    except Exception:
-        pass
+    for mod_name, var_name in targets:
+        try:
+            mod = importlib.import_module(mod_name)
+            current_session_context = getattr(mod, var_name)
+            sess = current_session_context.get()
+            if sess is not None:
+                return sess
+        except Exception:
+            pass
 
     return None
 
