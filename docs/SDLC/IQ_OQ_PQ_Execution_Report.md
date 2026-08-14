@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2415
-- **Passed:** 2401 🟢
+- **Total Automated Test Cases Run:** 2418
+- **Passed:** 2404 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 14 ⚪
 - **Overall Operational Pass Rate:** 99.42%
@@ -1540,6 +1540,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_inspect_study_audit_trail_endpoint`                                               | `apps.gateway.tests.test_auditor_router`                                    | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_expired_auditor_token_raises_error`                                               | `apps.gateway.tests.test_auditor_token`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_generate_and_validate_auditor_token`                                              | `apps.gateway.tests.test_auditor_token`                                     | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_background_jwks_loop_backoff_and_recovery`                                        | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_background_jwks_loop_backoff_cap`                                                 | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
+| `test_background_jwks_loop_success`                                                     | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_create_demo_session`                                                              | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
 | `test_eisf_gateway_site_isolation_propagation`                                          | `apps.gateway.tests.test_gateway`                                           | Trace-18                                     | 🟢 PASSED  | < 1s     |
 | `test_gateway_bearer_only_subject_routing_and_header_enforcement`                       | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                          | 🟢 PASSED  | < 1s     |
