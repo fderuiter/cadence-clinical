@@ -150,6 +150,18 @@
                   </button>
                 </router-link>
               </li>
+              <li
+                id="tab-btn-amendment-diff"
+                class="nav-item"
+                :class="{ active: $route.name === 'amendment-diff' }"
+              >
+                <router-link v-slot="{ navigate }" to="/amendment-diff" custom>
+                  <button type="button" @click="navigate">
+                    <span class="nav-icon">🔀</span>
+                    <span class="nav-label">Amendments &amp; Migration</span>
+                  </button>
+                </router-link>
+              </li>
             </ul>
           </div>
 

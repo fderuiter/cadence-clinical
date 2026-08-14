@@ -65,11 +65,11 @@ Phase 1 Core Clinical Workbenches, EDC Data Flow & Ingestion encompasses:
 
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| 1 | M1: Medical Coding Workbench | Backend coding models, parsers, matcher, service, impact analysis, routers, frontend view (`/coding`), and `test_medical_coding_workbench.py` | None | IN_PROGRESS |
-| 2 | M2: Data Lock & Freeze System | Backend lock models, pre-flush interceptor, `X-Sig-Token` dual-signatures, unlock override governance, router, frontend view (`/data-lock`), and `test_data_locks_persistence.py` | M1 | PLANNED |
-| 3 | M3: Lab Batch Ingestion Pipeline | Multi-format parsers (CSV, HL7, FHIR), range matching, UCUM normalization, discrepancy/SAE auto-queries, router, and `test_lab_batch_ingestion.py` | M1 | PLANNED |
-| 4 | M4: Clinical Data Export Wizard | SAS XPT v5/v8, CDISC ODM-XML 1.3.2 with audit records, Dataset-JSON 1.0.0, HIPAA/GDPR de-identification, router, frontend view (`/exports`), and `test_biostat_exports.py` | M1 | PLANNED |
-| 5 | M5: Platform Verification & GxP Compliance | Full test suite pass (`uv run pytest -n auto`), ruff formatting/linting, duplication check, web build (`pnpm run build`), and GxP sync (`sync_gxp.py`) | M1, M2, M3, M4 | PLANNED |
+| 1 | M1: Medical Coding Workbench | Backend coding models, parsers, matcher, service, impact analysis, routers, frontend view (`/coding`), and `test_medical_coding_workbench.py` | None | DONE |
+| 2 | M2: Data Lock & Freeze System | Backend lock models, pre-flush interceptor, `X-Sig-Token` dual-signatures, unlock override governance, router, frontend view (`/data-lock`), and `test_data_locks_persistence.py` | M1 | DONE |
+| 3 | M3: Lab Batch Ingestion Pipeline | Multi-format parsers (CSV, HL7, FHIR), range matching, UCUM normalization, discrepancy/SAE auto-queries, router, and `test_lab_batch_ingestion.py` | M1 | DONE |
+| 4 | M4: Clinical Data Export Wizard | SAS XPT v5/v8, CDISC ODM-XML 1.3.2 with audit records, Dataset-JSON 1.0.0, HIPAA/GDPR de-identification, router, frontend view (`/exports`), and `test_biostat_exports.py` | M1 | DONE |
+| 5 | M5: Platform Verification & GxP Compliance | Full test suite pass (`uv run pytest -n auto`), ruff formatting/linting, duplication check, web build (`pnpm run build`), and GxP sync (`sync_gxp.py`) | M1, M2, M3, M4 | DONE |
 
 ---
 

@@ -315,18 +315,20 @@
               </div>
             </div>
           </template>
+          </fieldset>
         </form>
 
         <div class="form-actions">
-          <button id="btn-clear-ecrf" class="btn" @click="clearForm">
+          <button id="btn-clear-ecrf" class="btn" :disabled="isReconsentGated" @click="clearForm">
             Clear Form
           </button>
           <button
             id="btn-submit-ecrf"
             class="btn btn-primary"
+            :disabled="isReconsentGated"
             @click="submitEcrf"
           >
-            Submit eCRF Session
+            {{ isReconsentGated ? 'Locked (Re-Consent Required)' : 'Submit eCRF Session' }}
           </button>
         </div>
       </div>
@@ -1092,6 +1094,97 @@
         </div>
       </div>
     </div>
+
+    <!-- eConsent Signing Modal Dialog (PRD-SUB-007) -->
+    <div
+      v-if="showEconsentModal"
+      id="econsent-modal"
+      class="modal-overlay"
+      style="display: flex"
+    >
+      <div class="modal" style="max-width: 520px;">
+        <div class="modal-header">Execute Electronic Re-Consent (ICF v2.0.0)</div>
+        <div class="modal-body">
+          <p>
+            Recording 21 CFR Part 11 compliant digital informed consent for Subject <strong>{{ selectedSubjectId }}</strong> under Protocol Version <strong>2.0.0</strong>.
+          </p>
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label style="font-size: 0.85rem; font-weight: 600;">Signer Printed Name:</label>
+            <input
+              v-model="econsentSignerName"
+              type="text"
+              class="form-control"
+              style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box;"
+              placeholder="Full legal name of subject"
+            >
+          </div>
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label style="font-size: 0.85rem; font-weight: 600;">Consent Declaration:</label>
+            <div style="background: #f8fafc; padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border); font-size: 0.8rem; color: var(--text-muted);">
+              "I confirm that I have reviewed the amended protocol details (v2.0.0) and agree to continue participation."
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px;">
+          <button class="btn btn-secondary" @click="showEconsentModal = false">Cancel</button>
+          <button
+            class="btn btn-primary"
+            style="background-color: #2563eb; color: white;"
+            :disabled="!econsentSignerName.trim() || reconsentSubmitting"
+            @click="handleCompleteReconsent('ECONSENT')"
+          >
+            {{ reconsentSubmitting ? 'Signing...' : 'Confirm & Sign ICF v2.0.0' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paper ICF Upload Modal Dialog (PRD-SUB-007) -->
+    <div
+      v-if="showPaperIcfModal"
+      id="paper-icf-modal"
+      class="modal-overlay"
+      style="display: flex"
+    >
+      <div class="modal" style="max-width: 520px;">
+        <div class="modal-header">Register Signed Paper ICF (v2.0.0)</div>
+        <div class="modal-body">
+          <p>
+            Upload or register site-verified paper Informed Consent Form for Subject <strong>{{ selectedSubjectId }}</strong>.
+          </p>
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label style="font-size: 0.85rem; font-weight: 600;">Date ICF Signed by Subject:</label>
+            <input
+              v-model="paperIcfDate"
+              type="date"
+              class="form-control"
+              style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box;"
+            >
+          </div>
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label style="font-size: 0.85rem; font-weight: 600;">Investigator Verification Note:</label>
+            <input
+              v-model="paperIcfNote"
+              type="text"
+              class="form-control"
+              style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box;"
+              placeholder="Paper ICF verified and archived in ISF binder."
+            >
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px;">
+          <button class="btn btn-secondary" @click="showPaperIcfModal = false">Cancel</button>
+          <button
+            class="btn btn-primary"
+            style="background-color: #2563eb; color: white;"
+            :disabled="reconsentSubmitting"
+            @click="handleCompleteReconsent('PAPER_UPLOAD')"
+          >
+            {{ reconsentSubmitting ? 'Uploading...' : 'Verify & Unlock eCRF' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -1101,6 +1194,50 @@ import { useRoute } from "vue-router";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
+
+// Re-consent Gating State (PRD-SUB-007)
+const reconsentGatedSubjects = ref(new Set(["SUBJ-002"]));
+const isReconsentGated = computed(() => {
+  return reconsentGatedSubjects.value.has(selectedSubjectId.value);
+});
+
+const showEconsentModal = ref(false);
+const showPaperIcfModal = ref(false);
+const reconsentSubmitting = ref(false);
+const econsentSignerName = ref("Jane Doe");
+const paperIcfDate = ref(new Date().toISOString().split("T")[0]);
+const paperIcfNote = ref("Verified signed paper ICF in investigator binder.");
+
+function openEconsentModal() {
+  showEconsentModal.value = true;
+}
+
+function openPaperIcfModal() {
+  showPaperIcfModal.value = true;
+}
+
+async function handleCompleteReconsent(method) {
+  reconsentSubmitting.value = true;
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    reconsentGatedSubjects.value.delete(selectedSubjectId.value);
+    showEconsentModal.value = false;
+    showPaperIcfModal.value = false;
+    if (store.addLedgerBlock) {
+      await store.addLedgerBlock(
+        "RECONSENT_COMPLETED",
+        {
+          subject_id: selectedSubjectId.value,
+          protocol_version: "2.0.0",
+          method: method,
+        },
+        `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`
+      );
+    }
+  } finally {
+    reconsentSubmitting.value = false;
+  }
+}
 import { validateField, debounce, ClinicalFormField } from "ui"; // Consolidating debounce onto shared packages/ui (PR #566 alignment)
 import { evaluateAST } from "../evaluator.js";
 import { terminologyClient } from "../api/terminologyClient";
