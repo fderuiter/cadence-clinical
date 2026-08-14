@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 import os
 import sys
 
@@ -6,16 +7,17 @@ repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if repo_root not in sys.path:
     sys.path.insert(0, repo_root)
 
-from tests.conftest import *  # noqa: E402, F401, F403
-
 import pytest
+
+from tests.conftest import *  # noqa: E402, F401, F403
 
 
 @pytest.fixture(autouse=True)
 def mock_sidecar_service(monkeypatch):
+    import httpx
+
     from apps.cdisc.main import app as sidecar_app
     from apps.execution.presentation.routers import exports
-    import httpx
 
     async def mock_call_sdtm(domain: str, payload: dict) -> dict:
         async with httpx.AsyncClient(
@@ -41,13 +43,10 @@ def mock_sidecar_service(monkeypatch):
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app=sidecar_app)
         ) as client:
-            res = await client.post(
-                "http://test/api/v1/cdisc/bundle", json=payload
-            )
+            res = await client.post("http://test/api/v1/cdisc/bundle", json=payload)
             res.raise_for_status()
             return res.json()
 
     monkeypatch.setattr(exports, "call_sidecar_sdtm", mock_call_sdtm)
     monkeypatch.setattr(exports, "call_sidecar_adam", mock_call_adam)
     monkeypatch.setattr(exports, "call_sidecar_bundle", mock_call_bundle)
-

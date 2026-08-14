@@ -2,6 +2,7 @@
 * @clinical-platform/global-reviewers
 
 # Clinical Domains under apps/
+/apps/cdisc/              @clinical-platform/clinical-operations
 /apps/ctms/              @clinical-platform/clinical-operations
 /apps/designer/          @clinical-platform/integration-and-routing
 /apps/econsent/          @clinical-platform/patient-engagement
