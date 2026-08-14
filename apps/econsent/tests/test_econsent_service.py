@@ -220,3 +220,68 @@ async def test_workflow_engine_legacy_signature_capture(db_session: AsyncSession
     stmt = select(ConsentSignature).where(ConsentSignature.subject_id == "SUBJ-002")
     db_sig = (await db_session.execute(stmt)).scalar_one()
     assert db_sig.id == signature.id
+
+
+@pytest.mark.asyncio
+async def test_fallback_pdf_generation_is_correct(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+):
+    """Verify fallback PDF generation is correct when reportlab is not available.
+
+    @req:PRD-SYS-001
+    Requirements: PRD-SYS-001
+    """
+    import apps.execution.services.econsent_capture_service as ecs
+
+    monkeypatch.setattr(ecs, "HAS_REPORTLAB", False)
+
+    # 1. Seed a passing comprehension quiz result
+    quiz = ComprehensionQuizResult(
+        subject_id="SUBJ-FALLBACK-99",
+        icf_version_id="ICF-V99.0",
+        score=100.0,
+        passed=True,
+    )
+    db_session.add(quiz)
+    await db_session.commit()
+
+    # 2. Prepare valid capture signature request with parenthesis and very long name
+    long_name_with_parens = "Jane (Subject) Smith with an extremely long name that pushes byte offsets out of bound"
+    payload = EConsentSignRequest(
+        subject_id="SUBJ-FALLBACK-99",
+        icf_version_id="ICF-V99.0",
+        printed_name=long_name_with_parens,
+        relationship_to_subject="SELF",
+        signature_svg="<svg></svg>",
+        otp_auth_code="123456",
+        reason_for_change="I consent to the clinical study.",
+    )
+
+    # 3. Process the signature
+    response = await process_econsent_signature(db_session, payload)
+
+    # 4. Verify we generated a valid PDF on the fallback path
+    assert response.signed_pdf_url.startswith("file://")
+    pdf_path = response.signed_pdf_url.replace("file://", "")
+
+    # Read the file
+    with open(pdf_path, "rb") as f:
+        pdf_bytes = f.read()
+
+    # 5. Open using PyMuPDF (fitz) to verify the structure has no errors or warnings
+    import fitz
+
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+
+    assert doc.page_count == 1
+    assert doc.is_repaired is False, (
+        "The dynamic PDF was repaired, meaning the offsets were miscalculated!"
+    )
+
+    # Verify content was written properly
+    page = doc.load_page(0)
+    text = page.get_text()
+    assert "GxP Consent Signature Certificate" in text
+    assert f"Subject ID: {payload.subject_id}" in text
+    assert f"Printed Name: {payload.printed_name}" in text
+    assert f"Verification Hash: {response.verification_hash}" in text

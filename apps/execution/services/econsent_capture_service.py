@@ -83,29 +83,73 @@ def _render_pdf_certificate(
         p.save()
         return pdf_buffer.getvalue()
     # Minimal valid PDF format when reportlab is not installed
-    header = "%PDF-1.4\n"
-    body = (
-        "GxP Consent Signature Certificate\n"
-        f"Subject ID: {payload.subject_id}\n"
-        f"Printed Name: {payload.printed_name}\n"
-        f"Relationship to Subject: {payload.relationship_to_subject}\n"
-        f"ICF Version ID: {payload.icf_version_id}\n"
-        f"Verification Hash: {sig_hash}\n"
-        f"Signed At (UTC): {now.isoformat()}\n"
+    lines = [
+        "GxP Consent Signature Certificate",
+        f"Subject ID: {payload.subject_id}",
+        f"Printed Name: {payload.printed_name}",
+        f"Relationship to Subject: {payload.relationship_to_subject}",
+        f"ICF Version ID: {payload.icf_version_id}",
+        f"Verification Hash: {sig_hash}",
+        f"Signed At (UTC): {now.isoformat()}",
+    ]
+
+    # Escape any backslashes or parentheses in each line to prevent breaking the PDF format
+    escaped_lines = []
+    for line in lines:
+        escaped_line = (
+            line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+        )
+        escaped_lines.append(escaped_line)
+
+    # Construct the PDF stream using the standard text positioning and rendering operators
+    stream_parts = ["BT", "/F1 12 Tf", f"50 700 Td ({escaped_lines[0]}) Tj"]
+    for esc_line in escaped_lines[1:]:
+        stream_parts.append(f"0 -20 Td ({esc_line}) Tj")
+    stream_parts.append("ET")
+    content_stream = "\n".join(stream_parts)
+
+    content_bytes = content_stream.encode("latin1", errors="replace")
+    stream_len = len(content_bytes)
+
+    obj4_header = f"4 0 obj <</Length {stream_len}>> stream\n".encode("latin1")
+    obj4_body = content_bytes
+    obj4_footer = b"\nendstream\nendobj\n"
+    obj4 = obj4_header + obj4_body + obj4_footer
+
+    objects_list = [
+        None,
+        b"1 0 obj <</Type /Catalog /Pages 2 0 R /MarkInfo <</Marked true>> /StructTreeRoot 6 0 R>> endobj\n",
+        b"2 0 obj <</Type /Pages /Kids [3 0 R] /Count 1>> endobj\n",
+        b"3 0 obj <</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources <</Font <</F1 5 0 R>>>> /StructParents 0>> endobj\n",
+        obj4,
+        b"5 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica>> endobj\n",
+        b"6 0 obj <</Type /StructTreeRoot /RoleMap <</Document /Div>> /K 7 0 R>> endobj\n",
+        b"7 0 obj <</Type /StructElem /S /Document /P 6 0 R /Pg 3 0 R /K [0]>> endobj\n",
+    ]
+
+    offsets: dict[int, int] = {}
+    current_offset = 9  # len(b"%PDF-1.4\n")
+    for i in range(1, 8):
+        offsets[i] = current_offset
+        obj_bytes = objects_list[i]
+        if obj_bytes is not None:
+            current_offset += len(obj_bytes)
+
+    xref_header = b"xref\n0 8\n"
+    xref_entries = [b"0000000000 65535 f \n"]
+    for i in range(1, 8):
+        entry = f"{offsets[i]:010d} 00000 n \n".encode("latin1")
+        xref_entries.append(entry)
+
+    xref_table = xref_header + b"".join(xref_entries)
+    trailer = (
+        f"trailer <</Size 8 /Root 1 0 R>>\nstartxref\n{current_offset}\n%%EOF".encode(
+            "latin1"
+        )
     )
-    content_stream = f"BT /F1 12 Tf 50 700 Td ({body}) Tj ET"
-    stream_len = len(content_stream)
-    objects = (
-        "1 0 obj <</Type /Catalog /Pages 2 0 R /MarkInfo <</Marked true>> /StructTreeRoot 6 0 R>> endobj\n"
-        "2 0 obj <</Type /Pages /Kids [3 0 R] /Count 1>> endobj\n"
-        "3 0 obj <</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources <</Font <</F1 5 0 R>>>> /StructParents 0>> endobj\n"
-        f"4 0 obj <</Length {stream_len}>> stream\n{content_stream}\nendstream\nendobj\n"
-        "5 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica>> endobj\n"
-        "6 0 obj <</Type /StructTreeRoot /RoleMap <</Document /Div>> /K 7 0 R>> endobj\n"
-        "7 0 obj <</Type /StructElem /S /Document /P 6 0 R /Pg 3 0 R /K [0]>> endobj\n"
-    )
-    xref = "xref\n0 8\n0000000000 65535 f \n0000000009 00000 n \n0000000098 00000 n \n0000000155 00000 n \n0000000302 00000 n \n0000000406 00000 n \n0000000486 00000 n \n0000000556 00000 n \ntrailer <</Size 8 /Root 1 0 R>>\nstartxref\n636\n%%EOF"  # deid-ignore
-    return f"{header}{objects}{xref}".encode("latin1", errors="replace")
+
+    # Combine parts to form the valid PDF byte stream
+    return b"%PDF-1.4\n" + b"".join(filter(None, objects_list)) + xref_table + trailer
 
 
 async def process_econsent_signature(
