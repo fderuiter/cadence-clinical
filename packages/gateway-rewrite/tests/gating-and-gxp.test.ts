@@ -185,7 +185,7 @@ describe("Gateway Gating and GxP Service Suite", () => {
 
   describe("Requirement 5, 6 & Acceptance Criteria: Secure Cryptographic Signatures parity check", () => {
     it("should produce a cryptographically verifiable gateway signature and allow verification parity", () => {
-      const secret = "my-secure-gateway-secret-key-12345";
+      const secret = "my-secure-gateway-secret-key-12345"; // pragma: allowlist secret
       const timestamp = "1723580000";
       const rolesStr = "investigator,site_investigator";
 

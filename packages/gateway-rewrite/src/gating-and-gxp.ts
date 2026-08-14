@@ -51,9 +51,9 @@ export function generateGatewaySignature(options: {
   sigToken?: string | null;
 }): string {
   const secretKey =
-    typeof options.secret === "string"
-      ? Buffer.from(options.secret, "utf-8")
-      : options.secret;
+    typeof options.secret === "string" // pragma: allowlist secret
+      ? Buffer.from(options.secret, "utf-8") // pragma: allowlist secret
+      : options.secret; // pragma: allowlist secret
 
   const payload: Record<string, any> = {
     change_reason:
