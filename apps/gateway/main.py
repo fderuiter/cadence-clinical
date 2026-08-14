@@ -350,6 +350,7 @@ async def _background_jwks_loop() -> None:
     - Hourly refresh cycle on success.
     - Safe error handling and preservation of cached keys during failed refreshes.
     """
+    # Initialize background JWKS caching and prefetching loop
     global jwks_cache, http_client
     delay = 1.0
     while True:
