@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:python3.14-bookworm@sha256:7b57b9f86450f3b0e1e695f269a8342ef62b1660d26829707e7b8c3ff6f827fc
+FROM ghcr.io/astral-sh/uv:python3.14-bookworm
 
 WORKDIR /app
 
@@ -12,5 +12,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 # Ensure we use the virtual environment by default
 ENV PATH="/opt/.venv/bin:$PATH"
+ENV PYTHONPATH="/app"
+ENV AUDIT_LOG_SECRET_KEY="test-gxp-audit-secret-key-placeholder-abc"
+ENV GATEWAY_SECRET="internal-gateway-secret-12345"
+ENV SIGNING_SECRET="designer-amendment-secure-key-12345"
+ENV INBOUND_EMAIL_HMAC_SECRET="test-email-hmac-secret-placeholder-xyz"
 
 CMD ["python", "--version"]

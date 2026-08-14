@@ -33,8 +33,9 @@ def run_pre_boot_migrations(service: str, migrate_path: str) -> None:
     print(f"[{service.upper()}] Pre-boot: Relational database detected.")
     print(f"[{service.upper()}] Pre-boot: Running migrations via '{migrate_path}'...")
 
+    env = {**os.environ, "PYTHONPATH": os.getcwd()}
     # Run using current virtual env Python
-    res = subprocess.run([sys.executable, migrate_path])
+    res = subprocess.run([sys.executable, migrate_path], env=env)
 
     if res.returncode != 0:
         print(
