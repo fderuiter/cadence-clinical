@@ -57,6 +57,34 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
     """
     # 1. Prevent updates or deletes on audit logs and seals
     if dialect_name == "postgresql":
+        # Configure default session parameters for the current role to ensure out-of-band direct writes have safe defaults
+        await conn.execute(
+            text("ALTER ROLE CURRENT_USER SET \"cadence.current_user_id\" = 'system';")
+        )
+        await conn.execute(
+            text(
+                "ALTER ROLE CURRENT_USER SET \"cadence.current_change_reason\" = 'system_operation';"
+            )
+        )
+        await conn.execute(
+            text("ALTER ROLE CURRENT_USER SET \"cadence.app_writing\" = 'false';")
+        )
+        await conn.execute(
+            text("ALTER ROLE CURRENT_USER SET \"cadence.is_trial_locked\" = 'false';")
+        )
+        await conn.execute(
+            text("ALTER ROLE CURRENT_USER SET \"cadence.locked_sites\" = '';")
+        )
+        await conn.execute(
+            text("ALTER ROLE CURRENT_USER SET \"cadence.locked_visits\" = '';")
+        )
+        await conn.execute(
+            text("ALTER ROLE CURRENT_USER SET \"cadence.locked_subjects\" = '';")
+        )
+        await conn.execute(
+            text("ALTER ROLE CURRENT_USER SET \"cadence.locked_forms\" = '';")
+        )
+
         # Create schema functions and triggers
         await conn.execute(
             text("""
