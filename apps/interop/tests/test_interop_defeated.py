@@ -7,9 +7,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from apps.gateway.main import generate_signature
-from apps.interop.database import db_manager
-from apps.interop.main import app
-from apps.interop.models import (
+from apps.interop.adapters.database import db_manager
+from apps.interop.adapters.models import (
     Base,
     ClinicalQuery,
     EPROSubmission,
@@ -18,11 +17,12 @@ from apps.interop.models import (
     InteropAuditLog,
     SubjectAssignment,
 )
-from apps.interop.sync_engine import (
+from apps.interop.domain.sync_engine import (
     SyncMetadata,
     SyncRecord,
     get_signature_payload,
 )
+from apps.interop.main import app
 from packages.security.signing import generate_canonical_signature
 
 

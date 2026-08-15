@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from apps.etmf.adapters.models import is_site_level_artifact
 from apps.etmf.domain.tmf_reference_model import (
     MILESTONE_MANDATORY_ARTIFACTS,
     get_active_catalog,
@@ -11,7 +12,6 @@ from apps.etmf.domain.tmf_reference_model import (
     resolve_artifact,
     validate_hierarchy,
 )
-from apps.etmf.models import is_site_level_artifact
 
 # Documented legacy allow-list constant for site-level artifacts
 # "site signature page" is a legacy/unassigned artifact name that is not
@@ -97,7 +97,11 @@ def test_site_level_classification_drift():
 
     # Dynamically extract helper's local variables (site_codes_prefix and site_artifacts) using AST parser
     models_file_path = (
-        Path(__file__).resolve().parent.parent.parent / "apps" / "etmf" / "models.py"
+        Path(__file__).resolve().parent.parent.parent
+        / "apps"
+        / "etmf"
+        / "adapters"
+        / "models.py"
     )
     assert models_file_path.is_file(), f"Models file not found at {models_file_path}"
 

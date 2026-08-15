@@ -44,11 +44,11 @@ We must implement a programmatic background escalation worker that:
 
 We adopted **Option 2**. We implemented the overdue escalation system as follows:
 
-1. **State Persistence:** Added `last_escalated_at`, `last_escalation_notified_at`, and `escalation_count` to the `Ticket` model in `apps/tickets/models/__init__.py`.
+1. **State Persistence:** Added `last_escalated_at`, `last_escalation_notified_at`, and `escalation_count` to the `Ticket` model in `apps/tickets/adapters/models.py`.
 2. **Pessimistic Concurrency Locking:** The background poller locks each ticket under `.with_for_update()` before re-verifying constraints, mirroring the pattern in `apps/notifications/main.py`.
 3. **Post-Commit Delivery Order:**
    - **Commit 1:** Priority advanced, `last_escalated_at` set to `now`, version index incremented, and `TICKET_ESCALATE` audit log written.
-   - **Dispatch:** Notification dispatched via the tickets notifications client (`apps/tickets/notifications_client.py`).
+   - **Dispatch:** Notification dispatched via the tickets notifications client (`apps/tickets/adapters/notifications_client.py`).
    - **Commit 2:** Upon success, `last_escalation_notified_at` is set to `now` and committed separately.
 4. **Notification Owed Invariant:** A notification is owed only when `last_escalated_at` is set and is newer than `last_escalation_notified_at`.
 
@@ -68,7 +68,7 @@ We evaluated event-driven brokers but preferred a lightweight direct poller to k
 
 ## 6. Implementation & Verification
 
-- **Affected Files:** `apps/tickets/models/__init__.py`, `apps/tickets/escalation.py`, `apps/tickets/main.py`
+- **Affected Files:** `apps/tickets/adapters/models.py`, `apps/tickets/adapters/escalation.py`, `apps/tickets/main.py`
 - **Verification Plan:**
   - Automated unit and integration tests written in `tests/test_tickets_escalation.py`.
   - Verified eligibility, stepwise priority cap, cooldown gating, idempotency, and gap-retry resilience.

@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from apps.interop.sync_engine import (
+from apps.interop.domain.sync_engine import (
     SignatureValidationError,
     SyncMetadata,
     SyncRecord,

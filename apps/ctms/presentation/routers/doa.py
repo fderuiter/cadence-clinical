@@ -9,6 +9,9 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
+from apps.ctms.adapters.repositories import (
+    get_ctms_repository,
+)
 from apps.ctms.application.services import CTMSDelegationUseCase
 from apps.ctms.domain.acl.document_renderer_dto import (
     CTMSDocumentRendererACL,
@@ -22,9 +25,6 @@ from apps.ctms.domain.doa_transport_models import (
 )
 from apps.ctms.domain.exceptions import CTMSDelegationNotFoundError
 from apps.ctms.domain.ports import ICTMSDelegationRepository
-from apps.ctms.infrastructure.repositories.ctms_delegation_repository import (
-    get_ctms_repository,
-)
 from packages.security.middleware import downstream_replay_cache, verify_sig_token
 from packages.security.rbac import Principal, get_principal, has_permission
 

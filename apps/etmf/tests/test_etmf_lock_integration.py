@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pytest
 from fastapi import HTTPException
 
-from apps.etmf.lock_client import (
+from apps.etmf.adapters.lock_client import (
     trigger_global_trial_lock,
     verify_trial_lock_status,
 )

@@ -3,8 +3,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
+from apps.etmf.adapters.models import TMFDocument
 from apps.etmf.domain.acl import ProtocolVersionRef
-from apps.etmf.infrastructure.models import TMFDocument
 from packages.deid.models import ComplianceProfile
 from packages.security.signature import SigningReason
 

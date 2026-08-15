@@ -6,13 +6,13 @@ import os
 
 from fastapi import FastAPI
 
-from apps.tickets.escalation import (
+from apps.tickets.adapters.database import db_manager, get_db_session
+from apps.tickets.adapters.escalation import (
     start_background_ticket_escalation,
     stop_background_ticket_escalation,
 )
-from apps.tickets.infrastructure.database import db_manager, get_db_session
-from apps.tickets.infrastructure.models import Base
-from apps.tickets.infrastructure.notifications_client import publish_notification
+from apps.tickets.adapters.models import Base
+from apps.tickets.adapters.notifications_client import publish_notification
 from apps.tickets.presentation.dtos import (
     CommentCreate,
     CommentResponse,
@@ -36,6 +36,7 @@ from apps.tickets.presentation.routers.tickets import (
     router as tickets_router,
 )
 from packages.database import get_relational_db_lifespan
+from packages.hexagonal import register_rfc7807_handlers
 from packages.security import validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
@@ -58,6 +59,7 @@ app = FastAPI(
 
 # Enforce secure gateway authentication middleware
 app.add_middleware(GatewayAuthMiddleware)
+register_rfc7807_handlers(app)
 
 # Include presentation routers
 app.include_router(tickets_router)

@@ -149,8 +149,10 @@ app = FastAPI(
     version="0.1.0",
     dependencies=[Depends(gxp_audit_enforcement_filter)],
 )
+from packages.hexagonal import register_rfc7807_handlers
 
 app.add_middleware(GatewayAuthMiddleware)
+register_rfc7807_handlers(app)
 
 assert_secure_secrets("designer", {"SIGNING_SECRET": os.getenv("SIGNING_SECRET")})
 

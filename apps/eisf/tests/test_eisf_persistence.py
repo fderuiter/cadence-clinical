@@ -4,8 +4,8 @@ import pytest
 import pytest_asyncio
 from sqlalchemy import select
 
-from apps.eisf.database import db_manager
-from apps.eisf.models import Base, ISFAuditLog, ISFDocument
+from apps.eisf.adapters.database import db_manager
+from apps.eisf.adapters.models import Base, ISFAuditLog, ISFDocument
 from packages.database import RelationalDatabaseManager
 
 

@@ -8,12 +8,13 @@ import os
 
 from fastapi import FastAPI
 
-from apps.interop.infrastructure.database import db_manager
-from apps.interop.infrastructure.models import Base
+from apps.interop.adapters.database import db_manager
+from apps.interop.adapters.models import Base
 from apps.interop.presentation.routers.interop import (
     router as interop_router,
 )
 from packages.database import get_relational_db_lifespan
+from packages.hexagonal import register_rfc7807_handlers
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
@@ -43,6 +44,7 @@ app = FastAPI(
 
 # Enforce secure gateway authentication middleware
 app.add_middleware(GatewayAuthMiddleware)
+register_rfc7807_handlers(app)
 
 
 @app.get("/health")
@@ -54,7 +56,7 @@ async def health_check() -> dict[str, str]:
 # Include Interop router
 app.include_router(interop_router)
 
-from apps.interop.infrastructure.designer_client import (  # noqa: E402
+from apps.interop.adapters.designer_client import (  # noqa: E402
     fetch_eligibility_criteria,
 )
 from apps.interop.presentation.routers.interop import (  # noqa: E402

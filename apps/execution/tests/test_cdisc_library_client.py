@@ -6,7 +6,7 @@ Requirements: PRD-SYS-001
 import httpx
 import pytest
 
-from apps.designer.infrastructure.cdisc.cdisc_library_client import (
+from apps.designer.adapters.cdisc.cdisc_library_client import (
     CdashDomainDefinition,
     CdiscLibraryClient,
     CdiscLibraryConfig,

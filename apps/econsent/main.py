@@ -2,17 +2,25 @@ import os
 
 from fastapi import FastAPI
 
-from apps.econsent.domain.evaluator import (
-    evaluate_comprehension,
-)
-from apps.econsent.infrastructure.cache import (
+from apps.econsent.adapters.cache import (
     ApprovedTranslationCache,
     get_approved_template_translation,
 )
-from apps.econsent.infrastructure.database import db_manager
-from apps.econsent.infrastructure.models import Base
-from apps.econsent.infrastructure.services import (
+from apps.econsent.adapters.comprehension import (
     submit_comprehension_answers,
+)
+from apps.econsent.adapters.database import db_manager
+from apps.econsent.adapters.models import Base
+from apps.econsent.adapters.workers.archival_worker import (
+    dispatcher_lifecycle_worker,
+    econsent_shutdown,
+    econsent_startup,
+    poll_and_dispatch,
+    start_dispatcher,
+    stop_dispatcher,
+)
+from apps.econsent.domain.evaluator import (
+    evaluate_comprehension,
 )
 from apps.econsent.presentation.dtos import (
     ArchivalDeliveryResponse,
@@ -49,15 +57,8 @@ from apps.econsent.presentation.routers.econsent import (
 from apps.econsent.presentation.routers.econsent import (
     router as econsent_router,
 )
-from apps.econsent.workers.archival_worker import (
-    dispatcher_lifecycle_worker,
-    econsent_shutdown,
-    econsent_startup,
-    poll_and_dispatch,
-    start_dispatcher,
-    stop_dispatcher,
-)
 from packages.database import get_relational_db_lifespan
+from packages.hexagonal import register_rfc7807_handlers
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
@@ -82,6 +83,7 @@ app = FastAPI(
 )
 
 app.add_middleware(GatewayAuthMiddleware)
+register_rfc7807_handlers(app)
 
 
 @app.get("/health")

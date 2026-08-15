@@ -4,11 +4,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from apps.gateway.main import generate_signature
-from apps.quality.database import db_manager
-from apps.quality.main import app
-from apps.quality.models import (
+from apps.quality.adapters.database import db_manager
+from apps.quality.adapters.models import (
     Base,
 )
+from apps.quality.main import app
 
 
 def make_step_up_token(

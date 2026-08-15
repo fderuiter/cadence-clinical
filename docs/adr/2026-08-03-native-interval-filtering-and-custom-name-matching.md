@@ -53,7 +53,7 @@ The previous implementation of the HIPAA redactor inside Cadence Clinical suffer
 - **Affected Repositories / Services:**
   - `packages/deid/ner_scrubber.py`
   - `packages/compliance/services/phi_redactor.py`
-  - `apps/etmf/services/eisf_service.py`
+  - `apps/etmf/adapters/eisf_service.py`
   - `apps/execution/services/pdf_redactor.py`
 - **Verification Plan:**
   - Unit tests under `tests/test_ner_scrubber.py` cover overlapping/nested pattern resolution, right-to-left string substitution, and boundary-based custom name matching.

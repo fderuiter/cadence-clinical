@@ -32,9 +32,9 @@ This decision addresses the following requirements:
 
 We choose **Option 1 (Integrated Multi-Language Versioning)**.
 
-- **Database Model:** A `ConsentTranslation` model in `apps/econsent/models.py` tracking version indices, languages, translated content (title and text), and Part 11 metadata (`created_at`, `created_by`, `reason_for_change`).
+- **Database Model:** A `ConsentTranslation` model in `apps/econsent/adapters/models.py` tracking version indices, languages, translated content (title and text), and Part 11 metadata (`created_at`, `created_by`, `reason_for_change`).
 - **Review Workflow:** Status transition endpoints `DRAFT -> IN_REVIEW -> APPROVED` enforce valid paths and invalidate caches upon approval.
-- **Caching Layer:** `ApprovedTranslationCache` under `apps/econsent/cache.py` provides thread-safe in-memory caching with TTL and eviction, with read-through retrieval returning stale data on database failure.
+- **Caching Layer:** `ApprovedTranslationCache` under `apps/econsent/adapters/cache.py` provides thread-safe in-memory caching with TTL and eviction, with read-through retrieval returning stale data on database failure.
 - **Localization Validation:** A centralized `packages/core-models/localization/` library defines supported ISO 639-1 language codes and `validate_language_code` validation functions.
 
 ## 5. Consequences & Trade-offs
@@ -49,9 +49,9 @@ We choose **Option 1 (Integrated Multi-Language Versioning)**.
 ## 6. Implementation & Verification
 
 - **Implementation Files:**
-  - `apps/econsent/models.py`
+  - `apps/econsent/adapters/models.py`
   - `apps/econsent/main.py`
-  - `apps/econsent/cache.py`
+  - `apps/econsent/adapters/cache.py`
   - `packages/core-models/localization/models.py`
 - **Verification Tests:**
   - `tests/test_econsent_translations.py` contains thorough validation, CRUD, status transitions, cache hits, expiration, and stale-on-error unit tests.

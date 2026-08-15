@@ -10,8 +10,8 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
-from apps.eisf.database.migrate import run_migrations
-from apps.eisf.models import (
+from apps.eisf.adapters.migrate import run_migrations
+from apps.eisf.adapters.models import (
     STANDARD_EISF_SECTIONS,
     EISFDocumentRecord,
     EISFSectionTaxonomy,

@@ -4,9 +4,9 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from apps.eisf.database import db_manager
+from apps.eisf.adapters.database import db_manager
+from apps.eisf.adapters.models import Base
 from apps.eisf.main import app as eisf_app
-from apps.eisf.models import Base
 from apps.gateway.main import generate_signature
 
 

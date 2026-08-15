@@ -9,22 +9,22 @@ from sqlalchemy import select, text
 
 from apps.gateway.main import generate_signature
 from apps.safety.adapters import SafetyDatabaseAdapter
-from apps.safety.database import db_manager
-from apps.safety.domain.sae_icsr import MedDRACoding, SeriousAdverseEvent
-from apps.safety.execution_client import ExecutionClient
-from apps.safety.main import app
-from apps.safety.models import (
+from apps.safety.adapters.database import db_manager
+from apps.safety.adapters.execution_client import ExecutionClient
+from apps.safety.adapters.models import (
     Base,
     SAEDiscrepancy,
     SAEReconciliationRun,
     SafetyAuditLog,
 )
-from apps.safety.reconciliation import (
+from apps.safety.adapters.reconciliation import (
     compare_sae_records,
     generate_stable_event_key,
     normalize_edc_ae_to_sae,
     normalize_external_icsr_to_saes,
 )
+from apps.safety.domain.sae_icsr import MedDRACoding, SeriousAdverseEvent
+from apps.safety.main import app
 
 # Ensure all tests in this module run on the same xdist worker.
 # The db_manager singleton is reinitialised per-fixture; distributing tests
@@ -961,7 +961,7 @@ def test_safety_reads_negative_signatures():
 
 def test_terminology_cache_functionality():
     """Verify that TerminologyCache correctly caches resolutions, respects TTL, and handles stale-on-error fallback."""
-    from apps.safety.reconciliation import TerminologyCache
+    from apps.safety.adapters.reconciliation import TerminologyCache
 
     cache = TerminologyCache(max_size=3, ttl=0.1)
 
@@ -990,7 +990,7 @@ def test_terminology_cache_functionality():
     # 5. Stale-on-error fallback simulation
     # Cache has expired HEADACHE entry.
     # We query terminology_cache singleton in apps/safety/reconciliation.py
-    from apps.safety.reconciliation import terminology_cache
+    from apps.safety.adapters.reconciliation import terminology_cache
 
     terminology_cache.clear()
 
@@ -1012,8 +1012,8 @@ def test_terminology_cache_functionality():
     async def run_fallback_test():
         from unittest.mock import AsyncMock, MagicMock
 
-        from apps.safety.execution_client import ExecutionClient
-        from apps.safety.reconciliation import run_reconciliation
+        from apps.safety.adapters.execution_client import ExecutionClient
+        from apps.safety.adapters.reconciliation import run_reconciliation
 
         mock_session = MagicMock()
         mock_session.begin_nested = MagicMock()

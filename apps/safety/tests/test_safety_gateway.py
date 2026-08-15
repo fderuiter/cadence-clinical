@@ -23,9 +23,9 @@ from apps.execution.domain.safety_models import (
 from apps.execution.exporters.e2b_xml_builder import E2BR3XMLBuilder
 from apps.execution.services.e2b_parser import E2BR3Parser
 from apps.gateway.main import generate_signature
-from apps.safety.database import db_manager
+from apps.safety.adapters.database import db_manager
+from apps.safety.adapters.models import Base, SafetyAuditLog
 from apps.safety.main import app
-from apps.safety.models import Base, SafetyAuditLog
 
 
 @pytest_asyncio.fixture(autouse=True)

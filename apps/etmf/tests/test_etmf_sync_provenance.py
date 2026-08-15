@@ -5,13 +5,13 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from apps.etmf.database import db_manager
-from apps.etmf.main import app as etmf_app
-from apps.etmf.models import Base, TMFAuditLog, TMFDocument
-from apps.etmf.sealer import (
+from apps.etmf.adapters.database import db_manager
+from apps.etmf.adapters.models import Base, TMFAuditLog, TMFDocument
+from apps.etmf.adapters.sealer import (
     execute_etmf_audit_sealing_cycle,
     validate_etmf_ledger_integrity,
 )
+from apps.etmf.main import app as etmf_app
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -238,7 +238,9 @@ async def test_sealer_retains_and_validates_reason_for_change(monkeypatch) -> No
     async def mock_lock(reason, is_testing=None):
         pass
 
-    monkeypatch.setattr("apps.etmf.sealer.trigger_global_trial_lock", mock_lock)
+    monkeypatch.setattr(
+        "apps.etmf.adapters.sealer.trigger_global_trial_lock", mock_lock
+    )
 
     async with db_manager.get_session_maker()() as session:
         # Create a legacy unsealed row with reason_for_change=None

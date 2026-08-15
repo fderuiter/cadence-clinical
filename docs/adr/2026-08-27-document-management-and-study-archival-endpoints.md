@@ -51,5 +51,5 @@ This decision implements requirements under PRD-SYS-001.
 
 ## 6. Implementation & Verification
 
-- **Affected Repositories / Services:** `apps/execution/routers/documents.py`, `apps/etmf/routers/archive.py`, `packages/core-models/storage/document_models.py`, `packages/security/permissions.py`
+- **Affected Repositories / Services:** `apps/execution/routers/documents.py`, `apps/etmf/presentation/routers/archive.py`, `packages/core-models/storage/document_models.py`, `packages/security/permissions.py`
 - **Verification Plan:** Verified via `tests/test_document_router.py` covering uploads, watermarked downloads, audit trail generation, and background archival jobs.

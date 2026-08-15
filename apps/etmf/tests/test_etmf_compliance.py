@@ -11,20 +11,20 @@ from cryptography.x509.oid import NameOID
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from apps.etmf.cryptography import (
+from apps.etmf.adapters.cryptography import (
     extract_signature_from_content,
     requires_signature,
     validate_document_signature,
 )
-from apps.etmf.database import db_manager
-from apps.etmf.main import app
-from apps.etmf.models import Base, TMFAuditLedgerSeal, TMFAuditLog
-from apps.etmf.sealer import (
+from apps.etmf.adapters.database import db_manager
+from apps.etmf.adapters.models import Base, TMFAuditLedgerSeal, TMFAuditLog
+from apps.etmf.adapters.sealer import (
     execute_etmf_audit_sealing_cycle,
     start_background_etmf_sealer,
     stop_background_etmf_sealer,
     validate_etmf_ledger_integrity,
 )
+from apps.etmf.main import app
 from apps.etmf.tests.test_etmf import get_auth_headers
 from apps.execution.trial_lock import TrialLockManager
 

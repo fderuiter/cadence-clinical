@@ -1,1 +1,1 @@
-"""Application use cases for eConsent microservice."""
+"""Application layer use cases for eConsent microservice."""

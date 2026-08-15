@@ -13,16 +13,19 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from apps.gateway.main import generate_signature
-from apps.interop.database import db_manager
-from apps.interop.fhir_adapter import pseudonymize_identifier, strip_pii_from_patient
-from apps.interop.main import app
-from apps.interop.models import (
+from apps.interop.adapters.database import db_manager
+from apps.interop.adapters.fhir_adapter import (
+    pseudonymize_identifier,
+    strip_pii_from_patient,
+)
+from apps.interop.adapters.models import (
     Base,
     EPROSubmission,
     Instrument,
     InteropAuditLog,
     SubjectAssignment,
 )
+from apps.interop.main import app
 
 
 @pytest_asyncio.fixture(autouse=True)

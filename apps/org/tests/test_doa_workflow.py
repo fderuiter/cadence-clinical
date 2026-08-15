@@ -11,9 +11,9 @@ import pytest
 from fastapi.testclient import TestClient
 from jose import jwt
 
-from apps.org.database import db_manager
+from apps.org.adapters.database import db_manager
+from apps.org.adapters.models import Base
 from apps.org.main import GATEWAY_SECRET, app
-from apps.org.models import Base
 from packages.security.signing import (
     generate_canonical_signature,
     generate_gateway_signature,

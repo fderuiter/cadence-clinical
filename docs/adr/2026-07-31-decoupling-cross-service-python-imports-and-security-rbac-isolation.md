@@ -35,5 +35,5 @@ Chosen option: Option A because it instantly solves the static verification chec
 
 ## 6. Implementation & Verification
 
-- Target files/packages modified: `apps/etmf/services/eisf_service.py`, `apps/gateway/routers/usdm.py`, `apps/execution/services/econsent_capture_service.py`, `apps/execution/translator.py`, `apps/execution/routers/documents.py`, `apps/notifications/workers/notification_worker.py`, `apps/ctms/main.py`, `apps/ctms/routers/doa.py`, `apps/ctms/services/doa_service.py`.
+- Target files/packages modified: `apps/etmf/adapters/eisf_service.py`, `apps/gateway/routers/usdm.py`, `apps/execution/services/econsent_capture_service.py`, `apps/execution/translator.py`, `apps/execution/routers/documents.py`, `apps/notifications/adapters/workers/notification_worker.py`, `apps/ctms/main.py`, `apps/ctms/routers/doa.py`, `apps/ctms/application/doa_service.py`.
 - Verification via `uv run python scripts/validate_imports.py` and `uv run python scripts/validate_adrs.py`.

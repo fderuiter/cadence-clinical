@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from apps.notifications.infrastructure.models import (
+from apps.notifications.adapters.models import (
     NotificationCategory,
     NotificationPriority,
     NotificationStatus,

@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-14: Comprehensive Hexagonal Architecture Standardization and Frontend Modularization](2026-08-14-comprehensive-hexagonal-architecture-standardization-and-frontend-modularization.md)
 - [2026-08-14: Standardized Hexagonal Architecture and Unified Developer Experience Suite](2026-08-14-standardized-hexagonal-architecture-and-unified-developer-experience-suite.md)
 
 - [2026-08-14: Standardized Hexagonal Architecture and Unified Developer CLI](2026-08-14-standardized-hexagonal-architecture-and-unified-developer-cli.md)

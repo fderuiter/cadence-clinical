@@ -47,7 +47,7 @@ def test_doa_delegation_record_defaults() -> None:
     """
     from datetime import date, datetime
 
-    from apps.ctms.models import DOADelegationRecord
+    from apps.ctms.adapters.models import DOADelegationRecord
 
     record = DOADelegationRecord(
         id="doa_rec_111",
@@ -75,7 +75,7 @@ def test_doa_delegation_record_validation() -> None:
     import pytest
     from pydantic import ValidationError
 
-    from apps.ctms.models import DOADelegationRecord
+    from apps.ctms.adapters.models import DOADelegationRecord
 
     with pytest.raises(ValidationError):
         # missing start_date in dict validation

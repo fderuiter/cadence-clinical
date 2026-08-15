@@ -1,9 +1,9 @@
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from apps.econsent.database import db_manager
+from apps.econsent.adapters.database import db_manager
+from apps.econsent.adapters.models import Base
 from apps.econsent.main import app
-from apps.econsent.models import Base
 from apps.econsent.tests.test_econsent import get_auth_headers
 
 

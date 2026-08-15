@@ -8,14 +8,14 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from apps.gateway.main import generate_signature
-from apps.interop.database import db_manager
+from apps.interop.adapters.database import db_manager
+from apps.interop.adapters.fhir_adapter import FHIRAdapter, pseudonymize_identifier
+from apps.interop.adapters.models import Base, InteropAuditLog
 from apps.interop.domain.acl import (
     EligibilityCriterionDTO,
     parse_dsl_dto,
 )
-from apps.interop.fhir_adapter import FHIRAdapter, pseudonymize_identifier
 from apps.interop.main import app
-from apps.interop.models import Base, InteropAuditLog
 
 EligibilityCriterion = EligibilityCriterionDTO
 parse_dsl = parse_dsl_dto
@@ -414,7 +414,7 @@ def test_no_edc_mutation_boundary():
         assert "apps.execution.database.models" not in content
         assert "ClinicalSubject" not in content
 
-    with open("apps/interop/fhir_adapter.py") as f:
+    with open("apps/interop/adapters/fhir_adapter.py") as f:
         content = f.read()
         assert "apps.execution.database.models" not in content
         assert "ClinicalSubject" not in content

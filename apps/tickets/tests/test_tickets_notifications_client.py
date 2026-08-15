@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, patch
 import httpx
 import pytest
 
-from apps.tickets.notifications_client import publish_notification
+from apps.tickets.adapters.notifications_client import publish_notification
 from packages.security.context import audit_context
 
 

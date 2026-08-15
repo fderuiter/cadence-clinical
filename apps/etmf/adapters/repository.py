@@ -1,3 +1,3 @@
-from apps.etmf.infrastructure.repositories import SQLETMFRepository
+from apps.etmf.adapters.repositories import SQLETMFRepository
 
 __all__ = ["SQLETMFRepository"]

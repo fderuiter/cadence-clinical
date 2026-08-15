@@ -53,7 +53,7 @@ Chosen option: **Option A** because it enforces architectural cleanliness, guara
 ## 6. Implementation & Verification
 
 - **Files Modified:**
-  - `apps/etmf/infrastructure/lock_client.py`
+  - `apps/etmf/adapters/lock_client.py`
   - `apps/etmf/tests/conftest.py`
   - `packages/database/__init__.py`
   - `packages/security/gateway_client.py`

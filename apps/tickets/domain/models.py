@@ -92,3 +92,16 @@ class CommittedTicket:
     assignee_role: str | None
     reporter: str
     version_index: int
+
+
+@dataclass
+class RegulatoryRiskAssessment:
+    """
+    Schema representing a clinical and regulatory risk assessment for a setting change.
+    """
+
+    risk_level: str
+    affected_gxp_clauses: list[str]
+    requires_qa_signoff: bool
+    summary: str
+    risk_summary: str

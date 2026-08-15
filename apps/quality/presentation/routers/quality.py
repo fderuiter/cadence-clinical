@@ -4,15 +4,15 @@ import os
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
-from apps.quality.application.services.quality_service import QualityService
-from apps.quality.infrastructure.database import transactional
-from apps.quality.infrastructure.models import (
+from apps.quality.adapters.database import transactional
+from apps.quality.adapters.models import (
     CAPARecord,
     CAPAStatus,
     Deviation,
     DeviationStatus,
     RootCauseAnalysis,
 )
+from apps.quality.application.services.quality_service import QualityService
 from apps.quality.presentation.dtos import (
     AuditLogResponse,
     CAPACreate,

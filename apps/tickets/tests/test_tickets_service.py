@@ -12,9 +12,8 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from apps.gateway.main import generate_signature
-from apps.tickets.database import db_manager
-from apps.tickets.main import app
-from apps.tickets.models import (
+from apps.tickets.adapters.database import db_manager
+from apps.tickets.adapters.models import (
     Base,
     Ticket,
     TicketAuditLog,
@@ -23,6 +22,7 @@ from apps.tickets.models import (
     TicketPriority,
     TicketStatus,
 )
+from apps.tickets.main import app
 
 
 @pytest_asyncio.fixture(autouse=True)

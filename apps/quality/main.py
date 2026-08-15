@@ -3,14 +3,14 @@ import os
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from apps.quality.adapters.database import db_manager
+from apps.quality.adapters.models import Base, QualityAuditLog
+from apps.quality.adapters.repositories import SQLQualityRepository
 from apps.quality.application.services.quality_service import (
     CAPA_TRANSITIONS,
     QualityService,
     QualityServiceError,
 )
-from apps.quality.infrastructure.database import db_manager
-from apps.quality.infrastructure.models import Base, QualityAuditLog
-from apps.quality.infrastructure.repositories import SQLQualityRepository
 from apps.quality.presentation.dtos import (
     AuditLogResponse,
     CAPACreate,
@@ -33,6 +33,7 @@ from apps.quality.presentation.routers.quality import (
     router as quality_router,
 )
 from packages.database import get_relational_db_lifespan
+from packages.hexagonal import register_rfc7807_handlers
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import Principal
@@ -56,6 +57,7 @@ app = FastAPI(
 )
 
 app.add_middleware(GatewayAuthMiddleware)
+register_rfc7807_handlers(app)
 
 
 @app.exception_handler(QualityServiceError)

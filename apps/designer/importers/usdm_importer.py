@@ -1,4 +1,4 @@
-from apps.designer.infrastructure.cdisc.usdm_importer import (
+from apps.designer.adapters.cdisc.usdm_importer import (
     USDMImporter,
     USDMImportResult,
 )

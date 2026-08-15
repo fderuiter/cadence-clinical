@@ -2,15 +2,15 @@ import os
 
 from fastapi import FastAPI
 
+from apps.eisf.adapters.database import db_manager
+from apps.eisf.adapters.models import Base, ISFAuditLog, ISFDocument
+from apps.eisf.adapters.repositories import SQLEISFRepository
 from apps.eisf.domain.eisf_transport_models import (
     EISFDocumentDetail,
     EISFDocumentUploadRequest,
     EISFFolderNode,
 )
 from apps.eisf.domain.ports import EISFRepositoryPort
-from apps.eisf.infrastructure.database import db_manager
-from apps.eisf.infrastructure.models import Base, ISFAuditLog, ISFDocument
-from apps.eisf.infrastructure.repositories import SQLEISFRepository
 from apps.eisf.presentation.dtos import (
     BinderCompletenessResponse,
     BinderSectionStatus,
@@ -48,6 +48,7 @@ from apps.eisf.presentation.routers.eisf import (
     router as eisf_router,
 )
 from packages.database import get_relational_db_lifespan
+from packages.hexagonal import register_rfc7807_handlers
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
@@ -70,6 +71,7 @@ app = FastAPI(
 )
 
 app.add_middleware(GatewayAuthMiddleware)
+register_rfc7807_handlers(app)
 
 
 _repo_instance = SQLEISFRepository()

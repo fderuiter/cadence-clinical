@@ -9,10 +9,11 @@ import os
 
 from fastapi import FastAPI
 
-from apps.org.infrastructure.database import db_manager
-from apps.org.infrastructure.models import Base
+from apps.org.adapters.database import db_manager
+from apps.org.adapters.models import Base
 from apps.org.presentation.routers.org import router as org_router
 from packages.database import get_relational_db_lifespan
+from packages.hexagonal import register_rfc7807_handlers
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
@@ -40,6 +41,7 @@ app = FastAPI(
 
 # Register internal gateway authentication middleware
 app.add_middleware(GatewayAuthMiddleware)
+register_rfc7807_handlers(app)
 
 # Include Organization Directory router
 app.include_router(org_router)

@@ -6,14 +6,14 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from apps.ctms.database import db_manager
-from apps.ctms.main import app
-from apps.ctms.models import (
+from apps.ctms.adapters.database import db_manager
+from apps.ctms.adapters.models import (
     Base,
     CRAAllocation,
     CTMSAuditLog,
     GeneratedLetter,
 )
+from apps.ctms.main import app
 from apps.gateway.main import generate_signature
 
 
@@ -1038,7 +1038,7 @@ async def test_ctms_sync_happy_path_and_reloads():
     assert data["sync_status"] == "RESOLVED"
 
     # Verify database has been updated
-    from apps.ctms.models import MonitoringVisit, MonitoringVisitFinding
+    from apps.ctms.adapters.models import MonitoringVisit, MonitoringVisitFinding
 
     async with db_manager.get_session_maker()() as session:
         stmt = select(MonitoringVisit).where(MonitoringVisit.id == visit_id)
@@ -1144,7 +1144,7 @@ async def test_ctms_sync_conflict_server_wins():
     assert resp.json()["status"] == "IGNORED_SERVER_WINS"
 
     # Verify visit retains server date and hasn't updated
-    from apps.ctms.models import MonitoringVisit, MonitoringVisitDefeated
+    from apps.ctms.adapters.models import MonitoringVisit, MonitoringVisitDefeated
 
     async with db_manager.get_session_maker()() as session:
         stmt = select(MonitoringVisit).where(MonitoringVisit.id == visit_id)
@@ -1278,7 +1278,7 @@ async def test_ctms_sync_structural_conflict():
     assert "missing or deleted" in data["query"]["explanation"]
 
     # Verify query and defeated visit exist in DB
-    from apps.ctms.models import (
+    from apps.ctms.adapters.models import (
         CTMSAuditLog,
         CTMSClinicalQuery,
         MonitoringVisitDefeated,

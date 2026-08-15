@@ -2,10 +2,8 @@ import os
 
 from fastapi import FastAPI
 
-from apps.etmf.domain.acl import ProtocolVersionRef, ProtocolVersionRefDTO
-from apps.etmf.domain.ports import ETMFRepositoryPort
-from apps.etmf.infrastructure.database import db_manager, transactional
-from apps.etmf.infrastructure.models import (
+from apps.etmf.adapters.database import db_manager, transactional
+from apps.etmf.adapters.models import (
     Base,
     DocumentExpirationAlertState,
     DocumentQCTransition,
@@ -17,7 +15,9 @@ from apps.etmf.infrastructure.models import (
     TMFDocumentType,
     is_site_level_artifact,
 )
-from apps.etmf.infrastructure.repositories import SQLETMFRepository
+from apps.etmf.adapters.repositories import SQLETMFRepository
+from apps.etmf.domain.acl import ProtocolVersionRef, ProtocolVersionRefDTO
+from apps.etmf.domain.ports import ETMFRepositoryPort
 from apps.etmf.presentation.dtos import (
     ArtifactDetail,
     AuditLogResponse,
@@ -47,6 +47,7 @@ from apps.etmf.presentation.dtos import (
     TransitionResponse,
     to_document_response,
 )
+from apps.etmf.presentation.routers.archive import router as archive_router
 from apps.etmf.presentation.routers.etmf import (
     auto_redact_document_endpoint,
     bulk_archive_study_documents,
@@ -84,9 +85,9 @@ from apps.etmf.presentation.routers.etmf import (
 from apps.etmf.presentation.routers.etmf import (
     router as etmf_router,
 )
-from apps.etmf.routers.archive import router as archive_router
-from apps.etmf.routers.taxonomy import router as taxonomy_router
+from apps.etmf.presentation.routers.taxonomy import router as taxonomy_router
 from packages.database import get_relational_db_lifespan
+from packages.hexagonal import register_rfc7807_handlers
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
@@ -98,7 +99,7 @@ assert_secure_secrets("etmf", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
 async def etmf_startup() -> None:
     session_maker = db_manager.get_session_maker()
     async with session_maker() as session:
-        from apps.etmf.database.context import current_session
+        from apps.etmf.adapters.database import current_session
 
         token = current_session.set(session)
         try:
@@ -116,29 +117,33 @@ async def etmf_startup() -> None:
         finally:
             current_session.reset(token)
 
-    from apps.etmf.sealer import start_background_etmf_sealer
+    from apps.etmf.adapters.sealer import start_background_etmf_sealer
 
     await start_background_etmf_sealer(db_manager.get_session_maker())
 
-    from apps.etmf.expiration_scanner import start_background_etmf_expiration_scanner
+    from apps.etmf.adapters.expiration_scanner import (
+        start_background_etmf_expiration_scanner,
+    )
 
     await start_background_etmf_expiration_scanner(db_manager.get_session_maker())
 
-    from apps.etmf.workers.outbox_worker import start_outbox_worker
+    from apps.etmf.adapters.workers.outbox_worker import start_outbox_worker
 
     start_outbox_worker()
 
 
 async def etmf_shutdown() -> None:
-    from apps.etmf.workers.outbox_worker import stop_outbox_worker
+    from apps.etmf.adapters.workers.outbox_worker import stop_outbox_worker
 
     stop_outbox_worker()
 
-    from apps.etmf.sealer import stop_background_etmf_sealer
+    from apps.etmf.adapters.sealer import stop_background_etmf_sealer
 
     await stop_background_etmf_sealer()
 
-    from apps.etmf.expiration_scanner import stop_background_etmf_expiration_scanner
+    from apps.etmf.adapters.expiration_scanner import (
+        stop_background_etmf_expiration_scanner,
+    )
 
     await stop_background_etmf_expiration_scanner()
 
@@ -160,6 +165,7 @@ app = FastAPI(
 )
 
 app.add_middleware(GatewayAuthMiddleware)
+register_rfc7807_handlers(app)
 
 app.include_router(archive_router)
 app.include_router(taxonomy_router)

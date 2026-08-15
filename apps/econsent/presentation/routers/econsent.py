@@ -8,12 +8,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.econsent.infrastructure.cache import (
+from apps.econsent.adapters.cache import (
     ApprovedTranslationCache,
     get_approved_template_translation,
 )
-from apps.econsent.infrastructure.database import db_manager
-from apps.econsent.infrastructure.models import (
+from apps.econsent.adapters.comprehension import submit_comprehension_answers
+from apps.econsent.adapters.database import db_manager
+from apps.econsent.adapters.models import (
     ComprehensionCheck,
     ComprehensionResult,
     ConsentAuditLog,
@@ -25,7 +26,6 @@ from apps.econsent.infrastructure.models import (
     EtmfArchivalDelivery,
     SubjectConsent,
 )
-from apps.econsent.infrastructure.services import submit_comprehension_answers
 from apps.econsent.presentation.dtos import (
     ArchivalDeliveryResponse,
     ComposedClauseResponse,

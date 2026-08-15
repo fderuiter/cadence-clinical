@@ -16,7 +16,7 @@ def test_check_file_imports_same_service(tmp_path):
 
     file_path = etmf_dir / "main.py"
     file_path.write_text(
-        "import apps.etmf.database\nfrom apps.etmf.models import TMFDocument\n",
+        "import apps.etmf.database\nfrom apps.etmf.adapters.models import TMFDocument\n",
         encoding="utf-8",
     )
 
@@ -64,7 +64,7 @@ def test_check_file_imports_cross_service_violation(tmp_path):
 
     file_path = etmf_dir / "main.py"
     file_path.write_text(
-        "import apps.execution.trial_lock\nfrom apps.ctms.database import db_manager\n",
+        "import apps.execution.trial_lock\nfrom apps.ctms.adapters.database import db_manager\n",
         encoding="utf-8",
     )
 

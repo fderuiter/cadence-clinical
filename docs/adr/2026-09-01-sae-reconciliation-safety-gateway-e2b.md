@@ -18,7 +18,7 @@ We decided to establish a dedicated, isolated safety gateway microservice (`apps
 
 ### 1. Service Boundary & Isolation
 
-Following our architectural patterns, the safety subsystem operates on its own dedicated relational database and audit ledger (`apps/safety/models.py`), keeping third-party pharmacovigilance schema completely separate from the core clinical execution (EDC) transaction engine.
+Following our architectural patterns, the safety subsystem operates on its own dedicated relational database and audit ledger (`apps/safety/adapters/models.py`), keeping third-party pharmacovigilance schema completely separate from the core clinical execution (EDC) transaction engine.
 
 ### 2. Data Flow Architecture
 

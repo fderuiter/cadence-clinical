@@ -7,12 +7,11 @@ import pytest
 import pytest_asyncio
 from sqlalchemy import select
 
-from apps.etmf.database import db_manager
-from apps.etmf.infrastructure.models import IntegrationOutbox
+from apps.etmf.adapters.database import db_manager
+from apps.etmf.adapters.models import Base, IntegrationOutbox
+from apps.etmf.adapters.workers.outbox_worker import poll_and_dispatch
 from apps.etmf.main import app
-from apps.etmf.models import Base
 from apps.etmf.tests.test_etmf import get_auth_headers
-from apps.etmf.workers.outbox_worker import poll_and_dispatch
 
 
 @pytest.fixture(autouse=True)

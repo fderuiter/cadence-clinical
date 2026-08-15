@@ -19,16 +19,18 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from apps.etmf.database import db_manager
-from apps.etmf.domain.tmf_reference_model import (
-    normalize_milestone,
+from apps.etmf.adapters.database import db_manager
+from apps.etmf.adapters.ingestion_service import (
+    seed_etmf_expected_documents_for_study,
 )
-from apps.etmf.infrastructure.models import (
+from apps.etmf.adapters.models import (
     Base,
     ExpectedDocument,
 )
-from apps.etmf.infrastructure.repositories import SQLETMFRepository
-from apps.etmf.ingestion_service import seed_etmf_expected_documents_for_study
+from apps.etmf.adapters.repositories import SQLETMFRepository
+from apps.etmf.domain.tmf_reference_model import (
+    normalize_milestone,
+)
 from apps.etmf.main import app
 from apps.etmf.tests.test_etmf import get_auth_headers
 

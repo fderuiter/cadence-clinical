@@ -8,12 +8,12 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from apps.etmf.database import db_manager
-from apps.etmf.export import generate_binder_zip
-from apps.etmf.ingestion_service import ingest_tmf_document
+from apps.etmf.adapters.database import db_manager
+from apps.etmf.adapters.export import generate_binder_zip
+from apps.etmf.adapters.ingestion_service import ingest_tmf_document
+from apps.etmf.adapters.models import Base, TMFDocument
+from apps.etmf.adapters.watermark import apply_watermark
 from apps.etmf.main import app
-from apps.etmf.models import Base, TMFDocument
-from apps.etmf.watermark import apply_watermark
 
 
 @pytest_asyncio.fixture(autouse=True)

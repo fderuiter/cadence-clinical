@@ -15,7 +15,7 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
-from apps.etmf.cryptography import (
+from apps.etmf.adapters.cryptography import (
     validate_document_signature,
 )
 from packages.security.cert_store import get_active_cert_store

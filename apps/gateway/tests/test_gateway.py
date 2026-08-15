@@ -1543,10 +1543,10 @@ async def test_eisf_gateway_site_isolation_propagation(
     from httpx import ASGITransport, AsyncClient
     from sqlalchemy import select
 
-    from apps.eisf.database import db_manager as eisf_db_manager
+    from apps.eisf.adapters.database import db_manager as eisf_db_manager
+    from apps.eisf.adapters.models import Base as EisfBase
+    from apps.eisf.adapters.models import ISFAuditLog
     from apps.eisf.main import app as eisf_app
-    from apps.eisf.models import Base as EisfBase
-    from apps.eisf.models import ISFAuditLog
     from apps.eisf.tests.test_eisf_api import get_eisf_auth_headers
 
     # Initialize in-memory SQLite database for eISF

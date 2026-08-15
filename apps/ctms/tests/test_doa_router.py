@@ -12,9 +12,9 @@ from jose import jwt
 from sqlalchemy import event
 
 import packages  # noqa: F401
-from apps.ctms.database import db_manager
+from apps.ctms.adapters.database import db_manager
+from apps.ctms.adapters.models import Base
 from apps.ctms.main import app
-from apps.ctms.models import Base
 from apps.execution.database.models import Base as ExecutionModelBase
 from apps.gateway.main import generate_signature
 

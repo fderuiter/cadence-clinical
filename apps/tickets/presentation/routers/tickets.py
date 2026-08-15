@@ -11,6 +11,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, R
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.tickets.adapters.database import get_db_session
+from apps.tickets.adapters.models import Ticket, TicketAuditLog, TicketComment
 from apps.tickets.application.notification_events import (
     generate_ticket_notification_payloads,
 )
@@ -25,8 +27,6 @@ from apps.tickets.domain.models import (
     TicketStatus,
 )
 from apps.tickets.domain.services import evaluate_setting_risk
-from apps.tickets.infrastructure.database import get_db_session
-from apps.tickets.infrastructure.models import Ticket, TicketAuditLog, TicketComment
 from apps.tickets.presentation.dtos import (
     CommentCreate,
     CommentResponse,
@@ -54,7 +54,7 @@ TICKET_CREATION_LOCK = asyncio.Lock()
 
 
 async def write_ticket_audit_log(session, **kwargs):
-    from apps.tickets.infrastructure.repositories import (
+    from apps.tickets.adapters.repositories import (
         write_ticket_audit_log as _write,
     )
 

@@ -24,6 +24,9 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from apps.designer.adapters.neo4j_usdm_writer import (
+    commit_usdm_graph,
+)
 from apps.designer.adapters.repositories import get_soa_matrix_projection
 from apps.designer.application.services.digitization_service import (
     _heuristic_protocol_extraction,
@@ -46,9 +49,6 @@ from apps.designer.domain.digitization_models import (
     USDMProtocolExtractionResponse,
 )
 from apps.designer.domain.synthesis import compile_soa_matrix_payload
-from apps.designer.infrastructure.neo4j_usdm_writer import (
-    commit_usdm_graph,
-)
 from apps.designer.main import app as designer_app
 from packages.database.mock_graph import MockGraphDriver
 

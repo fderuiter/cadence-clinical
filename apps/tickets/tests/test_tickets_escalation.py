@@ -7,13 +7,13 @@ import pytest
 import pytest_asyncio
 from sqlalchemy import select
 
-from apps.tickets.database import db_manager
-from apps.tickets.escalation import (
+from apps.tickets.adapters.database import db_manager
+from apps.tickets.adapters.escalation import (
     execute_ticket_escalation_cycle,
     start_background_ticket_escalation,
     stop_background_ticket_escalation,
 )
-from apps.tickets.models import (
+from apps.tickets.adapters.models import (
     Base,
     Ticket,
     TicketAuditLog,
@@ -38,7 +38,10 @@ async def setup_tickets_db():
 
 
 @pytest.mark.asyncio
-@patch("apps.tickets.notifications_client.publish_notification", new_callable=AsyncMock)
+@patch(
+    "apps.tickets.adapters.notifications_client.publish_notification",
+    new_callable=AsyncMock,
+)
 async def test_escalation_eligibility_rules(mock_publish):
     # @req:Trace-16
     """
@@ -160,7 +163,10 @@ async def test_escalation_eligibility_rules(mock_publish):
 
 
 @pytest.mark.asyncio
-@patch("apps.tickets.notifications_client.publish_notification", new_callable=AsyncMock)
+@patch(
+    "apps.tickets.adapters.notifications_client.publish_notification",
+    new_callable=AsyncMock,
+)
 async def test_bounded_priority_advancement(mock_publish):
     # @req:Trace-16
     """
@@ -238,7 +244,10 @@ async def test_bounded_priority_advancement(mock_publish):
 
 
 @pytest.mark.asyncio
-@patch("apps.tickets.notifications_client.publish_notification", new_callable=AsyncMock)
+@patch(
+    "apps.tickets.adapters.notifications_client.publish_notification",
+    new_callable=AsyncMock,
+)
 async def test_cooldown_gating_and_idempotency(mock_publish):
     # @req:Trace-16
     """
@@ -294,7 +303,10 @@ async def test_cooldown_gating_and_idempotency(mock_publish):
 
 
 @pytest.mark.asyncio
-@patch("apps.tickets.notifications_client.publish_notification", new_callable=AsyncMock)
+@patch(
+    "apps.tickets.adapters.notifications_client.publish_notification",
+    new_callable=AsyncMock,
+)
 async def test_audit_log_creation_on_escalate(mock_publish):
     # @req:Trace-16
     """
@@ -336,7 +348,10 @@ async def test_audit_log_creation_on_escalate(mock_publish):
 
 
 @pytest.mark.asyncio
-@patch("apps.tickets.notifications_client.publish_notification", new_callable=AsyncMock)
+@patch(
+    "apps.tickets.adapters.notifications_client.publish_notification",
+    new_callable=AsyncMock,
+)
 async def test_notification_deduplication_and_partial_failures(mock_publish):
     # @req:Trace-16
     """
@@ -422,7 +437,7 @@ async def test_startup_shutdown_and_resilience():
 
         await start_background_ticket_escalation()
 
-        import apps.tickets.escalation as esc
+        import apps.tickets.adapters.escalation as esc
 
         assert esc._escalation_task is not None
         assert esc._should_run is True

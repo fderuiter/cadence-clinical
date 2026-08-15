@@ -110,6 +110,7 @@ from apps.execution.subject_lifecycle import (
 from apps.execution.translator import process_translation
 from apps.execution.trial_lock import TrialLockManager
 from apps.execution.ucum import convert_unit, get_normalized_representation
+from packages.hexagonal import register_rfc7807_handlers
 from packages.security import (
     ROLE_CRA,
     ROLE_CRC,
@@ -521,6 +522,7 @@ async def invalid_state_transition_handler(
 
 app.add_middleware(ContextResetMiddleware)
 app.add_middleware(GatewayAuthMiddleware)
+register_rfc7807_handlers(app)
 
 
 @app.get("/health")

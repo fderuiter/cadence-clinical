@@ -43,10 +43,10 @@ Allow deterministic PKCS#1 v1.5 verification to succeed silently (or with a warn
 1. **Block Injection Defenses**:
    - Modified `packages/compliance/services/esignature_verifier.py` to count and block duplicate certificate/signature markers (e.g., `-----BEGIN CERTIFICATE-----`, `-----BEGIN SIGNATURE-----`, `<SignatureValue>`, etc.). Any payload with multiple blocks is rejected with `DUPLICATE_BLOCKS_REJECTED`.
 2. **Explicit Legacy Rejection & Alerts**:
-   - Implemented fallback checks in `packages/security/crypto_verifier.py`, `packages/compliance/services/esignature_verifier.py`, and `apps/etmf/cryptography.py` to identify legacy PKCS#1 v1.5 signatures.
+   - Implemented fallback checks in `packages/security/crypto_verifier.py`, `packages/compliance/services/esignature_verifier.py`, and `apps/etmf/adapters/cryptography.py` to identify legacy PKCS#1 v1.5 signatures.
    - If PKCS#1 v1.5 succeeds where PSS fails, a high-severity `COMPLIANCE ALERT: Legacy PKCS#1 v1.5 signature padding detected. This signature is insecure and has been rejected` is emitted, and a specific rejection code (`LEGACY_PADDING_REJECTED`) is returned.
 3. **Uncompromising Bypass Rejection**:
-   - Refined bypass checks in `apps/etmf/cryptography.py` to reject signature bypasses on mandatory documents if either strict compliance is active OR mock signatures are disallowed.
+   - Refined bypass checks in `apps/etmf/adapters/cryptography.py` to reject signature bypasses on mandatory documents if either strict compliance is active OR mock signatures are disallowed.
 
 ## 5. Consequences & Trade-offs
 
@@ -61,7 +61,7 @@ Allow deterministic PKCS#1 v1.5 verification to succeed silently (or with a warn
 
 - **Modified Source Files**:
   - `packages/compliance/services/esignature_verifier.py`: Added block injection validation and RSA-PSS legacy fallback/rejection logic.
-  - `apps/etmf/cryptography.py`: Added legacy padding detection in X.509 signature verification and tightened document bypass constraints.
+  - `apps/etmf/adapters/cryptography.py`: Added legacy padding detection in X.509 signature verification and tightened document bypass constraints.
   - `packages/security/crypto_verifier.py`: Implemented legacy RSA-PSS fallback rejection and compliant audit logs.
 - **Verification & Testing**:
   - Tests validating compliance alerts, duplicate block rejections, and PKCS#1 v1.5 signature rejections are maintained in `tests/` and mapped to trace keys under `tests/test_etmf_signing_lifecycle.py`.

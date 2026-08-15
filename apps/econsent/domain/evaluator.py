@@ -1,10 +1,13 @@
+"""Domain evaluator for comprehension checks."""
+
+
 def evaluate_comprehension(
     submitted_answers: dict[str, str],
     expected_answers: dict[str, str],
     threshold_policy: dict,
 ) -> tuple[bool, float, int]:
-    """
-    Stateless, deterministic evaluator for comprehension checks.
+    """Stateless, deterministic evaluator for comprehension checks.
+
     Returns:
         (passed, score_percentage, correct_count)
     """

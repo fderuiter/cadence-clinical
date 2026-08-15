@@ -23,7 +23,7 @@ This decision implements requirements under Trace-8.
 
 ### Option 1: Gateway Routing Restrictions combined with Downstream Identity Binding (Selected)
 
-Define a dedicated `Subject` realm role in Keycloak. Enforce routing restrictions in `apps/gateway/main.py` allowing clients with the `Subject` role to only access the 8 allowed self-service routes (submit diary, bulk offline sync, instrument details read, and self-scoped assignments, assigned instruments, compliance, notifications reads, and notification acknowledgement). Implement reusable authorization helpers in `apps/interop/auth.py` to bind downstream payload `subject_id` to the authenticated identity.
+Define a dedicated `Subject` realm role in Keycloak. Enforce routing restrictions in `apps/gateway/main.py` allowing clients with the `Subject` role to only access the 8 allowed self-service routes (submit diary, bulk offline sync, instrument details read, and self-scoped assignments, assigned instruments, compliance, notifications reads, and notification acknowledgement). Implement reusable authorization helpers in `apps/interop/adapters/auth.py` to bind downstream payload `subject_id` to the authenticated identity.
 
 - **Pros:**
   - ✅ Defense-in-depth: unauthorized requests are blocked both at the gateway and the microservice.
@@ -54,5 +54,5 @@ Only validate roles and bind identities inside the interop microservice itself.
 
 ## 6. Implementation & Verification
 
-- **Affected Repositories / Services:** `docker/cadence-realm.json`, `apps/gateway/main.py`, `apps/interop/auth.py`, `apps/interop/main.py`
+- **Affected Repositories / Services:** `docker/cadence-realm.json`, `apps/gateway/main.py`, `apps/interop/adapters/auth.py`, `apps/interop/main.py`
 - **Verification Plan:** Unit and integration tests in `tests/test_interop.py` verify Subject role authentication, identity matching, cross-subject 403 rejections, and gateway routing blocks.

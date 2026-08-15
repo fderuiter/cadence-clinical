@@ -18,7 +18,7 @@ The CTMS (Clinical Trial Management System) service requires a robust, GxP and 2
 
 - **Driver 1 (Service Isolation):** Maintaining a single authoritative source of truth for the `MonitoringVisit` domain inside `apps/ctms`, avoiding model duplication in `apps/interop`.
 - **Driver 2 (Compliance):** Satisfying FDA 21 CFR Part 11 and GxP requirements by ensuring immutable audit logging, version index tracking, and defeated data retention.
-- **Driver 3 (Code Reuse):** Reusing the proven, deterministic `apps/interop/sync_engine.py` reconciliation algorithm via an in-process integration contract.
+- **Driver 3 (Code Reuse):** Reusing the proven, deterministic `apps/interop/domain/sync_engine.py` reconciliation algorithm via an in-process integration contract.
 - **Driver 4 (No Cross-Service Sync):** Explicitly acknowledging and extending the "no cross-service sync" statement in ADR-055 to ensure services do not bidirectionally coordinate mutations across boundaries.
 
 ## 3. Options Considered
@@ -43,7 +43,7 @@ The CTMS (Clinical Trial Management System) service requires a robust, GxP and 2
 
 ### Option 3: Narrow In-Process Sync Contract with Interop Sync Engine (Selected)
 
-- **Overview:** Re-use the domain-agnostic `apps/interop/sync_engine.py` functions (such as `reconcile_records`) in-process within CTMS. CTMS owns the offline sync payloads, endpoints, defeated storage, and clinical-query database models.
+- **Overview:** Re-use the domain-agnostic `apps/interop/domain/sync_engine.py` functions (such as `reconcile_records`) in-process within CTMS. CTMS owns the offline sync payloads, endpoints, defeated storage, and clinical-query database models.
 - **Pros:**
   - ✅ Maintains clean domain isolation—the interop service is not called, and no models are duplicated.
   - ✅ Ensures identical conflict resolution semantics (LWW, Client Wins, Server Wins, Merge) by sharing the tested `sync_engine.py` library.
@@ -61,11 +61,11 @@ The CTMS (Clinical Trial Management System) service requires a robust, GxP and 2
   - Structural conflicts (e.g. syncs referencing deleted/missing visits) are handled safely and promoted to actionable, open clinical-query records.
   - Full GxP compliance with immutable `CTMSAuditLog` entries for every reconciliation decision.
 - **Negative Impact / Technical Debt:**
-  - Requires importing the `apps/interop/sync_engine.py` module in-process across microservices, creating an in-repo dependency from CTMS to Interop's utility.
-- **Mitigation Strategy:** Keep `apps/interop/sync_engine.py` strictly domain-agnostic and free of database imports so that it can be safely imported as a utility anywhere in the codebase.
+  - Requires importing the `apps/interop/domain/sync_engine.py` module in-process across microservices, creating an in-repo dependency from CTMS to Interop's utility.
+- **Mitigation Strategy:** Keep `apps/interop/domain/sync_engine.py` strictly domain-agnostic and free of database imports so that it can be safely imported as a utility anywhere in the codebase.
 
 ## 6. Implementation & Verification
 
-- **Affected Repositories / Services:** `apps/ctms/models.py`, `apps/ctms/main.py`, `packages/security/rbac.py`
+- **Affected Repositories / Services:** `apps/ctms/adapters/models.py`, `apps/ctms/main.py`, `packages/security/rbac.py`
 - **Verification Plan:**
   - Automated testing in `tests/test_ctms.py` validating happy path offline syncs, CLIENT_WINS/SERVER_WINS/MERGE conflict strategies, duplicate replay idempotency, structural conflict handling with query creation, and RBAC permission checks.

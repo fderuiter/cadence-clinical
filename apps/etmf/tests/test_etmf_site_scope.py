@@ -8,12 +8,12 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from apps.eisf.database import db_manager as eisf_db_manager
+from apps.eisf.adapters.database import db_manager as eisf_db_manager
+from apps.eisf.adapters.models import ISFDocument
 from apps.eisf.main import app as eisf_app
-from apps.eisf.models import ISFDocument
-from apps.etmf.database import db_manager
+from apps.etmf.adapters.database import db_manager
+from apps.etmf.adapters.models import Base, TMFDocument, is_site_level_artifact
 from apps.etmf.main import app
-from apps.etmf.models import Base, TMFDocument, is_site_level_artifact
 from apps.gateway.main import generate_signature
 
 
@@ -28,7 +28,7 @@ async def setup_db():
 
     eisf_db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
     async with eisf_db_manager.engine.begin() as conn:
-        from apps.eisf.models import Base as EIsfBase
+        from apps.eisf.adapters.models import Base as EIsfBase
 
         await conn.run_sync(EIsfBase.metadata.create_all)
 
@@ -39,7 +39,7 @@ async def setup_db():
     await db_manager.close()
 
     async with eisf_db_manager.engine.begin() as conn:
-        from apps.eisf.models import Base as EIsfBase
+        from apps.eisf.adapters.models import Base as EIsfBase
 
         await conn.run_sync(EIsfBase.metadata.drop_all)
     await eisf_db_manager.close()
@@ -432,7 +432,7 @@ async def test_legacy_records_quarantine_policy():
         await session.commit()
 
     # 2. Run migrate.upgrade_existing_tables to run backfill/quarantine
-    from apps.etmf.migrate import upgrade_existing_tables
+    from apps.etmf.adapters.migrate import upgrade_existing_tables
 
     async with db_manager.engine.begin() as conn:
         await upgrade_existing_tables(conn, "sqlite")

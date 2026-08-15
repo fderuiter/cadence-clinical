@@ -24,10 +24,10 @@ from apps.execution.database.models import (
 from apps.execution.main import app as execution_app
 from apps.execution.queries_escalation import execute_query_escalation_cycle
 from apps.execution.trial_lock import TrialLockManager
-from apps.notifications.database import db_manager as notif_db_manager
+from apps.notifications.adapters.database import db_manager as notif_db_manager
+from apps.notifications.adapters.models import Base as NotifBase
+from apps.notifications.adapters.models import Notification, NotificationAuditLog
 from apps.notifications.main import app as notifications_app
-from apps.notifications.models import Base as NotifBase
-from apps.notifications.models import Notification, NotificationAuditLog
 from packages.security.context import audit_context
 from packages.security.signing import generate_gateway_signature
 

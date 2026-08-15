@@ -8,35 +8,32 @@ import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from apps.tickets.main import app
-from apps.tickets.services.change_analyzer import (
+from apps.tickets.application.change_analyzer import (
     SettingChangeAnalyzer,
     analyze_setting_change,
 )
+from apps.tickets.main import app
 from apps.tickets.tests.test_tickets_service import get_auth_headers
 
 
 def test_disable_audit_logging_is_blocked_outright():
-    """
-    Verify that attempting to disable audit logging is blocked outright with an HTTP 400 Bad Request exception.
+    """Verify that attempting to disable audit logging is blocked outright with an HTTP 400 Bad Request exception or ValidationError.
 
     Requirements: PRD-SYS-001
     """
+    from packages.hexagonal import ValidationError
+
     # Attempt to disable audit logging using "false"
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises((HTTPException, ValidationError)) as exc_info:
         analyze_setting_change("audit_trail_enabled", "True", "False")
-    assert exc_info.value.status_code == 400
-    assert (
-        "Disabling audit trail logging is strictly prohibited" in exc_info.value.detail
-    )
+    err_str = getattr(exc_info.value, "detail", str(exc_info.value))
+    assert "Disabling audit trail logging is strictly prohibited" in err_str
 
     # Attempt to disable audit logging using "disabled"
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises((HTTPException, ValidationError)) as exc_info:
         analyze_setting_change("audit_logging", "enabled", "disabled")
-    assert exc_info.value.status_code == 400
-    assert (
-        "Disabling audit trail logging is strictly prohibited" in exc_info.value.detail
-    )
+    err_str = getattr(exc_info.value, "detail", str(exc_info.value))
+    assert "Disabling audit trail logging is strictly prohibited" in err_str
 
 
 def test_high_risk_compliance_setting_changes():

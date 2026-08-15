@@ -11,10 +11,10 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 
 - **Total Automated Test Cases Run:** 2644
-- **Passed:** 2630 🟢
+- **Passed:** 2626 🟢
 - **Failed/Errors:** 0 🔴
-- **Skipped:** 14 ⚪
-- **Overall Operational Pass Rate:** 99.47%
+- **Skipped:** 18 ⚪
+- **Overall Operational Pass Rate:** 99.32%
 
 ## 2. Installation Qualification (IQ)
 
@@ -2267,8 +2267,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_decoupled_api_routers_have_no_direct_db_imports[ctms]`                            | `packages.hexagonal.tests.test_hexagonal_architecture`                      | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_decoupled_api_routers_have_no_direct_db_imports[designer]`                        | `packages.hexagonal.tests.test_hexagonal_architecture`                      | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_decoupled_api_routers_have_no_direct_db_imports[econsent]`                        | `packages.hexagonal.tests.test_hexagonal_architecture`                      | _Regression/Helper_                                                                | ⚪ SKIPPED | < 1s     |
-| `test_decoupled_api_routers_have_no_direct_db_imports[eisf]`                            | `packages.hexagonal.tests.test_hexagonal_architecture`                      | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
-| `test_decoupled_api_routers_have_no_direct_db_imports[etmf]`                            | `packages.hexagonal.tests.test_hexagonal_architecture`                      | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_decoupled_api_routers_have_no_direct_db_imports[eisf]`                            | `packages.hexagonal.tests.test_hexagonal_architecture`                      | _Regression/Helper_                                                                | ⚪ SKIPPED | < 1s     |
+| `test_decoupled_api_routers_have_no_direct_db_imports[etmf]`                            | `packages.hexagonal.tests.test_hexagonal_architecture`                      | _Regression/Helper_                                                                | ⚪ SKIPPED | < 1s     |
 | `test_decoupled_api_routers_have_no_direct_db_imports[execution]`                       | `packages.hexagonal.tests.test_hexagonal_architecture`                      | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_decoupled_api_routers_have_no_direct_db_imports[gateway]`                         | `packages.hexagonal.tests.test_hexagonal_architecture`                      | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_decoupled_api_routers_have_no_direct_db_imports[interop]`                         | `packages.hexagonal.tests.test_hexagonal_architecture`                      | _Regression/Helper_                                                                | ⚪ SKIPPED | < 1s     |
@@ -2362,8 +2362,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_api_routers_contain_no_direct_db_calls[ctms]`                                     | `packages.hexagonal.tests.test_hexagonal_ports_adapters`                    | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_api_routers_contain_no_direct_db_calls[designer]`                                 | `packages.hexagonal.tests.test_hexagonal_ports_adapters`                    | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_api_routers_contain_no_direct_db_calls[econsent]`                                 | `packages.hexagonal.tests.test_hexagonal_ports_adapters`                    | _Regression/Helper_                                                                | ⚪ SKIPPED | < 1s     |
-| `test_api_routers_contain_no_direct_db_calls[eisf]`                                     | `packages.hexagonal.tests.test_hexagonal_ports_adapters`                    | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
-| `test_api_routers_contain_no_direct_db_calls[etmf]`                                     | `packages.hexagonal.tests.test_hexagonal_ports_adapters`                    | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_api_routers_contain_no_direct_db_calls[eisf]`                                     | `packages.hexagonal.tests.test_hexagonal_ports_adapters`                    | _Regression/Helper_                                                                | ⚪ SKIPPED | < 1s     |
+| `test_api_routers_contain_no_direct_db_calls[etmf]`                                     | `packages.hexagonal.tests.test_hexagonal_ports_adapters`                    | _Regression/Helper_                                                                | ⚪ SKIPPED | < 1s     |
 | `test_api_routers_contain_no_direct_db_calls[execution]`                                | `packages.hexagonal.tests.test_hexagonal_ports_adapters`                    | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_api_routers_contain_no_direct_db_calls[gateway]`                                  | `packages.hexagonal.tests.test_hexagonal_ports_adapters`                    | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_api_routers_contain_no_direct_db_calls[interop]`                                  | `packages.hexagonal.tests.test_hexagonal_ports_adapters`                    | _Regression/Helper_                                                                | ⚪ SKIPPED | < 1s     |

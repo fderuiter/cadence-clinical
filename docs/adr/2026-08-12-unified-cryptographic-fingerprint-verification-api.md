@@ -44,7 +44,7 @@ We chose **Option 2**. We implemented `verify_trust` using standard library `cry
 All boundary-violating direct accesses to `_cert_registry` were refactored to use the public `verify_trust` API:
 
 - `packages/compliance/services/esignature_verifier.py`
-- `apps/etmf/infrastructure/cryptography.py` (two separate locations)
+- `apps/etmf/adapters/cryptography.py` (two separate locations)
 
 We also refactored `is_approved` to delegate directly to `verify_trust`, ensuring consistent, fingerprint-backed validation across all certificate status checks.
 
@@ -63,7 +63,7 @@ We also refactored `is_approved` to delegate directly to `verify_trust`, ensurin
 
 - `packages/security/cert_store.py` (implemented `verify_trust`)
 - `packages/compliance/services/esignature_verifier.py` (refactored to call `verify_trust`)
-- `apps/etmf/infrastructure/cryptography.py` (refactored to call `verify_trust`)
+- `apps/etmf/adapters/cryptography.py` (refactored to call `verify_trust`)
 
 ### Verification Plan:
 

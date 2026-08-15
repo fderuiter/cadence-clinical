@@ -1,4 +1,4 @@
-from apps.designer.infrastructure.usdm_ingestion import (
+from apps.designer.adapters.usdm_ingestion import (
     ExpressionNode,
     FieldReference,
     USDMValidationReport,

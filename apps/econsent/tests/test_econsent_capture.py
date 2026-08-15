@@ -11,14 +11,14 @@ import pytest_asyncio
 from jose import jwt
 from sqlalchemy import select
 
-from apps.econsent.database import db_manager
-from apps.econsent.main import app
-from apps.econsent.models import (
+from apps.econsent.adapters.database import db_manager
+from apps.econsent.adapters.models import (
     Base,
     ComprehensionResult,
     ConsentTemplate,
     SubjectConsent,
 )
+from apps.econsent.main import app
 from packages.security.signing import verify_canonical_signature
 
 TEST_GATEWAY_SECRET = (

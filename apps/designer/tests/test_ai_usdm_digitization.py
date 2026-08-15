@@ -11,6 +11,7 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
+from apps.designer.adapters.neo4j_usdm_writer import commit_usdm_graph
 from apps.designer.application.services.digitization_service import (
     extract_usdm_from_protocol_document,
     synthesize_ecrf_forms,
@@ -24,7 +25,6 @@ from apps.designer.domain.digitization_models import (
     ExtractedVisit,
     USDMProtocolExtractionResponse,
 )
-from apps.designer.infrastructure.neo4j_usdm_writer import commit_usdm_graph
 from apps.designer.main import app as designer_app
 from packages.database.mock_graph import MockGraphDriver
 

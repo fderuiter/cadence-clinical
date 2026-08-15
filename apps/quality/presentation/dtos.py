@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from apps.quality.infrastructure.models import (
+from apps.quality.adapters.models import (
     CAPAStatus,
     DeviationSeverity,
     DeviationStatus,

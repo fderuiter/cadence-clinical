@@ -7,9 +7,14 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from apps.gateway.main import generate_signature
-from apps.safety.database import db_manager
+from apps.safety.adapters.database import db_manager
+from apps.safety.adapters.models import (
+    Base,
+    SafetyAuditLog,
+    SafetyCaseICSR,
+    SafetyExportJob,
+)
 from apps.safety.main import app
-from apps.safety.models import Base, SafetyAuditLog, SafetyCaseICSR, SafetyExportJob
 
 
 @pytest_asyncio.fixture(autouse=True)

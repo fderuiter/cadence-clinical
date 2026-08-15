@@ -308,24 +308,24 @@ async def create_all_schemas_async(worker_suffix_val: str, timeout: float = 30.0
     """Run migrations and schema creation for all 11 microservices on this worker's databases."""
     from sqlalchemy.ext.asyncio import create_async_engine
 
+    from apps.ctms.adapters.models import Base as CTMSBase
     from apps.ctms.migrate import run_migrations as run_ctms_migrations
-    from apps.ctms.models import Base as CTMSBase
-    from apps.econsent.models import Base as EConsentBase
-    from apps.eisf.database.migrate import run_migrations as run_eisf_migrations
-    from apps.eisf.models import Base as EISFBase
-    from apps.etmf.database.migrate import run_migrations as run_etmf_migrations
-    from apps.etmf.models import Base as ETMFBase
+    from apps.econsent.adapters.models import Base as EConsentBase
+    from apps.eisf.adapters.migrate import run_migrations as run_eisf_migrations
+    from apps.eisf.adapters.models import Base as EISFBase
+    from apps.etmf.adapters.migrate import run_migrations as run_etmf_migrations
+    from apps.etmf.adapters.models import Base as ETMFBase
     from apps.execution.database.migrate import (
         run_migrations as run_exec_migrations,
     )
     from apps.execution.database.models import Base as ExecBase
-    from apps.interop.models import Base as InteropBase
-    from apps.notifications.models import Base as NotificationsBase
-    from apps.org.models import Base as OrgBase
+    from apps.interop.adapters.models import Base as InteropBase
+    from apps.notifications.adapters.models import Base as NotificationsBase
+    from apps.org.adapters.models import Base as OrgBase
+    from apps.quality.adapters.models import Base as QualityBase
     from apps.quality.migrate import run_migrations as run_quality_migrations
-    from apps.quality.models import Base as QualityBase
-    from apps.safety.models import Base as SafetyBase
-    from apps.tickets.models import Base as TicketsBase
+    from apps.safety.adapters.models import Base as SafetyBase
+    from apps.tickets.adapters.models import Base as TicketsBase
 
     service_bases = {
         "cadence_edc": (ExecBase, run_exec_migrations),
@@ -904,9 +904,9 @@ def concurrency_runner():
 # =========================================================================
 
 from apps.designer.main import app as designer_app
-from apps.etmf.database import db_manager as etmf_db_manager
+from apps.etmf.adapters.database import db_manager as etmf_db_manager
+from apps.etmf.adapters.models import Base as ETMFBase
 from apps.etmf.main import app as etmf_app
-from apps.etmf.models import Base as ETMFBase
 from apps.execution.database.core import db_manager as exec_db_manager
 from apps.execution.database.models import Base as ExecBase
 from apps.execution.main import app as exec_app

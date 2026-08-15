@@ -5,10 +5,15 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from apps.etmf.database import db_manager
-from apps.etmf.ingestion import ingest_document_service
+from apps.etmf.adapters.database import db_manager
+from apps.etmf.adapters.ingestion import ingest_document_service
+from apps.etmf.adapters.models import (
+    Base,
+    DocumentQCTransition,
+    TMFAuditLog,
+    TMFDocument,
+)
 from apps.etmf.main import app, map_artifact_to_tmf
-from apps.etmf.models import Base, DocumentQCTransition, TMFAuditLog, TMFDocument
 from apps.gateway.main import generate_signature
 
 
@@ -2819,7 +2824,7 @@ async def test_etmf_completeness_rejects_quarantined():
     assert ingest_res.status_code == 201
 
     # Verify site_id is "QUARANTINED" in DB
-    from apps.etmf.infrastructure.repositories import SQLETMFRepository
+    from apps.etmf.adapters.repositories import SQLETMFRepository
 
     async with db_manager.get_session_maker()() as session:
         repo = SQLETMFRepository(session=session)
@@ -2840,14 +2845,14 @@ async def test_etmf_repository_rule_deduplication():
     """
     Test repository-level expected document sorting and deduplication.
     """
-    from apps.etmf.infrastructure.repositories import SQLETMFRepository
+    from apps.etmf.adapters.repositories import SQLETMFRepository
 
     async with db_manager.get_session_maker()() as session:
         repo = SQLETMFRepository(session=session)
         study_id = "study_dedup_test"
 
         # Save two duplicate expected documents with different version_index and created_by
-        from apps.etmf.infrastructure.models import ExpectedDocument
+        from apps.etmf.adapters.models import ExpectedDocument
 
         doc1 = ExpectedDocument(
             study_id=study_id,

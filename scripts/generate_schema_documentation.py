@@ -1042,7 +1042,7 @@ def main():
 
     try:
         # Import Relational Base Classes
-        from apps.etmf.infrastructure.models import Base as EtmfBase
+        from apps.etmf.adapters.models import Base as EtmfBase
         from apps.execution.database.models import Base as ExecutionBase
 
         print("Imported SQL bases statically under mocked environment keys.")

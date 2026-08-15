@@ -7,25 +7,25 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
 
+from apps.etmf.adapters.database import transactional
+from apps.etmf.adapters.export import generate_binder_zip
+from apps.etmf.adapters.ingestion_service import ingest_tmf_document
+from apps.etmf.adapters.lifecycle import (
+    authorize_document_read,
+    validate_and_transition_document_status,
+)
+from apps.etmf.adapters.models import (
+    DocumentStatus,
+    ExpectedDocument,
+    TMFAuditLog,
+    TMFDocument,
+)
 from apps.etmf.domain.ports import ETMFRepositoryPort
 from apps.etmf.domain.tmf_reference_model import (
     get_active_catalog,
     get_mandatory_artifacts,
     normalize_milestone,
     resolve_artifact,
-)
-from apps.etmf.export import generate_binder_zip
-from apps.etmf.infrastructure.database import transactional
-from apps.etmf.infrastructure.models import (
-    DocumentStatus,
-    ExpectedDocument,
-    TMFAuditLog,
-    TMFDocument,
-)
-from apps.etmf.ingestion_service import ingest_tmf_document
-from apps.etmf.lifecycle import (
-    authorize_document_read,
-    validate_and_transition_document_status,
 )
 from apps.etmf.presentation.dtos import (
     ArtifactDetail,
@@ -71,7 +71,7 @@ def get_etmf_repository() -> ETMFRepositoryPort:
 
     if hasattr(main_module, "_repo_instance"):
         return main_module._repo_instance
-    from apps.etmf.infrastructure.repositories import SQLETMFRepository
+    from apps.etmf.adapters.repositories import SQLETMFRepository
 
     return SQLETMFRepository()
 
@@ -106,7 +106,9 @@ async def seed_default_edl(repo: Any, study_id: str, milestone: str) -> None:
         if hasattr(repo, "session") and repo.session:
             await repo.session.flush()
     else:
-        from apps.etmf.ingestion_service import seed_etmf_expected_documents_for_study
+        from apps.etmf.adapters.ingestion_service import (
+            seed_etmf_expected_documents_for_study,
+        )
 
         await seed_etmf_expected_documents_for_study(
             study_id=study_id,
@@ -118,7 +120,7 @@ async def seed_default_edl(repo: Any, study_id: str, milestone: str) -> None:
 
 
 def map_artifact_to_tmf(artifact_type: str) -> tuple[int, str]:
-    from apps.etmf.classification_service import classify_tmf_document
+    from apps.etmf.application.classification_service import classify_tmf_document
 
     classification = classify_tmf_document(filename="", artifact_type=artifact_type)
     if classification is None:
@@ -198,7 +200,7 @@ async def ingest_document(
                 detail="Forbidden: Lacks manage_expiration permission to set or change expiration metadata.",
             )
 
-    from apps.etmf.lock_client import verify_trial_lock_status
+    from apps.etmf.adapters.lock_client import verify_trial_lock_status
 
     if await verify_trial_lock_status():
         raise HTTPException(
@@ -462,7 +464,7 @@ async def download_document(
     await authorize_document_read(principal, doc, session)
 
     if should_watermark:
-        from apps.etmf.watermark import apply_watermark
+        from apps.etmf.adapters.watermark import apply_watermark
 
         final_content = apply_watermark(doc.content, doc.mime_type, user_id, user_roles)
         action_name = "WATERMARKED_DOWNLOAD"
@@ -541,7 +543,7 @@ async def download_watermarked_document(
 
     await authorize_document_read(principal, doc, session)
 
-    from apps.etmf.watermark import apply_watermark
+    from apps.etmf.adapters.watermark import apply_watermark
 
     watermarked_content = apply_watermark(
         doc.content, doc.mime_type, user_id, user_roles
@@ -742,7 +744,7 @@ async def create_expectation(
             detail="Forbidden: Inspectors are restricted to read-only access.",
         )
 
-    from apps.etmf.lock_client import verify_trial_lock_status
+    from apps.etmf.adapters.lock_client import verify_trial_lock_status
 
     if await verify_trial_lock_status():
         raise HTTPException(
@@ -812,7 +814,7 @@ async def update_expectation(
             detail="Forbidden: Inspectors are restricted to read-only access.",
         )
 
-    from apps.etmf.lock_client import verify_trial_lock_status
+    from apps.etmf.adapters.lock_client import verify_trial_lock_status
 
     if await verify_trial_lock_status():
         raise HTTPException(
@@ -889,7 +891,7 @@ async def seed_edl_endpoint(
             detail="Forbidden: Inspectors are restricted to read-only access.",
         )
 
-    from apps.etmf.lock_client import verify_trial_lock_status
+    from apps.etmf.adapters.lock_client import verify_trial_lock_status
 
     if await verify_trial_lock_status():
         raise HTTPException(
@@ -904,7 +906,9 @@ async def seed_edl_endpoint(
         else "Zero-Click USDM Study Ingestion"
     )
 
-    from apps.etmf.ingestion_service import seed_etmf_expected_documents_for_study
+    from apps.etmf.adapters.ingestion_service import (
+        seed_etmf_expected_documents_for_study,
+    )
 
     seeded_dicts = await seed_etmf_expected_documents_for_study(
         study_id=study_id,
@@ -1028,7 +1032,7 @@ async def check_completeness(
                 if not matched_doc or arch.version_index > matched_doc.version_index:
                     matched_doc = arch
 
-        from apps.etmf.cryptography import requires_signature
+        from apps.etmf.adapters.cryptography import requires_signature
 
         sig_required = requires_signature(canonical_name)
 
@@ -1120,7 +1124,7 @@ async def redact_document_endpoint(
             detail="Forbidden: Inspectors are restricted to read-only access.",
         )
 
-    from apps.etmf.lock_client import verify_trial_lock_status
+    from apps.etmf.adapters.lock_client import verify_trial_lock_status
 
     if await verify_trial_lock_status():
         raise HTTPException(
@@ -1243,7 +1247,7 @@ async def auto_redact_document_endpoint(
             detail="Forbidden: Inspectors are restricted to read-only access.",
         )
 
-    from apps.etmf.lock_client import verify_trial_lock_status
+    from apps.etmf.adapters.lock_client import verify_trial_lock_status
 
     if await verify_trial_lock_status():
         raise HTTPException(
@@ -1416,7 +1420,7 @@ async def manual_redact_document_endpoint(
             detail="Forbidden: Inspectors are restricted to read-only access.",
         )
 
-    from apps.etmf.lock_client import verify_trial_lock_status
+    from apps.etmf.adapters.lock_client import verify_trial_lock_status
 
     if await verify_trial_lock_status():
         raise HTTPException(
@@ -1728,7 +1732,7 @@ async def update_document_expiration_endpoint(
             detail="Forbidden: Lacks manage_expiration permission to set or change expiration metadata.",
         )
 
-    from apps.etmf.lock_client import verify_trial_lock_status
+    from apps.etmf.adapters.lock_client import verify_trial_lock_status
 
     if await verify_trial_lock_status():
         raise HTTPException(
@@ -1818,7 +1822,7 @@ async def sign_document_endpoint(
             detail="Forbidden: Inspectors are restricted to read-only access.",
         )
 
-    from apps.etmf.lock_client import verify_trial_lock_status
+    from apps.etmf.adapters.lock_client import verify_trial_lock_status
 
     if await verify_trial_lock_status():
         raise HTTPException(
@@ -1974,7 +1978,7 @@ async def sign_document_endpoint(
     # Write outbox archival record within the service transaction
     import uuid
 
-    from apps.etmf.infrastructure.models import IntegrationOutbox
+    from apps.etmf.adapters.models import IntegrationOutbox
 
     outbox_entry = IntegrationOutbox(
         id=str(uuid.uuid4()),
@@ -2132,7 +2136,7 @@ def resolve_binder_hint(binder_hint: str | None) -> tuple[int, str, str, str]:
     if cleaned_hint.lower() in ("conduct", "initiation", "closeout", "milestone"):
         cleaned_hint = "Site Communication Log"
 
-    from apps.etmf.classification_service import classify_tmf_document
+    from apps.etmf.application.classification_service import classify_tmf_document
 
     classification = classify_tmf_document(filename="", artifact_type=cleaned_hint)
     if classification is None:
@@ -2753,8 +2757,8 @@ async def etmf_admin_outbox_endpoint(
 ) -> list[dict]:
     from sqlalchemy import select
 
-    from apps.etmf.infrastructure.database import db_manager
-    from apps.etmf.infrastructure.models import IntegrationOutbox
+    from apps.etmf.adapters.database import db_manager
+    from apps.etmf.adapters.models import IntegrationOutbox
 
     session_maker = db_manager.get_session_maker()
     async with session_maker() as session:

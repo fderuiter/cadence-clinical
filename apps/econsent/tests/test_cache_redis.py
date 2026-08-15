@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from apps.econsent.infrastructure.cache import ApprovedTranslationCache
+from apps.econsent.adapters.cache import ApprovedTranslationCache
 
 
 def test_redis_unconfigured_graceful_fallback():
@@ -308,7 +308,7 @@ def test_redis_subscriber_invalidate_template():
 
 @pytest.mark.asyncio
 async def test_get_approved_template_translation_helper():
-    from apps.econsent.infrastructure.cache import (
+    from apps.econsent.adapters.cache import (
         get_approved_template_translation,
     )
 
