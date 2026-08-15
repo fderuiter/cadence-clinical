@@ -4,9 +4,9 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from apps.etmf.adapters.database import db_manager
-from apps.etmf.adapters.models import Base
+from apps.etmf.database import db_manager
 from apps.etmf.main import app
+from apps.etmf.models import Base
 from apps.gateway.main import generate_signature
 
 

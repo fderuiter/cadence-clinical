@@ -548,10 +548,10 @@ The in-app Tickets and Query Escalation service manages operational issues, supp
 ### Directory Mapping & Active Utilities
 
 - Active ticket service routes and controllers reside in `apps/tickets/main.py`.
-- Relational database tables and Alembic configuration reside in `apps/tickets/adapters/database.py` and `apps/tickets/adapters/models.py`.
-- Dynamic notification generation logic resides in `apps/tickets/application/notification_events.py`.
-- Gate-signed internal service notification dispatch resides in `apps/tickets/adapters/notifications_client.py`.
-- Automated background priority escalation loops reside in `apps/tickets/adapters/escalation.py`.
+- Relational database tables and Alembic configuration reside in `apps/tickets/database.py` and `apps/tickets/models/__init__.py`.
+- Dynamic notification generation logic resides in `apps/tickets/notification_events.py`.
+- Gate-signed internal service notification dispatch resides in `apps/tickets/notifications_client.py`.
+- Automated background priority escalation loops reside in `apps/tickets/escalation.py`.
 
 ### Environment Variables & CI Configuration
 
@@ -580,7 +580,7 @@ Under the §4.3 Severity/SLA/MTTR format, tickets are escalated stepwise up to C
 
 Following the §3.1.0 background-runner style, the escalation worker operates as follows:
 
-- **Module Path:** `apps/tickets/adapters/escalation.py`
+- **Module Path:** `apps/tickets/escalation.py`
 - **Poll & Cooldown Vars:** Configured via `TICKETS_ESCALATION_POLL_INTERVAL_SECONDS` (sleep interval between scans, e.g. 60s) and `TICKETS_ESCALATION_INTERVAL_SECONDS` (cooldown window between escalation steps, e.g. 86400s / 1 day).
 - **Eligibility & Idempotency Rules:**
   - Overdue tickets (`due_date` in the past), non-terminal (not in `CLOSED` or `CANCELLED`), non-deleted, and below `CRITICAL` priority are eligible.
@@ -869,7 +869,7 @@ if __name__ == "__main__":
 
 The Tickets SLA Escalation background worker runs as a persistent service inside the Tickets microservice process lifespan.
 
-- **Module Path:** `apps/tickets/adapters/escalation.py`
+- **Module Path:** `apps/tickets/escalation.py`
 - **Configuration:**
   - `TICKETS_ESCALATION_POLL_INTERVAL_SECONDS`: Defines how frequently the worker sweeps the database (e.g. `60.0`).
   - `TICKETS_ESCALATION_INTERVAL_SECONDS`: Cooldown window gating re-escalation of a single ticket (e.g., `86400.0` or 24 hours).

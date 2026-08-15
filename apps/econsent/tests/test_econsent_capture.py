@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import os
 import time
 from datetime import datetime
 from typing import Any
@@ -11,14 +12,14 @@ import pytest_asyncio
 from jose import jwt
 from sqlalchemy import select
 
-from apps.econsent.adapters.database import db_manager
-from apps.econsent.adapters.models import (
+from apps.econsent.database import db_manager
+from apps.econsent.main import app
+from apps.econsent.models import (
     Base,
     ComprehensionResult,
     ConsentTemplate,
     SubjectConsent,
 )
-from apps.econsent.main import app
 from packages.security.signing import verify_canonical_signature
 
 TEST_GATEWAY_SECRET = (
@@ -78,14 +79,21 @@ def get_gateway_headers(
 @pytest_asyncio.fixture(autouse=True)
 async def setup_test_db(monkeypatch: pytest.MonkeyPatch):
     """Setup in-memory SQLite database before each test and clear down after."""
+    old_secret = os.environ.get("GATEWAY_SECRET")
     monkeypatch.setenv("GATEWAY_SECRET", TEST_GATEWAY_SECRET)
     db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    yield
-    async with db_manager.engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-    await db_manager.close()
+    try:
+        yield
+    finally:
+        async with db_manager.engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+        await db_manager.close()
+        if old_secret is not None:
+            os.environ["GATEWAY_SECRET"] = old_secret
+        else:
+            os.environ.pop("GATEWAY_SECRET", None)
 
 
 @pytest.mark.asyncio

@@ -50,7 +50,7 @@ This decision implements requirements under Trace-7.
 ## 5. Consequences & Trade-offs
 
 - **Positive Impact:**
-  - Well-defined domain models and a dedicated persistence layer in `apps/org/adapters/models.py`.
+  - Well-defined domain models and a dedicated persistence layer in `apps/org/models.py`.
   - Complete separation from execution/clinical capture tables while being fully compatible with system-wide site isolation checks.
   - Robust unit testing covering all schemas, async relationships, and health checks.
 - **Negative Impact / Technical Debt:**
@@ -59,8 +59,8 @@ This decision implements requirements under Trace-7.
 ## 6. Implementation & Verification
 
 - **Affected Repositories / Services:**
-  - `apps/org/adapters/models.py` (Persistence models)
-  - `apps/org/adapters/database.py` (Asynchronous relational DB manager)
+  - `apps/org/models.py` (Persistence models)
+  - `apps/org/database.py` (Asynchronous relational DB manager)
   - `apps/org/main.py` (FastAPI app & health check)
   - `apps/execution/database/audit.py` (Execution audit hooks exclusion)
 - **Verification Plan:**

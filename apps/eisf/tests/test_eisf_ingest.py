@@ -3,9 +3,9 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from apps.eisf.adapters.database import db_manager
-from apps.eisf.adapters.models import Base, ISFAuditLog, ISFDocument
+from apps.eisf.database import db_manager
 from apps.eisf.main import app as eisf_app
+from apps.eisf.models import Base, ISFAuditLog, ISFDocument
 from apps.eisf.tests.test_eisf_api import get_eisf_auth_headers
 
 

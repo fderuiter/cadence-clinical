@@ -3,7 +3,7 @@ eISF service package.
 Exposes the core adapter mapping and deduplication functions.
 """
 
-from apps.eisf.adapters.adapter import (
+from apps.eisf.adapter import (
     DocumentClassification,
     classify_incoming_document,
     derive_correlation_key,

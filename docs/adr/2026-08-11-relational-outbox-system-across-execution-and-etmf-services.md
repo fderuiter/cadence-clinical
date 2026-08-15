@@ -42,6 +42,6 @@ Chosen option: **Option 2 (Relational Outbox Pattern)** because it is the only p
 ## 6. Implementation & Verification
 
 - **Core Interface:** Standardized `IntegrationOutboxMixin` declared in `packages/database/__init__.py`.
-- **Service Models:** Concrete `IntegrationOutbox` model added in `apps/execution/database/models.py` and `apps/etmf/adapters/models.py`.
-- **Polling Loop:** Dedicated background pollers implemented in `apps/execution/workers/outbox_worker.py` and `apps/etmf/adapters/workers/outbox_worker.py`.
+- **Service Models:** Concrete `IntegrationOutbox` model added in `apps/execution/database/models.py` and `apps/etmf/infrastructure/models.py`.
+- **Polling Loop:** Dedicated background pollers implemented in `apps/execution/workers/outbox_worker.py` and `apps/etmf/workers/outbox_worker.py`.
 - **Testing & Verification:** Comprehensive test cases verify atomic creation, correct state transitions (`PENDING` -> `SUCCESS`/`FAILED`), and exponential backoff boundaries in `apps/execution/tests/test_relational_outbox.py` and `apps/etmf/tests/test_etmf_outbox.py`.

@@ -10,8 +10,8 @@ import pytest
 import pytest_asyncio
 from sqlalchemy import select
 
-from apps.ctms.adapters.database import db_manager
-from apps.ctms.application.doa_service import (
+from apps.ctms.database import db_manager
+from apps.ctms.services.doa_service import (
     DOAManagerService,
     approve_delegation_with_esignature,
     delegate_task,

@@ -1,7 +1,4 @@
-from apps.interop.adapters.fhir_adapter import (
-    deidentify_free_text,
-    strip_pii_from_patient,
-)
+from apps.interop.fhir_adapter import deidentify_free_text, strip_pii_from_patient
 from packages.deid.detector import DeidDetector, redact_text, resolve_overlaps
 from packages.deid.models import ComplianceProfile, DetectionResult, DetectorCategory
 

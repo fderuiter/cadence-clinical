@@ -130,7 +130,7 @@ def receive_before_flush(session: Session, flush_context, instances):
             "ctms_defeated_monitoring_visits", "quality_deviations", "quality_root_cause_analyses",
             "quality_capa_records", "quality_audit_logs", "isf_documents", "isf_audit_logs", "consent_documents",
             "consent_audit_logs", "consent_clauses", "safety_cases", "safety_export_jobs", "tickets",
-            "ticket_comments", "org_training_logs",
+            "ticket_comments", "ticket_attachments", "org_training_logs",
         }:
         # fmt: on
             continue

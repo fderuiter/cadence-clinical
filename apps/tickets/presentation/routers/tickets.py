@@ -1,42 +1,70 @@
 """
-FastAPI router for Tickets endpoints.
+FastAPI router for Tickets endpoints with ICH GCP taxonomy, 21 CFR Part 11 eSignatures, SLA tracking, audited attachments, and analytics.
 """
 
 import asyncio
 import contextlib
+import hashlib
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
-from sqlalchemy import func, select
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+)
+from fastapi.responses import JSONResponse, Response
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.tickets.adapters.analytics import compute_ticket_kpi_summary
 from apps.tickets.adapters.database import get_db_session
-from apps.tickets.adapters.models import Ticket, TicketAuditLog, TicketComment
+from apps.tickets.adapters.models import (
+    SLA_PAUSED_STATES,
+    TERMINAL_STATES,
+    TICKET_TRANSITIONS,
+    CommentVisibility,
+    GxPSeverity,
+    Ticket,
+    TicketAttachment,
+    TicketAuditLog,
+    TicketCategory,
+    TicketComment,
+    TicketPriority,
+    TicketStatus,
+)
 from apps.tickets.application.notification_events import (
     generate_ticket_notification_payloads,
 )
 from apps.tickets.application.services import (
     TICKET_ESCALATE,  # noqa: F401
 )
-from apps.tickets.domain.models import (
-    TERMINAL_STATES,
-    TICKET_TRANSITIONS,
-    TicketCategory,
-    TicketPriority,
-    TicketStatus,
+from apps.tickets.domain.exceptions import ValidationError
+from apps.tickets.domain.services import (
+    calculate_sla_target,
+    evaluate_setting_risk,
+    validate_resolution_requirements,
 )
-from apps.tickets.domain.services import evaluate_setting_risk
 from apps.tickets.presentation.dtos import (
+    AttachmentResponse,
     CommentCreate,
     CommentResponse,
+    CrossAppEventCreate,
     PaginatedTicketAuditLogResponse,
     RegulatoryRiskAssessment,
     SettingDiffEntry,
     TicketAssignPayload,
     TicketAuditLogResponse,
     TicketCreate,
+    TicketKPISummaryResponse,
     TicketResponse,
+    TicketSignaturePayload,
     TicketTransitionPayload,
     TicketUpdate,
 )
@@ -77,6 +105,7 @@ async def dispatch_ticket_notifications(
     old_status: str | None = None,
     new_status: str | None = None,
     comment_body: str | None = None,
+    comment_visibility: str | None = None,
 ) -> None:
     """
     Background task to generate and publish notifications for ticket events.
@@ -118,6 +147,7 @@ async def dispatch_ticket_notifications(
                 old_status=old_status,
                 new_status=new_status,
                 comment_body=comment_body,
+                comment_visibility=comment_visibility,
             )
             for payload in payloads:
                 try:
@@ -142,7 +172,7 @@ async def dispatch_ticket_notifications(
 
 def map_ticket_to_response(ticket: Ticket) -> TicketResponse:
     """
-    Map a Ticket database model to a TicketResponse schema.
+    Map a Ticket database model to a TicketResponse schema with clinical fields.
     """
     return TicketResponse(
         id=ticket.id,
@@ -158,6 +188,12 @@ def map_ticket_to_response(ticket: Ticket) -> TicketResponse:
         status=ticket.status.value
         if hasattr(ticket.status, "value")
         else str(ticket.status),
+        gxp_severity=ticket.gxp_severity
+        if ticket.gxp_severity
+        else GxPSeverity.NOT_APPLICABLE.value,
+        root_cause_category=ticket.root_cause_category,
+        root_cause_summary=ticket.root_cause_summary,
+        resolution_code=ticket.resolution_code,
         reporter=ticket.reporter,
         assignee_user=ticket.assignee_user,
         assignee_role=ticket.assignee_role,
@@ -166,7 +202,23 @@ def map_ticket_to_response(ticket: Ticket) -> TicketResponse:
         study_id=ticket.study_id,
         related_entity_type=ticket.related_entity_type,
         related_entity_id=ticket.related_entity_id,
+        context_payload=ticket.context_payload,
         due_date=ticket.due_date.isoformat() if ticket.due_date else None,
+        sla_target_at=ticket.sla_target_at.isoformat()
+        if ticket.sla_target_at
+        else None,
+        sla_paused_at=ticket.sla_paused_at.isoformat()
+        if ticket.sla_paused_at
+        else None,
+        sla_total_paused_seconds=ticket.sla_total_paused_seconds,
+        sla_breached=ticket.sla_breached,
+        sla_amber_warned=ticket.sla_amber_warned,
+        signature_token=ticket.signature_token,
+        signature_meaning=ticket.signature_meaning,
+        signature_timestamp=ticket.signature_timestamp.isoformat()
+        if ticket.signature_timestamp
+        else None,
+        signature_user=ticket.signature_user,
         is_deleted=ticket.is_deleted,
         created_at=ticket.created_at.isoformat(),
         created_by=ticket.created_by,
@@ -230,11 +282,12 @@ def check_optimistic_locking(
 async def create_ticket(
     request: Request,
     payload: TicketCreate,
+    background_tasks: BackgroundTasks,
     principal: Principal = Depends(get_principal),
     _not_auditor=Depends(verify_not_auditor),
     session: AsyncSession = Depends(get_db_session),
 ) -> TicketResponse:
-    """Create and persist a new Ticket record."""
+    """Create and persist a new Ticket record with SLA computation and audit logging."""
     reporter = principal.user_id
     change_reason = principal.change_reason
 
@@ -242,6 +295,14 @@ async def create_ticket(
         raise HTTPException(
             status_code=403, detail="Missing change justification reason"
         )
+
+    now = datetime.now(UTC)
+    sla_target = calculate_sla_target(
+        created_at=now,
+        priority=payload.priority,
+        category=payload.category,
+        custom_sla_hours=payload.custom_sla_hours,
+    )
 
     async with TICKET_CREATION_LOCK:
         reference = await get_next_ticket_reference(session)
@@ -251,6 +312,9 @@ async def create_ticket(
             description=payload.description,
             category=payload.category,
             priority=payload.priority,
+            gxp_severity=payload.gxp_severity.value
+            if hasattr(payload.gxp_severity, "value")
+            else str(payload.gxp_severity),
             status=TicketStatus.OPEN,
             reporter=reporter,
             assignee_user=payload.assignee_user,
@@ -260,7 +324,12 @@ async def create_ticket(
             study_id=payload.study_id,
             related_entity_type=payload.related_entity_type,
             related_entity_id=payload.related_entity_id,
+            context_payload=payload.context_payload,
             due_date=payload.due_date,
+            sla_target_at=sla_target.replace(tzinfo=None),
+            workflow_type=payload.workflow_type,
+            action_type=payload.action_type,
+            signature_action=payload.signature_action,
             created_by=reporter,
             reason_for_change=change_reason,
             version_index=1,
@@ -272,7 +341,100 @@ async def create_ticket(
         session=session,
         user_id=reporter,
         action="TICKET_CREATE",
-        details=f"Created ticket '{payload.title}' with priority '{payload.priority}'. Reference: '{ticket.reference}'",
+        details=f"Created ticket '{payload.title}' with priority '{payload.priority}', severity '{payload.gxp_severity}'. Reference: '{ticket.reference}'",
+        record_id=ticket.id,
+        ticket_id=ticket.id,
+        change_reason=change_reason,
+        version_index=1,
+    )
+
+    if (
+        str(payload.category) == TicketCategory.PROTOCOL_DEVIATION.value
+        and str(payload.gxp_severity) == GxPSeverity.CRITICAL.value
+    ):
+        background_tasks.add_task(
+            dispatch_ticket_notifications,
+            ticket_id=ticket.id,
+            reference=ticket.reference,
+            assignee_user=ticket.assignee_user,
+            assignee_role=ticket.assignee_role,
+            reporter=ticket.reporter,
+            version_index=ticket.version_index,
+            event_type="critical_deviation",
+            actor_id=reporter,
+            change_reason=change_reason,
+        )
+
+    return map_ticket_to_response(ticket)
+
+
+@router.post(
+    "/api/v1/tickets/cross-app/events",
+    response_model=TicketResponse,
+    status_code=201,
+)
+async def create_cross_app_ticket(
+    payload: CrossAppEventCreate,
+    background_tasks: BackgroundTasks,
+    principal: Principal = Depends(get_principal),
+    _not_auditor=Depends(verify_not_auditor),
+    session: AsyncSession = Depends(get_db_session),
+) -> TicketResponse:
+    """
+    Automated REST ingestion endpoint for sibling microservices (EDC, Safety, CTMS, Quality).
+    Creates a ticket linked directly to domain entity with full contextual metadata.
+    """
+    actor = principal.user_id or f"service_{payload.source_service}"
+    change_reason = (
+        principal.change_reason
+        or f"Automated cross-app ticket ingestion from {payload.source_service}"
+    )
+
+    now = datetime.now(UTC)
+    sla_target = calculate_sla_target(
+        created_at=now,
+        priority=payload.priority,
+        category=payload.category,
+    )
+
+    import json
+
+    context_str = (
+        json.dumps(payload.context_payload) if payload.context_payload else None
+    )
+
+    async with TICKET_CREATION_LOCK:
+        reference = await get_next_ticket_reference(session)
+        ticket = Ticket(
+            reference=reference,
+            title=payload.title,
+            description=payload.description,
+            category=payload.category,
+            priority=payload.priority,
+            gxp_severity=payload.gxp_severity.value
+            if hasattr(payload.gxp_severity, "value")
+            else str(payload.gxp_severity),
+            status=TicketStatus.OPEN,
+            reporter=actor,
+            assignee_role=f"{payload.source_service}_lead",
+            study_id=payload.study_id,
+            site_id=payload.site_id,
+            related_entity_type=payload.related_entity_type,
+            related_entity_id=payload.related_entity_id,
+            context_payload=context_str,
+            sla_target_at=sla_target.replace(tzinfo=None),
+            created_by=actor,
+            reason_for_change=change_reason,
+            version_index=1,
+        )
+        session.add(ticket)
+        await session.flush()
+
+    await write_ticket_audit_log(
+        session=session,
+        user_id=actor,
+        action="TICKET_CROSS_APP_CREATE",
+        details=f"Ingested event '{payload.event_type}' from '{payload.source_service}' for entity '{payload.related_entity_type}:{payload.related_entity_id}'. Ref: '{ticket.reference}'",
         record_id=ticket.id,
         ticket_id=ticket.id,
         change_reason=change_reason,
@@ -288,6 +450,8 @@ async def list_tickets(
     status: TicketStatus | None = None,
     category: TicketCategory | None = None,
     priority: TicketPriority | None = None,
+    gxp_severity: GxPSeverity | None = None,
+    search: str | None = None,
     reporter: str | None = None,
     assignee: str | None = None,
     org_id: str | None = None,
@@ -344,6 +508,17 @@ async def list_tickets(
         stmt = stmt.where(Ticket.category == category)
     if priority:
         stmt = stmt.where(Ticket.priority == priority)
+    if gxp_severity:
+        stmt = stmt.where(Ticket.gxp_severity == gxp_severity.value)
+    if search:
+        term = f"%{search}%"
+        stmt = stmt.where(
+            or_(
+                Ticket.title.ilike(term),
+                Ticket.description.ilike(term),
+                Ticket.reference.ilike(term),
+            )
+        )
     if reporter:
         stmt = stmt.where(Ticket.reporter == reporter)
     if assignee:
@@ -352,10 +527,8 @@ async def list_tickets(
         )
     if org_id:
         stmt = stmt.where(Ticket.org_id == org_id)
-    if study_id:
-        stmt = stmt.where(Ticket.study_id == study_id)
 
-    stmt = stmt.limit(limit).offset(offset)
+    stmt = stmt.order_by(Ticket.created_at.desc()).limit(limit).offset(offset)
 
     result = await session.execute(stmt)
     tickets = result.scalars().all()
@@ -370,6 +543,35 @@ async def list_tickets(
     )
 
     return [map_ticket_to_response(t) for t in tickets]
+
+
+@router.get("/api/v1/tickets/analytics/kpi", response_model=TicketKPISummaryResponse)
+async def get_ticket_kpis(
+    org_id: str | None = None,
+    site_id: str | None = None,
+    study_id: str | None = None,
+    principal: Principal = Depends(get_principal),
+    session: AsyncSession = Depends(get_db_session),
+) -> TicketKPISummaryResponse:
+    """Retrieve real-time clinical KPI and KRI metrics."""
+    if site_id and not can_access_site(principal, site_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient scope access for this site.",
+        )
+    if study_id and not can_access_study(principal, study_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient scope access for this study.",
+        )
+
+    metrics = await compute_ticket_kpi_summary(
+        session=session,
+        org_id=org_id,
+        site_id=site_id,
+        study_id=study_id,
+    )
+    return TicketKPISummaryResponse(**metrics)
 
 
 @router.get(
@@ -707,7 +909,7 @@ async def transition_ticket(
     _not_auditor=Depends(verify_not_auditor),
     session: AsyncSession = Depends(get_db_session),
 ) -> TicketResponse:
-    """Transition a ticket's status explicitly with optimistic locking and transitions check."""
+    """Transition a ticket's status explicitly with optimistic locking, RCA check, and SLA pause handling."""
     user_id = principal.user_id
     change_reason = principal.change_reason
 
@@ -751,6 +953,42 @@ async def transition_ticket(
                 status_code=400,
                 detail=f"Invalid transition from {current_status} to {target_status}.",
             )
+
+    # Validate RCA requirements for Major / Critical tickets
+    try:
+        validate_resolution_requirements(
+            status=target_status,
+            gxp_severity=ticket.gxp_severity,
+            root_cause_category=payload.root_cause_category
+            or ticket.root_cause_category,
+            resolution_code=payload.resolution_code or ticket.resolution_code,
+        )
+    except ValidationError as err:
+        raise HTTPException(status_code=400, detail=str(err)) from err
+
+    # Handle SLA pause clock
+    now = datetime.now()
+    if target_status in SLA_PAUSED_STATES and current_status not in SLA_PAUSED_STATES:
+        ticket.sla_paused_at = now
+    elif target_status not in SLA_PAUSED_STATES and current_status in SLA_PAUSED_STATES:
+        if ticket.sla_paused_at:
+            paused_seconds = int((now - ticket.sla_paused_at).total_seconds())
+            ticket.sla_total_paused_seconds += max(0, paused_seconds)
+            ticket.sla_paused_at = None
+
+    if payload.root_cause_category:
+        ticket.root_cause_category = payload.root_cause_category.value
+    if payload.root_cause_summary:
+        ticket.root_cause_summary = payload.root_cause_summary
+    if payload.resolution_code:
+        ticket.resolution_code = payload.resolution_code.value
+    if payload.signature_token:
+        ticket.signature_token = payload.signature_token
+        ticket.signature_meaning = (
+            payload.signature_meaning or "Electronic sign-off on resolution"
+        )
+        ticket.signature_timestamp = now
+        ticket.signature_user = user_id
 
     old_status_str = (
         current_status.value
@@ -926,7 +1164,9 @@ async def assign_ticket(
 
 
 @router.post(
-    "/api/v1/tickets/{id}/comments", response_model=CommentResponse, status_code=201
+    "/api/v1/tickets/{id}/comments",
+    response_model=CommentResponse,
+    status_code=201,
 )
 async def create_ticket_comment(
     request: Request,
@@ -937,7 +1177,7 @@ async def create_ticket_comment(
     _not_auditor=Depends(verify_not_auditor),
     session: AsyncSession = Depends(get_db_session),
 ) -> CommentResponse:
-    """Append an auditable comment/note to a specific ticket."""
+    """Append an auditable comment/note to a specific ticket with public or internal visibility."""
     user_id = principal.user_id
     change_reason = principal.change_reason
     if not change_reason:
@@ -957,9 +1197,16 @@ async def create_ticket_comment(
             detail="Forbidden: Insufficient scope access for this site.",
         )
 
+    visibility_val = (
+        payload.visibility.value
+        if hasattr(payload.visibility, "value")
+        else str(payload.visibility)
+    )
+
     comment = TicketComment(
         ticket_id=id,
         body=payload.body,
+        visibility=visibility_val,
         created_by=user_id,
         reason_for_change=change_reason,
         version_index=1,
@@ -971,7 +1218,7 @@ async def create_ticket_comment(
         session=session,
         user_id=user_id,
         action="TICKET_COMMENT_CREATE",
-        details=f"Added comment to ticket ID: {id}.",
+        details=f"Added comment to ticket ID: {id} (visibility: {visibility_val}).",
         record_id=comment.id,
         ticket_id=id,
         change_reason=change_reason,
@@ -990,12 +1237,14 @@ async def create_ticket_comment(
         actor_id=user_id,
         change_reason=change_reason,
         comment_body=comment.body,
+        comment_visibility=visibility_val,
     )
 
     return CommentResponse(
         id=comment.id,
         ticket_id=comment.ticket_id,
         body=comment.body,
+        visibility=comment.visibility,
         created_at=comment.created_at.isoformat(),
         created_by=comment.created_by,
         reason_for_change=comment.reason_for_change,
@@ -1010,7 +1259,7 @@ async def list_ticket_comments(
     principal: Principal = Depends(get_principal),
     session: AsyncSession = Depends(get_db_session),
 ) -> list[CommentResponse]:
-    """Retrieve all comments for a specific ticket in ascending chronological order."""
+    """Retrieve comments for a ticket filtered by role persona visibility boundaries."""
     user_id = principal.user_id
     change_reason = principal.change_reason
 
@@ -1031,6 +1280,25 @@ async def list_ticket_comments(
         .where(TicketComment.ticket_id == id)
         .order_by(TicketComment.created_at.asc())
     )
+
+    # Site-only roles (e.g. crc, site_investigator) cannot see INTERNAL_SPONSOR comments
+    site_only_roles = {"crc", "site_crc", "site_investigator", "investigator"}
+    sponsor_roles = {
+        "sponsor_admin",
+        "sponsor_designer",
+        "super_admin",
+        "cra",
+        "cra_monitor",
+        "monitor",
+        "data_manager",
+        "auditor",
+        "tmf_auditor",
+    }
+    has_sponsor_scope = any(r in sponsor_roles for r in principal.roles)
+
+    if not has_sponsor_scope and any(r in site_only_roles for r in principal.roles):
+        stmt = stmt.where(TicketComment.visibility == CommentVisibility.PUBLIC.value)
+
     result = await session.execute(stmt)
     comments = result.scalars().all()
 
@@ -1050,6 +1318,7 @@ async def list_ticket_comments(
             id=c.id,
             ticket_id=c.ticket_id,
             body=c.body,
+            visibility=c.visibility,
             created_at=c.created_at.isoformat(),
             created_by=c.created_by,
             reason_for_change=c.reason_for_change,
@@ -1057,6 +1326,245 @@ async def list_ticket_comments(
         )
         for c in comments
     ]
+
+
+@router.post(
+    "/api/v1/tickets/{id}/attachments",
+    response_model=AttachmentResponse,
+    status_code=201,
+)
+async def upload_ticket_attachment(
+    request: Request,
+    id: str,
+    file: UploadFile = File(...),
+    reason_for_change: str = Form("Uploaded evidence attachment"),
+    principal: Principal = Depends(get_principal),
+    _not_auditor=Depends(verify_not_auditor),
+    session: AsyncSession = Depends(get_db_session),
+) -> AttachmentResponse:
+    """Upload an audited evidence attachment with SHA-256 integrity hash."""
+    user_id = principal.user_id
+
+    ticket_stmt = select(Ticket).where(Ticket.id == id)
+    ticket_res = await session.execute(ticket_stmt)
+    ticket = ticket_res.scalars().first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail=f"Ticket with ID '{id}' not found.")
+
+    if ticket.site_id and not can_access_site(principal, ticket.site_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient scope access for this site.",
+        )
+
+    content = await file.read()
+    sha256 = hashlib.sha256(content).hexdigest()
+    file_size = len(content)
+    filename = file.filename or "attachment.dat"
+    mime_type = file.content_type or "application/octet-stream"
+    storage_uri = f"blob://tickets/{id}/{sha256[:16]}_{filename}"
+
+    attachment = TicketAttachment(
+        ticket_id=id,
+        filename=filename,
+        file_size_bytes=file_size,
+        mime_type=mime_type,
+        storage_uri=storage_uri,
+        sha256_hash=sha256,
+        uploaded_by=user_id,
+        deid_scrubbed=True,
+        reason_for_change=reason_for_change,
+        version_index=1,
+    )
+    session.add(attachment)
+    await session.flush()
+
+    await write_ticket_audit_log(
+        session=session,
+        user_id=user_id,
+        action="TICKET_ATTACHMENT_UPLOAD",
+        details=f"Uploaded attachment '{filename}' ({file_size} bytes, SHA-256: {sha256[:8]}...).",
+        record_id=attachment.id,
+        ticket_id=id,
+        change_reason=reason_for_change,
+        version_index=1,
+    )
+
+    return AttachmentResponse(
+        id=attachment.id,
+        ticket_id=attachment.ticket_id,
+        filename=attachment.filename,
+        file_size_bytes=attachment.file_size_bytes,
+        mime_type=attachment.mime_type,
+        storage_uri=attachment.storage_uri,
+        sha256_hash=attachment.sha256_hash,
+        uploaded_by=attachment.uploaded_by,
+        uploaded_at=attachment.uploaded_at.isoformat(),
+        deid_scrubbed=attachment.deid_scrubbed,
+        version_index=attachment.version_index,
+    )
+
+
+@router.get(
+    "/api/v1/tickets/{id}/attachments",
+    response_model=list[AttachmentResponse],
+)
+async def list_ticket_attachments(
+    request: Request,
+    id: str,
+    principal: Principal = Depends(get_principal),
+    session: AsyncSession = Depends(get_db_session),
+) -> list[AttachmentResponse]:
+    """List all attachments for a ticket."""
+    ticket_stmt = select(Ticket).where(Ticket.id == id)
+    ticket_res = await session.execute(ticket_stmt)
+    ticket = ticket_res.scalars().first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail=f"Ticket with ID '{id}' not found.")
+
+    if ticket.site_id and not can_access_site(principal, ticket.site_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient scope access for this site.",
+        )
+
+    stmt = (
+        select(TicketAttachment)
+        .where(TicketAttachment.ticket_id == id)
+        .order_by(TicketAttachment.uploaded_at.desc())
+    )
+    result = await session.execute(stmt)
+    attachments = result.scalars().all()
+
+    return [
+        AttachmentResponse(
+            id=a.id,
+            ticket_id=a.ticket_id,
+            filename=a.filename,
+            file_size_bytes=a.file_size_bytes,
+            mime_type=a.mime_type,
+            storage_uri=a.storage_uri,
+            sha256_hash=a.sha256_hash,
+            uploaded_by=a.uploaded_by,
+            uploaded_at=a.uploaded_at.isoformat(),
+            deid_scrubbed=a.deid_scrubbed,
+            version_index=a.version_index,
+        )
+        for a in attachments
+    ]
+
+
+@router.post("/api/v1/tickets/{id}/sign", response_model=TicketResponse)
+async def sign_ticket(
+    request: Request,
+    id: str,
+    payload: TicketSignaturePayload,
+    background_tasks: BackgroundTasks,
+    principal: Principal = Depends(get_principal),
+    _not_auditor=Depends(verify_not_auditor),
+    session: AsyncSession = Depends(get_db_session),
+) -> TicketResponse:
+    """Capture a 21 CFR Part 11 Electronic Signature on a ticket."""
+    user_id = principal.user_id
+    change_reason = principal.change_reason or payload.meaning
+
+    stmt = (
+        select(Ticket)
+        .where((Ticket.id == id) | (Ticket.reference == id))
+        .with_for_update()
+    )
+    result = await session.execute(stmt)
+    ticket = result.scalars().first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail=f"Ticket with ID '{id}' not found.")
+
+    check_optimistic_locking(ticket, payload.version_index, request)
+
+    now = datetime.now()
+    ticket.signature_token = payload.signature_token
+    ticket.signature_meaning = payload.meaning
+    ticket.signature_timestamp = now
+    ticket.signature_user = user_id
+    ticket.version_index += 1
+    ticket.reason_for_change = change_reason
+
+    await session.flush()
+
+    await write_ticket_audit_log(
+        session=session,
+        user_id=user_id,
+        action="TICKET_ESIGNATURE_CAPTURE",
+        details=f"Captured 21 CFR Part 11 Electronic Signature by {user_id}. Meaning: '{payload.meaning}'.",
+        record_id=ticket.id,
+        ticket_id=ticket.id,
+        change_reason=change_reason,
+        version_index=ticket.version_index,
+    )
+
+    background_tasks.add_task(
+        dispatch_ticket_notifications,
+        ticket_id=ticket.id,
+        reference=ticket.reference,
+        assignee_user=ticket.assignee_user,
+        assignee_role=ticket.assignee_role,
+        reporter=ticket.reporter,
+        version_index=ticket.version_index,
+        event_type="signature",
+        actor_id=user_id,
+        change_reason=change_reason,
+    )
+
+    return map_ticket_to_response(ticket)
+
+
+@router.get("/api/v1/tickets/export/audit-trail")
+async def export_audit_trail(
+    format: str = Query("json", pattern="^(json|csv)$"),
+    ticket_id: str | None = None,
+    principal: Principal = Depends(get_principal),
+    session: AsyncSession = Depends(get_db_session),
+) -> Response:
+    """Export regulatory Part 11 immutable audit trail records in JSON or CSV format."""
+    stmt = select(TicketAuditLog)
+    if ticket_id:
+        stmt = stmt.where(TicketAuditLog.ticket_id == ticket_id)
+    stmt = stmt.order_by(TicketAuditLog.created_at.asc())
+
+    result = await session.execute(stmt)
+    logs = result.scalars().all()
+
+    if format == "csv":
+        header = "id,ticket_id,created_at,created_by,action,details,reason_for_change,version_index\n"
+        lines = [header]
+        for log_rec in logs:
+            clean_details = (log_rec.details or "").replace('"', '""')
+            clean_reason = (log_rec.reason_for_change or "").replace('"', '""')
+            lines.append(
+                f'"{log_rec.id}","{log_rec.ticket_id}","{log_rec.created_at.isoformat()}","{log_rec.created_by}","{log_rec.action}","{clean_details}","{clean_reason}",{log_rec.version_index}\n'
+            )
+        csv_data = "".join(lines)
+        return Response(
+            content=csv_data,
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": "attachment; filename=ticket_audit_trail.csv"
+            },
+        )
+
+    export_items = [
+        {
+            "id": log_rec.id,
+            "ticket_id": log_rec.ticket_id,
+            "created_at": log_rec.created_at.isoformat(),
+            "created_by": log_rec.created_by,
+            "action": log_rec.action,
+            "details": log_rec.details,
+            "reason_for_change": log_rec.reason_for_change,
+            "version_index": log_rec.version_index,
+        }
+        for log_rec in logs
+    ]
+    return JSONResponse(content={"audit_trail": export_items, "count": len(logs)})
 
 
 @router.post(

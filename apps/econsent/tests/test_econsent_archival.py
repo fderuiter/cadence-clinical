@@ -6,15 +6,15 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from apps.econsent.adapters.database import db_manager
-from apps.econsent.adapters.models import (
+from apps.econsent.database import db_manager
+from apps.econsent.main import app, poll_and_dispatch
+from apps.econsent.models import (
     Base,
     ConsentAuditLog,
     ConsentSignature,
     ConsentTemplate,
     EtmfArchivalDelivery,
 )
-from apps.econsent.main import app, poll_and_dispatch
 from apps.gateway.main import generate_signature
 
 
@@ -243,7 +243,7 @@ async def test_poll_and_dispatch_failure_and_retry_backoff():
 
     # 5th Attempt: forward fails again, reaches cap of 5
     with patch(
-        "apps.econsent.adapters.etmf_client.forward_icf_to_etmf",
+        "apps.econsent.etmf_client.forward_icf_to_etmf",
         side_effect=Exception("Terminal down"),
     ):
         await poll_and_dispatch()

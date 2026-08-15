@@ -16,7 +16,7 @@ if config.config_file_name is not None:
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
 # 3. Import Base models metadata
-from apps.ctms.adapters.models import Base  # noqa: E402
+from apps.ctms.models import Base  # noqa: E402
 
 target_metadata = Base.metadata
 

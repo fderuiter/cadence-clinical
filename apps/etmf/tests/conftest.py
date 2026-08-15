@@ -1,6 +1,6 @@
 import pytest
 
-from apps.etmf.adapters.lock_client import (
+from apps.etmf.infrastructure.lock_client import (
     register_trial_lock_status_resolver,
     register_trial_lock_trigger_handler,
 )

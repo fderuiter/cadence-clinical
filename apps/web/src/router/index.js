@@ -228,9 +228,37 @@ const routes = [
     },
   },
   {
+    path: "/quality",
+    name: "quality",
+    component: () => import("../views/QualityCockpitView.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresRole: [
+        "sponsor_designer",
+        "data_manager",
+        "sponsor_admin",
+        "super_admin",
+        "cra",
+        "monitor",
+        "site_investigator",
+        "crc",
+        "auditor",
+        "tmf_auditor",
+      ],
+    },
+  },
+  {
     path: "/notifications",
     name: "notifications",
     component: () => import("../views/NotificationsView.vue"),
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: "/tickets",
+    name: "tickets",
+    component: () => import("../views/TicketsView.vue"),
     meta: {
       requiresAuth: true,
     },

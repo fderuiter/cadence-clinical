@@ -3,15 +3,23 @@ Pydantic DTO schemas for Tickets presentation layer.
 """
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from apps.tickets.domain.models import TicketCategory, TicketPriority, TicketStatus
+from apps.tickets.domain.models import (
+    CommentVisibility,
+    GxPSeverity,
+    ResolutionCode,
+    RootCauseCategory,
+    TicketCategory,
+    TicketPriority,
+    TicketStatus,
+)
 
 
 class TicketCreate(BaseModel):
-    """Pydantic schema for creating a support ticket."""
+    """Pydantic schema for creating a support or clinical operations ticket."""
 
     title: str = Field(..., description="Title of the support ticket")
     description: str = Field(..., description="Detailed description of the issue")
@@ -21,6 +29,9 @@ class TicketCreate(BaseModel):
     priority: TicketPriority = Field(
         TicketPriority.LOW, description="Priority level of the ticket"
     )
+    gxp_severity: GxPSeverity = Field(
+        GxPSeverity.NOT_APPLICABLE, description="GxP compliance severity impact"
+    )
     reporter: str | None = Field(None, description="Reporter of the ticket")
     assignee_user: str | None = Field(None, description="Assigned user")
     assignee_role: str | None = Field(None, description="Assigned role")
@@ -29,7 +40,16 @@ class TicketCreate(BaseModel):
     study_id: str | None = Field(None, description="Scope study ID")
     related_entity_type: str | None = Field(None, description="Related entity type")
     related_entity_id: str | None = Field(None, description="Related entity ID")
+    context_payload: str | None = Field(
+        None, description="Serialized contextual metadata JSON"
+    )
     due_date: datetime | None = Field(None, description="Optional due date")
+    custom_sla_hours: int | None = Field(
+        None, description="Optional study-specific SLA target override in hours"
+    )
+    workflow_type: str | None = Field(None, description="Workflow type")
+    action_type: str | None = Field(None, description="Action type")
+    signature_action: str | None = Field(None, description="Signature action")
 
 
 class TicketUpdate(BaseModel):
@@ -39,6 +59,7 @@ class TicketUpdate(BaseModel):
     description: str | None = Field(None, description="Updated description")
     category: TicketCategory | None = Field(None, description="Updated category")
     priority: TicketPriority | None = Field(None, description="Updated priority")
+    gxp_severity: GxPSeverity | None = Field(None, description="Updated GxP severity")
     status: TicketStatus | None = Field(None, description="Updated status")
     assignee_user: str | None = Field(None, description="Updated assigned user")
     assignee_role: str | None = Field(None, description="Updated assigned role")
@@ -49,6 +70,7 @@ class TicketUpdate(BaseModel):
         None, description="Updated related entity type"
     )
     related_entity_id: str | None = Field(None, description="Updated related entity ID")
+    context_payload: str | None = Field(None, description="Updated contextual payload")
     due_date: datetime | None = Field(None, description="Updated due date")
     is_deleted: bool | None = Field(None, description="Soft delete state")
     version_index: int | None = Field(
@@ -75,6 +97,61 @@ class TicketTransitionPayload(BaseModel):
     version_index: int = Field(
         ..., description="Expected version index for optimistic locking"
     )
+    root_cause_category: RootCauseCategory | None = Field(
+        None,
+        description="RCA 5-Whys classification (mandatory for Major/Critical closure)",
+    )
+    root_cause_summary: str | None = Field(
+        None, description="Detailed root cause explanation"
+    )
+    resolution_code: ResolutionCode | None = Field(
+        None, description="Formal resolution outcome code"
+    )
+    signature_token: str | None = Field(
+        None, description="21 CFR Part 11 signature token"
+    )
+    signature_meaning: str | None = Field(
+        None, description="Electronic signature justification meaning"
+    )
+
+
+class TicketSignaturePayload(BaseModel):
+    """Pydantic schema for capturing a 21 CFR Part 11 Electronic Signature."""
+
+    signature_token: str = Field(..., description="Cryptographic signature token")
+    meaning: str = Field(..., description="Signature meaning statement")
+    version_index: int = Field(
+        ..., description="Expected version index for optimistic locking"
+    )
+
+
+class CrossAppEventCreate(BaseModel):
+    """Pydantic schema for cross-app automated ticket ingestion from sibling microservices."""
+
+    event_type: str = Field(
+        ..., description="Event type, e.g. PROTOCOL_DEVIATION, DATA_QUERY, SAFETY_ALERT"
+    )
+    title: str = Field(..., description="Ticket title")
+    description: str = Field(..., description="Ticket description")
+    category: TicketCategory = Field(
+        TicketCategory.PROTOCOL_DEVIATION, description="Ticket category"
+    )
+    priority: TicketPriority = Field(TicketPriority.HIGH, description="Priority level")
+    gxp_severity: GxPSeverity = Field(
+        GxPSeverity.MAJOR, description="GxP Severity rating"
+    )
+    source_service: str = Field(
+        ..., description="Source microservice, e.g. execution, safety, ctms, quality"
+    )
+    study_id: str | None = Field(None, description="Study scope ID")
+    site_id: str | None = Field(None, description="Site scope ID")
+    related_entity_type: str = Field(
+        ..., description="Linked entity type (e.g. Subject, Form, AE, CAPA)"
+    )
+    related_entity_id: str = Field(..., description="Linked entity primary key")
+    context_payload: dict[str, Any] | None = Field(
+        None, description="Structured contextual JSON payload"
+    )
 
 
 class TicketResponse(BaseModel):
@@ -89,6 +166,10 @@ class TicketResponse(BaseModel):
     category: str
     priority: str
     status: str
+    gxp_severity: str = "NOT_APPLICABLE"
+    root_cause_category: str | None = None
+    root_cause_summary: str | None = None
+    resolution_code: str | None = None
     reporter: str
     assignee_user: str | None = None
     assignee_role: str | None = None
@@ -97,7 +178,17 @@ class TicketResponse(BaseModel):
     study_id: str | None = None
     related_entity_type: str | None = None
     related_entity_id: str | None = None
+    context_payload: str | None = None
     due_date: str | None = None
+    sla_target_at: str | None = None
+    sla_paused_at: str | None = None
+    sla_total_paused_seconds: int = 0
+    sla_breached: bool = False
+    sla_amber_warned: bool = False
+    signature_token: str | None = None
+    signature_meaning: str | None = None
+    signature_timestamp: str | None = None
+    signature_user: str | None = None
     is_deleted: bool
     created_at: str
     created_by: str
@@ -109,6 +200,9 @@ class CommentCreate(BaseModel):
     """Pydantic schema for creating a ticket comment."""
 
     body: str = Field(..., description="The comment body text")
+    visibility: CommentVisibility = Field(
+        CommentVisibility.PUBLIC, description="Visibility boundary for comment"
+    )
 
 
 class CommentResponse(BaseModel):
@@ -119,9 +213,28 @@ class CommentResponse(BaseModel):
     id: str
     ticket_id: str
     body: str
+    visibility: str = "PUBLIC"
     created_at: str
     created_by: str
     reason_for_change: str
+    version_index: int
+
+
+class AttachmentResponse(BaseModel):
+    """Pydantic schema for returning ticket attachment metadata."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    ticket_id: str
+    filename: str
+    file_size_bytes: int
+    mime_type: str
+    storage_uri: str
+    sha256_hash: str
+    uploaded_by: str
+    uploaded_at: str
+    deid_scrubbed: bool
     version_index: int
 
 
@@ -170,3 +283,24 @@ class RegulatoryRiskAssessment(BaseModel):
     requires_qa_signoff: bool
     summary: str
     risk_summary: str
+
+
+class TicketKPISummaryResponse(BaseModel):
+    """Schema representing aggregated clinical KPI and KRI metrics."""
+
+    total_tickets: int
+    active_tickets: int
+    open_tickets: int
+    in_progress_tickets: int
+    waiting_tickets: int
+    resolved_tickets: int
+    closed_tickets: int
+    critical_deviations: int
+    sla_breaches: int
+    sla_amber_warnings: int
+    sla_compliance_rate: float
+    mean_time_to_resolution_hours: float
+    category_distribution: dict[str, int]
+    severity_distribution: dict[str, int]
+    rca_distribution: dict[str, int]
+    site_distribution: dict[str, int]

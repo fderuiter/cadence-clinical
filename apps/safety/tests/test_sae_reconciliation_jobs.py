@@ -10,12 +10,12 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select, text
 
 from apps.gateway.main import generate_signature
-from apps.safety.adapters.database import db_manager
-from apps.safety.adapters.models import (
+from apps.safety.database import db_manager
+from apps.safety.main import app
+from apps.safety.models import (
     Base,
     SafetyAuditLog,
 )
-from apps.safety.main import app
 
 pytestmark = pytest.mark.xdist_group("sae_reconciliation_jobs")
 
@@ -344,12 +344,10 @@ async def test_notifications_gxp_medical_monitor_alert():
     Verify that notifications service create_notification registers MEDICAL_MONITOR_ALERT_ATTEMPT
     when recipient_role targets sponsor_mm.
     """
-    from apps.notifications.adapters.database import (
-        db_manager as notifications_db_manager,
-    )
-    from apps.notifications.adapters.models import Base as NotificationsBase
-    from apps.notifications.adapters.models import NotificationAuditLog
+    from apps.notifications.database import db_manager as notifications_db_manager
     from apps.notifications.main import app as notifications_app
+    from apps.notifications.models import Base as NotificationsBase
+    from apps.notifications.models import NotificationAuditLog
 
     # Initialize a clean in-memory database specifically for this notifications app test
     notifications_db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)

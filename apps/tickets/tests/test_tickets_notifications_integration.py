@@ -7,13 +7,13 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from apps.gateway.main import generate_signature
-from apps.tickets.adapters.database import db_manager
-from apps.tickets.adapters.models import (
+from apps.tickets.database import db_manager
+from apps.tickets.main import app
+from apps.tickets.models import (
     Base,
     Ticket,
     TicketAuditLog,
 )
-from apps.tickets.main import app
 
 
 @pytest_asyncio.fixture(autouse=True)

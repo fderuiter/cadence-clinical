@@ -24,6 +24,7 @@ from apps.econsent.domain.evaluator import (
 )
 from apps.econsent.presentation.dtos import (
     ArchivalDeliveryResponse,
+    ClauseDiffDTO,
     ComposedClauseResponse,
     ComposedTemplateResponse,
     ComprehensionCheckCreate,
@@ -43,10 +44,20 @@ from apps.econsent.presentation.dtos import (
     ConsentTranslationCreate,
     ConsentTranslationResponse,
     ConsentTranslationUpdate,
+    ConsentWithdrawalRequest,
+    ConsentWithdrawalResponse,
+    GranularOptionCreate,
+    GranularOptionResponse,
+    ReconsentRequirementResponse,
+    ReconsentTriggerRequest,
     SubjectConsentCaptureRequest,
     SubjectConsentResponse,
     SubjectConsentStatusResponse,
+    TemplateDiffResponse,
     TranslationTransitionRequest,
+)
+from apps.econsent.presentation.routers.audit import (
+    router as audit_router,
 )
 from apps.econsent.presentation.routers.econsent import (
     approved_translation_cache,
@@ -56,6 +67,18 @@ from apps.econsent.presentation.routers.econsent import (
 )
 from apps.econsent.presentation.routers.econsent import (
     router as econsent_router,
+)
+from apps.econsent.presentation.routers.export import (
+    router as export_router,
+)
+from apps.econsent.presentation.routers.granular import (
+    router as granular_router,
+)
+from apps.econsent.presentation.routers.reconsent import (
+    router as reconsent_router,
+)
+from apps.econsent.presentation.routers.withdrawal import (
+    router as withdrawal_router,
 )
 from packages.database import get_relational_db_lifespan
 from packages.hexagonal import register_rfc7807_handlers
@@ -93,10 +116,16 @@ async def health_check() -> dict[str, str]:
 
 
 app.include_router(econsent_router)
+app.include_router(reconsent_router)
+app.include_router(withdrawal_router)
+app.include_router(export_router)
+app.include_router(granular_router)
+app.include_router(audit_router)
 
 __all__ = [
     "ApprovedTranslationCache",
     "ArchivalDeliveryResponse",
+    "ClauseDiffDTO",
     "ComposedClauseResponse",
     "ComposedTemplateResponse",
     "ComprehensionCheckCreate",
@@ -116,9 +145,16 @@ __all__ = [
     "ConsentTranslationCreate",
     "ConsentTranslationResponse",
     "ConsentTranslationUpdate",
+    "ConsentWithdrawalRequest",
+    "ConsentWithdrawalResponse",
+    "GranularOptionCreate",
+    "GranularOptionResponse",
+    "ReconsentRequirementResponse",
+    "ReconsentTriggerRequest",
     "SubjectConsentCaptureRequest",
     "SubjectConsentResponse",
     "SubjectConsentStatusResponse",
+    "TemplateDiffResponse",
     "TranslationTransitionRequest",
     "app",
     "approved_translation_cache",

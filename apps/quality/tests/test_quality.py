@@ -9,8 +9,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from apps.gateway.main import generate_signature
-from apps.quality.adapters.database import db_manager
-from apps.quality.adapters.models import (
+from apps.quality.database import db_manager
+from apps.quality.main import app, write_audit_log
+from apps.quality.models import (
     Base,
     CAPARecord,
     CAPAStatus,
@@ -21,7 +22,6 @@ from apps.quality.adapters.models import (
     QualityAuditLog,
     RootCauseAnalysis,
 )
-from apps.quality.main import app, write_audit_log
 
 
 def make_step_up_token(

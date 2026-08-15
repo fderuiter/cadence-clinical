@@ -7,8 +7,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from apps.gateway.main import generate_signature
-from apps.interop.adapters.database import db_manager
-from apps.interop.adapters.models import (
+from apps.interop.database import db_manager
+from apps.interop.main import app
+from apps.interop.models import (
     Base,
     EPROSubmission,
     EPROSubmissionDefeated,
@@ -17,7 +18,6 @@ from apps.interop.adapters.models import (
     InteropAuditLog,
     SubjectAssignment,
 )
-from apps.interop.main import app
 
 
 @pytest_asyncio.fixture(autouse=True)

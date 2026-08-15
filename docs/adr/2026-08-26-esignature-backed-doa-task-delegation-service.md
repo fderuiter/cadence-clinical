@@ -53,7 +53,7 @@ We expand the execution database models (`apps/execution/database/models.py`) wi
 
 ### Workflow Services
 
-We implement the core services under `apps/ctms/application/doa_service.py`:
+We implement the core services under `apps/ctms/services/doa_service.py`:
 
 - **Task Delegation (`delegate_task`):** Queries `SiteStaffMember` to verify completed GCP training certificates, and creates a `DOADelegationRecord` in `PENDING_PI_APPROVAL` status while writing to `DOAAuditLog`.
 - **PI Sign-Off (`approve_delegation_with_esignature`):** Re-authenticates PI credentials (password and TOTP/MFA checks), computes a SHA-256 eSignature `verification_hash` based on the record details and signed timestamp, transitions status to `ACTIVE`, and writes to `DOAAuditLog`.
@@ -79,7 +79,7 @@ We implement the core services under `apps/ctms/application/doa_service.py`:
 ### Affected Files
 
 - `apps/execution/database/models.py` (Added `SiteStaffMember`, `DOADelegationRecord`, and `DOAAuditLog` schemas)
-- `apps/ctms/application/doa_service.py` (Implemented task delegation and Part 11 eSignature validation workflows)
+- `apps/ctms/services/doa_service.py` (Implemented task delegation and Part 11 eSignature validation workflows)
 - `tests/test_doa_service.py` (Created service-level unit test suite)
 
 ### Verification & Reproducible Commands

@@ -6,26 +6,26 @@ import pytest
 import pytest_asyncio
 from sqlalchemy import select
 
-from apps.notifications.adapters.database import db_manager as notifications_db_manager
-from apps.notifications.adapters.models import (
+from apps.notifications.database import db_manager as notifications_db_manager
+from apps.notifications.domain.event_models import SystemDomainEvent
+from apps.notifications.models import (
     Base as NotificationsBase,
 )
-from apps.notifications.adapters.models import (
+from apps.notifications.models import (
     Notification,
     NotificationDelivery,
 )
-from apps.notifications.adapters.workers.notification_worker import (
+from apps.notifications.workers.notification_worker import (
     NotificationWorker,
     publish_domain_event,
     start_notification_worker,
     stop_notification_worker,
 )
-from apps.notifications.domain.event_models import SystemDomainEvent
-from apps.org.adapters.database import db_manager as org_db_manager
-from apps.org.adapters.models import (
+from apps.org.database import db_manager as org_db_manager
+from apps.org.models import (
     Base as OrgBase,
 )
-from apps.org.adapters.models import (
+from apps.org.models import (
     Organization,
     Personnel,
     PersonnelAssignment,
@@ -44,8 +44,8 @@ async def mock_org_client():
         if path == "/api/v1/org/personnel":
             from sqlalchemy import select
 
-            from apps.org.adapters.database import db_manager as org_db_manager
-            from apps.org.adapters.models import Personnel, PersonnelAssignment
+            from apps.org.database import db_manager as org_db_manager
+            from apps.org.models import Personnel, PersonnelAssignment
 
             study_id = kwargs.get("params", {}).get("study_id")
             site_id = kwargs.get("params", {}).get("site_id")
@@ -102,7 +102,7 @@ async def setup_test_databases():
 
     from sqlalchemy.pool import NullPool
 
-    import apps.notifications.adapters.workers.notification_worker as nw
+    import apps.notifications.workers.notification_worker as nw
 
     nw._should_run = False
     if nw._worker_task:
@@ -481,11 +481,11 @@ async def test_worker_gxp_exponential_retry_and_dlq():
 
     with (
         patch(
-            "apps.notifications.adapters.workers.notification_worker.NotificationWorker.process_domain_event",
+            "apps.notifications.workers.notification_worker.NotificationWorker.process_domain_event",
             mock_process,
         ),
         patch(
-            "apps.notifications.adapters.workers.notification_worker.logger",
+            "apps.notifications.workers.notification_worker.logger",
             mock_logger,
         ),
     ):
@@ -543,7 +543,7 @@ async def test_start_stop_notification_worker_integration():
         return [{"user_id": "designer_john", "email": "designer_john@ccrsoft.com"}]
 
     with patch(
-        "apps.notifications.adapters.workers.notification_worker.NotificationWorker.resolve_recipients",
+        "apps.notifications.workers.notification_worker.NotificationWorker.resolve_recipients",
         mock_resolve_recipients,
     ):
         # Start the background worker loop

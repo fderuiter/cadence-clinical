@@ -17,25 +17,24 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from apps.ctms.adapters.models import Base as CTMSBase
-
 # Import SQLite Bases for metadata extraction
 from apps.ctms.migrate import run_migrations as run_ctms_migrations
-from apps.econsent.adapters.models import Base as EConsentBase
-from apps.eisf.adapters.migrate import run_migrations as run_eisf_migrations
-from apps.eisf.adapters.models import Base as EISFBase
-from apps.etmf.adapters.migrate import run_migrations as run_etmf_migrations
-from apps.etmf.adapters.models import Base as ETMFBase
+from apps.ctms.models import Base as CTMSBase
+from apps.econsent.models import Base as EConsentBase
+from apps.eisf.database.migrate import run_migrations as run_eisf_migrations
+from apps.eisf.models import Base as EISFBase
+from apps.etmf.database.migrate import run_migrations as run_etmf_migrations
+from apps.etmf.models import Base as ETMFBase
 
 # Import PostgreSQL migrations
 from apps.execution.database.migrate import run_migrations
-from apps.interop.adapters.models import Base as InteropBase
-from apps.notifications.adapters.models import Base as NotificationsBase
-from apps.org.adapters.models import Base as OrgBase
-from apps.quality.adapters.models import Base as QualityBase
+from apps.interop.models import Base as InteropBase
+from apps.notifications.models import Base as NotificationsBase
+from apps.org.models import Base as OrgBase
 from apps.quality.migrate import run_migrations as run_quality_migrations
-from apps.safety.adapters.models import Base as SafetyBase
-from apps.tickets.adapters.models import Base as TicketsBase
+from apps.quality.models import Base as QualityBase
+from apps.safety.models import Base as SafetyBase
+from apps.tickets.models import Base as TicketsBase
 
 # Standard developer mock studies to seed into Neo4j
 MOCK_STUDIES_NEO4J = [

@@ -57,7 +57,7 @@ We chose Option 2 because it perfectly satisfies the requirement for a lightweig
 ### Rationale
 
 - **Rendering Template:** The Jinja2 template `apps/safety/templates/e2b_r3_icsr.xml.j2` renders safety reports inside the standard `urn:hl7-org:v3` namespace, mapping headers, patient blocks, multiple reaction/event items (with MedDRA hierarchies), and suspect/concomitant drug variables cleanly.
-- **Structural Validation:** `apps/safety/application/validator.py` leverages `defusedxml.ElementTree` to parse the rendered XML. It verifies that:
+- **Structural Validation:** `apps/safety/validator.py` leverages `defusedxml.ElementTree` to parse the rendered XML. It verifies that:
   - The root element and namespace match `{urn:hl7-org:v3}ichicsr`.
   - All mandatory message headers (`message_id`, `sender_organization`, `receiver_organization`, `transmission_date`) are present.
   - The report identification block (`worldwide_unique_case_id`) exists.
@@ -86,8 +86,8 @@ We chose Option 2 because it perfectly satisfies the requirement for a lightweig
 
 - **Affected Repositories / Services:**
   - `apps/safety/templates/e2b_r3_icsr.xml.j2` (XML representation of E2B models)
-  - `apps/safety/adapters/renderer.py` (Pure Python renderer function)
-  - `apps/safety/application/validator.py` (Pure Python structural validation rules)
+  - `apps/safety/renderer.py` (Pure Python renderer function)
+  - `apps/safety/validator.py` (Pure Python structural validation rules)
 - **Verification Plan:**
   - Execute `uv run pytest tests/test_safety_e2b.py --no-cov` to verify that all valid/invalid rendering and validation paths work correctly.
   - Run `uv run python scripts/validate_adrs.py` to ensure complete ADR index tracking.

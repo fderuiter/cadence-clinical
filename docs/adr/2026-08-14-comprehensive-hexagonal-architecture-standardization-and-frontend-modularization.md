@@ -10,6 +10,7 @@
 ## 1. Context & Problem Statement
 
 As the Cadence Clinical platform scales across 14 microservices, multiple shared packages, and two web applications (`apps/web` and `apps/subject-portal`), architectural drift has emerged in several areas:
+
 1. Microservices have accumulated loose root-level service and helper files, mixed directory layouts (`infrastructure/` vs `adapters/` vs `services/`), and inconsistent exception handling.
 2. API errors returned varying formats across services rather than a unified RFC 7807 problem details specification.
 3. The patient/subject portal frontend (`apps/subject-portal`) accumulated logic in monolithic single files (`App.vue`, `index.js`, `style.css`, `sync-queue.js`) rather than modular components, views, and stores.
@@ -44,6 +45,7 @@ To satisfy system requirement **PRD-SYS-001**, we establish a comprehensive plat
 Chosen option: **Option 1 (Comprehensive Full-Stack Standardization)**.
 
 ### Architectural Rules:
+
 1. **`apps/<service>/domain/`:** Pure Python entities, value objects, domain invariants, and domain exceptions subclassing `packages.hexagonal.DomainError`. No framework dependencies (no SQLAlchemy, no FastAPI).
 2. **`apps/<service>/application/`:** Interface ports (subclassing `RepositoryPort[T]`, `ExternalServiceClientPort`, `UseCasePort`) and application use case orchestrators.
 3. **`apps/<service>/adapters/`:** Persistence models (SQLAlchemy / SQLModel), database repositories, external HTTP clients, and background workers.

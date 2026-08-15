@@ -9,8 +9,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from apps.gateway.main import generate_signature
-from apps.notifications.adapters.database import db_manager
-from apps.notifications.adapters.models import (
+from apps.notifications.database import db_manager
+from apps.notifications.main import app, poll_and_dispatch
+from apps.notifications.models import (
     Base,
     Notification,
     NotificationAuditLog,
@@ -18,7 +19,6 @@ from apps.notifications.adapters.models import (
     NotificationDelivery,
     NotificationPriority,
 )
-from apps.notifications.main import app, poll_and_dispatch
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -155,8 +155,7 @@ async def test_notification_creation_and_auditing():
     # Execute a poller and dispatcher tick to deliver IN_APP (and update delivery_state to DELIVERED)
     # We will mock send_email_notification to prevent external network traffic/SMTP calls
     with patch(
-        "apps.notifications.application.delivery.send_email_notification",
-        new_callable=AsyncMock,
+        "apps.notifications.delivery.send_email_notification", new_callable=AsyncMock
     ):
         await poll_and_dispatch()
         # Allow async task processing robustly
@@ -922,7 +921,7 @@ def test_missing_diary_alert_rendering():
     """
     Verify that the missing diary entry alert is correctly mapped and rendered.
     """
-    from apps.notifications.application.services.email_renderer import (
+    from apps.notifications.services.email_renderer import (
         get_template_name_for_event,
         render_email_template,
     )

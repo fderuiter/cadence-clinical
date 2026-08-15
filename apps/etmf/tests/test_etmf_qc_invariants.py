@@ -6,7 +6,7 @@ from sqlalchemy import event, text
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from apps.etmf.adapters.migrate import run_migrations
+from apps.etmf.migrate import run_migrations
 
 
 def enable_sqlite_fks(engine):

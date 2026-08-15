@@ -7,14 +7,14 @@ import pytest
 import pytest_asyncio
 from sqlalchemy import select
 
-from apps.etmf.adapters.database import db_manager
-from apps.etmf.adapters.expiration_scanner import (
+from apps.etmf.database import db_manager
+from apps.etmf.expiration_scanner import (
     determine_warning_window,
     execute_expiration_scan_cycle,
     start_background_etmf_expiration_scanner,
     stop_background_etmf_expiration_scanner,
 )
-from apps.etmf.adapters.models import Base, DocumentExpirationAlertState, TMFDocument
+from apps.etmf.models import Base, DocumentExpirationAlertState, TMFDocument
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -289,7 +289,7 @@ async def test_failure_isolation_and_resilience():
     os.environ["ETMF_EXPIRATION_SCANNER_INTERVAL_SECONDS"] = "0.1"
     await start_background_etmf_expiration_scanner(session_maker, interval=0.1)
 
-    import apps.etmf.adapters.expiration_scanner as es
+    import apps.etmf.expiration_scanner as es
 
     assert es._scanner_task is not None
     assert es._should_run is True
@@ -312,7 +312,7 @@ async def test_scanner_shutdown_cancellation():
     session_maker = MagicMock()
     await start_background_etmf_expiration_scanner(session_maker, interval=0.1)
 
-    import apps.etmf.adapters.expiration_scanner as es
+    import apps.etmf.expiration_scanner as es
 
     assert es._scanner_task is not None
     assert es._should_run is True
@@ -444,7 +444,7 @@ async def test_dispatch_successful_owner_routing():
         assert alert.last_error is None
 
         # Check TMFAuditLog
-        from apps.etmf.adapters.models import TMFAuditLog
+        from apps.etmf.models import TMFAuditLog
 
         res_audit = await session.execute(
             select(TMFAuditLog).where(TMFAuditLog.action == "EXPIRATION_ALERT_DISPATCH")
@@ -546,7 +546,7 @@ async def test_dispatch_failure_and_retryability():
         assert "HTTP 500" in alert.last_error
 
         # Check TMFAuditLog for failed dispatch
-        from apps.etmf.adapters.models import TMFAuditLog
+        from apps.etmf.models import TMFAuditLog
 
         res_audit = await session.execute(
             select(TMFAuditLog).where(
@@ -583,7 +583,7 @@ async def test_dispatch_failure_and_retryability():
         assert alert.last_error is None
 
         # Check TMFAuditLog for successful dispatch
-        from apps.etmf.adapters.models import TMFAuditLog
+        from apps.etmf.models import TMFAuditLog
 
         res_audit = await session.execute(
             select(TMFAuditLog).where(TMFAuditLog.action == "EXPIRATION_ALERT_DISPATCH")

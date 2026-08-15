@@ -10,8 +10,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from apps.org.adapters.database import db_manager
-from apps.org.adapters.models import (
+from apps.org.database import db_manager
+from apps.org.main import app
+from apps.org.models import (
     Base,
     DelegationOfAuthority,
     Organization,
@@ -20,7 +21,6 @@ from apps.org.adapters.models import (
     Site,
     SiteStaff,
 )
-from apps.org.main import app
 from packages.security.signing import generate_gateway_signature
 
 

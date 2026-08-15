@@ -81,9 +81,9 @@ Utilize decoupled gateway API queries to fetch Dataset-JSON observations, perfor
 
 ### Affected Files
 
-- `apps/safety/adapters/reconciliation.py` (Comparison core, stable key generator, and orchestrator)
-- `apps/safety/adapters/execution_client.py` (Dataset-JSON and MedDRA dictionary resolver)
-- `apps/safety/adapters/models.py` (Relational schemas for jobs, runs, discrepancies, and audit logs)
+- `apps/safety/reconciliation.py` (Comparison core, stable key generator, and orchestrator)
+- `apps/safety/execution_client.py` (Dataset-JSON and MedDRA dictionary resolver)
+- `apps/safety/models.py` (Relational schemas for jobs, runs, discrepancies, and audit logs)
 - `apps/safety/main.py` (FastAPI router endpoints, dependency injections, and background tasks)
 
 ### Verification & Reproducible Commands

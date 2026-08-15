@@ -57,5 +57,5 @@ This decision implements requirements under **PRD-SYS-001**.
 
 - **Affected Repositories / Services:** eISF Service (`apps/eisf/`), Core Models (`packages/core-models/etmf/`).
 - **Verification Plan:**
-  - Verify that the standard eISF sections are properly seeded inside migrations (`apps/eisf/adapters/migrate.py`).
+  - Verify that the standard eISF sections are properly seeded inside migrations (`apps/eisf/database/migrate.py`).
   - Implement unit and integration tests in `tests/test_eisf_taxonomy.py` verifying model defaults and database querying of all 8 mandatory sections.

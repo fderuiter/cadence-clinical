@@ -18,11 +18,6 @@ from apps.designer.delta import (
     verify_version_signature,
     with_transaction_retry,
 )
-from apps.designer.domain.ports import (
-    LibraryRepositoryPort,
-    RulesRepositoryPort,
-    StudyRepositoryPort,
-)
 from apps.designer.domain.protocol_authoring.models import (
     Comment,
     CommentThread,
@@ -31,7 +26,6 @@ from apps.designer.domain.protocol_authoring.models import (
     Suggestion,
     SuggestionStatus,
 )
-from packages.database import map_database_exceptions
 
 
 async def assert_study_version_mutable(tx, study_version_id: str):
@@ -6501,159 +6495,6 @@ async def retire_arm_applicability_link(
             )
             record = await res.single()
             return record["success"] if record else False
-
-
-class Neo4jLibraryRepository(LibraryRepositoryPort):
-    """Neo4j graph persistence implementation for Library Objects."""
-
-    def __init__(self, driver: Any):
-        self.driver = driver
-
-    @map_database_exceptions
-    async def get_by_id(self, entity_id: str) -> dict[str, Any] | None:
-        if not self.driver:
-            from apps.designer.db import MOCK_LIBRARY_OBJECTS
-
-            return MOCK_LIBRARY_OBJECTS.get(entity_id)
-
-        async with self.driver.session() as session:
-            query = "MATCH (l:LibraryObject {id: $id}) RETURN l {.*} AS obj"
-            result = await session.run(query, id=entity_id)
-            record = await result.single()
-            if record:
-                return dict(record["obj"])
-            return None
-
-    @map_database_exceptions
-    async def save(self, entity: dict[str, Any]) -> dict[str, Any]:
-        obj_id = entity.get("id")
-        if not self.driver:
-            from apps.designer.db import MOCK_LIBRARY_OBJECTS
-
-            MOCK_LIBRARY_OBJECTS[obj_id] = entity
-            return entity
-
-        async with self.driver.session() as session:
-            query = (
-                "MERGE (l:LibraryObject {id: $id}) SET l += $props RETURN l {.*} AS obj"
-            )
-            result = await session.run(query, id=obj_id, props=entity)
-            record = await result.single()
-            return dict(record["obj"])
-
-    @map_database_exceptions
-    async def get_latest_version(self, object_id: str) -> dict[str, Any] | None:
-        if not self.driver:
-            from apps.designer.db import MOCK_LIBRARY_OBJECTS
-
-            return MOCK_LIBRARY_OBJECTS.get(object_id)
-
-        async with self.driver.session() as session:
-            query = (
-                "MATCH (old:LibraryObject {id: $object_id}) "
-                "WHERE NOT (old)<-[:PREVIOUS_VERSION]-() "
-                "RETURN old {.*} AS obj"
-            )
-            result = await session.run(query, object_id=object_id)
-            record = await result.single()
-            if record:
-                return dict(record["obj"])
-            return None
-
-
-class Neo4jRulesRepository(RulesRepositoryPort):
-    """Neo4j graph persistence implementation for authored rules."""
-
-    def __init__(self, driver: Any):
-        self.driver = driver
-
-    @map_database_exceptions
-    async def get_by_id(self, entity_id: str) -> dict[str, Any] | None:
-        if not self.driver:
-            from apps.designer.db import get_mock_rule_by_id
-
-            return get_mock_rule_by_id(entity_id)
-
-        async with self.driver.session() as session:
-            query = "MATCH (r:Rule {id: $id}) RETURN r {.*} AS rule"
-            result = await session.run(query, id=entity_id)
-            record = await result.single()
-            if record:
-                return dict(record["rule"])
-            return None
-
-    @map_database_exceptions
-    async def save(self, entity: dict[str, Any]) -> dict[str, Any]:
-        rule_id = entity.get("id")
-        if not self.driver:
-            from apps.designer.db import create_mock_rule
-
-            return create_mock_rule(entity)
-
-        async with self.driver.session() as session:
-            query = "MERGE (r:Rule {id: $id}) SET r += $props RETURN r {.*} AS rule"
-            result = await session.run(query, id=rule_id, props=entity)
-            record = await result.single()
-            return dict(record["rule"])
-
-
-class Neo4jStudyRepository(StudyRepositoryPort):
-    """Neo4j graph persistence implementation for Clinical Studies."""
-
-    def __init__(self, driver: Any):
-        self.driver = driver
-
-    @map_database_exceptions
-    async def get_by_id(self, entity_id: str) -> dict[str, Any] | None:
-        if not self.driver:
-            from apps.designer.db import MOCK_STUDIES
-
-            return MOCK_STUDIES.get(entity_id)
-
-        async with self.driver.session() as session:
-            query = "MATCH (s:Study {id: $study_id}) RETURN s {.*} AS study"
-            result = await session.run(query, study_id=entity_id)
-            record = await result.single()
-            if record:
-                return dict(record["study"])
-            return None
-
-    @map_database_exceptions
-    async def save(self, entity: dict[str, Any]) -> dict[str, Any]:
-        study_id = entity.get("id")
-        if not self.driver:
-            from apps.designer.db import MOCK_STUDIES
-
-            MOCK_STUDIES[study_id] = entity
-            return entity
-
-        async with self.driver.session() as session:
-            query = (
-                "MERGE (s:Study {id: $study_id}) SET s += $props RETURN s {.*} AS study"
-            )
-            result = await session.run(query, study_id=study_id, props=entity)
-            record = await result.single()
-            return dict(record["study"])
-
-    @map_database_exceptions
-    async def get_study_version(
-        self, study_id: str, version_id: str
-    ) -> dict[str, Any] | None:
-        if not self.driver:
-            from apps.designer.db import MOCK_STUDY_VERSIONS
-
-            return MOCK_STUDY_VERSIONS.get(version_id)
-
-        async with self.driver.session() as session:
-            query = (
-                "MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion {id: $version_id}) "
-                "RETURN sv {.*} AS version"
-            )
-            result = await session.run(query, study_id=study_id, version_id=version_id)
-            record = await result.single()
-            if record:
-                return dict(record["version"])
-            return None
 
 
 # =========================================================================

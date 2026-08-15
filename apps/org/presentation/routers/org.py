@@ -6,8 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.org.adapters.database import db_manager
-from apps.org.adapters.models import (
+from apps.org.domain.models import ClinicalStaffRole, OrganizationType
+from apps.org.infrastructure.database import db_manager
+from apps.org.infrastructure.models import (
     DelegationOfAuthority,
     Organization,
     OrgAuditLog,
@@ -16,7 +17,6 @@ from apps.org.adapters.models import (
     Site,
     TrainingLog,
 )
-from apps.org.domain.models import ClinicalStaffRole, OrganizationType
 from apps.org.presentation.dtos import (
     AssignmentResolutionResponse,
     DelegationCreate,

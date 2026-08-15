@@ -262,7 +262,7 @@ class TestOfflineSchemaDrift:
         """
         client_file = "apps/subject-portal/src/sync-queue.js"
         offline_models_file = "apps/execution/domain/offline_models.py"
-        interop_models_file = "apps/interop/adapters/models.py"
+        interop_models_file = "apps/interop/infrastructure/models.py"
 
         client_data = self.parse_frontend(client_file)
         offline_server_data = self.parse_backend(offline_models_file)

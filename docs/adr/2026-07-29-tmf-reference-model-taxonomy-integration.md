@@ -83,7 +83,7 @@ To avoid taxonomy drift while supporting platform and sponsor-specific requireme
 
 - **Standard DIA Content:** Registered under `v3.2.0-complete` with `is_extension=False` for all standard artifacts.
 - **Cadence-Specific Extensions:** Registered under `v3.2.0-extended` with `is_extension=True`. All extensions utilize distinct codes or non-standard suffixes (e.g., `05.02.99`, `10.01.99`) to prevent collision.
-- **eISF-to-eTMF Propagation Mapping:** Mappings in `apps/eisf/adapters/adapter.py` map standard documents (Investigator CV, Delegation of Authority Log, and Financial Disclosure) to the authoritative complete catalog, while proprietary extensions (such as Medical License) are mapped to extension-only codes (`05.02.98`) to allow deterministic synchronization via `map_eisf_to_etmf` without standard catalog drift.
+- **eISF-to-eTMF Propagation Mapping:** Mappings in `apps/eisf/adapter.py` map standard documents (Investigator CV, Delegation of Authority Log, and Financial Disclosure) to the authoritative complete catalog, while proprietary extensions (such as Medical License) are mapped to extension-only codes (`05.02.98`) to allow deterministic synchronization via `map_eisf_to_etmf` without standard catalog drift.
 
 ### Active-Version Cutover Policy
 
@@ -122,7 +122,7 @@ This section records the formal GxP-compliant closure and completion review for 
 ### 1. Child Issues Resolution Matrix
 
 - **Issue #745 (Standard Reference Taxonomy Catalog Scaffold):** Fully delivered. The Pure-Python, memory-isolated taxonomy catalog registry was implemented under `packages/core-models/tmf_reference_model/` and strict ingestion hierarchy validations were integrated in `apps/etmf/`.
-- **Issue #688 (eISF-to-eTMF Document Propagation & De-Duplication):** Fully delivered. Bidirectional cross-walk mappings and deterministic correlation keys were implemented in `apps/eisf/adapters/adapter.py`. Standard artifacts (CV, DOA log, Financial Disclosure) map to the authoritative catalog, and the Medical License maps cleanly as a Cadence extension (`05.02.98`) to prevent taxonomy drift.
+- **Issue #688 (eISF-to-eTMF Document Propagation & De-Duplication):** Fully delivered. Bidirectional cross-walk mappings and deterministic correlation keys were implemented in `apps/eisf/adapter.py`. Standard artifacts (CV, DOA log, Financial Disclosure) map to the authoritative catalog, and the Medical License maps cleanly as a Cadence extension (`05.02.98`) to prevent taxonomy drift.
 - **Issue #746 (Authoritative Active-Version Cutover Qualification):** Fully delivered. The default taxonomy version has successfully cut over to `"v3.2.0-complete"`. Robust regression tests confirm standard and custom propagation pathways.
 
 ### 2. Qualification Evidence

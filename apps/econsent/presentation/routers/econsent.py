@@ -8,13 +8,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.econsent.adapters.cache import (
+from apps.econsent.infrastructure.cache import (
     ApprovedTranslationCache,
     get_approved_template_translation,
 )
-from apps.econsent.adapters.comprehension import submit_comprehension_answers
-from apps.econsent.adapters.database import db_manager
-from apps.econsent.adapters.models import (
+from apps.econsent.infrastructure.database import db_manager
+from apps.econsent.infrastructure.models import (
     ComprehensionCheck,
     ComprehensionResult,
     ConsentAuditLog,
@@ -26,8 +25,10 @@ from apps.econsent.adapters.models import (
     EtmfArchivalDelivery,
     SubjectConsent,
 )
+from apps.econsent.infrastructure.services import submit_comprehension_answers
 from apps.econsent.presentation.dtos import (
     ArchivalDeliveryResponse,
+    ClauseDiffDTO,
     ComposedClauseResponse,
     ComposedTemplateResponse,
     ComprehensionCheckCreate,
@@ -50,6 +51,7 @@ from apps.econsent.presentation.dtos import (
     SubjectConsentCaptureRequest,
     SubjectConsentResponse,
     SubjectConsentStatusResponse,
+    TemplateDiffResponse,
     TranslationTransitionRequest,
 )
 from packages.database import DatabaseSessionDependency
@@ -1886,3 +1888,57 @@ async def publish_consent_template(
     )
 
     return template
+
+
+@router.get(
+    "/api/v1/econsent/templates/{template_id}/diff/{base_version}/{target_version}",
+    response_model=TemplateDiffResponse,
+)
+async def diff_template_versions(
+    template_id: str,
+    base_version: int,
+    target_version: int,
+    session: AsyncSession = Depends(get_db_session),
+) -> TemplateDiffResponse:
+    """Computes semantic delta and substantive change analysis between two template versions."""
+    from apps.econsent.adapters.repositories import (
+        SQLConsentAuditRepository,
+        SQLConsentClauseRepository,
+        SQLConsentTemplateRepository,
+    )
+    from apps.econsent.application.use_cases import TemplateAuthoringService
+
+    svc = TemplateAuthoringService(
+        template_repo=SQLConsentTemplateRepository(session),
+        clause_repo=SQLConsentClauseRepository(session),
+        audit_repo=SQLConsentAuditRepository(session),
+    )
+    report = await svc.diff_template_versions(
+        template_id=template_id,
+        base_version_index=base_version,
+        target_version_index=target_version,
+    )
+    return TemplateDiffResponse(
+        template_id=report.template_id,
+        base_version_index=report.base_version_index,
+        target_version_index=report.target_version_index,
+        total_added=report.total_added,
+        total_removed=report.total_removed,
+        total_modified=report.total_modified,
+        total_unchanged=report.total_unchanged,
+        requires_reconsent=report.requires_reconsent,
+        substantive_summary=report.substantive_summary,
+        clause_diffs=[
+            ClauseDiffDTO(
+                clause_id=d.clause_id,
+                change_type=d.change_type,
+                old_title=d.old_title,
+                new_title=d.new_title,
+                old_text=d.old_text,
+                new_text=d.new_text,
+                text_diff=d.text_diff,
+                is_substantive=d.is_substantive,
+            )
+            for d in report.clause_diffs
+        ],
+    )

@@ -19,7 +19,6 @@ from fastapi import (
     status,
 )
 
-from apps.designer.adapters.neo4j_usdm_writer import commit_usdm_graph
 from apps.designer.application.services.digitization_service import (
     _heuristic_protocol_extraction,
     extract_usdm_from_protocol_document,
@@ -31,6 +30,7 @@ from apps.designer.domain.digitization_models import (
     CommitUSDMResponse,
     USDMProtocolExtractionResponse,
 )
+from apps.designer.infrastructure.neo4j_usdm_writer import commit_usdm_graph
 from packages.security.rbac import require_permission
 
 logger = logging.getLogger(__name__)

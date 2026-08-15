@@ -6,12 +6,12 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import inspect
 
-from apps.eisf.adapters.database import db_manager as eisf_db_manager
-from apps.eisf.adapters.models import Base as EISFBase
+from apps.eisf.database import db_manager as eisf_db_manager
 from apps.eisf.main import app as eisf_app
-from apps.etmf.adapters.database import db_manager as etmf_db_manager
-from apps.etmf.adapters.models import Base as ETMFBase
+from apps.eisf.models import Base as EISFBase
+from apps.etmf.database import db_manager as etmf_db_manager
 from apps.etmf.main import app as etmf_app
+from apps.etmf.models import Base as ETMFBase
 from apps.gateway.main import generate_signature
 from packages.security.rbac import (
     ROLE_AUDITOR_CANONICAL,
@@ -441,8 +441,8 @@ async def test_migration_adds_expiration_columns_idempotently() -> None:
 
     try:
         # 1. Run migrations initially (creates tables with columns)
-        from apps.eisf.adapters.migrate import run_migrations as run_eisf_m
-        from apps.etmf.adapters.migrate import run_migrations as run_etmf_m
+        from apps.eisf.database.migrate import run_migrations as run_eisf_m
+        from apps.etmf.database.migrate import run_migrations as run_etmf_m
 
         await run_etmf_m(db_url)
         await run_eisf_m(db_url)

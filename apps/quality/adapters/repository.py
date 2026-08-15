@@ -1,3 +1,3 @@
-from apps.quality.adapters.repositories import SQLQualityRepository
+from apps.quality.infrastructure.repositories import SQLQualityRepository
 
 __all__ = ["SQLQualityRepository"]

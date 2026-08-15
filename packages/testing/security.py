@@ -76,3 +76,36 @@ def create_test_auth_headers(
     if change_reason:
         headers["X-Change-Reason"] = change_reason
     return headers
+
+
+def generate_signature(
+    user_id: str,
+    roles: str,
+    timestamp: str,
+    version: str = "2",
+    change_reason: str | None = None,
+    site_id: str | None = None,
+    sponsor_id: str | None = None,
+    unblinded_access: bool = False,
+    tenant_id: str | None = None,
+    sig_token: str | None = None,
+    secret: bytes | None = None,
+) -> str:
+    """Generates an HMAC-SHA256 signature for test gateway authentication headers."""
+    import os
+
+    secret_bytes = (
+        secret or os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
+    )
+    return generate_gateway_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        secret=secret_bytes,
+        change_reason=change_reason,
+        site_id=site_id,
+        sponsor_id=sponsor_id,
+        unblinded_access=unblinded_access,
+        tenant_id=tenant_id,
+        sig_token=sig_token,
+    )

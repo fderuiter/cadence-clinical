@@ -1,6 +1,6 @@
 import pytest
 
-from apps.eisf.adapters.adapter import (
+from apps.eisf.adapter import (
     DocumentClassification,
     classify_incoming_document,
     derive_correlation_key,
@@ -278,7 +278,7 @@ def test_eisf_mappings_resolve_through_active_catalog():
     Version and is_extension expectations are hardcoded per artifact code so
     that a bad catalog change cannot make this test pass falsely.
     """
-    from apps.eisf.adapters.adapter import FORWARD_MAPPING
+    from apps.eisf.adapter import FORWARD_MAPPING
     from apps.etmf.domain.tmf_reference_model import resolve_artifact
 
     for (binder_sec, art_type), (
@@ -316,7 +316,7 @@ def test_eisf_reverse_mappings_resolve_through_active_catalog():
     Version and is_extension expectations are hardcoded per artifact code so
     that a bad catalog change cannot make this test pass falsely.
     """
-    from apps.eisf.adapters.adapter import REVERSE_MAPPING
+    from apps.eisf.adapter import REVERSE_MAPPING
     from apps.etmf.domain.tmf_reference_model import resolve_artifact
 
     for (zone, section, etmf_art_type, etmf_code), (

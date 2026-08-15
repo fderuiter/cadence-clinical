@@ -6,13 +6,13 @@ from fastapi.testclient import TestClient
 from jose import jwt
 from sqlalchemy import select
 
-from apps.etmf.adapters.database import db_manager
-from apps.etmf.adapters.models import Base, TMFAuditLog, TMFDocument
-from apps.etmf.adapters.sealer import (
+from apps.etmf.database import db_manager
+from apps.etmf.main import app
+from apps.etmf.models import Base, TMFAuditLog, TMFDocument
+from apps.etmf.sealer import (
     execute_etmf_audit_sealing_cycle,
     validate_etmf_ledger_integrity,
 )
-from apps.etmf.main import app
 from apps.gateway.main import generate_signature
 from packages.security.signature import SignatureManifestation
 

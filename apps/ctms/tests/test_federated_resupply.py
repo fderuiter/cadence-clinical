@@ -8,7 +8,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from apps.ctms.adapters.database import db_manager as ctms_db_manager
+from apps.ctms.database import db_manager as ctms_db_manager
 from apps.ctms.main import app as ctms_app
 from apps.execution.database.core import db_manager as exec_db_manager
 from apps.execution.database.models import Base as ExecBase
@@ -37,7 +37,7 @@ async def setup_databases():
 
     # Initialize CTMS DB
     ctms_db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
-    from apps.ctms.adapters.models import Base as CtmsBase
+    from apps.ctms.models import Base as CtmsBase
 
     async with ctms_db_manager.engine.begin() as conn:
         await conn.run_sync(CtmsBase.metadata.create_all)

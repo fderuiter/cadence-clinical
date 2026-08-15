@@ -36,7 +36,7 @@ def test_parse_sqlalchemy_schema_execution():
 
 def test_parse_sqlalchemy_schema_etmf():
     """Verify SQLAlchemy schema extraction for eTMF models."""
-    from apps.etmf.adapters.models import Base as EtmfBase
+    from apps.etmf.infrastructure.models import Base as EtmfBase
 
     tables = parse_sqlalchemy_schema(EtmfBase, "etmf")
     assert len(tables) > 0

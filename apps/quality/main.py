@@ -6,10 +6,22 @@ from fastapi.responses import JSONResponse
 from apps.quality.adapters.database import db_manager
 from apps.quality.adapters.models import Base, QualityAuditLog
 from apps.quality.adapters.repositories import SQLQualityRepository
+from apps.quality.application.services.audit_service import (
+    AuditServiceError,
+    ClinicalAuditService,
+)
 from apps.quality.application.services.quality_service import (
     CAPA_TRANSITIONS,
     QualityService,
     QualityServiceError,
+)
+from apps.quality.application.services.rbqm_service import (
+    RBQMService,
+    RBQMServiceError,
+)
+from apps.quality.application.services.serious_breach_service import (
+    SeriousBreachService,
+    SeriousBreachServiceError,
 )
 from apps.quality.presentation.dtos import (
     AuditLogResponse,
@@ -44,11 +56,10 @@ assert_secure_secrets("quality", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")}
 
 BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
 
-
 validate_branding("quality")
 app = FastAPI(
     title=f"{BRAND_NAME} - Quality & CAPA",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=get_relational_db_lifespan(
         db_manager=db_manager,
         database_url=DATABASE_URL,
@@ -68,12 +79,51 @@ async def quality_service_error_handler(request, exc: QualityServiceError):
     )
 
 
+@app.exception_handler(RBQMServiceError)
+async def rbqm_service_error_handler(request, exc: RBQMServiceError):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(AuditServiceError)
+async def audit_service_error_handler(request, exc: AuditServiceError):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(SeriousBreachServiceError)
+async def serious_breach_service_error_handler(request, exc: SeriousBreachServiceError):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": str(exc)},
+    )
+
+
 _repo_instance = SQLQualityRepository()
 
 
 def get_quality_service() -> QualityService:
-    """FastAPI dependency to retrieve the decoupled clinical service."""
+    """FastAPI dependency to retrieve the QualityService."""
     return QualityService(_repo_instance)
+
+
+def get_rbqm_service() -> RBQMService:
+    """FastAPI dependency to retrieve the RBQMService."""
+    return RBQMService(_repo_instance)
+
+
+def get_audit_service() -> ClinicalAuditService:
+    """FastAPI dependency to retrieve the ClinicalAuditService."""
+    return ClinicalAuditService(_repo_instance)
+
+
+def get_serious_breach_service() -> SeriousBreachService:
+    """FastAPI dependency to retrieve the SeriousBreachService."""
+    return SeriousBreachService(_repo_instance)
 
 
 def get_user_context(principal: Principal):
@@ -128,7 +178,10 @@ __all__ = [
     "app",
     "authorize_quality_oversight",
     "authorize_quality_write",
+    "get_audit_service",
     "get_quality_service",
+    "get_rbqm_service",
+    "get_serious_breach_service",
     "get_user_context",
     "map_capa_to_response",
     "map_deviation_to_response",

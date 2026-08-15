@@ -7,9 +7,9 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
-from apps.eisf.adapters.database import db_manager as eisf_db_manager
-from apps.eisf.adapters.models import Base as EisfBase
+from apps.eisf.database import db_manager as eisf_db_manager
 from apps.eisf.main import app as eisf_app
+from apps.eisf.models import Base as EisfBase
 
 
 def generate_signature(

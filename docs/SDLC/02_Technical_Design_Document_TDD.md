@@ -218,7 +218,7 @@ The Execution Service manages subject data capture (EDC) and clinical transactio
 
 The electronic Trial Master File (eTMF) and electronic Investigator Site File (eISF) services leverage a decentralized reference taxonomy modeling engine.
 
-- **Taxonomy Catalog Integration:** The taxonomy catalog registry of DIA TMF Reference Model versions is managed locally within individual services, such as the `etmf` microservice boundary (defined in `apps/etmf/adapters/models.py` and processed via `apps/etmf/application/classification_service.py`), ensuring that taxonomy schemas and reference datasets are isolated.
+- **Taxonomy Catalog Integration:** The taxonomy catalog registry of DIA TMF Reference Model versions is managed locally within individual services, such as the `etmf` microservice boundary (defined in `apps/etmf/models.py` and processed via `apps/etmf/classification_service.py`), ensuring that taxonomy schemas and reference datasets are isolated.
 - **The Cutover Decision:** The platform has cut over to `v3.2.0-complete` as the active default catalog version to prevent taxonomy drift. Legacy `v3.2.0` is fully retained for backward compatibility and reproducible pre-cutover record interpretation. Extended namespaces register Cadence-specific custom extensions in `v3.2.0-extended` with `is_extension=True`.
 - **Validation & Propagation:** Strict hierarchical integrity checks are performed locally during ingestion using `resolve_artifact` and `validate_hierarchy`, rejecting invalid classifications with HTTP 422, while supporting automated/manual document redactions signed with symmetrically cryptographed manifests (HMAC-SHA256). The system is fully synchronized and GxP compliant.
 
@@ -1133,7 +1133,7 @@ The Interoperability service exposes a secure, advisory endpoint allowing extern
 
 #### 6.4.1 FHIR to Canonical `eCRF.*` Namespace Projection
 
-- In `apps/interop/adapters/fhir_adapter.py`, external FHIR Bundles are parsed.
+- In `apps/interop/fhir_adapter.py`, external FHIR Bundles are parsed.
 - Patient demographics, observations, conditions, and medication statements are parsed and projected into the shared `eCRF.<DOMAIN>.<VARIABLE>` namespace.
 - Demographics such as age are derived safely relative to the active pre-screening request timestamp.
 

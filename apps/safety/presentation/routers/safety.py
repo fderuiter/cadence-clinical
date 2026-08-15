@@ -10,8 +10,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.safety.adapters.database import db_manager
-from apps.safety.adapters.models import (
+from apps.safety.infrastructure.database import db_manager
+from apps.safety.infrastructure.models import (
     ExportJob,
     SAEDiscrepancy,
     SAEReconciliationJob,
@@ -20,7 +20,6 @@ from apps.safety.adapters.models import (
     SafetyCaseICSR,
     write_audit_log,
 )
-from apps.safety.adapters.processor import process_sae_reconciliation
 from apps.safety.presentation.dtos import (
     ICSRDataExportRequest,
     SAEDiscrepancyResponse,
@@ -34,6 +33,7 @@ from apps.safety.presentation.dtos import (
     SafetyExportJobCreate,
     SafetyExportJobResponse,
 )
+from apps.safety.processor import process_sae_reconciliation
 from packages.database import DatabaseSessionDependency
 
 router = APIRouter()
@@ -173,7 +173,7 @@ async def reconciliation_worker(
             )
             await session.commit()
 
-            from apps.safety.adapters.reconciliation import run_reconciliation
+            from apps.safety.reconciliation import run_reconciliation
 
             results = await run_reconciliation(
                 study_id=study_id,
@@ -620,7 +620,7 @@ async def export_safety_case(
             status_code=403, detail="Missing change justification reason"
         )
 
-    from apps.safety.adapters.renderer import generate_e2b_xml
+    from apps.safety.renderer import generate_e2b_xml
 
     try:
         _ = generate_e2b_xml(payload.icsr)
@@ -717,7 +717,7 @@ async def trigger_sae_reconciliation(
             status_code=403, detail="Missing change justification reason"
         )
 
-    from apps.safety.adapters.reconciliation import run_reconciliation
+    from apps.safety.reconciliation import run_reconciliation
 
     test_client = getattr(request.app.state, "test_httpx_client", None)
 

@@ -7,9 +7,9 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from apps.etmf.adapters.database import db_manager
-from apps.etmf.adapters.models import Base, TMFAuditLog, TMFDocument
+from apps.etmf.database import db_manager
 from apps.etmf.main import app
+from apps.etmf.models import Base, TMFAuditLog, TMFDocument
 
 
 @pytest_asyncio.fixture(autouse=True)

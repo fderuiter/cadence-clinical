@@ -17,14 +17,14 @@ from apps.designer.db import (
     MOCK_STUDY_VERSIONS,
 )
 from apps.designer.main import app as designer_app
-from apps.etmf.adapters.database import db_manager as etmf_db_manager
-from apps.etmf.adapters.models import (
+from apps.etmf.database import db_manager as etmf_db_manager
+from apps.etmf.main import app as etmf_app
+from apps.etmf.models import (
     Base as EtmfBase,
 )
-from apps.etmf.adapters.models import (
+from apps.etmf.models import (
     DocumentQCTransition,
 )
-from apps.etmf.main import app as etmf_app
 from apps.execution.database.core import db_manager as exec_db_manager
 from apps.execution.database.models import (
     Base as ExecBase,

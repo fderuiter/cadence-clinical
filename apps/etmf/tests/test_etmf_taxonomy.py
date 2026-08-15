@@ -3,10 +3,10 @@ from contextlib import contextmanager
 import pytest
 from fastapi.testclient import TestClient
 
-from apps.etmf.adapters.database import db_manager
-from apps.etmf.adapters.models import Base
-from apps.etmf.application.classification_service import classify_tmf_document
+from apps.etmf.classification_service import classify_tmf_document
+from apps.etmf.database import db_manager
 from apps.etmf.main import app
+from apps.etmf.models import Base
 from apps.etmf.tests.test_etmf import get_auth_headers
 from apps.execution.trial_lock import TrialLockManager
 from packages.security.rbac import Principal, get_principal
@@ -43,7 +43,7 @@ def test_resolve_document_type_helper():
     """
     Verify the resolve_document_type helper works correctly.
     """
-    from apps.etmf.application.classification_service import resolve_document_type
+    from apps.etmf.classification_service import resolve_document_type
 
     assert resolve_document_type("05.02.01") == "FORM_1572"
     assert resolve_document_type("05.02.02") == "FINANCIAL_DISCLOSURE"

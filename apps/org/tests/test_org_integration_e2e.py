@@ -15,15 +15,15 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from jose import jwt
 
-from apps.eisf.adapters.database import db_manager as eisf_db_manager
-from apps.eisf.adapters.models import Base as EisfBase
+from apps.eisf.database import db_manager as eisf_db_manager
 from apps.eisf.main import app as eisf_app
+from apps.eisf.models import Base as EisfBase
 from apps.gateway.main import SERVICES
 from apps.gateway.main import app as gateway_app
-from apps.org.adapters.database import db_manager as org_db_manager
-from apps.org.adapters.models import Base as OrgBase
+from apps.org.database import db_manager as org_db_manager
 from apps.org.main import GATEWAY_SECRET
 from apps.org.main import app as org_app
+from apps.org.models import Base as OrgBase
 from packages.security.signing import (
     generate_canonical_signature,
     generate_gateway_signature,

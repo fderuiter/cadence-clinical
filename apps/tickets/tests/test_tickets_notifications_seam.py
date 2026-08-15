@@ -15,15 +15,15 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from apps.gateway.main import generate_signature
-from apps.notifications.adapters.database import db_manager as notifications_db_manager
-from apps.notifications.adapters.models import Base as NotificationsBase
-from apps.notifications.adapters.models import Notification
+from apps.notifications.database import db_manager as notifications_db_manager
 from apps.notifications.main import app as notifications_app
-from apps.tickets.adapters.database import db_manager as tickets_db_manager
-from apps.tickets.adapters.escalation import execute_ticket_escalation_cycle
-from apps.tickets.adapters.models import Base as TicketsBase
-from apps.tickets.adapters.models import Ticket, TicketPriority, TicketStatus
+from apps.notifications.models import Base as NotificationsBase
+from apps.notifications.models import Notification
+from apps.tickets.database import db_manager as tickets_db_manager
+from apps.tickets.escalation import execute_ticket_escalation_cycle
 from apps.tickets.main import app as tickets_app
+from apps.tickets.models import Base as TicketsBase
+from apps.tickets.models import Ticket, TicketPriority, TicketStatus
 
 
 @pytest_asyncio.fixture(autouse=True)

@@ -20,7 +20,6 @@ import packages  # noqa: F401
 from apps.gateway.routers.cdisc import router as cdisc_router
 from apps.gateway.routers.ecoa import router as ecoa_router
 from apps.gateway.routers.usdm import router as usdm_router
-from packages.hexagonal import register_rfc7807_handlers
 from packages.security import validate_branding
 
 
@@ -308,7 +307,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(RateLimitMiddleware)
-register_rfc7807_handlers(app)
 
 JWKS_URL = os.getenv(
     "JWKS_URL",
@@ -528,7 +526,7 @@ def generate_signature(
         user_id=user_id,
         roles=roles,
         timestamp=timestamp,
-        secret=GATEWAY_SECRET.encode(),
+        secret=os.getenv("GATEWAY_SECRET", GATEWAY_SECRET).encode(),
         change_reason=change_reason,
         site_id=site_id,
         sponsor_id=sponsor_id,

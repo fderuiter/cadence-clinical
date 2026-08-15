@@ -8,15 +8,15 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 from sqlalchemy import select
 
-from apps.econsent.adapters.database import db_manager
-from apps.econsent.adapters.models import (
+from apps.econsent.database import db_manager
+from apps.econsent.main import ConsentDocumentCreate, app
+from apps.econsent.models import (
     Base,
     ConsentAuditLog,
     ConsentClause,
     ConsentDocument,
     ConsentTemplate,
 )
-from apps.econsent.main import ConsentDocumentCreate, app
 from apps.gateway.main import generate_signature
 from packages.database import RelationalDatabaseManager
 from packages.database.audit import AuditFields

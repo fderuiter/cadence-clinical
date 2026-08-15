@@ -10,23 +10,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from apps.interop.adapters.auth import (
+from apps.interop.auth import (
     has_subject_role,
     require_staff_role,
     verify_subject_bulk_identity,
     verify_subject_identity,
-)
-from apps.interop.adapters.database import db_manager
-from apps.interop.adapters.fhir_adapter import FHIRAdapter
-from apps.interop.adapters.models import (
-    ClinicalQuery,
-    EPROSubmission,
-    EPROSubmissionDefeated,
-    EPROSubmissionQuarantine,
-    Instrument,
-    InteropAuditLog,
-    SubjectAssignment,
-    SubjectNotification,
 )
 from apps.interop.domain.acl import (
     AssignmentComplianceDetail,
@@ -43,6 +31,18 @@ from apps.interop.domain.sync_engine import (
     SyncRecord,
     reconcile_records,
     verify_record_signature,
+)
+from apps.interop.fhir_adapter import FHIRAdapter
+from apps.interop.infrastructure.database import db_manager
+from apps.interop.infrastructure.models import (
+    ClinicalQuery,
+    EPROSubmission,
+    EPROSubmissionDefeated,
+    EPROSubmissionQuarantine,
+    Instrument,
+    InteropAuditLog,
+    SubjectAssignment,
+    SubjectNotification,
 )
 from apps.interop.presentation.dtos import (
     AcknowledgeNotificationRequest,

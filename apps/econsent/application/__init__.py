@@ -1,1 +1,3 @@
-"""Application layer for eConsent microservice."""
+"""
+Application layer for eConsent microservice.
+"""

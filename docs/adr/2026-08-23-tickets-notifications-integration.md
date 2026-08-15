@@ -63,5 +63,5 @@ We adopted **Option 2**. We implemented a robust ticketing notifications integra
 
 ## 6. Implementation & Verification
 
-- **Affected Modules:** `apps/tickets/adapters/notifications_client.py`, `apps/tickets/application/notification_events.py`, `apps/tickets/main.py`
+- **Affected Modules:** `apps/tickets/notifications_client.py`, `apps/tickets/notification_events.py`, `apps/tickets/main.py`
 - **Verification Plan:** Verified via unit and integration tests under `tests/test_tickets_notifications_client.py` and `tests/test_tickets_service.py` with mocked HTTP endpoints and stubbed client boundaries.

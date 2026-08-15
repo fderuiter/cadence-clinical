@@ -15,9 +15,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class AwareDateTime(TypeDecorator):
-    """
-    SQLAlchemy type that ensures all datetimes are timezone-aware and stored/retrieved in UTC.
-    """
+    """SQLAlchemy type that ensures all datetimes are timezone-aware and stored/retrieved in UTC."""
 
     impl = DateTime(timezone=True)
     cache_ok = True
@@ -47,8 +45,8 @@ class Base(DeclarativeBase):
 
 
 class ConsentDocument(Base):
-    """
-    Represents a site-scoped clinical Trial eConsent Document.
+    """Represents a site-scoped clinical Trial eConsent Document.
+
     Complies with FDA 21 CFR Part 11 auditing and tracking constraints.
     """
 
@@ -71,8 +69,8 @@ class ConsentDocument(Base):
 
 
 class EtmfArchivalDelivery(Base):
-    """
-    Represents an append-only, idempotent eTMF archival delivery record for signed ICFs.
+    """Represents an append-only, idempotent eTMF archival delivery record for signed ICFs.
+
     Complies with FDA 21 CFR Part 11 auditing and tracking constraints.
     """
 
@@ -108,8 +106,8 @@ class EtmfArchivalDelivery(Base):
 
 
 class SubjectConsent(Base):
-    """
-    Represents an append-only, immutable record of a subject's cryptographically signed consent.
+    """Represents an append-only, immutable record of a subject's cryptographically signed consent.
+
     Complies with FDA 21 CFR Part 11 auditing and tracking constraints.
     """
 
@@ -127,6 +125,7 @@ class SubjectConsent(Base):
     version_index: Mapped[int] = mapped_column(Integer, nullable=False)
     protocol_version: Mapped[str] = mapped_column(String(255), nullable=False)
     source_content_identity: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="ACTIVE", nullable=False)
     server_timestamp: Mapped[datetime] = mapped_column(
         AwareDateTime, default=func.now(), nullable=False
     )
@@ -143,8 +142,8 @@ class SubjectConsent(Base):
 
 
 class ComprehensionCheck(Base):
-    """
-    Represents a set of comprehension questions, answers, and thresholds bound to a specific template version.
+    """Represents a set of comprehension questions, answers, and thresholds bound to a specific template version.
+
     Ensures that historical check configurations are preserved.
     """
 
@@ -168,8 +167,8 @@ class ComprehensionCheck(Base):
 
 
 class ComprehensionResult(Base):
-    """
-    Represents an append-only, immutable record of a subject's comprehension evaluation.
+    """Represents an append-only, immutable record of a subject's comprehension evaluation.
+
     Complies with FDA 21 CFR Part 11 auditing and tracking constraints.
     """
 
@@ -200,8 +199,8 @@ class ComprehensionResult(Base):
 
 
 class ConsentSignature(Base):
-    """
-    Represents a subject's electronic signature on a specific version of an eConsent template.
+    """Represents a subject's or other designated role's electronic signature.
+
     Complies with FDA 21 CFR Part 11 auditing and tracking constraints.
     """
 
@@ -215,18 +214,25 @@ class ConsentSignature(Base):
     subject_pseudonym: Mapped[str] = mapped_column(
         String(255), nullable=False, index=True
     )
+    role: Mapped[str] = mapped_column(String(50), default="SUBJECT", nullable=False)
+    signer_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    signer_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    meaning: Mapped[str | None] = mapped_column(String(255), nullable=True)
     signature_data: Mapped[str | None] = mapped_column(String, nullable=True)
     signed_at: Mapped[datetime] = mapped_column(
         AwareDateTime, default=func.now(), nullable=False
     )
+    digest_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    lar_relationship: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    lar_authority_basis: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
 
 
 class ConsentClause(Base):
-    """
-    Represents a versioned Informed Consent Form (ICF) clause scoped by study_id.
+    """Represents a versioned Informed Consent Form (ICF) clause scoped by study_id.
+
     Ensures that historical versions are preserved and never mutated.
     """
 
@@ -249,8 +255,8 @@ class ConsentClause(Base):
 
 
 class ConsentTemplate(Base):
-    """
-    Represents a versioned eConsent template/workflow scoped by study_id.
+    """Represents a versioned eConsent template/workflow scoped by study_id.
+
     Ensures that historical versions are preserved and never mutated.
     """
 
@@ -282,8 +288,8 @@ class ConsentTemplate(Base):
 
 
 class ConsentAuditLog(Base):
-    """
-    Represents an append-only, 21 CFR Part 11 compliant audit trail for eConsent operations.
+    """Represents an append-only, 21 CFR Part 11 compliant audit trail for eConsent operations.
+
     Captures actor metadata, action type, document references, change justifications, and timestamps.
     """
 
@@ -306,9 +312,9 @@ class ConsentAuditLog(Base):
 
 
 class ConsentTranslation(Base):
-    """
-    Represents an audited, human-reviewed, per-language consent translation
-    tied to a specific source clause or template version.
+    """Represents an audited, human-reviewed, per-language consent translation.
+
+    Tied to a specific source clause or template version.
     Complies with FDA 21 CFR Part 11 auditing and tracking constraints.
     """
 
@@ -330,6 +336,119 @@ class ConsentTranslation(Base):
     status: Mapped[str] = mapped_column(String(50), default="DRAFT", nullable=False)
 
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(
+        AwareDateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+
+class GranularConsentOption(Base):
+    """Represents a discrete optional research item (e.g., biobanking, genomics, sub-study)."""
+
+    __tablename__ = "granular_consent_options"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    template_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    version_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    option_code: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    category: Mapped[str] = mapped_column(String(50), default="OTHER", nullable=False)
+    is_mandatory: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    default_selected: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        AwareDateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+
+class SubjectConsentOptionSelection(Base):
+    """Represents a subject's selected opt-in/opt-out status for a granular consent option."""
+
+    __tablename__ = "subject_consent_option_selections"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    consent_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    subject_pseudonym: Mapped[str] = mapped_column(
+        String(255), nullable=False, index=True
+    )
+    option_code: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    selected: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    selected_at: Mapped[datetime] = mapped_column(
+        AwareDateTime, default=func.now(), nullable=False
+    )
+
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+
+class ReconsentRequirement(Base):
+    """Represents a re-consent task generated for a subject due to an ICF amendment."""
+
+    __tablename__ = "reconsent_requirements"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    template_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    prior_version_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    new_version_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    subject_pseudonym: Mapped[str] = mapped_column(
+        String(255), nullable=False, index=True
+    )
+    status: Mapped[str] = mapped_column(String(50), default="PENDING", nullable=False)
+    change_summary: Mapped[str] = mapped_column(String(1000), nullable=False)
+    substantive_changes: Mapped[list[dict]] = mapped_column(
+        JSON, default=list, nullable=False
+    )
+    deadline_at: Mapped[datetime | None] = mapped_column(AwareDateTime, nullable=True)
+    completed_consent_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        AwareDateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+
+class ConsentWithdrawal(Base):
+    """Represents a formal consent revocation/withdrawal record for a subject."""
+
+    __tablename__ = "consent_withdrawals"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    subject_pseudonym: Mapped[str] = mapped_column(
+        String(255), nullable=False, index=True
+    )
+    template_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    withdrawal_date: Mapped[datetime] = mapped_column(
+        AwareDateTime, default=func.now(), nullable=False
+    )
+    reason_category: Mapped[str] = mapped_column(String(100), nullable=False)
+    reason_detail: Mapped[str] = mapped_column(String(1000), nullable=False)
+    scope: Mapped[str] = mapped_column(
+        String(100), default="STOP_ALL_DATA_COLLECTION", nullable=False
+    )
+    acknowledged_by_investigator: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    investigator_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         AwareDateTime, default=func.now(), nullable=False

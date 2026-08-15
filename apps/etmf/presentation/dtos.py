@@ -3,8 +3,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
-from apps.etmf.adapters.models import TMFDocument
 from apps.etmf.domain.acl import ProtocolVersionRef
+from apps.etmf.infrastructure.models import TMFDocument
 from packages.deid.models import ComplianceProfile
 from packages.security.signature import SigningReason
 
@@ -444,4 +444,83 @@ class SeedEDLRequest(BaseModel):
     reason_for_change: str = Field(
         "Zero-Click USDM Study Ingestion",
         description="Part 11 change justification reason for seeding EDL",
+    )
+
+
+class ZoneReadinessDetail(BaseModel):
+    zone_code: int
+    zone_name: str
+    expected_count: int
+    present_count: int
+    approved_count: int
+    pending_qc_count: int
+    rejected_count: int
+    missing_count: int
+    completeness_percentage: float
+
+
+class MilestoneReadinessDetail(BaseModel):
+    milestone: str
+    is_complete: bool
+    expected_count: int
+    present_count: int
+    approved_count: int
+    missing_artifacts: list[str]
+    completeness_percentage: float
+
+
+class InspectionReadinessResponse(BaseModel):
+    study_id: str
+    generated_at: str
+    overall_readiness_score: float
+    readiness_rating: str
+    total_documents: int
+    total_expected: int
+    approved_documents_count: int
+    pending_qc_count: int
+    unsigned_documents_count: int
+    expired_documents_count: int
+    expiring_soon_count: int
+    milestones: list[MilestoneReadinessDetail]
+    zones: list[ZoneReadinessDetail]
+    action_items: list[str]
+
+
+class AuditChainVerificationResponse(BaseModel):
+    is_valid: bool
+    total_sealed_blocks: int
+    total_sealed_records: int
+    latest_block_hash: str | None
+    genesis_block_hash: str | None
+    unsealed_records_count: int
+    tamper_detected: bool
+    details: str
+
+
+class SignatureVerificationResponse(BaseModel):
+    document_id: str
+    version_index: int
+    is_valid: bool
+    signer: str | None
+    signing_timestamp: str | None
+    signing_reason: str | None
+    certificate_fingerprint: str | None
+    content_hash_matched: bool
+    details: str
+
+
+class QCDiscrepancyDetail(BaseModel):
+    category: str = Field(
+        ..., description="E.g. ILLEGIBLE_PAGE, MISSING_SIGNATURE, DATE_MISMATCH"
+    )
+    severity: str = Field("WARNING", description="CRITICAL, WARNING, INFO")
+    comment: str = Field(..., description="QC reviewer observation")
+
+
+class TmfEmsExportRequest(BaseModel):
+    study_title: str | None = Field(
+        None, description="Optional human-readable study title"
+    )
+    include_history: bool = Field(
+        True, description="Whether to include previous document versions"
     )
