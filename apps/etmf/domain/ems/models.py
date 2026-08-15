@@ -24,7 +24,8 @@ class TmfEmsSignatureRecord(BaseModel):
         None, description="Cryptographic signature digest or hash"
     )
     certificate_fingerprint: str | None = Field(
-        None, description="X.509 certificate SHA-256 fingerprint"
+        None,
+        description="X.509 certificate SHA-256 fingerprint",  # deid-ignore
     )
 
 

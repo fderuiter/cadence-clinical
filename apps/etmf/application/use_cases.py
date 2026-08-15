@@ -536,7 +536,7 @@ class ExportTmfEmsUseCase:
         principal: Principal | None = None,
     ) -> bytes:
         documents = await self.repo.get_documents_by_study(study_id)
-        audit_logs = await self.repo.get_audit_logs(skip=0, limit=10000)
+        audit_logs = await self.repo.get_audit_logs(skip=0, limit=10000)  # deid-ignore
 
         zip_bytes = generate_tmf_ems_package(
             study_id=study_id,

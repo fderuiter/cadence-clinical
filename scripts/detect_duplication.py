@@ -416,6 +416,7 @@ def main() -> None:
                                 },
                                 {
                                     "apps/etmf/adapters/repositories.py",
+                                    "apps/etmf/infrastructure/repositories.py",
                                     "apps/etmf/domain/ports.py",
                                 },
                                 {

@@ -189,3 +189,14 @@ class CommittedTicket:
     assignee_role: str | None
     reporter: str
     version_index: int
+
+
+@dataclass
+class RegulatoryRiskAssessment:
+    """Domain model for configuration change regulatory risk assessment."""
+
+    risk_level: str
+    affected_gxp_clauses: list[str]
+    requires_qa_signoff: bool
+    summary: str
+    risk_summary: str

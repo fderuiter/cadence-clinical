@@ -150,77 +150,8 @@ const handleSign = async () => {
 </script>
 
 <style scoped>
-.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
 .modal-dialog {
-  background: #ffffff;
-  border-radius: 12px;
-  width: 90%;
   max-width: 540px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  border: 1px solid #cbd5e1;
-}
-
-.modal-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 20px 24px;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.modal-header-icon {
-  font-size: 1.75rem;
-}
-
-.modal-title {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0;
-}
-
-.modal-subtitle {
-  font-size: 0.8rem;
-  color: #64748b;
-  margin: 4px 0 0 0;
-}
-
-.btn-close {
-  margin-left: auto;
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-}
-
-.btn-close:hover {
-  background: #e2e8f0;
-  color: #0f172a;
-}
-
-.modal-body {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
 }
 
 .compliance-alert {
@@ -234,94 +165,13 @@ const handleSign = async () => {
   line-height: 1.45;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.form-label {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #334155;
-}
-
 .text-danger {
   color: #dc2626;
-}
-
-.form-control {
-  padding: 8px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  color: #1e293b;
-  background: #ffffff;
-  outline: none;
-  transition: border-color 0.15s;
-}
-
-.form-control:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
 .form-control:disabled {
   background: #f1f5f9;
   color: #64748b;
-  cursor: not-allowed;
-}
-
-.error-banner {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
-  padding: 10px 12px;
-  border-radius: 6px;
-  font-size: 0.82rem;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 16px 24px;
-  background: #f8fafc;
-  border-top: 1px solid #e2e8f0;
-}
-
-.btn {
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease-in-out;
-  border: 1px solid transparent;
-}
-
-.btn-secondary {
-  background: #ffffff;
-  border-color: #cbd5e1;
-  color: #475569;
-}
-
-.btn-secondary:hover {
-  background: #f1f5f9;
-  color: #1e293b;
-}
-
-.btn-primary {
-  background: #2563eb;
-  color: #ffffff;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #1d4ed8;
-}
-
-.btn-primary:disabled {
-  background: #93c5fd;
   cursor: not-allowed;
 }
 

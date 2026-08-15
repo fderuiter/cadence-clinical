@@ -405,7 +405,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed } from "vue";
 import TicketSignModal from "./TicketSignModal.vue";
 
 const props = defineProps({
