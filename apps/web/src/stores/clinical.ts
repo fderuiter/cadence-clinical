@@ -544,7 +544,7 @@ const useClinicalStoreInner = defineStore("clinical", {
     canManageQueries: () => {
       const authStore = useAuthStore();
       const roles = authStore ? authStore.normalizedRoles || [] : [];
-      return roles.some((role) =>
+      return roles.some((role: string) =>
         [
           "cra",
           "monitor",

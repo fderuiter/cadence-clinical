@@ -381,3 +381,67 @@ class TestOfflineSchemaDrift:
         properties = client_data_1["interfaces"]["PendingDelta"]
         assert properties["deltaId"] == "string"
         assert properties["clientTimestampUtc"] == "string"
+
+    def test_committed_typescript_schema_is_up_to_date(self) -> None:
+        """Validate that the committed db_schemas.ts matches the introspected database models exactly.
+
+        This ensures developers must run `scripts/introspect_pg_schema.py` and commit the
+        regenerated file whenever SQLAlchemy database models are modified.
+        """
+        import os
+        import tempfile
+
+        import pytest
+
+        from scripts.introspect_pg_schema import generate_typescript_schemas
+
+        # Create a temporary file to hold the freshly generated schema
+        with tempfile.NamedTemporaryFile(suffix=".ts", delete=False) as tmp:
+            tmp_path = tmp.name
+
+        try:
+            # Generate the schemas offline to the temp file
+            success = generate_typescript_schemas(
+                db_url="sqlite+aiosqlite:///:memory:", output_path=tmp_path
+            )
+            assert success is True, "Failed to run the offline schema generator."
+
+            # Read both the committed file and the freshly generated file
+            committed_file_path = (
+                Path(__file__).parent.parent.parent
+                / "apps"
+                / "web"
+                / "src"
+                / "types"
+                / "db_schemas.ts"
+            )
+            assert committed_file_path.exists(), (
+                f"Committed schema file not found at: {committed_file_path}"
+            )
+
+            committed_content = committed_file_path.read_text().strip()
+            generated_content = Path(tmp_path).read_text().strip()
+
+            # Ensure they match exactly
+            if committed_content != generated_content:
+                # Highlight the drift / difference so the developer knows why it failed
+                import difflib
+
+                diff = list(
+                    difflib.unified_diff(
+                        committed_content.splitlines(),
+                        generated_content.splitlines(),
+                        fromfile="committed/db_schemas.ts",
+                        tofile="generated/db_schemas.ts",
+                    )
+                )
+                diff_msg = "\n".join(diff[:50])  # Limit output length
+                pytest.fail(
+                    "Database models have changed but the compiled typescript file (db_schemas.ts) has not been regenerated and committed.\n"
+                    "Please run 'uv run python scripts/introspect_pg_schema.py' and commit the resulting changes.\n"
+                    f"Diff:\n{diff_msg}"
+                )
+        finally:
+            # Clean up the temporary file
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
