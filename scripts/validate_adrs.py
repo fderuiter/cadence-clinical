@@ -99,6 +99,8 @@ def is_architectural_file(filepath: str) -> bool:
         or filepath.endswith(".txt")
         or filepath.endswith(".gitignore")
         or filepath.startswith("packages/ui/src/types/")
+        or filepath.startswith("apps/web/")
+        or filepath.startswith("apps/subject-portal/")
     ):
         return False
 

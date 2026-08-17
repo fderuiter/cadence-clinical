@@ -46,13 +46,7 @@ export interface ClinicalCodingAssignment {
   dictionary_version: string;
   coded_code?: string | null;
   coded_term?: string | null;
-  status:
-    | "UNCODED"
-    | "SUGGESTED"
-    | "CODED"
-    | "AUTO_CODED"
-    | "QUERY_PENDING"
-    | "RECODING_REQUIRED";
+  status: "UNCODED" | "SUGGESTED" | "CODED" | "AUTO_CODED" | "QUERY_PENDING" | "RECODING_REQUIRED";
   recoding_status: "NONE" | "PENDING" | "COMPLETED" | "CANCELLED";
   assigned_by?: string | null;
   assigned_at: string;
@@ -169,6 +163,7 @@ export interface ClinicalSubject {
   treatment_group?: string | null;
   randomization_seed?: number | null;
   investigational_product_id?: string | null;
+  active_protocol_version?: string | null;
   id: string;
   version: number;
   is_deleted: boolean;
@@ -254,6 +249,240 @@ export interface ConsentSignature {
   is_deleted: boolean;
 }
 
+export interface CtmsBudgetLineItem {
+  id: string;
+  grant_id: string;
+  category: string;
+  description: string;
+  amount: number;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
+export interface CtmsClinicalQuery {
+  id: string;
+  study_id: string;
+  site_id: string;
+  visit_id?: string | null;
+  status: string;
+  explanation?: string | null;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
+export interface CtmsCraAllocation {
+  id: string;
+  cra_id: string;
+  site_id: string;
+  study_id: string;
+  status: string;
+  effective_start_date: string;
+  effective_end_date?: string | null;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
+export interface CtmsDefeatedMonitoringVisit {
+  id: string;
+  visit_id: string;
+  actual_date?: string | null;
+  findings?: Record<string, any> | null;
+  device_timestamp: string;
+  offline_sync_markers: Record<string, any>;
+  status: string;
+  created_at: string;
+  created_by?: string | null;
+  reason_for_change?: string | null;
+  version_index: number;
+}
+
+export interface CtmsDelegation {
+  id: string;
+  site_id: string;
+  staff_user_id: string;
+  task_codes: Record<string, any>;
+  start_date: string;
+  end_date?: string | null;
+  is_active: boolean;
+  signed_off: boolean;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
+export interface CtmsGeneratedLetter {
+  id: string;
+  visit_id: string;
+  letter_type: string;
+  rendered_content: string;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
+export interface CtmsInvestigatorGrant {
+  id: string;
+  study_id: string;
+  site_id: string;
+  total_budget: number;
+  currency: string;
+  status: string;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
+export interface CtmsInvestigatorPayable {
+  id: string;
+  grant_id: string;
+  milestone_id?: string | null;
+  amount: number;
+  payment_status: string;
+  due_date?: string | null;
+  paid_at?: string | null;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
+export interface CtmsMonitoringVisitFinding {
+  id: string;
+  visit_id: string;
+  text: string;
+  severity: string;
+  resolution_status: string;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+  offline_sync_markers?: Record<string, any> | null;
+  sync_status?: string | null;
+}
+
+export interface CtmsMonitoringVisit {
+  id: string;
+  study_id: string;
+  site_id: string;
+  cra_id: string;
+  visit_type: string;
+  scheduled_date: string;
+  actual_date?: string | null;
+  status: string;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+  signature_manifestation?: Record<string, any> | null;
+  signer?: string | null;
+  signing_timestamp?: string | null;
+  offline_sync_markers?: Record<string, any> | null;
+  sync_status?: string | null;
+}
+
+export interface CtmsPaymentMilestone {
+  id: string;
+  grant_id: string;
+  milestone_name: string;
+  trigger_condition: string;
+  amount: number;
+  is_triggered: boolean;
+  triggered_at?: string | null;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
+export interface CtmsRecruitmentRecord {
+  id: string;
+  site_id: string;
+  study_id: string;
+  screened_count: number;
+  enrolled_count: number;
+  target_count: number;
+  as_of_date: string;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
+export interface CtmsRegulatoryForm {
+  id: string;
+  study_id: string;
+  site_id?: string | null;
+  form_type: string;
+  rendered_content: string;
+  approval_status: string;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+  signature_manifestation?: Record<string, any> | null;
+  signer?: string | null;
+  signing_timestamp?: string | null;
+}
+
+export interface CtmsSiteMilestone {
+  id: string;
+  site_id: string;
+  study_id: string;
+  milestone_type: string;
+  planned_date?: string | null;
+  actual_date?: string | null;
+  status: string;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
+export interface CtmsStudy {
+  id: string;
+  study_id: string;
+  name: string;
+  status: string;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
+export interface DataLock {
+  study_id?: string | null;
+  site_id?: string | null;
+  subject_id?: string | null;
+  visit_id?: string | null;
+  form_id?: string | null;
+  item_group_id?: string | null;
+  field_name?: string | null;
+  scope_type: string;
+  scope_id: string;
+  lock_type: string;
+  is_active: boolean;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  unlocked_at?: string | null;
+  unlocked_by?: string | null;
+  unlock_justification?: string | null;
+  signature_token?: string | null;
+  additional_metadata?: Record<string, any> | null;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
 export interface DictionaryImportJob {
   dictionary_type: "MEDDRA" | "WHODRUG" | "LOINC" | "SNOMED";
   dictionary_version: string;
@@ -270,19 +499,49 @@ export interface DictionaryImportJob {
 }
 
 export interface DoaDelegationRecord {
+  id: string;
   site_id: string;
   staff_user_id: string;
   task_code: string;
-  status: string;
-  pi_user_id: string;
-  reason_for_change: string;
-  pi_approved_at?: string | null;
-  pi_signature_hash?: string | null;
+  start_date: string;
   end_date?: string | null;
+  status: string;
+  pi_signature_hash?: string | null;
+  pi_approved_at?: string | null;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
   is_active: boolean;
-  id: string;
-  version: number;
   is_deleted: boolean;
+}
+
+export interface EisfDocumentRecord {
+  id: string;
+  site_id: string;
+  study_id: string;
+  section_code: string;
+  filename: string;
+  file_path: string;
+  sha256_checksum: string;
+  version_major: number;
+  version_minor: number;
+  status: string;
+  expiration_date?: string | null;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+  is_active: boolean;
+  is_deleted: boolean;
+}
+
+export interface EisfSectionTaxonomy {
+  section_code: string;
+  section_number: string;
+  title: string;
+  description: string;
+  is_mandatory: boolean;
 }
 
 export interface FormSubmission {
@@ -311,6 +570,27 @@ export interface IpKit {
   id: string;
   version: number;
   is_deleted: boolean;
+}
+
+export interface IsfDocument {
+  id: string;
+  study_id: string;
+  site_id: string;
+  binder_classification: string;
+  filename: string;
+  content: string;
+  mime_type: string;
+  version_index: number;
+  issue_date?: string | null;
+  expiration_date?: string | null;
+  document_owner_id?: string | null;
+  created_at: string;
+  created_by: string;
+  metadata_json?: Record<string, any> | null;
+  correlation_key?: string | null;
+  content_checksum?: string | null;
+  sync_status: string;
+  source_system: string;
 }
 
 export interface KitDispensation {
@@ -350,7 +630,7 @@ export interface LabReferenceRange {
   is_deleted: boolean;
 }
 
-export interface LabTestMaster {
+export interface LabTestMasterLegacy {
   study_id: string;
   test_code: string;
   test_name: string;
@@ -520,13 +800,20 @@ export interface SiteInventory {
 }
 
 export interface SiteStaffMember {
-  site_id: string;
-  staff_user_id: string;
-  name: string;
-  email: string;
-  has_gcp_training: boolean;
   id: string;
-  version: number;
+  site_id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  primary_role: string;
+  license_number?: string | null;
+  gcp_certified: boolean;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+  is_active: boolean;
   is_deleted: boolean;
 }
 
@@ -560,6 +847,8 @@ export interface SubjectConsent {
   site_id?: string | null;
   version_tag: string;
   version_index: number;
+  protocol_version?: string | null;
+  status: string;
   icf_signed: boolean;
   icf_signed_date?: string | null;
   requires_reconsent: boolean;
