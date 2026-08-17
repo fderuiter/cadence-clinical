@@ -97,7 +97,7 @@ function parseFile(filePath) {
               propName === "device_timestamp"
             ) {
               propType = "string";
-            } else if (propName === "sequence_number") {
+            } else if (propName === "sequence_number" || propName === "version_index") {
               propType = "number";
             }
           }
