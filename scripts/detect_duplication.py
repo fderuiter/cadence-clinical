@@ -393,6 +393,10 @@ def main() -> None:
                                     "apps/etmf/database/migrate.py",
                                 },
                                 {
+                                    "apps/etmf/infrastructure/models.py",
+                                    "apps/etmf/database/migrate.py",
+                                },
+                                {
                                     "apps/ctms/alembic/env.py",
                                     "apps/quality/alembic/env.py",
                                 },
