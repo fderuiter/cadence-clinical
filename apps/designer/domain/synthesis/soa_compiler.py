@@ -458,7 +458,7 @@ class SoACompiler:
             if target_day is None and enc.get("startDate") is not None:
                 try:
                     target_day = int(enc["startDate"])
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     target_day = None
 
             seq = enc.get("sequence") or enc.get("sequence_number") or (idx + 1)
