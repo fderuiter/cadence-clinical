@@ -218,6 +218,7 @@ def step_run_tests(dry_run: bool) -> None:
                 "--ignore=scripts/tests/test_translator.py",
                 "--ignore=apps/designer/tests/test_crf_builder_compliance.py",
                 "--ignore=apps/designer/tests/test_crf_requirements_mapping.py",
+                "--ignore=apps/execution/tests/test_pool_state_eviction.py",
             ]
         )
         # Run translation and compliance layout tests sequentially
@@ -235,6 +236,7 @@ def step_run_tests(dry_run: bool) -> None:
                 "scripts/tests/test_translator.py",
                 "apps/designer/tests/test_crf_builder_compliance.py",
                 "apps/designer/tests/test_crf_requirements_mapping.py",
+                "apps/execution/tests/test_pool_state_eviction.py",
             ]
         )
         # Run notification tests sequentially
