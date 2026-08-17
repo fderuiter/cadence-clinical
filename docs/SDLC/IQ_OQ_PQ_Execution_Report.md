@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2648
-- **Passed:** 2629 🟢
+- **Total Automated Test Cases Run:** 2649
+- **Passed:** 2630 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.28%
@@ -2868,6 +2868,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_feature_matrix_validation_ignoring_helper_and_excluded_services`                  | `tests.validation.test_feature_matrix_gating`                               | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_feature_matrix_validation_missing_service`                                        | `tests.validation.test_feature_matrix_gating`                               | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_feature_matrix_validation_success`                                                | `tests.validation.test_feature_matrix_gating`                               | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_committed_typescript_schema_is_up_to_date`                                        | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift`         | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_formatting_and_whitespace_immunity`                                               | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift`         | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_pending_delta_schema_drift`                                                       | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift`         | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_simulated_field_name_rename_drift`                                                | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift`         | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
