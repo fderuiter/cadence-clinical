@@ -12,8 +12,10 @@ GxP Compliance:
 """
 
 import ast
+import glob
 import json
 import re
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -186,13 +188,31 @@ class TestOfflineSchemaDrift:
 
         abs_file_path = str((repo_root / file_path).resolve())
 
-        res = subprocess.run(
-            ["node", str(parser_script), abs_file_path],
-            capture_output=True,
-            text=True,
-            check=True,
-            cwd=str(repo_root),
-        )
+        node_executable = "node"
+        resolved_node = shutil.which("node")
+        if resolved_node:
+            node_executable = resolved_node
+        else:
+            # Fallback search in home directory .nvm
+            nvm_nodes = glob.glob("/home/jules/.nvm/versions/node/*/bin/node")
+            if nvm_nodes:
+                node_executable = nvm_nodes[0]
+
+        try:
+            res = subprocess.run(
+                [node_executable, str(parser_script), abs_file_path],
+                capture_output=True,
+                text=True,
+                check=True,
+                cwd=str(repo_root),
+            )
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(
+                f"Frontend AST parser failed with code {e.returncode}.\n"
+                f"Command: {e.cmd}\n"
+                f"Stdout: {e.stdout}\n"
+                f"Stderr: {e.stderr}"
+            ) from e
         return json.loads(res.stdout)
 
     def parse_backend(self, file_path: str) -> dict[str, dict[str, str]]:
