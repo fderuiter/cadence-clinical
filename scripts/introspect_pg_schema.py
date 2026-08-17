@@ -64,6 +64,7 @@ def snake_to_pascal(name: str) -> str:
         "tsdv_configs": "TSDVConfig",
         "meddra_terms": "MedDRATerm",
         "whodrug_records": "WHODrugRecord",
+        "lab_test_master": "LabTestMasterLegacy",
     }
     if name in special_cases:
         return special_cases[name]
@@ -130,11 +131,27 @@ def generate_typescript_schemas(db_url: str, output_path: str) -> bool:
     )
 
     try:
-        from apps.execution.database.models import Base
+        from apps.execution.database.models import Base as exec_Base
     except Exception as e:
         import sys
 
-        print(f"Error importing Base: {e}", file=sys.stderr)
+        print(f"Error importing execution Base: {e}", file=sys.stderr)
+        return False
+
+    try:
+        from apps.ctms.models import Base as ctms_Base
+    except Exception as e:
+        import sys
+
+        print(f"Error importing CTMS Base: {e}", file=sys.stderr)
+        return False
+
+    try:
+        from apps.eisf.models import Base as eisf_Base
+    except Exception as e:
+        import sys
+
+        print(f"Error importing eISF Base: {e}", file=sys.stderr)
         return False
 
     ts_output = [
@@ -149,8 +166,18 @@ def generate_typescript_schemas(db_url: str, output_path: str) -> bool:
     ]
 
     table_count = 0
-    # Iterate over Base.metadata.tables
-    for table in sorted(Base.metadata.tables.values(), key=lambda t: t.name):
+
+    # Consolidate all metadata tables across services
+    consolidated_tables = {}
+    for table in exec_Base.metadata.tables.values():
+        consolidated_tables[table.name] = table
+    for table in ctms_Base.metadata.tables.values():
+        consolidated_tables[table.name] = table
+    for table in eisf_Base.metadata.tables.values():
+        consolidated_tables[table.name] = table
+
+    # Iterate over sorted, consolidated tables
+    for table in sorted(consolidated_tables.values(), key=lambda t: t.name):
         table_name = table.name
         name_lower = table_name.lower()
         if (
