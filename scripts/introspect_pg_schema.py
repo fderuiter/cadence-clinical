@@ -176,12 +176,23 @@ def generate_typescript_schemas(db_url: str, output_path: str) -> bool:
     for table in eisf_Base.metadata.tables.values():
         consolidated_tables[table.name] = table
 
+    # Identify test-only tables dynamically to prevent test pollution in parallel suites
+    test_tables = set()
+    for base in [exec_Base, ctms_Base, eisf_Base]:
+        if hasattr(base, "registry") and base.registry:
+            for mapper in base.registry.mappers:
+                if mapper.local_table is not None:
+                    module_name = getattr(mapper.class_, "__module__", "")
+                    if any(k in module_name for k in ("test", "mock", "conftest")):
+                        test_tables.add(mapper.local_table.name)
+
     # Iterate over sorted, consolidated tables
     for table in sorted(consolidated_tables.values(), key=lambda t: t.name):
         table_name = table.name
         name_lower = table_name.lower()
         if (
             name_lower in EXCLUDED_TABLES
+            or table_name in test_tables
             or "audit" in name_lower
             or "seal" in name_lower
             or "outbox" in name_lower
