@@ -315,3 +315,174 @@ async def test_reconsent_unlock_enables_v2_entry() -> None:
         stmt = select(ClinicalSubject).where(ClinicalSubject.id == "SUBJ-UNLOCK-01")
         sub_db = (await session.execute(stmt)).scalars().first()
         assert sub_db.active_protocol_version == "2.0.0"
+
+
+@pytest.mark.asyncio
+async def test_modular_coordinate_matching_and_collision_logging(caplog) -> None:
+    """Verifies modular coordinate matching, warning logs for multi-site subject overlaps, and zero synthetic observation drop."""
+    import logging
+
+    from apps.execution.database.models import MigrationRule
+    from apps.execution.migration_rules import reconcile_observations
+
+    # 1. Test coordinate matching on the observation layer
+    obs_ref = ClinicalObservation(
+        id="obs_ref",
+        subject_id="SUBJ-A",
+        study_id="STUDY-A",
+        site_id="SITE-X",
+        visit_id="VISIT-1",
+        domain="VS",
+        test_code="SYSBP",
+        test_name="Systolic Blood Pressure",
+        value=120.0,
+    )
+
+    # A. Match other ClinicalObservation
+    obs_other_match = ClinicalObservation(
+        id="obs_other_match",
+        subject_id="SUBJ-A",
+        study_id="STUDY-B",  # study_id does not affect matches_coordinates
+        site_id="SITE-X",
+        visit_id="VISIT-1",
+        domain="VS",
+        test_code="DIABP",
+        test_name="Diastolic Blood Pressure",
+    )
+    obs_other_diff = ClinicalObservation(
+        id="obs_other_diff",
+        subject_id="SUBJ-A",
+        study_id="STUDY-A",
+        site_id="SITE-Y",  # different site
+        visit_id="VISIT-1",
+        domain="VS",
+        test_code="SYSBP",
+        test_name="Systolic Blood Pressure",
+    )
+    assert obs_ref.matches_coordinates(obs_other_match) is True
+    assert obs_ref.matches_coordinates(obs_other_diff) is False
+
+    # B. Match dict
+    assert (
+        obs_ref.matches_coordinates(
+            {
+                "subject_id": "SUBJ-A",
+                "visit_id": "VISIT-1",
+                "domain": "VS",
+                "site_id": "SITE-X",
+            }
+        )
+        is True
+    )
+    assert (
+        obs_ref.matches_coordinates(
+            {
+                "subject_id": "SUBJ-A",
+                "visit_id": "VISIT-1",
+                "domain": "VS",
+                "site_id": "SITE-Y",
+            }
+        )
+        is False
+    )
+
+    # C. Match tuple
+    assert obs_ref.matches_coordinates(("SUBJ-A", "VISIT-1", "VS", "SITE-X")) is True
+    assert obs_ref.matches_coordinates(("SUBJ-A", "VISIT-1", "VS", "SITE-Y")) is False
+    assert (
+        obs_ref.matches_coordinates(("SUBJ-A", "VISIT-1", "VS")) is False
+    )  # length not 4
+
+    # D. Match other type
+    assert obs_ref.matches_coordinates("string") is False
+
+    # 2. Test multi-site duplicate subject ID scenario & zero synthetic observation drop & warning logs
+    study_id = "STUDY-MULTI"
+
+    # Setup observations for same subject ID across different sites
+    obs_site_a = ClinicalObservation(
+        id="obs_multi_a",
+        subject_id="SUBJ-DUP-01",
+        study_id=study_id,
+        site_id="SITE-A",
+        visit_id="VISIT-1",
+        domain="VS",
+        test_code="VSSBP",
+        test_name="Systolic BP",
+        value=120.0,
+        protocol_version_tag="1.0",
+        protocol_version_index=1,
+    )
+
+    obs_site_b = ClinicalObservation(
+        id="obs_multi_b",
+        subject_id="SUBJ-DUP-01",
+        study_id=study_id,
+        site_id="SITE-B",
+        visit_id="VISIT-1",
+        domain="VS",
+        test_code="VSSBP",
+        test_name="Systolic BP",
+        value=125.0,
+        protocol_version_tag="1.0",
+        protocol_version_index=1,
+    )
+
+    async with db_manager.get_session_maker()() as session:
+        # Create a rule to add PULSE on v2.0
+        rule = MigrationRule(
+            id="rule_add_pulse",
+            study_id=study_id,
+            source_version="1.0",
+            target_version="2.0",
+            rule_type="add",
+            target_field="PULSE",
+            default_value_float=72.0,
+            default_value_string="72.0",
+            is_deleted=False,
+        )
+        session.add(rule)
+        await session.commit()
+
+    # We want to capture the warning logs from the logger during reconcile_observations.
+    # Set caplog level to WARNING to ensure we capture the warning logs
+    with caplog.at_level(logging.WARNING):
+        async with db_manager.get_session_maker()() as session:
+            reconciled = await reconcile_observations(
+                session=session,
+                observations=[obs_site_a, obs_site_b],
+                target_version="2.0",
+            )
+
+    # 3. Assertions
+    # A. Verify logs captured warning for duplicate subject id across multiple sites
+    warning_msgs = [
+        record.message for record in caplog.records if record.levelname == "WARNING"
+    ]
+    assert any(
+        "Duplicate subject identifier 'SUBJ-DUP-01' detected across multiple sites:"
+        in msg
+        and "SITE-A" in msg
+        and "SITE-B" in msg
+        for msg in warning_msgs
+    )
+
+    # B. Verify zero synthetic observation drop. We should have 4 reconciled observations in total:
+    # 1. Carried over VSSBP for SITE-A
+    # 2. Carried over VSSBP for SITE-B
+    # 3. Synthetic PULSE for SITE-A
+    # 4. Synthetic PULSE for SITE-B
+    assert len(reconciled) == 4
+
+    reconciled_site_a = [o for o in reconciled if o.site_id == "SITE-A"]
+    reconciled_site_b = [o for o in reconciled if o.site_id == "SITE-B"]
+
+    assert len(reconciled_site_a) == 2
+    assert len(reconciled_site_b) == 2
+
+    # Check that PULSE was added to both sites
+    pulse_a = next(o for o in reconciled_site_a if o.test_code == "PULSE")
+    pulse_b = next(o for o in reconciled_site_b if o.test_code == "PULSE")
+
+    assert pulse_a.value == 72.0
+    assert pulse_b.value == 72.0

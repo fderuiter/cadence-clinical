@@ -152,3 +152,32 @@ class ClinicalObservation(AuditedModel):
     @reference_range_high.setter
     def reference_range_high(self, value: float | None) -> None:
         self._set_prop("reference_range_high", value)
+
+    def matches_coordinates(self, other: Any) -> bool:
+        """Determines if this observation shares coordinates with another coordinate source.
+
+        Evaluates the complete coordinate identifier, specifically including subject_id,
+        visit_id, domain, and site_id.
+        """
+        if hasattr(other, "subject_id"):
+            return (
+                self.subject_id == other.subject_id
+                and self.visit_id == other.visit_id
+                and self.domain == other.domain
+                and self.site_id == other.site_id
+            )
+        if isinstance(other, dict):
+            return (
+                self.subject_id == other.get("subject_id")
+                and self.visit_id == other.get("visit_id")
+                and self.domain == other.get("domain")
+                and self.site_id == other.get("site_id")
+            )
+        if isinstance(other, tuple) and len(other) == 4:
+            return (
+                self.subject_id == other[0]
+                and self.visit_id == other[1]
+                and self.domain == other[2]
+                and self.site_id == other[3]
+            )
+        return False

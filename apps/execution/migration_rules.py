@@ -1,9 +1,12 @@
+import logging
 import uuid
 from typing import Any
 
 from sqlalchemy import select
 
 from apps.execution.database.models import ClinicalObservation, MigrationRule
+
+logger = logging.getLogger(__name__)
 
 
 class ReconciledObservation(ClinicalObservation):
@@ -104,6 +107,19 @@ async def reconcile_observations(
     """Reconciles observations dynamically and non-destructively to a target protocol version."""
     if not observations:
         return []
+
+    # Detect subject ID overlaps across multiple sites
+    subject_to_sites: dict[str, set[str]] = {}
+    for obs in observations:
+        if obs.subject_id:
+            site = obs.site_id if obs.site_id is not None else ""
+            subject_to_sites.setdefault(obs.subject_id, set()).add(site)
+
+    for sub_id, sites in subject_to_sites.items():
+        if len(sites) > 1:
+            logger.warning(
+                f"Duplicate subject identifier '{sub_id}' detected across multiple sites: {sorted(list(sites))} during schema migration."
+            )
 
     # Get study_id from observations (all must belong to the same study)
     study_id = observations[0].study_id
@@ -258,10 +274,8 @@ async def reconcile_observations(
                             # Check if target_field already exists in the migrated group or original group
                             exists = any(
                                 o.test_code == r.target_field
+                                and o.matches_coordinates((sub_id, vis_id, dom, sit_id))
                                 for o in migrated_step
-                                if o.subject_id == sub_id
-                                and o.visit_id == vis_id
-                                and o.domain == dom
                             )
                             if not exists:
                                 # Create synthetic observation
