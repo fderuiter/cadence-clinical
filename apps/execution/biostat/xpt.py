@@ -327,7 +327,7 @@ def write_xpt_v5(
                 else:
                     try:
                         obs_bytes.extend(double_to_ibm(float(val)))
-                    except ValueError, TypeError:
+                    except (ValueError, TypeError) as _:
                         obs_bytes.extend(double_to_ibm(None))
             else:  # character
                 b_len = spec["length"]
@@ -496,7 +496,7 @@ def write_xpt_v8(
                 else:
                     try:
                         obs_bytes.extend(double_to_ibm(float(val)))
-                    except ValueError, TypeError:
+                    except (ValueError, TypeError) as _:
                         obs_bytes.extend(double_to_ibm(None))
             else:
                 b_len = spec["length"]

@@ -2365,10 +2365,15 @@ import asyncio
 
 _publish_locks: dict[str, asyncio.Lock] = {}
 
+
 class PublishStudyVersionRequest(BaseModel):
     description: str | None = Field(None, description="Amendment description")
-    baseline_snapshot: dict[str, Any] | None = Field(None, description="Optional baseline snapshot overrides")
-    amended_snapshot: dict[str, Any] | None = Field(None, description="Optional amended snapshot overrides")
+    baseline_snapshot: dict[str, Any] | None = Field(
+        None, description="Optional baseline snapshot overrides"
+    )
+    amended_snapshot: dict[str, Any] | None = Field(
+        None, description="Optional amended snapshot overrides"
+    )
 
 
 class PublishStudyVersionResponse(BaseModel):
@@ -2378,10 +2383,12 @@ class PublishStudyVersionResponse(BaseModel):
     summary_of_changes: str | None = None
 
 
-def make_snapshot_from_projection(projection: dict[str, Any] | None, version_tag: str) -> dict[str, Any]:
+def make_snapshot_from_projection(
+    projection: dict[str, Any] | None, version_tag: str
+) -> dict[str, Any]:
     if not projection:
         return {"version": version_tag, "activities": []}
-    
+
     activities_list = []
     seen_ids = set()
     arms = projection.get("arms", [])
@@ -2393,15 +2400,14 @@ def make_snapshot_from_projection(projection: dict[str, Any] | None, version_tag
                 act_id = act.get("id") or act.get("activity_id")
                 if act_id and act_id not in seen_ids:
                     seen_ids.add(act_id)
-                    activities_list.append({
-                        "id": act_id,
-                        "name": act.get("name"),
-                        "description": act.get("description", "")
-                    })
-    return {
-        "version": version_tag,
-        "activities": activities_list
-    }
+                    activities_list.append(
+                        {
+                            "id": act_id,
+                            "name": act.get("name"),
+                            "description": act.get("description", ""),
+                        }
+                    )
+    return {"version": version_tag, "activities": activities_list}
 
 
 def update_mock_version_status(study_id: str, version_id: str, new_status: str) -> str:
@@ -2415,7 +2421,7 @@ def update_mock_version_status(study_id: str, version_id: str, new_status: str) 
         if v.get("id") == version_id:
             old_status = v.get("status", "DRAFT")
             v["status"] = new_status
-            
+
             payload_to_sign = {
                 "id": v.get("id") or "legacy_ver",
                 "version_tag": v.get("version_tag") or "1.0",
@@ -2439,7 +2445,9 @@ def update_mock_version_status(study_id: str, version_id: str, new_status: str) 
     return "DRAFT"
 
 
-async def update_neo4j_version_status(driver, study_id: str, version_id: str, new_status: str) -> str:
+async def update_neo4j_version_status(
+    driver, study_id: str, version_id: str, new_status: str
+) -> str:
     import os
 
     from packages.security.signing import generate_canonical_signature
@@ -2473,7 +2481,10 @@ async def update_neo4j_version_status(driver, study_id: str, version_id: str, ne
             payload_to_sign["parent_version"] = version_props["parent_version"]
         if "branch_name" in version_props and version_props["branch_name"] is not None:
             payload_to_sign["branch_name"] = version_props["branch_name"]
-        if "base_version" in version_props and version_props["base_version"] is not None:
+        if (
+            "base_version" in version_props
+            and version_props["base_version"] is not None
+        ):
             payload_to_sign["base_version"] = version_props["base_version"]
 
         secret_env = os.getenv("SIGNING_SECRET") or "mock_secret"
@@ -2485,7 +2496,12 @@ async def update_neo4j_version_status(driver, study_id: str, version_id: str, ne
         SET sv.status = $new_status,
             sv.signature = $new_signature
         """
-        await session.run(update_query, version_id=version_id, new_status=new_status, new_signature=new_signature)
+        await session.run(
+            update_query,
+            version_id=version_id,
+            new_status=new_status,
+            new_signature=new_signature,
+        )
         return old_status
 
 
@@ -2527,11 +2543,11 @@ async def publish_study_version_endpoint(
     # Enforce concurrency/locking
     if version_id not in _publish_locks:
         _publish_locks[version_id] = asyncio.Lock()
-    
+
     if _publish_locks[version_id].locked():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="CONCURRENT_PUBLISHING_CONFLICT: This version is already in the process of being published."
+            detail="CONCURRENT_PUBLISHING_CONFLICT: This version is already in the process of being published.",
         )
 
     async with _publish_locks[version_id]:
@@ -2546,7 +2562,7 @@ async def publish_study_version_endpoint(
                     break
             if not ver_record:
                 raise HTTPException(status_code=404, detail="StudyVersion not found")
-            
+
             update_mock_version_status(study_id, version_id, "PENDING_PUBLISH")
             version_tag = ver_record.get("version_tag")
             parent_version_tag = ver_record.get("parent_version")
@@ -2556,15 +2572,21 @@ async def publish_study_version_endpoint(
                 MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion {id: $version_id})
                 RETURN sv {.*} AS version_props
                 """
-                ver_res = await session.run(ver_query, study_id=study_id, version_id=version_id)
+                ver_res = await session.run(
+                    ver_query, study_id=study_id, version_id=version_id
+                )
                 record = await ver_res.single()
                 if not record:
-                    raise HTTPException(status_code=404, detail="StudyVersion not found")
+                    raise HTTPException(
+                        status_code=404, detail="StudyVersion not found"
+                    )
                 version_props = record["version_props"]
                 version_tag = version_props.get("version_tag")
                 parent_version_tag = version_props.get("parent_version")
 
-            await update_neo4j_version_status(driver, study_id, version_id, "PENDING_PUBLISH")
+            await update_neo4j_version_status(
+                driver, study_id, version_id, "PENDING_PUBLISH"
+            )
 
         try:
             # Step 2: Build Snapshots for downstream
@@ -2572,7 +2594,9 @@ async def publish_study_version_endpoint(
             if not baseline_snapshot:
                 baseline_key = f"{study_id}:{parent_version_tag}"
                 baseline_proj = MOCK_STUDY_PROJECTIONS_BY_VERSION.get(baseline_key)
-                baseline_snapshot = make_snapshot_from_projection(baseline_proj, parent_version_tag or "1.0")
+                baseline_snapshot = make_snapshot_from_projection(
+                    baseline_proj, parent_version_tag or "1.0"
+                )
 
             amended_snapshot = payload.amended_snapshot
             if not amended_snapshot:
@@ -2580,8 +2604,11 @@ async def publish_study_version_endpoint(
                 amended_proj = MOCK_STUDY_PROJECTIONS_BY_VERSION.get(amended_key)
                 if not amended_proj and driver is None:
                     from apps.designer.db import get_study_projection
+
                     amended_proj = get_study_projection(study_id)
-                amended_snapshot = make_snapshot_from_projection(amended_proj, version_tag or "2.0")
+                amended_snapshot = make_snapshot_from_projection(
+                    amended_proj, version_tag or "2.0"
+                )
 
             # Step 3: Call downstream execution setup synchronously (with strict 15-second timeout)
             execution_url = os.getenv("EXECUTION_SERVICE_URL", "http://localhost:8001")
@@ -2592,7 +2619,13 @@ async def publish_study_version_endpoint(
 
             headers = {}
             for key, val in request.headers.items():
-                if key.lower() in ("authorization", "x-user-id", "x-user-roles", "x-tenant-id", "content-type"):
+                if key.lower() in (
+                    "authorization",
+                    "x-user-id",
+                    "x-user-roles",
+                    "x-tenant-id",
+                    "content-type",
+                ):
                     headers[key] = val
             if "x-user-id" not in {k.lower() for k in headers}:
                 headers["X-User-Id"] = user_id
@@ -2618,7 +2651,9 @@ async def publish_study_version_endpoint(
             if driver is None:
                 update_mock_version_status(study_id, version_id, "ACTIVE")
             else:
-                await update_neo4j_version_status(driver, study_id, version_id, "ACTIVE")
+                await update_neo4j_version_status(
+                    driver, study_id, version_id, "ACTIVE"
+                )
 
             return PublishStudyVersionResponse(
                 status="ACTIVE",
@@ -2683,7 +2718,7 @@ async def publish_study_version_endpoint(
             # Propagate clear validation error notification to user
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"PUBLISH_FAILED: {error_msg}"
+                detail=f"PUBLISH_FAILED: {error_msg}",
             )
 
 

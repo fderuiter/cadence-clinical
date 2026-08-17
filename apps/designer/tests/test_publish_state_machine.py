@@ -70,7 +70,7 @@ def test_publish_state_machine_success(mock_client) -> None:
     """
     study_id = "study_sm_1"
     version_id = "ver_sm_1"
-    
+
     # Setup mock data
     MOCK_STUDY_VERSIONS[study_id] = [
         {
@@ -82,15 +82,15 @@ def test_publish_state_machine_success(mock_client) -> None:
             "created_by": "designer_test_user",
         }
     ]
-    
+
     # Mock successful downstream call
     mock_response = httpx.Response(
         status_code=200,
         json={
             "amendment_id": "amd_success_123",
-            "summary_of_changes": "Protocol amendment summary"
+            "summary_of_changes": "Protocol amendment summary",
         },
-        request=httpx.Request("POST", "http://test")
+        request=httpx.Request("POST", "http://test"),
     )
     mock_client.post.return_value = mock_response
 
@@ -118,7 +118,7 @@ def test_publish_state_machine_rollback_on_downstream_error(mock_client) -> None
     """
     study_id = "study_sm_2"
     version_id = "ver_sm_2"
-    
+
     MOCK_STUDY_VERSIONS[study_id] = [
         {
             "id": version_id,
@@ -134,9 +134,11 @@ def test_publish_state_machine_rollback_on_downstream_error(mock_client) -> None
     response_mock = httpx.Response(
         status_code=400,
         json={"detail": "Downstream migration failed due to clinical validation error"},
-        request=httpx.Request("POST", "http://test")
+        request=httpx.Request("POST", "http://test"),
     )
-    mock_client.post.side_effect = httpx.HTTPStatusError("Bad Request", request=None, response=response_mock)
+    mock_client.post.side_effect = httpx.HTTPStatusError(
+        "Bad Request", request=None, response=response_mock
+    )
 
     headers = _make_auth_headers()
     response = client.post(
@@ -155,8 +157,7 @@ def test_publish_state_machine_rollback_on_downstream_error(mock_client) -> None
 
     # Verify audit trail contains corresponding entry
     rollback_audits = [
-        log for log in MOCK_DESIGNER_AUDIT_LOGS
-        if log.get("type") == "PUBLISH_ROLLBACK"
+        log for log in MOCK_DESIGNER_AUDIT_LOGS if log.get("type") == "PUBLISH_ROLLBACK"
     ]
     assert len(rollback_audits) == 1
     audit = rollback_audits[0]
@@ -170,7 +171,7 @@ def test_publish_state_machine_rollback_on_timeout(mock_client) -> None:
     """Verify 15-second timeout handling and rollback."""
     study_id = "study_sm_3"
     version_id = "ver_sm_3"
-    
+
     MOCK_STUDY_VERSIONS[study_id] = [
         {
             "id": version_id,
@@ -183,7 +184,9 @@ def test_publish_state_machine_rollback_on_timeout(mock_client) -> None:
     ]
 
     # Mock timeout exception
-    mock_client.post.side_effect = httpx.TimeoutException("Downstream server timed out.")
+    mock_client.post.side_effect = httpx.TimeoutException(
+        "Downstream server timed out."
+    )
 
     headers = _make_auth_headers()
     response = client.post(
@@ -201,8 +204,7 @@ def test_publish_state_machine_rollback_on_timeout(mock_client) -> None:
 
     # Verify audit log exists
     rollback_audits = [
-        log for log in MOCK_DESIGNER_AUDIT_LOGS
-        if log.get("type") == "PUBLISH_ROLLBACK"
+        log for log in MOCK_DESIGNER_AUDIT_LOGS if log.get("type") == "PUBLISH_ROLLBACK"
     ]
     assert len(rollback_audits) == 1
     assert "timed out" in rollback_audits[0]["error_message"]
@@ -212,7 +214,7 @@ def test_publish_state_machine_lock_freed(mock_client) -> None:
     """Verify that lock resources are freed and allow subsequent calls."""
     study_id = "study_sm_4"
     version_id = "ver_sm_4"
-    
+
     MOCK_STUDY_VERSIONS[study_id] = [
         {
             "id": version_id,
@@ -242,9 +244,9 @@ def test_publish_state_machine_lock_freed(mock_client) -> None:
         status_code=200,
         json={
             "amendment_id": "amd_success_456",
-            "summary_of_changes": "Protocol amendment summary"
+            "summary_of_changes": "Protocol amendment summary",
         },
-        request=httpx.Request("POST", "http://test")
+        request=httpx.Request("POST", "http://test"),
     )
 
     headers = _make_auth_headers()
