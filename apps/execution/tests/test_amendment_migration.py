@@ -320,9 +320,10 @@ async def test_reconsent_unlock_enables_v2_entry() -> None:
 @pytest.mark.asyncio
 async def test_modular_coordinate_matching_and_collision_logging(caplog) -> None:
     """Verifies modular coordinate matching, warning logs for multi-site subject overlaps, and zero synthetic observation drop."""
+    import logging
+
     from apps.execution.database.models import MigrationRule
     from apps.execution.migration_rules import reconcile_observations
-    import logging
 
     # 1. Test coordinate matching on the observation layer
     obs_ref = ClinicalObservation(
@@ -341,7 +342,7 @@ async def test_modular_coordinate_matching_and_collision_logging(caplog) -> None
     obs_other_match = ClinicalObservation(
         id="obs_other_match",
         subject_id="SUBJ-A",
-        study_id="STUDY-B", # study_id does not affect matches_coordinates
+        study_id="STUDY-B",  # study_id does not affect matches_coordinates
         site_id="SITE-X",
         visit_id="VISIT-1",
         domain="VS",
@@ -352,7 +353,7 @@ async def test_modular_coordinate_matching_and_collision_logging(caplog) -> None
         id="obs_other_diff",
         subject_id="SUBJ-A",
         study_id="STUDY-A",
-        site_id="SITE-Y", # different site
+        site_id="SITE-Y",  # different site
         visit_id="VISIT-1",
         domain="VS",
         test_code="SYSBP",
@@ -362,27 +363,38 @@ async def test_modular_coordinate_matching_and_collision_logging(caplog) -> None
     assert obs_ref.matches_coordinates(obs_other_diff) is False
 
     # B. Match dict
-    assert obs_ref.matches_coordinates({
-        "subject_id": "SUBJ-A",
-        "visit_id": "VISIT-1",
-        "domain": "VS",
-        "site_id": "SITE-X",
-    }) is True
-    assert obs_ref.matches_coordinates({
-        "subject_id": "SUBJ-A",
-        "visit_id": "VISIT-1",
-        "domain": "VS",
-        "site_id": "SITE-Y",
-    }) is False
+    assert (
+        obs_ref.matches_coordinates(
+            {
+                "subject_id": "SUBJ-A",
+                "visit_id": "VISIT-1",
+                "domain": "VS",
+                "site_id": "SITE-X",
+            }
+        )
+        is True
+    )
+    assert (
+        obs_ref.matches_coordinates(
+            {
+                "subject_id": "SUBJ-A",
+                "visit_id": "VISIT-1",
+                "domain": "VS",
+                "site_id": "SITE-Y",
+            }
+        )
+        is False
+    )
 
     # C. Match tuple
     assert obs_ref.matches_coordinates(("SUBJ-A", "VISIT-1", "VS", "SITE-X")) is True
     assert obs_ref.matches_coordinates(("SUBJ-A", "VISIT-1", "VS", "SITE-Y")) is False
-    assert obs_ref.matches_coordinates(("SUBJ-A", "VISIT-1", "VS")) is False # length not 4
+    assert (
+        obs_ref.matches_coordinates(("SUBJ-A", "VISIT-1", "VS")) is False
+    )  # length not 4
 
     # D. Match other type
     assert obs_ref.matches_coordinates("string") is False
-
 
     # 2. Test multi-site duplicate subject ID scenario & zero synthetic observation drop & warning logs
     study_id = "STUDY-MULTI"
@@ -439,14 +451,17 @@ async def test_modular_coordinate_matching_and_collision_logging(caplog) -> None
             reconciled = await reconcile_observations(
                 session=session,
                 observations=[obs_site_a, obs_site_b],
-                target_version="2.0"
+                target_version="2.0",
             )
 
     # 3. Assertions
     # A. Verify logs captured warning for duplicate subject id across multiple sites
-    warning_msgs = [record.message for record in caplog.records if record.levelname == "WARNING"]
+    warning_msgs = [
+        record.message for record in caplog.records if record.levelname == "WARNING"
+    ]
     assert any(
-        "Duplicate subject identifier 'SUBJ-DUP-01' detected across multiple sites:" in msg
+        "Duplicate subject identifier 'SUBJ-DUP-01' detected across multiple sites:"
+        in msg
         and "SITE-A" in msg
         and "SITE-B" in msg
         for msg in warning_msgs
