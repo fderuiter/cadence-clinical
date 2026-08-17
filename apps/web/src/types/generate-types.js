@@ -28,6 +28,12 @@ function translateProperty(prop) {
   if (prop.allOf) {
     return prop.allOf.map(translateProperty).join(" & ");
   }
+  if (Array.isArray(prop.type)) {
+    if (prop.type.length === 0) return "any";
+    const types = prop.type.map((t) => translateProperty({ ...prop, type: t }));
+    const allConstituents = types.flatMap((t) => t.split(" | "));
+    return [...new Set(allConstituents)].join(" | ");
+  }
   if (prop.type === "array") {
     const itemType = translateProperty(prop.items);
     return `${itemType}[]`;
@@ -105,3 +111,6 @@ function generate() {
 }
 
 generate();
+
+export { translateProperty, generate };
+
