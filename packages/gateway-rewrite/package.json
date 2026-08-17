@@ -15,5 +15,8 @@
     "reflect-metadata": "^0.2.2",
     "typescript": "^5.0.0",
     "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "pino": "^9.3.2"
   }
 }
