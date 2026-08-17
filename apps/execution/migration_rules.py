@@ -273,7 +273,8 @@ async def reconcile_observations(
                         if r.rule_type == "add":
                             # Check if target_field already exists in the migrated group or original group
                             exists = any(
-                                o.test_code == r.target_field and o.matches_coordinates((sub_id, vis_id, dom, sit_id))
+                                o.test_code == r.target_field
+                                and o.matches_coordinates((sub_id, vis_id, dom, sit_id))
                                 for o in migrated_step
                             )
                             if not exists:
