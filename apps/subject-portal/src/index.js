@@ -1744,7 +1744,9 @@ async function syncOfflineQueue(isManual = false) {
   const online = checkOnline();
 
   if (state.autoSyncSuspended && !isManual) {
-    console.log("[App] Auto-sync suspended due to version mismatch. Manual refresh required.");
+    console.log(
+      "[App] Auto-sync suspended due to version mismatch. Manual refresh required."
+    );
     return;
   }
 
@@ -1795,7 +1797,8 @@ async function syncOfflineQueue(isManual = false) {
     submissions: decryptable.map((item) => ({
       subject_id: item.subject_id,
       diary_id: item.diary_id,
-      version_index: typeof item.version_index === "number" ? item.version_index : 1,
+      version_index:
+        typeof item.version_index === "number" ? item.version_index : 1,
       device_timestamp: item.device_timestamp,
       answers: item.answers,
       offline_sync_markers: {
@@ -1844,7 +1847,9 @@ async function syncOfflineQueue(isManual = false) {
               additionalFields: {
                 resolved_answers: res.answers,
                 resolved_at: new Date().toISOString(),
-                error: isQuar ? "Version mismatch: client version index does not match the active instrument version." : null,
+                error: isQuar
+                  ? "Version mismatch: client version index does not match the active instrument version."
+                  : null,
               },
             });
           }
@@ -1865,7 +1870,9 @@ async function syncOfflineQueue(isManual = false) {
               additionalFields: {
                 resolved_answers: res.answers,
                 resolved_at: new Date().toISOString(),
-                error: isQuar ? "Version mismatch: client version index does not match the active instrument version." : null,
+                error: isQuar
+                  ? "Version mismatch: client version index does not match the active instrument version."
+                  : null,
               },
             });
           }
@@ -1878,7 +1885,8 @@ async function syncOfflineQueue(isManual = false) {
 
       if (hasQuarantined) {
         state.autoSyncSuspended = true;
-        const msg = "ALERT: Outdated Form Structure! Please perform manual refresh to reload active clinical structures.";
+        const msg =
+          "ALERT: Outdated Form Structure! Please perform manual refresh to reload active clinical structures.";
         state.syncStatusText = msg;
         if (statusTextEl) {
           statusTextEl.textContent = msg;

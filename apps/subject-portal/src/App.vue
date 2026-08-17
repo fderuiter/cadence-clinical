@@ -219,7 +219,9 @@
             ⚠️ Outdated Form Structure Detected
           </p>
           <p style="font-size: 14px; margin: 0 0 12px 0">
-            The questionnaire version index does not match the active server structure. Automatic sync is suspended. Please perform a manual refresh.
+            The questionnaire version index does not match the active server
+            structure. Automatic sync is suspended. Please perform a manual
+            refresh.
           </p>
           <button
             id="btn-alert-sync-now"
@@ -1114,7 +1116,8 @@ function getSubmissionClass(item) {
     "submission-merged": item.status === "MERGED",
     "submission-ignored": item.status === "IGNORED_SERVER_WINS",
     "submission-quarantined": item.status === "QUARANTINED",
-    "submission-error": item.status === "DECRYPTION_ERROR" || item.status === "QUARANTINED",
+    "submission-error":
+      item.status === "DECRYPTION_ERROR" || item.status === "QUARANTINED",
   };
 }
 
