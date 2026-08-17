@@ -10,11 +10,11 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2644
-- **Passed:** 2630 🟢
+- **Total Automated Test Cases Run:** 2647
+- **Passed:** 2628 🟢
 - **Failed/Errors:** 0 🔴
-- **Skipped:** 14 ⚪
-- **Overall Operational Pass Rate:** 99.47%
+- **Skipped:** 19 ⚪
+- **Overall Operational Pass Rate:** 99.28%
 
 ## 2. Installation Qualification (IQ)
 
@@ -1411,6 +1411,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_zero_phi_leak_in_redacted_pdf`                                                    | `apps.execution.tests.test_phi_redaction`                                   | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_concurrent_connection_isolation_and_no_weakref_errors`                            | `apps.execution.tests.test_pool_state_eviction`                             | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
 | `test_pool_connection_state_eviction`                                                   | `apps.execution.tests.test_pool_state_eviction`                             | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
+| `test_manual_physical_paper_consent_override`                                           | `apps.execution.tests.test_pubsub_auto_enrollment`                          | PRD-SUB-007                                                                        | 🟢 PASSED  | < 1s     |
+| `test_pubsub_auto_enrollment_screening`                                                 | `apps.execution.tests.test_pubsub_auto_enrollment`                          | PRD-SUB-007                                                                        | 🟢 PASSED  | < 1s     |
+| `test_site_activation_compliance_validation`                                            | `apps.execution.tests.test_pubsub_auto_enrollment`                          | PRD-SUB-007                                                                        | 🟢 PASSED  | < 1s     |
 | `test_digest_window_configurations`                                                     | `apps.execution.tests.test_queries_escalation`                              | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_escalation_idempotency`                                                           | `apps.execution.tests.test_queries_escalation`                              | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_escalation_missing_ids_fallback`                                                  | `apps.execution.tests.test_queries_escalation`                              | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
@@ -2599,11 +2602,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_success_with_draft_flag`                                                          | `scripts.tests.test_gxp_fail_fast`                                          | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
 | `test_layout_gating_approved_and_logged`                                                | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_layout_gating_missing_justification_rejected`                                     | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
-| `test_layout_validation_integration`                                                    | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
-| `test_layout_validation_invisible`                                                      | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
-| `test_layout_validation_overlap`                                                        | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
-| `test_layout_validation_scrambled_sequence`                                             | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
-| `test_layout_validation_valid`                                                          | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_layout_validation_integration`                                                    | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                                                                | ⚪ SKIPPED | < 1s     |
+| `test_layout_validation_invisible`                                                      | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                                                                | ⚪ SKIPPED | < 1s     |
+| `test_layout_validation_overlap`                                                        | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                                                                | ⚪ SKIPPED | < 1s     |
+| `test_layout_validation_scrambled_sequence`                                             | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                                                                | ⚪ SKIPPED | < 1s     |
+| `test_layout_validation_valid`                                                          | `scripts.tests.test_layout_validator`                                       | _Regression/Helper_                                                                | ⚪ SKIPPED | < 1s     |
 | `test_aggregate_eligibility_evaluation_scenarios`                                       | `scripts.tests.test_m4_challenger1_stress`                                  | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_ctms_document_renderer_fallback`                                                  | `scripts.tests.test_m4_challenger1_stress`                                  | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_ctms_sync_reconciliation_signature_enforcement_errors`                            | `scripts.tests.test_m4_challenger1_stress`                                  | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |

@@ -1,9 +1,11 @@
 """FastAPI Router for eConsent microservice."""
 
+import json
 import os
 import uuid
 from datetime import UTC, datetime
 
+import redis
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -80,6 +82,57 @@ async def write_audit_log(
     )
     session.add(log_entry)
     await session.flush()
+
+
+def publish_consent_completed_event(
+    subject_id: str,
+    study_id: str,
+    site_id: str | None,
+    version_tag: str = "1.0",
+    version_index: int = 1,
+) -> None:
+    """Publishes a consent completed event to a Redis Pub/Sub channel.
+
+    Args:
+        subject_id: The pseudonym identifier of the subject.
+        study_id: The study identifier.
+        site_id: Optional site identifier.
+        version_tag: Optional version tag of the consent template.
+        version_index: Optional version index of the consent template.
+
+    Returns:
+        None
+    """
+    redis_host = os.getenv("REDIS_HOST")
+    if not redis_host:
+        return
+    try:
+        redis_port = int(os.getenv("REDIS_PORT", "6379"))
+        redis_password = os.getenv("REDIS_PASSWORD") or None
+        redis_channel = os.getenv("REDIS_CHANNEL_CONSENT", "econsent_consent_completed")
+
+        r = redis.Redis(
+            host=redis_host,
+            port=redis_port,
+            password=redis_password,
+            decode_responses=True,
+            socket_timeout=5,
+        )
+        payload = {
+            "action": "consent_completed",
+            "subject_id": subject_id,
+            "study_id": study_id,
+            "site_id": site_id,
+            "version_tag": version_tag,
+            "version_index": version_index,
+        }
+        r.publish(redis_channel, json.dumps(payload))
+    except Exception as e:
+        import logging
+
+        logging.getLogger("econsent-publisher").warning(
+            f"Failed to publish consent completed event to Redis: {e}"
+        )
 
 
 def map_document_to_response(doc: ConsentDocument) -> ConsentDocumentResponse:
@@ -611,6 +664,14 @@ async def capture_subject_consent(
         reason_for_change=change_reason,
     )
 
+    publish_consent_completed_event(
+        sc.subject_pseudonym,
+        sc.study_id,
+        sc.site_id,
+        sc.protocol_version or "1.0",
+        sc.version_index,
+    )
+
     return SubjectConsentResponse(
         id=sc.id,
         subject_pseudonym=sc.subject_pseudonym,
@@ -1023,6 +1084,14 @@ async def sign_consent_template_endpoint(
         document_id=delivery.id,
         details=f"Queued ICF archival delivery for template '{template_id}' version {version_index}, subject '{payload.subject_pseudonym}'. Correlation ID: {correlation_id}",
         reason_for_change=change_reason,
+    )
+
+    publish_consent_completed_event(
+        sig.subject_pseudonym,
+        template.study_id,
+        payload.site_id,
+        template.protocol_version or "1.0",
+        sig.version_index,
     )
 
     return ConsentSignatureResponse(

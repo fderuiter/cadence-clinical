@@ -260,6 +260,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
             start_outbox_worker,
             stop_outbox_worker,
         )
+        from apps.execution.workers.consent_subscriber import (
+            start_consent_subscriber,
+            stop_consent_subscriber,
+        )
 
         if run_workers:
             # Initialize isolated background database session manager with dedicated pool
@@ -276,6 +280,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
             await start_background_sealer(bg_db_manager.get_session_maker())
             await start_background_query_escalation(bg_db_manager.get_session_maker())
             start_outbox_worker(bg_db_manager.get_session_maker())
+            start_consent_subscriber(bg_db_manager.get_session_maker())
 
     yield
 
@@ -286,6 +291,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         await stop_background_query_escalation()
         # Stop background outbox worker
         stop_outbox_worker()
+        # Stop background consent subscriber worker
+        stop_consent_subscriber()
         # Cleanup background database connection
         await bg_db_manager.close()
         # Cleanup database connection
@@ -814,6 +821,7 @@ class SubjectConsentRequest(BaseModel):
     icf_signed: bool
     icf_signed_date: datetime | None = None
     requires_reconsent: bool = False
+    is_paper_override: bool = False
 
 
 class SubjectConsentResponse(BaseModel):
@@ -827,6 +835,7 @@ class SubjectConsentResponse(BaseModel):
     icf_signed: bool
     icf_signed_date: datetime | None = None
     requires_reconsent: bool
+    is_paper_override: bool = False
     version: int
 
 
@@ -1022,6 +1031,7 @@ async def record_subject_consent_endpoint(
                 elif not existing.icf_signed_date:
                     existing.icf_signed_date = datetime.utcnow()
                 existing.requires_reconsent = payload.requires_reconsent
+                existing.is_paper_override = payload.is_paper_override
                 consent_db = existing
             else:
                 consent_db = SubjectConsent(
@@ -1032,12 +1042,13 @@ async def record_subject_consent_endpoint(
                     icf_signed=payload.icf_signed,
                     icf_signed_date=payload.icf_signed_date or datetime.utcnow(),
                     requires_reconsent=payload.requires_reconsent,
+                    is_paper_override=payload.is_paper_override,
                 )
                 session.add(consent_db)
 
             # If this consent is signed and does not require re-consent,
             # clear requires_reconsent for any other/older consents of this subject
-            if payload.icf_signed and not payload.requires_reconsent:
+            if (payload.icf_signed or payload.is_paper_override) and not payload.requires_reconsent:
                 stmt_others = select(SubjectConsent).where(
                     SubjectConsent.subject_id == subject_id,
                     SubjectConsent.study_id == study_id,
@@ -1061,6 +1072,7 @@ async def record_subject_consent_endpoint(
             icf_signed=saved.icf_signed,
             icf_signed_date=saved.icf_signed_date,
             requires_reconsent=saved.requires_reconsent,
+            is_paper_override=saved.is_paper_override,
             version=saved.version,
         )
 

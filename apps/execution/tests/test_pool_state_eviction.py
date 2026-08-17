@@ -24,6 +24,7 @@ async def test_pool_connection_state_eviction() -> None:
             os.remove(db_file)
 
     # 1. Initialize test database
+    db_manager._sqlite_settings.clear()
     db_manager.init_db(f"sqlite+aiosqlite:///{db_file}")
 
     # Verify manager settings dict is empty initially
