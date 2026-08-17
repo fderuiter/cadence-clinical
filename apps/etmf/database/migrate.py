@@ -153,6 +153,49 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
         """)
         )
 
+        # Enforce session context constraints are verified on updates and deletes
+        await conn.execute(
+            text("""
+            CREATE OR REPLACE FUNCTION verify_gxp_session_context()
+            RETURNS TRIGGER AS $$
+            DECLARE
+                v_user_id VARCHAR(255);
+                v_change_reason VARCHAR(255);
+                v_app_writing VARCHAR(50);
+            BEGIN
+                v_app_writing := COALESCE(current_setting('cadence.app_writing', true), 'false');
+                IF (v_app_writing = 'true') THEN
+                    RETURN NEW;
+                END IF;
+
+                v_user_id := current_setting('cadence.current_user_id', true);
+                IF (v_user_id IS NULL OR v_user_id = '') THEN
+                    RAISE EXCEPTION 'GxP Compliance Violation: Write operations lacking session-level user identifiers are strictly prohibited.';
+                END IF;
+
+                IF (TG_OP IN ('UPDATE', 'DELETE')) THEN
+                    v_change_reason := current_setting('cadence.current_change_reason', true);
+                    IF (v_change_reason IS NULL OR v_change_reason = '') THEN
+                        RAISE EXCEPTION 'GxP Compliance Violation: Write operations lacking session-level change justification are strictly prohibited.';
+                    END IF;
+                END IF;
+
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        """)
+        )
+
+        for table in ["tmf_documents", "tmf_expected_documents", "tmf_document_expiration_alert_states"]:
+            await conn.execute(text(f"DROP TRIGGER IF EXISTS trg_verify_gxp_{table} ON {table};"))
+            await conn.execute(
+                text(f"""
+                CREATE TRIGGER trg_verify_gxp_{table}
+                BEFORE UPDATE OR DELETE ON {table}
+                FOR EACH ROW EXECUTE FUNCTION verify_gxp_session_context();
+            """)
+            )
+
 
 async def upgrade_existing_tables(conn, dialect_name: str) -> None:
     """
@@ -910,6 +953,8 @@ async def run_migrations(database_url: str) -> None:
                     f"Alembic migration failed for eTMF: {stderr.decode()}"
                 )
             print("eTMF Schema migration completed successfully via Alembic.")
+            async with engine.begin() as conn:
+                await deploy_database_triggers(conn, dialect_name)
     finally:
         await engine.dispose()
 

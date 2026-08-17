@@ -59,6 +59,53 @@ async def test_trigger_rejects_missing_user_identifier(local_test_db):
 
 
 @pytest.mark.asyncio
+async def test_trigger_rejects_missing_change_justification_on_update(local_test_db):
+    """
+    Test that database triggers reject update attempts if the session lacks
+    the session-level change justification (current_change_reason is empty or NULL).
+    """
+    session_maker = local_test_db.get_session_maker()
+
+    # Insert a record first
+    async with session_maker() as session:
+        conn = await session.connection()
+        # Set variables so insert succeeds
+        await conn.execute(
+            text("SELECT set_config('cadence.current_user_id', 'test-user', true);")
+        )
+        await conn.execute(
+            text("SELECT set_config('cadence.current_change_reason', 'initial insert', true);")
+        )
+        await conn.execute(
+            text(
+                "INSERT INTO clinical_subjects (id, subject_id, study_id, status, version, is_deleted, is_unblinded) VALUES ('test-id-2', 'SUBJ-003', 'STUDY-XYZ', 'SCREENING', 1, 0, 0);"
+            )
+        )
+        await session.commit()
+
+    # Now attempt an update with user_id but empty change justification
+    async with session_maker() as session:
+        conn = await session.connection()
+        await conn.execute(
+            text("SELECT set_config('cadence.current_user_id', 'test-user', true);")
+        )
+        await conn.execute(
+            text("SELECT set_config('cadence.current_change_reason', '', true);")
+        )
+
+        with pytest.raises(Exception) as exc_info:
+            await conn.execute(
+                text("UPDATE clinical_subjects SET status = 'ACTIVE' WHERE id = 'test-id-2';")
+            )
+            await session.commit()
+
+        assert (
+            "GxP Compliance Violation: Write operations lacking session-level change justification"
+            in str(exc_info.value)
+        )
+
+
+@pytest.mark.asyncio
 async def test_introspection_engine_excludes_compliance_tables(local_test_db, tmp_path):
     """
     Test that the schema introspection engine correctly filters out
