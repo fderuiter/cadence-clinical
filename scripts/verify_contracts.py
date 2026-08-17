@@ -101,6 +101,7 @@ def validate_ast_port_contracts(files: list[str], root: Path) -> list[str]:
                         "AuditLoggerPort",
                         "EventDispatcherPort",
                     }
+
                     def get_base_name(b) -> str | None:
                         if isinstance(b, ast.Subscript):
                             b = b.value
@@ -111,8 +112,7 @@ def validate_ast_port_contracts(files: list[str], root: Path) -> list[str]:
                         return None
 
                     has_abc_base = any(
-                        get_base_name(base) in allowed_bases
-                        for base in node.bases
+                        get_base_name(base) in allowed_bases for base in node.bases
                     )
                     # Abstract or base port verification
                     if not has_abc_base:

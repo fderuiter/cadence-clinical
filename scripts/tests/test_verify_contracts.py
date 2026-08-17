@@ -3,8 +3,6 @@
 Requirements: PRD-SYS-001
 """
 
-import ast
-from pathlib import Path
 from scripts.verify_contracts import validate_ast_port_contracts
 
 
@@ -20,7 +18,9 @@ def test_validate_ast_port_contracts_passes(tmp_path):
         encoding="utf-8",
     )
 
-    violations = validate_ast_port_contracts([str(port_file.relative_to(tmp_path))], tmp_path)
+    violations = validate_ast_port_contracts(
+        [str(port_file.relative_to(tmp_path))], tmp_path
+    )
     assert len(violations) == 0
 
 
@@ -30,11 +30,12 @@ def test_validate_ast_port_contracts_fails(tmp_path):
     port_dir.mkdir(parents=True, exist_ok=True)
     port_file = port_dir / "ports.py"
     port_file.write_text(
-        "class DummyBadPort:\n"
-        "    pass\n",
+        "class DummyBadPort:\n    pass\n",
         encoding="utf-8",
     )
 
-    violations = validate_ast_port_contracts([str(port_file.relative_to(tmp_path))], tmp_path)
+    violations = validate_ast_port_contracts(
+        [str(port_file.relative_to(tmp_path))], tmp_path
+    )
     assert len(violations) == 1
     assert "is designated as a Port but does not inherit" in violations[0]

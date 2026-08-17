@@ -3,11 +3,11 @@
 Requirements: PRD-SYS-001, PRD-SYS-003
 """
 
-import os
-import sys
+from unittest.mock import mock_open, patch
+
 import pytest
-from unittest.mock import patch, mock_open
-from scripts.generate_schemas import main, MODELS
+
+from scripts.generate_schemas import MODELS, main
 
 
 def test_generate_schemas_halts_in_production(monkeypatch):
@@ -25,12 +25,14 @@ def test_generate_schemas_omits_sensitive_tables(monkeypatch):
 
     # Patch MODELS to contain a sensitive model
     from pydantic import BaseModel
+
     class AuditTestModel(BaseModel):
         id: str
 
     original_models = list(MODELS)
     # Inject AuditTestModel
     import scripts.generate_schemas
+
     scripts.generate_schemas.MODELS = original_models + [AuditTestModel]
 
     m = mock_open()

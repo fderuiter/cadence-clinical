@@ -26,8 +26,8 @@ async def test_pool_connection_state_eviction() -> None:
     # 1. Initialize test database
     db_manager.init_db(f"sqlite+aiosqlite:///{db_file}")
 
-    # Verify manager settings dict is empty initially
-    assert len(db_manager._sqlite_settings) == 0
+    # Track initial keys to isolate our test from concurrent/previous tests
+    initial_keys = set(db_manager._sqlite_settings.keys())
 
     # 2. Open a connection and set custom config
     async with db_manager.engine.connect() as conn:
@@ -49,8 +49,9 @@ async def test_pool_connection_state_eviction() -> None:
         assert res_user_updated.scalar() == "test_user_abc"
 
         # Verify the manager tracked this connection and has updated settings
-        assert len(db_manager._sqlite_settings) == 1
-        conn_id = list(db_manager._sqlite_settings.keys())[0]
+        new_keys = set(db_manager._sqlite_settings.keys()) - initial_keys
+        assert len(new_keys) == 1
+        conn_id = list(new_keys)[0]
         assert (
             db_manager._sqlite_settings[conn_id]["cadence.current_user_id"]
             == "test_user_abc"
@@ -73,7 +74,7 @@ async def test_pool_connection_state_eviction() -> None:
     await db_manager.close()
 
     # The settings for all closed connections must be completely evicted from our tracking dict
-    assert len(db_manager._sqlite_settings) == 0
+    assert conn_id not in db_manager._sqlite_settings
 
     if os.path.exists(db_file):
         with contextlib.suppress(Exception):

@@ -88,14 +88,22 @@ def main():
     for env_var in ["NODE_ENV", "APP_ENV", "ENVIRONMENT", "STAGE"]:
         val = os.getenv(env_var, "").lower()
         if "prod" in val or val == "production":
-            sys.stderr.write(f"Error: Schema generation is blocked in production environment ({env_var}={os.getenv(env_var)}).\n")
+            sys.stderr.write(
+                f"Error: Schema generation is blocked in production environment ({env_var}={os.getenv(env_var)}).\n"
+            )
             sys.exit(1)
 
     # Filter out sensitive internal/audit tables
     allowed_models = []
     for model in MODELS:
         name = model.__name__.lower()
-        if "audit" in name or "seal" in name or "credential" in name or "secret" in name or "private" in name:
+        if (
+            "audit" in name
+            or "seal" in name
+            or "credential" in name
+            or "secret" in name
+            or "private" in name
+        ):
             continue
         allowed_models.append(model)
 
