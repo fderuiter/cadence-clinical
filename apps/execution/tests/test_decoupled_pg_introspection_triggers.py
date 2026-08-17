@@ -74,7 +74,9 @@ async def test_trigger_rejects_missing_change_justification_on_update(local_test
             text("SELECT set_config('cadence.current_user_id', 'test-user', true);")
         )
         await conn.execute(
-            text("SELECT set_config('cadence.current_change_reason', 'initial insert', true);")
+            text(
+                "SELECT set_config('cadence.current_change_reason', 'initial insert', true);"
+            )
         )
         await conn.execute(
             text(
@@ -95,7 +97,9 @@ async def test_trigger_rejects_missing_change_justification_on_update(local_test
 
         with pytest.raises(Exception) as exc_info:
             await conn.execute(
-                text("UPDATE clinical_subjects SET status = 'ACTIVE' WHERE id = 'test-id-2';")
+                text(
+                    "UPDATE clinical_subjects SET status = 'ACTIVE' WHERE id = 'test-id-2';"
+                )
             )
             await session.commit()
 

@@ -186,8 +186,14 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
         """)
         )
 
-        for table in ["tmf_documents", "tmf_expected_documents", "tmf_document_expiration_alert_states"]:
-            await conn.execute(text(f"DROP TRIGGER IF EXISTS trg_verify_gxp_{table} ON {table};"))
+        for table in [
+            "tmf_documents",
+            "tmf_expected_documents",
+            "tmf_document_expiration_alert_states",
+        ]:
+            await conn.execute(
+                text(f"DROP TRIGGER IF EXISTS trg_verify_gxp_{table} ON {table};")
+            )
             await conn.execute(
                 text(f"""
                 CREATE TRIGGER trg_verify_gxp_{table}

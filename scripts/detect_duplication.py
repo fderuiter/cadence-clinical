@@ -504,6 +504,10 @@ def main() -> None:
                                     "apps/etmf/presentation/routers/etmf.py",
                                     "apps/execution/main.py",
                                 },
+                                {
+                                    "apps/etmf/infrastructure/models.py",
+                                    "apps/etmf/database/migrate.py",
+                                },
                             ]
                         ):
                             continue

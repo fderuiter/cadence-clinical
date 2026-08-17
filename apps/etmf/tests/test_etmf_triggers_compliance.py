@@ -1,4 +1,5 @@
 import os
+
 import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -53,7 +54,9 @@ async def test_etmf_triggers_immutability():
         async with engine.begin() as conn:
             with pytest.raises(Exception) as exc_info:
                 await conn.execute(
-                    text("UPDATE tmf_document_qc_transitions SET to_status = 'CLINICAL_QC' WHERE id = 'trans_1';")
+                    text(
+                        "UPDATE tmf_document_qc_transitions SET to_status = 'CLINICAL_QC' WHERE id = 'trans_1';"
+                    )
                 )
             assert "IMMUTABILITY_VIOLATION" in str(exc_info.value)
 
@@ -61,7 +64,9 @@ async def test_etmf_triggers_immutability():
         async with engine.begin() as conn:
             with pytest.raises(Exception) as exc_info:
                 await conn.execute(
-                    text("DELETE FROM tmf_document_qc_transitions WHERE id = 'trans_1';")
+                    text(
+                        "DELETE FROM tmf_document_qc_transitions WHERE id = 'trans_1';"
+                    )
                 )
             assert "IMMUTABILITY_VIOLATION" in str(exc_info.value)
 
