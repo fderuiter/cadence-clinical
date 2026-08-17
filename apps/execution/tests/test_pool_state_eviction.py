@@ -23,6 +23,8 @@ async def test_pool_connection_state_eviction() -> None:
         with contextlib.suppress(Exception):
             os.remove(db_file)
 
+    await db_manager.close()
+
     # 1. Initialize test database
     db_manager.init_db(f"sqlite+aiosqlite:///{db_file}")
 
@@ -90,6 +92,8 @@ async def test_concurrent_connection_isolation_and_no_weakref_errors() -> None:
     if os.path.exists(db_file):
         with contextlib.suppress(Exception):
             os.remove(db_file)
+
+    await db_manager.close()
 
     db_manager.init_db(f"sqlite+aiosqlite:///{db_file}")
 
