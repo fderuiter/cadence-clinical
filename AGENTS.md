@@ -21,7 +21,7 @@ Capture (EDC) into an automated Digital Data Flow (DDF) platform.
 | Execution DB       | Async SQLAlchemy + SQLModel for PostgreSQL (`apps/execution/`)                    |
 | Clinical Standards | CDISC USDM v3.0/v4.0, CDISC ODM XML/JSON                                          |
 | GxP Audit Fields   | `created_at`, `created_by`, `reason_for_change`, `version_index` (21 CFR Part 11) |
-| CLI & DX Tooling   | Cadence CLI (`uv run cadence`) in `packages/cli/`                                  |
+| CLI & DX Tooling   | Cadence CLI (`uv run cadence`) in `packages/cli/`                                 |
 
 ---
 
@@ -170,17 +170,17 @@ def test_subject_registration():
 
 Agents should always prefer the unified `cadence` CLI (`packages/cli`) for local development, diagnostic, and validation tasks:
 
-| Task | Command | Description |
-| :--- | :--- | :--- |
-| Interactive Dev TUI | `uv run cadence dev --tui` | Multi-service interactive Rich cockpit with live logs & hotkey restarts |
-| Test Watcher | `uv run cadence test --watch` | Smart file-system watcher re-running tests on code edits |
-| Fast Unit Tests | `uv run cadence test --fast` | Sub-second unit tests bypassing heavy coverage calculations |
-| System Diagnostics | `uv run cadence doctor --auto-fix` | Validates environment and auto-initializes missing SQLite schemas |
-| Quality Gates | `uv run cadence check --parallel` | Concurrently runs all 10 architecture sentinels and quality gates |
-| Auto-Remediation | `uv run cadence fix --all` | Auto-remediates lints, formats code, aligns ADRs, schemas, and RTM |
-| Multi-Engine Seeding | `uv run cadence db seed --tier full` | Seeds multi-engine clinical test scenarios across Neo4j, PG, and SQLite |
-| GxP Sync | `uv run cadence gxp sync` | Runs tests, regenerates RTM, and stages docs |
-| Service Scaffolding | `uv run cadence scaffold adr "Title"` | Scaffolds new ADRs and auto-indexes under `docs/adr/index.md` |
+| Task                 | Command                               | Description                                                             |
+| :------------------- | :------------------------------------ | :---------------------------------------------------------------------- |
+| Interactive Dev TUI  | `uv run cadence dev --tui`            | Multi-service interactive Rich cockpit with live logs & hotkey restarts |
+| Test Watcher         | `uv run cadence test --watch`         | Smart file-system watcher re-running tests on code edits                |
+| Fast Unit Tests      | `uv run cadence test --fast`          | Sub-second unit tests bypassing heavy coverage calculations             |
+| System Diagnostics   | `uv run cadence doctor --auto-fix`    | Validates environment and auto-initializes missing SQLite schemas       |
+| Quality Gates        | `uv run cadence check --parallel`     | Concurrently runs all 10 architecture sentinels and quality gates       |
+| Auto-Remediation     | `uv run cadence fix --all`            | Auto-remediates lints, formats code, aligns ADRs, schemas, and RTM      |
+| Multi-Engine Seeding | `uv run cadence db seed --tier full`  | Seeds multi-engine clinical test scenarios across Neo4j, PG, and SQLite |
+| GxP Sync             | `uv run cadence gxp sync`             | Runs tests, regenerates RTM, and stages docs                            |
+| Service Scaffolding  | `uv run cadence scaffold adr "Title"` | Scaffolds new ADRs and auto-indexes under `docs/adr/index.md`           |
 
 ---
 
@@ -328,17 +328,17 @@ and commit the RTM (see [GxP Compliance Sync Protocol](#gxp-compliance-sync-prot
 
 When CI fails, use this table to identify the root cause and exact fix:
 
-| CI Error                                         | Root Cause                                                                                       | Agent Action                                                                                                                                                                  |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `I001 Import block is un-sorted or un-formatted` | New symbol inserted at wrong position in import block                                            | `uv run ruff check . --fix` then verify the block is alphabetical                                                                                                             |
-| `E712 Avoid equality comparisons to True/False`  | Used `col == True` in SQLAlchemy `.where()`                                                      | Replace with `col.is_(True)` / `col.is_(False)` — see [pattern above](#sqlalchemy-boolean-filter-pattern-e712)                                                                |
-| `GxP compliance documentation is out of sync`    | RTM docs not regenerated after test changes                                                      | `uv run python scripts/sync_gxp.py` then commit `docs/SDLC/`                                                                                                                  |
-| `Would reformat: <file>` (ruff format check)     | Code not formatted                                                                               | `uv run ruff format .`                                                                                                                                                        |
-| `Coverage < 80%`                                 | New code paths not covered                                                                       | Add tests for the uncovered lines in the coverage report                                                                                                                      |
-| `ADR validation failed`                          | Architectural change without a matching ADR                                                      | `uv run python scripts/create_adr.py ...` — fill in rationale                                                                                                                  |
-| `Bandit: high severity issue`                    | Security-sensitive pattern in code                                                               | Fix the flagged pattern; if intentional add `# nosec B<code>: <justification>`                                                                                                |
-| `Secret detected`                                | Credential or token in source                                                                    | Remove the secret; update `.secrets.baseline` with `detect-secrets scan`                                                                                                      |
-| `DEID compliance scan failure`                   | Sensitive PII/PHI (SSN, Email, Date) flagged in files                                            | Apply inline bypass (e.g., `# deid-ignore`) in mock/test files; remove actual sensitive data                                                                                  |
+| CI Error                                         | Root Cause                                                                                       | Agent Action                                                                                                                                                                        |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `I001 Import block is un-sorted or un-formatted` | New symbol inserted at wrong position in import block                                            | `uv run ruff check . --fix` then verify the block is alphabetical                                                                                                                   |
+| `E712 Avoid equality comparisons to True/False`  | Used `col == True` in SQLAlchemy `.where()`                                                      | Replace with `col.is_(True)` / `col.is_(False)` — see [pattern above](#sqlalchemy-boolean-filter-pattern-e712)                                                                      |
+| `GxP compliance documentation is out of sync`    | RTM docs not regenerated after test changes                                                      | `uv run python scripts/sync_gxp.py` then commit `docs/SDLC/`                                                                                                                        |
+| `Would reformat: <file>` (ruff format check)     | Code not formatted                                                                               | `uv run ruff format .`                                                                                                                                                              |
+| `Coverage < 80%`                                 | New code paths not covered                                                                       | Add tests for the uncovered lines in the coverage report                                                                                                                            |
+| `ADR validation failed`                          | Architectural change without a matching ADR                                                      | `uv run python scripts/create_adr.py ...` — fill in rationale                                                                                                                       |
+| `Bandit: high severity issue`                    | Security-sensitive pattern in code                                                               | Fix the flagged pattern; if intentional add `# nosec B<code>: <justification>`                                                                                                      |
+| `Secret detected`                                | Credential or token in source                                                                    | Remove the secret; update `.secrets.baseline` with `detect-secrets scan`                                                                                                            |
+| `DEID compliance scan failure`                   | Sensitive PII/PHI (SSN, Email, Date) flagged in files                                            | Apply inline bypass (e.g., `# deid-ignore`) in mock/test files; remove actual sensitive data                                                                                        |
 | `Code Duplication Detected Above Threshold`      | A consecutive block of 15 or more normalized lines of code is duplicated across different files. | Run `uv run python scripts/detect_duplication.py` to identify, refactor to share logic, or add to the inline list of ignored sets inside `scripts/detect_duplication.py` if exempt. |
 
 ---
@@ -750,24 +750,24 @@ make db-reset-offline
 
 Agents may invoke these tools directly when needed:
 
-| Command                                                                                  | Purpose                                                                                               |
-| ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `make ports`                                                                             | Check that all 13 microservice, database, and frontend ports are free and available                   |
-| `make db-reset`                                                                          | Concurrently wipe, migrate, and seed all SQL/NoSQL/graph databases in under 15 seconds                |
-| `make db-reset-offline`                                                                  | Execute database resets offline, generating warnings instead of crashing if databases are unreachable |
-| `uv run ruff check . --fix`                                                              | Auto-fix all fixable lint errors (I001, F-strings, etc.)                                              |
-| `uv run ruff format .`                                                                   | Auto-format all Python files                                                                          |
-| `uv run python scripts/sync_gxp.py`                                                      | Full GxP compliance sync (tests → RTM → stage)                                                        |
-| `uv run python scripts/sync_gxp.py --dry-run`                                            | Validate GxP docs without modifying files                                                             |
-| `uv run python scripts/create_adr.py --title "..." --domain "..." --req "PRD-SYS-xxx"`   | Scaffold ADR                                                                                          |
-| `uv run python scripts/validate_adrs.py --fix-index`                                     | Rebuild the ADR index                                                                                 |
-| `uv run python scripts/validate_markdown.py`                                             | Check all Markdown link integrity                                                                     |
-| `uv run pytest -n auto --cov=apps --cov=packages`                                        | Run full test suite with coverage                                                                     |
-| `uv run bandit -c pyproject.toml -ll -ii -r apps packages`                               | Static security analysis                                                                              |
-| `uv run python -m packages.deid.cli [paths...]`                                          | Local de-identification (DEID) scanner to check specific files/directories for PII/PHI leakage        |
-| `uv run python scripts/audit_security.py`                                                | Execute standard repository-wide security and credentials sweep                                       |
-| `uv run python scripts/detect_duplication.py`                                            | Run workspace-wide code duplication scanner                                                           |
-| `uv run python scripts/detect_duplication.py <files>`                                    | Run duplication scanner in target changed-files mode                                                  |
+| Command                                                                                | Purpose                                                                                               |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `make ports`                                                                           | Check that all 13 microservice, database, and frontend ports are free and available                   |
+| `make db-reset`                                                                        | Concurrently wipe, migrate, and seed all SQL/NoSQL/graph databases in under 15 seconds                |
+| `make db-reset-offline`                                                                | Execute database resets offline, generating warnings instead of crashing if databases are unreachable |
+| `uv run ruff check . --fix`                                                            | Auto-fix all fixable lint errors (I001, F-strings, etc.)                                              |
+| `uv run ruff format .`                                                                 | Auto-format all Python files                                                                          |
+| `uv run python scripts/sync_gxp.py`                                                    | Full GxP compliance sync (tests → RTM → stage)                                                        |
+| `uv run python scripts/sync_gxp.py --dry-run`                                          | Validate GxP docs without modifying files                                                             |
+| `uv run python scripts/create_adr.py --title "..." --domain "..." --req "PRD-SYS-xxx"` | Scaffold ADR                                                                                          |
+| `uv run python scripts/validate_adrs.py --fix-index`                                   | Rebuild the ADR index                                                                                 |
+| `uv run python scripts/validate_markdown.py`                                           | Check all Markdown link integrity                                                                     |
+| `uv run pytest -n auto --cov=apps --cov=packages`                                      | Run full test suite with coverage                                                                     |
+| `uv run bandit -c pyproject.toml -ll -ii -r apps packages`                             | Static security analysis                                                                              |
+| `uv run python -m packages.deid.cli [paths...]`                                        | Local de-identification (DEID) scanner to check specific files/directories for PII/PHI leakage        |
+| `uv run python scripts/audit_security.py`                                              | Execute standard repository-wide security and credentials sweep                                       |
+| `uv run python scripts/detect_duplication.py`                                          | Run workspace-wide code duplication scanner                                                           |
+| `uv run python scripts/detect_duplication.py <files>`                                  | Run duplication scanner in target changed-files mode                                                  |
 
 ---
 

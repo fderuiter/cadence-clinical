@@ -13,17 +13,17 @@ quality gates, and CI failure recovery procedures.
 
 The most common commands you will reach for day-to-day (via the unified Cadence CLI or Make):
 
-| Task | Primary CLI (`cadence`) | Make / Shortcut |
-| :--- | :--- | :--- |
-| Interactive Dev TUI Cockpit | `uv run cadence dev --tui` | `make dev` |
-| Test Watcher (auto-retest on edit) | `uv run cadence test --watch` | — |
-| Fast Unit Tests (sub-second) | `uv run cadence test --fast` | — |
-| Auto-Fix Lint, Format & Schemas | `uv run cadence fix --all` | `make fix` |
-| Quality Gates (10 sentinels) | `uv run cadence check --parallel` | `make check` |
-| Diagnostic Auto-Healing | `uv run cadence doctor --auto-fix` | `make doctor` |
-| Sync GxP Compliance Docs | `uv run cadence gxp sync` | `make sync-gxp` |
-| Seed Multi-Engine DB Scenarios | `uv run cadence db seed --tier full` | `make seed` |
-| Scaffold New ADR | `uv run cadence scaffold adr "Title"` | `make adr` |
+| Task                               | Primary CLI (`cadence`)               | Make / Shortcut |
+| :--------------------------------- | :------------------------------------ | :-------------- |
+| Interactive Dev TUI Cockpit        | `uv run cadence dev --tui`            | `make dev`      |
+| Test Watcher (auto-retest on edit) | `uv run cadence test --watch`         | —               |
+| Fast Unit Tests (sub-second)       | `uv run cadence test --fast`          | —               |
+| Auto-Fix Lint, Format & Schemas    | `uv run cadence fix --all`            | `make fix`      |
+| Quality Gates (10 sentinels)       | `uv run cadence check --parallel`     | `make check`    |
+| Diagnostic Auto-Healing            | `uv run cadence doctor --auto-fix`    | `make doctor`   |
+| Sync GxP Compliance Docs           | `uv run cadence gxp sync`             | `make sync-gxp` |
+| Seed Multi-Engine DB Scenarios     | `uv run cadence db seed --tier full`  | `make seed`     |
+| Scaffold New ADR                   | `uv run cadence scaffold adr "Title"` | `make adr`      |
 
 ---
 
@@ -32,7 +32,9 @@ The most common commands you will reach for day-to-day (via the unified Cadence 
 The repository features a unified CLI (`uv run cadence`) designed to maximize developer velocity and streamline local orchestration:
 
 ### 1. Interactive Dev TUI Cockpit (`cadence dev --tui`)
+
 Runs and monitors all 15 active microservices (`gateway`, `designer`, `execution`, `etmf`, `ctms`, `interop`, etc.) in an interactive terminal cockpit with live health monitoring and log streaming:
+
 - `[r]`: Restart all services
 - `[g]`: Hot-restart Gateway API (`8000`)
 - `[e]`: Hot-restart Execution Engine (`8002`)
@@ -41,14 +43,18 @@ Runs and monitors all 15 active microservices (`gateway`, `designer`, `execution
 - `[q]`: Gracefully exit and terminate processes
 
 ### 2. Smart Test Watcher (`cadence test --watch` & `--fast`)
+
 - `cadence test --watch`: Monitors source files across `apps/`, `packages/`, and `tests/` and automatically executes the relevant test file when changes are saved.
 - `cadence test --fast`: Runs unit tests using in-memory test harnesses bypassing heavy global coverage calculation for instant iteration.
 
 ### 3. Diagnostic Healing (`cadence doctor --auto-fix`)
+
 Inspects system prerequisites, ports, databases, and environment configuration. Passing `--auto-fix` automatically provisions missing local SQLite schemas (`econsent.db`, `eisf.db`, `interop.db`, `notifications.db`, `safety.db`, `tickets.db`).
 
 ### 4. Quality Sentinel Check (`cadence check --parallel`)
+
 Executes all 10 architecture sentinels and quality gates concurrently, identical to the GitHub Actions CI pipeline:
+
 1. `path-patterns`: Validates directory patterns & subfolder whitelists
 2. `ruff-lint`: Lints Python code against GxP rules
 3. `ruff-format`: Verifies Python code formatting
@@ -67,7 +73,9 @@ Executes all 10 architecture sentinels and quality gates concurrently, identical
 To maintain clean GxP test isolation and high performance, always use `packages/testing` when authoring tests:
 
 ### 1. Domain Entity Factories (`packages.testing.factories`)
+
 Generate typed domain model instances with authentic GxP attributes:
+
 - `SubjectFactory.create(...)`
 - `ProtocolDefinitionFactory.create(...)`
 - `ClinicalObservationFactory.create(...)`
@@ -77,7 +85,9 @@ Generate typed domain model instances with authentic GxP attributes:
 - `AuditLogFactory.create(...)`
 
 ### 2. In-Memory Repository Fakes (`packages.testing.fakes`)
+
 Test domain use-cases without touching live databases:
+
 ```python
 from packages.testing.fakes import InMemoryRepository
 
@@ -85,7 +95,9 @@ repo = InMemoryRepository()
 ```
 
 ### 3. Security & Gateway Auth Mocks (`packages.testing.security`)
+
 Generate authentic HMAC signed gateway headers matching `GatewayAuthMiddleware`:
+
 ```python
 from packages.testing.security import create_test_auth_headers
 
