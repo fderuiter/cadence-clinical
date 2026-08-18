@@ -2,10 +2,20 @@ import os
 
 from fastapi import FastAPI
 
-from apps.ctms.database import db_manager
-from apps.ctms.models import Base
-from apps.ctms.presentation.routers import ctms_router, doa_router
+from apps.ctms.adapters.database import db_manager
+from apps.ctms.adapters.models import Base
+from apps.ctms.presentation.routers import (
+    ctms_router,
+    deviations_router,
+    doa_router,
+    etmf_sync_router,
+    financials_router,
+    ip_accountability_router,
+    rbqm_router,
+    site_startup_router,
+)
 from packages.database import get_relational_db_lifespan
+from packages.hexagonal import register_rfc7807_handlers
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
@@ -29,9 +39,16 @@ app = FastAPI(
 
 # Enforce secure gateway authentication middleware
 app.add_middleware(GatewayAuthMiddleware)
+register_rfc7807_handlers(app)
 
 # Include routers
 app.include_router(doa_router)
+app.include_router(site_startup_router)
+app.include_router(deviations_router)
+app.include_router(rbqm_router)
+app.include_router(financials_router)
+app.include_router(ip_accountability_router)
+app.include_router(etmf_sync_router)
 app.include_router(ctms_router)
 
 

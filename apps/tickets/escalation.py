@@ -98,8 +98,13 @@ async def execute_ticket_escalation_cycle(session_maker: Any) -> None:
     async with session_maker() as db:
         try:
             escalation_eligible_clause = and_(
-                Ticket.due_date.is_not(None),
-                Ticket.due_date <= now,
+                or_(
+                    and_(Ticket.due_date.is_not(None), Ticket.due_date <= now),
+                    and_(
+                        Ticket.sla_target_at.is_not(None),
+                        Ticket.sla_target_at <= now,
+                    ),
+                ),
                 or_(
                     Ticket.last_escalated_at.is_(None),
                     Ticket.last_escalated_at <= cooldown_cutoff,
@@ -115,8 +120,18 @@ async def execute_ticket_escalation_cycle(session_maker: Any) -> None:
                 ),
             )
 
+            paused_state_strs = [
+                s.value if hasattr(s, "value") else str(s)
+                for s in [
+                    "WAITING_ON_SITE",
+                    "WAITING_ON_SPONSOR",
+                    "PENDING_REGULATORY_REVIEW",
+                ]
+            ]
+
             stmt = select(Ticket).where(
                 Ticket.status.not_in(terminal_state_strs),
+                Ticket.status.not_in(paused_state_strs),
                 Ticket.is_deleted.is_(False),
                 or_(escalation_eligible_clause, notification_owed_clause),
             )
@@ -139,14 +154,25 @@ async def execute_ticket_escalation_cycle(session_maker: Any) -> None:
                 if not ticket:
                     continue
 
-                if ticket.status in TERMINAL_STATES:
+                if (
+                    ticket.status in TERMINAL_STATES
+                    or str(ticket.status) in terminal_state_strs
+                ):
+                    continue
+                if str(ticket.status) in paused_state_strs:
                     continue
                 if ticket.is_deleted:
                     continue
 
+                effective_due = ticket.due_date
+                if effective_due is None and ticket.sla_target_at is not None:
+                    effective_due = ticket.sla_target_at + timedelta(
+                        seconds=max(0, ticket.sla_total_paused_seconds)
+                    )
+
                 escalation_eligible = (
-                    ticket.due_date is not None
-                    and ticket.due_date <= now
+                    effective_due is not None
+                    and effective_due <= now
                     and (
                         ticket.last_escalated_at is None
                         or (now - ticket.last_escalated_at).total_seconds()
@@ -163,6 +189,7 @@ async def execute_ticket_escalation_cycle(session_maker: Any) -> None:
 
                     ticket.priority = new_priority
                     ticket.last_escalated_at = now
+                    ticket.sla_breached = True
                     ticket.escalation_count += 1
                     ticket.version_index += 1
                     ticket.reason_for_change = (
@@ -240,7 +267,7 @@ async def start_background_ticket_escalation() -> None:
         )
         return
 
-    from apps.tickets.infrastructure.database import db_manager
+    from apps.tickets.adapters.database import db_manager
 
     session_maker = db_manager.get_session_maker()
 

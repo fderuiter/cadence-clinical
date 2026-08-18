@@ -65,6 +65,7 @@ To ensure complete software validation under GxP, requirements in this document 
 - **`PRD-EDC-XXX`**: Electronic Data Capture, parsing, skipping, and offline synchronization
 - **`PRD-SUB-XXX`**: Subject Lifecycle, Randomization, and State Transition Machines
 - **`PRD-QRY-XXX`**: Query Lifecycle, Data Review, Verification, and Medical Monitoring
+- **`PRD-QLT-XXX`**: Clinical Quality Management System (eQMS), CAPA, RBQM, and Audits
 
 ### 2.3 Regulatory Compliance Mandates (21 CFR Part 11 / EU Annex 11)
 
@@ -781,6 +782,34 @@ To coordinate and track site monitoring, CRA allocations, recruitment progressio
 
 - All CTMS view logs, milestone updates, visit creations, completions, sign-offs, and allocations must write append-only records to an immutable chronological `CTMSAuditLog` auditing schema.
 
+#### PRD-CTMS-005: Site Regulatory Greenlight & Essential Document Gatekeeper
+
+- The system must manage country and site-level regulatory approval tracks and Essential Document Lists (EDL).
+- The automated Greenlight validation engine must verify all prerequisite approvals (Contract, IRB approval, FDA Form 1572/CTA, PI DOA sign-off, and IP readiness) before enabling site activation in EDC.
+
+#### PRD-CTMS-006: Protocol Deviation Lifecycle & Quality CAPA Escalation
+
+- The system must capture, classify (Minor, Major, Critical), and manage protocol deviations with 5-Why root cause analysis (RCA).
+- Major and Critical deviations must support automated escalation to `apps/quality` (CAPA) and event notifications to `apps/safety`.
+
+#### PRD-CTMS-007: Risk-Based Quality Management (RBQM) & KRI Engine
+
+- The system must dynamically compute Key Risk Indicators (KRIs) such as query velocity, SAE reporting lag, protocol deviation density, form entry lag, and SDV backlog.
+- The system must compute composite Site Risk Index scores and trigger adaptive monitoring alerts when Quality Tolerance Limits (QTLs) are breached.
+
+#### PRD-CTMS-008: Procedure-Based Financials & EDC Auto-Payables
+
+- The system must support tiered investigator grant budgets with visit/procedure-based fee matrices, withholding/holdback retention rules, and passthrough expense invoices.
+- Completing EDC subject visit milestones must automatically generate pending payables and batch invoice disbursement workflows.
+
+#### PRD-CTMS-009: Investigational Product (IP) Accountability & Temperature Excursions
+
+- The system must track site IP kit receipt, lot expiration, temperature excursions with quarantine disposition, subject kit dispensation reconciliation, and Certificates of Destruction.
+
+#### PRD-CTMS-010: Automated DIA TMF Reference Model Synchronization
+
+- Finalized CTMS operational artifacts (Monitoring Visit Reports, DOA logs, Greenlight packages, Deviation summaries, Certificates of Destruction) must automatically bundle, sign, and push to `apps/etmf` mapped to DIA TMF Reference Model zones and sections.
+
 ---
 
 ### 7.5 Laboratory Reference Range & Master Catalog Management
@@ -790,6 +819,81 @@ To coordinate, track, and standardize laboratory reference range specifications,
 #### PRD-LAB-001: Laboratory Reference Models and Validation Runs
 
 - The system must standardize laboratory reference models and map them to their corresponding verification runs.
+
+---
+
+### 7.6 Clinical Quality Management System (eQMS) & Risk-Based Quality Management (RBQM)
+
+To coordinate protocol deviation management, multi-methodology root cause analysis, 6-stage CAPA lifecycles with scheduled effectiveness verification, TransCelerate/ICH E6(R3) RBQM/KRI statistical scoring, study-level Quality Tolerance Limits (QTL), clinical audits, serious breach escalations, and inspection readiness.
+
+#### PRD-QLT-001: Protocol Deviation Classification, Severity Grading, and Ingestion Hooks
+
+- The system must capture and classify protocol deviations across standard categories (`INFORMED_CONSENT`, `ELIGIBILITY`, `PROTOCOL_PROCEDURES`, `IP_MANAGEMENT`, `SAFETY_REPORTING`, `LAB_SPECIMEN`, `VISIT_WINDOW`, `CONCOMITANT_MED`, `GCP_COMPLIANCE`, `OTHER`) with severity grading (`MINOR`, `MAJOR`, `CRITICAL`, `SYSTEMATIC_TREND`).
+- The platform must expose an automated ingestion webhook/endpoint (`/api/v1/quality/ingest/event`) allowing EDC, CTMS, and eTMF microservices to post automated quality event triggers (e.g. out-of-window visits, temperature excursions, document rejections) with deduplication.
+
+#### PRD-QLT-002: Multi-Methodology Root Cause Analysis (RCA) Engine
+
+- The system must provide multi-methodology RCA capabilities supporting both hierarchical 5-Whys causal trees and 6M Ishikawa/Fishbone diagrams (Man, Machine, Material, Method, Measurement, Milieu) with contributing factor tagging.
+- Major and Critical deviations must require completed RCA documentation before resolution or closure.
+
+#### PRD-QLT-003: 6-Stage Gate CAPA Lifecycle with Scheduled Effectiveness Checks
+
+- The system must enforce a strict 6-stage gate lifecycle: `INITIATED` -> `UNDER_REVIEW` -> `APPROVED` -> `IMPLEMENTATION` -> `IMPLEMENTATION_VERIFIED` -> `EFFECTIVENESS_CHECK` -> `CLOSED` (or `INEFFECTIVE` / `CANCELLED`).
+- CAPAs must track discrete sub-action items (Corrective vs. Preventive) with individual assignees and due dates. Transition to `IMPLEMENTATION_VERIFIED` requires 100% action item completion.
+- Advancing past `EFFECTIVENESS_CHECK` requires evaluating quantifiable metrics at a scheduled post-closure interval (30/60/90 days). If deemed `INEFFECTIVE`, the system must auto-flag recurrence and prompt a follow-up Re-CAPA.
+
+#### PRD-QLT-004: TransCelerate & ICH E6(R3) RBQM, KRI Statistical Anomaly Scoring, and Site Risk Index
+
+- The system must manage Critical to Quality (CtQ) factors and configurable Key Risk Indicators (KRIs) with dynamic Green/Amber/Red thresholds.
+- The RBQM engine must compute standardized Z-scores and population statistical distributions across sites, deriving a weighted composite Site Risk Index (SRI) and percentile ranking to drive targeted monitoring.
+
+#### PRD-QLT-005: Study-Level Quality Tolerance Limits (QTLs) and CSR Summary Generation
+
+- The system must track study-level Quality Tolerance Limits (QTLs).
+- When a QTL threshold is breached, the system must record a `QTLBreachEvent`, trigger high-priority GxP notifications, require documented mitigation plans, and auto-generate the Clinical Study Report (CSR Section 9.6) compliance narrative.
+
+#### PRD-QLT-006: Clinical Quality Audits, Finding Grading, and Direct CAPA Promotion
+
+- The system must manage Clinical Audits across multiple scopes (`SITE_AUDIT`, `VENDOR_QUALIFICATION`, `PROCESS_AUDIT`, `TMF_AUDIT`, `FOR_CAUSE`).
+- Audit findings must be graded (`CRITICAL`, `MAJOR`, `MINOR`, `OBSERVATION`) and support direct 1-click promotion of findings into formal CAPAs.
+
+#### PRD-QLT-007: Serious Breach & Regulatory Notification Clock Management
+
+- The system must assess and track potential Serious Breaches under regulatory timelines (e.g. MHRA 7-day clock, EMA/FDA reporting).
+- The regulatory clock must calculate countdown deadlines from time of confirmation, issue escalation alerts at 48 hours remaining, and compile standardized regulatory notification dossiers.
+
+#### PRD-QLT-008: 1-Click GxP Inspection Readiness Dossier Packaging
+
+- The system must compile an on-demand, cryptographically verified Inspection Readiness Dossier aggregating study deviation histories, RCA trees, CAPA effectiveness records, auditor logs, and immutable audit trail snapshots.
+
+#### PRD-QLT-009: 21 CFR Part 11 Electronic Signatures & Step-Up Verification for Quality Actions
+
+- Approving CAPA plans, completing implementation verifications, closing effectiveness checks, and signing off clinical audit reports must require 21 CFR Part 11 step-up electronic signatures with cryptographic HMAC/JWT verification.
+
+---
+
+### 7.7 Unified Clinical Operations & Ticketing Hub
+
+To coordinate cross-functional clinical trial issues, protocol deviations, site discrepancies, supply excursions, technical support requests, and GxP investigations with multi-tier SLA timers, Part 11 signatures, and cross-service context injection.
+
+#### PRD-TCK-001: Unified Clinical Issue Management & Operations Taxonomy
+
+- The system must capture and classify operational issues across ICH GCP categories (`PROTOCOL_DEVIATION`, `DATA_QUERY`, `SAFETY_ADVERSE_EVENT`, `SUPPLY_EXCURSION`, `SITE_OPERATIONS`, `MONITORING_FINDING`, `TECHNICAL_SYSTEM`, `ACCESS_CONTROL`, `REGULATORY_QUERY`, `SYSTEM_SUPPORT`) with GxP severity grading (`MINOR`, `MAJOR`, `CRITICAL`).
+- Resolving Major or Critical issues must require documented Root Cause Analysis (5-Whys) and standardized resolution codes.
+
+#### PRD-TCK-002: Multi-Tier Clinical SLA Engine & Pause States
+
+- The platform must calculate automated SLA targets based on category and severity (e.g. Critical Safety AE <= 4h, Critical Deviation <= 8h).
+- The SLA engine must support amber warning thresholds (>75% elapsed), multi-tier escalation, and pause states (`WAITING_ON_SITE`, `WAITING_ON_SPONSOR`, `PENDING_REGULATORY_REVIEW`) that freeze SLA countdown timers while awaiting external action.
+
+#### PRD-TCK-003: Cross-Service REST Ingestion & Context Injection
+
+- The tickets service must expose internal gateway-authenticated REST endpoints (`/api/v1/tickets/cross-app/events`) enabling EDC, CTMS, Safety, Quality, and eTMF microservices to auto-generate tickets with typed entity linkage (`SUBJECT`, `CRF_FORM`, `SAE_CASE`, `CAPA_ACTION`, `TMF_DOCUMENT`, `MVR_VISIT`, `SUPPLY_KIT`) and structured JSON context payloads.
+
+#### PRD-TCK-004: 21 CFR Part 11 Electronic Signatures & Audited Evidence Attachments
+
+- Ticket sign-offs on Critical/Major resolutions must support 21 CFR Part 11 compliant electronic signatures with user identity binding, re-authentication password/token verification, and immutable audit trail manifestation.
+- The platform must manage audited blob evidence attachments with SHA-256 integrity verification, DEID scrubbing flags, and dual-visibility comment streams (`PUBLIC` vs `INTERNAL_SPONSOR`).
 
 ## 8. Definition of Done (DoD) & Bi-directional Traceability
 

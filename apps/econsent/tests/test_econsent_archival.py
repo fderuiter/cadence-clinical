@@ -165,7 +165,7 @@ async def test_poll_and_dispatch_success():
 
     # Mock forward_icf_to_etmf to return a mocked document_id
     with patch(
-        "apps.econsent.etmf_client.forward_icf_to_etmf", new_callable=AsyncMock
+        "apps.econsent.adapters.etmf_client.forward_icf_to_etmf", new_callable=AsyncMock
     ) as mock_forward:
         mock_forward.return_value = "etmf-doc-uuid-888"
 
@@ -219,7 +219,7 @@ async def test_poll_and_dispatch_failure_and_retry_backoff():
 
     # 1st Attempt: forward fails with exception
     with patch(
-        "apps.econsent.etmf_client.forward_icf_to_etmf",
+        "apps.econsent.adapters.etmf_client.forward_icf_to_etmf",
         side_effect=Exception("eTMF service down"),
     ):
         await poll_and_dispatch()

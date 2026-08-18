@@ -159,6 +159,7 @@ ALLOWED_ROOT_FILES = {
     "TEST_INFRA.md",
     "CONTEXT.md",
     "REPORT.md",
+    ".env.example",
 }
 
 # Allowed root-level subdirectories for general file placement

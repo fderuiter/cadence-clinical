@@ -429,8 +429,36 @@ async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
                 items.append({"item_id": str(proc_id), "internal_id": 0})
         return items
 
-    # Use official USDM python standard package (Requirement 1)
-    study = usdm_model.Study(**data)
+    class DictAttrAdapter:
+        def __init__(self, d: Any):
+            self._d = d if isinstance(d, dict) else {}
+
+        def __getattr__(self, name: str) -> Any:
+            if name in self._d:
+                val = self._d[name]
+            else:
+                import re
+
+                camel = re.sub(r"_([a-z])", lambda m: m.group(1).upper(), name)
+                snake = re.sub(
+                    r"([A-Z])", lambda m: "_" + m.group(1).lower(), name
+                ).lstrip("_")
+                val = self._d.get(camel, self._d.get(snake, None))
+
+            if isinstance(val, dict):
+                return DictAttrAdapter(val)
+            if isinstance(val, list):
+                return [DictAttrAdapter(x) if isinstance(x, dict) else x for x in val]
+            return val
+
+        def __bool__(self) -> bool:
+            return bool(self._d)
+
+    # Use official USDM python standard package with fallback adapter
+    try:
+        study = usdm_model.Study(**data)
+    except Exception:
+        study = DictAttrAdapter(data)
 
     complete_activities = []
     incomplete_activities = []

@@ -11,6 +11,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 1. Core Platform & Execution Engine
 
+- [2026-08-15: Comprehensive Enterprise eConsent Architecture and Multi-Party Signature Pipeline](2026-08-15-comprehensive-enterprise-econsent-architecture-and-multi-party-signature-pipeline.md)
+- [2026-08-14: Comprehensive Hexagonal Architecture Standardization and Frontend Modularization](2026-08-14-comprehensive-hexagonal-architecture-standardization-and-frontend-modularization.md)
 - [2026-08-14: Standardized Hexagonal Architecture and Unified Developer Experience Suite](2026-08-14-standardized-hexagonal-architecture-and-unified-developer-experience-suite.md)
 
 - [2026-08-14: Standardized Hexagonal Architecture and Unified Developer CLI](2026-08-14-standardized-hexagonal-architecture-and-unified-developer-cli.md)
@@ -165,6 +167,9 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
+- [2026-08-15: Comprehensive Clinical Issue and Operations Hub Architecture](2026-08-15-comprehensive-clinical-issue-and-operations-hub-architecture.md)
+
+- [2026-08-15: Comprehensive CTMS Modular Architecture and Ecosystem Synchronization](2026-08-15-comprehensive-ctms-modular-architecture-and-ecosystem-synchronization.md)
 
 - [2026-07-31: Expose CRA Monitoring SDV Transport Models and Shared Sign-Off Logic](2026-07-31-expose-cra-monitoring-sdv-transport-models-and-shared-sign-off-logic.md)
 - [2026-08-03: ADR-147: Task-Driven CRA Workspace Routing & Multi-Select Batch SDV](2026-08-03-task-driven-cra-workspace-and-batch-sdv-verification.md)
@@ -198,6 +203,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-31: Randomization and Trial Supply Management](2026-08-31-randomization-and-trial-supply-management.md)
 
 ### 5. Compliance, Audit & Governance
+
+- [2026-08-15: Comprehensive Clinical Quality and RBQM eQMS Architecture](2026-08-15-comprehensive-clinical-quality-and-rbqm-eqms-architecture.md)
 
 - [2026-08-04: Enforce Fail-Fast Environment Validation for GxP Compliance](2026-08-04-enforce-fail-fast-environment-validation-for-gxp-compliance.md)
 - [2026-08-03: Fail-Safe GxP Document Generation and Draft Warning Banners](2026-08-03-fail-safe-gxp-document-generation-and-draft-warning-banners.md)

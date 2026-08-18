@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Cadence Clinical - Quality & CAPA",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "paths": {
     "/health": {
@@ -122,6 +122,42 @@
               "title": "Status"
             },
             "description": "Filter by status"
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/DeviationSeverity"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by severity",
+              "title": "Severity"
+            },
+            "description": "Filter by severity"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/DeviationType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by deviation type",
+              "title": "Type"
+            },
+            "description": "Filter by deviation type"
           }
         ],
         "responses": {
@@ -135,6 +171,44 @@
                     "$ref": "#/components/schemas/DeviationResponse"
                   },
                   "title": "Response List Deviations Api V1 Quality Deviations Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/ingest/event": {
+      "post": {
+        "summary": "Ingest Quality Event",
+        "operationId": "ingest_quality_event_api_v1_quality_ingest_event_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviationIngestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviationResponse"
                 }
               }
             }
@@ -292,17 +366,171 @@
         "summary": "Create Capa",
         "operationId": "create_capa_api_v1_quality_capas_post",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CAPACreate"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CAPAResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Capas",
+        "operationId": "list_capas_api_v1_quality_capas_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by study ID",
+              "title": "Study Id"
+            },
+            "description": "Filter by study ID"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/CAPAStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by status",
+              "title": "Status"
+            },
+            "description": "Filter by status"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CAPAResponse"
+                  },
+                  "title": "Response List Capas Api V1 Quality Capas Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/capas/{id}": {
+      "get": {
+        "summary": "View Capa",
+        "operationId": "view_capa_api_v1_quality_capas__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CAPAResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update Capa",
+        "operationId": "update_capa_api_v1_quality_capas__id__put",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CAPAUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
@@ -374,10 +602,10 @@
         }
       }
     },
-    "/api/v1/quality/capas/{id}": {
-      "put": {
-        "summary": "Update Capa",
-        "operationId": "update_capa_api_v1_quality_capas__id__put",
+    "/api/v1/quality/capas/{id}/action-items": {
+      "post": {
+        "summary": "Create Action Item",
+        "operationId": "create_action_item_api_v1_quality_capas__id__action_items_post",
         "parameters": [
           {
             "name": "id",
@@ -394,7 +622,56 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CAPAUpdate"
+                "$ref": "#/components/schemas/CAPAActionItemCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CAPAActionItemResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/capas/action-items/{item_id}": {
+      "put": {
+        "summary": "Update Action Item Status",
+        "operationId": "update_action_item_status_api_v1_quality_capas_action_items__item_id__put",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CAPAActionItemUpdate"
               }
             }
           }
@@ -405,7 +682,1251 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "$ref": "#/components/schemas/CAPAActionItemResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/capas/{id}/effectiveness": {
+      "post": {
+        "summary": "Record Effectiveness Check",
+        "operationId": "record_effectiveness_check_api_v1_quality_capas__id__effectiveness_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CAPAEffectivenessCheckCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CAPAEffectivenessCheckResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/ctq": {
+      "post": {
+        "summary": "Create Ctq Factor",
+        "operationId": "create_ctq_factor_api_v1_quality_rbqm_ctq_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CtQFactorCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CtQFactorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Ctq Factors",
+        "operationId": "list_ctq_factors_api_v1_quality_rbqm_ctq_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study ID",
+              "title": "Study Id"
+            },
+            "description": "Study ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CtQFactorResponse"
+                  },
+                  "title": "Response List Ctq Factors Api V1 Quality Rbqm Ctq Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/kris": {
+      "get": {
+        "summary": "List Kri Definitions",
+        "operationId": "list_kri_definitions_api_v1_quality_rbqm_kris_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/KRIDefinitionResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Kri Definitions Api V1 Quality Rbqm Kris Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Kri Definition",
+        "operationId": "create_kri_definition_api_v1_quality_rbqm_kris_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KRIDefinitionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KRIDefinitionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/kris/evaluate-batch": {
+      "post": {
+        "summary": "Evaluate Kri Batch",
+        "operationId": "evaluate_kri_batch_api_v1_quality_rbqm_kris_evaluate_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KRIBatchEvaluationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/KRIMetricEvaluationResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Evaluate Kri Batch Api V1 Quality Rbqm Kris Evaluate Batch Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/evaluations": {
+      "get": {
+        "summary": "List Kri Evaluations",
+        "operationId": "list_kri_evaluations_api_v1_quality_rbqm_evaluations_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study ID",
+              "title": "Study Id"
+            },
+            "description": "Study ID"
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional Site ID",
+              "title": "Site Id"
+            },
+            "description": "Optional Site ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/KRIMetricEvaluationResponse"
+                  },
+                  "title": "Response List Kri Evaluations Api V1 Quality Rbqm Evaluations Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/site-risk-profiles/compute": {
+      "post": {
+        "summary": "Compute Site Risk Profiles",
+        "operationId": "compute_site_risk_profiles_api_v1_quality_rbqm_site_risk_profiles_compute_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study ID",
+              "title": "Study Id"
+            },
+            "description": "Study ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SiteRiskProfileResponse"
+                  },
+                  "title": "Response Compute Site Risk Profiles Api V1 Quality Rbqm Site Risk Profiles Compute Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/site-risk-profiles": {
+      "get": {
+        "summary": "Get Site Risk Profiles",
+        "operationId": "get_site_risk_profiles_api_v1_quality_rbqm_site_risk_profiles_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study ID",
+              "title": "Study Id"
+            },
+            "description": "Study ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SiteRiskProfileResponse"
+                  },
+                  "title": "Response Get Site Risk Profiles Api V1 Quality Rbqm Site Risk Profiles Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/qtls": {
+      "post": {
+        "summary": "Create Qtl",
+        "operationId": "create_qtl_api_v1_quality_rbqm_qtls_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QTLCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QTLResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Qtls",
+        "operationId": "list_qtls_api_v1_quality_rbqm_qtls_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study ID",
+              "title": "Study Id"
+            },
+            "description": "Study ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QTLResponse"
+                  },
+                  "title": "Response List Qtls Api V1 Quality Rbqm Qtls Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/qtls/{id}/evaluate-breach": {
+      "post": {
+        "summary": "Evaluate Qtl Breach",
+        "operationId": "evaluate_qtl_breach_api_v1_quality_rbqm_qtls__id__evaluate_breach_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QTLEvaluateBreachRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/qtls/breaches": {
+      "get": {
+        "summary": "List Qtl Breaches",
+        "operationId": "list_qtl_breaches_api_v1_quality_rbqm_qtls_breaches_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study ID",
+              "title": "Study Id"
+            },
+            "description": "Study ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QTLBreachEventResponse"
+                  },
+                  "title": "Response List Qtl Breaches Api V1 Quality Rbqm Qtls Breaches Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/audits": {
+      "post": {
+        "summary": "Create Audit",
+        "operationId": "create_audit_api_v1_quality_audits_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuditCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Audits",
+        "operationId": "list_audits_api_v1_quality_audits_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by study ID",
+              "title": "Study Id"
+            },
+            "description": "Filter by study ID"
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by site ID",
+              "title": "Site Id"
+            },
+            "description": "Filter by site ID"
+          },
+          {
+            "name": "audit_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by audit type",
+              "title": "Audit Type"
+            },
+            "description": "Filter by audit type"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by audit status",
+              "title": "Status"
+            },
+            "description": "Filter by audit status"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditResponse"
+                  },
+                  "title": "Response List Audits Api V1 Quality Audits Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/audits/{id}": {
+      "get": {
+        "summary": "Get Audit",
+        "operationId": "get_audit_api_v1_quality_audits__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/audits/{id}/status": {
+      "put": {
+        "summary": "Update Audit Status",
+        "operationId": "update_audit_status_api_v1_quality_audits__id__status_put",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuditStatusUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/audits/{id}/findings": {
+      "post": {
+        "summary": "Create Audit Finding",
+        "operationId": "create_audit_finding_api_v1_quality_audits__id__findings_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuditFindingCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditFindingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Audit Findings",
+        "operationId": "list_audit_findings_api_v1_quality_audits__id__findings_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditFindingResponse"
+                  },
+                  "title": "Response List Audit Findings Api V1 Quality Audits  Id  Findings Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/audits/findings/{finding_id}/promote-capa": {
+      "post": {
+        "summary": "Promote Finding To Capa",
+        "operationId": "promote_finding_to_capa_api_v1_quality_audits_findings__finding_id__promote_capa_post",
+        "parameters": [
+          {
+            "name": "finding_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Finding Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromoteFindingToCAPARequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
                   "$ref": "#/components/schemas/CAPAResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/audits/inspection-dossier/{study_id}": {
+      "get": {
+        "summary": "Get Inspection Readiness Dossier",
+        "operationId": "get_inspection_readiness_dossier_api_v1_quality_audits_inspection_dossier__study_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/serious-breaches": {
+      "post": {
+        "summary": "Report Serious Breach",
+        "operationId": "report_serious_breach_api_v1_quality_serious_breaches_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeriousBreachReportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriousBreachResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Serious Breaches",
+        "operationId": "list_serious_breaches_api_v1_quality_serious_breaches_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by study ID",
+              "title": "Study Id"
+            },
+            "description": "Filter by study ID"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by status",
+              "title": "Status"
+            },
+            "description": "Filter by status"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SeriousBreachResponse"
+                  },
+                  "title": "Response List Serious Breaches Api V1 Quality Serious Breaches Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/serious-breaches/{id}": {
+      "get": {
+        "summary": "Get Serious Breach",
+        "operationId": "get_serious_breach_api_v1_quality_serious_breaches__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriousBreachResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/serious-breaches/{id}/confirm": {
+      "post": {
+        "summary": "Confirm Serious Breach",
+        "operationId": "confirm_serious_breach_api_v1_quality_serious_breaches__id__confirm_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeriousBreachConfirmRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriousBreachResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/serious-breaches/{id}/clock": {
+      "get": {
+        "summary": "Get Regulatory Clock Status",
+        "operationId": "get_regulatory_clock_status_api_v1_quality_serious_breaches__id__clock_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegulatoryClockStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/serious-breaches/{id}/status": {
+      "put": {
+        "summary": "Update Serious Breach Status",
+        "operationId": "update_serious_breach_status_api_v1_quality_serious_breaches__id__status_put",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeriousBreachStatusUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriousBreachResponse"
                 }
               }
             }
@@ -448,6 +1969,226 @@
   },
   "components": {
     "schemas": {
+      "ActionItemStatus": {
+        "type": "string",
+        "enum": [
+          "CANCELLED",
+          "COMPLETED",
+          "IN_PROGRESS",
+          "OPEN"
+        ],
+        "title": "ActionItemStatus"
+      },
+      "AuditCreate": {
+        "properties": {
+          "audit_number": {
+            "type": "string",
+            "title": "Audit Number",
+            "description": "Unique audit engagement identifier (e.g. AUD-2026-001)"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical study ID"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional clinical site ID"
+          },
+          "vendor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendor Name",
+            "description": "Optional CRO/Vendor name"
+          },
+          "audit_type": {
+            "type": "string",
+            "title": "Audit Type",
+            "description": "Audit type: SITE_AUDIT, VENDOR_QUALIFICATION, PROCESS_AUDIT, TMF_AUDIT",
+            "default": "SITE_AUDIT"
+          },
+          "lead_auditor": {
+            "type": "string",
+            "title": "Lead Auditor",
+            "description": "Lead auditor name / ID"
+          },
+          "planned_start_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Planned Start Date",
+            "description": "Scheduled audit start"
+          },
+          "planned_end_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Planned End Date",
+            "description": "Scheduled audit end"
+          },
+          "scope_summary": {
+            "type": "string",
+            "title": "Scope Summary",
+            "description": "Scope and objectives of the audit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "audit_number",
+          "study_id",
+          "lead_auditor",
+          "planned_start_date",
+          "planned_end_date",
+          "scope_summary"
+        ],
+        "title": "AuditCreate"
+      },
+      "AuditFindingCreate": {
+        "properties": {
+          "finding_number": {
+            "type": "string",
+            "title": "Finding Number",
+            "description": "Finding sequence (e.g. F-01)"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity",
+            "description": "Severity: CRITICAL, MAJOR, MINOR, OBSERVATION",
+            "default": "MAJOR"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "description": "Finding category (Informed Consent, Investigational Product, Data Integrity)"
+          },
+          "condition": {
+            "type": "string",
+            "title": "Condition",
+            "description": "Observed non-compliance or defect"
+          },
+          "criteria": {
+            "type": "string",
+            "title": "Criteria",
+            "description": "Applicable GCP or protocol requirement"
+          },
+          "cause": {
+            "type": "string",
+            "title": "Cause",
+            "description": "Why the condition occurred"
+          },
+          "effect": {
+            "type": "string",
+            "title": "Effect",
+            "description": "Impact on subject safety, rights, or trial reliability"
+          }
+        },
+        "type": "object",
+        "required": [
+          "finding_number",
+          "category",
+          "condition",
+          "criteria",
+          "cause",
+          "effect"
+        ],
+        "title": "AuditFindingCreate"
+      },
+      "AuditFindingResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "audit_id": {
+            "type": "string",
+            "title": "Audit Id"
+          },
+          "finding_number": {
+            "type": "string",
+            "title": "Finding Number"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "condition": {
+            "type": "string",
+            "title": "Condition"
+          },
+          "criteria": {
+            "type": "string",
+            "title": "Criteria"
+          },
+          "cause": {
+            "type": "string",
+            "title": "Cause"
+          },
+          "effect": {
+            "type": "string",
+            "title": "Effect"
+          },
+          "capa_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capa Id"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "audit_id",
+          "finding_number",
+          "severity",
+          "category",
+          "condition",
+          "criteria",
+          "cause",
+          "effect",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "AuditFindingResponse"
+      },
       "AuditLogResponse": {
         "properties": {
           "id": {
@@ -495,6 +2236,17 @@
               }
             ],
             "title": "Change Reason"
+          },
+          "merkle_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Merkle Hash"
           }
         },
         "type": "object",
@@ -507,6 +2259,359 @@
           "details"
         ],
         "title": "AuditLogResponse"
+      },
+      "AuditResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "audit_number": {
+            "type": "string",
+            "title": "Audit Number"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "vendor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendor Name"
+          },
+          "audit_type": {
+            "type": "string",
+            "title": "Audit Type"
+          },
+          "lead_auditor": {
+            "type": "string",
+            "title": "Lead Auditor"
+          },
+          "planned_start_date": {
+            "type": "string",
+            "title": "Planned Start Date"
+          },
+          "planned_end_date": {
+            "type": "string",
+            "title": "Planned End Date"
+          },
+          "actual_start_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Start Date"
+          },
+          "actual_end_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual End Date"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "scope_summary": {
+            "type": "string",
+            "title": "Scope Summary"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/AuditFindingResponse"
+            },
+            "type": "array",
+            "title": "Findings",
+            "default": []
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "audit_number",
+          "study_id",
+          "audit_type",
+          "lead_auditor",
+          "planned_start_date",
+          "planned_end_date",
+          "status",
+          "scope_summary",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "AuditResponse"
+      },
+      "AuditStatus": {
+        "type": "string",
+        "enum": [
+          "CANCELLED",
+          "CAPA_PENDING",
+          "COMPLETED",
+          "FINDINGS_REPORTED",
+          "IN_PROGRESS",
+          "PLANNED"
+        ],
+        "title": "AuditStatus"
+      },
+      "AuditStatusUpdate": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/AuditStatus",
+            "description": "Updated audit status"
+          },
+          "actual_start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Start Date",
+            "description": "Actual start timestamp"
+          },
+          "actual_end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual End Date",
+            "description": "Actual completion timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "AuditStatusUpdate"
+      },
+      "BreachStatus": {
+        "type": "string",
+        "enum": [
+          "AUTHORITY_NOTIFIED",
+          "CONFIRMED_BREACH",
+          "DISMISSED",
+          "RESOLVED",
+          "UNDER_EVALUATION"
+        ],
+        "title": "BreachStatus"
+      },
+      "CAPAActionItemCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Action item title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Detailed instructions for the action"
+          },
+          "action_type": {
+            "type": "string",
+            "title": "Action Type",
+            "description": "Action type: CORRECTIVE or PREVENTIVE",
+            "default": "CORRECTIVE"
+          },
+          "assigned_to": {
+            "type": "string",
+            "title": "Assigned To",
+            "description": "User ID assigned to complete this action"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date",
+            "description": "Target completion timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "description",
+          "assigned_to"
+        ],
+        "title": "CAPAActionItemCreate"
+      },
+      "CAPAActionItemResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "capa_id": {
+            "type": "string",
+            "title": "Capa Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "action_type": {
+            "type": "string",
+            "title": "Action Type"
+          },
+          "assigned_to": {
+            "type": "string",
+            "title": "Assigned To"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "evidence_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Url"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "capa_id",
+          "title",
+          "description",
+          "action_type",
+          "assigned_to",
+          "status",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "CAPAActionItemResponse"
+      },
+      "CAPAActionItemUpdate": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ActionItemStatus",
+            "description": "Target status: OPEN, IN_PROGRESS, COMPLETED, CANCELLED"
+          },
+          "evidence_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Url",
+            "description": "URL or reference to completion verification evidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "CAPAActionItemUpdate"
       },
       "CAPACreate": {
         "properties": {
@@ -530,7 +2635,8 @@
           "capa_type": {
             "type": "string",
             "title": "Capa Type",
-            "description": "Type of CAPA: CORRECTIVE or PREVENTIVE"
+            "description": "Type of CAPA: CORRECTIVE, PREVENTIVE, BOTH",
+            "default": "BOTH"
           },
           "action_plan": {
             "type": "string",
@@ -549,6 +2655,24 @@
             "title": "Preventive Measures",
             "description": "Specific measures to prevent recurrence"
           },
+          "risk_level": {
+            "type": "string",
+            "title": "Risk Level",
+            "description": "Risk level: LOW, MEDIUM, HIGH, CRITICAL",
+            "default": "MEDIUM"
+          },
+          "lead_investigator_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Investigator Id",
+            "description": "Lead investigator user ID"
+          },
           "target_completion_date": {
             "anyOf": [
               {
@@ -561,15 +2685,195 @@
             ],
             "title": "Target Completion Date",
             "description": "Optional expected completion timestamp"
+          },
+          "effectiveness_interval_days": {
+            "type": "integer",
+            "title": "Effectiveness Interval Days",
+            "description": "Scheduled interval in days before post-closure effectiveness check",
+            "default": 30
+          },
+          "audit_finding_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audit Finding Id",
+            "description": "Optional linked audit finding ID"
           }
         },
         "type": "object",
         "required": [
           "deviation_id",
-          "capa_type",
           "action_plan"
         ],
         "title": "CAPACreate"
+      },
+      "CAPAEffectivenessCheckCreate": {
+        "properties": {
+          "planned_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Planned Date",
+            "description": "Scheduled verification date"
+          },
+          "metric_evaluated": {
+            "type": "string",
+            "title": "Metric Evaluated",
+            "description": "Metric or condition being verified"
+          },
+          "baseline_value": {
+            "type": "string",
+            "title": "Baseline Value",
+            "description": "Baseline measurement before CAPA implementation"
+          },
+          "target_value": {
+            "type": "string",
+            "title": "Target Value",
+            "description": "Target success threshold"
+          },
+          "actual_value": {
+            "type": "string",
+            "title": "Actual Value",
+            "description": "Observed measurement during effectiveness check"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/EffectivenessOutcome",
+            "description": "Evaluation outcome: EFFECTIVE, INEFFECTIVE, PARTIALLY_EFFECTIVE"
+          },
+          "comments": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comments",
+            "description": "Evaluator rationale and notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "planned_date",
+          "metric_evaluated",
+          "baseline_value",
+          "target_value",
+          "actual_value",
+          "outcome"
+        ],
+        "title": "CAPAEffectivenessCheckCreate"
+      },
+      "CAPAEffectivenessCheckResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "capa_id": {
+            "type": "string",
+            "title": "Capa Id"
+          },
+          "planned_date": {
+            "type": "string",
+            "title": "Planned Date"
+          },
+          "executed_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Executed Date"
+          },
+          "metric_evaluated": {
+            "type": "string",
+            "title": "Metric Evaluated"
+          },
+          "baseline_value": {
+            "type": "string",
+            "title": "Baseline Value"
+          },
+          "target_value": {
+            "type": "string",
+            "title": "Target Value"
+          },
+          "actual_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Value"
+          },
+          "outcome": {
+            "type": "string",
+            "title": "Outcome"
+          },
+          "evaluator_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluator Id"
+          },
+          "comments": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comments"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "capa_id",
+          "planned_date",
+          "metric_evaluated",
+          "baseline_value",
+          "target_value",
+          "outcome",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "CAPAEffectivenessCheckResponse"
       },
       "CAPAResponse": {
         "properties": {
@@ -614,6 +2918,33 @@
             ],
             "title": "Preventive Measures"
           },
+          "risk_level": {
+            "type": "string",
+            "title": "Risk Level",
+            "default": "MEDIUM"
+          },
+          "lead_investigator_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Investigator Id"
+          },
+          "qa_approver_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qa Approver Id"
+          },
           "target_completion_date": {
             "anyOf": [
               {
@@ -624,6 +2955,54 @@
               }
             ],
             "title": "Target Completion Date"
+          },
+          "actual_completion_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Completion Date"
+          },
+          "effectiveness_interval_days": {
+            "type": "integer",
+            "title": "Effectiveness Interval Days",
+            "default": 30
+          },
+          "effectiveness_review_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effectiveness Review Date"
+          },
+          "effectiveness_outcome": {
+            "type": "string",
+            "title": "Effectiveness Outcome",
+            "default": "PENDING"
+          },
+          "recurrence_detected": {
+            "type": "boolean",
+            "title": "Recurrence Detected",
+            "default": false
+          },
+          "audit_finding_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audit Finding Id"
           },
           "study_id": {
             "type": "string",
@@ -655,6 +3034,22 @@
           "reason_for_change": {
             "type": "string",
             "title": "Reason For Change"
+          },
+          "action_items": {
+            "items": {
+              "$ref": "#/components/schemas/CAPAActionItemResponse"
+            },
+            "type": "array",
+            "title": "Action Items",
+            "default": []
+          },
+          "effectiveness_checks": {
+            "items": {
+              "$ref": "#/components/schemas/CAPAEffectivenessCheckResponse"
+            },
+            "type": "array",
+            "title": "Effectiveness Checks",
+            "default": []
           }
         },
         "type": "object",
@@ -677,9 +3072,12 @@
         "enum": [
           "INITIATED",
           "UNDER_REVIEW",
+          "APPROVED",
           "IMPLEMENTATION",
+          "IMPLEMENTATION_VERIFIED",
           "EFFECTIVENESS_CHECK",
           "CLOSED",
+          "INEFFECTIVE",
           "CANCELLED"
         ],
         "title": "CAPAStatus"
@@ -735,6 +3133,18 @@
             "title": "Preventive Measures",
             "description": "Specific measures to prevent recurrence"
           },
+          "risk_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Level",
+            "description": "Risk level"
+          },
           "target_completion_date": {
             "anyOf": [
               {
@@ -747,6 +3157,18 @@
             ],
             "title": "Target Completion Date",
             "description": "Optional expected completion timestamp"
+          },
+          "effectiveness_interval_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effectiveness Interval Days",
+            "description": "Effectiveness interval in days"
           },
           "version_index": {
             "anyOf": [
@@ -763,6 +3185,113 @@
         },
         "type": "object",
         "title": "CAPAUpdate"
+      },
+      "CtQFactorCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "description": "Risk category",
+            "default": "PATIENT_SAFETY"
+          },
+          "critical_aspect": {
+            "type": "string",
+            "title": "Critical Aspect",
+            "description": "Critical process or data parameter"
+          },
+          "risk_description": {
+            "type": "string",
+            "title": "Risk Description",
+            "description": "Potential threat to quality"
+          },
+          "impact_area": {
+            "type": "string",
+            "title": "Impact Area",
+            "description": "Primary endpoint, patient safety, etc."
+          },
+          "mitigation_strategy": {
+            "type": "string",
+            "title": "Mitigation Strategy",
+            "description": "Operational control measures"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "critical_aspect",
+          "risk_description",
+          "impact_area",
+          "mitigation_strategy"
+        ],
+        "title": "CtQFactorCreate"
+      },
+      "CtQFactorResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "critical_aspect": {
+            "type": "string",
+            "title": "Critical Aspect"
+          },
+          "risk_description": {
+            "type": "string",
+            "title": "Risk Description"
+          },
+          "impact_area": {
+            "type": "string",
+            "title": "Impact Area"
+          },
+          "mitigation_strategy": {
+            "type": "string",
+            "title": "Mitigation Strategy"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "category",
+          "critical_aspect",
+          "risk_description",
+          "impact_area",
+          "mitigation_strategy",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "CtQFactorResponse"
       },
       "DeviationCreate": {
         "properties": {
@@ -796,17 +3325,65 @@
           },
           "severity": {
             "$ref": "#/components/schemas/DeviationSeverity",
-            "description": "Severity level: MINOR, MAJOR, CRITICAL"
+            "description": "Severity level: MINOR, MAJOR, CRITICAL, SYSTEMATIC_TREND"
           },
           "type": {
             "$ref": "#/components/schemas/DeviationType",
             "description": "Type of deviation, e.g., INFORMED_CONSENT"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category",
+            "description": "Optional granular category"
           },
           "is_protocol_violation": {
             "type": "boolean",
             "title": "Is Protocol Violation",
             "description": "Whether this constitutes a protocol violation",
             "default": false
+          },
+          "impact_safety": {
+            "type": "boolean",
+            "title": "Impact Safety",
+            "description": "Potential or actual impact on subject safety",
+            "default": false
+          },
+          "impact_data": {
+            "type": "boolean",
+            "title": "Impact Data",
+            "description": "Potential or actual impact on study data reliability",
+            "default": false
+          },
+          "impact_compliance": {
+            "type": "boolean",
+            "title": "Impact Compliance",
+            "description": "Potential or actual impact on GCP regulatory compliance",
+            "default": false
+          },
+          "source_system": {
+            "type": "string",
+            "title": "Source System",
+            "description": "Source of deviation (MANUAL, EDC, CTMS, eTMF)",
+            "default": "MANUAL"
+          },
+          "source_reference_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Reference Id",
+            "description": "External reference ID from originating system"
           }
         },
         "type": "object",
@@ -818,6 +3395,108 @@
           "type"
         ],
         "title": "DeviationCreate"
+      },
+      "DeviationIngestRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique identifier of the clinical study"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional clinical site ID"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Summary of the quality event"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Detailed event log"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/DeviationSeverity",
+            "description": "Severity grade",
+            "default": "MINOR"
+          },
+          "type": {
+            "$ref": "#/components/schemas/DeviationType",
+            "description": "Deviation classification",
+            "default": "PROTOCOL_PROCEDURE"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category",
+            "description": "Sub-category"
+          },
+          "is_protocol_violation": {
+            "type": "boolean",
+            "title": "Is Protocol Violation",
+            "description": "Violation flag",
+            "default": false
+          },
+          "impact_safety": {
+            "type": "boolean",
+            "title": "Impact Safety",
+            "description": "Safety impact",
+            "default": false
+          },
+          "impact_data": {
+            "type": "boolean",
+            "title": "Impact Data",
+            "description": "Data impact",
+            "default": false
+          },
+          "impact_compliance": {
+            "type": "boolean",
+            "title": "Impact Compliance",
+            "description": "Compliance impact",
+            "default": false
+          },
+          "source_system": {
+            "type": "string",
+            "title": "Source System",
+            "description": "Source system: EDC, CTMS, eTMF"
+          },
+          "source_reference_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Reference Id",
+            "description": "Idempotency key / foreign entity reference"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "title",
+          "description",
+          "source_system"
+        ],
+        "title": "DeviationIngestRequest"
       },
       "DeviationResponse": {
         "properties": {
@@ -857,9 +3536,51 @@
           "type": {
             "$ref": "#/components/schemas/DeviationType"
           },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
           "is_protocol_violation": {
             "type": "boolean",
             "title": "Is Protocol Violation"
+          },
+          "impact_safety": {
+            "type": "boolean",
+            "title": "Impact Safety",
+            "default": false
+          },
+          "impact_data": {
+            "type": "boolean",
+            "title": "Impact Data",
+            "default": false
+          },
+          "impact_compliance": {
+            "type": "boolean",
+            "title": "Impact Compliance",
+            "default": false
+          },
+          "source_system": {
+            "type": "string",
+            "title": "Source System",
+            "default": "MANUAL"
+          },
+          "source_reference_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Reference Id"
           },
           "created_at": {
             "type": "string",
@@ -900,7 +3621,8 @@
         "enum": [
           "MINOR",
           "MAJOR",
-          "CRITICAL"
+          "CRITICAL",
+          "SYSTEMATIC_TREND"
         ],
         "title": "DeviationSeverity"
       },
@@ -919,14 +3641,29 @@
       "DeviationType": {
         "type": "string",
         "enum": [
-          "INFORMED_CONSENT",
+          "CONCOMITANT_MED",
           "ELIGIBILITY",
+          "GCP_COMPLIANCE",
+          "INFORMED_CONSENT",
+          "INVESTIGATIONAL_PRODUCT",
+          "IP_MANAGEMENT",
+          "LAB_SPECIMEN",
+          "OTHER",
           "PROTOCOL_PROCEDURE",
           "SAFETY_REPORTING",
-          "IP_MANAGEMENT",
-          "OTHER"
+          "VISIT_WINDOW"
         ],
         "title": "DeviationType"
+      },
+      "EffectivenessOutcome": {
+        "type": "string",
+        "enum": [
+          "EFFECTIVE",
+          "INEFFECTIVE",
+          "PARTIALLY_EFFECTIVE",
+          "PENDING"
+        ],
+        "title": "EffectivenessOutcome"
       },
       "HTTPValidationError": {
         "properties": {
@@ -941,13 +3678,500 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "KRIBatchEvaluationRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "kri_code": {
+            "type": "string",
+            "title": "Kri Code",
+            "description": "KRI Code to evaluate across sites"
+          },
+          "site_raw_values": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Site Raw Values",
+            "description": "Dictionary mapping site_id -> raw metric value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "kri_code",
+          "site_raw_values"
+        ],
+        "title": "KRIBatchEvaluationRequest"
+      },
+      "KRIDefinitionCreate": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "Unique KRI identifier code (e.g. KRI_AE_RATE)"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Human-readable KRI title"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "description": "Risk category",
+            "default": "DATA_INTEGRITY"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Metric description"
+          },
+          "calculation_formula": {
+            "type": "string",
+            "title": "Calculation Formula",
+            "description": "Formula definition"
+          },
+          "green_threshold": {
+            "type": "number",
+            "title": "Green Threshold",
+            "description": "Green / Low risk boundary",
+            "default": 1.0
+          },
+          "amber_threshold": {
+            "type": "number",
+            "title": "Amber Threshold",
+            "description": "Amber / Moderate risk boundary",
+            "default": 2.0
+          },
+          "red_threshold": {
+            "type": "number",
+            "title": "Red Threshold",
+            "description": "Red / High risk boundary",
+            "default": 3.0
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight",
+            "description": "Weight factor for Site Risk Index",
+            "default": 1.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "description",
+          "calculation_formula"
+        ],
+        "title": "KRIDefinitionCreate"
+      },
+      "KRIDefinitionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "calculation_formula": {
+            "type": "string",
+            "title": "Calculation Formula"
+          },
+          "green_threshold": {
+            "type": "number",
+            "title": "Green Threshold"
+          },
+          "amber_threshold": {
+            "type": "number",
+            "title": "Amber Threshold"
+          },
+          "red_threshold": {
+            "type": "number",
+            "title": "Red Threshold"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "name",
+          "category",
+          "description",
+          "calculation_formula",
+          "green_threshold",
+          "amber_threshold",
+          "red_threshold",
+          "weight",
+          "is_active",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "KRIDefinitionResponse"
+      },
+      "KRIMetricEvaluationResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "kri_code": {
+            "type": "string",
+            "title": "Kri Code"
+          },
+          "evaluation_date": {
+            "type": "string",
+            "title": "Evaluation Date"
+          },
+          "raw_value": {
+            "type": "number",
+            "title": "Raw Value"
+          },
+          "standardized_z_score": {
+            "type": "number",
+            "title": "Standardized Z Score"
+          },
+          "risk_tier": {
+            "type": "string",
+            "title": "Risk Tier"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "kri_code",
+          "evaluation_date",
+          "raw_value",
+          "standardized_z_score",
+          "risk_tier",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "KRIMetricEvaluationResponse"
+      },
+      "PromoteFindingToCAPARequest": {
+        "properties": {
+          "action_plan": {
+            "type": "string",
+            "title": "Action Plan",
+            "description": "Corrective action plan to remediate the finding"
+          },
+          "preventive_measures": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preventive Measures",
+            "description": "Preventive measures to prevent recurrence"
+          },
+          "target_completion_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Completion Date",
+            "description": "Target completion date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action_plan"
+        ],
+        "title": "PromoteFindingToCAPARequest"
+      },
+      "QTLBreachEventResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "qtl_id": {
+            "type": "string",
+            "title": "Qtl Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "breach_date": {
+            "type": "string",
+            "title": "Breach Date"
+          },
+          "observed_value": {
+            "type": "number",
+            "title": "Observed Value"
+          },
+          "threshold_value": {
+            "type": "number",
+            "title": "Threshold Value"
+          },
+          "root_cause": {
+            "type": "string",
+            "title": "Root Cause"
+          },
+          "corrective_action_summary": {
+            "type": "string",
+            "title": "Corrective Action Summary"
+          },
+          "csr_narrative": {
+            "type": "string",
+            "title": "Csr Narrative"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "qtl_id",
+          "study_id",
+          "breach_date",
+          "observed_value",
+          "threshold_value",
+          "root_cause",
+          "corrective_action_summary",
+          "csr_narrative",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "QTLBreachEventResponse"
+      },
+      "QTLCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "parameter_name": {
+            "type": "string",
+            "title": "Parameter Name",
+            "description": "Parameter name (e.g. Lost to Follow-up Rate)"
+          },
+          "target_value": {
+            "type": "number",
+            "title": "Target Value",
+            "description": "Expected target value"
+          },
+          "tolerance_limit": {
+            "type": "number",
+            "title": "Tolerance Limit",
+            "description": "Maximum allowable threshold before breach"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit",
+            "description": "Measurement unit (%, count, days)",
+            "default": "%"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "parameter_name",
+          "target_value",
+          "tolerance_limit"
+        ],
+        "title": "QTLCreate"
+      },
+      "QTLEvaluateBreachRequest": {
+        "properties": {
+          "observed_value": {
+            "type": "number",
+            "title": "Observed Value",
+            "description": "Current observed metric value"
+          },
+          "root_cause": {
+            "type": "string",
+            "title": "Root Cause",
+            "description": "Investigation of why the QTL was breached"
+          },
+          "corrective_action_summary": {
+            "type": "string",
+            "title": "Corrective Action Summary",
+            "description": "Mitigation and corrective actions planned"
+          }
+        },
+        "type": "object",
+        "required": [
+          "observed_value",
+          "root_cause",
+          "corrective_action_summary"
+        ],
+        "title": "QTLEvaluateBreachRequest"
+      },
+      "QTLResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "parameter_name": {
+            "type": "string",
+            "title": "Parameter Name"
+          },
+          "target_value": {
+            "type": "number",
+            "title": "Target Value"
+          },
+          "tolerance_limit": {
+            "type": "number",
+            "title": "Tolerance Limit"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "is_breached": {
+            "type": "boolean",
+            "title": "Is Breached"
+          },
+          "breach_count": {
+            "type": "integer",
+            "title": "Breach Count"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "parameter_name",
+          "target_value",
+          "tolerance_limit",
+          "unit",
+          "is_breached",
+          "breach_count",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "QTLResponse"
+      },
       "RCACreateOrUpdate": {
         "properties": {
           "methodology": {
             "type": "string",
             "maxLength": 255,
             "title": "Methodology",
-            "description": "RCA methodology used, e.g., 5 Whys, Fishbone"
+            "description": "RCA methodology used (FIVE_WHYS, ISHIKAWA_FISHBONE, HUMAN_FACTORS)",
+            "default": "FIVE_WHYS"
           },
           "investigation_details": {
             "type": "string",
@@ -958,6 +4182,49 @@
             "type": "string",
             "title": "Root Cause Summary",
             "description": "Summary of the determined root cause"
+          },
+          "five_whys_chain": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Five Whys Chain",
+            "description": "Structured 5-Whys causal hierarchy (why_1 through why_5)"
+          },
+          "fishbone_categories": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fishbone Categories",
+            "description": "Ishikawa 6M categories (Man, Machine, Material, Method, Measurement, Milieu)"
+          },
+          "contributing_factors": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contributing Factors",
+            "description": "Contributing factor tags and classifications"
           },
           "version_index": {
             "anyOf": [
@@ -974,7 +4241,6 @@
         },
         "type": "object",
         "required": [
-          "methodology",
           "investigation_details",
           "root_cause_summary"
         ],
@@ -1001,6 +4267,46 @@
           "root_cause_summary": {
             "type": "string",
             "title": "Root Cause Summary"
+          },
+          "five_whys_chain": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Five Whys Chain"
+          },
+          "fishbone_categories": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fishbone Categories"
+          },
+          "contributing_factors": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contributing Factors"
           },
           "study_id": {
             "type": "string",
@@ -1048,6 +4354,343 @@
           "reason_for_change"
         ],
         "title": "RCAResponse"
+      },
+      "RegulatoryClockStatusResponse": {
+        "properties": {
+          "breach_id": {
+            "type": "string",
+            "title": "Breach Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "reporting_deadline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporting Deadline"
+          },
+          "regulatory_clock_hours_remaining": {
+            "type": "number",
+            "title": "Regulatory Clock Hours Remaining"
+          },
+          "is_approaching_deadline": {
+            "type": "boolean",
+            "title": "Is Approaching Deadline"
+          },
+          "is_overdue": {
+            "type": "boolean",
+            "title": "Is Overdue"
+          },
+          "affected_authorities": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Affected Authorities"
+          }
+        },
+        "type": "object",
+        "required": [
+          "breach_id",
+          "study_id",
+          "status",
+          "regulatory_clock_hours_remaining",
+          "is_approaching_deadline",
+          "is_overdue"
+        ],
+        "title": "RegulatoryClockStatusResponse"
+      },
+      "SeriousBreachConfirmRequest": {
+        "properties": {
+          "affected_authorities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Affected Authorities",
+            "description": "Confirmed list of health authorities to notify"
+          }
+        },
+        "type": "object",
+        "required": [
+          "affected_authorities"
+        ],
+        "title": "SeriousBreachConfirmRequest"
+      },
+      "SeriousBreachReportRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical study ID"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional clinical site ID"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Title of serious breach event"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "description": "Comprehensive description of the breach and suspected impact"
+          },
+          "event_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Event Date",
+            "description": "Date breach occurred"
+          },
+          "discovery_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Discovery Date",
+            "description": "Date breach was discovered"
+          },
+          "affected_authorities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Affected Authorities",
+            "description": "List of regulatory authorities to notify"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "title",
+          "summary",
+          "event_date",
+          "discovery_date"
+        ],
+        "title": "SeriousBreachReportRequest"
+      },
+      "SeriousBreachResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "event_date": {
+            "type": "string",
+            "title": "Event Date"
+          },
+          "discovery_date": {
+            "type": "string",
+            "title": "Discovery Date"
+          },
+          "confirmation_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmation Date"
+          },
+          "reporting_deadline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporting Deadline"
+          },
+          "affected_authorities": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Affected Authorities"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "regulatory_clock_hours_remaining": {
+            "type": "number",
+            "title": "Regulatory Clock Hours Remaining",
+            "default": 168.0
+          },
+          "lead_qa_id": {
+            "type": "string",
+            "title": "Lead Qa Id"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "title",
+          "summary",
+          "event_date",
+          "discovery_date",
+          "status",
+          "lead_qa_id",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "SeriousBreachResponse"
+      },
+      "SeriousBreachStatusUpdate": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/BreachStatus",
+            "description": "Target status: CONFIRMED_BREACH, AUTHORITY_NOTIFIED, RESOLVED, DISMISSED"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "SeriousBreachStatusUpdate"
+      },
+      "SiteRiskProfileResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "evaluation_date": {
+            "type": "string",
+            "title": "Evaluation Date"
+          },
+          "composite_risk_score": {
+            "type": "number",
+            "title": "Composite Risk Score"
+          },
+          "risk_rank": {
+            "type": "integer",
+            "title": "Risk Rank"
+          },
+          "high_risk_kri_count": {
+            "type": "integer",
+            "title": "High Risk Kri Count"
+          },
+          "active_deviations_count": {
+            "type": "integer",
+            "title": "Active Deviations Count"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "evaluation_date",
+          "composite_risk_score",
+          "risk_rank",
+          "high_risk_kri_count",
+          "active_deviations_count",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "SiteRiskProfileResponse"
       },
       "ValidationError": {
         "properties": {

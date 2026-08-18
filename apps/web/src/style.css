@@ -875,6 +875,75 @@ main {
   gap: 12px;
 }
 
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-dialog {
+  background: #ffffff;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 680px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header-icon {
+  font-size: 1.6rem;
+}
+
+.modal-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.modal-subtitle {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin: 4px 0 0 0;
+}
+
+.btn-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.btn-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.error-banner {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+}
+
 /* Audit Ledger Timeline */
 .ledger-container {
   display: flex;

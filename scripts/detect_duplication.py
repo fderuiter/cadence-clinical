@@ -252,7 +252,9 @@ def main() -> None:
                                 },
                                 {
                                     "apps/etmf/watermark.py",
+                                    "apps/etmf/adapters/watermark.py",
                                     "apps/execution/src/domain/watermark.py",
+                                    "apps/execution/domain/watermark.py",
                                 },
                                 {
                                     "apps/execution/src/domain/acl/designer_eligibility_dto.py",
@@ -261,6 +263,7 @@ def main() -> None:
                                 },
                                 {
                                     "apps/etmf/sealer.py",
+                                    "apps/etmf/adapters/sealer.py",
                                     "apps/execution/database/sealer.py",
                                 },
                                 {
@@ -302,6 +305,8 @@ def main() -> None:
                                 },
                                 {
                                     "apps/tickets/notifications_client.py",
+                                    "apps/tickets/adapters/notifications_client.py",
+                                    "apps/tickets/infrastructure/notifications_client.py",
                                     "apps/execution/notifications_client.py",
                                 },
                                 {
@@ -319,8 +324,10 @@ def main() -> None:
                                 },
                                 {
                                     "apps/interop/designer_client.py",
+                                    "apps/interop/adapters/designer_client.py",
                                     "apps/interop/infrastructure/designer_client.py",
                                     "apps/etmf/lock_client.py",
+                                    "apps/etmf/adapters/lock_client.py",
                                     "apps/etmf/infrastructure/lock_client.py",
                                     "apps/execution/designer_client.py",
                                     "apps/execution/econsent_client.py",
@@ -329,6 +336,7 @@ def main() -> None:
                                     "apps/safety/processor.py",
                                     "apps/safety/main.py",
                                     "apps/safety/presentation/routers/safety.py",
+                                    "apps/safety/adapters/processor.py",
                                 },
                                 {
                                     "apps/econsent/main.py",
@@ -391,6 +399,7 @@ def main() -> None:
                                 {
                                     "packages/database/__init__.py",
                                     "apps/etmf/database/migrate.py",
+                                    "apps/etmf/adapters/migrate.py",
                                 },
                                 {
                                     "apps/ctms/alembic/env.py",
@@ -399,6 +408,16 @@ def main() -> None:
                                 {
                                     "apps/ctms/domain/acl/document_renderer_dto.py",
                                     "apps/designer/infrastructure/document_renderer.py",
+                                    "apps/designer/adapters/document_renderer.py",
+                                },
+                                {
+                                    "apps/ctms/adapters/repositories.py",
+                                    "apps/ctms/domain/ports.py",
+                                },
+                                {
+                                    "apps/etmf/adapters/repositories.py",
+                                    "apps/etmf/infrastructure/repositories.py",
+                                    "apps/etmf/domain/ports.py",
                                 },
                                 {
                                     "apps/ctms/domain/acl/sync_engine_dto.py",
@@ -422,6 +441,7 @@ def main() -> None:
                                 },
                                 {
                                     "apps/designer/infrastructure/usdm_ingestion.py",
+                                    "apps/designer/adapters/usdm_ingestion.py",
                                     "apps/designer/rules.py",
                                 },
                                 {
@@ -470,6 +490,7 @@ def main() -> None:
                                 },
                                 {
                                     "apps/etmf/watermark.py",
+                                    "apps/etmf/adapters/watermark.py",
                                     "apps/execution/domain/watermark.py",
                                 },
                                 {
@@ -495,6 +516,10 @@ def main() -> None:
                                 {
                                     "apps/quality/domain/models.py",
                                     "apps/quality/infrastructure/models.py",
+                                },
+                                {
+                                    "apps/tickets/main.py",
+                                    "apps/tickets/presentation/routers/tickets.py",
                                 },
                                 {
                                     "apps/etmf/workers/outbox_worker.py",

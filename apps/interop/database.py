@@ -1,3 +1,3 @@
-from apps.interop.infrastructure.database import db_manager
+from apps.interop.adapters.database import db_manager
 
 __all__ = ["db_manager"]

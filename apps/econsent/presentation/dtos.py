@@ -1,6 +1,11 @@
-"""Pydantic schemas for eConsent service presentation layer."""
+"""Pydantic schemas for eConsent service presentation layer.
+
+Includes 21 CFR Part 11 multisig schemas, granular research options,
+template amendment diff models, re-consent tracking, withdrawal records, and CDISC ODM exports.
+"""
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -237,10 +242,15 @@ class TranslationTransitionRequest(BaseModel):
     @classmethod
     def check_status(cls, v: str) -> str:
         v_clean = v.strip().upper()
-        if v_clean not in ("DRAFT", "IN_REVIEW", "APPROVED"):
-            raise ValueError(
-                "status must be either 'DRAFT', 'IN_REVIEW', or 'APPROVED'"
-            )
+        if v_clean not in (
+            "DRAFT",
+            "IN_REVIEW",
+            "APPROVED",
+            "PUBLISHED",
+            "REJECTED",
+            "RETIRED",
+        ):
+            raise ValueError(f"status '{v_clean}' is not recognized.")
         return v_clean
 
 
@@ -285,6 +295,7 @@ class ComprehensionSubmissionResponse(BaseModel):
     min_required: int
     next_step: str
     message: str
+    details: list[dict[str, Any]] | None = None
 
 
 class ConsentSignatureRequest(BaseModel):
@@ -296,6 +307,19 @@ class ConsentSignatureRequest(BaseModel):
     )
     reason_for_change: str = Field(..., description="Change reason for signing")
     site_id: str | None = Field(None, description="Optional site identifier")
+    role: str = Field(
+        "SUBJECT",
+        description="Signer role: SUBJECT, LAR, MINOR_ASSENT, INVESTIGATOR, WITNESS",
+    )
+    signer_name: str | None = Field(None, description="Printed legal name of signer")
+    signer_email: str | None = Field(None, description="Contact email of signer")
+    meaning: str | None = Field(None, description="21 CFR Part 11 signing intent")
+    lar_relationship: str | None = Field(
+        None, description="Relationship if role is LAR"
+    )
+    lar_authority_basis: str | None = Field(
+        None, description="Legal basis if role is LAR"
+    )
 
 
 class ConsentSignatureResponse(AuditFields):
@@ -305,8 +329,15 @@ class ConsentSignatureResponse(AuditFields):
     template_id: str
     version_index: int
     subject_pseudonym: str
+    role: str = "SUBJECT"
+    signer_name: str | None = None
+    signer_email: str | None = None
+    meaning: str | None = None
     signature_data: str | None
     signed_at: datetime
+    digest_sha256: str | None = None
+    lar_relationship: str | None = None
+    lar_authority_basis: str | None = None
 
 
 class ArchivalDeliveryResponse(AuditFields):
@@ -340,6 +371,12 @@ class SubjectConsentCaptureRequest(BaseModel):
     reason_for_change: str = Field(
         ..., description="Part 11 rationale/change justification"
     )
+    signatures: list[dict[str, Any]] | None = Field(
+        None, description="Optional multi-party signature list"
+    )
+    granular_selections: list[dict[str, Any]] | None = Field(
+        None, description="Optional granular opt-in selections"
+    )
 
 
 class SubjectConsentResponse(AuditFields):
@@ -359,6 +396,9 @@ class SubjectConsentResponse(AuditFields):
     )
     source_content_identity: str = Field(
         ..., description="Hash/clause-set identifier at capture time"
+    )
+    status: str = Field(
+        "ACTIVE", description="Consent status: ACTIVE, SUPERSEDED, WITHDRAWN"
     )
     server_timestamp: datetime = Field(
         ..., description="Server-side chronological capture timestamp"
@@ -381,4 +421,162 @@ class SubjectConsentStatusResponse(BaseModel):
     protocol_version: str
     signed: bool
     comprehension_passed: bool
+    status: str = "ACTIVE"
     requires_reconsent: bool = False
+
+
+# --- Granular Options DTOs ---
+class GranularOptionCreate(BaseModel):
+    option_code: str = Field(
+        ..., description="Unique key for the option, e.g. OPT_GENETICS"
+    )
+    title: str = Field(..., max_length=255, description="Title of the optional choice")
+    description: str = Field(
+        ..., description="Detailed description of optional procedure"
+    )
+    category: str = Field(
+        "OTHER",
+        description="Category: GENETICS, BIOBANKING, DATA_SHARING, FUTURE_CONTACT, SUBSTUDY",
+    )
+    is_mandatory: bool = Field(False, description="Whether selection is mandatory")
+    default_selected: bool = Field(False, description="Default initial state")
+    reason_for_change: str = Field(..., description="Mandatory change justification")
+
+
+class GranularOptionResponse(AuditFields):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    template_id: str
+    version_index: int
+    option_code: str
+    title: str
+    description: str
+    category: str
+    is_mandatory: bool
+    default_selected: bool
+
+
+class GranularSelectionInput(BaseModel):
+    option_code: str
+    selected: bool
+
+
+# --- Template Diff DTOs ---
+class ClauseDiffDTO(BaseModel):
+    clause_id: str
+    change_type: str
+    old_title: str | None
+    new_title: str | None
+    old_text: str | None
+    new_text: str | None
+    text_diff: str | None
+    is_substantive: bool
+
+
+class TemplateDiffResponse(BaseModel):
+    template_id: str
+    base_version_index: int
+    target_version_index: int
+    total_added: int
+    total_removed: int
+    total_modified: int
+    total_unchanged: int
+    requires_reconsent: bool
+    substantive_summary: list[str]
+    clause_diffs: list[ClauseDiffDTO]
+
+
+# --- Reconsent DTOs ---
+class ReconsentTriggerRequest(BaseModel):
+    study_id: str
+    site_id: str | None = None
+    prior_version_index: int
+    new_version_index: int
+    change_summary: str
+    substantive_changes: list[dict[str, Any]] = Field(default_factory=list)
+    reason_for_change: str = Field(..., description="Mandatory change justification")
+
+
+class ReconsentRequirementResponse(AuditFields):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    study_id: str
+    site_id: str | None
+    template_id: str
+    prior_version_index: int
+    new_version_index: int
+    subject_pseudonym: str
+    status: str
+    change_summary: str
+    substantive_changes: list[dict[str, Any]]
+    deadline_at: datetime | None
+    completed_consent_id: str | None
+
+
+# --- Consent Withdrawal DTOs ---
+class ConsentWithdrawalRequest(BaseModel):
+    study_id: str
+    site_id: str
+    subject_pseudonym: str
+    template_id: str
+    withdrawal_date: datetime | None = None
+    reason_category: str = Field(
+        ..., description="Category: Adverse Event, Personal Choice, Relocation, Other"
+    )
+    reason_detail: str = Field(..., description="Specific explanation for withdrawal")
+    scope: str = Field(
+        "STOP_ALL_DATA_COLLECTION",
+        description="STOP_INTERVENTIONS_ONLY, STOP_ALL_DATA_COLLECTION, DESTROY_SAMPLES",
+    )
+    investigator_id: str | None = None
+    reason_for_change: str = Field(..., description="Mandatory change justification")
+
+
+class ConsentWithdrawalResponse(AuditFields):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    study_id: str
+    site_id: str
+    subject_pseudonym: str
+    template_id: str
+    withdrawal_date: datetime
+    reason_category: str
+    reason_detail: str
+    scope: str
+    acknowledged_by_investigator: bool
+    investigator_id: str | None
+
+
+# --- Export & Audit DTOs ---
+class CdiscOdmExportResponse(BaseModel):
+    study_id: str
+    subject_pseudonym: str
+    template_id: str
+    version_index: int
+    odm_version: str
+    xml_content: str
+
+
+class VerifiableCertificateResponse(BaseModel):
+    study_id: str
+    subject_pseudonym: str
+    template_id: str
+    version_index: int
+    html_content: str
+    digest_sha256: str
+
+
+class ConsentAuditLogResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    timestamp: datetime
+    actor_id: str
+    actor_role: str
+    action: str
+    document_id: str | None
+    details: str
+    reason_for_change: str

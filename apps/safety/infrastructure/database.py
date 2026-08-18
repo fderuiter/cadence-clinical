@@ -1,3 +1,3 @@
-from packages.database import RelationalDatabaseManager
+from apps.safety.adapters.database import db_manager
 
-db_manager = RelationalDatabaseManager(service_name="Safety")
+__all__ = ["db_manager"]

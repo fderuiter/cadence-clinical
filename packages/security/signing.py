@@ -142,7 +142,7 @@ def verify_gateway_signature(
         if hmac.compare_digest(fallback_8_field, signature):
             return True
 
-    # Fallback 1: Try verifying with the 7-field compatibility fallback (tenant_id=None)
+    # Fallback 1: Try verifying with compatibility fallback (tenant_id=None)
     # for requests signed before tenant propagation was introduced.
     # Note: This is safe because scope-level variables (site_id, sponsor_id, unblinded_access)
     # are kept completely intact in the payload serialization.
@@ -158,10 +158,26 @@ def verify_gateway_signature(
             sponsor_id=sponsor_id,
             unblinded_access=unblinded_access,
             tenant_id=None,
-            sig_token=None,
+            sig_token=sig_token,
         )
         if hmac.compare_digest(fallback_tenant_expected, signature):
             return True
+
+        if sig_token:
+            fallback_tenant_no_sig = generate_gateway_signature(
+                user_id=user_id,
+                roles=roles,
+                timestamp=timestamp,
+                secret=secret,
+                change_reason=change_reason,
+                site_id=site_id,
+                sponsor_id=sponsor_id,
+                unblinded_access=unblinded_access,
+                tenant_id=None,
+                sig_token=None,
+            )
+            if hmac.compare_digest(fallback_tenant_no_sig, signature):
+                return True
 
     # 2. Scope-free fallbacks: Only permitted if no scope fields are present/active.
     # If any scope values are present, they are scope-bearing requests and must not fall back to cleared scopes.
@@ -172,7 +188,7 @@ def verify_gateway_signature(
         or (tenant_id and tenant_id != "tenant_default")
     )
     if not has_scopes:
-        # Fallback 2: Verify using the scope-free 7-field payload serialization with all scopes cleared/defaulted.
+        # Fallback 2: Verify using the scope-free payload serialization with all scopes cleared/defaulted.
         no_scope_expected = generate_gateway_signature(
             user_id=user_id,
             roles=roles,
@@ -183,10 +199,26 @@ def verify_gateway_signature(
             sponsor_id=None,
             unblinded_access=False,
             tenant_id=None,
-            sig_token=None,
+            sig_token=sig_token,
         )
         if hmac.compare_digest(no_scope_expected, signature):
             return True
+
+        if sig_token:
+            no_scope_no_sig = generate_gateway_signature(
+                user_id=user_id,
+                roles=roles,
+                timestamp=timestamp,
+                secret=secret,
+                change_reason=change_reason,
+                site_id=None,
+                sponsor_id=None,
+                unblinded_access=False,
+                tenant_id=None,
+                sig_token=None,
+            )
+            if hmac.compare_digest(no_scope_no_sig, signature):
+                return True
 
         # Fallback 3: Verify using the legacy 4-field V2 payload (backward compatibility for identity-only signatures).
         legacy_payload = {

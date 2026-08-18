@@ -87,6 +87,94 @@ def map_domain_error_to_http_status(err: DomainError) -> int:
     return 400
 
 
+@dataclass
+class ProblemDetails:
+    """RFC 7807 Problem Details representation for HTTP APIs."""
+
+    type: str = "about:blank"
+    title: str = "An error occurred"
+    status: int = 400
+    detail: str = ""
+    instance: str | None = None
+    invalid_params: list[dict[str, Any]] | None = None
+    extensions: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serializes ProblemDetails to standard RFC 7807 JSON structure."""
+        data: dict[str, Any] = {
+            "type": self.type,
+            "title": self.title,
+            "status": self.status,
+            "detail": self.detail,
+        }
+        if self.instance is not None:
+            data["instance"] = self.instance
+        if self.invalid_params:
+            data["invalid_params"] = self.invalid_params
+        if self.extensions:
+            data.update(self.extensions)
+        return data
+
+
+def create_problem_details_from_domain_error(
+    err: DomainError, instance: str | None = None
+) -> dict[str, Any]:
+    """Builds an RFC 7807 compliant problem details dict from a DomainError."""
+    status = map_domain_error_to_http_status(err)
+    titles = {
+        EntityNotFoundError: "Entity Not Found",
+        EntityAlreadyExistsError: "Entity Already Exists",
+        ValidationError: "Validation Error",
+        UnauthorizedActionError: "Unauthorized Action",
+        PreconditionFailedError: "Precondition Failed",
+        ConflictError: "Conflict",
+        DatabaseError: "Database Error",
+    }
+    type_slugs = {
+        EntityNotFoundError: "entity-not-found",
+        EntityAlreadyExistsError: "entity-already-exists",
+        ValidationError: "validation-error",
+        UnauthorizedActionError: "unauthorized-action",
+        PreconditionFailedError: "precondition-failed",
+        ConflictError: "conflict",
+        DatabaseError: "database-error",
+    }
+    err_cls = err.__class__
+    title = titles.get(err_cls, "Domain Error")
+    type_slug = type_slugs.get(err_cls, "domain-error")
+    problem = ProblemDetails(
+        type=f"https://cadence.clinical/errors/{type_slug}",
+        title=title,
+        status=status,
+        detail=str(err.message or err),
+        instance=instance,
+        extensions=err.details if hasattr(err, "details") and err.details else {},
+    )
+    return problem.to_dict()
+
+
+def register_rfc7807_handlers(app: Any) -> None:
+    """Registers standard RFC 7807 exception handlers on a FastAPI application."""
+    try:
+        from fastapi import Request
+        from fastapi.responses import JSONResponse
+
+        @app.exception_handler(DomainError)
+        async def domain_error_handler(request: Request, exc: DomainError):
+            status = map_domain_error_to_http_status(exc)
+            body = create_problem_details_from_domain_error(
+                exc, instance=str(request.url)
+            )
+            return JSONResponse(
+                status_code=status,
+                content=body,
+                media_type="application/problem+json",
+            )
+
+    except ImportError:
+        pass
+
+
 # ==========================================
 # 2. Domain Events & Primitives
 # ==========================================

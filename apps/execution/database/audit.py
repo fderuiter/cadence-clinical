@@ -130,6 +130,7 @@ def receive_before_flush(session: Session, flush_context, instances):
             "tickets",
             "ticket_audit_logs",
             "ticket_comments",
+            "ticket_attachments",
             "integration_outbox",
             "security_audit_logs",
             "test_user_records",
@@ -814,7 +815,14 @@ def receive_before_flush(session: Session, flush_context, instances):
 
     # Track Inserts
     for obj in session.new:
-        if not hasattr(obj, "__tablename__") or obj.__tablename__ == "audit_logs":
+        if (
+            not hasattr(obj, "__tablename__")
+            or obj.__tablename__ in ("audit_logs", "audit_ledger_seals")
+            or not (
+                getattr(obj, "__module__", "").startswith("apps.execution")
+                or isinstance(obj, AuditedModel)
+            )
+        ):
             continue
 
         new_values = {}
@@ -843,7 +851,14 @@ def receive_before_flush(session: Session, flush_context, instances):
 
     # Track Updates
     for obj in session.dirty:
-        if not hasattr(obj, "__tablename__") or obj.__tablename__ == "audit_logs":
+        if (
+            not hasattr(obj, "__tablename__")
+            or obj.__tablename__ in ("audit_logs", "audit_ledger_seals")
+            or not (
+                getattr(obj, "__module__", "").startswith("apps.execution")
+                or isinstance(obj, AuditedModel)
+            )
+        ):
             continue
         if not session.is_modified(obj, include_collections=False):
             continue
@@ -920,7 +935,14 @@ def receive_before_flush(session: Session, flush_context, instances):
                 f"Hard deletion of {obj.__class__.__name__} is forbidden. Use soft deletes by setting is_deleted=True."
             )
 
-        if not hasattr(obj, "__tablename__") or obj.__tablename__ == "audit_logs":
+        if (
+            not hasattr(obj, "__tablename__")
+            or obj.__tablename__ in ("audit_logs", "audit_ledger_seals")
+            or not (
+                getattr(obj, "__module__", "").startswith("apps.execution")
+                or isinstance(obj, AuditedModel)
+            )
+        ):
             continue
 
         # If it's another non-audited model, capture its deletion? The requirement says "all clinical records must be versioned..."

@@ -526,7 +526,7 @@ def generate_signature(
         user_id=user_id,
         roles=roles,
         timestamp=timestamp,
-        secret=GATEWAY_SECRET.encode(),
+        secret=os.getenv("GATEWAY_SECRET", GATEWAY_SECRET).encode(),
         change_reason=change_reason,
         site_id=site_id,
         sponsor_id=sponsor_id,

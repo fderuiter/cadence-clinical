@@ -33,6 +33,7 @@ class DatabaseSessionManager:
             database_url (str): The connection string for the database.
             **kwargs (Any): Additional arguments to pass to the async engine.
         """
+        self._sqlite_settings.clear()
         engine_options = {}
         if database_url.startswith("sqlite"):
             engine_options["execution_options"] = {

@@ -1,3 +1,3 @@
-from packages.database import RelationalDatabaseManager
+from apps.econsent.adapters.database import db_manager
 
-db_manager = RelationalDatabaseManager(service_name="EConsent")
+__all__ = ["db_manager"]

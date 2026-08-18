@@ -221,6 +221,1731 @@
         }
       }
     },
+    "/api/v1/ctms/startup/milestones": {
+      "post": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "Create Or Update Country Milestone",
+        "operationId": "create_or_update_country_milestone_api_v1_ctms_startup_milestones_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CountryMilestoneCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CountryMilestoneResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "List Country Milestones",
+        "operationId": "list_country_milestones_api_v1_ctms_startup_milestones_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "country_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Country Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CountryMilestoneResponse"
+                  },
+                  "title": "Response List Country Milestones Api V1 Ctms Startup Milestones Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/startup/documents": {
+      "post": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "Submit Essential Document",
+        "operationId": "submit_essential_document_api_v1_ctms_startup_documents_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EssentialDocumentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EssentialDocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "List Essential Documents",
+        "operationId": "list_essential_documents_api_v1_ctms_startup_documents_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EssentialDocumentResponse"
+                  },
+                  "title": "Response List Essential Documents Api V1 Ctms Startup Documents Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/startup/documents/{document_id}/review": {
+      "put": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "Review Essential Document",
+        "operationId": "review_essential_document_api_v1_ctms_startup_documents__document_id__review_put",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EssentialDocumentReview"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EssentialDocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/startup/sites/{site_id}/greenlight": {
+      "get": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "Evaluate Site Greenlight",
+        "operationId": "evaluate_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteGreenlightGateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/startup/sites/{site_id}/greenlight/certify": {
+      "post": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "Certify Site Greenlight",
+        "operationId": "certify_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_certify_post",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteGreenlightGateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/deviations": {
+      "post": {
+        "tags": [
+          "CTMS Protocol Deviations"
+        ],
+        "summary": "Log Protocol Deviation",
+        "operationId": "log_protocol_deviation_api_v1_ctms_deviations_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProtocolDeviationCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolDeviationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "CTMS Protocol Deviations"
+        ],
+        "summary": "List Protocol Deviations",
+        "operationId": "list_protocol_deviations_api_v1_ctms_deviations_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Severity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProtocolDeviationResponse"
+                  },
+                  "title": "Response List Protocol Deviations Api V1 Ctms Deviations Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/deviations/{deviation_id}/rca": {
+      "post": {
+        "tags": [
+          "CTMS Protocol Deviations"
+        ],
+        "summary": "Perform Root Cause Analysis",
+        "operationId": "perform_root_cause_analysis_api_v1_ctms_deviations__deviation_id__rca_post",
+        "parameters": [
+          {
+            "name": "deviation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Deviation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProtocolDeviationRCA"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolDeviationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/deviations/{deviation_id}/escalate-capa": {
+      "post": {
+        "tags": [
+          "CTMS Protocol Deviations"
+        ],
+        "summary": "Escalate To Quality Capa",
+        "operationId": "escalate_to_quality_capa_api_v1_ctms_deviations__deviation_id__escalate_capa_post",
+        "parameters": [
+          {
+            "name": "deviation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Deviation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolDeviationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/deviations/{deviation_id}/resolve": {
+      "post": {
+        "tags": [
+          "CTMS Protocol Deviations"
+        ],
+        "summary": "Resolve Protocol Deviation",
+        "operationId": "resolve_protocol_deviation_api_v1_ctms_deviations__deviation_id__resolve_post",
+        "parameters": [
+          {
+            "name": "deviation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Deviation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolDeviationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/deviations/{deviation_id}/action-items": {
+      "post": {
+        "tags": [
+          "CTMS Protocol Deviations"
+        ],
+        "summary": "Create Deviation Action Item",
+        "operationId": "create_deviation_action_item_api_v1_ctms_deviations__deviation_id__action_items_post",
+        "parameters": [
+          {
+            "name": "deviation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Deviation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviationActionItemCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviationActionItemResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/deviations/action-items/{action_item_id}/complete": {
+      "post": {
+        "tags": [
+          "CTMS Protocol Deviations"
+        ],
+        "summary": "Complete Deviation Action Item",
+        "operationId": "complete_deviation_action_item_api_v1_ctms_deviations_action_items__action_item_id__complete_post",
+        "parameters": [
+          {
+            "name": "action_item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Action Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviationActionItemComplete"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviationActionItemResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/deviations/action-items": {
+      "get": {
+        "tags": [
+          "CTMS Protocol Deviations"
+        ],
+        "summary": "List Deviation Action Items",
+        "operationId": "list_deviation_action_items_api_v1_ctms_deviations_action_items_get",
+        "parameters": [
+          {
+            "name": "deviation_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Deviation Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeviationActionItemResponse"
+                  },
+                  "title": "Response List Deviation Action Items Api V1 Ctms Deviations Action Items Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/rbqm/kri": {
+      "post": {
+        "tags": [
+          "CTMS RBQM"
+        ],
+        "summary": "Record Kri Metric",
+        "operationId": "record_kri_metric_api_v1_ctms_rbqm_kri_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RBQMKRIMetricCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RBQMKRIMetricResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "CTMS RBQM"
+        ],
+        "summary": "List Kri Metrics",
+        "operationId": "list_kri_metrics_api_v1_ctms_rbqm_kri_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RBQMKRIMetricResponse"
+                  },
+                  "title": "Response List Kri Metrics Api V1 Ctms Rbqm Kri Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/rbqm/sites/{site_id}/evaluate-risk": {
+      "post": {
+        "tags": [
+          "CTMS RBQM"
+        ],
+        "summary": "Evaluate Site Risk Score",
+        "operationId": "evaluate_site_risk_score_api_v1_ctms_rbqm_sites__site_id__evaluate_risk_post",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteRiskScoreResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/rbqm/sites/{site_id}/risk-score": {
+      "get": {
+        "tags": [
+          "CTMS RBQM"
+        ],
+        "summary": "Get Site Risk Score",
+        "operationId": "get_site_risk_score_api_v1_ctms_rbqm_sites__site_id__risk_score_get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/SiteRiskScoreResponse"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Site Risk Score Api V1 Ctms Rbqm Sites  Site Id  Risk Score Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/financials/procedure-grids": {
+      "post": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Add Procedure Payment Grid",
+        "operationId": "add_procedure_payment_grid_api_v1_ctms_financials_procedure_grids_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcedurePaymentGridCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcedurePaymentGridResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "List Procedure Grids",
+        "operationId": "list_procedure_grids_api_v1_ctms_financials_procedure_grids_get",
+        "parameters": [
+          {
+            "name": "grant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Grant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProcedurePaymentGridResponse"
+                  },
+                  "title": "Response List Procedure Grids Api V1 Ctms Financials Procedure Grids Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/financials/grants/{grant_id}/calculate-visit": {
+      "get": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Calculate Visit Payable",
+        "operationId": "calculate_visit_payable_api_v1_ctms_financials_grants__grant_id__calculate_visit_get",
+        "parameters": [
+          {
+            "name": "grant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Grant Id"
+            }
+          },
+          {
+            "name": "visit_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Visit Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisitPayableCalculationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/financials/invoices": {
+      "post": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Create Batch Invoice",
+        "operationId": "create_batch_invoice_api_v1_ctms_financials_invoices_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinancialInvoiceCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialInvoiceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "List Invoices",
+        "operationId": "list_invoices_api_v1_ctms_financials_invoices_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FinancialInvoiceResponse"
+                  },
+                  "title": "Response List Invoices Api V1 Ctms Financials Invoices Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/financials/invoices/{invoice_id}/approve": {
+      "post": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Approve And Disburse Invoice",
+        "operationId": "approve_and_disburse_invoice_api_v1_ctms_financials_invoices__invoice_id__approve_post",
+        "parameters": [
+          {
+            "name": "invoice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Invoice Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialInvoiceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/ip/shipments/receive": {
+      "post": {
+        "tags": [
+          "CTMS IP Accountability"
+        ],
+        "summary": "Receive Ip Shipment",
+        "operationId": "receive_ip_shipment_api_v1_ctms_ip_shipments_receive_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IPShipmentReceiveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IPKitRecordResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Receive Ip Shipment Api V1 Ctms Ip Shipments Receive Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/ip/kits": {
+      "get": {
+        "tags": [
+          "CTMS IP Accountability"
+        ],
+        "summary": "List Ip Kits",
+        "operationId": "list_ip_kits_api_v1_ctms_ip_kits_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IPKitRecordResponse"
+                  },
+                  "title": "Response List Ip Kits Api V1 Ctms Ip Kits Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/ip/kits/{kit_id}/dispense": {
+      "post": {
+        "tags": [
+          "CTMS IP Accountability"
+        ],
+        "summary": "Dispense Ip Kit",
+        "operationId": "dispense_ip_kit_api_v1_ctms_ip_kits__kit_id__dispense_post",
+        "parameters": [
+          {
+            "name": "kit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Kit Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IPKitDispenseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IPKitRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/ip/kits/{kit_id}/reconcile": {
+      "post": {
+        "tags": [
+          "CTMS IP Accountability"
+        ],
+        "summary": "Reconcile Returned Kit",
+        "operationId": "reconcile_returned_kit_api_v1_ctms_ip_kits__kit_id__reconcile_post",
+        "parameters": [
+          {
+            "name": "kit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Kit Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IPKitReconcileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IPKitRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/ip/excursions": {
+      "post": {
+        "tags": [
+          "CTMS IP Accountability"
+        ],
+        "summary": "Log Temperature Excursion",
+        "operationId": "log_temperature_excursion_api_v1_ctms_ip_excursions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IPTemperatureExcursionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IPTemperatureExcursionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/ip/excursions/{excursion_id}/disposition": {
+      "post": {
+        "tags": [
+          "CTMS IP Accountability"
+        ],
+        "summary": "Disposition Temperature Excursion",
+        "operationId": "disposition_temperature_excursion_api_v1_ctms_ip_excursions__excursion_id__disposition_post",
+        "parameters": [
+          {
+            "name": "excursion_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Excursion Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IPTemperatureExcursionDisposition"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IPTemperatureExcursionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/ip/destruction-certificates": {
+      "post": {
+        "tags": [
+          "CTMS IP Accountability"
+        ],
+        "summary": "Generate Destruction Certificate",
+        "operationId": "generate_destruction_certificate_api_v1_ctms_ip_destruction_certificates_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IPDestructionCertificateCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IPDestructionCertificateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/etmf-sync": {
+      "post": {
+        "tags": [
+          "CTMS eTMF Sync"
+        ],
+        "summary": "Sync Artifact To Etmf",
+        "operationId": "sync_artifact_to_etmf_api_v1_ctms_etmf_sync_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ETMFSyncRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ETMFSyncRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "CTMS eTMF Sync"
+        ],
+        "summary": "List Etmf Sync Records",
+        "operationId": "list_etmf_sync_records_api_v1_ctms_etmf_sync_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ETMFSyncRecordResponse"
+                  },
+                  "title": "Response List Etmf Sync Records Api V1 Ctms Etmf Sync Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/ctms/studies": {
       "get": {
         "tags": [
@@ -2480,6 +4205,194 @@
         ],
         "title": "ConflictStrategy"
       },
+      "CountryMilestoneCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical study ID"
+          },
+          "country_code": {
+            "type": "string",
+            "title": "Country Code",
+            "description": "ISO 2-letter or 3-letter country code"
+          },
+          "milestone_type": {
+            "type": "string",
+            "title": "Milestone Type",
+            "description": "Milestone type (e.g. CTA_SUBMISSION, CTA_APPROVAL, ETHICS_APPROVAL)"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Status (PLANNED, IN_PROGRESS, APPROVED, REJECTED)",
+            "default": "PLANNED"
+          },
+          "planned_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planned Date",
+            "description": "Planned date ISO string"
+          },
+          "actual_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Date",
+            "description": "Actual date ISO string"
+          },
+          "approval_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Number",
+            "description": "Regulatory authority approval identifier"
+          },
+          "authority_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Authority Name",
+            "description": "Name of the competent authority / ethics body"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "country_code",
+          "milestone_type"
+        ],
+        "title": "CountryMilestoneCreate"
+      },
+      "CountryMilestoneResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "country_code": {
+            "type": "string",
+            "title": "Country Code"
+          },
+          "milestone_type": {
+            "type": "string",
+            "title": "Milestone Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "planned_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planned Date"
+          },
+          "actual_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Date"
+          },
+          "approval_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Number"
+          },
+          "authority_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Authority Name"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "country_code",
+          "milestone_type",
+          "status",
+          "planned_date",
+          "actual_date",
+          "approval_number",
+          "authority_name",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "CountryMilestoneResponse"
+      },
       "DOALogResponse": {
         "properties": {
           "site_id": {
@@ -2581,6 +4494,733 @@
         ],
         "title": "DelegationTaskRequest"
       },
+      "DeviationActionItemComplete": {
+        "properties": {
+          "resolution_notes": {
+            "type": "string",
+            "title": "Resolution Notes",
+            "description": "Resolution summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resolution_notes"
+        ],
+        "title": "DeviationActionItemComplete"
+      },
+      "DeviationActionItemCreate": {
+        "properties": {
+          "deviation_id": {
+            "type": "string",
+            "title": "Deviation Id",
+            "description": "Deviation ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Site ID"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Description of the action item task"
+          },
+          "assignee_user_id": {
+            "type": "string",
+            "title": "Assignee User Id",
+            "description": "User ID of assignee"
+          },
+          "assignee_role": {
+            "type": "string",
+            "title": "Assignee Role",
+            "description": "Role of assignee"
+          },
+          "due_date": {
+            "type": "string",
+            "title": "Due Date",
+            "description": "Due date (YYYY-MM-DD)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deviation_id",
+          "site_id",
+          "description",
+          "assignee_user_id",
+          "assignee_role",
+          "due_date"
+        ],
+        "title": "DeviationActionItemCreate"
+      },
+      "DeviationActionItemResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "deviation_id": {
+            "type": "string",
+            "title": "Deviation Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "assignee_user_id": {
+            "type": "string",
+            "title": "Assignee User Id"
+          },
+          "assignee_role": {
+            "type": "string",
+            "title": "Assignee Role"
+          },
+          "due_date": {
+            "type": "string",
+            "title": "Due Date"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "resolution_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Notes"
+          },
+          "completed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed By"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "deviation_id",
+          "site_id",
+          "description",
+          "assignee_user_id",
+          "assignee_role",
+          "due_date",
+          "status",
+          "resolution_notes",
+          "completed_by",
+          "completed_at",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "DeviationActionItemResponse"
+      },
+      "ETMFSyncRecordResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "artifact_type": {
+            "type": "string",
+            "title": "Artifact Type"
+          },
+          "source_record_id": {
+            "type": "string",
+            "title": "Source Record Id"
+          },
+          "etmf_document_id": {
+            "type": "string",
+            "title": "Etmf Document Id"
+          },
+          "dia_zone": {
+            "type": "string",
+            "title": "Dia Zone"
+          },
+          "dia_section": {
+            "type": "string",
+            "title": "Dia Section"
+          },
+          "dia_artifact": {
+            "type": "string",
+            "title": "Dia Artifact"
+          },
+          "sync_status": {
+            "type": "string",
+            "title": "Sync Status"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "artifact_type",
+          "source_record_id",
+          "etmf_document_id",
+          "dia_zone",
+          "dia_section",
+          "dia_artifact",
+          "sync_status",
+          "error_message",
+          "synced_at",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "ETMFSyncRecordResponse"
+      },
+      "ETMFSyncRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Site ID"
+          },
+          "artifact_type": {
+            "type": "string",
+            "title": "Artifact Type",
+            "description": "Artifact type (MVR_REPORT, DOA_LOG, GREENLIGHT_PACKAGE, DEVIATION_REPORT, IP_DESTRUCTION_CERT)"
+          },
+          "source_record_id": {
+            "type": "string",
+            "title": "Source Record Id",
+            "description": "Source record ID in CTMS"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Document Title"
+          },
+          "content_text": {
+            "type": "string",
+            "title": "Content Text",
+            "description": "Full text or markdown content of artifact"
+          },
+          "dia_zone": {
+            "type": "string",
+            "title": "Dia Zone",
+            "description": "DIA TMF Reference Model Zone",
+            "default": "05"
+          },
+          "dia_section": {
+            "type": "string",
+            "title": "Dia Section",
+            "description": "DIA TMF Section",
+            "default": "05.02"
+          },
+          "dia_artifact": {
+            "type": "string",
+            "title": "Dia Artifact",
+            "description": "DIA TMF Artifact Name",
+            "default": "Trip Report"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "artifact_type",
+          "source_record_id",
+          "title",
+          "content_text"
+        ],
+        "title": "ETMFSyncRequest"
+      },
+      "EssentialDocumentCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical study ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Site ID"
+          },
+          "document_type": {
+            "type": "string",
+            "title": "Document Type",
+            "description": "Type of document (e.g. FDA_1572, SITE_CONTRACT, LOCAL_IRB_APPROVAL, GCP_CERTIFICATE)"
+          },
+          "file_name": {
+            "type": "string",
+            "title": "File Name",
+            "description": "Filename of the uploaded document"
+          },
+          "file_hash": {
+            "type": "string",
+            "title": "File Hash",
+            "description": "SHA-256 hash of the uploaded document"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date",
+            "description": "Document expiration date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "document_type",
+          "file_name",
+          "file_hash"
+        ],
+        "title": "EssentialDocumentCreate"
+      },
+      "EssentialDocumentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "document_type": {
+            "type": "string",
+            "title": "Document Type"
+          },
+          "file_name": {
+            "type": "string",
+            "title": "File Name"
+          },
+          "file_hash": {
+            "type": "string",
+            "title": "File Hash"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date"
+          },
+          "review_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Notes"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "document_type",
+          "file_name",
+          "file_hash",
+          "status",
+          "expiration_date",
+          "review_notes",
+          "reviewed_by",
+          "reviewed_at",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "EssentialDocumentResponse"
+      },
+      "EssentialDocumentReview": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Review disposition (APPROVED, REJECTED, EXPIRED)"
+          },
+          "review_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Notes",
+            "description": "Reviewer feedback or rationale"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "EssentialDocumentReview"
+      },
+      "FinancialInvoiceCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Site ID"
+          },
+          "grant_id": {
+            "type": "string",
+            "title": "Grant Id",
+            "description": "Grant ID"
+          },
+          "invoice_type": {
+            "type": "string",
+            "title": "Invoice Type",
+            "description": "Type of invoice",
+            "default": "VISIT_PROCEDURE_BATCH"
+          },
+          "gross_amount": {
+            "type": "number",
+            "title": "Gross Amount",
+            "description": "Gross payable amount"
+          },
+          "withholding_amount": {
+            "type": "number",
+            "title": "Withholding Amount",
+            "description": "Withheld amount",
+            "default": 0.0
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "description": "Currency code",
+            "default": "USD"
+          },
+          "payable_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Payable Ids",
+            "description": "List of included payable IDs",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "grant_id",
+          "gross_amount"
+        ],
+        "title": "FinancialInvoiceCreate"
+      },
+      "FinancialInvoiceResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "grant_id": {
+            "type": "string",
+            "title": "Grant Id"
+          },
+          "invoice_number": {
+            "type": "string",
+            "title": "Invoice Number"
+          },
+          "invoice_type": {
+            "type": "string",
+            "title": "Invoice Type"
+          },
+          "gross_amount": {
+            "type": "number",
+            "title": "Gross Amount"
+          },
+          "withholding_amount": {
+            "type": "number",
+            "title": "Withholding Amount"
+          },
+          "net_amount": {
+            "type": "number",
+            "title": "Net Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "payable_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Payable Ids"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "disbursed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disbursed At"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "grant_id",
+          "invoice_number",
+          "invoice_type",
+          "gross_amount",
+          "withholding_amount",
+          "net_amount",
+          "currency",
+          "status",
+          "payable_ids",
+          "approved_by",
+          "approved_at",
+          "disbursed_at",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "FinancialInvoiceResponse"
+      },
       "FindingCreate": {
         "properties": {
           "text": {
@@ -2674,6 +5314,647 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "IPDestructionCertificateCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Site ID"
+          },
+          "kit_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kit Ids",
+            "description": "List of kit IDs destroyed"
+          },
+          "destruction_method": {
+            "type": "string",
+            "title": "Destruction Method",
+            "description": "Destruction method",
+            "default": "ON_SITE_INCINERATION"
+          },
+          "witness_user_id": {
+            "type": "string",
+            "title": "Witness User Id",
+            "description": "User ID of the witness"
+          },
+          "witness_role": {
+            "type": "string",
+            "title": "Witness Role",
+            "description": "Role of the witness"
+          },
+          "pi_signature_hash": {
+            "type": "string",
+            "title": "Pi Signature Hash",
+            "description": "Cryptographic signature hash of the PI"
+          },
+          "reason_for_destruction": {
+            "type": "string",
+            "title": "Reason For Destruction",
+            "description": "Clinical rationale for destruction"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "kit_ids",
+          "witness_user_id",
+          "witness_role",
+          "pi_signature_hash",
+          "reason_for_destruction"
+        ],
+        "title": "IPDestructionCertificateCreate"
+      },
+      "IPDestructionCertificateResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "certificate_number": {
+            "type": "string",
+            "title": "Certificate Number"
+          },
+          "kit_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kit Ids"
+          },
+          "destruction_method": {
+            "type": "string",
+            "title": "Destruction Method"
+          },
+          "destruction_date": {
+            "type": "string",
+            "title": "Destruction Date"
+          },
+          "witness_user_id": {
+            "type": "string",
+            "title": "Witness User Id"
+          },
+          "witness_role": {
+            "type": "string",
+            "title": "Witness Role"
+          },
+          "pi_signature_hash": {
+            "type": "string",
+            "title": "Pi Signature Hash"
+          },
+          "pi_signed_at": {
+            "type": "string",
+            "title": "Pi Signed At"
+          },
+          "reason_for_destruction": {
+            "type": "string",
+            "title": "Reason For Destruction"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "certificate_number",
+          "kit_ids",
+          "destruction_method",
+          "destruction_date",
+          "witness_user_id",
+          "witness_role",
+          "pi_signature_hash",
+          "pi_signed_at",
+          "reason_for_destruction",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "IPDestructionCertificateResponse"
+      },
+      "IPKitDispenseRequest": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject ID"
+          },
+          "visit_id": {
+            "type": "string",
+            "title": "Visit Id",
+            "description": "Visit ID"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_id",
+          "visit_id"
+        ],
+        "title": "IPKitDispenseRequest"
+      },
+      "IPKitReconcileRequest": {
+        "properties": {
+          "returned_units_count": {
+            "type": "integer",
+            "title": "Returned Units Count",
+            "description": "Number of returned units/tablets"
+          },
+          "expected_units_count": {
+            "type": "integer",
+            "title": "Expected Units Count",
+            "description": "Expected returned units/tablets"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "Discrepancy notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "returned_units_count",
+          "expected_units_count"
+        ],
+        "title": "IPKitReconcileRequest"
+      },
+      "IPKitRecordResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "kit_number": {
+            "type": "string",
+            "title": "Kit Number"
+          },
+          "lot_number": {
+            "type": "string",
+            "title": "Lot Number"
+          },
+          "kit_type": {
+            "type": "string",
+            "title": "Kit Type"
+          },
+          "shipment_tracking_number": {
+            "type": "string",
+            "title": "Shipment Tracking Number"
+          },
+          "expiration_date": {
+            "type": "string",
+            "title": "Expiration Date"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "received_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Received Date"
+          },
+          "dispensed_subject_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispensed Subject Id"
+          },
+          "dispensed_visit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispensed Visit Id"
+          },
+          "dispensed_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispensed Date"
+          },
+          "returned_units_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Returned Units Count"
+          },
+          "expected_units_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Units Count"
+          },
+          "compliance_percentage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compliance Percentage"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "kit_number",
+          "lot_number",
+          "kit_type",
+          "shipment_tracking_number",
+          "expiration_date",
+          "status",
+          "received_date",
+          "dispensed_subject_id",
+          "dispensed_visit_id",
+          "dispensed_date",
+          "returned_units_count",
+          "expected_units_count",
+          "compliance_percentage",
+          "notes",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "IPKitRecordResponse"
+      },
+      "IPShipmentReceiveRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Site ID"
+          },
+          "kit_numbers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kit Numbers",
+            "description": "List of kit serial identifiers"
+          },
+          "lot_number": {
+            "type": "string",
+            "title": "Lot Number",
+            "description": "Manufacturing lot number"
+          },
+          "kit_type": {
+            "type": "string",
+            "title": "Kit Type",
+            "description": "Kit type (ACTIVE_DRUG, PLACEBO, COMPARATOR)",
+            "default": "ACTIVE_DRUG"
+          },
+          "shipment_tracking_number": {
+            "type": "string",
+            "title": "Shipment Tracking Number",
+            "description": "Courier tracking number"
+          },
+          "expiration_date": {
+            "type": "string",
+            "title": "Expiration Date",
+            "description": "Expiration date (YYYY-MM-DD)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "kit_numbers",
+          "lot_number",
+          "shipment_tracking_number",
+          "expiration_date"
+        ],
+        "title": "IPShipmentReceiveRequest"
+      },
+      "IPTemperatureExcursionCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Site ID"
+          },
+          "kit_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kit Ids",
+            "description": "List of affected IP kit record IDs"
+          },
+          "excursion_type": {
+            "type": "string",
+            "title": "Excursion Type",
+            "description": "Excursion type (TRANSIT, STORAGE)",
+            "default": "STORAGE"
+          },
+          "min_temp_celsius": {
+            "type": "number",
+            "title": "Min Temp Celsius",
+            "description": "Minimum recorded temperature"
+          },
+          "max_temp_celsius": {
+            "type": "number",
+            "title": "Max Temp Celsius",
+            "description": "Maximum recorded temperature"
+          },
+          "duration_hours": {
+            "type": "number",
+            "title": "Duration Hours",
+            "description": "Duration in hours outside standard range"
+          },
+          "occurred_at": {
+            "type": "string",
+            "title": "Occurred At",
+            "description": "Timestamp when excursion was detected"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "kit_ids",
+          "min_temp_celsius",
+          "max_temp_celsius",
+          "duration_hours",
+          "occurred_at"
+        ],
+        "title": "IPTemperatureExcursionCreate"
+      },
+      "IPTemperatureExcursionDisposition": {
+        "properties": {
+          "disposition_status": {
+            "type": "string",
+            "title": "Disposition Status",
+            "description": "QA disposition (QA_APPROVED_USE, QA_REJECTED_DESTROY)"
+          },
+          "qa_rationale": {
+            "type": "string",
+            "title": "Qa Rationale",
+            "description": "Justification and stability data reference"
+          }
+        },
+        "type": "object",
+        "required": [
+          "disposition_status",
+          "qa_rationale"
+        ],
+        "title": "IPTemperatureExcursionDisposition"
+      },
+      "IPTemperatureExcursionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "kit_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kit Ids"
+          },
+          "excursion_type": {
+            "type": "string",
+            "title": "Excursion Type"
+          },
+          "min_temp_celsius": {
+            "type": "number",
+            "title": "Min Temp Celsius"
+          },
+          "max_temp_celsius": {
+            "type": "number",
+            "title": "Max Temp Celsius"
+          },
+          "duration_hours": {
+            "type": "number",
+            "title": "Duration Hours"
+          },
+          "occurred_at": {
+            "type": "string",
+            "title": "Occurred At"
+          },
+          "disposition_status": {
+            "type": "string",
+            "title": "Disposition Status"
+          },
+          "qa_reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qa Reviewed By"
+          },
+          "qa_reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qa Reviewed At"
+          },
+          "qa_rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qa Rationale"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "kit_ids",
+          "excursion_type",
+          "min_temp_celsius",
+          "max_temp_celsius",
+          "duration_hours",
+          "occurred_at",
+          "disposition_status",
+          "qa_reviewed_by",
+          "qa_reviewed_at",
+          "qa_rationale",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "IPTemperatureExcursionResponse"
       },
       "InvestigatorGrantCreate": {
         "properties": {
@@ -3248,6 +6529,587 @@
         ],
         "title": "PaymentMilestoneResponse"
       },
+      "ProcedurePaymentGridCreate": {
+        "properties": {
+          "grant_id": {
+            "type": "string",
+            "title": "Grant Id",
+            "description": "Grant ID"
+          },
+          "visit_name": {
+            "type": "string",
+            "title": "Visit Name",
+            "description": "Visit name (e.g. SCREENING, WEEK_4, END_OF_TREATMENT)"
+          },
+          "procedure_code": {
+            "type": "string",
+            "title": "Procedure Code",
+            "description": "CPT/Procedure code"
+          },
+          "procedure_name": {
+            "type": "string",
+            "title": "Procedure Name",
+            "description": "Descriptive procedure name"
+          },
+          "base_amount": {
+            "type": "number",
+            "title": "Base Amount",
+            "description": "Base fee amount"
+          },
+          "overhead_percentage": {
+            "type": "number",
+            "title": "Overhead Percentage",
+            "description": "Institutional overhead %",
+            "default": 0.0
+          },
+          "withholding_percentage": {
+            "type": "number",
+            "title": "Withholding Percentage",
+            "description": "Retention/Withholding % (e.g. 10%)",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "grant_id",
+          "visit_name",
+          "procedure_code",
+          "procedure_name",
+          "base_amount"
+        ],
+        "title": "ProcedurePaymentGridCreate"
+      },
+      "ProcedurePaymentGridResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "grant_id": {
+            "type": "string",
+            "title": "Grant Id"
+          },
+          "visit_name": {
+            "type": "string",
+            "title": "Visit Name"
+          },
+          "procedure_code": {
+            "type": "string",
+            "title": "Procedure Code"
+          },
+          "procedure_name": {
+            "type": "string",
+            "title": "Procedure Name"
+          },
+          "base_amount": {
+            "type": "number",
+            "title": "Base Amount"
+          },
+          "overhead_percentage": {
+            "type": "number",
+            "title": "Overhead Percentage"
+          },
+          "withholding_percentage": {
+            "type": "number",
+            "title": "Withholding Percentage"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "grant_id",
+          "visit_name",
+          "procedure_code",
+          "procedure_name",
+          "base_amount",
+          "overhead_percentage",
+          "withholding_percentage",
+          "is_active",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "ProcedurePaymentGridResponse"
+      },
+      "ProtocolDeviationCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Site ID"
+          },
+          "subject_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Id",
+            "description": "Subject ID if applicable"
+          },
+          "visit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Id",
+            "description": "Visit ID if applicable"
+          },
+          "deviation_category": {
+            "type": "string",
+            "title": "Deviation Category",
+            "description": "Category (ELIGIBILITY, INFORMED_CONSENT, DOSING_IP, SAFETY_REPORTING, VISIT_WINDOW, OTHER)"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity",
+            "description": "Severity (MINOR, MAJOR, CRITICAL)"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Brief title of deviation"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Detailed description of protocol deviation"
+          },
+          "date_occurred": {
+            "type": "string",
+            "title": "Date Occurred",
+            "description": "Date deviation occurred (YYYY-MM-DD)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "deviation_category",
+          "severity",
+          "title",
+          "description",
+          "date_occurred"
+        ],
+        "title": "ProtocolDeviationCreate"
+      },
+      "ProtocolDeviationRCA": {
+        "properties": {
+          "root_cause_5whys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Root Cause 5Whys",
+            "description": "5-Why questions and answers",
+            "default": []
+          },
+          "root_cause_summary": {
+            "type": "string",
+            "title": "Root Cause Summary",
+            "description": "Summary of root cause analysis"
+          },
+          "corrective_action_plan": {
+            "type": "string",
+            "title": "Corrective Action Plan",
+            "description": "Corrective action plan (CAP)"
+          },
+          "preventive_action_plan": {
+            "type": "string",
+            "title": "Preventive Action Plan",
+            "description": "Preventive action plan (PAP)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "root_cause_summary",
+          "corrective_action_plan",
+          "preventive_action_plan"
+        ],
+        "title": "ProtocolDeviationRCA"
+      },
+      "ProtocolDeviationResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Id"
+          },
+          "visit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Id"
+          },
+          "deviation_category": {
+            "type": "string",
+            "title": "Deviation Category"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "date_occurred": {
+            "type": "string",
+            "title": "Date Occurred"
+          },
+          "date_identified": {
+            "type": "string",
+            "title": "Date Identified"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "root_cause_5whys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Root Cause 5Whys"
+          },
+          "root_cause_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Root Cause Summary"
+          },
+          "corrective_action_plan": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Corrective Action Plan"
+          },
+          "preventive_action_plan": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preventive Action Plan"
+          },
+          "quality_capa_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Capa Id"
+          },
+          "reported_by": {
+            "type": "string",
+            "title": "Reported By"
+          },
+          "resolved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved By"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "visit_id",
+          "deviation_category",
+          "severity",
+          "title",
+          "description",
+          "date_occurred",
+          "date_identified",
+          "status",
+          "root_cause_5whys",
+          "root_cause_summary",
+          "corrective_action_plan",
+          "preventive_action_plan",
+          "quality_capa_id",
+          "reported_by",
+          "resolved_by",
+          "resolved_at",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "ProtocolDeviationResponse"
+      },
+      "RBQMKRIMetricCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Site ID"
+          },
+          "metric_type": {
+            "type": "string",
+            "title": "Metric Type",
+            "description": "KRI metric type (QUERY_VELOCITY, SAE_REPORTING_LAG_DAYS, PROTOCOL_DEVIATION_RATE, FORM_ENTRY_LAG_DAYS, SDV_BACKLOG_RATE)"
+          },
+          "metric_value": {
+            "type": "number",
+            "title": "Metric Value",
+            "description": "Calculated metric value"
+          },
+          "threshold_low": {
+            "type": "number",
+            "title": "Threshold Low",
+            "description": "Lower normal threshold"
+          },
+          "threshold_high": {
+            "type": "number",
+            "title": "Threshold High",
+            "description": "Upper normal threshold"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "Analytical context or observation notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "metric_type",
+          "metric_value",
+          "threshold_low",
+          "threshold_high"
+        ],
+        "title": "RBQMKRIMetricCreate"
+      },
+      "RBQMKRIMetricResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "metric_type": {
+            "type": "string",
+            "title": "Metric Type"
+          },
+          "metric_value": {
+            "type": "number",
+            "title": "Metric Value"
+          },
+          "threshold_low": {
+            "type": "number",
+            "title": "Threshold Low"
+          },
+          "threshold_high": {
+            "type": "number",
+            "title": "Threshold High"
+          },
+          "breach_status": {
+            "type": "string",
+            "title": "Breach Status"
+          },
+          "calculation_date": {
+            "type": "string",
+            "title": "Calculation Date"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "metric_type",
+          "metric_value",
+          "threshold_low",
+          "threshold_high",
+          "breach_status",
+          "calculation_date",
+          "notes",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "RBQMKRIMetricResponse"
+      },
       "RecruitmentRecordCreate": {
         "properties": {
           "site_id": {
@@ -3381,6 +7243,129 @@
           "reason_for_change"
         ],
         "title": "RevokeDelegationRequest"
+      },
+      "SiteGreenlightGateResponse": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "overall_status": {
+            "type": "string",
+            "title": "Overall Status"
+          },
+          "contract_approved": {
+            "type": "boolean",
+            "title": "Contract Approved"
+          },
+          "irb_approved": {
+            "type": "boolean",
+            "title": "Irb Approved"
+          },
+          "form_1572_approved": {
+            "type": "boolean",
+            "title": "Form 1572 Approved"
+          },
+          "doa_signed_off": {
+            "type": "boolean",
+            "title": "Doa Signed Off"
+          },
+          "ip_ready": {
+            "type": "boolean",
+            "title": "Ip Ready"
+          },
+          "greenlight_certified_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Greenlight Certified By"
+          },
+          "greenlight_certified_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Greenlight Certified At"
+          },
+          "rejection_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejection Reason"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "overall_status",
+          "contract_approved",
+          "irb_approved",
+          "form_1572_approved",
+          "doa_signed_off",
+          "ip_ready",
+          "greenlight_certified_by",
+          "greenlight_certified_at",
+          "rejection_reason",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "SiteGreenlightGateResponse"
       },
       "SiteMilestoneCreate": {
         "properties": {
@@ -3568,6 +7553,88 @@
         "type": "object",
         "title": "SiteMilestoneUpdate"
       },
+      "SiteRiskScoreResponse": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "composite_score": {
+            "type": "number",
+            "title": "Composite Score"
+          },
+          "risk_level": {
+            "type": "string",
+            "title": "Risk Level"
+          },
+          "assessment_date": {
+            "type": "string",
+            "title": "Assessment Date"
+          },
+          "recommended_monitoring_type": {
+            "type": "string",
+            "title": "Recommended Monitoring Type"
+          },
+          "monitoring_interval_days": {
+            "type": "integer",
+            "title": "Monitoring Interval Days"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "composite_score",
+          "risk_level",
+          "assessment_date",
+          "recommended_monitoring_type",
+          "monitoring_interval_days",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "SiteRiskScoreResponse"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -3607,6 +7674,29 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VisitPayableCalculationResponse": {
+        "properties": {
+          "gross_amount": {
+            "type": "number",
+            "title": "Gross Amount"
+          },
+          "withholding_amount": {
+            "type": "number",
+            "title": "Withholding Amount"
+          },
+          "net_amount": {
+            "type": "number",
+            "title": "Net Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "gross_amount",
+          "withholding_amount",
+          "net_amount"
+        ],
+        "title": "VisitPayableCalculationResponse"
       }
     }
   }

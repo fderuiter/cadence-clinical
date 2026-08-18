@@ -1,4 +1,4 @@
-from apps.eisf.infrastructure.database import (
+from apps.eisf.adapters.database import (
     current_session,
     db_manager,
     get_session,

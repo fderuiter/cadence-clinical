@@ -40,13 +40,13 @@ async def setup_tickets_db():
 @pytest.mark.asyncio
 @patch("apps.tickets.notifications_client.publish_notification", new_callable=AsyncMock)
 async def test_escalation_eligibility_rules(mock_publish):
-    # @req:Trace-16
     """
-    # @req:Trace-16
     Verify escalation eligibility rules:
     - Only non-terminal, due_date-past tickets escalate.
     - No due_date tickets are untouched.
     - Terminal tickets (CLOSED/CANCELLED) are skipped.
+
+    @req:PRD-TCK-002
     """
     mock_publish.return_value = True
     session_maker = db_manager.get_session_maker()
