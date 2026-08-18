@@ -27,11 +27,16 @@ export function useConsentGating(selectedSubjectId) {
   }
 
   async function handleCompleteReconsent(method, storeInstance) {
-    const activeStore = storeInstance || store;
     reconsentSubmitting.value = true;
     try {
       if (store && typeof store.clearReconsentGate === "function") {
         await store.clearReconsentGate(
+          selectedSubjectId.value,
+          method,
+          `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`
+        );
+      } else if (storeInstance && typeof storeInstance.clearReconsentGate === "function") {
+        await storeInstance.clearReconsentGate(
           selectedSubjectId.value,
           method,
           `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`
