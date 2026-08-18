@@ -13,7 +13,7 @@ import { soaClient } from "../api/soaClient.js";
 import { executionService } from "../api/execution";
 import { evaluateAST } from "../evaluator.js";
 import { ingestionClient } from "../api/ingestionClient.js";
-import { normalizeUsdm } from "./normalization";
+import { normalizeUsdm, type NormalizedUsdm } from "./normalization";
 import {
   CodeSchema,
   ActivitySchema,
@@ -23,32 +23,145 @@ import {
   USDMStudySchema,
 } from "usdm-schemas";
 
+export interface ClinicalFieldOption {
+  value: string;
+  label: string;
+}
+
+export interface ClinicalFieldValidation {
+  required?: boolean;
+  pattern?: string;
+  message?: string;
+  min?: number;
+  max?: number;
+}
+
 export interface ClinicalField {
   id: string;
   label: string;
   type: string;
   gridSpan: number;
   cdash?: string;
-  value?: any;
-  validation?: Record<string, any>;
-  relevant?: Record<string, any>;
-  constraint?: Record<string, any>;
-  options?: Array<{ value: string; label: string }>;
-  [key: string]: any; // Index signature for flexible fields
+  value?: string | number | boolean | null;
+  validation?: ClinicalFieldValidation;
+  relevant?: Record<string, unknown>;
+  constraint?: Record<string, unknown>;
+  options?: ClinicalFieldOption[];
+}
+
+export interface CtmsMilestone {
+  id: string;
+  type: string;
+  plannedDate: string;
+  actualDate: string;
+  status: string;
+}
+
+export interface CtmsVisit {
+  id: string;
+  type: string;
+  scheduledDate: string;
+  actualDate: string;
+  status: string;
+  cra: string;
+}
+
+export interface CtmsAllocation {
+  cra: string;
+  activeAllocations: number;
+  sites: string[];
+  studies: string[];
+}
+
+export interface CtmsRecruitment {
+  siteId: string;
+  screened: number;
+  enrolled: number;
+  target: number;
+}
+
+export interface CtmsData {
+  milestones: CtmsMilestone[];
+  visits: CtmsVisit[];
+  allocations: CtmsAllocation[];
+  recruitment: CtmsRecruitment[];
+}
+
+export interface ClinicalQuery {
+  id?: string;
+  fieldId?: string;
+  field_id?: string;
+  status?: string;
+  text?: string;
+  query_text?: string;
+  author?: string;
+  created_at?: string;
+  response?: string;
+  response_text?: string;
+  responded_by?: string;
+  responded_at?: string;
+  closed_by?: string;
+  closed_at?: string;
+}
+
+export interface LabAlert {
+  id?: string;
+  study_id?: string;
+  subject_id?: string;
+  test_code?: string;
+  test_name?: string;
+  severity?: string;
+  value?: string | number;
+  unit?: string;
+  message?: string;
+  flag?: string;
+}
+
+export interface LedgerBlock {
+  index: number;
+  timestamp: string;
+  action: string;
+  details: Record<string, unknown>;
+  reason: string;
+  prevHash: string;
+  hash: string;
+  synced: boolean;
+}
+
+export interface IngestionItem {
+  id: string;
+  status: string;
+  name?: string;
+  cdash_domain?: string;
+}
+
+export interface CandidateDraft {
+  id: string;
+  status: string;
+  items?: IngestionItem[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface IngestionJob {
+  job_id: string;
+  status: string;
+  candidate_id: string;
+  errors: string[] | null;
 }
 
 export interface ClinicalState {
-  currentUsdm: any;
-  currentCtmsData: any;
+  currentUsdm: NormalizedUsdm;
+  currentCtmsData: CtmsData;
   ecrfFields: ClinicalField[];
-  formValues: Record<string, any>; // Index signature for dynamic form values
+  formValues: Record<string, string | number | boolean | null | undefined>;
   fieldVisibility: Record<string, boolean>;
-  formQueries: Record<string, any>;
-  labAlerts: Record<string, any>;
+  formQueries: Record<string, ClinicalQuery>;
+  labAlerts: Record<string, LabAlert>;
   labAlertsLoading: boolean;
   labAlertsError: string | null;
-  ledgerBlocks: any[];
-  syncInterval: any;
+  ledgerBlocks: LedgerBlock[];
+  syncInterval: ReturnType<typeof setInterval> | number | null;
 
   activeStudyId: string;
   activeSiteId: string;
@@ -61,21 +174,23 @@ export interface ClinicalState {
   soaError: string | null;
 
   // --- Ingestion / Candidate Draft State ---
-  candidateDraft: any;
-  ingestionJobs: any[];
+  candidateDraft: CandidateDraft | null;
+  ingestionJobs: IngestionJob[];
   ingestionLoading: boolean;
   ingestionError: string | null;
 
   debouncedEvaluateRules?: () => void;
-  [key: string]: any;
 }
 
 const useClinicalStoreInner = defineStore("clinical", {
   state: (): ClinicalState => {
-    let savedFormValues: any = null;
-    let savedFormQueries: any = null;
-    let savedLedgerBlocks: any = null;
-    let savedUsdm: any = null;
+    let savedFormValues: Record<
+      string,
+      string | number | boolean | null | undefined
+    > | null = null;
+    let savedFormQueries: Record<string, ClinicalQuery> | null = null;
+    let savedLedgerBlocks: LedgerBlock[] | null = null;
+    let savedUsdm: unknown = null;
     if (typeof window !== "undefined" && window.localStorage) {
       try {
         const storedFormValues = window.localStorage.getItem("formValues");
@@ -86,7 +201,8 @@ const useClinicalStoreInner = defineStore("clinical", {
         if (storedFormQueries) {
           savedFormQueries = JSON.parse(storedFormQueries);
         }
-        const storedLedgerBlocks = window.localStorage.getItem("ledgerBlocks");
+        const storedLedgerBlocks =
+          window.localStorage.getItem("ledgerBlocks");
         if (storedLedgerBlocks) {
           savedLedgerBlocks = JSON.parse(storedLedgerBlocks);
         }
@@ -103,7 +219,8 @@ const useClinicalStoreInner = defineStore("clinical", {
       currentUsdm: normalizeUsdm(
         savedUsdm || {
           studyId: "STUDY-USDM-001",
-          studyTitle: "Phase II Trial of Cadence-001 in Essential Hypertension",
+          studyTitle:
+            "Phase II Trial of Cadence-001 in Essential Hypertension",
           objectives: [
             {
               id: "OBJ-001",
@@ -556,7 +673,7 @@ const useClinicalStoreInner = defineStore("clinical", {
       );
     },
     getQueryLabel: () => {
-      return (query: any) => {
+      return (query: ClinicalQuery) => {
         const status =
           query && query.status ? query.status.toUpperCase() : "NONE";
         const authStore = useAuthStore();
@@ -591,7 +708,10 @@ const useClinicalStoreInner = defineStore("clinical", {
         passes++;
         for (const field of this.ecrfFields) {
           const isRelevant = field.relevant
-            ? evaluateAST(field.relevant, this.formValues) !== false
+            ? evaluateAST(
+                field.relevant as Record<string, unknown>,
+                this.formValues as Record<string, unknown>
+              ) !== false
             : true;
           const wasVisible = this.fieldVisibility[field.id] !== false;
           if (
@@ -625,13 +745,13 @@ const useClinicalStoreInner = defineStore("clinical", {
       if (!this.debouncedEvaluateRules) {
         this.debouncedEvaluateRules = debounce(async () => {
           await this.evaluateRules();
-        }, 50) as any;
+        }, 50) as unknown as () => void;
       }
       this.debouncedEvaluateRules?.();
     },
     async addLedgerBlock(
       action: string,
-      details: any,
+      details: Record<string, unknown>,
       reason: string = "System Action"
     ) {
       const timestamp = new Date().toISOString();
@@ -648,7 +768,7 @@ const useClinicalStoreInner = defineStore("clinical", {
         details,
         reason,
         prevHash
-      )) as any;
+      )) as unknown as LedgerBlock;
       block.synced = false;
 
       this.ledgerBlocks.push(block);
@@ -710,7 +830,10 @@ const useClinicalStoreInner = defineStore("clinical", {
       );
 
       try {
-        const options: Record<string, any> = {
+        const options: {
+          changeReason: string;
+          headers?: Record<string, string>;
+        } = {
           changeReason: "Background sync of clinical query ledger blocks",
         };
         if (sigToken) {
@@ -734,7 +857,7 @@ const useClinicalStoreInner = defineStore("clinical", {
           );
         }
         console.log("Background sync: Successfully synchronized query blocks.");
-      } catch (err) {
+      } catch (err: unknown) {
         console.warn("Background sync failed (retrying automatically):", err);
         throw err;
       }
@@ -747,7 +870,7 @@ const useClinicalStoreInner = defineStore("clinical", {
           study_id: studyId,
           subject_id: subjectId,
         });
-        const alertsMap: Record<string, any> = {};
+        const alertsMap: Record<string, LabAlert> = {};
         if (Array.isArray(data)) {
           for (const alert of data) {
             const alertTestCode = alert.test_code;
@@ -766,9 +889,10 @@ const useClinicalStoreInner = defineStore("clinical", {
           }
         }
         this.labAlerts = alertsMap || {};
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.warn("Database connection failed", err);
-        this.labAlertsError = err.message || err;
+        this.labAlertsError =
+          err instanceof Error ? err.message : String(err);
         // Suppress/Swallow the error (DO NOT re-throw)
       }
     },
@@ -788,7 +912,7 @@ const useClinicalStoreInner = defineStore("clinical", {
       });
     },
 
-    validateModel(type: string, payload: any) {
+    validateModel(type: string, payload: Record<string, unknown>) {
       let schema;
       const lower = type ? type.toLowerCase() : "";
       if (lower === "arms" || lower === "arm") {
@@ -825,7 +949,7 @@ const useClinicalStoreInner = defineStore("clinical", {
     async pushSoAMutation(
       type: string,
       id: string,
-      properties: any,
+      properties: Record<string, unknown>,
       changeReason: string
     ) {
       // Validate prior to local queuing, persistence, or API submission!
@@ -833,7 +957,8 @@ const useClinicalStoreInner = defineStore("clinical", {
       if (!validation.success) {
         const errorMsg = `Local payload mutation rejected. Shared Zod Schema violation: ${validation
           .error!.errors.map(
-            (e: any) => `${e.path.join(".") || "field"}: ${e.message}`
+            (e: { path: (string | number)[]; message: string }) =>
+              `${e.path.join(".") || "field"}: ${e.message}`
           )
           .join(", ")}`;
         console.error(errorMsg);
@@ -883,18 +1008,23 @@ const useClinicalStoreInner = defineStore("clinical", {
           changeReason
         );
         await this.fetchSoAProjection();
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const error = err as Error;
         // Log mutation locally even on network failure for compliance
         await this.addLedgerBlock(
           `SOA_MUTATION_OFFLINE_${type.toUpperCase()}`,
-          { id, properties, error: err.message },
+          { id, properties, error: error.message },
           changeReason
         );
         throw err;
       }
     },
 
-    async pushSoALink(linkType: string, payload: any, changeReason: string) {
+    async pushSoALink(
+      linkType: string,
+      payload: Record<string, unknown>,
+      changeReason: string
+    ) {
       try {
         await soaClient.createLink(
           this.currentUsdm.studyId,
@@ -909,10 +1039,11 @@ const useClinicalStoreInner = defineStore("clinical", {
           changeReason
         );
         await this.fetchSoAProjection();
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const error = err as Error;
         await this.addLedgerBlock(
           `SOA_LINK_OFFLINE_${linkType.toUpperCase()}`,
-          { payload, error: err.message },
+          { payload, error: error.message },
           changeReason
         );
         throw err;
@@ -921,9 +1052,9 @@ const useClinicalStoreInner = defineStore("clinical", {
 
     // --- Ingestion Store Actions ---
     async uploadProtocolDocument(file: File, changeReason: string) {
-      const draft = await ingestionClient.uploadProtocol(file, {
+      const draft = (await ingestionClient.uploadProtocol(file, {
         changeReason,
-      });
+      })) as CandidateDraft;
       this.candidateDraft = draft;
       this.ingestionJobs.push({
         job_id: draft.id,
@@ -938,12 +1069,15 @@ const useClinicalStoreInner = defineStore("clinical", {
       this.ingestionLoading = true;
       this.ingestionError = null;
       try {
-        const draft = await ingestionClient.getCandidate(candidateId);
+        const draft = (await ingestionClient.getCandidate(
+          candidateId
+        )) as CandidateDraft;
         this.candidateDraft = draft;
         this.ingestionLoading = false;
         return draft;
-      } catch (err: any) {
-        this.ingestionError = err.message;
+      } catch (err: unknown) {
+        const error = err as Error;
+        this.ingestionError = error.message;
         this.ingestionLoading = false;
         throw err;
       }
@@ -954,23 +1088,24 @@ const useClinicalStoreInner = defineStore("clinical", {
       itemId: string,
       status: string,
       reason: string,
-      updatedFields: any = {}
+      updatedFields: Record<string, unknown> = {}
     ) {
       this.ingestionLoading = true;
       this.ingestionError = null;
       try {
-        const draft = await ingestionClient.transitionItem(
+        const draft = (await ingestionClient.transitionItem(
           candidateId,
           itemId,
           status,
           reason,
           updatedFields
-        );
+        )) as CandidateDraft;
         this.candidateDraft = draft;
         this.ingestionLoading = false;
         return draft;
-      } catch (err: any) {
-        this.ingestionError = err.message;
+      } catch (err: unknown) {
+        const error = err as Error;
+        this.ingestionError = error.message;
         this.ingestionLoading = false;
         throw err;
       }
@@ -989,8 +1124,9 @@ const useClinicalStoreInner = defineStore("clinical", {
         }
         this.ingestionLoading = false;
         return res;
-      } catch (err: any) {
-        this.ingestionError = err.message;
+      } catch (err: unknown) {
+        const error = err as Error;
+        this.ingestionError = error.message;
         this.ingestionLoading = false;
         throw err;
       }
@@ -998,9 +1134,12 @@ const useClinicalStoreInner = defineStore("clinical", {
   },
 });
 
-export const useClinicalStore = (pinia?: any) => {
-  const activePinia = pinia || getActivePinia();
-  if (activePinia && !(activePinia as any)._hasStateTrackingPlugin) {
+export const useClinicalStore = (pinia?: unknown) => {
+  const activePinia = (pinia as any) || getActivePinia();
+  if (
+    activePinia &&
+    !(activePinia as Record<string, unknown>)._hasStateTrackingPlugin
+  ) {
     activePinia.use(stateTrackingPlugin);
     if (!activePinia._a && typeof activePinia.install === "function") {
       const dummyApp = {
@@ -1009,7 +1148,7 @@ export const useClinicalStore = (pinia?: any) => {
       };
       activePinia.install(dummyApp);
     }
-    (activePinia as any)._hasStateTrackingPlugin = true;
+    (activePinia as Record<string, unknown>)._hasStateTrackingPlugin = true;
   }
   return useClinicalStoreInner(activePinia);
 };

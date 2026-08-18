@@ -185,8 +185,9 @@ export class ClientSyncEngine {
 
   async queueDelta(delta: Omit<PendingDelta, "deltaId">): Promise<void> {
     const activeSession = offlineAuthManager.getActiveSession();
-    if (activeSession?.userId || (activeSession as any)?.user_id) {
-      this.dbManager.setUserId(activeSession.userId || (activeSession as any).user_id);
+    const userId = activeSession?.userId || (activeSession as any)?.user_id;
+    if (userId) {
+      this.dbManager.setUserId(userId);
     }
     const deltaId = `delta_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const item: PendingDelta = {
