@@ -98,51 +98,66 @@ BASELINE_FILES = {
 }
 
 
-def parse_srs(filepath: str) -> set[str]:
-    """Parses requirements from SRS file."""
+def _sweep_markdown_files(path_or_dir: str) -> list[str]:
+    """Helper to sweep a file or directory recursively for markdown files in deterministic order."""
+    if not os.path.exists(path_or_dir):
+        return []
+    if os.path.isfile(path_or_dir):
+        return [path_or_dir]
+    files_list = []
+    ignored_files = {
+        "Requirements_Traceability_Matrix.md",
+        "IQ_OQ_PQ_Execution_Report.md",
+    }
+    for root, dirs, files in os.walk(path_or_dir):
+        dirs.sort()
+        for f in sorted(files):
+            if f.endswith(".md") and f not in ignored_files:
+                files_list.append(os.path.join(root, f))
+    return files_list
+
+
+def parse_srs(filepath_or_dir: str) -> set[str]:
+    """Parses SRS requirements (Trace-X) from a file or directory of fragments."""
     requirements = set()
-    if not os.path.exists(filepath):
-        return requirements
-
-    with open(filepath, encoding="utf-8") as f:
-        content = f.read()
-
-    # Pattern used in generate_rtm.py: e.g. - **Trace 1: Shadow Schema Retention:**
+    files = _sweep_markdown_files(filepath_or_dir)
     pattern = re.compile(r"[-*]\s*\*\*Trace[\s-]*(\d+)")
-    for line in content.splitlines():
-        match = pattern.search(line)
-        if match:
-            num = match.group(1)
-            requirements.add(f"Trace-{num}")
-
-    # Fallback to general Trace-\d+ parsing
     general_pattern = re.compile(r"\bTrace-(\d+)\b")
-    for m in general_pattern.findall(content):
-        requirements.add(f"Trace-{m}")
+
+    for file_path in files:
+        with open(file_path, encoding="utf-8") as f:
+            content = f.read()
+
+        for line in content.splitlines():
+            match = pattern.search(line)
+            if match:
+                num = match.group(1)
+                requirements.add(f"Trace-{num}")
+
+        for m in general_pattern.findall(content):
+            requirements.add(f"Trace-{m}")
 
     return requirements
 
 
-def parse_prd(filepath: str) -> set[str]:
-    """Parses requirements from PRD/product design files."""
+def parse_prd(filepath_or_dir: str) -> set[str]:
+    """Parses PRD requirements (PRD-XXX-XXX) from a file or directory of fragments."""
     requirements = set()
-    if not os.path.exists(filepath):
-        return requirements
+    files = _sweep_markdown_files(filepath_or_dir)
+    pattern = re.compile(r"####\s*(PRD-[A-Z0-9]+-\d+)")
+    general_pattern = re.compile(r"\b(PRD-[A-Z0-9]+-\d+)\b")
 
-    with open(filepath, encoding="utf-8") as f:
-        content = f.read()
+    for file_path in files:
+        with open(file_path, encoding="utf-8") as f:
+            content = f.read()
 
-    # Pattern used in generate_rtm.py: e.g. #### PRD-SYS-001:
-    pattern = re.compile(r"####\s*(PRD-[A-Z]+-\d+)")
-    for line in content.splitlines():
-        match = pattern.search(line)
-        if match:
-            requirements.add(match.group(1))
+        for line in content.splitlines():
+            match = pattern.search(line)
+            if match:
+                requirements.add(match.group(1))
 
-    # General regex pattern for any PRD-[A-Z]+-\d+ reference
-    general_pattern = re.compile(r"\b(PRD-[A-Z]+-\d+)\b")
-    for m in general_pattern.findall(content):
-        requirements.add(m)
+        for m in general_pattern.findall(content):
+            requirements.add(m)
 
     return requirements
 
@@ -153,22 +168,29 @@ DEFAULT_DOCS_DIR = os.path.join(REPO_ROOT, "docs")
 
 
 def get_valid_requirements(docs_dir: str = DEFAULT_DOCS_DIR) -> set[str]:
-    """Gets the master set of valid requirement identifiers."""
-    srs_path = os.path.join(docs_dir, "SRS.md")
-    prd_path = os.path.join(docs_dir, "SDLC/01_Product_Requirements_Document_PRD.md")
-
+    """Gets the master set of valid requirement identifiers by recursively sweeping SDLC folders."""
     reqs = set()
-    reqs.update(parse_srs(srs_path))
-    reqs.update(parse_prd(prd_path))
+    if not os.path.exists(docs_dir):
+        return reqs
 
-    # Support other requirement prefixes just in case
-    # Walker through docs to ensure complete safety
+    srs_path = os.path.join(docs_dir, "SRS.md")
+    srs_dir = os.path.join(docs_dir, "SRS")
     sdlc_dir = os.path.join(docs_dir, "SDLC")
+
+    if os.path.isfile(srs_path):
+        reqs.update(parse_srs(srs_path))
+    if os.path.isdir(srs_dir):
+        reqs.update(parse_srs(srs_dir))
+
     if os.path.isdir(sdlc_dir):
-        for f in os.listdir(sdlc_dir):
-            if f.endswith(".md"):
-                file_path = os.path.join(sdlc_dir, f)
-                reqs.update(parse_prd(file_path))
+        reqs.update(parse_srs(sdlc_dir))
+        reqs.update(parse_prd(sdlc_dir))
+    elif os.path.isfile(os.path.join(docs_dir, "SDLC/01_Product_Requirements_Document_PRD.md")):
+        reqs.update(parse_prd(os.path.join(docs_dir, "SDLC/01_Product_Requirements_Document_PRD.md")))
+
+    # Also sweep any other subdirectories or root markdown files under docs_dir
+    reqs.update(parse_srs(docs_dir))
+    reqs.update(parse_prd(docs_dir))
 
     return reqs
 

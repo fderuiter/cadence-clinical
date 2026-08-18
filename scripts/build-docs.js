@@ -160,6 +160,78 @@ function copyAndPreprocess(srcName, destName) {
   );
 }
 
+const originalFilesMap = new Map();
+
+function sweepAndPreprocessDocs(docsDir) {
+  function walkDir(dir) {
+    if (!fs.existsSync(dir)) return;
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    entries.sort((a, b) => a.name.localeCompare(b.name));
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name !== ".vitepress" && entry.name !== "node_modules") {
+          walkDir(fullPath);
+        }
+      } else if (entry.isFile() && entry.name.endsWith(".md")) {
+        preprocessDocFile(fullPath, docsDir);
+      }
+    }
+  }
+
+  function preprocessDocFile(fullPath, docsDir) {
+    const content = fs.readFileSync(fullPath, "utf8");
+    const relToDocs = path.relative(docsDir, fullPath).replace(/\\/g, "/");
+    const docSubDir = path.dirname(relToDocs);
+
+    const rewritten = content.replace(
+      /(\[(?:[^\]]|\\\])*\]\()([^)]+)(\))/g,
+      (match, prefix, url, suffix) => {
+        let cleanUrl = url.trim();
+        if (
+          cleanUrl.startsWith("http://") ||
+          cleanUrl.startsWith("https://") ||
+          cleanUrl.startsWith("mailto:") ||
+          cleanUrl.startsWith("#")
+        ) {
+          return match;
+        }
+
+        let newUrl = cleanUrl;
+        if (cleanUrl.startsWith("docs/")) {
+          const targetPathInDocs = cleanUrl.substring(5);
+          newUrl = path.relative(docSubDir, targetPathInDocs).replace(/\\/g, "/");
+        } else if (cleanUrl === "LICENSE") {
+          newUrl = path.relative(docSubDir, "LICENSE.md").replace(/\\/g, "/");
+        }
+
+        const targetClean = newUrl.split("#")[0].split("?")[0];
+        if (targetClean) {
+          const resolvedPath = path.resolve(path.dirname(fullPath), targetClean);
+          if (!fs.existsSync(resolvedPath)) {
+            console.error(
+              `[ERROR] Broken relative link in ${relToDocs}: '${cleanUrl}' resolves to non-existent file '${resolvedPath}'`
+            );
+            throw new Error(`Broken relative link in ${relToDocs}: ${cleanUrl}`);
+          }
+        }
+
+        return `${prefix}${newUrl}${suffix}`;
+      }
+    );
+
+    if (rewritten !== content) {
+      if (!originalFilesMap.has(fullPath)) {
+        originalFilesMap.set(fullPath, content);
+      }
+      fs.writeFileSync(fullPath, rewritten, "utf8");
+      console.log(`Preprocessed cross-document links in docs/${relToDocs}`);
+    }
+  }
+
+  walkDir(docsDir);
+}
+
 // Run preflight checks before Step 1
 runPreflightChecks();
 
@@ -214,6 +286,9 @@ try {
     console.warn(`Plain-text LICENSE file not found at ${licenseSrcPath}`);
   }
 
+  // Sweep and preprocess all docs files and subdirectories
+  sweepAndPreprocessDocs(path.join(repoRoot, "docs"));
+
   // 4. Build VitePress static portal
   console.log("--- Step 4: Compiling VitePress Static Portal ---");
   runCommand(`${pnpmCmd} vitepress build docs`);
@@ -224,6 +299,14 @@ try {
   process.exit(1);
 } finally {
   console.log("--- Cleanup Temporary Docs ---");
+  for (const [fullPath, originalContent] of originalFilesMap.entries()) {
+    try {
+      fs.writeFileSync(fullPath, originalContent, "utf8");
+      console.log(`Restored original content for ${path.relative(repoRoot, fullPath)}`);
+    } catch (err) {
+      console.warn(`Could not restore ${fullPath}:`, err);
+    }
+  }
   // Derive temporary docs files relative to repoRoot for cleanup
   for (const file of [
     "index.md",
