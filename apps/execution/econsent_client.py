@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+from abc import ABC, abstractmethod
 
 import httpx
 from fastapi import HTTPException
@@ -16,7 +17,24 @@ class EConsentClientError(Exception):
     pass
 
 
-class EConsentClient:
+class IConsentVerificationClient(ABC):
+    """Abstract interface for verifying subject consent status with consent services."""
+
+    @abstractmethod
+    async def get_subject_consent_status(
+        self,
+        subject_pseudonym: str,
+        study_id: str | None = None,
+        client: httpx.AsyncClient | None = None,
+    ) -> dict:
+        """Fetch canonical subject consent status from consent verification service."""
+        pass
+
+
+IConsentClient = IConsentVerificationClient
+
+
+class EConsentClient(IConsentVerificationClient):
     """Asynchronous client to retrieve subject consent status from the eConsent service."""
 
     def __init__(
@@ -117,11 +135,29 @@ class EConsentClient:
             )
 
 
+_consent_client_instance: IConsentVerificationClient | None = None
+
+
+def get_consent_verification_client() -> IConsentVerificationClient:
+    """Retrieve the active consent verification client instance."""
+    global _consent_client_instance
+    if _consent_client_instance is None:
+        _consent_client_instance = EConsentClient()
+    return _consent_client_instance
+
+
+def set_consent_verification_client(client: IConsentVerificationClient | None) -> None:
+    """Set or override the active consent verification client instance."""
+    global _consent_client_instance
+    _consent_client_instance = client
+
+
 # Module level convenience helper function
 async def fetch_subject_consent_status(
     subject_pseudonym: str,
     study_id: str | None = None,
 ) -> dict:
     """Convenience module helper to fetch canonical subject consent status."""
-    client = EConsentClient()
+    client = get_consent_verification_client()
     return await client.get_subject_consent_status(subject_pseudonym, study_id)
+
