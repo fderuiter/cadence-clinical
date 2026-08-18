@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2644
-- **Passed:** 2625 🟢
+- **Total Automated Test Cases Run:** 2650
+- **Passed:** 2631 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.28%
@@ -557,6 +557,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_protocol_version_ref_validation_blank_fields`                                     | `apps.designer.tests.test_protocol_version_ref`                             | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_protocol_version_ref_validation_index`                                            | `apps.designer.tests.test_protocol_version_ref`                             | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_protocol_version_ref_validation_status`                                           | `apps.designer.tests.test_protocol_version_ref`                             | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_publish_state_machine_lock_freed`                                                 | `apps.designer.tests.test_publish_state_machine`                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_publish_state_machine_rollback_on_downstream_error`                               | `apps.designer.tests.test_publish_state_machine`                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_publish_state_machine_rollback_on_timeout`                                        | `apps.designer.tests.test_publish_state_machine`                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_publish_state_machine_success`                                                    | `apps.designer.tests.test_publish_state_machine`                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_synopsis_export_invalid_format_returns_400`                                       | `apps.designer.tests.test_synopsis_router`                                  | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_synopsis_export_post_docx`                                                        | `apps.designer.tests.test_synopsis_router`                                  | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_synopsis_export_post_html`                                                        | `apps.designer.tests.test_synopsis_router`                                  | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
@@ -894,6 +898,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_advs_missing_baseline_behavior`                                                   | `apps.execution.tests.test_advs`                                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_advs_no_coercion_of_missing_numeric_values`                                       | `apps.execution.tests.test_advs`                                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_amendment_cloning_preserves_base_version`                                         | `apps.execution.tests.test_amendment_migration`                             | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
+| `test_modular_coordinate_matching_and_collision_logging`                                | `apps.execution.tests.test_amendment_migration`                             | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_reconsent_gating_blocks_form_submission`                                          | `apps.execution.tests.test_amendment_migration`                             | PRD-SUB-007                                                                        | 🟢 PASSED  | < 1s     |
 | `test_reconsent_unlock_enables_v2_entry`                                                | `apps.execution.tests.test_amendment_migration`                             | PRD-SUB-007                                                                        | 🟢 PASSED  | < 1s     |
 | `test_subject_historical_visits_preserve_v1_schema`                                     | `apps.execution.tests.test_amendment_migration`                             | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
@@ -2864,6 +2869,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_feature_matrix_validation_ignoring_helper_and_excluded_services`                  | `tests.validation.test_feature_matrix_gating`                               | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_feature_matrix_validation_missing_service`                                        | `tests.validation.test_feature_matrix_gating`                               | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_feature_matrix_validation_success`                                                | `tests.validation.test_feature_matrix_gating`                               | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_committed_typescript_schema_is_up_to_date`                                        | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift`         | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_formatting_and_whitespace_immunity`                                               | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift`         | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_pending_delta_schema_drift`                                                       | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift`         | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_simulated_field_name_rename_drift`                                                | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift`         | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |

@@ -22,6 +22,7 @@ async def test_pool_connection_state_eviction(tmp_path: Path) -> None:
     await db_manager.close()
 
     # 1. Initialize test database
+    await db_manager.close()
     db_manager.init_db(f"sqlite+aiosqlite:///{db_file}")
 
     # 2. Open a connection and set custom config
@@ -84,6 +85,7 @@ async def test_concurrent_connection_isolation_and_no_weakref_errors(
 
     await db_manager.close()
 
+    await db_manager.close()
     db_manager.init_db(f"sqlite+aiosqlite:///{db_file}")
 
     # We will open two connections concurrently
