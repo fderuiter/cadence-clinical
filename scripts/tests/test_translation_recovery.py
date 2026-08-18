@@ -113,6 +113,7 @@ async def test_translation_status_and_listing_success():
         assert status_json["odm_payload"] is not None
         assert status_json["openrosa_payload"] is not None
         assert status_json["error_message"] is None
+        assert isinstance(status_json["warnings"], list)
 
         # Verify listing endpoint
         list_response = await client.get(
@@ -123,6 +124,100 @@ async def test_translation_status_and_listing_success():
         assert len(list_json) >= 1
         matching_job = [j for j in list_json if j["id"] == job_id][0]
         assert matching_job["status"] == "COMPLETED"
+        assert isinstance(matching_job["warnings"], list)
+
+
+@pytest.mark.asyncio
+async def test_audited_fallbacks_and_warning_propagation():
+    """Verify that translation auto-populates missing fields with fallbacks, completes successfully,
+    and records all generated fallbacks as structured warning metadata in the job record and API responses.
+    """
+    study_id = "draft_study_missing_fields_123"
+    study_payload = {
+        "study_id": study_id,
+        "payload": {
+            # 'id' and 'name' omitted to trigger study-level fallbacks
+            "protocol": {
+                "items": [
+                    {"id": "sbp", "name": "Systolic BP", "type": "int"},
+                ]
+            },
+            "documentedBy": [
+                {
+                    # Omit doc id, type, templateName, instanceType, language, versions id/status
+                    "versions": [
+                        {
+                            "contents": [
+                                {
+                                    "displaySectionTitle": "Overview Section",
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+        },
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.post(
+            "/events/study-published", json=study_payload, headers=get_auth_headers()
+        )
+        assert response.status_code == 200
+        job_id = response.json()["job_id"]
+
+        # Poll job status
+        for _ in range(50):
+            status_response = await client.get(
+                f"/api/v1/execution/translation/jobs/{job_id}",
+                headers=get_auth_headers(),
+            )
+            assert status_response.status_code == 200
+            status_json = status_response.json()
+            if status_json["status"] in ("COMPLETED", "FAILED"):
+                break
+            await asyncio.sleep(0.1)
+
+        # Requirement 4: Translation completes successfully even with fallbacks
+        assert status_json["status"] == "COMPLETED"
+        assert status_json["odm_payload"] is not None
+        assert status_json["openrosa_payload"] is not None
+
+        # Requirement 2 & 3: Metadata attached and exposed via API
+        warnings = status_json.get("warnings")
+        assert isinstance(warnings, list)
+        assert len(warnings) > 0
+
+        # Requirement 1: Check recorded fields (study_id, name, documentedBy fields, language, versions)
+        warning_fields = [w["field"] for w in warnings]
+        assert "study_id" in warning_fields
+        assert "name" in warning_fields
+        assert "documentedBy.id" in warning_fields
+        assert "documentedBy.type" in warning_fields
+        assert "documentedBy.templateName" in warning_fields
+        assert "documentedBy.instanceType" in warning_fields
+        assert "documentedBy.language" in warning_fields or "documentedBy.language.id" in warning_fields
+        assert "documentedBy.versions.id" in warning_fields
+        assert "documentedBy.versions.status" in warning_fields
+        assert "documentedBy.versions.contents.id" in warning_fields
+
+        # Check structure of each warning object
+        for w in warnings:
+            assert "field" in w
+            assert "generated_value" in w
+            assert "warning_reason" in w
+            assert len(w["warning_reason"]) > 0
+
+        # Also verify job history list API endpoint contains warnings
+        list_response = await client.get(
+            "/api/v1/execution/translation/jobs", headers=get_auth_headers()
+        )
+        assert list_response.status_code == 200
+        list_json = list_response.json()
+        matching = [j for j in list_json if j["id"] == job_id][0]
+        assert matching["warnings"] == warnings
 
 
 @pytest.mark.asyncio

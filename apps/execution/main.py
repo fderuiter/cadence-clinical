@@ -712,6 +712,7 @@ class TranslationJobResponse(BaseModel):
     odm_payload: str | None = None
     openrosa_payload: str | None = None
     error_message: str | None = None
+    warnings: list[dict[str, Any]] | None = Field(default_factory=list)
 
 
 @app.get(
@@ -731,6 +732,7 @@ async def list_translation_jobs() -> list[TranslationJobResponse]:
                 odm_payload=job.odm_payload,
                 openrosa_payload=job.openrosa_payload,
                 error_message=job.error_message,
+                warnings=job.warnings or [],
             )
             for job in jobs
         ]
@@ -754,6 +756,7 @@ async def get_translation_job(job_id: str) -> TranslationJobResponse:
             odm_payload=job.odm_payload,
             openrosa_payload=job.openrosa_payload,
             error_message=job.error_message,
+            warnings=job.warnings or [],
         )
 
 
