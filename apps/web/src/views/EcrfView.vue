@@ -130,25 +130,8 @@
         "
       >
         <!-- PI Persona Component: Signature Worklist & Re-authentication Drawer/Modal -->
-        <PiSignatureDrawer
-          v-model:signoff-target-type="signoffTargetType"
-          v-model:signoff-target-id="signoffTargetId"
-          v-model:custom-target-id="customTargetId"
-          v-model:signoff-reason="signoffReason"
-          v-model:reauth-username="reauthUsername"
-          v-model:reauth-password="reauthPassword"
-          v-model:reauth-totp="reauthTotp"
-          v-model:simulate-delay="simulateDelay"
-          :available-subjects="availableSubjects"
-          :available-visits="availableVisits"
-          :available-form-submissions="availableFormSubmissions"
-          :valid-signing-reasons="validSigningReasons"
-          :show-reauth-modal="showReauthModal"
-          :reauth-error="reauthError"
-          @submit-signoff="handleSignOffSubmit"
-          @cancel-reauth="cancelReauth"
-          @confirm-reauth="confirmReauth"
-        />
+        <!-- prettier-ignore -->
+        <PiSignatureDrawer v-model:signoff-target-type="signoffTargetType" v-model:signoff-target-id="signoffTargetId" v-model:custom-target-id="customTargetId" v-model:signoff-reason="signoffReason" v-model:reauth-username="reauthUsername" v-model:reauth-password="reauthPassword" v-model:reauth-totp="reauthTotp" v-model:simulate-delay="simulateDelay" :available-subjects="availableSubjects" :available-visits="availableVisits" :available-form-submissions="availableFormSubmissions" :valid-signing-reasons="validSigningReasons" :show-reauth-modal="showReauthModal" :reauth-error="reauthError" @submit-signoff="handleSignOffSubmit" @cancel-reauth="cancelReauth" @confirm-reauth="confirmReauth"/><!-- pragma: allowlist secret -->
 
         <!-- Live Form State & CDASH Meta Card -->
         <div
