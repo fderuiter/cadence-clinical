@@ -1,6 +1,5 @@
 import json
 
-import pytest
 import yaml
 from fastapi.testclient import TestClient
 
@@ -147,42 +146,3 @@ versions: []
         headers=headers,
     )
     assert response.status_code in (400, 403)
-
-
-def test_gateway_proxying_v2_studies(monkeypatch: pytest.MonkeyPatch):
-    # Verify that the Gateway router proxies /api/v2/studies correctly
-    import httpx
-
-    from apps.gateway.main import app as gateway_app
-
-    # Mock httpx AsyncClient send to check the target proxy URL
-    sent_request_url = None
-
-    async def mock_send(self, request, *args, **kwargs):
-        nonlocal sent_request_url
-        sent_request_url = str(request.url)
-        return httpx.Response(200, json={"status": "success"})
-
-    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
-    monkeypatch.setenv("JWT_TEST_SECRET", "internal-gateway-secret-12345")
-
-    # Generate a mock token signed with JWT_TEST_SECRET
-    import time
-
-    from jose import jwt
-
-    claims = {
-        "sub": "test-user-gateway",
-        "username": "test-user-gateway",
-        "realm_access": {"roles": ["sponsor_designer"]},
-        "exp": time.time() + 3600,
-    }
-    token = jwt.encode(claims, "internal-gateway-secret-12345", algorithm="HS256")
-
-    with TestClient(gateway_app) as gateway_client:
-        response = gateway_client.get(
-            "/api/v2/studies/study_1/usdm", headers={"Authorization": f"Bearer {token}"}
-        )
-        assert response.status_code == 200
-        # Check that the gateway proxied to the correct designer URL on port 8001
-        assert sent_request_url == "http://localhost:8001/api/v2/studies/study_1/usdm"

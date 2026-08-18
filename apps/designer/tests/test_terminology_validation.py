@@ -310,7 +310,7 @@ async def test_validate_study_ct_endpoint():
     import httpx
 
     from apps.designer.main import app
-    from apps.execution.tests.test_soa_endpoints import get_auth_headers
+    from apps.designer.tests.test_soa_endpoints import get_auth_headers
 
     mock_study = {
         "study_id": "study_1",
@@ -358,7 +358,7 @@ async def test_validate_study_ct_endpoint_not_found():
     import httpx
 
     from apps.designer.main import app
-    from apps.execution.tests.test_soa_endpoints import get_auth_headers
+    from apps.designer.tests.test_soa_endpoints import get_auth_headers
 
     with patch("apps.designer.validator.get_study_projection", return_value=None):
         async with httpx.AsyncClient(
@@ -379,7 +379,7 @@ async def test_validate_single_code_endpoint():
     import httpx
 
     from apps.designer.main import app
-    from apps.execution.tests.test_soa_endpoints import get_auth_headers
+    from apps.designer.tests.test_soa_endpoints import get_auth_headers
 
     with patch("apps.designer.db.terminology_cache.get") as mock_get:
         mock_get.return_value = {
@@ -411,7 +411,7 @@ async def test_validate_single_code_endpoint_invalid_data():
     import httpx
 
     from apps.designer.main import app
-    from apps.execution.tests.test_soa_endpoints import get_auth_headers
+    from apps.designer.tests.test_soa_endpoints import get_auth_headers
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
@@ -430,7 +430,7 @@ async def test_validate_single_code_endpoint_degraded():
     import httpx
 
     from apps.designer.main import app
-    from apps.execution.tests.test_soa_endpoints import get_auth_headers
+    from apps.designer.tests.test_soa_endpoints import get_auth_headers
 
     with patch(
         "apps.designer.db.terminology_cache.get",
@@ -458,7 +458,7 @@ async def test_search_terminology_endpoint_success():
     import httpx
 
     from apps.designer.main import app
-    from apps.execution.tests.test_soa_endpoints import get_auth_headers
+    from apps.designer.tests.test_soa_endpoints import get_auth_headers
 
     mock_concepts = [
         {"code": "C123", "decode": "Treatment Arm", "system": "NCI", "valid": True}
@@ -494,7 +494,7 @@ async def test_search_terminology_endpoint_invalid_input():
     import httpx
 
     from apps.designer.main import app
-    from apps.execution.tests.test_soa_endpoints import get_auth_headers
+    from apps.designer.tests.test_soa_endpoints import get_auth_headers
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
@@ -516,7 +516,7 @@ async def test_search_terminology_endpoint_degraded():
     import httpx
 
     from apps.designer.main import app
-    from apps.execution.tests.test_soa_endpoints import get_auth_headers
+    from apps.designer.tests.test_soa_endpoints import get_auth_headers
 
     with patch(
         "apps.designer.evs_client.NCIEVSClient.search_concepts",
@@ -546,7 +546,7 @@ async def test_validate_study_terminology_endpoint_client_success():
     import httpx
 
     from apps.designer.main import app
-    from apps.execution.tests.test_soa_endpoints import get_auth_headers
+    from apps.designer.tests.test_soa_endpoints import get_auth_headers
 
     mock_study = {
         "study_id": "study_1",
@@ -596,7 +596,7 @@ async def test_validate_study_terminology_endpoint_client_not_found():
     import httpx
 
     from apps.designer.main import app
-    from apps.execution.tests.test_soa_endpoints import get_auth_headers
+    from apps.designer.tests.test_soa_endpoints import get_auth_headers
 
     with patch("apps.designer.validator.get_study_projection", return_value=None):
         async with httpx.AsyncClient(
@@ -619,7 +619,7 @@ async def test_validate_study_terminology_endpoint_client_degraded():
     import httpx
 
     from apps.designer.main import app
-    from apps.execution.tests.test_soa_endpoints import get_auth_headers
+    from apps.designer.tests.test_soa_endpoints import get_auth_headers
 
     mock_study = {
         "study_id": "study_1",
@@ -666,7 +666,7 @@ async def test_validate_single_code_endpoint_not_found():
     import httpx
 
     from apps.designer.main import app
-    from apps.execution.tests.test_soa_endpoints import get_auth_headers
+    from apps.designer.tests.test_soa_endpoints import get_auth_headers
 
     with patch("apps.designer.db.terminology_cache.get", return_value=None):
         async with httpx.AsyncClient(
@@ -692,7 +692,7 @@ async def test_validate_single_code_endpoint_marked_invalid():
     import httpx
 
     from apps.designer.main import app
-    from apps.execution.tests.test_soa_endpoints import get_auth_headers
+    from apps.designer.tests.test_soa_endpoints import get_auth_headers
 
     with patch("apps.designer.db.terminology_cache.get") as mock_get:
         mock_get.return_value = {
@@ -763,7 +763,7 @@ async def test_search_terminology_endpoint_cache_behavior():
     import httpx
 
     from apps.designer.main import app
-    from apps.execution.tests.test_soa_endpoints import get_auth_headers
+    from apps.designer.tests.test_soa_endpoints import get_auth_headers
 
     mock_concepts_1 = [{"code": "C123", "decode": "Concept 1", "system": "NCI"}]
     mock_concepts_2 = [{"code": "C456", "decode": "Concept 2", "system": "NCI"}]
@@ -810,7 +810,7 @@ async def test_search_terminology_endpoint_bypass_and_refresh():
     import httpx
 
     from apps.designer.main import app
-    from apps.execution.tests.test_soa_endpoints import get_auth_headers
+    from apps.designer.tests.test_soa_endpoints import get_auth_headers
 
     mock_concepts_1 = [{"code": "C123", "decode": "Concept 1", "system": "NCI"}]
     mock_concepts_2 = [{"code": "C456", "decode": "Concept 2", "system": "NCI"}]

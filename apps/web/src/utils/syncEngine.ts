@@ -44,7 +44,9 @@ export class IndexedDBManager {
       offlineAuthManager.getActiveSession()?.userId ||
       (offlineAuthManager.getActiveSession() as any)?.user_id ||
       null;
-    return activeUserId ? `${this.baseDbName}_${activeUserId}` : this.baseDbName;
+    return activeUserId
+      ? `${this.baseDbName}_${activeUserId}`
+      : this.baseDbName;
   }
 
   private getMemoryStore(): Map<string, PendingDelta> {
@@ -186,7 +188,9 @@ export class ClientSyncEngine {
   async queueDelta(delta: Omit<PendingDelta, "deltaId">): Promise<void> {
     const activeSession = offlineAuthManager.getActiveSession();
     if (activeSession?.userId || (activeSession as any)?.user_id) {
-      this.dbManager.setUserId(activeSession.userId || (activeSession as any).user_id);
+      this.dbManager.setUserId(
+        activeSession.userId || (activeSession as any).user_id
+      );
     }
     const deltaId = `delta_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const item: PendingDelta = {
@@ -225,7 +229,8 @@ export class ClientSyncEngine {
         return;
       }
 
-      const activeUserId = activeSession.userId || (activeSession as any)?.user_id;
+      const activeUserId =
+        activeSession.userId || (activeSession as any)?.user_id;
       if (activeUserId) {
         this.dbManager.setUserId(activeUserId);
       }
