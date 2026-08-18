@@ -149,7 +149,10 @@ export const etmfService = {
    * @returns {Promise<Object>} Inspection readiness evaluation metrics.
    */
   getInspectionReadiness(studyId, options = {}) {
-    return apiClient.get(`/api/v1/etmf/studies/${studyId}/inspection-readiness`, options);
+    return apiClient.get(
+      `/api/v1/etmf/studies/${studyId}/inspection-readiness`,
+      options
+    );
   },
 
   /**
@@ -183,6 +186,10 @@ export const etmfService = {
    * @returns {Promise<Object>} Signature verification outcome.
    */
   verifyDocumentSignature(documentId, options = {}) {
-    return apiClient.post(`/api/v1/etmf/documents/${documentId}/verify-signature`, {}, options);
+    return apiClient.post(
+      `/api/v1/etmf/documents/${documentId}/verify-signature`,
+      {},
+      options
+    );
   },
 };

@@ -29,24 +29,68 @@ describe("ProtocolDigitizationView.vue - AI Protocol Ingestion & Synthesis Speci
     therapeutic_area: "Cardiovascular",
     confidence_score: 0.98,
     arms: [
-      { name: "Active Treatment Arm A", arm_type: "EXPERIMENTAL", description: "Compound X 50mg daily", target_sample_size: 100 },
-      { name: "Placebo Control Arm B", arm_type: "PLACEBO", description: "Matching placebo daily", target_sample_size: 100 },
+      {
+        name: "Active Treatment Arm A",
+        arm_type: "EXPERIMENTAL",
+        description: "Compound X 50mg daily",
+        target_sample_size: 100,
+      },
+      {
+        name: "Placebo Control Arm B",
+        arm_type: "PLACEBO",
+        description: "Matching placebo daily",
+        target_sample_size: 100,
+      },
     ],
     epochs: [
       { name: "Screening Epoch", epoch_type: "SCREENING", sequence_index: 1 },
       { name: "Treatment Epoch", epoch_type: "TREATMENT", sequence_index: 2 },
     ],
     visits: [
-      { visit_name: "Screening (Day -7)", epoch_name: "Screening Epoch", target_day: -7, window_lower_days: 2, window_upper_days: 2, is_mandatory: true },
-      { visit_name: "Baseline (Day 1)", epoch_name: "Treatment Epoch", target_day: 1, window_lower_days: 0, window_upper_days: 1, is_mandatory: true },
+      {
+        visit_name: "Screening (Day -7)",
+        epoch_name: "Screening Epoch",
+        target_day: -7,
+        window_lower_days: 2,
+        window_upper_days: 2,
+        is_mandatory: true,
+      },
+      {
+        visit_name: "Baseline (Day 1)",
+        epoch_name: "Treatment Epoch",
+        target_day: 1,
+        window_lower_days: 0,
+        window_upper_days: 1,
+        is_mandatory: true,
+      },
     ],
     activities: [
-      { activity_name: "Vital Signs Assessment", cdash_domain: "VS", biomedical_concept_code: "C25298", assigned_visit_names: ["Screening (Day -7)", "Baseline (Day 1)"] },
-      { activity_name: "12-Lead Electrocardiogram", cdash_domain: "EG", biomedical_concept_code: "C38054", assigned_visit_names: ["Baseline (Day 1)"] },
+      {
+        activity_name: "Vital Signs Assessment",
+        cdash_domain: "VS",
+        biomedical_concept_code: "C25298",
+        assigned_visit_names: ["Screening (Day -7)", "Baseline (Day 1)"],
+      },
+      {
+        activity_name: "12-Lead Electrocardiogram",
+        cdash_domain: "EG",
+        biomedical_concept_code: "C38054",
+        assigned_visit_names: ["Baseline (Day 1)"],
+      },
     ],
     criteria: [
-      { criterion_type: "INCLUSION", identifier: "INC-01", text_expression: "Adults aged 18 to 75 years", logical_expression: "DM.AGE >= 18" },
-      { criterion_type: "EXCLUSION", identifier: "EXC-01", text_expression: "History of severe hepatic impairment", logical_expression: "LB.ALT > 150" },
+      {
+        criterion_type: "INCLUSION",
+        identifier: "INC-01",
+        text_expression: "Adults aged 18 to 75 years",
+        logical_expression: "DM.AGE >= 18",
+      },
+      {
+        criterion_type: "EXCLUSION",
+        identifier: "EXC-01",
+        text_expression: "History of severe hepatic impairment",
+        logical_expression: "LB.ALT > 150",
+      },
     ],
   };
 
@@ -103,9 +147,13 @@ describe("ProtocolDigitizationView.vue - AI Protocol Ingestion & Synthesis Speci
     });
 
     // Simulate file selection
-    const file = new File(["Protocol text content for hypertension study"], "protocol_hypertension.pdf", {
-      type: "application/pdf",
-    });
+    const file = new File(
+      ["Protocol text content for hypertension study"],
+      "protocol_hypertension.pdf",
+      {
+        type: "application/pdf",
+      }
+    );
 
     wrapper.vm.selectedFile = file;
     await wrapper.vm.$nextTick();

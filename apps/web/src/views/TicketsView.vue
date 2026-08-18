@@ -11,20 +11,33 @@
         </div>
         <h2 class="view-title">Clinical Issue &amp; Operations Hub</h2>
         <p class="view-subtitle">
-          Unified eClinical operations desk synthesizing protocol deviations, site queries, data discrepancies,
-          supply excursions, and CAPA linkages with multi-tier clinical SLA timers, 21 CFR Part 11 electronic signatures,
-          and dual-visibility discussion streams.
+          Unified eClinical operations desk synthesizing protocol deviations,
+          site queries, data discrepancies, supply excursions, and CAPA linkages
+          with multi-tier clinical SLA timers, 21 CFR Part 11 electronic
+          signatures, and dual-visibility discussion streams.
         </p>
       </div>
 
       <div class="header-action-group">
-        <button class="btn btn-secondary" title="Export Regulatory Audit Trail CSV" @click="exportAuditTrail('csv')">
+        <button
+          class="btn btn-secondary"
+          title="Export Regulatory Audit Trail CSV"
+          @click="exportAuditTrail('csv')"
+        >
           <span class="btn-icon">📊</span> Export CSV
         </button>
-        <button class="btn btn-secondary" title="Export Regulatory Audit Trail JSON" @click="exportAuditTrail('json')">
+        <button
+          class="btn btn-secondary"
+          title="Export Regulatory Audit Trail JSON"
+          @click="exportAuditTrail('json')"
+        >
           <span class="btn-icon">📄</span> Export JSON
         </button>
-        <button class="btn btn-primary" title="Log New Clinical Issue" @click="isCreateModalOpen = true">
+        <button
+          class="btn btn-primary"
+          title="Log New Clinical Issue"
+          @click="isCreateModalOpen = true"
+        >
           <span class="btn-icon">➕</span> Log Issue
         </button>
       </div>
@@ -49,14 +62,18 @@
       <div class="stat-card">
         <div class="stat-icon rbqm-icon">⏱</div>
         <div class="stat-details">
-          <div class="stat-value" :class="slaComplianceClass">{{ kpis.sla_compliance_rate || 96.4 }}%</div>
+          <div class="stat-value" :class="slaComplianceClass">
+            {{ kpis.sla_compliance_rate || 96.4 }}%
+          </div>
           <div class="stat-label">SLA Target Compliance</div>
         </div>
       </div>
       <div class="stat-card">
         <div class="stat-icon qtl-icon">⚡</div>
         <div class="stat-details">
-          <div class="stat-value">{{ kpis.mttr_hours ? kpis.mttr_hours.toFixed(1) + 'h' : '4.2h' }}</div>
+          <div class="stat-value">
+            {{ kpis.mttr_hours ? kpis.mttr_hours.toFixed(1) + "h" : "4.2h" }}
+          </div>
           <div class="stat-label">Mean Resolution Time (MTTR)</div>
         </div>
       </div>
@@ -140,7 +157,9 @@
             <span class="column-bullet col-open"></span>
             <span class="column-title">Open / Triage</span>
           </div>
-          <span class="column-count">{{ getColumnTickets('OPEN').length }}</span>
+          <span class="column-count">{{
+            getColumnTickets("OPEN").length
+          }}</span>
         </div>
         <div class="column-cards">
           <div
@@ -150,13 +169,25 @@
             @click="openTicketDetail(t)"
           >
             <div class="card-meta">
-              <span class="ref-tag">{{ t.reference || `#${t.id?.substring(0, 8)}` }}</span>
-              <span class="badge" :class="`badge-sev-${t.gxp_severity?.toLowerCase()}`">{{ t.gxp_severity }}</span>
+              <span class="ref-tag">{{
+                t.reference || `#${t.id?.substring(0, 8)}`
+              }}</span>
+              <span
+                class="badge"
+                :class="`badge-sev-${t.gxp_severity?.toLowerCase()}`"
+                >{{ t.gxp_severity }}</span
+              >
             </div>
             <h4 class="card-ticket-title">{{ t.title }}</h4>
             <div class="card-footer">
-              <span class="category-pill">{{ formatCategory(t.category) }}</span>
-              <div v-if="t.sla_target_at" class="sla-mini-badge" :class="getSlaClass(t)">
+              <span class="category-pill">{{
+                formatCategory(t.category)
+              }}</span>
+              <div
+                v-if="t.sla_target_at"
+                class="sla-mini-badge"
+                :class="getSlaClass(t)"
+              >
                 {{ formatSlaRemaining(t) }}
               </div>
             </div>
@@ -171,7 +202,9 @@
             <span class="column-bullet col-progress"></span>
             <span class="column-title">Investigation</span>
           </div>
-          <span class="column-count">{{ getColumnTickets('IN_PROGRESS').length }}</span>
+          <span class="column-count">{{
+            getColumnTickets("IN_PROGRESS").length
+          }}</span>
         </div>
         <div class="column-cards">
           <div
@@ -181,13 +214,25 @@
             @click="openTicketDetail(t)"
           >
             <div class="card-meta">
-              <span class="ref-tag">{{ t.reference || `#${t.id?.substring(0, 8)}` }}</span>
-              <span class="badge" :class="`badge-sev-${t.gxp_severity?.toLowerCase()}`">{{ t.gxp_severity }}</span>
+              <span class="ref-tag">{{
+                t.reference || `#${t.id?.substring(0, 8)}`
+              }}</span>
+              <span
+                class="badge"
+                :class="`badge-sev-${t.gxp_severity?.toLowerCase()}`"
+                >{{ t.gxp_severity }}</span
+              >
             </div>
             <h4 class="card-ticket-title">{{ t.title }}</h4>
             <div class="card-footer">
-              <span class="category-pill">{{ formatCategory(t.category) }}</span>
-              <div v-if="t.sla_target_at" class="sla-mini-badge" :class="getSlaClass(t)">
+              <span class="category-pill">{{
+                formatCategory(t.category)
+              }}</span>
+              <div
+                v-if="t.sla_target_at"
+                class="sla-mini-badge"
+                :class="getSlaClass(t)"
+              >
                 {{ formatSlaRemaining(t) }}
               </div>
             </div>
@@ -202,22 +247,38 @@
             <span class="column-bullet col-paused"></span>
             <span class="column-title">Awaiting Action</span>
           </div>
-          <span class="column-count">{{ getColumnTickets(['WAITING_ON_SITE', 'WAITING_ON_SPONSOR', 'PENDING_REGULATORY_REVIEW']).length }}</span>
+          <span class="column-count">{{
+            getColumnTickets([
+              "WAITING_ON_SITE",
+              "WAITING_ON_SPONSOR",
+              "PENDING_REGULATORY_REVIEW",
+            ]).length
+          }}</span>
         </div>
         <div class="column-cards">
           <div
-            v-for="t in getColumnTickets(['WAITING_ON_SITE', 'WAITING_ON_SPONSOR', 'PENDING_REGULATORY_REVIEW'])"
+            v-for="t in getColumnTickets([
+              'WAITING_ON_SITE',
+              'WAITING_ON_SPONSOR',
+              'PENDING_REGULATORY_REVIEW',
+            ])"
             :key="t.id"
             class="ticket-card paused-card"
             @click="openTicketDetail(t)"
           >
             <div class="card-meta">
-              <span class="ref-tag">{{ t.reference || `#${t.id?.substring(0, 8)}` }}</span>
-              <span class="badge badge-paused">{{ formatStatus(t.status) }}</span>
+              <span class="ref-tag">{{
+                t.reference || `#${t.id?.substring(0, 8)}`
+              }}</span>
+              <span class="badge badge-paused">{{
+                formatStatus(t.status)
+              }}</span>
             </div>
             <h4 class="card-ticket-title">{{ t.title }}</h4>
             <div class="card-footer">
-              <span class="category-pill">{{ formatCategory(t.category) }}</span>
+              <span class="category-pill">{{
+                formatCategory(t.category)
+              }}</span>
               <div class="sla-mini-badge fill-paused">⏸ SLA Paused</div>
             </div>
           </div>
@@ -231,7 +292,9 @@
             <span class="column-bullet col-resolved"></span>
             <span class="column-title">Resolved</span>
           </div>
-          <span class="column-count">{{ getColumnTickets('RESOLVED').length }}</span>
+          <span class="column-count">{{
+            getColumnTickets("RESOLVED").length
+          }}</span>
         </div>
         <div class="column-cards">
           <div
@@ -241,14 +304,24 @@
             @click="openTicketDetail(t)"
           >
             <div class="card-meta">
-              <span class="ref-tag">{{ t.reference || `#${t.id?.substring(0, 8)}` }}</span>
-              <span v-if="t.signature_token" class="badge badge-signed">✍️ eSigned</span>
-              <span v-else class="badge badge-pending-sign">Pending Sign-off</span>
+              <span class="ref-tag">{{
+                t.reference || `#${t.id?.substring(0, 8)}`
+              }}</span>
+              <span v-if="t.signature_token" class="badge badge-signed"
+                >✍️ eSigned</span
+              >
+              <span v-else class="badge badge-pending-sign"
+                >Pending Sign-off</span
+              >
             </div>
             <h4 class="card-ticket-title">{{ t.title }}</h4>
             <div class="card-footer">
-              <span class="category-pill">{{ formatCategory(t.category) }}</span>
-              <span class="rca-mini-tag">{{ t.resolution_code || 'Resolved' }}</span>
+              <span class="category-pill">{{
+                formatCategory(t.category)
+              }}</span>
+              <span class="rca-mini-tag">{{
+                t.resolution_code || "Resolved"
+              }}</span>
             </div>
           </div>
         </div>
@@ -261,7 +334,9 @@
             <span class="column-bullet col-closed"></span>
             <span class="column-title">Closed &amp; Archived</span>
           </div>
-          <span class="column-count">{{ getColumnTickets('CLOSED').length }}</span>
+          <span class="column-count">{{
+            getColumnTickets("CLOSED").length
+          }}</span>
         </div>
         <div class="column-cards">
           <div
@@ -271,12 +346,16 @@
             @click="openTicketDetail(t)"
           >
             <div class="card-meta">
-              <span class="ref-tag">{{ t.reference || `#${t.id?.substring(0, 8)}` }}</span>
+              <span class="ref-tag">{{
+                t.reference || `#${t.id?.substring(0, 8)}`
+              }}</span>
               <span class="badge badge-closed">🔒 Closed</span>
             </div>
             <h4 class="card-ticket-title">{{ t.title }}</h4>
             <div class="card-footer">
-              <span class="category-pill">{{ formatCategory(t.category) }}</span>
+              <span class="category-pill">{{
+                formatCategory(t.category)
+              }}</span>
             </div>
           </div>
         </div>
@@ -307,38 +386,69 @@
             class="table-row"
             @click="openTicketDetail(t)"
           >
-            <td class="ref-cell font-mono">{{ t.reference || `#${t.id?.substring(0, 8)}` }}</td>
+            <td class="ref-cell font-mono">
+              {{ t.reference || `#${t.id?.substring(0, 8)}` }}
+            </td>
             <td class="title-cell font-semibold">{{ t.title }}</td>
             <td>
-              <span class="category-pill">{{ formatCategory(t.category) }}</span>
+              <span class="category-pill">{{
+                formatCategory(t.category)
+              }}</span>
             </td>
             <td>
-              <span class="badge" :class="`badge-sev-${t.gxp_severity?.toLowerCase()}`">{{ t.gxp_severity }}</span>
+              <span
+                class="badge"
+                :class="`badge-sev-${t.gxp_severity?.toLowerCase()}`"
+                >{{ t.gxp_severity }}</span
+              >
             </td>
             <td>
-              <span class="badge" :class="`badge-status-${t.status?.toLowerCase()}`">{{ formatStatus(t.status) }}</span>
+              <span
+                class="badge"
+                :class="`badge-status-${t.status?.toLowerCase()}`"
+                >{{ formatStatus(t.status) }}</span
+              >
             </td>
             <td class="context-cell">
               <span v-if="t.site_id">{{ t.site_id }}</span>
               <span v-if="t.subject_id"> / {{ t.subject_id }}</span>
-              <span v-if="!t.site_id && !t.subject_id">{{ t.study_id || '—' }}</span>
+              <span v-if="!t.site_id && !t.subject_id">{{
+                t.study_id || "—"
+              }}</span>
             </td>
             <td>
-              <span class="priority-tag" :class="`priority-${t.priority?.toLowerCase()}`">{{ t.priority }}</span>
+              <span
+                class="priority-tag"
+                :class="`priority-${t.priority?.toLowerCase()}`"
+                >{{ t.priority }}</span
+              >
             </td>
             <td>
-              <div v-if="t.sla_target_at" class="sla-mini-badge" :class="getSlaClass(t)">
+              <div
+                v-if="t.sla_target_at"
+                class="sla-mini-badge"
+                :class="getSlaClass(t)"
+              >
                 {{ formatSlaRemaining(t) }}
               </div>
               <span v-else>—</span>
             </td>
             <td>
-              <span v-if="t.signature_token" class="badge badge-signed">✍️ eSigned</span>
-              <span v-else-if="t.status === 'RESOLVED'" class="badge badge-pending-sign">Needs Sign</span>
+              <span v-if="t.signature_token" class="badge badge-signed"
+                >✍️ eSigned</span
+              >
+              <span
+                v-else-if="t.status === 'RESOLVED'"
+                class="badge badge-pending-sign"
+                >Needs Sign</span
+              >
               <span v-else>—</span>
             </td>
             <td>
-              <button class="btn btn-xs btn-secondary" @click.stop="openTicketDetail(t)">
+              <button
+                class="btn btn-xs btn-secondary"
+                @click.stop="openTicketDetail(t)"
+              >
                 Inspect
               </button>
             </td>
@@ -411,7 +521,8 @@ const initialMockTickets = [
     id: "tk-8801",
     reference: "DEV-2026-0041",
     title: "Investigational Product Cold-Chain Excursion at Site 101",
-    description: "Cold-chain continuous temperature logger logged 9.4°C (protocol limit 2.0-8.0°C) during weekend storage.",
+    description:
+      "Cold-chain continuous temperature logger logged 9.4°C (protocol limit 2.0-8.0°C) during weekend storage.",
     category: "SUPPLY_EXCURSION",
     gxp_severity: "CRITICAL",
     priority: "CRITICAL",
@@ -432,7 +543,8 @@ const initialMockTickets = [
     id: "tk-8802",
     reference: "DEV-2026-0042",
     title: "Missed Scheduled Blood Draw at Cycle 2 Day 1",
-    description: "Subject 8812 PK blood sample collection missed due to scheduling conflict.",
+    description:
+      "Subject 8812 PK blood sample collection missed due to scheduling conflict.",
     category: "PROTOCOL_DEVIATION",
     gxp_severity: "MAJOR",
     priority: "HIGH",
@@ -453,7 +565,8 @@ const initialMockTickets = [
     id: "tk-8803",
     reference: "QRY-2026-0109",
     title: "Inconsistent Diastolic BP Observation in Vital Signs Form",
-    description: "Systolic 120 recorded with Diastolic 130 mmHg. Out-of-bounds cross-field validation query.",
+    description:
+      "Systolic 120 recorded with Diastolic 130 mmHg. Out-of-bounds cross-field validation query.",
     category: "DATA_QUERY",
     gxp_severity: "MINOR",
     priority: "MEDIUM",
@@ -474,7 +587,8 @@ const initialMockTickets = [
     id: "tk-8804",
     reference: "DEV-2026-0038",
     title: "Informed Consent Form Re-Consent Signed on V2 Instead of V3",
-    description: "Subject 8804 re-consented on outdated paper template version during Protocol Amendment 2 rollout.",
+    description:
+      "Subject 8804 re-consented on outdated paper template version during Protocol Amendment 2 rollout.",
     category: "PROTOCOL_DEVIATION",
     gxp_severity: "MAJOR",
     priority: "HIGH",
@@ -490,9 +604,11 @@ const initialMockTickets = [
     signature_token: "sig_token_hex_a982fe41b3",
     signature_user: "dr_smith_pi",
     signature_timestamp: new Date(Date.now() - 3600 * 1000 * 12).toISOString(),
-    signature_meaning: "I approve the clinical assessment and corrective medical action.",
+    signature_meaning:
+      "I approve the clinical assessment and corrective medical action.",
     root_cause_category: "PROCESS_WORKFLOW_DEFICIT",
-    root_cause_summary: "Site ICF version binders were updated and CRC re-training completed.",
+    root_cause_summary:
+      "Site ICF version binders were updated and CRC re-training completed.",
     resolution_code: "CORRECTIVE_ACTION_IMPLEMENTED",
     version_index: 4,
   },
@@ -520,11 +636,15 @@ const activeTicketsCount = computed(() => {
 });
 
 const criticalTicketsCount = computed(() => {
-  return tickets.value.filter((t) => t.gxp_severity === "CRITICAL" && t.status !== "CLOSED").length;
+  return tickets.value.filter(
+    (t) => t.gxp_severity === "CRITICAL" && t.status !== "CLOSED"
+  ).length;
 });
 
 const pausedTicketsCount = computed(() => {
-  return tickets.value.filter((t) => t.status === "WAITING_ON_SITE" || t.status === "WAITING_ON_SPONSOR").length;
+  return tickets.value.filter(
+    (t) => t.status === "WAITING_ON_SITE" || t.status === "WAITING_ON_SPONSOR"
+  ).length;
 });
 
 const slaComplianceClass = computed(() => {
@@ -550,7 +670,10 @@ const filteredTickets = computed(() => {
       return false;
     }
     // Severity match
-    if (filterSeverity.value !== "ALL" && t.gxp_severity !== filterSeverity.value) {
+    if (
+      filterSeverity.value !== "ALL" &&
+      t.gxp_severity !== filterSeverity.value
+    ) {
       return false;
     }
     // Status match
@@ -605,9 +728,12 @@ const openTicketDetail = (t) => {
     {
       id: "cm-002",
       user_id: "sponsor.qa@cadence.io",
-      content: "Quality assessment initiated under ICH E6(R3). Reviewing cold-chain calibration records.",
+      content:
+        "Quality assessment initiated under ICH E6(R3). Reviewing cold-chain calibration records.",
       visibility: "INTERNAL_SPONSOR",
-      created_at: new Date(new Date(t.created_at).getTime() + 1800 * 1000).toISOString(),
+      created_at: new Date(
+        new Date(t.created_at).getTime() + 1800 * 1000
+      ).toISOString(),
     },
   ];
   selectedTicketAttachments.value = [
@@ -616,7 +742,8 @@ const openTicketDetail = (t) => {
       filename: "logger_raw_export.csv",
       file_size_bytes: 42100,
       mime_type: "text/csv",
-      sha256_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      sha256_hash:
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       uploaded_by: t.created_by || "cra.monitor@cadence.io",
       uploaded_at: t.created_at,
       deid_scrubbed: true,
@@ -633,12 +760,20 @@ const openTicketDetail = (t) => {
   isDrawerOpen.value = true;
 };
 
-const handleTicketTransition = async ({ ticketId, newStatus, root_cause_category, root_cause_summary, resolution_code }) => {
+const handleTicketTransition = async ({
+  ticketId,
+  newStatus,
+  root_cause_category,
+  root_cause_summary,
+  resolution_code,
+}) => {
   const index = tickets.value.findIndex((t) => t.id === ticketId);
   if (index !== -1) {
     tickets.value[index].status = newStatus;
-    if (root_cause_category) tickets.value[index].root_cause_category = root_cause_category;
-    if (root_cause_summary) tickets.value[index].root_cause_summary = root_cause_summary;
+    if (root_cause_category)
+      tickets.value[index].root_cause_category = root_cause_category;
+    if (root_cause_summary)
+      tickets.value[index].root_cause_summary = root_cause_summary;
     if (resolution_code) tickets.value[index].resolution_code = resolution_code;
     selectedTicket.value = { ...tickets.value[index] };
   }
@@ -662,7 +797,8 @@ const handleTicketAttachment = ({ file, reason_for_change }) => {
     filename: file.name,
     file_size_bytes: file.size,
     mime_type: file.type || "application/octet-stream",
-    sha256_hash: "a4f891b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abc",
+    sha256_hash:
+      "a4f891b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abc",
     uploaded_by: "active.user@cadence.io",
     uploaded_at: new Date().toISOString(),
     deid_scrubbed: true,
@@ -698,7 +834,9 @@ const handleTicketCreated = (payload) => {
 
 const exportAuditTrail = (format) => {
   const data = JSON.stringify(tickets.value, null, 2);
-  const blob = new Blob([data], { type: format === "json" ? "application/json" : "text/csv" });
+  const blob = new Blob([data], {
+    type: format === "json" ? "application/json" : "text/csv",
+  });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -738,9 +876,18 @@ const exportAuditTrail = (format) => {
   text-transform: uppercase;
 }
 
-.badge-gxp { background: #0284c7; color: #ffffff; }
-.badge-regulatory { background: #4f46e5; color: #ffffff; }
-.badge-standard { background: #475569; color: #ffffff; }
+.badge-gxp {
+  background: #0284c7;
+  color: #ffffff;
+}
+.badge-regulatory {
+  background: #4f46e5;
+  color: #ffffff;
+}
+.badge-standard {
+  background: #475569;
+  color: #ffffff;
+}
 
 .view-title {
   font-size: 1.6rem;
@@ -779,7 +926,9 @@ const exportAuditTrail = (format) => {
   align-items: center;
   gap: 16px;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .stat-card:hover {
@@ -798,11 +947,21 @@ const exportAuditTrail = (format) => {
   background: #f1f5f9;
 }
 
-.alert-icon { background: #eff6ff; }
-.capa-icon { background: #fef2f2; }
-.rbqm-icon { background: #f0fdf4; }
-.qtl-icon { background: #faf5ff; }
-.breach-icon { background: #fffbeb; }
+.alert-icon {
+  background: #eff6ff;
+}
+.capa-icon {
+  background: #fef2f2;
+}
+.rbqm-icon {
+  background: #f0fdf4;
+}
+.qtl-icon {
+  background: #faf5ff;
+}
+.breach-icon {
+  background: #fffbeb;
+}
 
 .stat-details {
   display: flex;
@@ -823,9 +982,15 @@ const exportAuditTrail = (format) => {
   margin-top: 2px;
 }
 
-.text-danger { color: #dc2626; }
-.text-success { color: #16a34a; }
-.text-warning { color: #d97706; }
+.text-danger {
+  color: #dc2626;
+}
+.text-success {
+  color: #16a34a;
+}
+.text-warning {
+  color: #d97706;
+}
 
 /* Filter & Controls Card */
 .controls-card {
@@ -852,7 +1017,9 @@ const exportAuditTrail = (format) => {
   min-width: 240px;
 }
 
-.search-icon { font-size: 0.9rem; }
+.search-icon {
+  font-size: 0.9rem;
+}
 
 .search-input {
   border: none;
@@ -939,11 +1106,21 @@ const exportAuditTrail = (format) => {
   border-radius: 50%;
 }
 
-.col-open { background: #3b82f6; }
-.col-progress { background: #8b5cf6; }
-.col-paused { background: #f59e0b; }
-.col-resolved { background: #10b981; }
-.col-closed { background: #64748b; }
+.col-open {
+  background: #3b82f6;
+}
+.col-progress {
+  background: #8b5cf6;
+}
+.col-paused {
+  background: #f59e0b;
+}
+.col-resolved {
+  background: #10b981;
+}
+.col-closed {
+  background: #64748b;
+}
 
 .column-title {
   font-size: 0.85rem;
@@ -975,7 +1152,9 @@ const exportAuditTrail = (format) => {
   padding: 12px 14px;
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: transform 0.12s ease, border-color 0.12s ease;
+  transition:
+    transform 0.12s ease,
+    border-color 0.12s ease;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1030,18 +1209,51 @@ const exportAuditTrail = (format) => {
   border-radius: 4px;
 }
 
-.sla-tag-normal { background: #e0f2fe; color: #0284c7; }
-.sla-tag-warned { background: #fef3c7; color: #b45309; }
-.sla-tag-breached { background: #fee2e2; color: #dc2626; }
-.fill-paused { background: #f1f5f9; color: #64748b; }
+.sla-tag-normal {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+.sla-tag-warned {
+  background: #fef3c7;
+  color: #b45309;
+}
+.sla-tag-breached {
+  background: #fee2e2;
+  color: #dc2626;
+}
+.fill-paused {
+  background: #f1f5f9;
+  color: #64748b;
+}
 
-.badge-sev-critical { background: #fee2e2; color: #b91c1c; }
-.badge-sev-major { background: #ffedd5; color: #c2410c; }
-.badge-sev-minor { background: #dbeafe; color: #1d4ed8; }
-.badge-paused { background: #fef3c7; color: #b45309; }
-.badge-signed { background: #dcfce7; color: #15803d; }
-.badge-pending-sign { background: #fef9c3; color: #a16207; }
-.badge-closed { background: #f1f5f9; color: #64748b; }
+.badge-sev-critical {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.badge-sev-major {
+  background: #ffedd5;
+  color: #c2410c;
+}
+.badge-sev-minor {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.badge-paused {
+  background: #fef3c7;
+  color: #b45309;
+}
+.badge-signed {
+  background: #dcfce7;
+  color: #15803d;
+}
+.badge-pending-sign {
+  background: #fef9c3;
+  color: #a16207;
+}
+.badge-closed {
+  background: #f1f5f9;
+  color: #64748b;
+}
 
 /* TABLE VIEW */
 .table-card {
@@ -1084,8 +1296,12 @@ const exportAuditTrail = (format) => {
   background: #f8fafc;
 }
 
-.font-mono { font-family: monospace; }
-.font-semibold { font-weight: 600; }
+.font-mono {
+  font-family: monospace;
+}
+.font-semibold {
+  font-weight: 600;
+}
 
 .empty-table-cell {
   text-align: center;
@@ -1099,10 +1315,18 @@ const exportAuditTrail = (format) => {
   text-transform: uppercase;
 }
 
-.priority-critical { color: #dc2626; }
-.priority-high { color: #ea580c; }
-.priority-medium { color: #2563eb; }
-.priority-low { color: #64748b; }
+.priority-critical {
+  color: #dc2626;
+}
+.priority-high {
+  color: #ea580c;
+}
+.priority-medium {
+  color: #2563eb;
+}
+.priority-low {
+  color: #64748b;
+}
 
 .btn {
   padding: 8px 14px;
@@ -1122,8 +1346,19 @@ const exportAuditTrail = (format) => {
   font-size: 0.75rem;
 }
 
-.btn-primary { background: #2563eb; color: #ffffff; }
-.btn-primary:hover { background: #1d4ed8; }
-.btn-secondary { background: #ffffff; border-color: #cbd5e1; color: #334155; }
-.btn-secondary:hover { background: #f1f5f9; }
+.btn-primary {
+  background: #2563eb;
+  color: #ffffff;
+}
+.btn-primary:hover {
+  background: #1d4ed8;
+}
+.btn-secondary {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+.btn-secondary:hover {
+  background: #f1f5f9;
+}
 </style>
