@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f9f9f9; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px; }
+        .header { font-size: 18px; font-weight: bold; margin-bottom: 10px; color: #d9534f; }
+        .meta { color: #666; font-size: 12px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .content { font-size: 14px; line-height: 1.5; color: #444; margin-bottom: 20px; }
+        .footer { font-size: 11px; color: #999; border-top: 1px solid #eee; padding-top: 10px; text-align: center; }
+        .button { display: inline-block; padding: 10px 20px; background-color: #0284c7; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">[URGENT] Protocol Amendment Re-Consent Required</div>
+        <div class="meta">
+            <strong>Study ID:</strong> {{ study_id }}<br>
+            <strong>Event ID:</strong> {{ event_id }}<br>
+            <strong>Timestamp (UTC):</strong> {{ timestamp_utc }}
+        </div>
+        <div class="content">
+            <p>Dear Study Participant,</p>
+            <p>An updated protocol consent document version ({{ payload.protocol_version or payload.version_number or '2.0' }}) has been published for your study.</p>
+            <p><strong>Summary of Updates:</strong> {{ payload.change_summary or payload.summary_of_changes or 'Protocol amendment updates requiring active subject re-consent.' }}</p>
+            <p>To ensure continued trial participation and unblock scheduled ePRO diary submissions, please log into your Participant Companion Portal to review and electronically sign the updated consent form.</p>
+            <p style="text-align: center;">
+                <a href="{{ portal_url or 'http://localhost:3000' }}" class="button">Log In to Subject Portal</a>
+            </p>
+        </div>
+        <div class="footer">
+            <p>This is an automated system-generated notification from {{ brand_name }}.<br>
+            All participant consent updates are versioned and e-signed in compliance with 21 CFR Part 11.</p>
+        </div>
+    </div>
+</body>
+</html>

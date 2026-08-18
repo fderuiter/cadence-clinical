@@ -801,10 +801,12 @@ class ReconsentService:
         reconsent_repo: IReconsentRepository,
         consent_repo: ISubjectConsentRepository,
         audit_repo: IConsentAuditRepository | None = None,
+        notification_dispatcher: Any | None = None,
     ) -> None:
         self.reconsent_repo = reconsent_repo
         self.consent_repo = consent_repo
         self.audit_repo = audit_repo
+        self.notification_dispatcher = notification_dispatcher
 
     async def trigger_reconsent_for_active_cohort(
         self,
@@ -861,6 +863,27 @@ class ReconsentService:
                 )
             )
 
+        # Dispatch automated notification events via HTTP client
+        if self.notification_dispatcher:
+            try:
+                for req in requirements:
+                    await self.notification_dispatcher(
+                        {
+                            "recipient_user_id": req.subject_pseudonym,
+                            "category": "ALERTS",
+                            "priority": "CRITICAL",
+                            "channels": "IN_APP,EMAIL",
+                            "message_content": (
+                                f"URGENT: Protocol amendment re-consent required for study {study_id}. "
+                                f"Version: {new_version_index}.0"
+                            ),
+                            "related_entity_id": req.id,
+                            "related_entity_type": "RECONSENT_REQUIRED",
+                        }
+                    )
+            except Exception:
+                pass
+
         return requirements
 
     async def get_pending_reconsents(
@@ -869,6 +892,39 @@ class ReconsentService:
         return await self.reconsent_repo.get_pending_requirements(
             study_id, subject_pseudonym
         )
+
+    async def complete_reconsent_requirement(
+        self,
+        requirement_id: str,
+        completed_consent_id: str | None = None,
+        created_by: str = "system",
+        reason_for_change: str = "Subject completed protocol re-consent signature",
+    ) -> ReconsentRequirementEntity:
+        req = await self.reconsent_repo.get_by_id(requirement_id)
+        if not req:
+            raise ValueError(f"Re-consent requirement '{requirement_id}' not found.")
+
+        req.status = "COMPLETED"
+        if completed_consent_id:
+            req.completed_consent_id = completed_consent_id
+
+        saved = await self.reconsent_repo.save(req)
+
+        if self.audit_repo:
+            await self.audit_repo.save(
+                ConsentAuditLogEntity(
+                    id=str(uuid.uuid4()),
+                    timestamp=datetime.now(UTC),
+                    actor_id=created_by,
+                    actor_role="subject",
+                    action="COMPLETE_RECONSENT",
+                    document_id=saved.id,
+                    details=f"Subject '{saved.subject_pseudonym}' completed re-consent requirement '{saved.id}'.",
+                    reason_for_change=reason_for_change,
+                )
+            )
+
+        return saved
 
 
 # =========================================================================

@@ -308,6 +308,7 @@ def main() -> None:
                                     "apps/tickets/adapters/notifications_client.py",
                                     "apps/tickets/infrastructure/notifications_client.py",
                                     "apps/execution/notifications_client.py",
+                                    "apps/econsent/adapters/notifications_client.py",
                                 },
                                 {
                                     "apps/designer/soa_models.py",
@@ -525,6 +526,7 @@ def main() -> None:
                                 {
                                     "apps/execution/notifications_client.py",
                                     "apps/tickets/infrastructure/notifications_client.py",
+                                    "apps/econsent/adapters/notifications_client.py",
                                 },
                                 {
                                     "apps/quality/domain/models.py",

@@ -9,9 +9,10 @@
 
 ## 1. Context & Problem Statement
 
-In multi-service systems with distinct databases—such as Clinical Trial Management System (CTMS), Electronic Investigator Site File (eISF), and Electronic Data Capture (EDC) core execution engines—maintaining client-side TypeScript type definitions in perfect sync with Python SQLModel database models is critical. 
+In multi-service systems with distinct databases—such as Clinical Trial Management System (CTMS), Electronic Investigator Site File (eISF), and Electronic Data Capture (EDC) core execution engines—maintaining client-side TypeScript type definitions in perfect sync with Python SQLModel database models is critical.
 
 Previously, we established an offline schema generator. However, we lacked:
+
 1. **Consolidation:** Aggregating schemas across CTMS, eISF, and execution services into a single unified client types file (`apps/web/src/types/db_schemas.ts`).
 2. **Automated Gating:** A mechanism in the continuous integration (CI) pipeline to ensure that developers do not modify SQLAlchemy/SQLModel backend schemas without also committing the updated client-side TypeScript definitions.
 3. **Collision Resilience:** Gracefully handling matching model or table names (e.g., `lab_test_master` vs `LabTestMaster`) across decoupled microservice domain boundaries.
@@ -38,7 +39,7 @@ This decision addresses requirements under Trace-8 and PRD-SYS-001.
 
 ### Option 2: Unified Static Generator with Automated Drift Verification Gate (Selected)
 
-- **Overview:** 
+- **Overview:**
   1. Extend the offline introspection generator (`scripts/introspect_pg_schema.py`) to parse, compile, and output a single consolidated `db_schemas.ts` representing CTMS, eISF, and core execution databases.
   2. Implement collision-resolution mappings (e.g., mapping duplicate structures to specific legacy variants).
   3. Introduce a robust CI integration test (`test_committed_typescript_schema_is_up_to_date`) in `tests/validation/test_offline_schema_drift.py` that compares the committed `db_schemas.ts` file against a freshly generated on-the-fly instance.
