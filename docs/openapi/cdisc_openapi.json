@@ -933,7 +933,7 @@
           }
         }
       },
-      "options": {
+      "post": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
         "operationId": "proxy_requests__path__get",
@@ -969,7 +969,7 @@
           }
         }
       },
-      "delete": {
+      "options": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
         "operationId": "proxy_requests__path__get",
@@ -1077,7 +1077,7 @@
           }
         }
       },
-      "post": {
+      "delete": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
         "operationId": "proxy_requests__path__get",
@@ -16804,6 +16804,22 @@
               "default": "2.0.0",
               "title": "Target Version"
             }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
           }
         ],
         "responses": {
@@ -16903,6 +16919,50 @@
                   "additionalProperties": true,
                   "type": "object",
                   "title": "Response Register Subject Reconsent Api V1 Execution Amendments Reconsent Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/amendments/bulk-reconsent": {
+      "post": {
+        "tags": [
+          "Amendments"
+        ],
+        "summary": "Register Bulk Subject Reconsent",
+        "description": "Registers batch subject re-consent for an amended version, unlocking gating in bulk.\n\nRequirements: PRD-SUB-007, PRD-SYS-001",
+        "operationId": "register_bulk_subject_reconsent_api_v1_execution_amendments_bulk_reconsent_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_BulkSubjectReconsentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Register Bulk Subject Reconsent Api V1 Execution Amendments Bulk Reconsent Post"
                 }
               }
             }
@@ -47046,6 +47106,66 @@
         ],
         "title": "BulkSdvSignOffResponse",
         "description": "Response payload following bulk SDV sign-off execution.\n\nRequirements: PRD-SYS-001"
+      },
+      "Execution_BulkSubjectReconsentRequest": {
+        "properties": {
+          "subject_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Subject Ids",
+            "description": "List of subject identifiers"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study identifier"
+          },
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version",
+            "description": "Amended protocol version tag"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Protocol version index",
+            "default": 2
+          },
+          "icf_signed": {
+            "type": "boolean",
+            "title": "Icf Signed",
+            "description": "Whether ICF is signed",
+            "default": true
+          },
+          "signature_type": {
+            "type": "string",
+            "title": "Signature Type",
+            "description": "Signature type: 'ECONSENT' or 'PAPER_UPLOAD'",
+            "default": "ECONSENT"
+          },
+          "signer_name": {
+            "type": "string",
+            "title": "Signer Name",
+            "description": "Full name or user ID of batch signer",
+            "default": "site_coordinator_01"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "GxP reason for change",
+            "default": "Bulk protocol amendment re-consent verification"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_ids",
+          "study_id",
+          "protocol_version"
+        ],
+        "title": "BulkSubjectReconsentRequest",
+        "description": "Request payload to register batch subject re-consent for an amended version."
       },
       "Execution_ClinicalQueryResponse": {
         "properties": {

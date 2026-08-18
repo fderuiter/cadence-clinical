@@ -114,4 +114,105 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
       expect(tabs[1].classes()).toContain("active");
     }
   });
+
+  it("guides study manager through the 4-step upversioning wizard and publishes via API", async () => {
+    const wrapper = mount(AmendmentDiffView, {
+      global: { plugins: [pinia] },
+    });
+
+    // Launch wizard
+    const createBtn = wrapper.find("#btn-create-amendment");
+    await createBtn.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.vm.wizardStep).toBe(1);
+    expect(wrapper.text()).toContain("Step 1: Amendment Classification & Scope");
+
+    // Advance to Step 2
+    wrapper.vm.goToWizardStep(2);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.vm.wizardStep).toBe(2);
+    expect(wrapper.text()).toContain("Step 2: Target Version & Study Scope Selection");
+
+    // Advance to Step 3 (Predictive impact analysis)
+    wrapper.vm.goToWizardStep(3);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.vm.wizardStep).toBe(3);
+    expect(wrapper.text()).toContain("Step 3: Predictive Site & Subject Impact Analysis");
+
+    // Advance to Step 4 & publish
+    wrapper.vm.goToWizardStep(4);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.vm.wizardStep).toBe(4);
+    expect(wrapper.find("#btn-publish-amendment").exists()).toBe(true);
+
+    // Trigger publish
+    await wrapper.find("#btn-publish-amendment").trigger("click");
+    await flushPromises();
+
+    expect(apiClient.post).toHaveBeenCalledWith(
+      "/api/v1/execution/amendments/publish",
+      expect.objectContaining({
+        study_id: "STUDY-001",
+        version_number: "2.0.0",
+      })
+    );
+  });
+
+  it("switches to site coordinator bulk workspace, filters by site, and executes bulk re-consent", async () => {
+    const wrapper = mount(AmendmentDiffView, {
+      global: { plugins: [pinia] },
+    });
+
+    // Switch to site coordinator mode
+    const navBtns = wrapper.findAll(".mode-nav-btn");
+    expect(navBtns.length).toBeGreaterThan(1);
+    await navBtns[1].trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.vm.activeMode).toBe("coordinator");
+    expect(wrapper.text()).toContain("Site Coordinator Bulk Re-Consent Workspace");
+
+    // Test site filter select
+    const siteSelect = wrapper.find("#site-filter-select");
+    expect(siteSelect.exists()).toBe(true);
+    await siteSelect.setValue("SITE-101");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.vm.siteFilter).toBe("SITE-101");
+
+    // Select gated subjects
+    wrapper.vm.selectedSubjectIds = ["SUBJ-102", "SUBJ-103"];
+    await wrapper.vm.$nextTick();
+
+    // Verify sticky batch toolbar is displayed
+    const batchToolbar = wrapper.find("#sticky-batch-toolbar");
+    expect(batchToolbar.exists()).toBe(true);
+    expect(wrapper.text()).toContain("2 Subject(s) Selected");
+
+    // Open bulk re-consent modal
+    await wrapper.find("#btn-batch-reconsent").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.vm.showBulkReconsentModal).toBe(true);
+    expect(wrapper.find("#bulk-reconsent-modal").exists()).toBe(true);
+
+    // Execute bulk re-consent sign-off
+    await wrapper.find("#btn-submit-bulk-signature").trigger("click");
+    await flushPromises();
+
+    expect(apiClient.post).toHaveBeenCalledWith(
+      "/api/v1/execution/amendments/bulk-reconsent",
+      expect.objectContaining({
+        subject_ids: ["SUBJ-102", "SUBJ-103"],
+        study_id: "STUDY-001",
+        protocol_version: "2.0.0",
+        signature_type: "ECONSENT",
+      })
+    );
+
+    // Verify subjects cleared
+    expect(wrapper.vm.selectedSubjectIds).toEqual([]);
+    expect(wrapper.vm.showBulkReconsentModal).toBe(false);
+  });
 });
