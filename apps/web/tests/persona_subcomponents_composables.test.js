@@ -148,6 +148,32 @@ describe("Persona Sub-Components & Domain Composables Unit Tests", () => {
   });
 
   describe("Persona Sub-Components Rendering", () => {
+    it("renders CrcFormRenderer form fields and controls", () => {
+      const wrapper = mount(CrcFormRenderer, {
+        props: {
+          store: clinicalStore,
+          selectedSubjectId: "SUBJ-001",
+          selectedVisitId: "V-SCR",
+          isReconsentGated: false,
+          showEconsentModal: false,
+          showPaperIcfModal: false,
+          reconsentSubmitting: false,
+          econsentSignerName: "",
+          paperIcfDate: "",
+          paperIcfNote: "",
+          lookupStatuses: {},
+          getValidationError: () => null,
+          isCraUser: false,
+          isAuthorizedForBulkSdv: false,
+          sdvStates: {},
+          getSdvKey: () => "",
+          selectedBatchFields: [],
+        },
+      });
+
+      expect(wrapper.find(".crc-form-renderer").exists()).toBe(true);
+    });
+
     it("renders CraVerificationConsole batch verification bar when fields are selected", () => {
       const wrapper = mount(CraVerificationConsole, {
         props: {

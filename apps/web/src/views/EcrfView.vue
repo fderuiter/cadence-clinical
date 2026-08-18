@@ -336,7 +336,6 @@ const activeUserRole = computed(() => {
 
 // Domain Composable 1: Consent Gating (CRC)
 const {
-  reconsentGatedSubjects,
   isReconsentGated,
   showEconsentModal,
   showPaperIcfModal,
@@ -422,7 +421,6 @@ function handleSignOffSubmit() {
 
 // Domain Composable 4: Protocol Schema Ingestion & Review (Study Designer)
 const {
-  fileInputRef,
   selectedFileName,
   editingItemId,
   editItemValue,

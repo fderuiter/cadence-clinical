@@ -168,7 +168,7 @@
                 :lookup-status="lookupStatuses[field.id]"
                 :can-manage-queries="store.canManageQueries"
                 :query-label="store.getQueryLabel(store.formQueries[field.id])"
-                @update:model-value="store.formValues[field.id] = $event"
+                @update:model-value="updateFieldValue(field.id, $event)"
                 @input="$emit('handle-lookup-input', field, $event)"
                 @change="
                   (val, target) =>
@@ -452,6 +452,9 @@
 
 <script setup>
 import { ClinicalFormField } from "ui";
+import { useClinicalStore } from "../../stores/clinical";
+
+const clinicalStore = useClinicalStore();
 
 const props = defineProps({
   store: { type: Object, required: true },
@@ -496,6 +499,11 @@ const emit = defineEmits([
   "clear-form",
   "submit-ecrf",
 ]);
+
+function updateFieldValue(fieldId, val) {
+  const storeInstance = props.store || clinicalStore;
+  storeInstance.formValues[fieldId] = val;
+}
 
 function toggleBatchField(fieldId, checked) {
   const updated = [...props.selectedBatchFields];

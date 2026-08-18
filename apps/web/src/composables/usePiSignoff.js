@@ -1,5 +1,4 @@
 import { ref } from "vue";
-import { soaClient } from "../api/soaClient";
 
 export function usePiSignoff(store, authStore) {
   const signoffTargetType = ref("FORM");
