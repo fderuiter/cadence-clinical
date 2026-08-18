@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "ui": "workspace:*",
+    "usdm-schemas": "workspace:*",
     "vue": "^3.5.40"
   },
   "devDependencies": {
