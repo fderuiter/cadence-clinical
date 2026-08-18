@@ -169,12 +169,16 @@ def generate_typescript_schemas(db_url: str, output_path: str) -> bool:
     table_count = 0
 
     # Consolidate all metadata tables across services
+    from sqlmodel import SQLModel
+
     consolidated_tables = {}
     for table in exec_Base.metadata.tables.values():
         consolidated_tables[table.name] = table
     for table in ctms_Base.metadata.tables.values():
         consolidated_tables[table.name] = table
     for table in eisf_Base.metadata.tables.values():
+        consolidated_tables[table.name] = table
+    for table in SQLModel.metadata.tables.values():
         consolidated_tables[table.name] = table
 
     # Identify test-only tables dynamically to prevent test pollution in parallel suites
