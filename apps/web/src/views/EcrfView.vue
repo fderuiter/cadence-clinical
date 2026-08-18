@@ -102,9 +102,13 @@
                 "
                 @change="loadEcrfSession"
               >
-                <option value="SUBJ-001">SUBJ-001 (Mock Subject)</option>
-                <option value="SUBJ-002">SUBJ-002 (Screened Cohort)</option>
-                <option value="SUBJ-003">SUBJ-003 (Post-Randomization)</option>
+                <option
+                  v-for="sub in store.subjects"
+                  :key="sub.id"
+                  :value="sub.id"
+                >
+                  {{ sub.label || `${sub.id} (${sub.status})` }}
+                </option>
               </select>
             </div>
             <div class="form-group" style="flex: 1">
@@ -1341,9 +1345,8 @@ import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
 
 // Re-consent Gating State (PRD-SUB-007)
-const reconsentGatedSubjects = ref(new Set(["SUBJ-002"]));
 const isReconsentGated = computed(() => {
-  return reconsentGatedSubjects.value.has(selectedSubjectId.value);
+  return store.isSubjectGated(selectedSubjectId.value);
 });
 
 const showEconsentModal = ref(false);
@@ -1364,21 +1367,13 @@ function openPaperIcfModal() {
 async function handleCompleteReconsent(method) {
   reconsentSubmitting.value = true;
   try {
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    reconsentGatedSubjects.value.delete(selectedSubjectId.value);
+    await store.clearReconsentGate(
+      selectedSubjectId.value,
+      method,
+      `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`
+    );
     showEconsentModal.value = false;
     showPaperIcfModal.value = false;
-    if (store.addLedgerBlock) {
-      await store.addLedgerBlock(
-        "RECONSENT_COMPLETED",
-        {
-          subject_id: selectedSubjectId.value,
-          protocol_version: "2.0.0",
-          method: method,
-        },
-        `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`
-      );
-    }
   } finally {
     reconsentSubmitting.value = false;
   }
@@ -1644,11 +1639,9 @@ onMounted(() => {
     if (route.query.studyId) store.activeStudyId = route.query.studyId;
     if (route.query.siteId) store.activeSiteId = route.query.siteId;
     if (route.query.subjectId) {
-      store.activeSubjectId = route.query.subjectId;
       const sId = String(route.query.subjectId);
-      if (sId.includes("002")) selectedSubjectId.value = "SUBJ-002";
-      else if (sId.includes("003")) selectedSubjectId.value = "SUBJ-003";
-      else selectedSubjectId.value = "SUBJ-001";
+      store.activeSubjectId = sId;
+      selectedSubjectId.value = sId;
     }
     if (route.query.visitId) {
       store.activeVisitId = route.query.visitId;
@@ -1688,7 +1681,7 @@ const signoffTargetId = ref("");
 const customTargetId = ref("");
 const signoffReason = ref("PI approval and sign-off.");
 
-const availableSubjects = ref(["SUBJ-001", "SUBJ-002", "SUBJ-003"]);
+const availableSubjects = computed(() => store.subjects.map((s) => s.id));
 const availableVisits = ref(["V-SCR", "V-TRT-A1", "V-TRT-A2", "V-TRT-B1"]);
 const availableFormSubmissions = ref(["FSUB-001", "FSUB-002", "FSUB-003"]);
 

@@ -443,6 +443,9 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import { useClinicalStore } from "../stores/clinical";
+
+const store = useClinicalStore();
 
 // State
 const selectedBaseVersion = ref("1.0.0");
@@ -461,53 +464,7 @@ const newAmendment = ref({
 });
 
 // Subject Cohort
-const subjectsList = ref([
-  {
-    id: "SUBJ-101",
-    status: "ACTIVE",
-    active_protocol_version: "2.0.0",
-    consentText: "Signed ICF v2.0.0",
-    consentColor: "green",
-    category: "migrated",
-    isGated: false,
-  },
-  {
-    id: "SUBJ-102",
-    status: "ACTIVE",
-    active_protocol_version: "1.0.0",
-    consentText: "Pending ICF v2.0.0",
-    consentColor: "yellow",
-    category: "pending",
-    isGated: true,
-  },
-  {
-    id: "SUBJ-103",
-    status: "ENROLLED",
-    active_protocol_version: "1.0.0",
-    consentText: "Pending ICF v2.0.0",
-    consentColor: "yellow",
-    category: "pending",
-    isGated: true,
-  },
-  {
-    id: "SUBJ-104",
-    status: "COMPLETED",
-    active_protocol_version: "1.0.0",
-    consentText: "Historical v1.0.0",
-    consentColor: "gray",
-    category: "completedPrev",
-    isGated: false,
-  },
-  {
-    id: "SUBJ-105",
-    status: "ACTIVE",
-    active_protocol_version: "2.0.0",
-    consentText: "Signed ICF v2.0.0",
-    consentColor: "green",
-    category: "migrated",
-    isGated: false,
-  },
-]);
+const subjectsList = computed(() => store.subjects);
 
 const activeSubjectCount = computed(() => subjectsList.value.length);
 
@@ -642,19 +599,11 @@ async function submitReconsent() {
   if (!activeModalSubject.value) return;
   isSubmitting.value = true;
   try {
-    // Simulate API registration
-    await new Promise((resolve) => setTimeout(resolve, 600));
-
-    const targetSub = subjectsList.value.find(
-      (s) => s.id === activeModalSubject.value.id
+    await store.clearReconsentGate(
+      activeModalSubject.value.id,
+      reconsentMode.value,
+      `Subject ${activeModalSubject.value.id} re-consent recorded via ${reconsentMode.value} in Amendment Management. Gating unlocked.`
     );
-    if (targetSub) {
-      targetSub.active_protocol_version = selectedAmendedVersion.value;
-      targetSub.consentText = `Signed ICF v${selectedAmendedVersion.value}`;
-      targetSub.consentColor = "green";
-      targetSub.category = "migrated";
-      targetSub.isGated = false;
-    }
     showReconsentModal.value = false;
   } finally {
     isSubmitting.value = false;
