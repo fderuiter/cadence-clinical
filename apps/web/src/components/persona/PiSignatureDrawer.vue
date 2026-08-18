@@ -140,27 +140,8 @@
           </p>
           <!-- Reuse GxpCredentialsInput for GxP re-authentication -->
           <!-- prettier-ignore -->
-          <GxpCredentialsInput
-            :username="reauthUsername"
-            :password="reauthPassword" data-pragma="pragma: allowlist secret"
-            :totp="reauthTotp"
-            username-id="reauth-username"
-            password-id="reauth-password"
-            totp-id="reauth-totp"
-            :disabled="false"
-            :password-required="true"
-            :group-style="{ marginBottom: '12px' }"
-            :input-style="{
-              width: '100%',
-              padding: '8px',
-              border: '1px solid var(--border)',
-              borderRadius: '4px',
-            }"
-            @update:username="$emit('update:reauthUsername', $event)"
-            @update:password="$emit('update:reauthPassword', $event)"
-            @update:totp="$emit('update:reauthTotp', $event)"
-            @keyup-enter="$emit('confirm-reauth')"
-          />
+          <GxpCredentialsInput :username="reauthUsername" :password="reauthPassword" :totp="reauthTotp" username-id="reauth-username" password-id="reauth-password" totp-id="reauth-totp" :disabled="false" :password-required="true" :group-style="{ marginBottom: '12px' }" :input-style="{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '4px' }" @update:username="$emit('update:reauthUsername', $event)" @update:password="$emit('update:reauthPassword', $event)" @update:totp="$emit('update:reauthTotp', $event)" @keyup-enter="$emit('confirm-reauth')" />
+          <!-- pragma: allowlist secret -->
           <div
             class="form-group"
             style="
