@@ -2141,7 +2141,9 @@ def test_gateway_startup_production_no_bypass_configs() -> None:
     assert result.returncode == 0
 
 
-def generate_test_rsa_jwks_and_token(kid: str = "new-kid-123") -> tuple[dict, str]:
+def generate_test_rsa_jwks_and_token(
+    kid: str = "new-kid-123", aud: Any = "cadence-clinical"
+) -> tuple[dict, str]:
     import base64
 
     from cryptography.hazmat.primitives import serialization
@@ -2154,8 +2156,11 @@ def generate_test_rsa_jwks_and_token(kid: str = "new-kid-123") -> tuple[dict, st
         format=serialization.PrivateFormat.TraditionalOpenSSL,
         encryption_algorithm=serialization.NoEncryption(),
     )
+    claims: dict[str, Any] = {"sub": "user_123", "preferred_username": "user_123"}
+    if aud is not None:
+        claims["aud"] = aud
     token = jwt.encode(
-        {"sub": "user_123", "preferred_username": "user_123"},
+        claims,
         pem,
         algorithm="RS256",
         headers={"kid": kid},
@@ -2399,3 +2404,181 @@ def test_sandbox_tenant_isolation_gate_violations() -> None:
             "Sandbox token cannot access non-sandbox resources"
             in res_blocked_query.json()["detail"]
         )
+
+
+@pytest.mark.asyncio
+async def test_keycloak_token_valid_audience_string(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Validate that Keycloak tokens with a string audience matching the configured client ID are accepted.
+    """
+    from apps.gateway import main as gateway_main
+
+    jwks, token = generate_test_rsa_jwks_and_token(
+        "aud-string-kid", aud="cadence-clinical"
+    )
+    monkeypatch.setattr(gateway_main, "jwks_cache", jwks)
+
+    payload = await gateway_main.verify_token(token)
+    assert payload["sub"] == "user_123"
+    assert payload["aud"] == "cadence-clinical"
+
+
+@pytest.mark.asyncio
+async def test_keycloak_token_valid_audience_array(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Validate that Keycloak tokens with an audience array containing the configured client ID are accepted.
+    """
+    from apps.gateway import main as gateway_main
+
+    jwks, token = generate_test_rsa_jwks_and_token(
+        "aud-array-kid", aud=["cadence-clinical", "account"]
+    )
+    monkeypatch.setattr(gateway_main, "jwks_cache", jwks)
+
+    payload = await gateway_main.verify_token(token)
+    assert payload["sub"] == "user_123"
+    assert "cadence-clinical" in payload["aud"]
+
+
+@pytest.mark.asyncio
+async def test_keycloak_token_unauthorized_audience_string(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Validate that Keycloak tokens issued for an unauthorized client ID are rejected with 401.
+    """
+    from fastapi import HTTPException
+
+    from apps.gateway import main as gateway_main
+
+    jwks, token = generate_test_rsa_jwks_and_token(
+        "unauth-aud-kid", aud="unauthorized-client"
+    )
+    monkeypatch.setattr(gateway_main, "jwks_cache", jwks)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await gateway_main.verify_token(token)
+    assert exc_info.value.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_keycloak_token_unauthorized_audience_array(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Validate that Keycloak tokens lacking the gateway client ID in an audience array are rejected.
+    """
+    from fastapi import HTTPException
+
+    from apps.gateway import main as gateway_main
+
+    jwks, token = generate_test_rsa_jwks_and_token(
+        "unauth-array-kid", aud=["other-app", "account"]
+    )
+    monkeypatch.setattr(gateway_main, "jwks_cache", jwks)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await gateway_main.verify_token(token)
+    assert exc_info.value.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_keycloak_token_missing_audience(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Validate that Keycloak tokens missing an audience claim altogether are rejected with 401.
+    """
+    from fastapi import HTTPException
+
+    from apps.gateway import main as gateway_main
+
+    jwks, token = generate_test_rsa_jwks_and_token("missing-aud-kid", aud=None)
+    monkeypatch.setattr(gateway_main, "jwks_cache", jwks)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await gateway_main.verify_token(token)
+    assert exc_info.value.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_gateway_local_secret_bypasses_audience_check() -> None:
+    """
+    Validate that tokens verified via local gateway secret skip Keycloak audience requirements.
+    """
+    from apps.gateway import main as gateway_main
+
+    token = jwt.encode(
+        {"sub": "local_user", "aud": "arbitrary-aud"},
+        gateway_main.GATEWAY_SECRET,
+        algorithm="HS256",
+    )
+    payload = await gateway_main.verify_token(token)
+    assert payload["sub"] == "local_user"
+
+
+@pytest.mark.asyncio
+async def test_gateway_test_secret_bypasses_audience_check(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Validate that test tokens generated with test-specific secrets bypass audience requirements in dev.
+    """
+    from apps.gateway import main as gateway_main
+
+    monkeypatch.setenv("JWT_TEST_SECRET", "custom_test_secret")
+    token = jwt.encode(
+        {"sub": "test_user"},
+        "custom_test_secret",
+        algorithm="HS256",
+    )
+    payload = await gateway_main.verify_token(token)
+    assert payload["sub"] == "test_user"
+
+
+def test_gateway_unauthorized_client_token_returns_401(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Validate that sending a request with an unauthorized Keycloak client token returns 401.
+    """
+    from apps.gateway import main as gateway_main
+
+    jwks, token = generate_test_rsa_jwks_and_token(
+        "route-unauth-kid", aud="wrong-client"
+    )
+    monkeypatch.setattr(gateway_main, "jwks_cache", jwks)
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/api/v1/usdm/schema",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 401
+
+
+def test_gateway_startup_staging_fails_with_bypass_configs() -> None:
+    """
+    Validate that staging environment fails startup if test bypass configurations are set.
+    """
+    import subprocess
+    import sys
+
+    env = {
+        "APP_ENV": "staging",
+        "JWT_TEST_SECRET": "some_test_secret",
+        "GATEWAY_SECRET": "internal-gateway-secret-12345",
+        "AUDIT_LOG_SECRET_KEY": "test-gxp-audit-secret-key-placeholder-abc",
+        "INBOUND_EMAIL_HMAC_SECRET": "test-email-hmac-secret-placeholder-xyz",
+    }
+    result = subprocess.run(
+        [sys.executable, "-c", "import apps.gateway.main"],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+    assert "SECURITY ALERT" in result.stderr
+    assert "JWT_TEST_SECRET" in result.stderr
