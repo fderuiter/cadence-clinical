@@ -148,7 +148,4 @@ def test_gateway_proxying_v2_studies(monkeypatch: pytest.MonkeyPatch) -> None:
             headers={"Authorization": f"Bearer {token}"},
         )
         assert response.status_code == 200
-        assert (
-            sent_request_url
-            == "http://localhost:8001/api/v2/studies/study_1/usdm"
-        )
+        assert sent_request_url == "http://localhost:8001/api/v2/studies/study_1/usdm"

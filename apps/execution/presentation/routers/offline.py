@@ -168,8 +168,7 @@ async def sync_offline_batch(
 
     user_val = user.get("sub") or "system"
     reason_val = (
-        getattr(request.state, "change_reason", None)
-        or "Offline batch synchronization"
+        getattr(request.state, "change_reason", None) or "Offline batch synchronization"
     )
 
     await session.execute(
