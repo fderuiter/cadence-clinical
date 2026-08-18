@@ -111,6 +111,9 @@ class SubjectConsent(AuditedModel):
     requires_reconsent: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
+    is_paper_override: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
 
 
 InformedConsentRecord = SubjectConsent

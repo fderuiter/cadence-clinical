@@ -20,8 +20,6 @@ async def test_pool_connection_state_eviction(tmp_path: Path) -> None:
     db_file = str(tmp_path / "test_eviction.db")
 
     await db_manager.close()
-
-    await db_manager.close()
     db_manager._sqlite_settings.clear()
     db_manager.init_db(f"sqlite+aiosqlite:///{db_file}")
 
