@@ -151,44 +151,57 @@ beforeEach(async () => {
   }
 
   if (globalThis.indexedDB) {
-    await new Promise((resolve) => {
-      const req = globalThis.indexedDB.open("SubjectPortalSyncDB", 2);
-      req.onsuccess = (event) => {
-        const db = event.target.result;
-        const tx = db.transaction(
-          ["submissions", "config", "instruments", "assignments"],
-          "readwrite"
-        );
-        tx.objectStore("submissions").clear();
-        tx.objectStore("config").clear();
-        tx.objectStore("instruments").clear();
-        tx.objectStore("assignments").clear();
-        tx.oncomplete = () => {
-          db.close();
-          resolve();
+    const dbNames = [
+      "SubjectPortalSyncDB",
+      "SubjectPortalSyncDB_subject_001",
+      "SubjectPortalSyncDB_subject_authenticated",
+    ];
+    for (const dbName of dbNames) {
+      await new Promise((resolve) => {
+        const req = globalThis.indexedDB.open(dbName, 2);
+        req.onsuccess = (event) => {
+          const db = event.target.result;
+          if (db.objectStoreNames.length === 0) {
+            db.close();
+            return resolve();
+          }
+          const tx = db.transaction(
+            Array.from(db.objectStoreNames),
+            "readwrite"
+          );
+          for (const name of db.objectStoreNames) {
+            tx.objectStore(name).clear();
+          }
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => {
+            db.close();
+            resolve();
+          };
         };
-        tx.onerror = () => {
-          db.close();
-          resolve();
+        req.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains("submissions")) {
+            db.createObjectStore("submissions", { keyPath: "sequence_number" });
+          }
+          if (!db.objectStoreNames.contains("config")) {
+            db.createObjectStore("config", { keyPath: "key" });
+          }
+          if (!db.objectStoreNames.contains("instruments")) {
+            db.createObjectStore("instruments", { keyPath: "id" });
+          }
+          if (!db.objectStoreNames.contains("assignments")) {
+            db.createObjectStore("assignments", { keyPath: "id" });
+          }
+          if (!db.objectStoreNames.contains("drafts")) {
+            db.createObjectStore("drafts", { keyPath: "assignment_id" });
+          }
         };
-      };
-      req.onupgradeneeded = (event) => {
-        const db = event.target.result;
-        if (!db.objectStoreNames.contains("submissions")) {
-          db.createObjectStore("submissions", { keyPath: "sequence_number" });
-        }
-        if (!db.objectStoreNames.contains("config")) {
-          db.createObjectStore("config", { keyPath: "key" });
-        }
-        if (!db.objectStoreNames.contains("instruments")) {
-          db.createObjectStore("instruments", { keyPath: "id" });
-        }
-        if (!db.objectStoreNames.contains("assignments")) {
-          db.createObjectStore("assignments", { keyPath: "id" });
-        }
-      };
-      req.onerror = () => resolve();
-    });
+        req.onerror = () => resolve();
+      });
+    }
   }
 });
 
