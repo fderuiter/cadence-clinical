@@ -79,7 +79,7 @@ describe("Subject Portal Immediate Re-Consent Workflow", () => {
   it("executes e-signature, logs 21 CFR Part 11 audit record, and unlocks submission status", async () => {
     openReconsentModal();
     state.reconsentForm.username = "subject_001";
-    state.reconsentForm.password = "secret_pin_123";
+    state.reconsentForm.password = "secret_pin_123"; // pragma: allowlist secret
 
     await submitReconsentSignature();
 
