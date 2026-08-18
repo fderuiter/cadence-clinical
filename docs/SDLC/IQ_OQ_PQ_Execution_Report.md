@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2727
-- **Passed:** 2708 🟢
+- **Total Automated Test Cases Run:** 2731
+- **Passed:** 2712 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.30%
@@ -1477,6 +1477,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_subject_consent_blocking_and_reconsent_lifecycle`                                 | `apps.execution.tests.test_reconsent_blocking`                              | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_subject_consent_endpoint_lifecycle`                                               | `apps.execution.tests.test_reconsent_blocking`                              | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_admin_visibility_endpoint`                                                        | `apps.execution.tests.test_relational_outbox`                               | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_background_worker_uses_separate_database_connection_channel`                      | `apps.execution.tests.test_relational_outbox`                               | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_commit_clinical_change_without_reason_fails`                                      | `apps.execution.tests.test_relational_outbox`                               | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_manual_coding_writes_query_resolve_to_outbox`                                     | `apps.execution.tests.test_relational_outbox`                               | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_outbox_no_unencrypted_pii`                                                        | `apps.execution.tests.test_relational_outbox`                               | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_outbox_worker_batch_size_limit`                                                   | `apps.execution.tests.test_relational_outbox`                               | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
@@ -1485,6 +1487,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_outbox_worker_dialect_aware_locking_sqlite`                                       | `apps.execution.tests.test_relational_outbox`                               | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_outbox_worker_polling_and_dispatch_success`                                       | `apps.execution.tests.test_relational_outbox`                               | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_outbox_worker_retry_and_backoff`                                                  | `apps.execution.tests.test_relational_outbox`                               | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_parallel_workers_do_not_deliver_duplicate_events`                                 | `apps.execution.tests.test_relational_outbox`                               | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_rollback_prevents_outbox_record_creation`                                         | `apps.execution.tests.test_relational_outbox`                               | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_trial_lock_writes_outbox`                                                         | `apps.execution.tests.test_relational_outbox`                               | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_get_subject_api_blinding_and_isolation`                                           | `apps.execution.tests.test_role_redaction_and_access`                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_get_visit_api_blinding_and_isolation`                                             | `apps.execution.tests.test_role_redaction_and_access`                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |

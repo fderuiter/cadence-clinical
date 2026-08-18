@@ -574,12 +574,16 @@ async def test_rollback_prevents_outbox_record_creation() -> None:
     # Verify that neither the clinical record nor the outbox record exists
     async with db_manager.get_session_maker()() as session:
         res_subj = await session.execute(
-            select(ClinicalSubject).where(ClinicalSubject.subject_id == "SUBJ-ROLLBACK-01")
+            select(ClinicalSubject).where(
+                ClinicalSubject.subject_id == "SUBJ-ROLLBACK-01"
+            )
         )
         assert res_subj.scalars().first() is None
 
         res_outbox = await session.execute(
-            select(IntegrationOutbox).where(IntegrationOutbox.correlation_id == "corr-rollback-1")
+            select(IntegrationOutbox).where(
+                IntegrationOutbox.correlation_id == "corr-rollback-1"
+            )
         )
         assert res_outbox.scalars().first() is None
 
@@ -669,7 +673,10 @@ async def test_parallel_workers_do_not_deliver_duplicate_events() -> None:
 
     with patch.object(db_manager.engine.dialect, "name", "postgresql"):
         with patch("httpx.AsyncClient.post", mock_post):
-            with patch("apps.execution.workers.outbox_worker._session_maker", locking_session_factory):
+            with patch(
+                "apps.execution.workers.outbox_worker._session_maker",
+                locking_session_factory,
+            ):
                 # Run two workers in parallel
                 await asyncio.gather(poll_and_dispatch(), poll_and_dispatch())
 
@@ -699,4 +706,3 @@ async def test_background_worker_uses_separate_database_connection_channel() -> 
     assert bg_sm is not api_sm
 
     await bg_db_manager.close()
-
