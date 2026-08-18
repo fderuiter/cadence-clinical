@@ -116,6 +116,7 @@ _RAW_WHITELISTED_ROUTES = {
     ("post", "/api/v1/execution/auditor/token/generate"),
     ("get", "/api/v1/execution/amendments/summary/{study_id}/{version}"),
     ("post", "/api/v1/execution/amendments/publish"),
+    ("post", "/api/v1/execution/amendments/bulk-reconsent"),
     ("post", "/api/v1/execution/signatures/batch-sign-off"),
     ("get", "/api/v1/execution/locks/status/{form_id}"),
     ("delete", "/api/v1/eisf/documents/{document_id}"),

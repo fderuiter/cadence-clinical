@@ -486,3 +486,67 @@ async def test_modular_coordinate_matching_and_collision_logging(caplog) -> None
 
     assert pulse_a.value == 72.0
     assert pulse_b.value == 72.0
+
+
+@pytest.mark.asyncio
+async def test_bulk_subject_reconsent_endpoint():
+    """Validates batch subject re-consent sign-off via the bulk-reconsent router endpoint."""
+    async with db_manager.get_session_maker()() as session:
+        # Create test subjects across sites
+        s1 = ClinicalSubject(
+            id="SUBJ-BULK-01",
+            subject_id="SUBJ-BULK-01",
+            study_id="STUDY-BULK",
+            site_id="SITE-101",
+            status="SCREENING",
+            active_protocol_version="1.0.0",
+        )
+        s2 = ClinicalSubject(
+            id="SUBJ-BULK-02",
+            subject_id="SUBJ-BULK-02",
+            study_id="STUDY-BULK",
+            site_id="SITE-102",
+            status="SCREENING",
+            active_protocol_version="1.0.0",
+        )
+        session.add_all([s1, s2])
+        await session.commit()
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGIThrottledTransport(app=app)
+        if hasattr(httpx, "ASGIThrottledTransport")
+        else httpx.ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        headers = get_auth_headers(
+            user_id="site_coordinator_01",
+            roles="crc",
+            change_reason="Bulk protocol amendment re-consent verification",
+        )
+        payload = {
+            "subject_ids": ["SUBJ-BULK-01", "SUBJ-BULK-02"],
+            "study_id": "STUDY-BULK",
+            "protocol_version": "2.0.0",
+            "signature_type": "ECONSENT",
+            "signer_name": "site_coordinator_01",
+            "reason_for_change": "Bulk protocol amendment re-consent verification",
+        }
+        res = await client.post(
+            "/api/v1/execution/amendments/bulk-reconsent",
+            json=payload,
+            headers=headers,
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"] == "SUCCESS"
+        assert data["processed_count"] == 2
+        assert data["cleared_subject_ids"] == ["SUBJ-BULK-01", "SUBJ-BULK-02"]
+
+    # Verify subjects updated in database
+    async with db_manager.get_session_maker()() as session:
+        sub_res = await session.execute(
+            select(ClinicalSubject).where(ClinicalSubject.study_id == "STUDY-BULK")
+        )
+        subs = sub_res.scalars().all()
+        for sub in subs:
+            assert sub.active_protocol_version == "2.0.0"
