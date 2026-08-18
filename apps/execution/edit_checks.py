@@ -54,13 +54,119 @@ def rewrite_condition_ast(node: Any) -> Any:
     return node
 
 
+
+class BatchEvaluationContext:
+    """In-memory evaluation context loaded in exactly three batch database queries.
+
+    Consolidates lookups for visits, submission statuses, and observations
+    per subject during form evaluation to eliminate database connection pool congestion.
+    """
+
+    def __init__(
+        self,
+        visits: list[ClinicalVisit],
+        submissions: list[FormSubmission],
+        observations: list[ClinicalObservation],
+    ) -> None:
+        """Initialize the evaluation context with pre-fetched records."""
+        self.visits = visits
+        self.submissions = submissions
+        self.observations = observations
+
+        # Build fast lookup maps
+        self.visit_by_id: dict[str, ClinicalVisit] = {
+            v.id: v for v in visits if v.id
+        }
+        self.visit_by_name: dict[str, ClinicalVisit] = {
+            v.visit_name.upper(): v for v in visits if v.visit_name
+        }
+
+        self.submissions_by_visit: dict[str, list[FormSubmission]] = {}
+        for sub in submissions:
+            if sub.visit_id:
+                self.submissions_by_visit.setdefault(sub.visit_id, []).append(sub)
+
+        self.obs_by_visit_and_code: dict[
+            tuple[str, str], list[ClinicalObservation]
+        ] = {}
+        self.obs_by_code: dict[str, list[ClinicalObservation]] = {}
+        for obs in observations:
+            code_upper = obs.test_code.upper() if obs.test_code else ""
+            self.obs_by_code.setdefault(code_upper, []).append(obs)
+            if obs.visit_id:
+                self.obs_by_visit_and_code.setdefault(
+                    (obs.visit_id, code_upper), []
+                ).append(obs)
+
+    @classmethod
+    async def load(
+        cls, session: AsyncSession, subject_id: str, study_id: str
+    ) -> BatchEvaluationContext:
+        """Consolidates lookups for visits, submission statuses, and observations into 3 queries.
+
+        Args:
+            session: Async database session.
+            subject_id: Subject identifier.
+            study_id: Study identifier.
+
+        Returns:
+            BatchEvaluationContext: Pre-loaded context for in-memory resolution.
+        """
+        # Query 1: Visits
+        v_res = await session.execute(
+            select(ClinicalVisit).where(
+                ClinicalVisit.subject_id == subject_id,
+                ClinicalVisit.study_id == study_id,
+            )
+        )
+        visits = list(v_res.scalars().all())
+
+        # Query 2: Form Submissions
+        s_res = await session.execute(
+            select(FormSubmission).where(
+                FormSubmission.subject_id == subject_id,
+                FormSubmission.study_id == study_id,
+                FormSubmission.is_deleted.is_(False),
+            )
+        )
+        submissions = list(s_res.scalars().all())
+
+        # Query 3: Clinical Observations
+        o_res = await session.execute(
+            select(ClinicalObservation)
+            .where(
+                ClinicalObservation.subject_id == subject_id,
+                ClinicalObservation.study_id == study_id,
+                ClinicalObservation.is_deleted.is_(False),
+            )
+            .order_by(ClinicalObservation.observation_date.desc())
+        )
+        observations = list(o_res.scalars().all())
+
+        return cls(visits=visits, submissions=submissions, observations=observations)
+
+
 class EditCheckRule:
     rule_id: str
     rule_type: str  # "field_level", "cross_form", "longitudinal"
     message: str
 
+    def applies_to_observation(self, observation: ClinicalObservation) -> bool:
+        """Fast in-memory precondition check before running detailed rule logic.
+
+        Args:
+            observation: Target observation to evaluate.
+
+        Returns:
+            bool: True if observation matches rule preconditions.
+        """
+        return True
+
     async def evaluate(
-        self, session: AsyncSession, observation: ClinicalObservation
+        self,
+        session: AsyncSession,
+        observation: ClinicalObservation,
+        batch_context: BatchEvaluationContext | None = None,
     ) -> str | None:
         raise NotImplementedError()
 
@@ -70,8 +176,14 @@ class OutlierCheckRule(EditCheckRule):
     rule_type = "field_level"
     message = "Observation is a statistical outlier within the cohort."
 
+    def applies_to_observation(self, observation: ClinicalObservation) -> bool:
+        return observation.value is not None or observation.is_outlier is not None
+
     async def evaluate(
-        self, session: AsyncSession, observation: ClinicalObservation
+        self,
+        session: AsyncSession,
+        observation: ClinicalObservation,
+        batch_context: BatchEvaluationContext | None = None,
     ) -> str | None:
         if observation.is_outlier:
             return self.message
@@ -83,10 +195,20 @@ class HighSystolicBPCheckRule(EditCheckRule):
     rule_type = "field_level"
     message = "Systolic blood pressure entry of {value} mmHg is critically high."
 
+    def applies_to_observation(self, observation: ClinicalObservation) -> bool:
+        return (observation.test_code or "").upper() == "SYSBP"
+
     async def evaluate(
-        self, session: AsyncSession, observation: ClinicalObservation
+        self,
+        session: AsyncSession,
+        observation: ClinicalObservation,
+        batch_context: BatchEvaluationContext | None = None,
     ) -> str | None:
-        if observation.test_code == "SYSBP" and observation.value is not None:
+        if (
+            observation.test_code
+            and observation.test_code.upper() == "SYSBP"
+            and observation.value is not None
+        ):
             if observation.value > 200.0:
                 return self.message.format(value=observation.value)
         return None
@@ -97,8 +219,17 @@ class LabOutOfRangeCheckRule(EditCheckRule):
     rule_type = "field_level"
     message = "Laboratory observation is out of range. Indicator: {indicator}, Normal bounds: {bounds}."
 
+    def applies_to_observation(self, observation: ClinicalObservation) -> bool:
+        return (
+            observation.domain == "LB"
+            or observation.lab_out_of_range is not None
+        )
+
     async def evaluate(
-        self, session: AsyncSession, observation: ClinicalObservation
+        self,
+        session: AsyncSession,
+        observation: ClinicalObservation,
+        batch_context: BatchEvaluationContext | None = None,
     ) -> str | None:
         if observation.lab_out_of_range:
             indicator = observation.lab_indicator or "UNKNOWN"
@@ -112,40 +243,73 @@ class AEConsentTemporalCheckRule(EditCheckRule):
     rule_type = "cross_form"
     message = "Adverse event onset date cannot be before informed consent date."
 
+    def applies_to_observation(self, observation: ClinicalObservation) -> bool:
+        code = (observation.test_code or "").upper()
+        domain = (observation.domain or "").upper()
+        return domain in ("AE", "DS") or code in (
+            "AESTDTC",
+            "AE_ONSET",
+            "DSSTDTC",
+            "INFORMED_CONSENT",
+            "INFORMED_CONSENT_DATE",
+        )
+
     async def evaluate(
-        self, session: AsyncSession, observation: ClinicalObservation
+        self,
+        session: AsyncSession,
+        observation: ClinicalObservation,
+        batch_context: BatchEvaluationContext | None = None,
     ) -> str | None:
-        # This rule evaluates if we have both AE onset and Informed Consent date
         subject_id = observation.subject_id
 
-        # Find the latest AE onset observation and latest Informed Consent observation for this subject
-        ae_stmt = (
-            select(ClinicalObservation)
-            .where(
-                ClinicalObservation.subject_id == subject_id,
-                ClinicalObservation.test_code.in_(["AESTDTC", "AE_ONSET"]),
-                ClinicalObservation.is_deleted.is_(False),
-            )
-            .order_by(ClinicalObservation.observation_date.desc())
-        )
-
-        consent_stmt = (
-            select(ClinicalObservation)
-            .where(
-                ClinicalObservation.subject_id == subject_id,
-                ClinicalObservation.test_code.in_(
-                    ["DSSTDTC", "INFORMED_CONSENT", "INFORMED_CONSENT_DATE"]
+        if batch_context is not None:
+            ae_obs = next(
+                (
+                    o
+                    for o in batch_context.observations
+                    if o.subject_id == subject_id
+                    and (o.test_code or "").upper() in ("AESTDTC", "AE_ONSET")
                 ),
-                ClinicalObservation.is_deleted.is_(False),
+                None,
             )
-            .order_by(ClinicalObservation.observation_date.desc())
-        )
+            consent_obs = next(
+                (
+                    o
+                    for o in batch_context.observations
+                    if o.subject_id == subject_id
+                    and (o.test_code or "").upper()
+                    in ("DSSTDTC", "INFORMED_CONSENT", "INFORMED_CONSENT_DATE")
+                ),
+                None,
+            )
+        else:
+            ae_stmt = (
+                select(ClinicalObservation)
+                .where(
+                    ClinicalObservation.subject_id == subject_id,
+                    ClinicalObservation.test_code.in_(["AESTDTC", "AE_ONSET"]),
+                    ClinicalObservation.is_deleted.is_(False),
+                )
+                .order_by(ClinicalObservation.observation_date.desc())
+            )
 
-        ae_res = await session.execute(ae_stmt)
-        ae_obs = ae_res.scalars().first()
+            consent_stmt = (
+                select(ClinicalObservation)
+                .where(
+                    ClinicalObservation.subject_id == subject_id,
+                    ClinicalObservation.test_code.in_(
+                        ["DSSTDTC", "INFORMED_CONSENT", "INFORMED_CONSENT_DATE"]
+                    ),
+                    ClinicalObservation.is_deleted.is_(False),
+                )
+                .order_by(ClinicalObservation.observation_date.desc())
+            )
 
-        consent_res = await session.execute(consent_stmt)
-        consent_obs = consent_res.scalars().first()
+            ae_res = await session.execute(ae_stmt)
+            ae_obs = ae_res.scalars().first()
+
+            consent_res = await session.execute(consent_stmt)
+            consent_obs = consent_res.scalars().first()
 
         if not ae_obs or not consent_obs:
             return None
@@ -195,24 +359,33 @@ def extract_fields_from_dict(node: dict) -> list:
 
 
 async def resolve_authored_rule_context(
-    session: AsyncSession, observation: ClinicalObservation, condition: dict
+    session: AsyncSession,
+    observation: ClinicalObservation,
+    condition: dict,
+    batch_context: BatchEvaluationContext | None = None,
 ) -> tuple[dict | None, str | None]:
-    """
-    Resolves the data context for an authored rule's condition.
+    """Resolves the data context for an authored rule's condition.
+
     Returns (context_dict, sentinel) where sentinel is "PENDING_PREDECESSOR" or None.
+    If batch_context is provided, lookups execute in memory without additional database queries.
     """
+    if batch_context is None:
+        batch_context = await BatchEvaluationContext.load(
+            session, observation.subject_id, observation.study_id
+        )
+
     context = {}
 
     # 1. Fetch current visit
-    current_visit = None
-    if observation.visit_id:
-        v_res = await session.execute(
-            select(ClinicalVisit).where(ClinicalVisit.id == observation.visit_id)
-        )
-        current_visit = v_res.scalars().first()
-
+    current_visit = (
+        batch_context.visit_by_id.get(observation.visit_id)
+        if observation.visit_id
+        else None
+    )
     current_visit_name = (
-        current_visit.visit_name.upper() if current_visit else "UNKNOWN"
+        current_visit.visit_name.upper()
+        if current_visit and current_visit.visit_name
+        else "UNKNOWN"
     )
     current_idx = (
         VISIT_SEQUENCE.index(current_visit_name)
@@ -240,10 +413,10 @@ async def resolve_authored_rule_context(
 
         # Determine target visit name
         is_prior = False
-        if visit_relative == "previous" or visit_relative == "predecessor":
+        if visit_relative in ("previous", "predecessor"):
             is_prior = True
             if current_idx <= 0:
-                # First visit has no predecessor, we skip or treat as None
+                # First visit has no predecessor, skip
                 context[context_key] = None
                 continue
             target_visit_name = VISIT_SEQUENCE[current_idx - 1]
@@ -260,35 +433,22 @@ async def resolve_authored_rule_context(
             target_visit_name = current_visit_name
 
         # 3. Look up target visit
-        target_visit_stmt = select(ClinicalVisit).where(
-            ClinicalVisit.subject_id == observation.subject_id,
-            ClinicalVisit.visit_name.ilike(target_visit_name),
-            ClinicalVisit.study_id == observation.study_id,
-        )
-        target_visit_res = await session.execute(target_visit_stmt)
-        target_visit = target_visit_res.scalars().first()
-
+        target_visit = batch_context.visit_by_name.get(target_visit_name)
         if not target_visit:
             if is_prior:
                 return None, "PENDING_PREDECESSOR"
             context[context_key] = None
             continue
 
-        # Check if the target visit's FormSubmission is "DRAFT" (incomplete)
-        sub_stmt = select(FormSubmission).where(
-            FormSubmission.subject_id == observation.subject_id,
-            FormSubmission.visit_id == target_visit.id,
-            FormSubmission.is_deleted.is_(False),
-        )
-        sub_res = await session.execute(sub_stmt)
-        subs = sub_res.scalars().all()
+        # Check if target visit's FormSubmission is "DRAFT" (incomplete)
+        subs = batch_context.submissions_by_visit.get(target_visit.id, [])
         if subs and any(sub.status == "DRAFT" for sub in subs) and is_prior:
             return None, "PENDING_PREDECESSOR"
 
         # 4. Look up target observation
-        # First check if the observation we are evaluating is the target observation
         if (
             observation.visit_id == target_visit.id
+            and observation.test_code
             and observation.test_code.upper() == field_id.upper()
         ):
             val = (
@@ -299,18 +459,10 @@ async def resolve_authored_rule_context(
             context[context_key] = val
             continue
 
-        obs_stmt = (
-            select(ClinicalObservation)
-            .where(
-                ClinicalObservation.subject_id == observation.subject_id,
-                ClinicalObservation.visit_id == target_visit.id,
-                ClinicalObservation.test_code.ilike(field_id),
-                ClinicalObservation.is_deleted.is_(False),
-            )
-            .order_by(ClinicalObservation.observation_date.desc())
+        target_obs_list = batch_context.obs_by_visit_and_code.get(
+            (target_visit.id, field_id.upper()), []
         )
-        obs_res = await session.execute(obs_stmt)
-        target_obs = obs_res.scalars().first()
+        target_obs = target_obs_list[0] if target_obs_list else None
 
         if not target_obs:
             if is_prior:
@@ -339,12 +491,27 @@ class AuthoredCrossFormRule(EditCheckRule):
         self.condition = db_rule.condition
         self.publication_version = db_rule.publication_version
 
+    def applies_to_observation(self, observation: ClinicalObservation) -> bool:
+        if not self.condition or not isinstance(self.condition, dict):
+            return True
+        refs = extract_fields_from_dict(self.condition)
+        if not refs:
+            return True
+        ref_field_ids = {
+            r.get("field_id", "").upper() for r in refs if r.get("field_id")
+        }
+        obs_code = (observation.test_code or "").upper()
+        return obs_code in ref_field_ids or not ref_field_ids
+
     async def evaluate(
-        self, session: AsyncSession, observation: ClinicalObservation
+        self,
+        session: AsyncSession,
+        observation: ClinicalObservation,
+        batch_context: BatchEvaluationContext | None = None,
     ) -> str | None:
         # 1. Resolve context & check for pending predecessor
         context, sentinel = await resolve_authored_rule_context(
-            session, observation, self.condition
+            session, observation, self.condition, batch_context=batch_context
         )
         if sentinel == "PENDING_PREDECESSOR":
             return "PENDING_PREDECESSOR"
@@ -382,11 +549,17 @@ class WeightLossCheckRule(EditCheckRule):
     rule_type = "longitudinal"
     message = "Subject weight loss is greater than 20% compared to predecessor visit."
 
+    def applies_to_observation(self, observation: ClinicalObservation) -> bool:
+        return (observation.test_code or "").upper() in ("WEIGHT", "VSWT")
+
     async def evaluate(
-        self, session: AsyncSession, observation: ClinicalObservation
+        self,
+        session: AsyncSession,
+        observation: ClinicalObservation,
+        batch_context: BatchEvaluationContext | None = None,
     ) -> str | None:
         # Only evaluates weight parameters
-        if observation.test_code not in ["WEIGHT", "VSWT"]:
+        if (observation.test_code or "").upper() not in ["WEIGHT", "VSWT"]:
             return None
 
         if observation.value is None:
@@ -398,12 +571,16 @@ class WeightLossCheckRule(EditCheckRule):
         if not observation.visit_id:
             return None
 
-        current_visit_stmt = select(ClinicalVisit).where(
-            ClinicalVisit.id == observation.visit_id
-        )
-        current_visit_res = await session.execute(current_visit_stmt)
-        current_visit = current_visit_res.scalars().first()
-        if not current_visit:
+        if batch_context is not None:
+            current_visit = batch_context.visit_by_id.get(observation.visit_id)
+        else:
+            current_visit_stmt = select(ClinicalVisit).where(
+                ClinicalVisit.id == observation.visit_id
+            )
+            current_visit_res = await session.execute(current_visit_stmt)
+            current_visit = current_visit_res.scalars().first()
+
+        if not current_visit or not current_visit.visit_name:
             return None
 
         current_visit_name = current_visit.visit_name.upper()
@@ -418,42 +595,56 @@ class WeightLossCheckRule(EditCheckRule):
         predecessor_visit_name = VISIT_SEQUENCE[idx - 1]
 
         # 2. Get predecessor visit and weight observation
-        pred_visit_stmt = select(ClinicalVisit).where(
-            ClinicalVisit.subject_id == subject_id,
-            ClinicalVisit.visit_name.ilike(predecessor_visit_name),
-            ClinicalVisit.study_id == observation.study_id,
-        )
-        pred_visit_res = await session.execute(pred_visit_stmt)
-        pred_visit = pred_visit_res.scalars().first()
+        if batch_context is not None:
+            pred_visit = batch_context.visit_by_name.get(predecessor_visit_name)
+        else:
+            pred_visit_stmt = select(ClinicalVisit).where(
+                ClinicalVisit.subject_id == subject_id,
+                ClinicalVisit.visit_name.ilike(predecessor_visit_name),
+                ClinicalVisit.study_id == observation.study_id,
+            )
+            pred_visit_res = await session.execute(pred_visit_stmt)
+            pred_visit = pred_visit_res.scalars().first()
 
         if not pred_visit:
             # Predecessor visit is unavailable/incomplete: return "PENDING_PREDECESSOR" signal
             return "PENDING_PREDECESSOR"
 
         # Check if the predecessor visit's FormSubmission is "DRAFT" (incomplete)
-        pred_sub_stmt = select(FormSubmission).where(
-            FormSubmission.subject_id == subject_id,
-            FormSubmission.visit_id == pred_visit.id,
-            FormSubmission.is_deleted.is_(False),
-        )
-        pred_sub_res = await session.execute(pred_sub_stmt)
-        pred_subs = pred_sub_res.scalars().all()
+        if batch_context is not None:
+            pred_subs = batch_context.submissions_by_visit.get(pred_visit.id, [])
+        else:
+            pred_sub_stmt = select(FormSubmission).where(
+                FormSubmission.subject_id == subject_id,
+                FormSubmission.visit_id == pred_visit.id,
+                FormSubmission.is_deleted.is_(False),
+            )
+            pred_sub_res = await session.execute(pred_sub_stmt)
+            pred_subs = pred_sub_res.scalars().all()
+
         if pred_subs and any(sub.status == "DRAFT" for sub in pred_subs):
             # Predecessor is Draft/incomplete: return "PENDING_PREDECESSOR"
             return "PENDING_PREDECESSOR"
 
-        pred_obs_stmt = (
-            select(ClinicalObservation)
-            .where(
-                ClinicalObservation.subject_id == subject_id,
-                ClinicalObservation.visit_id == pred_visit.id,
-                ClinicalObservation.test_code == observation.test_code,
-                ClinicalObservation.is_deleted.is_(False),
+        code_upper = observation.test_code.upper()
+        if batch_context is not None:
+            pred_obs_list = batch_context.obs_by_visit_and_code.get(
+                (pred_visit.id, code_upper), []
             )
-            .order_by(ClinicalObservation.observation_date.desc())
-        )
-        pred_obs_res = await session.execute(pred_obs_stmt)
-        pred_obs = pred_obs_res.scalars().first()
+            pred_obs = pred_obs_list[0] if pred_obs_list else None
+        else:
+            pred_obs_stmt = (
+                select(ClinicalObservation)
+                .where(
+                    ClinicalObservation.subject_id == subject_id,
+                    ClinicalObservation.visit_id == pred_visit.id,
+                    ClinicalObservation.test_code == observation.test_code,
+                    ClinicalObservation.is_deleted.is_(False),
+                )
+                .order_by(ClinicalObservation.observation_date.desc())
+            )
+            pred_obs_res = await session.execute(pred_obs_stmt)
+            pred_obs = pred_obs_res.scalars().first()
 
         if not pred_obs or pred_obs.value is None:
             # Predecessor weight observation is unavailable: return signal
@@ -512,10 +703,12 @@ async def run_synchronous_edit_checks(
     logger.info(f"Running synchronous edit checks for observation {observation.id}")
 
     for rule in FIELD_LEVEL_RULES:
+        if not rule.applies_to_observation(observation):
+            continue
+
         err_msg = await rule.evaluate(session, observation)
 
         # Query coordinate filters
-        # Note: study_id can be inferred/stored on observation
         stmt_query = select(ClinicalQuery).where(
             ClinicalQuery.study_id == observation.study_id,
             ClinicalQuery.subject_id == observation.subject_id,
@@ -592,15 +785,25 @@ async def run_asynchronous_edit_checks(
                 # 2. Check if this newly added observation can resolve any pending predecessor dependencies
                 await resolve_pending_predecessor_checks(session, observation)
 
-                # 3. Load active authored rules for the study and combine with static ones
+                # 3. Load BatchEvaluationContext (consolidates lookups into 3 queries)
+                batch_context = await BatchEvaluationContext.load(
+                    session, observation.subject_id, observation.study_id
+                )
+
+                # 4. Load active authored rules for the study and combine with static ones
                 authored_rules = await load_active_authored_rules(
                     session, observation.study_id
                 )
                 combined_rules = list(CROSS_FORM_LONGITUDINAL_RULES) + authored_rules
 
-                # 4. Evaluate each rule
+                # 5. Evaluate each rule
                 for rule in combined_rules:
-                    eval_result = await rule.evaluate(session, observation)
+                    if not rule.applies_to_observation(observation):
+                        continue
+
+                    eval_result = await rule.evaluate(
+                        session, observation, batch_context=batch_context
+                    )
 
                     if eval_result == "PENDING_PREDECESSOR":
                         # Record pending predecessor state
@@ -614,16 +817,14 @@ async def run_asynchronous_edit_checks(
                         )
                         res_pending = await session.execute(stmt_pending)
                         if not res_pending.scalars().first():
-                            # Find current visit name
-                            current_visit_name = "UNKNOWN"
-                            if observation.visit_id:
-                                cv_stmt = select(ClinicalVisit).where(
-                                    ClinicalVisit.id == observation.visit_id
-                                )
-                                cv_res = await session.execute(cv_stmt)
-                                cv = cv_res.scalars().first()
-                                if cv:
-                                    current_visit_name = cv.visit_name.upper()
+                            current_visit = batch_context.visit_by_id.get(
+                                observation.visit_id
+                            )
+                            current_visit_name = (
+                                current_visit.visit_name.upper()
+                                if current_visit and current_visit.visit_name
+                                else "UNKNOWN"
+                            )
 
                             idx = (
                                 VISIT_SEQUENCE.index(current_visit_name)
@@ -697,6 +898,292 @@ async def run_asynchronous_edit_checks(
                             logger.info(
                                 f"Auto-resolved and closed clinical query in background for rule {rule.rule_id}"
                             )
+
+
+async def _resolve_pending_predecessor_checks_for_form_in_session(
+    session: AsyncSession,
+    subject_id: str,
+    visit_id: str,
+) -> None:
+    """In-session helper to re-evaluate and resume pending predecessor checks for a completed visit."""
+    cv_stmt = select(ClinicalVisit).where(ClinicalVisit.id == visit_id)
+    cv_res = await session.execute(cv_stmt)
+    cv = cv_res.scalars().first()
+    if not cv or not cv.visit_name:
+        return
+
+    visit_name = cv.visit_name.upper()
+
+    stmt_pending = select(PendingPredecessorCheck).where(
+        PendingPredecessorCheck.subject_id == subject_id,
+        PendingPredecessorCheck.predecessor_visit_name.ilike(visit_name),
+        PendingPredecessorCheck.is_deleted.is_(False),
+    )
+    res_pending = await session.execute(stmt_pending)
+    pending_checks = res_pending.scalars().all()
+    if not pending_checks:
+        return
+
+    batch_context = await BatchEvaluationContext.load(
+        session, subject_id, cv.study_id
+    )
+    authored_rules = await load_active_authored_rules(session, cv.study_id)
+    combined_rules = list(CROSS_FORM_LONGITUDINAL_RULES) + authored_rules
+
+    for pending in pending_checks:
+        stmt_obs = select(ClinicalObservation).where(
+            ClinicalObservation.id == pending.observation_id,
+            ClinicalObservation.is_deleted.is_(False),
+        )
+        res_obs = await session.execute(stmt_obs)
+        deferred_obs = res_obs.scalars().first()
+
+        if not deferred_obs:
+            pending.is_deleted = True
+            pending.version += 1
+            continue
+
+        rule = next((r for r in combined_rules if r.rule_id == pending.rule_id), None)
+        if not rule:
+            pending.is_deleted = True
+            pending.version += 1
+            continue
+
+        eval_result = await rule.evaluate(
+            session, deferred_obs, batch_context=batch_context
+        )
+
+        if eval_result != "PENDING_PREDECESSOR":
+            stmt_query = select(ClinicalQuery).where(
+                ClinicalQuery.study_id == deferred_obs.study_id,
+                ClinicalQuery.subject_id == deferred_obs.subject_id,
+                ClinicalQuery.visit_id == deferred_obs.visit_id,
+                ClinicalQuery.domain == deferred_obs.domain,
+                ClinicalQuery.test_code == deferred_obs.test_code,
+                ClinicalQuery.rule_id == rule.rule_id,
+                ClinicalQuery.status.in_(["OPEN", "REOPENED", "ANSWERED"]),
+                ClinicalQuery.is_deleted.is_(False),
+            )
+            res_query = await session.execute(stmt_query)
+            existing_query = res_query.scalars().first()
+
+            if eval_result:
+                if not existing_query:
+                    new_query = ClinicalQuery(
+                        study_id=deferred_obs.study_id,
+                        subject_id=deferred_obs.subject_id,
+                        visit_id=deferred_obs.visit_id,
+                        domain=deferred_obs.domain,
+                        test_code=deferred_obs.test_code,
+                        observation_id=deferred_obs.id,
+                        field_link=f"{deferred_obs.domain}.{deferred_obs.test_code}",
+                        rule_id=rule.rule_id,
+                        message=eval_result,
+                        explanation=eval_result,
+                        origin="SYSTEM",
+                        created_by="SYSTEM",
+                        status="OPEN",
+                    )
+                    session.add(new_query)
+            else:
+                if existing_query:
+                    existing_query.status = "CLOSED"
+                    existing_query.resolver = "SYSTEM"
+                    existing_query.resolved_at = datetime.utcnow()
+                    existing_query.response = (
+                        f"Auto-resolved: data corrected and {rule.rule_id} check passes."
+                    )
+                    existing_query.version += 1
+
+            pending.is_deleted = True
+            pending.version += 1
+
+
+async def run_asynchronous_form_edit_checks(
+    session_factory: async_sessionmaker[AsyncSession],
+    submission_id: str,
+    user_id: str | None = None,
+    change_reason: str | None = None,
+) -> None:
+    """Form-level background task for cross-form and longitudinal check evaluations with query coalescing."""
+    logger.info(
+        f"Form-level background edit checks started for submission {submission_id}"
+    )
+
+    with audit_context(user_id, change_reason):
+        async with session_factory() as session:
+            async with session.begin():
+                # 1. Retrieve the form submission
+                stmt = select(FormSubmission).where(
+                    FormSubmission.id == submission_id,
+                    FormSubmission.is_deleted.is_(False),
+                )
+                res = await session.execute(stmt)
+                sub = res.scalars().first()
+                if not sub:
+                    logger.warning(
+                        f"Form submission {submission_id} not found in background task."
+                    )
+                    return
+
+                # 2. Retrieve form observations
+                stmt_obs = select(ClinicalObservation).where(
+                    ClinicalObservation.subject_id == sub.subject_id,
+                    ClinicalObservation.visit_id == sub.visit_id,
+                    ClinicalObservation.page_id == sub.form_id,
+                    ClinicalObservation.is_deleted.is_(False),
+                )
+                res_obs = await session.execute(stmt_obs)
+                form_obs = list(res_obs.scalars().all())
+
+                if not form_obs and sub.visit_id:
+                    stmt_obs_fallback = select(ClinicalObservation).where(
+                        ClinicalObservation.subject_id == sub.subject_id,
+                        ClinicalObservation.visit_id == sub.visit_id,
+                        ClinicalObservation.is_deleted.is_(False),
+                    )
+                    res_obs_fallback = await session.execute(stmt_obs_fallback)
+                    form_obs = list(res_obs_fallback.scalars().all())
+
+                # 3. Resume any pending predecessor checks waiting on this completed visit/form
+                if sub.visit_id:
+                    await _resolve_pending_predecessor_checks_for_form_in_session(
+                        session, sub.subject_id, sub.visit_id
+                    )
+
+                if not form_obs:
+                    return
+
+                # 4. Load BatchEvaluationContext (consolidates lookups into 3 queries)
+                batch_context = await BatchEvaluationContext.load(
+                    session, sub.subject_id, sub.study_id
+                )
+
+                # 5. Load active authored rules for the study and combine with static rules
+                authored_rules = await load_active_authored_rules(
+                    session, sub.study_id
+                )
+                combined_rules = list(CROSS_FORM_LONGITUDINAL_RULES) + authored_rules
+
+                # Batch query existing active queries and pending checks for this subject
+                stmt_queries = select(ClinicalQuery).where(
+                    ClinicalQuery.study_id == sub.study_id,
+                    ClinicalQuery.subject_id == sub.subject_id,
+                    ClinicalQuery.status.in_(["OPEN", "REOPENED", "ANSWERED"]),
+                    ClinicalQuery.is_deleted.is_(False),
+                )
+                existing_queries_res = await session.execute(stmt_queries)
+                existing_queries = list(existing_queries_res.scalars().all())
+                query_map = {
+                    (q.visit_id, q.domain, q.test_code, q.rule_id): q
+                    for q in existing_queries
+                }
+
+                stmt_pending = select(PendingPredecessorCheck).where(
+                    PendingPredecessorCheck.subject_id == sub.subject_id,
+                    PendingPredecessorCheck.is_deleted.is_(False),
+                )
+                pending_res = await session.execute(stmt_pending)
+                existing_pending = list(pending_res.scalars().all())
+                pending_map = {
+                    (p.rule_id, p.observation_id): p for p in existing_pending
+                }
+
+                # 6. Evaluate rules for each observation in the form using pre-filtering
+                for obs in form_obs:
+                    for rule in combined_rules:
+                        if not rule.applies_to_observation(obs):
+                            continue
+
+                        eval_result = await rule.evaluate(
+                            session, obs, batch_context=batch_context
+                        )
+
+                        if eval_result == "PENDING_PREDECESSOR":
+                            pending_key = (rule.rule_id, obs.id)
+                            if pending_key not in pending_map:
+                                current_visit = batch_context.visit_by_id.get(
+                                    obs.visit_id
+                                )
+                                current_visit_name = (
+                                    current_visit.visit_name.upper()
+                                    if current_visit and current_visit.visit_name
+                                    else "UNKNOWN"
+                                )
+                                idx = (
+                                    VISIT_SEQUENCE.index(current_visit_name)
+                                    if current_visit_name in VISIT_SEQUENCE
+                                    else 0
+                                )
+                                predecessor_visit_name = (
+                                    VISIT_SEQUENCE[idx - 1] if idx > 0 else "UNKNOWN"
+                                )
+
+                                pending_check = PendingPredecessorCheck(
+                                    subject_id=obs.subject_id,
+                                    study_id=obs.study_id,
+                                    current_visit_id=obs.visit_id,
+                                    current_visit_name=current_visit_name,
+                                    predecessor_visit_name=predecessor_visit_name,
+                                    rule_id=rule.rule_id,
+                                    observation_id=obs.id,
+                                    test_code=obs.test_code,
+                                )
+                                session.add(pending_check)
+                                pending_map[pending_key] = pending_check
+                                logger.info(
+                                    f"Deferred rule {rule.rule_id} and recorded PENDING predecessor dependency on visit {predecessor_visit_name}"
+                                )
+                            continue
+
+                        query_key = (
+                            obs.visit_id,
+                            obs.domain,
+                            obs.test_code,
+                            rule.rule_id,
+                        )
+                        existing_query = query_map.get(query_key)
+
+                        if eval_result:
+                            # Rule failed: open system query if not present
+                            if not existing_query:
+                                site_id = sub.site_id
+                                if not site_id and obs.visit_id:
+                                    visit = batch_context.visit_by_id.get(obs.visit_id)
+                                    if visit and hasattr(visit, "site_id"):
+                                        site_id = visit.site_id
+                                new_query = ClinicalQuery(
+                                    study_id=obs.study_id,
+                                    site_id=site_id or getattr(obs, "site_id", None),
+                                    subject_id=obs.subject_id,
+                                    visit_id=obs.visit_id,
+                                    domain=obs.domain,
+                                    test_code=obs.test_code,
+                                    observation_id=obs.id,
+                                    field_link=f"{obs.domain}.{obs.test_code}",
+                                    rule_id=rule.rule_id,
+                                    message=eval_result,
+                                    explanation=eval_result,
+                                    origin="SYSTEM",
+                                    created_by="SYSTEM",
+                                    status="OPEN",
+                                )
+                                session.add(new_query)
+                                query_map[query_key] = new_query
+                                logger.info(
+                                    f"Created system clinical query in background for rule {rule.rule_id}"
+                                )
+                        else:
+                            # Rule passed: auto-close existing active query
+                            if existing_query:
+                                existing_query.status = "CLOSED"
+                                existing_query.resolver = "SYSTEM"
+                                existing_query.resolved_at = datetime.utcnow()
+                                existing_query.response = f"Auto-resolved: data corrected and {rule.rule_id} check passes."
+                                existing_query.version += 1
+                                logger.info(
+                                    f"Auto-resolved and closed clinical query in background for rule {rule.rule_id}"
+                                )
 
 
 async def resolve_pending_predecessor_checks(

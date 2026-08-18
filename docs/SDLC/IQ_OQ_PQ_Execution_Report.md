@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2727
-- **Passed:** 2708 🟢
+- **Total Automated Test Cases Run:** 2732
+- **Passed:** 2713 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.30%
@@ -1464,6 +1464,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_no_aging_queries`                                                                 | `apps.execution.tests.test_queries_escalation`                              | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_startup_shutdown_and_resilience`                                                  | `apps.execution.tests.test_queries_escalation`                              | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_threshold_boundaries_and_escalation`                                              | `apps.execution.tests.test_queries_escalation`                              | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_auto_query_generation_and_auto_close_on_form_completion`                          | `apps.execution.tests.test_query_coalescing_form_batching`                  | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_context_resolution_query_budget`                                                  | `apps.execution.tests.test_query_coalescing_form_batching`                  | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_form_completion_enqueues_single_background_task`                                  | `apps.execution.tests.test_query_coalescing_form_batching`                  | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_in_memory_prefiltering_rules`                                                     | `apps.execution.tests.test_query_coalescing_form_batching`                  | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_predecessor_pause_and_resume_on_form_completion`                                  | `apps.execution.tests.test_query_coalescing_form_batching`                  | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_driver_session_transaction_wrappers`                                              | `apps.execution.tests.test_query_safety_gateway`                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_parameter_bypass_validation`                                                      | `apps.execution.tests.test_query_safety_gateway`                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_unbounded_wildcards_validation`                                                   | `apps.execution.tests.test_query_safety_gateway`                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
