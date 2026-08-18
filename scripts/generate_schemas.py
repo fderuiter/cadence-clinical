@@ -157,6 +157,8 @@ def main():
         lines.append(f"export type {name} = z.infer<typeof {name}Schema>;")
         lines.append("")
 
+    lines.append('export * from "./graph-validator.js";')
+
     with open(output_file, "w") as f:
         f.write("\n".join(lines))
 

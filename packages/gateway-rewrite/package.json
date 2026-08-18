@@ -17,6 +17,7 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
-    "pino": "^9.3.2"
+    "pino": "^9.3.2",
+    "usdm-schemas": "workspace:*"
   }
 }

@@ -145,3 +145,5 @@ export const USDMStudySchema = z.object({
   biomedicalConcepts: z.array(BiomedicalConceptSchema).default([]),
 });
 export type USDMStudy = z.infer<typeof USDMStudySchema>;
+
+export * from "./graph-validator.js";

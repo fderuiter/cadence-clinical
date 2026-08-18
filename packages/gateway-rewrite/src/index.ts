@@ -18,4 +18,5 @@ export { RateLimiterService } from "./rate-limiter.service.js";
 export { RateLimiterModule } from "./rate-limiter.module.js";
 export { RateLimitMiddleware } from "./rate-limiter.middleware.js";
 export { RateLimitGuard } from "./rate-limiter.guard.js";
+export { PreProxyGraphValidationInterceptor } from "./pre-proxy-graph-validation.interceptor.js";
 
