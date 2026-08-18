@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.econsent.adapters.database import db_manager
+from apps.econsent.adapters.notifications_client import publish_notification
 from apps.econsent.adapters.repositories import (
     SQLConsentAuditRepository,
     SQLReconsentRepository,
@@ -38,7 +39,12 @@ async def trigger_reconsent(
     reconsent_repo = SQLReconsentRepository(session)
     consent_repo = SQLSubjectConsentRepository(session)
     audit_repo = SQLConsentAuditRepository(session)
-    svc = ReconsentService(reconsent_repo, consent_repo, audit_repo)
+    svc = ReconsentService(
+        reconsent_repo,
+        consent_repo,
+        audit_repo,
+        notification_dispatcher=publish_notification,
+    )
 
     requirements = await svc.trigger_reconsent_for_active_cohort(
         study_id=payload.study_id,
@@ -111,3 +117,47 @@ async def get_pending_reconsents(
         )
         for r in requirements
     ]
+
+
+@router.post(
+    "/complete/{requirement_id}",
+    response_model=ReconsentRequirementResponse,
+)
+async def complete_reconsent(
+    request: Request,
+    requirement_id: str,
+    completed_consent_id: str | None = None,
+    session: AsyncSession = Depends(get_db_session),
+) -> ReconsentRequirementResponse:
+    """Marks a re-consent requirement as completed following subject e-signature."""
+    user_id = getattr(request.state, "user_id", "subject")
+    change_reason = getattr(request.state, "change_reason", "Re-consent completed")
+
+    reconsent_repo = SQLReconsentRepository(session)
+    consent_repo = SQLSubjectConsentRepository(session)
+    audit_repo = SQLConsentAuditRepository(session)
+    svc = ReconsentService(reconsent_repo, consent_repo, audit_repo)
+
+    r = await svc.complete_reconsent_requirement(
+        requirement_id=requirement_id,
+        completed_consent_id=completed_consent_id,
+        created_by=user_id,
+        reason_for_change=change_reason,
+    )
+    return ReconsentRequirementResponse(
+        id=r.id,
+        study_id=r.study_id,
+        site_id=r.site_id,
+        template_id=r.template_id,
+        prior_version_index=r.prior_version_index,
+        new_version_index=r.new_version_index,
+        subject_pseudonym=r.subject_pseudonym,
+        status=r.status,
+        change_summary=r.change_summary,
+        substantive_changes=r.substantive_changes,
+        deadline_at=r.deadline_at,
+        completed_consent_id=r.completed_consent_id,
+        created_at=r.created_at,
+        created_by=r.created_by,
+        reason_for_change=r.reason_for_change,
+    )
