@@ -5,4 +5,8 @@ export { TraceContextModule } from "./trace-context.module.js";
 export { PinoLoggerService, scrubPii } from "./pino-logger.service.js";
 export { TraceContextMiddleware } from "./trace-context.middleware.js";
 export { propagateTraceContext } from "./trace-context-http.helper.js";
+export { RateLimiterService } from "./rate-limiter.service.js";
+export { RateLimiterModule } from "./rate-limiter.module.js";
+export { RateLimitMiddleware } from "./rate-limiter.middleware.js";
+export { RateLimitGuard } from "./rate-limiter.guard.js";
 
