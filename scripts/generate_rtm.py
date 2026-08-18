@@ -75,70 +75,242 @@ def format_file_with_prettier(filepath):
         )
 
 
-def parse_srs(filepath):
+def _sweep_markdown_files(path_or_dir):
+    if not os.path.exists(path_or_dir):
+        return []
+    if os.path.isfile(path_or_dir):
+        return [path_or_dir]
+    files_list = []
+    ignored_files = {
+        "Requirements_Traceability_Matrix.md",
+        "IQ_OQ_PQ_Execution_Report.md",
+    }
+    for root, dirs, files in os.walk(path_or_dir):
+        dirs.sort()
+        for f in sorted(files):
+            if f.endswith(".md") and f not in ignored_files:
+                files_list.append(os.path.join(root, f))
+    return files_list
+
+
+def parse_srs(filepath_or_dir):
     requirements = {}
-    if not os.path.exists(filepath):
-        print(f"Warning: SRS file {filepath} not found.")
+    files = _sweep_markdown_files(filepath_or_dir)
+    if not files:
+        if not os.path.exists(filepath_or_dir):
+            print(f"Warning: SRS file or directory {filepath_or_dir} not found.")
         return requirements
 
-    with open(filepath, encoding="utf-8") as f:
-        content = f.read()
+    list_pattern = re.compile(r"[-*]\s*\*\*Trace[\s-]*(\d+)\s*:\s*(.+?):\s*\*\*\s*(.*)")
+    heading_pattern = re.compile(r"#{1,6}\s*Trace[\s-]*(\d+)\s*:\s*(.*)")
 
-    # We look for Section 8 Trace 1, Trace 2, Trace 3
-    # e.g., - **Trace 1: Shadow Schema Retention:** Database-level...
-    # Update pattern to accept both hyphenated (Trace-14) and space-separated (Trace 14) formats
-    pattern = re.compile(r"[-*]\s*\*\*Trace[\s-]*(\d+)\s*:\s*(.+?):\s*\*\*\s*(.*)")
-    for line in content.splitlines():
-        match = pattern.search(line)
-        if match:
-            num = match.group(1)
-            title = match.group(2).strip()
-            desc = match.group(3).strip()
-            req_id = f"Trace-{num}"
-            if req_id in requirements:
-                print(
-                    f"ERROR: Duplicate SRS requirement ID detected: '{req_id}' in {filepath}",
-                    file=sys.stderr,
-                )
-                sys.exit(1)
-            requirements[req_id] = {
-                "id": req_id,
-                "title": title,
-                "description": desc,
-                "source": "docs/SRS.md",
-            }
+    for file_path in files:
+        rel_path = os.path.relpath(file_path, start=os.getcwd()).replace("\\", "/")
+        with open(file_path, encoding="utf-8") as f:
+            content = f.read()
+
+        for line_no, line in enumerate(content.splitlines(), 1):
+            stripped = line.strip()
+
+            num = None
+            title = ""
+            desc = ""
+
+            match = list_pattern.search(line)
+            if match:
+                num = match.group(1)
+                title = match.group(2).strip()
+                desc = match.group(3).strip()
+            else:
+                hmatch = heading_pattern.search(line)
+                if hmatch:
+                    num = hmatch.group(1)
+                    title = hmatch.group(2).strip()
+
+            if num:
+                req_id = f"Trace-{num}"
+                if req_id in requirements:
+                    prev_src = requirements[req_id]["source"]
+                    print(
+                        f"ERROR: Duplicate SRS requirement ID detected: '{req_id}' in {rel_path} (previously defined in {prev_src})",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                requirements[req_id] = {
+                    "id": req_id,
+                    "title": title,
+                    "description": desc,
+                    "source": rel_path,
+                }
+            elif (
+                stripped.startswith("- **Trace")
+                or stripped.startswith("* **Trace")
+                or re.match(r"^#{1,6}\s*Trace", stripped)
+            ):
+                # Attempted SRS definition line that failed valid Trace-\d+ pattern
+                if "XXX" not in stripped and "YYY" not in stripped:
+                    print(
+                        f"ERROR: Malformed Trace requirement ID detected in definition line: '{stripped}' in {rel_path}:{line_no}",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+
     return requirements
 
 
-def parse_prd(filepath):
+def parse_prd(filepath_or_dir):
     requirements = {}
-    if not os.path.exists(filepath):
-        print(f"Warning: PRD file {filepath} not found.")
+    files = _sweep_markdown_files(filepath_or_dir)
+    if not files:
+        if not os.path.exists(filepath_or_dir):
+            print(f"Warning: PRD file or directory {filepath_or_dir} not found.")
         return requirements
 
-    with open(filepath, encoding="utf-8") as f:
-        content = f.read()
+    heading_pattern = re.compile(r"#{1,6}\s*(PRD-[A-Z0-9]+-\d+)\s*:\s*(.*)")
+    bold_pattern = re.compile(r"[-*]\s*\*\*(PRD-[A-Z0-9]+-\d+)\s*:\s*(.+?)\*\*")
 
-    # e.g., #### PRD-SYS-001: Standard Audit Logging (21 CFR Part 11 § 11.10(e))
-    pattern = re.compile(r"####\s*(PRD-[A-Z]+-\d+)\s*:\s*(.*)")
-    for line in content.splitlines():
-        match = pattern.search(line)
-        if match:
-            req_id = match.group(1).strip()
-            title = match.group(2).strip()
-            if req_id in requirements:
+    for file_path in files:
+        rel_path = os.path.relpath(file_path, start=os.getcwd()).replace("\\", "/")
+        with open(file_path, encoding="utf-8") as f:
+            content = f.read()
+
+        for line_no, line in enumerate(content.splitlines(), 1):
+            stripped = line.strip()
+
+            req_id = None
+            title = ""
+
+            hmatch = heading_pattern.search(line)
+            if hmatch:
+                req_id = hmatch.group(1).strip()
+                title = hmatch.group(2).strip()
+            else:
+                bmatch = bold_pattern.search(line)
+                if bmatch:
+                    req_id = bmatch.group(1).strip()
+                    title = bmatch.group(2).strip()
+
+            if req_id:
+                if req_id in requirements:
+                    prev_src = requirements[req_id]["source"]
+                    print(
+                        f"ERROR: Duplicate PRD requirement ID detected: '{req_id}' in {rel_path} (previously defined in {prev_src})",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                requirements[req_id] = {
+                    "id": req_id,
+                    "title": title,
+                    "description": "",
+                    "source": rel_path,
+                }
+            elif (
+                stripped.startswith("#### PRD-")
+                or stripped.startswith("### PRD-")
+                or stripped.startswith("- **PRD-")
+                or stripped.startswith("* **PRD-")
+            ):
+                if "XXX" not in stripped and "YYY" not in stripped:
+                    print(
+                        f"ERROR: Malformed PRD requirement ID detected in definition line: '{stripped}' in {rel_path}:{line_no}",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+
+    return requirements
+
+
+def check_orphan_fragments(sdlc_dirs=None, all_requirements=None):
+    if sdlc_dirs is None:
+        sdlc_dirs = ["docs/SDLC"]
+    elif isinstance(sdlc_dirs, str):
+        sdlc_dirs = [sdlc_dirs]
+
+    all_req_sources = set()
+    if all_requirements:
+        for req_info in all_requirements.values():
+            src = req_info.get("source", "")
+            if src:
+                all_req_sources.add(os.path.normpath(src))
+
+    incoming_links = set()
+    link_pattern = re.compile(r"\[[^\]]*\]\(([^)#\s]+)")
+    ref_pattern = re.compile(r"^\s{0,3}\[[^\]]+\]:\s*(\S+)")
+
+    docs_files = _sweep_markdown_files("docs")
+    if os.path.exists("README.md"):
+        docs_files.append("README.md")
+
+    for md_file in docs_files:
+        try:
+            with open(md_file, encoding="utf-8") as f:
+                content = f.read()
+            md_dir = os.path.dirname(md_file)
+            for m in link_pattern.finditer(content):
+                target = m.group(1).strip()
+                if not target.startswith(("http://", "https://", "mailto:", "#")):
+                    resolved = os.path.normpath(os.path.join(md_dir, target))
+                    incoming_links.add(resolved)
+            for m in ref_pattern.finditer(content):
+                target = m.group(1).strip()
+                if not target.startswith(("http://", "https://", "mailto:", "#")):
+                    resolved = os.path.normpath(os.path.join(md_dir, target))
+                    incoming_links.add(resolved)
+        except Exception:
+            pass
+
+    for sdlc_dir in sdlc_dirs:
+        if not os.path.exists(sdlc_dir) or not os.path.isdir(sdlc_dir):
+            continue
+        sdlc_files = _sweep_markdown_files(sdlc_dir)
+        norm_sdlc_dir = os.path.normpath(sdlc_dir)
+        for fpath in sdlc_files:
+            norm_fpath = os.path.normpath(fpath)
+            rel_fpath = os.path.relpath(norm_fpath, start=os.getcwd()).replace(
+                "\\", "/"
+            )
+            is_subfragment = os.path.dirname(norm_fpath) != norm_sdlc_dir
+            has_reqs = norm_fpath in all_req_sources
+            is_linked = norm_fpath in incoming_links
+            if is_subfragment and not has_reqs and not is_linked:
                 print(
-                    f"ERROR: Duplicate PRD requirement ID detected: '{req_id}' in {filepath}",
+                    f"ERROR: Orphan document fragment detected: '{rel_fpath}' contains no requirement definitions and is not referenced by any SDLC document.",
                     file=sys.stderr,
                 )
                 sys.exit(1)
-            requirements[req_id] = {
-                "id": req_id,
-                "title": title,
-                "description": "",
-                "source": "docs/SDLC/01_Product_Requirements_Document_PRD.md",
-            }
-    return requirements
+
+
+def check_fragment_relative_links(sdlc_dirs=None):
+    if sdlc_dirs is None:
+        sdlc_dirs = ["docs/SDLC"]
+    elif isinstance(sdlc_dirs, str):
+        sdlc_dirs = [sdlc_dirs]
+
+    link_pattern = re.compile(r"\[[^\]]*\]\(([^)#\s]+)")
+    for sdlc_dir in sdlc_dirs:
+        if not os.path.exists(sdlc_dir):
+            continue
+        files = _sweep_markdown_files(sdlc_dir)
+        for fpath in files:
+            rel_fpath = os.path.relpath(fpath, start=os.getcwd()).replace("\\", "/")
+            with open(fpath, encoding="utf-8") as f:
+                content = f.read()
+            fdir = os.path.dirname(fpath)
+            for line_no, line in enumerate(content.splitlines(), 1):
+                for match in link_pattern.finditer(line):
+                    target = match.group(1).strip()
+                    if target.startswith(("http://", "https://", "mailto:", "#")):
+                        continue
+                    if target.startswith("docs/"):
+                        resolved = os.path.normpath(os.path.join(os.getcwd(), target))
+                    else:
+                        resolved = os.path.normpath(os.path.join(fdir, target))
+                    if not os.path.exists(resolved):
+                        print(
+                            f"ERROR: Broken relative link detected in fragment '{rel_fpath}:{line_no}': '{target}' does not exist.",
+                            file=sys.stderr,
+                        )
+                        sys.exit(1)
 
 
 def scan_tests(tests_dirs=None):
@@ -879,11 +1051,21 @@ def main():
         "Initializing Requirements Traceability Matrix & Qualification Log Generator..."
     )
 
-    # 1. Parse requirements
-    srs_reqs = parse_srs("docs/SRS.md")
-    prd_reqs = parse_prd("docs/SDLC/01_Product_Requirements_Document_PRD.md")
+    # 1. Parse requirements across modular SDLC subdirectories and specification files
+    srs_path = "docs/SRS.md" if os.path.isfile("docs/SRS.md") else "docs/SRS"
+    srs_reqs = parse_srs(srs_path)
 
-    # Merge both dicts and verify no key overlap exists between the two
+    sdlc_path = (
+        "docs/SDLC"
+        if os.path.isdir("docs/SDLC")
+        else "docs/SDLC/01_Product_Requirements_Document_PRD.md"
+    )
+    prd_reqs = parse_prd(sdlc_path)
+    srs_reqs_sdlc = parse_srs(sdlc_path)
+
+    check_fragment_relative_links("docs/SDLC")
+
+    # Merge all dicts and verify no key overlap exists between datasets
     all_requirements = {}
     for k, v in prd_reqs.items():
         if k in all_requirements:
@@ -894,7 +1076,15 @@ def main():
             sys.exit(1)
         all_requirements[k] = v
     for k, v in srs_reqs.items():
-        if k in all_requirements:
+        if k in all_requirements and all_requirements[k]["source"] != v["source"]:
+            print(
+                f"ERROR: Overlapping requirement ID detected across merged datasets: '{k}'",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        all_requirements[k] = v
+    for k, v in srs_reqs_sdlc.items():
+        if k in all_requirements and all_requirements[k]["source"] != v["source"]:
             print(
                 f"ERROR: Overlapping requirement ID detected across merged datasets: '{k}'",
                 file=sys.stderr,
@@ -902,8 +1092,10 @@ def main():
             sys.exit(1)
         all_requirements[k] = v
 
+    check_orphan_fragments("docs/SDLC", all_requirements)
+
     print(
-        f"Parsed {len(prd_reqs)} PRD requirements and {len(srs_reqs)} SRS requirements."
+        f"Parsed {len(all_requirements)} total requirements across swept SDLC document folders."
     )
 
     # 2. Scan tests across workspaces
