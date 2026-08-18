@@ -47,6 +47,99 @@ class ESignatureVerifier:
         """
         self.revoked_certs = set(revoked_certs) if revoked_certs else set()
 
+    def _get_normalized_revoked_certs(
+        self,
+    ) -> tuple[set[int], set[str], set[str], set[str]]:
+        """Normalize all revoked_certs identifiers into strongly-typed representations.
+
+        Returns:
+            tuple: (serials_int, serials_str, fingerprints, pems)
+        """
+        serials_int: set[int] = set()
+        serials_str: set[str] = set()
+        fingerprints: set[str] = set()
+        pems: set[str] = set()
+
+        if not self.revoked_certs:
+            return serials_int, serials_str, fingerprints, pems
+
+        for item in self.revoked_certs:
+            if item is None:
+                continue
+
+            if isinstance(item, int):
+                serials_int.add(item)
+                serials_str.add(str(item))
+                serials_str.add(hex(item)[2:].lower())
+                serials_str.add(hex(item).lower())
+            elif isinstance(item, str):
+                clean_item = item.strip()
+                if not clean_item:
+                    continue
+
+                # Check if it is a PEM certificate block
+                if "-----BEGIN CERTIFICATE-----" in clean_item:
+                    pems.add(clean_item)
+                    try:
+                        parsed_cert = x509.load_pem_x509_certificate(
+                            clean_item.encode("utf-8")
+                        )
+                        sn = parsed_cert.serial_number
+                        serials_int.add(sn)
+                        serials_str.add(str(sn))
+                        serials_str.add(hex(sn)[2:].lower())
+                        serials_str.add(hex(sn).lower())
+                        fingerprints.add(
+                            parsed_cert.fingerprint(hashes.SHA256()).hex().lower()
+                        )
+                    except Exception:
+                        pass
+                    continue
+
+                # Check if it is a SHA-256 fingerprint (64 hex characters)
+                fp_candidate = (
+                    clean_item.replace(":", "")
+                    .replace("-", "")
+                    .replace(" ", "")
+                    .lower()
+                )
+                if len(fp_candidate) == 64 and all(
+                    c in "0123456789abcdef" for c in fp_candidate
+                ):
+                    fingerprints.add(fp_candidate)
+
+                # Check if it is an integer in decimal format
+                if clean_item.isdigit():
+                    sn = int(clean_item)
+                    serials_int.add(sn)
+                    serials_str.add(clean_item)
+                    serials_str.add(str(sn))
+                    serials_str.add(hex(sn)[2:].lower())
+                    serials_str.add(hex(sn).lower())
+                # Check if it is a hex format starting with 0x / 0X
+                elif clean_item.lower().startswith("0x"):
+                    try:
+                        sn = int(clean_item, 16)
+                        serials_int.add(sn)
+                        serials_str.add(clean_item.lower())
+                        serials_str.add(str(sn))
+                        serials_str.add(hex(sn)[2:].lower())
+                    except ValueError:
+                        serials_str.add(clean_item.lower())
+                else:
+                    # Generic hex string or raw string identifier
+                    try:
+                        sn = int(clean_item, 16)
+                        serials_int.add(sn)
+                        serials_str.add(str(sn))
+                        serials_str.add(hex(sn)[2:].lower())
+                        serials_str.add(hex(sn).lower())
+                    except ValueError:
+                        pass
+                    serials_str.add(clean_item.lower())
+
+        return serials_int, serials_str, fingerprints, pems
+
     def verify_signature(self, signed_data: bytes) -> VerificationResult:
         """Verify the embedded signature of a signed document payload.
 
@@ -250,13 +343,23 @@ class ESignatureVerifier:
 
             # Check for revocation in constructor-provided revoked_certs
             cert_serial = cert.serial_number
-            cert_fingerprint = cert.fingerprint(hashes.SHA256()).hex()
+            cert_serial_dec = str(cert_serial)
+            cert_serial_hex = hex(cert_serial)[2:].lower()
+            cert_serial_hex_0x = hex(cert_serial).lower()
+            cert_fingerprint = cert.fingerprint(hashes.SHA256()).hex().lower()
+            cert_pem_normalized = cert_pem_str.strip()
+
+            serials_int, serials_str, fingerprints, pems = (
+                self._get_normalized_revoked_certs()
+            )
 
             is_revoked = (
-                cert_serial in self.revoked_certs
-                or cert_fingerprint in self.revoked_certs
-                or cert_pem_str in self.revoked_certs
-                or any(str(rev_id) in cert_pem_str for rev_id in self.revoked_certs)
+                cert_serial in serials_int
+                or cert_serial_dec in serials_str
+                or cert_serial_hex in serials_str
+                or cert_serial_hex_0x in serials_str
+                or cert_fingerprint in fingerprints
+                or cert_pem_normalized in pems
             )
 
             if is_revoked:
