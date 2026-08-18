@@ -712,20 +712,24 @@ def generate_qualification_report(
         )
 
         import json
+
         import jsonschema
 
         schema_file = REPO_ROOT / "docs" / "SDLC" / "pq_scenarios_schema.json"
         config_file = REPO_ROOT / "docs" / "SDLC" / "pq_scenarios.json"
 
         try:
-            with open(schema_file, "r", encoding="utf-8") as sf:
+            with open(schema_file, encoding="utf-8") as sf:
                 schema = json.load(sf)
-            with open(config_file, "r", encoding="utf-8") as cf:
+            with open(config_file, encoding="utf-8") as cf:
                 config = json.load(cf)
             jsonschema.validate(instance=config, schema=schema)
             scenarios = config["scenarios"]
         except Exception as e:
-            print(f"ERROR: Failed to load/validate PQ scenarios from standalone JSON configuration: {e}", file=sys.stderr)
+            print(
+                f"ERROR: Failed to load/validate PQ scenarios from standalone JSON configuration: {e}",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
         for sc in scenarios:
@@ -768,9 +772,7 @@ def generate_qualification_report(
             f.write(f"### {sc['id']}: {sc['name']}\n")
             f.write(f"- **Target Requirements:** {sc['reqs']}\n")
             f.write(f"- **Description:** {sc['desc']}\n")
-            f.write(
-                f"- **Verification Status:** {status_text}\n\n"
-            )
+            f.write(f"- **Verification Status:** {status_text}\n\n")
 
         f.write("## 5. Qualification Review & Authorization\n\n")
         f.write(
@@ -814,6 +816,14 @@ def main():
         "-d",
         action="store_true",
         help="Use current UTC system timestamp instead of the stable baseline timestamp.",
+    )
+    parser.add_argument(
+        "--report",
+        "--report-path",
+        "-r",
+        dest="report_path",
+        default="report.xml",
+        help="Path to pytest JUnit XML report file (default: report.xml)",
     )
     parser.add_argument(
         "--validate",
@@ -873,7 +883,7 @@ def main():
     )
 
     # 3. Read test results
-    report_path = "report.xml"
+    report_path = args.report_path
     test_results = parse_test_results(report_path)
     print(
         f"Parsed test results from {report_path}. Found {len(test_results)} test execution outcomes."

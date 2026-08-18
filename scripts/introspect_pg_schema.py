@@ -15,6 +15,7 @@ Compliance Guardrails:
 import argparse
 import os
 import sys
+from pathlib import Path
 from urllib.parse import urlparse
 
 # ---------------------------------------------------------------------------
@@ -239,6 +240,9 @@ def generate_typescript_schemas(db_url: str, output_path: str) -> bool:
 
 
 def main() -> None:
+    repo_root = Path(__file__).resolve().parent.parent
+    default_output = str(repo_root / "apps" / "web" / "src" / "types" / "db_schemas.ts")
+
     parser = argparse.ArgumentParser(
         description="Out-of-band PostgreSQL DB Introspection Engine"
     )
@@ -251,7 +255,7 @@ def main() -> None:
     parser.add_argument(
         "--output-file",
         type=str,
-        default="/app/apps/web/src/types/db_schemas.ts",
+        default=default_output,
         help="Path where generated TypeScript interfaces will be saved",
     )
     args = parser.parse_args()

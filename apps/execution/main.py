@@ -256,13 +256,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
             start_background_query_escalation,
             stop_background_query_escalation,
         )
-        from apps.execution.workers.outbox_worker import (
-            start_outbox_worker,
-            stop_outbox_worker,
-        )
         from apps.execution.workers.consent_subscriber import (
             start_consent_subscriber,
             stop_consent_subscriber,
+        )
+        from apps.execution.workers.outbox_worker import (
+            start_outbox_worker,
+            stop_outbox_worker,
         )
 
         if run_workers:
@@ -1048,7 +1048,9 @@ async def record_subject_consent_endpoint(
 
             # If this consent is signed and does not require re-consent,
             # clear requires_reconsent for any other/older consents of this subject
-            if (payload.icf_signed or payload.is_paper_override) and not payload.requires_reconsent:
+            if (
+                payload.icf_signed or payload.is_paper_override
+            ) and not payload.requires_reconsent:
                 stmt_others = select(SubjectConsent).where(
                     SubjectConsent.subject_id == subject_id,
                     SubjectConsent.study_id == study_id,

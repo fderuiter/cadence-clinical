@@ -12800,6 +12800,11 @@
             "type": "boolean",
             "title": "Requires Reconsent",
             "default": false
+          },
+          "is_paper_override": {
+            "type": "boolean",
+            "title": "Is Paper Override",
+            "default": false
           }
         },
         "type": "object",
@@ -12851,6 +12856,11 @@
           "requires_reconsent": {
             "type": "boolean",
             "title": "Requires Reconsent"
+          },
+          "is_paper_override": {
+            "type": "boolean",
+            "title": "Is Paper Override",
+            "default": false
           },
           "version": {
             "type": "integer",

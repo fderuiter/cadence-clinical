@@ -274,6 +274,22 @@ export interface CtmsClinicalQuery {
   version_index: number;
 }
 
+export interface CtmsCountryRegulatoryMilestone {
+  id: string;
+  study_id: string;
+  country_code: string;
+  milestone_type: string;
+  planned_date?: string | null;
+  actual_date?: string | null;
+  status: string;
+  approval_number?: string | null;
+  authority_name?: string | null;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
 export interface CtmsCraAllocation {
   id: string;
   cra_id: string;
@@ -317,6 +333,83 @@ export interface CtmsDelegation {
   version_index: number;
 }
 
+export interface CtmsDeviationActionItem {
+  id: string;
+  deviation_id: string;
+  site_id: string;
+  description: string;
+  assignee_user_id: string;
+  assignee_role: string;
+  due_date: string;
+  status: string;
+  resolution_notes?: string | null;
+  completed_by?: string | null;
+  completed_at?: string | null;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
+export interface CtmsEssentialDocument {
+  id: string;
+  study_id: string;
+  site_id: string;
+  document_type: string;
+  file_name: string;
+  file_hash: string;
+  expiration_date?: string | null;
+  status: string;
+  review_notes?: string | null;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
+export interface CtmsEtmfSyncRecord {
+  id: string;
+  study_id: string;
+  site_id: string;
+  artifact_type: string;
+  source_record_id: string;
+  etmf_document_id: string;
+  dia_zone: string;
+  dia_section: string;
+  dia_artifact: string;
+  sync_status: string;
+  error_message?: string | null;
+  synced_at: string;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
+export interface CtmsFinancialInvoice {
+  id: string;
+  study_id: string;
+  site_id: string;
+  grant_id: string;
+  invoice_number: string;
+  invoice_type: string;
+  gross_amount: number;
+  withholding_amount: number;
+  net_amount: number;
+  currency: string;
+  status: string;
+  payable_ids: Record<string, any>;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  disbursed_at?: string | null;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
 export interface CtmsGeneratedLetter {
   id: string;
   visit_id: string;
@@ -349,6 +442,69 @@ export interface CtmsInvestigatorPayable {
   payment_status: string;
   due_date?: string | null;
   paid_at?: string | null;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
+export interface CtmsIpDestructionCertificate {
+  id: string;
+  study_id: string;
+  site_id: string;
+  certificate_number: string;
+  kit_ids: Record<string, any>;
+  destruction_method: string;
+  destruction_date: string;
+  witness_user_id: string;
+  witness_role: string;
+  pi_signature_hash: string;
+  pi_signed_at: string;
+  reason_for_destruction: string;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
+export interface CtmsIpKitRecord {
+  id: string;
+  study_id: string;
+  site_id: string;
+  kit_number: string;
+  lot_number: string;
+  kit_type: string;
+  shipment_tracking_number: string;
+  expiration_date: string;
+  status: string;
+  received_date?: string | null;
+  dispensed_subject_id?: string | null;
+  dispensed_visit_id?: string | null;
+  dispensed_date?: string | null;
+  returned_units_count?: number | null;
+  expected_units_count?: number | null;
+  compliance_percentage?: number | null;
+  notes?: string | null;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
+export interface CtmsIpTemperatureExcursion {
+  id: string;
+  study_id: string;
+  site_id: string;
+  kit_ids: Record<string, any>;
+  excursion_type: string;
+  min_temp_celsius: number;
+  max_temp_celsius: number;
+  duration_hours: number;
+  occurred_at: string;
+  disposition_status: string;
+  qa_reviewed_by?: string | null;
+  qa_reviewed_at?: string | null;
+  qa_rationale?: string | null;
   created_at: string;
   created_by: string;
   reason_for_change: string;
@@ -403,6 +559,66 @@ export interface CtmsPaymentMilestone {
   version_index: number;
 }
 
+export interface CtmsProcedurePaymentGrid {
+  id: string;
+  grant_id: string;
+  visit_name: string;
+  procedure_code: string;
+  procedure_name: string;
+  base_amount: number;
+  overhead_percentage: number;
+  withholding_percentage: number;
+  is_active: boolean;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
+export interface CtmsProtocolDeviation {
+  id: string;
+  study_id: string;
+  site_id: string;
+  subject_id?: string | null;
+  visit_id?: string | null;
+  deviation_category: string;
+  severity: string;
+  title: string;
+  description: string;
+  date_occurred: string;
+  date_identified: string;
+  status: string;
+  root_cause_5whys: Record<string, any>;
+  root_cause_summary?: string | null;
+  corrective_action_plan?: string | null;
+  preventive_action_plan?: string | null;
+  quality_capa_id?: string | null;
+  reported_by: string;
+  resolved_by?: string | null;
+  resolved_at?: string | null;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
+export interface CtmsRbqmKriMetric {
+  id: string;
+  study_id: string;
+  site_id: string;
+  metric_type: string;
+  metric_value: number;
+  threshold_low: number;
+  threshold_high: number;
+  breach_status: string;
+  calculation_date: string;
+  notes?: string | null;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
 export interface CtmsRecruitmentRecord {
   id: string;
   site_id: string;
@@ -433,6 +649,25 @@ export interface CtmsRegulatoryForm {
   signing_timestamp?: string | null;
 }
 
+export interface CtmsSiteGreenlightGate {
+  id: string;
+  study_id: string;
+  site_id: string;
+  overall_status: string;
+  contract_approved: boolean;
+  irb_approved: boolean;
+  form_1572_approved: boolean;
+  doa_signed_off: boolean;
+  ip_ready: boolean;
+  greenlight_certified_by?: string | null;
+  greenlight_certified_at?: string | null;
+  rejection_reason?: string | null;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
 export interface CtmsSiteMilestone {
   id: string;
   site_id: string;
@@ -441,6 +676,21 @@ export interface CtmsSiteMilestone {
   planned_date?: string | null;
   actual_date?: string | null;
   status: string;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
+export interface CtmsSiteRiskScore {
+  id: string;
+  study_id: string;
+  site_id: string;
+  composite_score: number;
+  risk_level: string;
+  assessment_date: string;
+  recommended_monitoring_type: string;
+  monitoring_interval_days: number;
   created_at: string;
   created_by: string;
   reason_for_change: string;
@@ -852,6 +1102,7 @@ export interface SubjectConsent {
   icf_signed: boolean;
   icf_signed_date?: string | null;
   requires_reconsent: boolean;
+  is_paper_override: boolean;
   id: string;
   version: number;
   is_deleted: boolean;

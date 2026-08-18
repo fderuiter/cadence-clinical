@@ -926,6 +926,12 @@
             "title": "Diary Id",
             "description": "Unique identifier for the diary or survey"
           },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "The version index of the instrument used for compilation",
+            "default": 1
+          },
           "device_timestamp": {
             "type": "string",
             "format": "date-time",

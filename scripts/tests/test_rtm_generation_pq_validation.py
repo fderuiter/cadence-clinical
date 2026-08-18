@@ -1,33 +1,11 @@
-import os
 import subprocess
 import sys
 from pathlib import Path
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
-@pytest.fixture
-def backup_report_xml():
-    """Backup the existing report.xml and restore it after testing."""
-    report_path = REPO_ROOT / "report.xml"
-    backup_path = REPO_ROOT / "report.xml.bak"
-
-    has_backup = False
-    if report_path.is_file():
-        report_path.rename(backup_path)
-        has_backup = True
-
-    yield
-
-    if report_path.is_file():
-        report_path.unlink()
-
-    if has_backup:
-        backup_path.rename(report_path)
-
-
-def test_pq_all_tests_passed(tmp_path, backup_report_xml):
+def test_pq_all_tests_passed(tmp_path):
     """Test that all PQ scenarios are marked as Verified Compliant if all tests pass."""
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
 <testsuites>
@@ -39,12 +17,15 @@ def test_pq_all_tests_passed(tmp_path, backup_report_xml):
   </testsuite>
 </testsuites>
 """
-    (REPO_ROOT / "report.xml").write_text(xml_content, encoding="utf-8")
+    report_file = tmp_path / "report.xml"
+    report_file.write_text(xml_content, encoding="utf-8")
 
     output_dir = tmp_path / "reports_all_passed"
     cmd = [
         sys.executable,
         "scripts/generate_rtm.py",
+        "--report-path",
+        str(report_file),
         "--output-dir",
         str(output_dir),
     ]
@@ -56,11 +37,17 @@ def test_pq_all_tests_passed(tmp_path, backup_report_xml):
     assert qual_file.is_file()
     qual_content = qual_file.read_text(encoding="utf-8")
 
-    assert "### TC-VAL-LOG-001: Protocol Version Locking & Immutability Rejection" in qual_content
-    assert "Verification Status:** ✅ Verified Compliant via Automated Integration Suite" in qual_content
+    assert (
+        "### TC-VAL-LOG-001: Protocol Version Locking & Immutability Rejection"
+        in qual_content
+    )
+    assert (
+        "Verification Status:** ✅ Verified Compliant via Automated Integration Suite"
+        in qual_content
+    )
 
 
-def test_pq_test_failed(tmp_path, backup_report_xml):
+def test_pq_test_failed(tmp_path):
     """Test that if a mapped test fails, the associated scenario is marked as failed."""
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
 <testsuites>
@@ -74,12 +61,15 @@ def test_pq_test_failed(tmp_path, backup_report_xml):
   </testsuite>
 </testsuites>
 """
-    (REPO_ROOT / "report.xml").write_text(xml_content, encoding="utf-8")
+    report_file = tmp_path / "report.xml"
+    report_file.write_text(xml_content, encoding="utf-8")
 
     output_dir = tmp_path / "reports_failed"
     cmd = [
         sys.executable,
         "scripts/generate_rtm.py",
+        "--report-path",
+        str(report_file),
         "--output-dir",
         str(output_dir),
     ]
@@ -91,14 +81,26 @@ def test_pq_test_failed(tmp_path, backup_report_xml):
     assert qual_file.is_file()
     qual_content = qual_file.read_text(encoding="utf-8")
 
-    assert "### TC-VAL-LOG-001: Protocol Version Locking & Immutability Rejection" in qual_content
-    assert "Verification Status:** ❌ Failed via Automated Integration Suite" in qual_content
+    assert (
+        "### TC-VAL-LOG-001: Protocol Version Locking & Immutability Rejection"
+        in qual_content
+    )
+    assert (
+        "Verification Status:** ❌ Failed via Automated Integration Suite"
+        in qual_content
+    )
     # Mapped test for TC-VAL-LOG-002 still passes
-    assert "### TC-VAL-LOG-002: Stratification Factor Re-randomization Rejections" in qual_content
-    assert "Verification Status:** ✅ Verified Compliant via Automated Integration Suite" in qual_content
+    assert (
+        "### TC-VAL-LOG-002: Stratification Factor Re-randomization Rejections"
+        in qual_content
+    )
+    assert (
+        "Verification Status:** ✅ Verified Compliant via Automated Integration Suite"
+        in qual_content
+    )
 
 
-def test_pq_test_skipped(tmp_path, backup_report_xml):
+def test_pq_test_skipped(tmp_path):
     """Test that if a mapped test is skipped, the associated scenario is marked as skipped."""
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
 <testsuites>
@@ -112,12 +114,15 @@ def test_pq_test_skipped(tmp_path, backup_report_xml):
   </testsuite>
 </testsuites>
 """
-    (REPO_ROOT / "report.xml").write_text(xml_content, encoding="utf-8")
+    report_file = tmp_path / "report.xml"
+    report_file.write_text(xml_content, encoding="utf-8")
 
     output_dir = tmp_path / "reports_skipped"
     cmd = [
         sys.executable,
         "scripts/generate_rtm.py",
+        "--report-path",
+        str(report_file),
         "--output-dir",
         str(output_dir),
     ]
@@ -129,11 +134,17 @@ def test_pq_test_skipped(tmp_path, backup_report_xml):
     assert qual_file.is_file()
     qual_content = qual_file.read_text(encoding="utf-8")
 
-    assert "### TC-VAL-LOG-001: Protocol Version Locking & Immutability Rejection" in qual_content
-    assert "Verification Status:** ⚪ Skipped via Automated Integration Suite" in qual_content
+    assert (
+        "### TC-VAL-LOG-001: Protocol Version Locking & Immutability Rejection"
+        in qual_content
+    )
+    assert (
+        "Verification Status:** ⚪ Skipped via Automated Integration Suite"
+        in qual_content
+    )
 
 
-def test_pq_test_missing_fail_fast(tmp_path, backup_report_xml):
+def test_pq_test_missing_fail_fast(tmp_path):
     """Test that if a mapped test is missing, report generation fails and raises an error (unless in draft)."""
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
 <testsuites>
@@ -144,12 +155,15 @@ def test_pq_test_missing_fail_fast(tmp_path, backup_report_xml):
   </testsuite>
 </testsuites>
 """
-    (REPO_ROOT / "report.xml").write_text(xml_content, encoding="utf-8")
+    report_file = tmp_path / "report.xml"
+    report_file.write_text(xml_content, encoding="utf-8")
 
     output_dir = tmp_path / "reports_missing"
     cmd = [
         sys.executable,
         "scripts/generate_rtm.py",
+        "--report-path",
+        str(report_file),
         "--output-dir",
         str(output_dir),
     ]
@@ -157,10 +171,14 @@ def test_pq_test_missing_fail_fast(tmp_path, backup_report_xml):
     res = subprocess.run(cmd, capture_output=True, text=True, cwd=str(REPO_ROOT))
     # Script must fail because a mapped test is missing
     assert res.returncode != 0
-    assert "ERROR: Active test" in res.stderr or "missing from the test results report" in res.stderr or "ValueError" in res.stderr
+    assert (
+        "ERROR: Active test" in res.stderr
+        or "missing from the test results report" in res.stderr
+        or "ValueError" in res.stderr
+    )
 
 
-def test_pq_test_missing_draft_mode(tmp_path, backup_report_xml):
+def test_pq_test_missing_draft_mode(tmp_path):
     """Test that draft mode bypasses the missing mapped test fail-fast check and outputs UNVERIFIED."""
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
 <testsuites>
@@ -171,12 +189,15 @@ def test_pq_test_missing_draft_mode(tmp_path, backup_report_xml):
   </testsuite>
 </testsuites>
 """
-    (REPO_ROOT / "report.xml").write_text(xml_content, encoding="utf-8")
+    report_file = tmp_path / "report.xml"
+    report_file.write_text(xml_content, encoding="utf-8")
 
     output_dir = tmp_path / "reports_draft"
     cmd = [
         sys.executable,
         "scripts/generate_rtm.py",
+        "--report-path",
+        str(report_file),
         "--output-dir",
         str(output_dir),
         "--draft",
@@ -189,5 +210,8 @@ def test_pq_test_missing_draft_mode(tmp_path, backup_report_xml):
     assert qual_file.is_file()
     qual_content = qual_file.read_text(encoding="utf-8")
 
-    assert "### TC-VAL-LOG-001: Protocol Version Locking & Immutability Rejection" in qual_content
+    assert (
+        "### TC-VAL-LOG-001: Protocol Version Locking & Immutability Rejection"
+        in qual_content
+    )
     assert "Verification Status:** ⚪ Unverified (Draft Mode)" in qual_content
