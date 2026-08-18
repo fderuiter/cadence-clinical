@@ -21,20 +21,11 @@ cdisc_app = typer.Typer(
 )
 
 
-@cdisc_app.command("export")
-def export_cdisc(
+def run_cdisc_export(
     ctx: typer.Context,
-    output: str = typer.Option(
-        "docs/CDISC/cdisc_usdm_compliance.json",
-        "--output",
-        "-o",
-        help="Path to save generated CDISC USDM compliance JSON document",
-    ),
-    validate: bool = typer.Option(
-        True,
-        "--validate/--no-validate",
-        help="Validate generated document against CDISC USDM Pydantic schema",
-    ),
+    output: str,
+    validate: bool,
+    command_name: str = "cdisc export",
 ) -> None:
     """Generate a validated CDISC USDM compliance document from local database models."""
     json_mode = is_json_mode(ctx.obj)
@@ -70,7 +61,7 @@ def export_cdisc(
 
         output_json(
             {
-                "command": "cdisc export",
+                "command": command_name,
                 "success": success,
                 "output_file": str(repo_root / output),
                 "usdm_version": usdm_doc.get("usdmVersion", "3.0")
@@ -94,3 +85,22 @@ def export_cdisc(
         print_error("CDISC USDM compliance export failed:")
         console.print(res.stderr or res.stdout)
         sys.exit(1)
+
+
+@cdisc_app.command("export")
+def export_cdisc(
+    ctx: typer.Context,
+    output: str = typer.Option(
+        "docs/CDISC/cdisc_usdm_compliance.json",
+        "--output",
+        "-o",
+        help="Path to save generated CDISC USDM compliance JSON document",
+    ),
+    validate: bool = typer.Option(
+        True,
+        "--validate/--no-validate",
+        help="Validate generated document against CDISC USDM Pydantic schema",
+    ),
+) -> None:
+    """Generate a validated CDISC USDM compliance document from local database models."""
+    run_cdisc_export(ctx, output=output, validate=validate, command_name="cdisc export")

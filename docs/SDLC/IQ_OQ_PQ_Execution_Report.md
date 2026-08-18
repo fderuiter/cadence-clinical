@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2727
-- **Passed:** 2708 🟢
+- **Total Automated Test Cases Run:** 2729
+- **Passed:** 2710 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.30%
@@ -2209,12 +2209,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_evaluate_sla_status_amber_warning_and_breach`                                     | `apps.tickets.tests.test_tickets_sla_advanced`                              | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_sla_target_calculation_with_multipliers`                                          | `apps.tickets.tests.test_tickets_sla_advanced`                              | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_ticket_sla_pause_and_resume_lifecycle`                                            | `apps.tickets.tests.test_tickets_sla_advanced`                              | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_cli_cdisc_export_json`                                                            | `packages.cli.tests.test_cadence_cli`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_cli_db_seed_json`                                                                 | `packages.cli.tests.test_cadence_cli`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_cli_db_snapshot_and_restore`                                                      | `packages.cli.tests.test_cadence_cli`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_cli_db_status_json`                                                               | `packages.cli.tests.test_cadence_cli`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_cli_dev_json`                                                                     | `packages.cli.tests.test_cadence_cli`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_cli_doctor_auto_fix_json`                                                         | `packages.cli.tests.test_cadence_cli`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_cli_doctor_json`                                                                  | `packages.cli.tests.test_cadence_cli`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_cli_gxp_export_cdisc_json`                                                        | `packages.cli.tests.test_cadence_cli`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_cli_help`                                                                         | `packages.cli.tests.test_cadence_cli`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_find_target_test_file_resolution`                                                 | `packages.cli.tests.test_cadence_cli`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_change_request_audit_trail_recorded`                                              | `packages.compliance.tests.test_compliance_change_request`                  | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
